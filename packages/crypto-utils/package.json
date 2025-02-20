@@ -1,17 +1,6 @@
 {
     "name": "@nzyme/crypto-utils",
     "version": "0.5.0",
-    "type": "module",
-    "exports": {
-        "node": {
-            "import": "./dist/index.node.js",
-            "types": "./src/index.node.ts"
-        },
-        "default": {
-            "import": "./dist/index.browser.js",
-            "types": "./src/index.browser.ts"
-        }
-    },
     "sideEffects": false,
     "license": "MIT",
     "repository": {
@@ -19,27 +8,57 @@
         "url": "https://github.com/kedrzu/nzyme.git"
     },
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "type": "module",
     "publishConfig": {
         "access": "public"
     },
     "files": [
         "dist"
     ],
+    "main": "./dist/cjs/index.node.cjs",
+    "types": "./dist/cjs/index.node.d.ts",
+    "exports": {
+        "node": {
+            "import": {
+                "types": "./dist/esm/index.node.d.ts",
+                "default": "./dist/esm/index.node.js"
+            },
+            "require": {
+                "types": "./dist/cjs/index.node.d.ts",
+                "default": "./dist/cjs/index.node.cjs"
+            }
+        },
+        "default": {
+            "import": {
+                "types": "./dist/esm/index.browser.d.ts",
+                "default": "./dist/esm/index.browser.js"
+            },
+            "require": {
+                "types": "./dist/cjs/index.browser.d.ts",
+                "default": "./dist/cjs/index.browser.cjs"
+            }
+        }
+    },
     "scripts": {
         "eslint": "eslint . --fix --cache",
-        "build": "tsc --build"
+        "build:esm": "tsc --build ./tsconfig.esm.json",
+        "build:cjs": "tsc --build ./tsconfig.cjs.json",
+        "smoke:mjs": "node tests/smoke.test.mjs",
+        "smoke:cjs": "node tests/smoke.test.cjs"
     },
     "dependencies": {
         "@nzyme/types": "^0.5.0",
         "@nzyme/utils": "^0.5.0",
-        "spark-md5": "^3.0.2"
+        "spark-md5": "^3.0.2",
+        "tslib": "^2.8.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.5.0",
         "@nzyme/tsconfig": "^0.5.0",
         "@nzyme/vitest": "^0.5.0",
-        "@types/node": "^22.10.7",
-        "@types/spark-md5": "^3.0.5"
+        "@types/node": "^22.13.4",
+        "@types/spark-md5": "^3.0.5",
+        "typescript": "^5.7.3"
     },
     "depcheck": {
         "ignoreFiles": [

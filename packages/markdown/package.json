@@ -1,10 +1,6 @@
 {
     "name": "@nzyme/markdown",
     "version": "0.5.0",
-    "type": "module",
-    "main": "./dist/index.js",
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
     "sideEffects": false,
     "license": "MIT",
     "repository": {
@@ -12,24 +8,44 @@
         "url": "https://github.com/kedrzu/nzyme.git"
     },
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "type": "module",
     "publishConfig": {
         "access": "public"
     },
     "files": [
         "dist"
     ],
+    "main": "./dist/cjs/index.cjs",
+    "types": "./dist/cjs/index.d.ts",
+    "exports": {
+        ".": {
+            "import": {
+                "types": "./dist/esm/index.d.ts",
+                "default": "./dist/esm/index.js"
+            },
+            "require": {
+                "types": "./dist/cjs/index.d.ts",
+                "default": "./dist/cjs/index.cjs"
+            }
+        }
+    },
     "scripts": {
+        "build:esm": "tsc --build ./tsconfig.esm.json",
+        "build:cjs": "tsc --build ./tsconfig.cjs.json",
         "eslint": "eslint . --fix --cache",
-        "build": "tsc --build"
+        "smoke:mjs": "node tests/smoke.test.mjs",
+        "smoke:cjs": "node tests/smoke.test.cjs"
     },
     "dependencies": {
         "@nzyme/types": "^0.5.0",
-        "@nzyme/utils": "^0.5.0"
+        "@nzyme/utils": "^0.5.0",
+        "tslib": "^2.8.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.5.0",
         "@nzyme/tsconfig": "^0.5.0",
         "@nzyme/vitest": "^0.5.0",
-        "@types/node": "^22.10.7"
+        "@types/node": "^22.13.4",
+        "typescript": "^5.7.3"
     }
 }

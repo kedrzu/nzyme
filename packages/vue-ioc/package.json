@@ -7,28 +7,44 @@
         "url": "https://github.com/kedrzu/nzyme.git"
     },
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "type": "module",
     "publishConfig": {
         "access": "public"
     },
     "files": [
         "dist"
     ],
-    "type": "module",
-    "main": "./dist/index.js",
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
+    "main": "./dist/cjs/index.cjs",
+    "types": "./dist/cjs/index.d.ts",
+    "exports": {
+        ".": {
+            "import": {
+                "types": "./dist/esm/index.d.ts",
+                "default": "./dist/esm/index.js"
+            },
+            "require": {
+                "types": "./dist/cjs/index.d.ts",
+                "default": "./dist/cjs/index.cjs"
+            }
+        }
+    },
     "sideEffects": false,
     "scripts": {
+        "build:esm": "tsc --build ./tsconfig.esm.json",
+        "build:cjs": "tsc --build ./tsconfig.cjs.json",
         "eslint": "eslint . --fix --cache",
-        "build": "tsc --build"
+        "smoke:mjs": "node tests/smoke.test.mjs",
+        "smoke:cjs": "node tests/smoke.test.cjs"
     },
     "dependencies": {
         "@nzyme/ioc": "^0.5.0",
         "@nzyme/types": "^0.5.0",
+        "tslib": "^2.8.1",
         "vue": "^3.5.13"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.5.0",
-        "@nzyme/tsconfig": "^0.5.0"
+        "@nzyme/tsconfig": "^0.5.0",
+        "typescript": "^5.7.3"
     }
 }

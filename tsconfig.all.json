@@ -1,0 +1,11 @@
+{
+    "include": [],
+    "references": [
+        {
+            "path": "./tsconfig.esm.dev.json"
+        },
+        {
+            "path": "./tsconfig.cjs.dev.json"
+        }
+    ]
+}

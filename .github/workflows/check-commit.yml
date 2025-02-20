@@ -26,8 +26,7 @@ jobs:
             git push
           fi
 
-      - name: Build
-        run: yarn turbo run build
-
-      - name: Test
-        run: yarn test
+      - run: yarn setup
+      - run: yarn build
+      - run: yarn test
+      - run: yarn smoke

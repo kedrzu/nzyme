@@ -35,8 +35,10 @@ jobs:
           node-version: latest
 
       - run: yarn install
-      - run: yarn turbo run build
+      - run: yarn setup
+      - run: yarn build
       - run: yarn test
+      - run: yarn smoke
 
       - run: yarn release
         if: ${{ inputs.dry_run != true }}

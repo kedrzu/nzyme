@@ -1,10 +1,15 @@
 {
     "$schema": "https://turbo.build/schema.json",
     "tasks": {
-        "build": {
+        "build:esm": {
             "cache": true,
-            "outputs": ["dist/**"],
-            "dependsOn": ["^build"]
+            "outputs": ["dist/esm/**"],
+            "dependsOn": ["^build:esm"]
+        },
+        "build:cjs": {
+            "cache": true,
+            "outputs": ["dist/cjs/**"],
+            "dependsOn": ["^build:cjs"]
         },
         "dev": {
             "cache": false,
@@ -13,6 +18,14 @@
         "watch": {
             "cache": false,
             "persistent": true
+        },
+        "smoke:cjs": {
+            "cache": false,
+            "persistent": false
+        },
+        "smoke:mjs": {
+            "cache": false,
+            "persistent": false
         }
     },
     "ui": "stream"

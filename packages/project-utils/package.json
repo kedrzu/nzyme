@@ -2,9 +2,6 @@
     "name": "@nzyme/project-utils",
     "version": "0.5.0",
     "type": "module",
-    "main": "./dist/index.js",
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
     "sideEffects": false,
     "license": "MIT",
     "repository": {
@@ -18,9 +15,17 @@
     "files": [
         "dist"
     ],
+    "exports": {
+        ".": {
+            "import": "./dist/esm/index.js",
+            "types": "./dist/esm/index.d.ts"
+        }
+    },
     "scripts": {
+        "build:esm": "tsc --build ./tsconfig.esm.json",
+        "build:cjs": "tsc --build ./tsconfig.cjs.json",
         "eslint": "eslint . --fix --cache",
-        "build": "tsc --build"
+        "smoke:mjs": "node tests/smoke.test.mjs"
     },
     "dependencies": {
         "@lerna/project": "^6.4.1",
@@ -29,7 +34,8 @@
         "chalk": "^5.4.1",
         "consola": "^3.4.0",
         "dotenv": "^16.4.7",
-        "execa": "^9.5.2"
+        "execa": "^9.5.2",
+        "tslib": "^2.8.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.5.0",

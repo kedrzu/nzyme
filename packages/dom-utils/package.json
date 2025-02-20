@@ -1,10 +1,6 @@
 {
     "name": "@nzyme/dom-utils",
     "version": "0.5.0",
-    "type": "module",
-    "main": "./dist/index.js",
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
     "sideEffects": false,
     "license": "MIT",
     "repository": {
@@ -18,14 +14,28 @@
     "files": [
         "dist"
     ],
+    "main": "./dist/cjs/index.js",
+    "module": "./dist/esm/index.js",
+    "types": "./dist/esm/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/esm/index.js",
+            "require": "./dist/cjs/index.js",
+            "types": "./dist/esm/index.d.ts"
+        }
+    },
     "scripts": {
         "eslint": "eslint . --fix --cache",
-        "build": "tsc --build"
+        "build:esm": "tsc --build ./tsconfig.esm.json",
+        "build:cjs": "tsc --build ./tsconfig.cjs.json",
+        "smoke:mjs": "node tests/smoke.test.mjs",
+        "smoke:cjs": "node tests/smoke.test.cjs"
     },
     "dependencies": {
-        "@nzyme/crypto-utils": "0.4.1",
+        "@nzyme/crypto-utils": "0.5.0",
         "@nzyme/utils": "^0.5.0",
-        "lodash.debounce": "^4.0.8"
+        "lodash.debounce": "^4.0.8",
+        "tslib": "^2.8.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.5.0",

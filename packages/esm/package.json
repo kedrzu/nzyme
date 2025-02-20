@@ -2,9 +2,6 @@
     "name": "@nzyme/esm",
     "version": "0.5.0",
     "type": "module",
-    "main": "./dist/index.js",
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
     "sideEffects": false,
     "license": "MIT",
     "repository": {
@@ -18,13 +15,23 @@
     "files": [
         "dist"
     ],
+    "exports": {
+        ".": {
+            "import": "./dist/esm/index.js",
+            "types": "./dist/esm/index.d.ts"
+        }
+    },
     "scripts": {
+        "build:esm": "tsc --build ./tsconfig.esm.json",
         "eslint": "eslint . --fix --cache",
-        "build": "tsc --build"
+        "smoke:mjs": "node tests/smoke.test.mjs"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.5.0",
         "@nzyme/tsconfig": "^0.5.0",
         "@types/node": "^22.10.7"
+    },
+    "dependencies": {
+        "tslib": "^2.8.1"
     }
 }

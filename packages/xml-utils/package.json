@@ -1,10 +1,16 @@
 {
     "name": "@nzyme/xml-utils",
     "version": "0.5.0",
-    "type": "module",
-    "main": "./dist/index.js",
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
+    "main": "./dist/cjs/index.js",
+    "module": "./dist/esm/index.js",
+    "types": "./dist/esm/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/esm/index.js",
+            "require": "./dist/cjs/index.js",
+            "types": "./dist/esm/index.d.ts"
+        }
+    },
     "sideEffects": false,
     "license": "MIT",
     "repository": {
@@ -19,11 +25,15 @@
         "dist"
     ],
     "scripts": {
+        "build:esm": "tsc --build ./tsconfig.esm.json",
+        "build:cjs": "tsc --build ./tsconfig.cjs.json",
         "eslint": "eslint . --fix --cache",
-        "build": "tsc --build"
+        "smoke:mjs": "node tests/smoke.test.mjs",
+        "smoke:cjs": "node tests/smoke.test.cjs"
     },
     "dependencies": {
-        "fast-xml-parser": "^4.5.1"
+        "fast-xml-parser": "^4.5.1",
+        "tslib": "^2.8.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.5.0",

@@ -10,11 +10,15 @@
         "packages/*"
     ],
     "scripts": {
-        "setup": "yarn && turbo run build && yarn monorepo",
+        "setup": "yarn && turbo run build:esm --filter=@nzyme/cli && yarn monorepo",
         "monorepo": "nzyme monorepo",
-        "clean": "del  \"**/dist\" \"**/.tsbuildinfo\" \"!**/node_modules/**\"",
-        "build": "tsc --build tsconfig.dev.json",
-        "watch": "yarn build --watch",
+        "clean": "del \"**/tsconfig.*.dev.json\" \"**/dist\" \"**/.turbo\" \"**/.tsbuildinfo\" \"**/.tsbuildinfo.*\" \"!**/node_modules/**\"",
+        "build:esm": "tsc --build tsconfig.esm.dev.json",
+        "build:cjs": "tsc --build tsconfig.cjs.dev.json",
+        "build": "tsc --build tsconfig.json",
+        "watch": "yarn build:esm --watch",
+        "watch:cjs": "yarn build:cjs --watch",
+        "smoke": "turbo run smoke:cjs smoke:mjs",
         "release": "nx release --yes",
         "dev": "yarn && yarn monorepo && yarn watch",
         "test": "vitest run",
@@ -38,5 +42,8 @@
         "ignoreDeps": [
             "*"
         ]
+    },
+    "dependencies": {
+        "tslib": "^2.8.1"
     }
 }

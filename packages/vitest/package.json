@@ -13,21 +13,21 @@
     "files": [
         "dist"
     ],
-    "type": "module",
     "exports": {
         ".": {
-            "import": "./dist/index.js",
-            "types": "./dist/index.d.ts"
+            "import": "./dist/esm/index.js",
+            "types": "./dist/esm/index.d.ts"
         },
         "./setup": {
-            "import": "./dist/setup.js",
-            "types": "./dist/setup.d.ts"
+            "import": "./dist/esm/setup.js",
+            "types": "./dist/esm/setup.d.ts"
         }
     },
     "sideEffects": false,
     "scripts": {
         "eslint": "eslint . --fix --cache",
-        "build": "tsc --build"
+        "build:esm": "tsc --build ./tsconfig.esm.json",
+        "build:cjs": "tsc --build ./tsconfig.cjs.json"
     },
     "dependencies": {
         "date-fns": "^4.1.0",

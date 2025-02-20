@@ -14,20 +14,20 @@
         "dist"
     ],
     "bin": {
-        "nzyme": "dist/cli.js"
+        "nzyme": "dist/esm/cli.js"
     },
     "type": "module",
     "engines": {
         "node": ">=20"
     },
     "scripts": {
-        "build": "tsc",
-        "watch": "tsc --watch"
+        "build:esm": "tsc --build ./tsconfig.esm.json"
     },
     "dependencies": {
         "@lerna/package": "^6.4.1",
         "@lerna/project": "^6.4.1",
         "@nzyme/node-utils": "^0.5.0",
+        "@nzyme/utils": "^0.5.0",
         "@oclif/core": "^4.2.3",
         "@oclif/plugin-help": "^6.2.21",
         "@oclif/plugin-version": "^2.2.20",
@@ -40,7 +40,8 @@
         "fs-extra": "^11.3.0",
         "lodash.merge": "^4.6.2",
         "prettier": "^3.4.2",
-        "ts-node": "^10.9.2"
+        "ts-node": "^10.9.2",
+        "tslib": "^2.8.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.5.0",
@@ -61,7 +62,7 @@
         "bin": "nzyme",
         "commands": {
             "strategy": "explicit",
-            "target": "./dist/commands.js"
+            "target": "./dist/esm/commands.js"
         },
         "plugins": [
             "@oclif/plugin-help",

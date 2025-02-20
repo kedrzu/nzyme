@@ -6,6 +6,8 @@ dist/
 
 # TypeScript cache
 *.tsbuildinfo
+*.tsbuildinfo.cjs
+*.tsbuildinfo.esm
 
 # Eslint cache
 .eslintcache
@@ -22,8 +24,8 @@ yarn-error.log
 
 .turbo
 .env
-./tsconfig.json
-tsconfig.dev.json
+tsconfig.cjs.dev.json
+tsconfig.esm.dev.json
 
 .nx/cache
 .nx/workspace-data

@@ -21,7 +21,7 @@
         "node": ">=20"
     },
     "scripts": {
-        "build:esm": "tsc --build ./tsconfig.esm.json"
+        "tsc:esm": "tsc --build ./tsconfig.esm.json"
     },
     "dependencies": {
         "@lerna/package": "^6.4.1",

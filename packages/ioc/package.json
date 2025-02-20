@@ -28,8 +28,8 @@
         "eslint": "eslint . --fix --cache",
         "smoke:cjs": "node tests/smoke.test.cjs",
         "smoke:mjs": "node tests/smoke.test.mjs",
-        "build:esm": "tsc --build ./tsconfig.esm.json",
-        "build:cjs": "tsc --build ./tsconfig.cjs.json"
+        "tsc:esm": "tsc --build ./tsconfig.esm.json",
+        "tsc:cjs": "tsc --build ./tsconfig.cjs.json"
     },
     "dependencies": {
         "@nzyme/types": "^0.5.0",

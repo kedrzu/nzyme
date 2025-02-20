@@ -22,7 +22,7 @@
         }
     },
     "scripts": {
-        "build:esm": "tsc --build ./tsconfig.esm.json",
+        "tsc:esm": "tsc --build ./tsconfig.esm.json",
         "eslint": "eslint . --fix --cache",
         "smoke:mjs": "node tests/smoke.test.mjs"
     },

@@ -31,8 +31,8 @@
     },
     "scripts": {
         "eslint": "eslint . --fix --cache",
-        "build:esm": "tsc --build ./tsconfig.esm.json",
-        "build:cjs": "tsc --build ./tsconfig.cjs.json",
+        "tsc:esm": "tsc --build ./tsconfig.esm.json",
+        "tsc:cjs": "tsc --build ./tsconfig.cjs.json",
         "smoke:mjs": "node tests/smoke.test.mjs",
         "smoke:cjs": "node tests/smoke.test.cjs"
     },

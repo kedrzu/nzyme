@@ -1,9 +1,9 @@
-name: Update yarn.lock file
+name: Check commit
 on:
   push:
-    branches: [main]
+    branches: [main, release]
 jobs:
-  release:
+  check-commit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -11,17 +11,11 @@ jobs:
         with:
           node-version: latest
 
-      - name: Setup Git
-        run: |
-          git config --local user.email "actions@github.com"
-          git config --local user.name "Github Actions"
-
       - run: yarn install
         env:
           YARN_ENABLE_IMMUTABLE_INSTALLS: false
 
-      - name: Check for changes
-        id: check_changes
+      - name: Commit yarn.lock changes
         run: |
           if git diff --exit-code; then
             echo "No changes to commit."
@@ -31,3 +25,8 @@ jobs:
             git commit -a -m "chore: update yarn.lock"
             git push
           fi
+
+      - run: yarn setup
+      - run: yarn build
+      - run: yarn test
+      - run: yarn smoke

@@ -7,35 +7,36 @@
         "url": "https://github.com/kedrzu/nzyme.git"
     },
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "type": "module",
     "publishConfig": {
         "access": "public"
     },
     "files": [
         "dist"
     ],
-    "type": "module",
     "exports": {
         ".": {
-            "import": "./dist/index.js",
-            "types": "./dist/index.d.ts"
+            "import": "./dist/esm/index.js",
+            "types": "./dist/cjs/index.d.ts"
         },
         "./setup": {
-            "import": "./dist/setup.js",
-            "types": "./dist/setup.d.ts"
+            "import": "./dist/esm/setup.js",
+            "types": "./dist/esm/setup.d.ts"
         }
     },
     "sideEffects": false,
     "scripts": {
         "eslint": "eslint . --fix --cache",
-        "build": "tsc --build"
+        "build:esm": "tsc --build ./tsconfig.esm.json"
     },
     "dependencies": {
         "date-fns": "^4.1.0",
         "tslib": "^2.8.1",
-        "vitest": "^3.0.1"
+        "vitest": "^3.0.6"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.5.0",
-        "@nzyme/tsconfig": "^0.5.0"
+        "@nzyme/tsconfig": "^0.5.0",
+        "typescript": "^5.7.3"
     }
 }

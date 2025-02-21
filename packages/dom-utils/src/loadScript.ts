@@ -15,9 +15,9 @@ export function loadScript(url: string, options?: { document?: Document }) {
     return new Promise<void>((resolve, reject) => {
         scriptTag.src = url;
         scriptTag.onload = () => resolve();
-        scriptTag.onerror = () => {
+        scriptTag.onerror = e => {
             doc.body.removeChild(scriptTag);
-            reject();
+            reject(new Error(`Failed to load script: ${url}`, { cause: e }));
         };
         doc.body.appendChild(scriptTag);
     });

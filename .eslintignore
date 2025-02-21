@@ -1,3 +1,6 @@
 node_modules
 dist
 .eslintrc.cjs
+# smoke tests mostly
+*.cjs
+*.mjs

@@ -1,0 +1,12 @@
+{
+    "extends": "@nzyme/tsconfig/tsconfig.esm.json",
+    "compilerOptions": {
+        "outDir": "./dist/esm",
+        "tsBuildInfoFile": "./.tsbuildinfo.esm",
+        "rootDir": "./src",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext"
+    },
+    "include": ["src"],
+    "exclude": ["src/**/*.test.ts"]
+}

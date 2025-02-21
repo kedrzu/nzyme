@@ -9,6 +9,8 @@ import * as json from 'comment-json';
 import fsExtra from 'fs-extra/esm';
 import merge from 'lodash.merge';
 import prettier from 'prettier';
+import consola from 'consola';
+import { asArray } from '@nzyme/utils';
 
 interface TsConfig {
     path: string;
@@ -26,28 +28,42 @@ export class MonorepoCommand extends Command {
 
 async function processProject() {
     const cwd = process.cwd();
-    const packages = await getPackages(cwd);
+    const packages = await loadPackages(cwd);
 
-    const tsconfigPath = path.join(cwd, './tsconfig.dev.json');
-    const references = await getTsReferences({
-        path: tsconfigPath,
+    const esmTsconfigPath = path.join(cwd, './tsconfig.esm.dev.json');
+    const esmReferences = await getTsReferences({
+        path: esmTsconfigPath,
         dependencies: packages,
+        fileName: 'tsconfig.esm.json',
+    });
+    await saveTsReferences(esmTsconfigPath, esmReferences, 'tsconfig.json');
+
+    const cjsTsconfigPath = path.join(cwd, './tsconfig.cjs.dev.json');
+    const cjsReferences = await getTsReferences({
+        path: cjsTsconfigPath,
+        dependencies: packages,
+        fileName: 'tsconfig.cjs.json',
     });
 
-    await saveTsReferences(tsconfigPath, references);
+    await saveTsReferences(cjsTsconfigPath, cjsReferences, 'tsconfig.json');
 
-    await Promise.all(
-        packages.map(pkg =>
-            processPackage({
-                pkg,
-                packages,
-            }),
-        ),
-    );
+    for (const pkg of packages) {
+        await processPackage({
+            pkg,
+            packages,
+            fileName: 'tsconfig.esm.json',
+        });
+
+        await processPackage({
+            pkg,
+            packages,
+            fileName: 'tsconfig.cjs.json',
+        });
+    }
 }
 
-async function processPackage(params: { pkg: Package; packages: Package[] }) {
-    const tsconfig = await loadTsConfigForPackage(params.pkg);
+async function processPackage(params: { pkg: Package; packages: Package[]; fileName: string }) {
+    const tsconfig = await loadTsConfigForPackage(params.pkg, params.fileName);
     if (!tsconfig) {
         return;
     }
@@ -64,17 +80,22 @@ async function processPackage(params: { pkg: Package; packages: Package[] }) {
     const references = await getTsReferences({
         path: tsconfig.path,
         dependencies: dependencies,
+        fileName: params.fileName,
     });
 
-    const configPath = path.join(params.pkg.location, 'tsconfig.dev.json');
-    await saveTsReferences(configPath, references);
+    const configPath = path.join(params.pkg.location, getFileDevName(params.fileName));
+    await saveTsReferences(configPath, references, params.fileName);
 }
 
-async function getTsReferences(params: { path: string; dependencies: Package[] }) {
+async function getTsReferences(params: {
+    path: string;
+    dependencies: Package[];
+    fileName: string;
+}) {
     const references: { path: string }[] = [];
 
     for (const dep of params.dependencies) {
-        const depTsConfig = await loadTsConfigForPackage(dep);
+        const depTsConfig = await loadTsConfigForPackage(dep, params.fileName);
 
         const disable =
             !depTsConfig ||
@@ -96,8 +117,9 @@ async function getTsReferences(params: { path: string; dependencies: Package[] }
             relativePath = './' + relativePath;
         }
 
-        if (relativePath.endsWith('tsconfig.json')) {
-            relativePath = relativePath.slice(0, -13) + 'tsconfig.dev.json';
+        if (relativePath.endsWith(params.fileName)) {
+            relativePath =
+                relativePath.slice(0, -params.fileName.length) + getFileDevName(params.fileName);
         }
 
         references.push({
@@ -108,8 +130,8 @@ async function getTsReferences(params: { path: string; dependencies: Package[] }
     return references;
 }
 
-async function loadTsConfigForPackage(pkg: Package) {
-    const filePath = path.join(pkg.location, 'tsconfig.json');
+async function loadTsConfigForPackage(pkg: Package, fileName: string) {
+    const filePath = path.join(pkg.location, fileName);
     return await loadTsConfig(filePath);
 }
 
@@ -124,34 +146,61 @@ async function loadTsConfig(filePath: string) {
 }
 
 async function loadTsConfigCore(filePath: string) {
-    if (!(await fsExtra.pathExists(filePath))) {
-        return null;
-    }
+    try {
+        if (!(await fsExtra.pathExists(filePath))) {
+            return null;
+        }
 
-    let configFile = await fs.readFile(filePath, { encoding: 'utf8' });
-    let configPath = filePath;
+        let configFile = await fs.readFile(filePath, { encoding: 'utf8' });
+        let configPath = filePath;
 
-    const config = json.parse(configFile) as Record<string, any>;
-    let resolved = json.parse(configFile) as Record<string, any>;
+        const extend: string[] = [];
 
-    while (resolved.extends) {
-        configPath = resolveTsConfigPath(path.dirname(configPath), resolved.extends);
-        configFile = await fs.readFile(configPath, { encoding: 'utf8' });
+        const config = json.parse(configFile) as Record<string, any>;
+        let resolved = json.parse(configFile) as Record<string, any>;
 
-        const extendedConfig = json.parse(configFile) as Record<string, any>;
+        if (resolved.extends) {
+            const cwd = path.dirname(configPath);
+            const extendsPaths = asArray(resolved.extends).map(p => resolveTsConfigPath(cwd, p));
+            extend.push(...extendsPaths);
+        }
+
+        while (extend.length > 0) {
+            const extendsPath = extend.shift();
+            if (!extendsPath) {
+                break;
+            }
+
+            configFile = await fs.readFile(extendsPath, { encoding: 'utf8' });
+
+            const extendedConfig = json.parse(configFile) as Record<string, any>;
+            if (extendedConfig.extends) {
+                const cwd = path.dirname(extendsPath);
+                const extendsPaths = asArray(extendedConfig.extends).map(p =>
+                    resolveTsConfigPath(cwd, p),
+                );
+                extend.push(...extendsPaths);
+            }
+
+            resolved = merge(extendedConfig, resolved);
+        }
 
         delete resolved.extends;
 
-        resolved = merge(extendedConfig, resolved);
+        const result: TsConfig = {
+            path: filePath,
+            config,
+            resolved,
+        };
+
+        return result;
+    } catch (error: unknown) {
+        if (error instanceof Error) {
+            throw new Error(`Failed to process ${filePath}: ${error.message}`, { cause: error });
+        }
+
+        throw new Error(`Failed to process ${filePath}`, { cause: error });
     }
-
-    const result: TsConfig = {
-        path: filePath,
-        config,
-        resolved,
-    };
-
-    return result;
 }
 
 function resolveTsConfigPath(cwd: string, filePath: string) {
@@ -162,9 +211,13 @@ function resolveTsConfigPath(cwd: string, filePath: string) {
     return fileURLToPath(import.meta.resolve(filePath));
 }
 
-async function saveTsReferences(configPath: string, references: { path: string }[]) {
+async function saveTsReferences(
+    configPath: string,
+    references: { path: string }[],
+    fileName: string,
+) {
     const config = {
-        extends: './tsconfig.json',
+        extends: `./${fileName}`,
         references,
     };
 
@@ -176,6 +229,17 @@ async function saveTsReferences(configPath: string, references: { path: string }
         parser: 'json',
     });
 
-    console.log(configPath);
+    consola.success(configPath);
     await fs.writeFile(configPath, configJson, { encoding: 'utf8' });
+}
+
+function getFileDevName(fileName: string) {
+    return fileName.endsWith('.json') ? fileName.slice(0, -5) + '.dev.json' : fileName + '.dev';
+}
+
+async function loadPackages(cwd: string) {
+    const packages = await getPackages(cwd);
+    return packages.filter(
+        p => p.get('main') || p.get('exports') || p.get('bin') || p.get('module') || p.get('types'),
+    );
 }

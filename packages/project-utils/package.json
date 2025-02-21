@@ -1,10 +1,6 @@
 {
     "name": "@nzyme/project-utils",
     "version": "0.5.0",
-    "type": "module",
-    "main": "./dist/index.js",
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
     "sideEffects": false,
     "license": "MIT",
     "repository": {
@@ -12,15 +8,23 @@
         "url": "https://github.com/kedrzu/nzyme.git"
     },
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "type": "module",
     "publishConfig": {
         "access": "public"
     },
     "files": [
         "dist"
     ],
+    "exports": {
+        ".": {
+            "import": "./dist/esm/index.js",
+            "types": "./dist/esm/index.d.ts"
+        }
+    },
     "scripts": {
+        "build:esm": "tsc --build ./tsconfig.esm.json",
         "eslint": "eslint . --fix --cache",
-        "build": "tsc --build"
+        "smoke:mjs": "node tests/smoke.test.mjs"
     },
     "dependencies": {
         "@lerna/project": "^6.4.1",
@@ -29,11 +33,13 @@
         "chalk": "^5.4.1",
         "consola": "^3.4.0",
         "dotenv": "^16.4.7",
-        "execa": "^9.5.2"
+        "execa": "^9.5.2",
+        "tslib": "^2.8.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.5.0",
         "@nzyme/tsconfig": "^0.5.0",
-        "@types/node": "^22.10.7"
+        "@types/node": "^22.13.4",
+        "typescript": "^5.7.3"
     }
 }

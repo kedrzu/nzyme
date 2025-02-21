@@ -7,6 +7,7 @@
         "url": "https://github.com/kedrzu/nzyme.git"
     },
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "type": "module",
     "publishConfig": {
         "access": "public"
     },
@@ -14,11 +15,14 @@
         "dist"
     ],
     "sideEffects": false,
-    "main": "./base.json",
     "dependencies": {
-        "@types/node": "^22.10.7",
+        "@types/node": "^22.13.4",
+        "tslib": "^2.8.1",
         "typescript-plugin-css-modules": "^5.1.0",
         "typescript-vue-plugin": "^1.8.27",
         "vite": "^6.0.7"
+    },
+    "devDependencies": {
+        "typescript": "^5.7.3"
     }
 }

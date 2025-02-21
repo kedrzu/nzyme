@@ -35,10 +35,10 @@ jobs:
           node-version: latest
 
       - run: yarn install
-        env:
-          YARN_ENABLE_IMMUTABLE_INSTALLS: false
-      - run: yarn turbo run build
+      - run: yarn setup
+      - run: yarn build
       - run: yarn test
+      - run: yarn smoke
 
       - run: yarn release
         if: ${{ inputs.dry_run != true }}
@@ -51,3 +51,14 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/checkout@v4
+        if: ${{ inputs.dry_run != true }}
+        with:
+          ref: main
+
+      - name: Merge release to main
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          git merge --no-ff release -m "chore: auto-merge release -> main"
+          git push

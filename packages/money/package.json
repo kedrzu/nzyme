@@ -1,7 +1,7 @@
 {
     "name": "@nzyme/money",
     "private": true,
-    "version": "0.5.0",
+    "version": "0.6.0",
     "main": "./dist/cjs/index.cjs",
     "types": "./dist/cjs/index.d.ts",
     "exports": {
@@ -38,13 +38,13 @@
         "smoke:cjs": "node tests/smoke.test.cjs"
     },
     "dependencies": {
-        "@nzyme/utils": "^0.5.0",
+        "@nzyme/utils": "^0.6.0",
         "tslib": "^2.8.1"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.5.0",
-        "@nzyme/tsconfig": "^0.5.0",
-        "@nzyme/vitest": "^0.5.0",
+        "@nzyme/eslint": "^0.6.0",
+        "@nzyme/tsconfig": "^0.6.0",
+        "@nzyme/vitest": "^0.6.0",
         "@types/node": "^22.13.4",
         "typescript": "^5.7.3"
     }

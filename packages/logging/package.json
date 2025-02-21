@@ -1,7 +1,7 @@
 {
     "name": "@nzyme/logging",
     "private": true,
-    "version": "0.5.0",
+    "version": "0.6.0",
     "sideEffects": false,
     "license": "MIT",
     "repository": {
@@ -28,14 +28,14 @@
         "smoke:mjs": "node tests/smoke.test.mjs"
     },
     "dependencies": {
-        "@nzyme/ioc": "^0.5.0",
+        "@nzyme/ioc": "^0.6.0",
         "chalk": "^5.4.1",
         "consola": "^3.4.0",
         "tslib": "^2.8.1"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.5.0",
-        "@nzyme/tsconfig": "^0.5.0",
+        "@nzyme/eslint": "^0.6.0",
+        "@nzyme/tsconfig": "^0.6.0",
         "@types/node": "^22.13.4",
         "typescript": "^5.7.3"
     }

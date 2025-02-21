@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/vue-utils",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "license": "MIT",
     "repository": {
         "type": "git",
@@ -37,15 +37,15 @@
         "smoke:cjs": "node tests/smoke.test.cjs"
     },
     "dependencies": {
-        "@nzyme/dom-utils": "^0.5.0",
-        "@nzyme/types": "^0.5.0",
-        "@nzyme/utils": "^0.5.0",
+        "@nzyme/dom-utils": "^0.6.0",
+        "@nzyme/types": "^0.6.0",
+        "@nzyme/utils": "^0.6.0",
         "tslib": "^2.8.1",
         "vue": "^3.5.13"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.5.0",
-        "@nzyme/tsconfig": "^0.5.0",
+        "@nzyme/eslint": "^0.6.0",
+        "@nzyme/tsconfig": "^0.6.0",
         "typescript": "^5.7.3"
     }
 }

@@ -1,3 +1,13 @@
+## 0.6.0 (2025-02-21)
+
+### 🚀 Features
+
+- cjs support for most of packages ([72b525c](https://github.com/kedrzu/nzyme/commit/72b525c))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.5.0 (2025-01-22)
 
 ### 🚀 Features

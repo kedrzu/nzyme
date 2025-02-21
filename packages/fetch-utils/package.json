@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/fetch-utils",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "sideEffects": false,
     "license": "MIT",
     "repository": {
@@ -37,15 +37,15 @@
         "smoke:cjs": "node tests/smoke.test.cjs"
     },
     "dependencies": {
-        "@nzyme/ioc": "^0.5.0",
-        "@nzyme/types": "^0.5.0",
-        "@nzyme/xml-utils": "^0.5.0",
+        "@nzyme/ioc": "^0.6.0",
+        "@nzyme/types": "^0.6.0",
+        "@nzyme/xml-utils": "^0.6.0",
         "tslib": "^2.8.1",
         "ufo": "^1.5.4"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.5.0",
-        "@nzyme/tsconfig": "^0.5.0",
+        "@nzyme/eslint": "^0.6.0",
+        "@nzyme/tsconfig": "^0.6.0",
         "@types/node": "^22.13.4",
         "typescript": "^5.7.3"
     }

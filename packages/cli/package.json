@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/cli",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "license": "MIT",
     "repository": {
         "type": "git",
@@ -26,8 +26,8 @@
     "dependencies": {
         "@lerna/package": "^6.4.1",
         "@lerna/project": "^6.4.1",
-        "@nzyme/node-utils": "^0.5.0",
-        "@nzyme/utils": "^0.5.0",
+        "@nzyme/node-utils": "^0.6.0",
+        "@nzyme/utils": "^0.6.0",
         "@oclif/core": "^4.2.7",
         "@oclif/plugin-help": "^6.2.25",
         "@oclif/plugin-version": "^2.2.24",
@@ -46,8 +46,8 @@
         "tslib": "^2.8.1"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.5.0",
-        "@nzyme/tsconfig": "^0.5.0",
+        "@nzyme/eslint": "^0.6.0",
+        "@nzyme/tsconfig": "^0.6.0",
         "@types/lerna__package": "^5.1.3",
         "@types/lerna__project": "^5.1.2",
         "@types/lodash.merge": "^4.6.9",

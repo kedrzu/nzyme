@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/vitest",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "license": "MIT",
     "repository": {
         "type": "git",
@@ -35,8 +35,8 @@
         "vitest": "^3.0.6"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.5.0",
-        "@nzyme/tsconfig": "^0.5.0",
+        "@nzyme/eslint": "^0.6.0",
+        "@nzyme/tsconfig": "^0.6.0",
         "typescript": "^5.7.3"
     }
 }

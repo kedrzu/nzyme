@@ -1,5 +1,5 @@
 {
-    "extends": ["@nzyme/tsconfig/tsconfig.cjs.json", "./tsconfig.base.json"],
+    "extends": ["@nzyme/tsconfig/cjs.json", "./tsconfig.base.json"],
     "compilerOptions": {
         "outDir": "./dist/cjs",
         "tsBuildInfoFile": "./.tsbuildinfo.cjs"

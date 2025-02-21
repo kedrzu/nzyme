@@ -1,5 +1,5 @@
 {
-    "extends": "@nzyme/tsconfig/tsconfig.vue.json",
+    "extends": "@nzyme/tsconfig/vue.json",
     "compilerOptions": {
         "outDir": "./dist",
         "tsBuildInfoFile": "./.tsbuildinfo",

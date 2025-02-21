@@ -1,3 +1,13 @@
+## 0.6.1 (2025-02-21)
+
+### 🩹 Fixes
+
+- **tsconfig:** fixed dist files ([0f2351a](https://github.com/kedrzu/nzyme/commit/0f2351a))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.6.0 (2025-02-21)
 
 ### 🚀 Features

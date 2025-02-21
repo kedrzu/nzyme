@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/dom-utils",
-    "version": "0.6.0",
+    "version": "0.6.1",
     "sideEffects": false,
     "license": "MIT",
     "repository": {
@@ -37,14 +37,14 @@
         "smoke:cjs": "node tests/smoke.test.cjs"
     },
     "dependencies": {
-        "@nzyme/crypto-utils": "0.6.0",
-        "@nzyme/utils": "^0.6.0",
+        "@nzyme/crypto-utils": "0.6.1",
+        "@nzyme/utils": "^0.6.1",
         "lodash.debounce": "^4.0.8",
         "tslib": "^2.8.1"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.6.0",
-        "@nzyme/tsconfig": "^0.6.0",
+        "@nzyme/eslint": "^0.6.1",
+        "@nzyme/tsconfig": "^0.6.1",
         "@types/lodash.debounce": "^4.0.9",
         "typescript": "^5.7.3"
     }

@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/zchema",
-    "version": "0.6.0",
+    "version": "0.6.1",
     "license": "MIT",
     "repository": {
         "type": "git",
@@ -37,15 +37,15 @@
         "build:cjs": "tsc --build ./tsconfig.cjs.json"
     },
     "dependencies": {
-        "@nzyme/types": "^0.6.0",
-        "@nzyme/utils": "^0.6.0",
-        "@nzyme/validation": "^0.6.0",
+        "@nzyme/types": "^0.6.1",
+        "@nzyme/utils": "^0.6.1",
+        "@nzyme/validation": "^0.6.1",
         "@types/json-schema": "^7.0.15",
         "tslib": "^2.8.1"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.6.0",
-        "@nzyme/tsconfig": "^0.6.0",
+        "@nzyme/eslint": "^0.6.1",
+        "@nzyme/tsconfig": "^0.6.1",
         "@types/lodash.merge": "^4.6.9",
         "typescript": "^5.7.3",
         "vitest": "^3.0.6"

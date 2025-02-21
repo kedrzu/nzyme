@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/ioc",
-    "version": "0.6.0",
+    "version": "0.6.1",
     "main": "./dist/cjs/index.cjs",
     "types": "./dist/cjs/index.d.ts",
     "exports": {
@@ -37,14 +37,14 @@
         "build:cjs": "tsc --build ./tsconfig.cjs.json"
     },
     "dependencies": {
-        "@nzyme/types": "^0.6.0",
-        "@nzyme/utils": "^0.6.0",
+        "@nzyme/types": "^0.6.1",
+        "@nzyme/utils": "^0.6.1",
         "tslib": "^2.8.1"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.6.0",
-        "@nzyme/tsconfig": "^0.6.0",
-        "@nzyme/vitest": "^0.6.0",
+        "@nzyme/eslint": "^0.6.1",
+        "@nzyme/tsconfig": "^0.6.1",
+        "@nzyme/vitest": "^0.6.1",
         "typescript": "^5.7.3",
         "vitest": "^3.0.6"
     }

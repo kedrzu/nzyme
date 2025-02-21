@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/esm",
-    "version": "0.6.0",
+    "version": "0.6.1",
     "sideEffects": false,
     "license": "MIT",
     "repository": {
@@ -27,8 +27,8 @@
         "smoke:mjs": "node tests/smoke.test.mjs"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.6.0",
-        "@nzyme/tsconfig": "^0.6.0",
+        "@nzyme/eslint": "^0.6.1",
+        "@nzyme/tsconfig": "^0.6.1",
         "@types/node": "^22.13.4",
         "typescript": "^5.7.3"
     },

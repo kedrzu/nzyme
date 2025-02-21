@@ -12,7 +12,9 @@
         "access": "public"
     },
     "files": [
-        "dist"
+        "esm.json",
+        "cjs.json",
+        "vue.json"
     ],
     "sideEffects": false,
     "dependencies": {

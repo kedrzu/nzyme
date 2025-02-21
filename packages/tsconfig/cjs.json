@@ -1,5 +1,6 @@
 {
-    "extends": "./tsconfig.esm.json",
+    "$schema": "https://json.schemastore.org/tsconfig",
+    "extends": "./esm.json",
     "compilerOptions": {
         "module": "CommonJS",
         "moduleResolution": "Node"

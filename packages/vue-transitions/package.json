@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/vue-transitions",
-    "version": "0.6.1",
+    "version": "0.6.2",
     "main": "./src/index.ts",
     "types": "./src/index.ts",
     "exports": {
@@ -31,17 +31,17 @@
         "eslint": "eslint . --fix --cache"
     },
     "dependencies": {
-        "@nzyme/dom-utils": "^0.6.1",
-        "@nzyme/types": "^0.6.1",
-        "@nzyme/utils": "^0.6.1",
-        "@nzyme/vue": "^0.6.1",
-        "@nzyme/vue-utils": "^0.6.1",
+        "@nzyme/dom-utils": "^0.6.2",
+        "@nzyme/types": "^0.6.2",
+        "@nzyme/utils": "^0.6.2",
+        "@nzyme/vue": "^0.6.2",
+        "@nzyme/vue-utils": "^0.6.2",
         "tslib": "^2.8.1",
         "vue": "^3.5.13"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.6.1",
-        "@nzyme/tsconfig": "^0.6.1",
+        "@nzyme/eslint": "^0.6.2",
+        "@nzyme/tsconfig": "^0.6.2",
         "typescript": "^5.7.3"
     }
 }

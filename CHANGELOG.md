@@ -1,3 +1,13 @@
+## 0.6.2 (2025-02-24)
+
+### 🩹 Fixes
+
+- cjs build improvements ([87bf334](https://github.com/kedrzu/nzyme/commit/87bf334))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.6.1 (2025-02-21)
 
 ### 🩹 Fixes

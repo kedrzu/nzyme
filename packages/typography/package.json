@@ -31,9 +31,9 @@
     ],
     "private": true,
     "scripts": {
+        "eslint": "eslint . --fix --cache",
         "build:esm": "tsc --build ./tsconfig.esm.json",
         "build:cjs": "tsc --build ./tsconfig.cjs.json",
-        "eslint": "eslint . --fix --cache",
         "smoke:mjs": "node tests/smoke.test.mjs",
         "smoke:cjs": "node tests/smoke.test.cjs"
     },

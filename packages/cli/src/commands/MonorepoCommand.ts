@@ -29,110 +29,125 @@ export class MonorepoCommand extends Command {
 async function processProject() {
     const cwd = process.cwd();
     const packages = await loadPackages(cwd);
+    const references = await getTsReferences(cwd, packages);
 
     const esmTsconfigPath = path.join(cwd, './tsconfig.esm.dev.json');
-    const esmReferences = await getTsReferences({
-        path: esmTsconfigPath,
-        dependencies: packages,
-        fileName: 'tsconfig.esm.json',
+
+    await saveTsReferences(esmTsconfigPath, {
+        extends: './tsconfig.json',
+        references: references.esm,
     });
-    await saveTsReferences(esmTsconfigPath, esmReferences, 'tsconfig.json');
 
     const cjsTsconfigPath = path.join(cwd, './tsconfig.cjs.dev.json');
-    const cjsReferences = await getTsReferences({
-        path: cjsTsconfigPath,
-        dependencies: packages,
-        fileName: 'tsconfig.cjs.json',
+
+    await saveTsReferences(cjsTsconfigPath, {
+        extends: './tsconfig.json',
+        references: references.cjs,
     });
 
-    await saveTsReferences(cjsTsconfigPath, cjsReferences, 'tsconfig.json');
-
     for (const pkg of packages) {
-        await processPackage({
-            pkg,
-            packages,
-            fileName: 'tsconfig.esm.json',
-        });
-
-        await processPackage({
-            pkg,
-            packages,
-            fileName: 'tsconfig.cjs.json',
-        });
+        await processPackage(pkg, packages);
     }
 }
 
-async function processPackage(params: { pkg: Package; packages: Package[]; fileName: string }) {
-    const tsconfig = await loadTsConfigForPackage(params.pkg, params.fileName);
-    if (!tsconfig) {
-        return;
-    }
-
+async function processPackage(pkg: Package, packages: Package[]) {
     const dependencyNames = [
-        ...Object.keys(params.pkg.dependencies || {}),
-        ...Object.keys(params.pkg.devDependencies || {}),
+        ...Object.keys(pkg.dependencies || {}),
+        ...Object.keys(pkg.devDependencies || {}),
     ];
 
     const dependencies = dependencyNames
-        .map(d => params.packages.find(p => p.name === d)!)
+        .map(d => packages.find(p => p.name === d)!)
         .filter(Boolean);
 
-    const references = await getTsReferences({
-        path: tsconfig.path,
-        dependencies: dependencies,
-        fileName: params.fileName,
-    });
+    const references = await getTsReferences(pkg.location, dependencies);
+    const tsconfig = await loadTsConfigForPackage(pkg);
 
-    const configPath = path.join(params.pkg.location, getFileDevName(params.fileName));
-    await saveTsReferences(configPath, references, params.fileName);
-}
+    if (tsconfig.esm && isMonorepoPackage(pkg, tsconfig.esm)) {
+        const filePath = getFileDevName(tsconfig.esm.path);
+        const extendsPath = getRelativePath(path.dirname(filePath), tsconfig.esm.path);
 
-async function getTsReferences(params: {
-    path: string;
-    dependencies: Package[];
-    fileName: string;
-}) {
-    const references: { path: string }[] = [];
-
-    for (const dep of params.dependencies) {
-        const depTsConfig = await loadTsConfigForPackage(dep, params.fileName);
-
-        const disable =
-            !depTsConfig ||
-            !depTsConfig.resolved.compilerOptions ||
-            !depTsConfig.resolved.compilerOptions.composite ||
-            depTsConfig.resolved.compilerOptions.noEmit ||
-            !(dep.get('main') || dep.get('exports') || dep.get('bin'));
-
-        if (disable) {
-            continue;
-        }
-
-        let relativePath = path.relative(path.dirname(params.path), depTsConfig.path);
-        if (path.sep === '\\') {
-            relativePath = relativePath.replace(/\\/g, '/');
-        }
-
-        if (!relativePath.startsWith('./') && !relativePath.startsWith('../')) {
-            relativePath = './' + relativePath;
-        }
-
-        if (relativePath.endsWith(params.fileName)) {
-            relativePath =
-                relativePath.slice(0, -params.fileName.length) + getFileDevName(params.fileName);
-        }
-
-        references.push({
-            path: relativePath,
+        await saveTsReferences(filePath, {
+            extends: extendsPath,
+            references: references.esm,
         });
     }
 
-    return references;
+    if (tsconfig.cjs && isMonorepoPackage(pkg, tsconfig.cjs)) {
+        const filePath = getFileDevName(tsconfig.cjs.path);
+        const extendsPath = getRelativePath(path.dirname(filePath), tsconfig.cjs.path);
+
+        await saveTsReferences(filePath, {
+            extends: extendsPath,
+            references: references.cjs,
+        });
+    }
 }
 
-async function loadTsConfigForPackage(pkg: Package, fileName: string) {
-    const filePath = path.join(pkg.location, fileName);
-    return await loadTsConfig(filePath);
+async function getTsReferences(cwd: string, dependencies: Package[]) {
+    const esmReferences: { path: string }[] = [];
+    const cjsReferences: { path: string }[] = [];
+
+    for (const dep of dependencies) {
+        const depTsConfig = await loadTsConfigForPackage(dep);
+
+        if (isMonorepoPackage(dep, depTsConfig.esm)) {
+            esmReferences.push(getTsReference(cwd, depTsConfig.esm));
+        }
+
+        if (isMonorepoPackage(dep, depTsConfig.cjs)) {
+            cjsReferences.push(getTsReference(cwd, depTsConfig.cjs));
+        }
+    }
+
+    return {
+        esm: esmReferences,
+        cjs: cjsReferences,
+    };
+}
+
+async function loadTsConfigForPackage(pkg: Package) {
+    const cjsConfig = await loadTsConfig(path.join(pkg.location, 'tsconfig.cjs.json'));
+    const esmConfig =
+        (await loadTsConfig(path.join(pkg.location, 'tsconfig.esm.json'))) ||
+        (await loadTsConfig(path.join(pkg.location, 'tsconfig.json')));
+
+    return {
+        cjs: cjsConfig,
+        esm: esmConfig,
+    };
+}
+
+function isMonorepoPackage(pkg: Package, tsconfig: TsConfig | null): tsconfig is TsConfig {
+    return (
+        !!tsconfig &&
+        !!tsconfig.resolved.compilerOptions &&
+        !!tsconfig.resolved.compilerOptions.composite &&
+        !tsconfig.resolved.compilerOptions.noEmit &&
+        (pkg.get('main') || pkg.get('exports') || pkg.get('bin'))
+    );
+}
+
+function getTsReference(fromPath: string, tsconfig: TsConfig) {
+    const relativePath = getRelativePath(fromPath, tsconfig.path);
+    const devPath = getFileDevName(relativePath);
+
+    return {
+        path: devPath,
+    };
+}
+
+function getRelativePath(fromPath: string, toPath: string) {
+    let relativePath = path.relative(fromPath, toPath);
+    if (path.sep === '\\') {
+        relativePath = relativePath.replace(/\\/g, '/');
+    }
+
+    if (!relativePath.startsWith('./') && !relativePath.startsWith('../')) {
+        relativePath = './' + relativePath;
+    }
+
+    return relativePath;
 }
 
 async function loadTsConfig(filePath: string) {
@@ -212,25 +227,19 @@ function resolveTsConfigPath(cwd: string, filePath: string) {
 }
 
 async function saveTsReferences(
-    configPath: string,
-    references: { path: string }[],
-    fileName: string,
+    filePath: string,
+    config: { extends: string; references: { path: string }[] },
 ) {
-    const config = {
-        extends: `./${fileName}`,
-        references,
-    };
+    const prettierConfig = await prettier.resolveConfig(filePath);
 
     let configJson = json.stringify(config, undefined, 2);
-
-    const prettierConfig = await prettier.resolveConfig(configPath);
     configJson = await prettier.format(configJson, {
         ...prettierConfig,
         parser: 'json',
     });
 
-    consola.success(configPath);
-    await fs.writeFile(configPath, configJson, { encoding: 'utf8' });
+    consola.success(filePath);
+    await fs.writeFile(filePath, configJson, { encoding: 'utf8' });
 }
 
 function getFileDevName(fileName: string) {

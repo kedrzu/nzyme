@@ -24,8 +24,7 @@ yarn-error.log
 
 .turbo
 .env
-tsconfig.cjs.dev.json
-tsconfig.esm.dev.json
+*.dev.json
 
 .nx/cache
 .nx/workspace-data

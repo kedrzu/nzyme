@@ -1,7 +1,6 @@
 {
     "extends": ["@nzyme/tsconfig/cjs.json", "./tsconfig.base.json"],
     "compilerOptions": {
-        "outDir": "./dist/cjs",
-        "tsBuildInfoFile": "./.tsbuildinfo.cjs"
+        "outDir": "./dist/cjs"
     }
 }

@@ -12,9 +12,9 @@
     "scripts": {
         "setup": "turbo run build:esm --filter=@nzyme/cli && yarn monorepo",
         "monorepo": "nzyme monorepo",
-        "clean": "del \"**/tsconfig.*.dev.json\" \"**/dist\" \"**/.turbo\" \"**/.tsbuildinfo\" \"**/*.tsbuildinfo\" \"!**/node_modules/**\"",
-        "build:esm": "tsc --build tsconfig.esm.dev.json",
-        "build:cjs": "tsc --build tsconfig.cjs.dev.json && yarn nzyme rename-cjs",
+        "clean": "del \"**/dist\" \"**/.turbo\" \"**/.nzyme\" \"**/.tsbuildinfo\" \"**/*.tsbuildinfo\" \"!**/node_modules/**\"",
+        "build:esm": "tsc --build ./.nzyme/tsconfig.esm.json",
+        "build:cjs": "tsc --build ./.nzyme/tsconfig.cjs.json && yarn nzyme rename-cjs",
         "build": "yarn build:esm && yarn build:cjs",
         "build:turbo": "turbo run build:esm build:cjs",
         "watch": "yarn build:esm --watch",

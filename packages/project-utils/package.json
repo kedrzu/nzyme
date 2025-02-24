@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/project-utils",
-    "version": "0.6.1",
+    "version": "0.6.2",
     "sideEffects": false,
     "license": "MIT",
     "repository": {
@@ -28,8 +28,8 @@
     },
     "dependencies": {
         "@lerna/project": "^6.4.1",
-        "@nzyme/types": "^0.6.1",
-        "@nzyme/utils": "^0.6.1",
+        "@nzyme/types": "^0.6.2",
+        "@nzyme/utils": "^0.6.2",
         "chalk": "^5.4.1",
         "consola": "^3.4.0",
         "dotenv": "^16.4.7",
@@ -37,8 +37,8 @@
         "tslib": "^2.8.1"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.6.1",
-        "@nzyme/tsconfig": "^0.6.1",
+        "@nzyme/eslint": "^0.6.2",
+        "@nzyme/tsconfig": "^0.6.2",
         "@types/node": "^22.13.4",
         "typescript": "^5.7.3"
     }

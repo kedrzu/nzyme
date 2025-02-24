@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/crypto-utils",
-    "version": "0.6.1",
+    "version": "0.6.2",
     "sideEffects": false,
     "license": "MIT",
     "repository": {
@@ -47,15 +47,15 @@
         "smoke:cjs": "node tests/smoke.test.cjs"
     },
     "dependencies": {
-        "@nzyme/types": "^0.6.1",
-        "@nzyme/utils": "^0.6.1",
+        "@nzyme/types": "^0.6.2",
+        "@nzyme/utils": "^0.6.2",
         "spark-md5": "^3.0.2",
         "tslib": "^2.8.1"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.6.1",
-        "@nzyme/tsconfig": "^0.6.1",
-        "@nzyme/vitest": "^0.6.1",
+        "@nzyme/eslint": "^0.6.2",
+        "@nzyme/tsconfig": "^0.6.2",
+        "@nzyme/vitest": "^0.6.2",
         "@types/node": "^22.13.4",
         "@types/spark-md5": "^3.0.5",
         "typescript": "^5.7.3"

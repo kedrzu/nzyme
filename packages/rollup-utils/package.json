@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/rollup-utils",
-    "version": "0.6.1",
+    "version": "0.6.2",
     "exports": {
         ".": {
             "import": {
@@ -33,9 +33,9 @@
         "smoke:mjs": "node tests/smoke.test.mjs"
     },
     "dependencies": {
-        "@nzyme/esm": "^0.6.1",
-        "@nzyme/logging": "^0.6.1",
-        "@nzyme/utils": "^0.6.1",
+        "@nzyme/esm": "^0.6.2",
+        "@nzyme/logging": "^0.6.2",
+        "@nzyme/utils": "^0.6.2",
         "@rollup/plugin-commonjs": "^28.0.2",
         "@rollup/plugin-json": "^6.1.0",
         "@rollup/plugin-node-resolve": "^16.0.0",
@@ -53,8 +53,8 @@
         "type-fest": "^4.35.0"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.6.1",
-        "@nzyme/tsconfig": "^0.6.1",
+        "@nzyme/eslint": "^0.6.2",
+        "@nzyme/tsconfig": "^0.6.2",
         "@types/connect": "^3.4.38",
         "@types/express": "^5.0.0",
         "@types/koa": "^2.15.0",

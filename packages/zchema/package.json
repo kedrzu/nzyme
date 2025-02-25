@@ -48,6 +48,6 @@
         "@nzyme/tsconfig": "^0.6.2",
         "@types/lodash.merge": "^4.6.9",
         "typescript": "^5.7.3",
-        "vitest": "^3.0.6"
+        "vitest": "^3.0.7"
     }
 }

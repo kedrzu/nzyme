@@ -46,6 +46,6 @@
         "@nzyme/tsconfig": "^0.6.2",
         "@nzyme/vitest": "^0.6.2",
         "typescript": "^5.7.3",
-        "vitest": "^3.0.6"
+        "vitest": "^3.0.7"
     }
 }

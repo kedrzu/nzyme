@@ -7,7 +7,6 @@
         "url": "https://github.com/kedrzu/nzyme.git"
     },
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
-    "type": "module",
     "publishConfig": {
         "access": "public"
     },

@@ -45,7 +45,7 @@
         "@nzyme/eslint": "^0.6.2",
         "@nzyme/tsconfig": "^0.6.2",
         "@types/lodash.debounce": "^4.0.9",
-        "sass": "1.83.4",
+        "sass": "1.85.1",
         "typescript": "^5.7.3"
     }
 }

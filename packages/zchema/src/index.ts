@@ -12,6 +12,7 @@ export * from './schemas/integer.js';
 export * from './schemas/union.js';
 export * from './schemas/tuple.js';
 export * from './schemas/record.js';
+export * from './schemas/lazy.js';
 export type * from './schemas/enum.js';
 export { enumSchema as enum } from './schemas/enum.js';
 export type * from './schemas/const.js';

@@ -9,3 +9,5 @@ export * from './Caller.js';
 
 export * from './helpers/envVariable.js';
 export * from './helpers/constValue.js';
+
+export * from './utils/resolveDeps.js';

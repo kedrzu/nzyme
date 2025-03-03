@@ -2,7 +2,8 @@ import { noop, createMemo } from '@nzyme/utils';
 
 import type { Container } from './Container.js';
 import type { Injectable } from './Injectable.js';
-import type { Service, ServiceDependencies, ServiceOptions } from './Service.js';
+import type { Service, ServiceOptions } from './Service.js';
+import { resolveDeps } from './utils/resolveDeps.js';
 
 export type ServiceResolutionParams = {
     service: Service;
@@ -116,14 +117,4 @@ export function lazyStrategy(params: ServiceResolutionParams) {
     });
 
     return proxy;
-}
-
-export function resolveDeps(deps: ServiceDependencies, container: Container, caller?: Injectable) {
-    const resolved: Record<string, unknown> = {};
-
-    for (const [key, value] of Object.entries(deps)) {
-        resolved[key] = value.resolve(container, caller);
-    }
-
-    return resolved;
 }

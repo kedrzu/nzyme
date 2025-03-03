@@ -22,7 +22,7 @@ export type SchemaOptionsSimlify<O extends SchemaOptions<any>> = Simplify<{
 export interface SchemaProto<V = unknown, U = V> {
     coerce: (value: unknown) => V | undefined;
     serialize: (value: U) => unknown;
-    check: (value: unknown) => value is V;
+    check: (value: unknown) => boolean;
     default: () => V;
     visit?: (value: U, visitor: SchemaVisitor) => void;
 }

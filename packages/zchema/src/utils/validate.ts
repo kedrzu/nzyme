@@ -8,6 +8,7 @@ import {
 } from '@nzyme/validation';
 
 import type { SchemaAny, Infer } from '../Schema.js';
+import { lazyResolve } from '../schemas/lazy.js';
 
 export function validate<S extends SchemaAny>(
     schema: S,
@@ -34,6 +35,8 @@ function validateInner<S extends SchemaAny>(
     value: Infer<S>,
     ctx: ValidationContext,
 ): ValidationResult {
+    lazyResolve(schema);
+
     const proto = schema.proto;
 
     if (value === null) {

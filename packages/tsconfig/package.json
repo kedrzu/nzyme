@@ -18,11 +18,11 @@
     ],
     "sideEffects": false,
     "dependencies": {
-        "@types/node": "^22.13.4",
+        "@types/node": "^22.13.5",
         "tslib": "^2.8.1",
         "typescript-plugin-css-modules": "^5.1.0",
         "typescript-vue-plugin": "^1.8.27",
-        "vite": "^6.0.7"
+        "vite": "^6.2.0"
     },
     "devDependencies": {
         "typescript": "^5.7.3"

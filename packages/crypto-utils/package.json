@@ -56,7 +56,7 @@
         "@nzyme/eslint": "^0.6.2",
         "@nzyme/tsconfig": "^0.6.2",
         "@nzyme/vitest": "^0.6.2",
-        "@types/node": "^22.13.4",
+        "@types/node": "^22.13.5",
         "@types/spark-md5": "^3.0.5",
         "typescript": "^5.7.3"
     },

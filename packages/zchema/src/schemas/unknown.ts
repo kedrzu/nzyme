@@ -30,5 +30,15 @@ type UnknownSchemaBase = {
 
 export const unknown = defineSchema<UnknownSchemaBase>({
     name: 'unknown',
+    options: (options?: SchemaOptions<unknown>) => {
+        const nullable = options?.nullable ?? true;
+        const optional = options?.optional ?? true;
+
+        return {
+            ...options,
+            nullable,
+            optional,
+        };
+    },
     proto: () => proto,
 });

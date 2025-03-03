@@ -77,8 +77,8 @@ test('basic object', () => {
                 proto: expect.any(Object) as object,
                 type: s.array,
                 of: {
-                    nullable: false,
-                    optional: false,
+                    nullable: true,
+                    optional: true,
                     validators: [],
                     proto: expect.any(Object) as object,
                     type: s.unknown,

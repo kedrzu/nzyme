@@ -24,6 +24,8 @@ yarn-error.log
 .env
 .nzyme
 
-
 .nx/cache
 .nx/workspace-data
+
+# not needed for lib and messes up monorepos
+yarn.lock

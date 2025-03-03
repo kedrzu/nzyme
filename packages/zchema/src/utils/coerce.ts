@@ -1,8 +1,11 @@
 import type { Schema, SchemaProto, Infer, InferNonNull } from '../Schema.js';
+import { lazyResolve } from '../schemas/lazy.js';
 
 export function coerce<S extends Schema>(schema: S, value: Partial<Infer<S>>): Infer<S>;
 export function coerce<S extends Schema>(schema: S, value?: unknown): Infer<S>;
 export function coerce<S extends Schema>(schema: S, value?: unknown): Infer<S> {
+    lazyResolve(schema);
+
     const proto = schema.proto as SchemaProto<InferNonNull<S>>;
 
     if (value === null) {

@@ -1,3 +1,19 @@
+## 0.7.0 (2025-03-03)
+
+### 🚀 Features
+
+- **ioc:** exposed resolveDeps function ([c3fb1a6](https://github.com/kedrzu/nzyme/commit/c3fb1a6))
+- **zchema:** add record schema ([4253434](https://github.com/kedrzu/nzyme/commit/4253434))
+- **zchema:** lazy schema ([8a97d18](https://github.com/kedrzu/nzyme/commit/8a97d18))
+
+### 🩹 Fixes
+
+- **zchema:** lazy resolve schemas before using ([3d98f09](https://github.com/kedrzu/nzyme/commit/3d98f09))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.6.2 (2025-02-24)
 
 ### 🩹 Fixes

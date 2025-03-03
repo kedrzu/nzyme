@@ -53,8 +53,7 @@ export function packageJsonPlugin(options: PackageJsonPluginOptions = {}): Plugi
     function* getPackagesFromBundle(bundle: OutputBundle) {
         for (const chunkName in bundle) {
             const chunk = bundle[chunkName];
-
-            if (chunk.type !== 'chunk') {
+            if (!chunk || chunk.type !== 'chunk') {
                 continue;
             }
 

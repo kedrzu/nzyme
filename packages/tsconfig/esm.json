@@ -17,6 +17,7 @@
         "noUnusedParameters": false,
         "noImplicitReturns": false,
         "noImplicitOverride": true,
+        "noUncheckedIndexedAccess": true,
         "experimentalDecorators": true,
         "forceConsistentCasingInFileNames": true,
         "esModuleInterop": true,

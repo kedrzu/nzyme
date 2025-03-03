@@ -14,7 +14,6 @@ export function validateBasicAuth(params: BasicAuthParams) {
     }
 
     const parsed = parseBasicAuth(token);
-
     return (
         stringEqualTimingSafe(parsed.login, params.login) &&
         stringEqualTimingSafe(parsed.password, params.password)

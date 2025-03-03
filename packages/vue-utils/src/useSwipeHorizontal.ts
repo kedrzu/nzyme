@@ -131,7 +131,11 @@ export function useSwipeHorizontal(options: SwipeOptions) {
     function onTouchEnd(event: TouchEvent) {
         removeTouchListeners();
         const touch = event.changedTouches[0];
-        swipeEnd(touch?.clientX ?? position.currentX);
+        if (!touch) {
+            return;
+        }
+
+        swipeEnd(touch.clientX);
     }
 
     function swipeStart(x: number, y: number) {

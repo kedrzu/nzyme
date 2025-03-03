@@ -64,7 +64,7 @@ export const object = defineSchema<ObjectSchemaBase, ObjectSchemaOptions>({
         type ObjectType = Record<string, unknown>;
 
         for (const propKey in options.props) {
-            const propSchema = options.props[propKey];
+            const propSchema = options.props[propKey]!;
             props.push([propKey, propSchema]);
         }
 

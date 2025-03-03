@@ -17,7 +17,7 @@ export default async function Depcheck(options: Options) {
     for (const pkg of packages) {
         if (pkg.dependencies) {
             for (const dep in pkg.dependencies) {
-                const version = pkg.dependencies[dep];
+                const version = pkg.dependencies[dep]!;
                 if (!deps[dep]) {
                     deps[dep] = version;
                     continue;

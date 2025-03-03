@@ -47,10 +47,8 @@ export const enumSchema = defineSchema<EnumSchemaBase, EnumSchemaOptions>({
                 return values[0];
             },
             serialize: identity,
-            check(value): value is Primitive {
-                return valuesSet.has(value as Primitive);
-            },
-            default: () => values[0],
+            check: value => valuesSet.has(value as Primitive),
+            default: () => values[0] as Primitive,
         };
 
         return proto;

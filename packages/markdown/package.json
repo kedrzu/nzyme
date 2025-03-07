@@ -26,6 +26,10 @@
             "require": {
                 "types": "./dist/cjs/index.d.ts",
                 "default": "./dist/cjs/index.cjs"
+            },
+            "default": {
+                "types": "./dist/esm/index.d.ts",
+                "default": "./dist/esm/index.js"
             }
         }
     },
@@ -45,7 +49,7 @@
         "@nzyme/eslint": "^0.7.0",
         "@nzyme/tsconfig": "^0.7.0",
         "@nzyme/vitest": "^0.7.0",
-        "@types/node": "^22.13.5",
+        "@types/node": "^22.13.9",
         "typescript": "^5.8.2"
     }
 }

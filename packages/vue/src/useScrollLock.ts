@@ -19,6 +19,8 @@ let lockCount = 0;
  * Can be used from multiple components.
  */
 export function useScrollLock(options: ScrollLockOptions = {}) {
+    const scrollLockClass = css.scrollLock!;
+
     if (!isBrowser()) {
         return;
     }
@@ -51,7 +53,7 @@ export function useScrollLock(options: ScrollLockOptions = {}) {
         lockLocal = true;
         lockCount++;
 
-        document.body.classList.add(css.scrollLock);
+        document.body.classList.add(scrollLockClass);
         // When we disable body scroll padding is added to body
         // to ensure document content will not jump.
         // However, elements that have fixed position, ignores body paddings.
@@ -68,7 +70,7 @@ export function useScrollLock(options: ScrollLockOptions = {}) {
         lockLocal = false;
         lockCount--;
         if (!lockCount) {
-            document.body.classList.remove(css.scrollLock);
+            document.body.classList.remove(scrollLockClass);
             document.documentElement.style.setProperty('--body-padding-right', null);
         }
     }

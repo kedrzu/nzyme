@@ -1,3 +1,17 @@
+## 0.8.0 (2025-03-12)
+
+### 🚀 Features
+
+- **eslint:** migrated to flat config file format ([3c32b34](https://github.com/kedrzu/nzyme/commit/3c32b34))
+
+### 🩹 Fixes
+
+- update dependencies ([b4b9ed9](https://github.com/kedrzu/nzyme/commit/b4b9ed9))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.7.0 (2025-03-03)
 
 ### 🚀 Features

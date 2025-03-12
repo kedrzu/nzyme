@@ -59,7 +59,7 @@ export const tuple = defineSchema<TupleSchemaBase, TupleSchemaOptions>({
 
                 for (let i = 0; i < of.length; i++) {
                     const item = (value as unknown[])[i];
-                    result.push(coerce(of[i], item));
+                    result.push(coerce(of[i]!, item));
                 }
 
                 return result;
@@ -68,7 +68,7 @@ export const tuple = defineSchema<TupleSchemaBase, TupleSchemaOptions>({
                 const result: unknown[] = [];
 
                 for (let i = 0; i < of.length; i++) {
-                    result.push(serialize(of[i], value[i]));
+                    result.push(serialize(of[i]!, value[i]));
                 }
 
                 return result;
@@ -79,7 +79,7 @@ export const tuple = defineSchema<TupleSchemaBase, TupleSchemaOptions>({
             default: () => [],
             visit(value, visitor) {
                 for (let i = 0; i < of.length; i++) {
-                    visitor(of[i], value[i], i);
+                    visitor(of[i]!, value[i], i);
                 }
             },
         };

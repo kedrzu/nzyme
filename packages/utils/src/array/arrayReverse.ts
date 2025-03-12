@@ -4,9 +4,17 @@ export function arrayReverse<T>(array: readonly T[]): Iterable<T> {
     const iterator: Iterator<T> = {
         next() {
             index--;
+
+            if (index < 0) {
+                return {
+                    done: true,
+                    value: undefined,
+                };
+            }
+
             return {
-                done: index < 0,
-                value: array[index],
+                done: false,
+                value: array[index]!,
             };
         },
     };

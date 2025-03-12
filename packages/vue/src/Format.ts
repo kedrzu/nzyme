@@ -30,7 +30,7 @@ export const Format = defineComponent({
 
                 index += match[0].length;
 
-                const slotName = match[1];
+                const slotName = match[1]!;
                 const slot = ctx.slots[slotName];
                 if (slot) {
                     vnodes.push(slot());

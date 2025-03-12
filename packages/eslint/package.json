@@ -10,20 +10,34 @@
     "publishConfig": {
         "access": "public"
     },
+    "type": "module",
     "sideEffects": false,
+    "files": [
+        "dist"
+    ],
+    "exports": {
+        ".": {
+            "import": "./dist/esm/index.js",
+            "types": "./dist/esm/index.d.ts"
+        }
+    },
     "dependencies": {
-        "@typescript-eslint/eslint-plugin": "^8.25.0",
-        "@typescript-eslint/parser": "^8.25.0",
-        "eslint": "^9.21.0",
-        "eslint-config-prettier": "^10.0.1",
+        "@eslint/js": "^9.22.0",
+        "eslint": "^9.22.0",
+        "eslint-config-prettier": "^10.1.1",
         "eslint-plugin-import": "^2.31.0",
-        "eslint-plugin-jsdoc": "^50.6.3",
+        "eslint-plugin-jsdoc": "^50.6.6",
         "eslint-plugin-monorepo": "^0.3.2",
-        "eslint-plugin-vue": "^9.32.0",
+        "eslint-plugin-vue": "^10.0.0",
         "eslint-plugin-workspaces": "^0.10.1",
-        "tslib": "^2.8.1"
+        "globals": "^16.0.0",
+        "tslib": "^2.8.1",
+        "typescript-eslint": "^8.26.1",
+        "vue-eslint-parser": "^10.1.1"
     },
     "devDependencies": {
-        "typescript": "^5.7.3"
+        "@nzyme/tsconfig": " ^0.7.0",
+        "jiti": "^2.4.2",
+        "typescript": "^5.8.2"
     }
 }

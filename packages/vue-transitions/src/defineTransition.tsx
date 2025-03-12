@@ -1,4 +1,3 @@
-import { defineProp } from '@nzyme/vue-utils';
 import {
     Transition,
     TransitionGroup,
@@ -8,11 +7,19 @@ import {
     type ExtractPropTypes,
     computed,
     type ComponentObjectPropsOptions,
+    h,
 } from 'vue';
 
 import type { SomeObject } from '@nzyme/types';
+import { defineProp } from '@nzyme/vue-utils';
 
+/**
+ * Transition props.
+ */
 export type TransitionProps = Omit<TransitionPropsVue, 'name' | `${string}Class` | 'css'> & {
+    /**
+     * Transition duration in milliseconds.
+     */
     duration?: number;
 };
 
@@ -38,10 +45,16 @@ type TransitionDefProps<TProps extends ComponentObjectPropsOptions = SomeObject>
     leaveToClass?: TransitionProp<TProps, string>;
 };
 
+/**
+ * Transition group props.
+ */
 export type TransitionGroupProps = Omit<
     TransitionGroupPropsVue,
     'name' | `${string}Class` | 'css'
 > & {
+    /**
+     * Transition duration in milliseconds.
+     */
     duration?: number;
 };
 
@@ -57,6 +70,9 @@ const TRANSITION_PROPS = {
 };
 
 /*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ */
 export function defineTransition<TProps extends ComponentObjectPropsOptions = SomeObject>(
     def: TransitionDefProps<TProps>,
 ) {

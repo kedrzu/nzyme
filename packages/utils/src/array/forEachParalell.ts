@@ -36,7 +36,7 @@ export function forEachParalell<T>(array: readonly T[], params: ForEachParalellP
                     return;
                 }
 
-                const item = array[index++];
+                const item = array[index++]!;
                 try {
                     const result = await callback(item, index - 1);
                     if (result === false) {
@@ -45,6 +45,7 @@ export function forEachParalell<T>(array: readonly T[], params: ForEachParalellP
                     }
                 } catch (e) {
                     done = true;
+                    // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                     reject(e);
                 }
             }

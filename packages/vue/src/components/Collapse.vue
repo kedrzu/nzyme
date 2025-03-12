@@ -1,12 +1,5 @@
 <script lang="ts" setup>
-import {
-    defineComponent,
-    getCurrentInstance,
-    Transition,
-    withDirectives,
-    vShow,
-    ComponentPublicInstance,
-} from 'vue';
+import { getCurrentInstance, vShow, ComponentPublicInstance } from 'vue';
 
 import { prop } from '../prop';
 
@@ -101,36 +94,46 @@ function forceRepaint(el: Element) {
 </script>
 
 <template>
-    <LazyHydrate v-if="lazyHydrate"
-                 :whenTriggered="props.show">
-        <Transition :enterFromClass="css.enterFrom"
-                    :enterActiveClass="css.enterActive"
-                    :leaveFromClass="css.leaveFrom"
-                    :leaveActiveClass="css.leaveActive"
-                    @beforeEnter="beforeEnter"
-                    @enter="enter"
-                    @afterEnter="afterEnter"
-                    @eave="leave"
-                    @afterLeave="afterLeave"
-                    appear>
-            <div :class="css.collapse"
-                 v-show="props.show">
+    <LazyHydrate
+        v-if="lazyHydrate"
+        :whenTriggered="props.show"
+    >
+        <Transition
+            :enterFromClass="css.enterFrom"
+            :enterActiveClass="css.enterActive"
+            :leaveFromClass="css.leaveFrom"
+            :leaveActiveClass="css.leaveActive"
+            @beforeEnter="beforeEnter"
+            @enter="enter"
+            @afterEnter="afterEnter"
+            @eave="leave"
+            @afterLeave="afterLeave"
+            appear
+        >
+            <div
+                :class="css.collapse"
+                v-show="props.show"
+            >
                 <slot />
             </div>
         </Transition>
     </LazyHydrate>
-    <Transition v-else
-                :enterFromClass="css.enterFrom"
-                :enterActiveClass="css.enterActive"
-                :leaveFromClass="css.leaveFrom"
-                :leaveActiveClass="css.leaveActive"
-                @beforeEnter="beforeEnter"
-                @enter="enter"
-                @afterEnter="afterEnter"
-                @eave="leave"
-                @afterLeave="afterLeave">
-        <div :class="css.collapse"
-             v-show="props.show">
+    <Transition
+        v-else
+        :enterFromClass="css.enterFrom"
+        :enterActiveClass="css.enterActive"
+        :leaveFromClass="css.leaveFrom"
+        :leaveActiveClass="css.leaveActive"
+        @beforeEnter="beforeEnter"
+        @enter="enter"
+        @afterEnter="afterEnter"
+        @eave="leave"
+        @afterLeave="afterLeave"
+    >
+        <div
+            :class="css.collapse"
+            v-show="props.show"
+        >
             <slot />
         </div>
     </Transition>
@@ -138,7 +141,9 @@ function forceRepaint(el: Element) {
 
 <style lang="scss" module="css">
 .collapse {
-    transition: height 0.2s ease-out, opacity 0.2s ease-out 0.1s;
+    transition:
+        height 0.2s ease-out,
+        opacity 0.2s ease-out 0.1s;
     box-sizing: content-box;
 }
 

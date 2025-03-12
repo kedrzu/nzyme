@@ -10,7 +10,7 @@
         "jsx": "react",
         "jsxFactory": "h",
         "jsxFragmentFactory": "h",
-        "types": ["vue", "vite/client", "@types/node"],
+        "types": ["vue", "vue/jsx", "vite/client", "@types/node"],
         "plugins": [
             {
                 "name": "typescript-vue-plugin"

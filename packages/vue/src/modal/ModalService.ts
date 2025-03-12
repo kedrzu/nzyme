@@ -63,6 +63,7 @@ export const ModalService = defineService({
             // When modal is opened, we want to clear focus from the previously focused element.
             clearFocus();
 
+
             modal.id = Symbol('modal');
             modal.props = options.props as ModalProps<T>;
             modal.handler = reactive<ModalHandler<ModalResult<T>>>({
@@ -70,14 +71,7 @@ export const ModalService = defineService({
                 setResult: result => {
                     modalResult = { result };
                 },
-                done: result => {
-                    if (!open.value) {
-                        return;
-                    }
-
-                    modalResult = { result };
-                    closeModal();
-                },
+                done: setDone as ModalHandler<ModalResult<T>>['done'],
                 close: closeModal,
                 cancel: () => {
                     if (!open.value) {
@@ -96,7 +90,7 @@ export const ModalService = defineService({
 
                 // Destroy the modal after a slight delay
                 // This way you can use customized transitions.
-                void nextTick(() => arrayRemove(modals.value, modal as Modal));
+                void nextTick(() => arrayRemove(modals.value, modal as unknown as Modal));
 
                 historyHandle.cancel();
 
@@ -114,7 +108,7 @@ export const ModalService = defineService({
                         modal: modal.handler,
                     };
 
-                    provideContext(ModalContext, modal.handler);
+                    provideContext(ModalContext, modal.handler as unknown as ModalHandler<unknown>);
                     onKeyUp('Escape', closeModal);
 
                     const view = await unwrapModalComponent(options.modal);
@@ -130,12 +124,21 @@ export const ModalService = defineService({
                 },
             });
 
-            modals.value.push(modal as Modal);
+            modals.value.push(modal as unknown as Modal);
 
             function closeModal() {
                 open.value = false;
             }
 
+            function setDone(result: ModalResult<T>) {
+                if (!open.value) {
+                    return;
+                }
+    
+                modalResult = { result  };
+                closeModal();
+    }
+    
             return modal;
         }
 

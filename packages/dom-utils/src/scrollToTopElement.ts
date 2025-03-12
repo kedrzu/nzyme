@@ -13,7 +13,7 @@ const scrollToElement = debounce(() => {
         }
     }).sort((e1, e2) => e1.top - e2.top)[0]?.el;
 
-    topElement.scrollIntoView({
+    topElement?.scrollIntoView({
         behavior: 'smooth',
         block: 'nearest',
     });

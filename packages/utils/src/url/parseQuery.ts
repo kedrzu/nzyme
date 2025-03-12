@@ -26,8 +26,12 @@ export function parseQuery(
 
     for (const item of querystring.split('&')) {
         const [rawKey, rawValue] = item.split('=');
+        if (!rawKey) {
+            continue;
+        }
+
         const key = decodeURIComponent(rawKey);
-        const value = decodeURIComponent(rawValue);
+        const value = decodeURIComponent(rawValue ?? '');
 
         // Sometimes a query string can have multiple values
         // for the same key, so to factor that case in, you

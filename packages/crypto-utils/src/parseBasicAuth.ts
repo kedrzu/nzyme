@@ -10,7 +10,7 @@ export function parseBasicAuth(token: string) {
     const [login, password] = Buffer.from(token, 'base64').toString().split(':');
 
     return {
-        login,
-        password,
+        login: login ?? '',
+        password: password ?? '',
     };
 }

@@ -1,5 +1,8 @@
 let scrollBarWidth: number;
 
+/**
+ * Get the width of the scrollbar.
+ */
 export function getScrollBarWidth() {
     if (scrollBarWidth != null) {
         return scrollBarWidth;

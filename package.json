@@ -32,7 +32,7 @@
         "@nx/js": "^20.5.0",
         "@nzyme/cli": "*",
         "@swc-node/register": "^1.10.9",
-        "@swc/core": "^1.11.7",
+        "@swc/core": "^1.11.8",
         "del-cli": "^6.0.0",
         "nx": "20.5.0",
         "prettier": "^3.5.3",

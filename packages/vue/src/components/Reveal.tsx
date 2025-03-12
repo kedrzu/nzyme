@@ -17,6 +17,9 @@ import css from './Reveal.module.scss';
 
 const fallbackKey = Symbol('fallback');
 
+/**
+ * Reveal component.
+ */
 export const Reveal = defineComponent({
     name: 'Reveal',
     emits: {
@@ -27,7 +30,7 @@ export const Reveal = defineComponent({
         leave: (vm: ComponentPublicInstance) => vm,
         afterLeave: (vm: ComponentPublicInstance) => vm,
     },
-    setup(props, ctx) {
+    setup(_props, ctx) {
         const element = useElement<HTMLElement>();
         const vm = getCurrentInstance()!.proxy!;
 

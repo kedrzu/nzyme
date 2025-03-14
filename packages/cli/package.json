@@ -28,7 +28,7 @@
         "@lerna/project": "^6.4.1",
         "@nzyme/node-utils": "^0.8.0",
         "@nzyme/utils": "^0.8.0",
-        "@oclif/core": "^4.2.9",
+        "@oclif/core": "^4.2.10",
         "@oclif/plugin-help": "^6.2.26",
         "@oclif/plugin-version": "^2.2.25",
         "@types/fs-extra": "^11.0.4",

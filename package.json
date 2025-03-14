@@ -31,8 +31,8 @@
     "devDependencies": {
         "@nx/js": "^20.5.0",
         "@nzyme/cli": "*",
-        "@swc-node/register": "^1.10.9",
-        "@swc/core": "^1.11.8",
+        "@swc-node/register": "^1.10.10",
+        "@swc/core": "^1.11.9",
         "del-cli": "^6.0.0",
         "nx": "20.5.0",
         "prettier": "^3.5.3",

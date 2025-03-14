@@ -1,27 +1,34 @@
-import { defineInterface } from '@nzyme/ioc';
+import { pino } from 'pino';
+import type { Logger as PinoLogger } from 'pino';
 
-export type LoggerArgs = {
-    [key: string]: unknown;
-};
+import { callerName, defineInjectable, defineInterface, defineService } from '@nzyme/ioc';
 
-export type LoggerErrorArgs = {
-    error?: unknown;
-    [key: string]: unknown;
-};
+/**
+ * A logger instance.
+ */
+export type Logger = PinoLogger;
 
-export interface Logger {
-    error(message: string, args?: LoggerErrorArgs): void;
-    error(error: unknown, args?: LoggerArgs): void;
-    warn(message: string, args?: LoggerArgs): void;
-    info(message: string, args?: LoggerArgs): void;
-    success(message: string, args?: LoggerArgs): void;
-    debug(message: string, args?: LoggerArgs): void;
-    trace(message: string, args?: LoggerArgs): void;
-    measure(start: number, message: string): void;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    context<T extends Record<string, any>>(name: string, ctx: T | null | undefined): void;
-}
-
+/**
+ * A logger interface.
+ */
 export const Logger = defineInterface<Logger>({
     name: 'Logger',
+    default: defineInjectable({
+        resolve: (container, caller): Logger => {
+            return DefaultLogger.resolve(container, caller);
+        },
+    }),
+});
+
+/**
+ * A default logger service.
+ */
+export const DefaultLogger = defineService({
+    name: 'DefaultLogger',
+    implements: Logger,
+    resolution: 'transient',
+    deps: {
+        name: callerName(),
+    },
+    setup: ({ name }) => pino({ name }),
 });

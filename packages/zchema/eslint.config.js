@@ -1,4 +1,4 @@
-import { jsdoc, typescript, imports } from '@nzyme/eslint';
+import { imports, jsdoc, typescript } from '@nzyme/eslint';
 
 export default [
     //

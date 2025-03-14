@@ -5,11 +5,15 @@ const INTERFACE_SYMBOL = Symbol('interface');
 /**
  * Options for the interface.
  */
-export interface InterfaceOptions {
+export interface InterfaceOptions<T = unknown> {
     /**
      * Name of the interface.
      */
     name?: string;
+    /**
+     * Default value for the interface.
+     */
+    default?: Injectable<T>;
 }
 
 /**
@@ -46,7 +50,7 @@ export type Interface<T = unknown> = Injectable<T> & {
  * @param options - Options for the interface.
  * @returns Interface injectable.
  */
-export function defineInterface<T>(options: InterfaceOptions = {}): Interface<T> {
+export function defineInterface<T>(options: InterfaceOptions<T> = {}): Interface<T> {
     return {
         [INJECTABLE_SYMBOL]: INTERFACE_SYMBOL,
         name: options.name,
@@ -68,6 +72,10 @@ export function defineInterface<T>(options: InterfaceOptions = {}): Interface<T>
                 }
 
                 return value;
+            }
+
+            if (options.default) {
+                return options.default.resolve(container, caller);
             }
 
             throw new Error(`Interface ${this.name ?? ''} was not found`);

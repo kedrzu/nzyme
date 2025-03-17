@@ -9,7 +9,7 @@ import { ensureDir } from 'fs-extra';
 export interface LoginLocallyOptions {
     /**
      * The directory for the Pulumi state.
-     * @default './'
+     * @default './.pulumi'
      */
     dir?: string;
 
@@ -24,7 +24,7 @@ export interface LoginLocallyOptions {
  * Logs in to Pulumi locally.
  */
 export async function loginLocally(options: LoginLocallyOptions = {}) {
-    const dir = options.dir ?? './';
+    const dir = options.dir ?? './.pulumi';
     const cwd = options.cwd ?? process.cwd();
     const cli = $({ cwd, all: true, shell: true });
     const path = resolve(cwd, dir);

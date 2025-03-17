@@ -31,7 +31,7 @@ export interface QueueLocal<T> extends Queue<T> {
     /**
      * Wait for all messages to be processed.
      */
-    wait(): Promise<void>;
+    wait: () => Promise<void>;
 }
 
 /**

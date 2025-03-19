@@ -1,5 +1,6 @@
 import { automation } from '@pulumi/pulumi';
 
+import type { AwsConfig } from './AwsConfig.js';
 import type { StackDefinition } from './defineStack.js';
 
 /**
@@ -17,15 +18,20 @@ export interface CreateOrSelectStackOptions {
     projectName: string;
 
     /**
+     * The project description to use for the stack.
+     */
+    projectDescription?: string;
+
+    /**
      * The cwd to use for the stack.
      * @default process.cwd()
      */
     cwd?: string;
 
     /**
-     * The stack settings to use for the stack.
+     * The AWS config to use for the stack.
      */
-    stackSettings?: Record<string, automation.StackSettingsConfigValue>;
+    awsConfig: AwsConfig;
 }
 
 /**
@@ -34,9 +40,23 @@ export interface CreateOrSelectStackOptions {
 export async function createOrSelectStack(options: CreateOrSelectStackOptions) {
     const cwd = options.cwd ?? process.cwd();
 
-    const stackSettings: Record<string, automation.StackSettings> = {};
-    if (options.stackSettings) {
-        stackSettings[options.stack.name] = options.stackSettings;
+    const stackSettings: Record<string, automation.StackSettingsConfigValue> = {};
+
+    for (const [key, value] of Object.entries(options.awsConfig)) {
+        if (typeof value === 'string') {
+            stackSettings[`aws:${key}`] = value;
+        } else if (typeof value === 'boolean') {
+            stackSettings[`aws:${key}`] = value.toString();
+        }
+    }
+
+    if (options.awsConfig.endpoints) {
+        const endpoints: Record<string, string>[] = [];
+        for (const [service, endpoint] of Object.entries(options.awsConfig.endpoints)) {
+            endpoints.push({ [service]: endpoint as string });
+        }
+
+        stackSettings['aws:endpoints'] = endpoints;
     }
 
     const stack = await automation.LocalWorkspace.createOrSelectStack(
@@ -47,8 +67,16 @@ export async function createOrSelectStack(options: CreateOrSelectStackOptions) {
         },
         {
             workDir: cwd,
-            pulumiHome: cwd,
-            stackSettings,
+            stackSettings: {
+                [options.stack.name]: {
+                    config: stackSettings,
+                },
+            },
+            projectSettings: {
+                name: options.projectName,
+                description: options.projectDescription,
+                runtime: 'nodejs',
+            },
         },
     );
 

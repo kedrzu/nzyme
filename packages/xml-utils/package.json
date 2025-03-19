@@ -41,7 +41,7 @@
         "smoke:cjs": "node tests/smoke.test.cjs"
     },
     "dependencies": {
-        "fast-xml-parser": "^5.0.8",
+        "fast-xml-parser": "^5.0.9",
         "tslib": "^2.8.1"
     },
     "devDependencies": {

@@ -24,7 +24,7 @@ export interface LoginLocallyOptions {
  * Logs in to Pulumi locally.
  */
 export async function loginLocally(options: LoginLocallyOptions = {}) {
-    const dir = options.dir ?? './.pulumi';
+    const dir = options.dir ?? './';
     const cwd = options.cwd ?? process.cwd();
     const cli = $({ cwd, all: true, shell: true });
     const path = resolve(cwd, dir);

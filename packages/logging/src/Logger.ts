@@ -1,12 +1,45 @@
 import { pino } from 'pino';
-import type { Logger as PinoLogger } from 'pino';
 
 import { callerName, defineInjectable, defineInterface, defineService } from '@nzyme/ioc';
+
+import { fromPino } from './fromPino.js';
+
+/**
+ * A logger function.
+ */
+export interface LoggerFunction {
+    (msg: string, obj?: object): void;
+}
 
 /**
  * A logger instance.
  */
-export type Logger = PinoLogger;
+export interface Logger {
+    /**
+     * Log an error.
+     */
+    error: LoggerFunction;
+    /**
+     * Log a warning.
+     */
+    warn: LoggerFunction;
+    /**
+     * Log an info message.
+     */
+    info: LoggerFunction;
+    /**
+     * Log a debug message.
+     */
+    debug: LoggerFunction;
+    /**
+     * Log a trace message.
+     */
+    trace: LoggerFunction;
+    /**
+     * Log a fatal message.
+     */
+    fatal: LoggerFunction;
+}
 
 /**
  * A logger interface.
@@ -30,5 +63,5 @@ export const DefaultLogger = defineService({
     deps: {
         name: callerName(),
     },
-    setup: ({ name }) => pino({ name }),
+    setup: ({ name }) => fromPino(pino({ name })),
 });

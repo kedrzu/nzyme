@@ -7,14 +7,21 @@ export interface QueueMessage<T> {
      * Will be serialized to JSON.
      */
     body: T;
+
     /**
      * The deduplication ID of the message.
      */
     deduplicationId?: string;
+
     /**
      * The group ID of the message.
      */
     messageGroupId?: string;
+
+    /**
+     * The delay in seconds for the message.
+     */
+    delaySeconds?: number;
 }
 
 /**

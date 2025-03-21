@@ -1,4 +1,5 @@
 import * as pulumi from '@pulumi/pulumi';
+import type { automation } from '@pulumi/pulumi';
 
 import type { ResolveDependencies, ServiceDependencies } from '@nzyme/ioc';
 import { defineService } from '@nzyme/ioc';
@@ -9,6 +10,22 @@ import { toPascalCase } from '@nzyme/utils';
  * Output of a Pulumi stack.
  */
 export type StackOutput = Record<string, unknown>;
+
+/**
+ * Result of a stack output.
+ */
+export type StackOutputResult<TOutput extends StackOutput> = {
+    [K in keyof TOutput]: {
+        /**
+         * Whether the output is a secret.
+         */
+        secret: boolean;
+        /**
+         * Value of the output.
+         */
+        value: pulumi.Unwrap<TOutput[K]>;
+    };
+};
 
 /**
  * Options for defining a stack.
@@ -64,6 +81,11 @@ export interface StackDefinition<TOutput extends StackOutput = StackOutput> {
      * Create a reference to the stack.
      */
     ref: (options: StackReferenceOptions) => StackReference<TOutput>;
+
+    /**
+     * Get the outputs of the stack.
+     */
+    outputs: (stack: automation.Stack) => Promise<StackOutputResult<TOutput>>;
 }
 
 /**
@@ -99,6 +121,9 @@ export function defineStack<
                     const org = refOptions.organization ?? 'organization';
                     const path = `${org}/${refOptions.project}/${name}`;
                     return createStackReference(path);
+                },
+                outputs: async (stack: automation.Stack) => {
+                    return (await stack.outputs()) as StackOutputResult<TOutput>;
                 },
             };
         },

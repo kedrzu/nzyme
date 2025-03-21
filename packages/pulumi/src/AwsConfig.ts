@@ -9,7 +9,7 @@ export interface AwsConfig {
     /**
      * Region.
      */
-    region: string;
+    region: aws.Region;
 
     /**
      * Access key.
@@ -56,7 +56,7 @@ export const AwsConfig = defineInterface<AwsConfig>({
         name: 'AwsConfig',
         resolve: () => {
             return {
-                region: process.env.AWS_REGION ?? 'eu-central-1',
+                region: (process.env.AWS_REGION as aws.Region | undefined) ?? 'eu-central-1',
                 accessKey: process.env.AWS_ACCESS_KEY_ID,
                 secretKey: process.env.AWS_SECRET_ACCESS_KEY,
                 profile: process.env.AWS_PROFILE,
@@ -81,7 +81,7 @@ export const AwsConfigLocalStack = defineService({
         const endpoint = `http://localhost:${opts.port ?? 4566}`;
 
         return {
-            region: opts.region ?? 'eu-central-1',
+            region: (opts.region as aws.Region) ?? 'eu-central-1',
             accessKey: opts.accessKey ?? 'test',
             secretKey: opts.secretKey ?? 'test',
             skipCredentialsValidation: true,

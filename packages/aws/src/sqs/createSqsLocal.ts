@@ -13,15 +13,15 @@ export interface QueueLocalOptions<T> {
     /**
      * The handler for the local SQS.
      */
-    handler: (message: QueueMessage<T>) => Promise<void>;
+    handler: (message: QueueMessage<T>) => Promise<void> | void;
     /**
      * The on success handler for the local SQS.
      */
-    onSuccess?: (message: QueueMessage<T>) => Promise<void>;
+    onSuccess?: (message: QueueMessage<T>) => Promise<void> | void;
     /**
      * The on error handler for the local SQS.
      */
-    onError?: (message: QueueMessage<T>, error: Error) => Promise<void>;
+    onError?: (message: QueueMessage<T>, error: Error) => Promise<void> | void;
 }
 
 /**

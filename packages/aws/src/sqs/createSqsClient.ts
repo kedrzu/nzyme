@@ -12,13 +12,20 @@ export interface SqsClientOptions {
      * The URL of the SQS queue.
      */
     queueUrl: string;
+
+    /**
+     * The region of the SQS queue.
+     */
+    region?: string;
 }
 
 /**
  * Creates a new SQS client.
  */
-export function createSqsClient<T>({ queueUrl }: SqsClientOptions): Queue<T> {
-    const client = new SQSClient();
+export function createSqsClient<T>({ queueUrl, region }: SqsClientOptions): Queue<T> {
+    const client = new SQSClient({
+        region,
+    });
 
     return {
         send,

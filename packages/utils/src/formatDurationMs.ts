@@ -1,4 +1,7 @@
-export function formatDuration(ms: number) {
+/**
+ * Formats a duration in milliseconds to a human-readable string.
+ */
+export function formatDurationMs(ms: number) {
     if (ms < 1000) {
         return `${ms.toFixed(1)}ms`;
     }

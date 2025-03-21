@@ -5,10 +5,24 @@ import { callerName, defineInjectable, defineInterface, defineService } from '@n
 import { fromPino } from './fromPino.js';
 
 /**
+ * A logger object.
+ */
+export interface LoggerObject {
+    /**
+     * An error object.
+     */
+    err?: unknown;
+    /**
+     * Additional properties.
+     */
+    [key: string]: unknown;
+}
+
+/**
  * A logger function.
  */
 export interface LoggerFunction {
-    (msg: string, obj?: object): void;
+    (msg: string, obj?: LoggerObject): void;
 }
 
 /**

@@ -6,13 +6,15 @@ import type { NextHandleFunction } from 'connect';
 import consola from 'consola';
 import getPort from 'get-port';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { watch, type RollupWatchOptions } from 'rollup';
+import { type RollupWatchOptions, watch } from 'rollup';
 
-import { formatDuration, perf } from '@nzyme/logging';
-import { createPromise } from '@nzyme/utils';
+import { createPromise, formatDurationMs, formatElapsedMs } from '@nzyme/utils';
 
 import { onRollupWarning } from './onRollupWarning.js';
 
+/**
+ *
+ */
 export function devServerMiddleware(options: RollupWatchOptions): NextHandleFunction {
     const outputFile = getOutputFile(options);
 
@@ -46,7 +48,7 @@ export function devServerMiddleware(options: RollupWatchOptions): NextHandleFunc
             } else if (event.code === 'BUNDLE_END') {
                 compiled = true;
 
-                const duration = formatDuration(event.duration);
+                const duration = formatDurationMs(event.duration);
                 consola.info(`Server compiled in ${chalk.green(duration)}.`);
                 void server?.start();
             } else if (event.code === 'ERROR') {
@@ -78,7 +80,7 @@ export function devServerMiddleware(options: RollupWatchOptions): NextHandleFunc
                 return;
             }
 
-            const start = perf.start();
+            const start = performance.now();
             const port = await getPort();
 
             worker = new Worker(outputFile, {
@@ -112,7 +114,7 @@ export function devServerMiddleware(options: RollupWatchOptions): NextHandleFunc
 
             worker.on('message', e => {
                 if (e === 'START') {
-                    consola.info(`Server started in ${chalk.green(perf.format(start))}`);
+                    consola.info(`Server started in ${chalk.green(formatElapsedMs(start))}`);
                     proxyPromise.resolve(proxy as NextHandleFunction);
                 }
             });

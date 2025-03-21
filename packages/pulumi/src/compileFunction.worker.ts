@@ -15,12 +15,11 @@ import sourcemaps from 'rollup-plugin-sourcemaps';
 import { terser } from 'rollup-plugin-terser';
 
 import { unwrapCjsDefaultImport } from '@nzyme/esm';
-import { perf } from '@nzyme/logging';
-import { sortBy } from '@nzyme/utils';
+import { formatElapsedMs, sortBy } from '@nzyme/utils';
 
 import type { CompileFunctionOptions, CompileFunctionResult } from './compileFunction.js';
 
-const start = perf.start();
+const start = performance.now();
 const options = workerData as CompileFunctionOptions;
 
 const outputDir = options.outputDir;
@@ -131,7 +130,9 @@ for (const file of outputFiles) {
 
 await rollupResult.close();
 
-consola.success(`Compiled ${chalk.green(options.inputFile)} in ${chalk.green(perf.format(start))}`);
+consola.success(
+    `Compiled ${chalk.green(options.inputFile)} in ${chalk.green(formatElapsedMs(start))}`,
+);
 
 const output: CompileFunctionResult = {
     dirPath: outputDir,

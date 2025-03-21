@@ -1,5 +1,5 @@
 export * from './AwsConfig.js';
-export * from './loginLocally.js';
+export * from './login.js';
 export * from './defineStack.js';
 export * from './createOrSelectStack.js';
 export * from './createAwsProvider.js';

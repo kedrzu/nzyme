@@ -74,3 +74,5 @@ export * from './isPlainObject.js';
 export * from './parseBigint.js';
 export * from './getMailToUrl.js';
 export * from './phoneLink.js';
+export * from './formatDurationMs.js';
+export * from './formatElapsedMs.js';

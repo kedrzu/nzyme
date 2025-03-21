@@ -31,7 +31,12 @@ export interface CreateOrSelectStackOptions {
     /**
      * The AWS config to use for the stack.
      */
-    awsConfig: AwsConfig;
+    awsConfig?: AwsConfig;
+
+    /**
+     * The secrets provider to use for the stack.
+     */
+    secretsProvider?: string;
 }
 
 /**
@@ -40,23 +45,30 @@ export interface CreateOrSelectStackOptions {
 export async function createOrSelectStack(options: CreateOrSelectStackOptions) {
     const cwd = options.cwd ?? process.cwd();
 
-    const stackSettings: Record<string, automation.StackSettingsConfigValue> = {};
+    const stackSettings: Record<string, automation.StackSettings> = {};
 
-    for (const [key, value] of Object.entries(options.awsConfig)) {
-        if (typeof value === 'string') {
-            stackSettings[`aws:${key}`] = value;
-        } else if (typeof value === 'boolean') {
-            stackSettings[`aws:${key}`] = value.toString();
-        }
-    }
-
-    if (options.awsConfig.endpoints) {
-        const endpoints: Record<string, string>[] = [];
-        for (const [service, endpoint] of Object.entries(options.awsConfig.endpoints)) {
-            endpoints.push({ [service]: endpoint as string });
+    if (options.awsConfig) {
+        const stackConfig: Record<string, automation.StackSettingsConfigValue> = {};
+        for (const [key, value] of Object.entries(options.awsConfig)) {
+            if (typeof value === 'string') {
+                stackConfig[`aws:${key}`] = value;
+            } else if (typeof value === 'boolean') {
+                stackConfig[`aws:${key}`] = value.toString();
+            }
         }
 
-        stackSettings['aws:endpoints'] = endpoints;
+        if (options.awsConfig.endpoints) {
+            const endpoints: Record<string, string>[] = [];
+            for (const [service, endpoint] of Object.entries(options.awsConfig.endpoints)) {
+                endpoints.push({ [service]: endpoint as string });
+            }
+
+            stackConfig['aws:endpoints'] = endpoints;
+        }
+
+        stackSettings[options.stack.name] = {
+            config: stackConfig,
+        };
     }
 
     const stack = await automation.LocalWorkspace.createOrSelectStack(
@@ -67,11 +79,8 @@ export async function createOrSelectStack(options: CreateOrSelectStackOptions) {
         },
         {
             workDir: cwd,
-            stackSettings: {
-                [options.stack.name]: {
-                    config: stackSettings,
-                },
-            },
+            stackSettings,
+            secretsProvider: options.secretsProvider,
             projectSettings: {
                 name: options.projectName,
                 description: options.projectDescription,

@@ -1,4 +1,4 @@
-import consola from 'consola';
+import { consola } from 'consola';
 import type { WarningHandlerWithDefault } from 'rollup';
 
 export const onRollupWarning: WarningHandlerWithDefault = warning => {

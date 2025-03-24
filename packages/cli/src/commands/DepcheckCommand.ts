@@ -2,7 +2,7 @@ import type { Package } from '@lerna/package';
 import { getPackages } from '@lerna/project';
 import chalk from 'chalk';
 import { compareVersions } from 'compare-versions';
-import consola from 'consola';
+import { consola } from 'consola';
 import depcheckImport from 'depcheck';
 
 interface Options {

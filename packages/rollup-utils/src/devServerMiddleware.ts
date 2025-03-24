@@ -3,7 +3,7 @@ import { Worker } from 'node:worker_threads';
 
 import chalk from 'chalk';
 import type { NextHandleFunction } from 'connect';
-import consola from 'consola';
+import { consola } from 'consola';
 import getPort from 'get-port';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { type RollupWatchOptions, watch } from 'rollup';

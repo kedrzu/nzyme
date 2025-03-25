@@ -1,6 +1,7 @@
-import { defineEndpoint, jsonResponse } from '@nzyme/fetch-utils';
+import { defineEndpoint, jsonNullableResponse } from '@nzyme/fetch-utils';
 
-import type { InpostPointData } from '../models/InpostPointData.js';
+import { INPOST_API_URL } from './constants.js';
+import type { InpostPointData } from './models/InpostPointData.js';
 
 type InpostPointFunction = 'parcel_collect' | 'parcel_send';
 
@@ -43,7 +44,7 @@ export type InpostPointListParams = {
  */
 export const InpostPointList = defineEndpoint({
     request: (params: InpostPointListParams) => ({
-        url: 'v1/points',
+        url: `${INPOST_API_URL}/v1/points`,
         query: {
             sort_order: params.sortOrder,
             sort_by: params.sortBy,
@@ -54,5 +55,5 @@ export const InpostPointList = defineEndpoint({
             relative_post_code: params.relativePostCode,
         },
     }),
-    response: jsonResponse<{ items: InpostPointData[] }>,
+    response: jsonNullableResponse<{ items: InpostPointData[] }>,
 });

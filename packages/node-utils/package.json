@@ -48,7 +48,7 @@
     "devDependencies": {
         "@nzyme/eslint": "^0.8.0",
         "@nzyme/tsconfig": "^0.8.0",
-        "@types/node": "^22.13.10",
+        "@types/node": "^22.13.13",
         "typescript": "^5.8.2"
     }
 }

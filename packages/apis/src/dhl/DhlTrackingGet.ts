@@ -40,11 +40,20 @@ export type DhlTrackingInfo = {
     }[];
 };
 
+export type DhlTrackingGetParams = {
+    trackingNumber: string;
+    apiKey: string;
+    apiUrl: string;
+};
+
 // https://developer.dhl.com/api-reference/shipment-tracking#reference-docs-section
 export const DhlTrackingGet = defineEndpoint({
-    request: (params: { trackingNumber: string }) => ({
-        url: `track/shipments`,
+    request: (params: DhlTrackingGetParams) => ({
+        url: `${params.apiUrl}/track/shipments`,
         query: params,
+        headers: {
+            'DHL-API-Key': params.apiKey,
+        },
     }),
     response: jsonResponse<DhlTrackingInfo>,
 });

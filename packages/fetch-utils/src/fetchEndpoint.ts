@@ -1,16 +1,29 @@
-import { joinURL } from 'ufo';
+import { joinURL, withQuery } from 'ufo';
 
+import { assertResponse } from './assertResponse.js';
 import type { Endpoint } from './defineEndpoint.js';
-import type { FetchRequest } from './fetchRequest.js';
-import { fetchRequest } from './fetchRequest.js';
 
+/**
+ * Parameters for a fetch endpoint.
+ */
 export interface FetchEndpointParams<TParams> {
+    /**
+     * The parameters for the endpoint.
+     */
     params: TParams;
+    /**
+     * The base URL for the endpoint.
+     */
     baseUrl?: string;
+    /**
+     * Additional headers for the endpoint.
+     */
     headers?: Record<string, string>;
-    onRequest?: (request: FetchRequest) => void;
 }
 
+/**
+ *
+ */
 export async function fetchEndpoint<TParams, TResult>(
     endpoint: Endpoint<TParams, TResult>,
     params: FetchEndpointParams<TParams>,
@@ -26,11 +39,14 @@ export async function fetchEndpoint<TParams, TResult>(
         },
     };
 
-    params.onRequest?.(request);
-    const response = await fetchRequest(request);
+    const url = request.query ? withQuery(request.url, request.query) : request.url;
+    // Clone the response to avoid "Other side closed error"
+    const response = (await fetch(url, request)).clone();
 
     if (endpoint.response) {
         return await endpoint.response(response, params.params);
+    } else {
+        await assertResponse(response);
     }
 
     return undefined as unknown as TResult;

@@ -25,6 +25,7 @@ export * from './array/shuffleArray.js';
 export * from './array/isIterable.js';
 
 export * from './string/equalIgnoreCase.js';
+export * from './string/formatLength.js';
 export * from './string/formatWith.js';
 export * from './string/isDigit.js';
 export * from './string/caseUtils.js';

@@ -3,7 +3,7 @@
     "private": true,
     "version": "0.8.0",
     "main": "./dist/cjs/index.cjs",
-    "types": "./dist/cjs/index.d.ts",
+    "types": "./dist/esm/index.d.ts",
     "exports": {
         ".": {
             "import": {

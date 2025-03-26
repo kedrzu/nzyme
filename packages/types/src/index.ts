@@ -17,5 +17,6 @@ export type * from './VoidProps.js';
 export type * from './FunctionOnly.js';
 export type * from './FunctionParams.js';
 export type * from './Literals.js';
+export type * from './Union.js';
 
 export type { Class } from 'type-fest';

@@ -28,12 +28,6 @@ export type Properties<T> = {
     [K in PropertyNames<T>]: T[K];
 };
 
-export type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
-    k: infer I,
-) => void
-    ? I
-    : never;
-
 export type FlattenUnion<T> = T extends any ? Flatten<T> : never;
 
 export type Merge<T1, T2> = Exclude<
@@ -49,7 +43,7 @@ export type Override<T1, T2> = {
 
 export type Maybe<T> = T | null | undefined;
 
-export type Item<T> = T[keyof T];
+export type Item<T> = T extends Iterable<infer U> ? U : T[keyof T];
 
 export type Writable<T> = { -readonly [P in keyof T]: T[P] };
 

@@ -12,6 +12,7 @@
         "noImplicitThis": true,
         "alwaysStrict": true,
         "allowJs": false,
+        "allowUnreachableCode": false,
         "isolatedModules": true,
         "noUnusedLocals": false,
         "noUnusedParameters": false,

@@ -10,3 +10,4 @@ export * from './scrollToTopElement.js';
 export * from './getScrollBarWidth.js';
 export * from './clearFocus.js';
 export * from './isAncestorOf.js';
+export * from './lockBodyScroll.js';

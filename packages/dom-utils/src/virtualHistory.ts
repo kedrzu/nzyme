@@ -21,23 +21,21 @@ let initialized = false;
 const callbacks = new Map<number, Callback | null>();
 const uid = randomGuid();
 
-export const virtualHistory = {
-    pushState(callback: Callback): VirtualHistoryHandle {
-        initialize();
+export function onHistoryBack(callback: Callback): VirtualHistoryHandle {
+    initialize();
 
-        history.pushState(history.state, document.title, null);
-        const index = getStateIndex(history.state as VirtualHistoryState | null);
+    history.pushState(history.state, document.title, null);
+    const index = getStateIndex(history.state as VirtualHistoryState | null);
 
-        callbacks.set(index, callback);
+    callbacks.set(index, callback);
 
-        return {
-            index,
-            cancel() {
-                callbacks.set(index, null);
-            },
-        };
-    },
-};
+    return {
+        index,
+        cancel() {
+            callbacks.set(index, null);
+        },
+    };
+}
 
 function initialize() {
     if (initialized) {

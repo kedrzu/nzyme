@@ -1,14 +1,41 @@
 {
     "name": "@nzyme/apis",
     "version": "0.8.0",
+    "typesVersions": {
+        "*": {
+            "*": [
+                "./dist/esm/*.d.ts"
+            ]
+        }
+    },
     "exports": {
         ".": {
-            "types": "./dist/esm/index.d.ts",
-            "default": "./dist/esm/index.js"
+            "import": {
+                "types": "./dist/esm/index.d.ts",
+                "default": "./dist/esm/index.js"
+            },
+            "require": {
+                "types": "./dist/cjs/index.d.ts",
+                "default": "./dist/cjs/index.cjs"
+            },
+            "default": {
+                "types": "./dist/esm/index.d.ts",
+                "default": "./dist/esm/index.js"
+            }
         },
         "./*": {
-            "types": "./dist/esm/*.d.ts",
-            "default": "./dist/esm/*.js"
+            "import": {
+                "types": "./dist/esm/*.d.ts",
+                "default": "./dist/esm/*.js"
+            },
+            "require": {
+                "types": "./dist/cjs/*.d.ts",
+                "default": "./dist/cjs/*.cjs"
+            },
+            "default": {
+                "types": "./dist/esm/*.d.ts",
+                "default": "./dist/esm/*.js"
+            }
         }
     },
     "sideEffects": false,

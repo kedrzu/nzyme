@@ -11,15 +11,21 @@ export type Target = 'node' | 'browser';
 
 export interface TypescriptOptions {
     target?: Target[] | Target;
+    project?: string | string[];
 }
 
-export function typescript(options: TypescriptOptions = {}) {
+export function typescript(options: TypescriptOptions) {
     const config: Linter.Config = {
-        ignores: ['dist/**/*', 'node_modules/**/*'],
+        ignores: ['dist/**/*', 'node_modules/**/*', 'eslint.config.js'],
         files: ['**/*.{ts,tsx}'],
         plugins: {
             workspaces,
             monorepo,
+        },
+        languageOptions: {
+            parserOptions: {
+                project: options.project || './tsconfig.json',
+            },
         },
         rules: {
             curly: 'error',
@@ -60,7 +66,7 @@ export function typescript(options: TypescriptOptions = {}) {
     }
 
     return tseslint.config({
-        extends: [js.configs.recommended, ...tseslint.configs.recommended, prettier],
+        extends: [js.configs.recommended, ...tseslint.configs.recommendedTypeChecked, prettier],
         ...config,
     });
 }

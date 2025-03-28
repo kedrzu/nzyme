@@ -1,9 +1,12 @@
-export function asArray<T>(items: T[] | T): T[];
-export function asArray<T>(items: readonly T[] | T): readonly T[];
-export function asArray<T>(items: readonly T[] | T) {
-    if (Array.isArray(items)) {
-        return items as T[];
+/**
+ * Converts parameter to an array
+ * @param o an object, array, null or undefined
+ * @return an array of 0, 1 or more elements
+ */
+export function asArray<T>(o: T | readonly T[] | undefined | null): readonly T[] {
+    if (o === null || o === undefined) {
+        return [];
     }
 
-    return [items];
+    return Array.isArray(o) ? o : [o as T];
 }

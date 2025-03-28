@@ -9,7 +9,7 @@ import * as json from 'comment-json';
 import fsExtra from 'fs-extra/esm';
 import merge from 'lodash.merge';
 import prettier from 'prettier';
-import consola from 'consola';
+import { consola } from 'consola';
 import { asArray, createPromise } from '@nzyme/utils';
 
 interface TsConfig {

@@ -16,7 +16,7 @@
         "dist"
     ],
     "main": "./dist/cjs/index.js",
-    "types": "./dist/cjs/index.d.ts",
+    "types": "./dist/esm/index.d.ts",
     "exports": {
         ".": {
             "import": {
@@ -49,8 +49,8 @@
     "devDependencies": {
         "@nzyme/eslint": "^0.8.0",
         "@nzyme/tsconfig": "^0.8.0",
-        "@types/node": "^22.13.10",
+        "@types/node": "^22.13.14",
         "typescript": "^5.8.2",
-        "vitest": "^3.0.8"
+        "vitest": "^3.0.9"
     }
 }

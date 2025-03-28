@@ -6,6 +6,7 @@ export * from './fetchJson.js';
 export * from './fetchRequest.js';
 export * from './FetchError.js';
 export * from './formUrlEncodedRequest.js';
+export * from './jsonNullableResponse.js';
 export * from './jsonRequest.js';
 export * from './jsonResponse.js';
 export * from './xmlRequest.js';

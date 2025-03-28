@@ -1,6 +1,19 @@
 const styles: { [key: string]: Promise<void> | undefined } = {};
 
-export function loadStyles(url: string, options?: { document?: Document }) {
+/**
+ * Options for {@link loadStyles}.
+ */
+export interface LoadStylesOptions {
+    /**
+     * The document to load the stylesheet into.
+     */
+    document?: Document;
+}
+
+/**
+ * Loads a stylesheet from a URL.
+ */
+export function loadStyles(url: string, options?: LoadStylesOptions) {
     if (styles[url]) {
         return styles[url];
     }
@@ -15,9 +28,9 @@ export function loadStyles(url: string, options?: { document?: Document }) {
 
         if (typeof css.onload != 'undefined') {
             css.onload = () => resolve();
-            css.onerror = () => {
+            css.onerror = (_event, _source, _lineno, _colno, err) => {
                 doc.head.removeChild(css);
-                reject();
+                reject(err ?? new Error(`Failed to load styles from ${url}`));
             };
             doc.head.appendChild(css);
         } else {

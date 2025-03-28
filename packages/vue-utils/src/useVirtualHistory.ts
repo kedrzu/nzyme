@@ -1,9 +1,12 @@
 import { onBeforeUnmount } from 'vue';
 
-import { virtualHistory, type VirtualHistoryHandle } from '@nzyme/dom-utils';
+import { type VirtualHistoryHandle, onHistoryBack } from '@nzyme/dom-utils';
 
 type Callback = () => void;
 
+/**
+ *
+ */
 export function useVirtualHistory() {
     const handles: VirtualHistoryHandle[] = [];
 
@@ -15,7 +18,7 @@ export function useVirtualHistory() {
 
     return {
         pushState(callback: Callback) {
-            const handle = virtualHistory.pushState(callback);
+            const handle = onHistoryBack(callback);
             handles.push(handle);
             return handle;
         },

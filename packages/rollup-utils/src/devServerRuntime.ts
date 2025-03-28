@@ -1,7 +1,7 @@
 import { parentPort, workerData } from 'node:worker_threads';
 
 import chalk from 'chalk';
-import consola from 'consola';
+import { consola } from 'consola';
 import sourceMap from 'source-map-support';
 
 export function devServerRuntime() {

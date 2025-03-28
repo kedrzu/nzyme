@@ -1,24 +1,58 @@
-const scripts: { [key: string]: Promise<void> | undefined } = {};
+const CACHE_SYMBOL = Symbol('script-cache');
+type ScriptCache = {
+    [CACHE_SYMBOL]?: {
+        [key: string]: Promise<void> | undefined;
+    };
+};
+
+/**
+ * Options for {@link loadScript}.
+ */
+export interface LoadScriptOptions {
+    /**
+     * The document to load the script into.
+     */
+    document?: Document;
+}
 
 /**
  * Loads a given script into the page.
  * If script was already loaded, it won't load it again
  */
-export function loadScript(url: string, options?: { document?: Document }) {
-    if (scripts[url]) {
-        return scripts[url];
+export function loadScript(url: string, options?: LoadScriptOptions) {
+    const cache = getScriptCache((options?.document ?? document) as ScriptCache);
+    if (cache[url]) {
+        return cache[url];
     }
 
-    const doc = options?.document ?? document;
-    const scriptTag = doc.createElement('script');
+    const promise = new Promise<void>((resolve, reject) => {
+        const doc = options?.document ?? document;
+        const scriptTag = doc.createElement('script');
 
-    return new Promise<void>((resolve, reject) => {
         scriptTag.src = url;
         scriptTag.onload = () => resolve();
         scriptTag.onerror = e => {
             doc.body.removeChild(scriptTag);
+            // Remove pending promise from cache
+            if (cache[url] === promise) {
+                delete cache[url];
+            }
+
             reject(new Error(`Failed to load script: ${url}`, { cause: e }));
         };
+
         doc.body.appendChild(scriptTag);
     });
+
+    cache[url] = promise;
+
+    return promise;
+}
+
+function getScriptCache(cache: ScriptCache) {
+    if (!cache[CACHE_SYMBOL]) {
+        cache[CACHE_SYMBOL] = {};
+    }
+
+    return cache[CACHE_SYMBOL];
 }

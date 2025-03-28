@@ -1,0 +1,70 @@
+{
+    "name": "@nzyme/apis",
+    "version": "0.8.0",
+    "typesVersions": {
+        "*": {
+            "*": [
+                "./dist/esm/*.d.ts"
+            ]
+        }
+    },
+    "exports": {
+        ".": {
+            "import": {
+                "types": "./dist/esm/index.d.ts",
+                "default": "./dist/esm/index.js"
+            },
+            "require": {
+                "types": "./dist/cjs/index.d.ts",
+                "default": "./dist/cjs/index.cjs"
+            },
+            "default": {
+                "types": "./dist/esm/index.d.ts",
+                "default": "./dist/esm/index.js"
+            }
+        },
+        "./*": {
+            "import": {
+                "types": "./dist/esm/*.d.ts",
+                "default": "./dist/esm/*.js"
+            },
+            "require": {
+                "types": "./dist/cjs/*.d.ts",
+                "default": "./dist/cjs/*.cjs"
+            },
+            "default": {
+                "types": "./dist/esm/*.d.ts",
+                "default": "./dist/esm/*.js"
+            }
+        }
+    },
+    "sideEffects": false,
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/kedrzu/nzyme.git"
+    },
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "type": "module",
+    "publishConfig": {
+        "access": "public"
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "eslint": "eslint . --fix --cache"
+    },
+    "dependencies": {
+        "@nzyme/fetch-utils": "^0.8.0",
+        "@nzyme/ioc": "^0.8.0",
+        "@nzyme/types": "^0.8.0",
+        "@nzyme/utils": "^0.8.0",
+        "tslib": "^2.8.1"
+    },
+    "devDependencies": {
+        "@nzyme/eslint": "^0.8.0",
+        "@nzyme/tsconfig": "^0.8.0",
+        "typescript": "^5.8.2"
+    }
+}

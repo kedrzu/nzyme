@@ -1,7 +1,7 @@
 import * as path from 'node:path';
 
 import chalk from 'chalk';
-import consola from 'consola';
+import { consola } from 'consola';
 import { config as configDotenv } from 'dotenv';
 
 import { asArray } from '@nzyme/utils';

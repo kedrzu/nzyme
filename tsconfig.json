@@ -1,6 +1,6 @@
 {
     "extends": "@nzyme/tsconfig/esm.json",
-    "include": ["vitest.workspaces.ts"],
+    "include": ["vitest.workspace.ts"],
     "compilerOptions": {
         "noEmit": true
     }

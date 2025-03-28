@@ -1,27 +1,81 @@
-import { defineInterface } from '@nzyme/ioc';
+import { pino } from 'pino';
 
-export type LoggerArgs = {
+import { callerName, defineInjectable, defineInterface, defineService } from '@nzyme/ioc';
+
+import { fromPino } from './fromPino.js';
+
+/**
+ * A logger object.
+ */
+export interface LoggerObject {
+    /**
+     * An error object.
+     */
+    err?: unknown;
+    /**
+     * Additional properties.
+     */
     [key: string]: unknown;
-};
-
-export type LoggerErrorArgs = {
-    error?: unknown;
-    [key: string]: unknown;
-};
-
-export interface Logger {
-    error(message: string, args?: LoggerErrorArgs): void;
-    error(error: unknown, args?: LoggerArgs): void;
-    warn(message: string, args?: LoggerArgs): void;
-    info(message: string, args?: LoggerArgs): void;
-    success(message: string, args?: LoggerArgs): void;
-    debug(message: string, args?: LoggerArgs): void;
-    trace(message: string, args?: LoggerArgs): void;
-    measure(start: number, message: string): void;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    context<T extends Record<string, any>>(name: string, ctx: T | null | undefined): void;
 }
 
+/**
+ * A logger function.
+ */
+export interface LoggerFunction {
+    (msg: string, obj?: LoggerObject): void;
+}
+
+/**
+ * A logger instance.
+ */
+export interface Logger {
+    /**
+     * Log an error.
+     */
+    error: LoggerFunction;
+    /**
+     * Log a warning.
+     */
+    warn: LoggerFunction;
+    /**
+     * Log an info message.
+     */
+    info: LoggerFunction;
+    /**
+     * Log a debug message.
+     */
+    debug: LoggerFunction;
+    /**
+     * Log a trace message.
+     */
+    trace: LoggerFunction;
+    /**
+     * Log a fatal message.
+     */
+    fatal: LoggerFunction;
+}
+
+/**
+ * A logger interface.
+ */
 export const Logger = defineInterface<Logger>({
     name: 'Logger',
+    default: defineInjectable({
+        resolve: (container, caller): Logger => {
+            return DefaultLogger.resolve(container, caller);
+        },
+    }),
+});
+
+/**
+ * A default logger service.
+ */
+export const DefaultLogger = defineService({
+    name: 'DefaultLogger',
+    implements: Logger,
+    resolution: 'transient',
+    deps: {
+        name: callerName(),
+    },
+    setup: ({ name }) => fromPino(pino({ name })),
 });

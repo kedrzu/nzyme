@@ -25,9 +25,10 @@ export * from './array/shuffleArray.js';
 export * from './array/isIterable.js';
 
 export * from './string/equalIgnoreCase.js';
+export * from './string/formatLength.js';
 export * from './string/formatWith.js';
 export * from './string/isDigit.js';
-export * from './string/toCamelCase.js';
+export * from './string/caseUtils.js';
 
 export * from './url/stringifyQuery.js';
 export * from './url/parseQuery.js';
@@ -74,3 +75,5 @@ export * from './isPlainObject.js';
 export * from './parseBigint.js';
 export * from './getMailToUrl.js';
 export * from './phoneLink.js';
+export * from './formatDurationMs.js';
+export * from './formatElapsedMs.js';

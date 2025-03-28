@@ -1,3 +1,25 @@
+## 0.9.0 (2025-03-28)
+
+### 🚀 Features
+
+- pulumi improvements ([fb5970a](https://github.com/kedrzu/nzyme/commit/fb5970a))
+- changes in apis and utils ([2fe1711](https://github.com/kedrzu/nzyme/commit/2fe1711))
+- add formatLength util ([38ed03d](https://github.com/kedrzu/nzyme/commit/38ed03d))
+- **apis:** added several APIs ([30e174e](https://github.com/kedrzu/nzyme/commit/30e174e))
+- **aws:** add aws package ([fde0ec3](https://github.com/kedrzu/nzyme/commit/fde0ec3))
+- **dom-utils:** improvements ([5d3ce37](https://github.com/kedrzu/nzyme/commit/5d3ce37))
+
+### 🩹 Fixes
+
+- **eslint:** fix project config ([01d0611](https://github.com/kedrzu/nzyme/commit/01d0611))
+- **pulumi:** fix pulumi state directory ([bec60ee](https://github.com/kedrzu/nzyme/commit/bec60ee))
+- **pulumi:** better AWS config handling ([7dca4db](https://github.com/kedrzu/nzyme/commit/7dca4db))
+- **utils:** asArray returns empty array if input is null ([972efa4](https://github.com/kedrzu/nzyme/commit/972efa4))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.8.0 (2025-03-12)
 
 ### 🚀 Features

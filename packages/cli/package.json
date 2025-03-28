@@ -1,27 +1,33 @@
 {
     "name": "@nzyme/cli",
     "version": "0.9.0",
-    "license": "MIT",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/kedrzu/nzyme.git"
     },
+    "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "type": "module",
-    "publishConfig": {
-        "access": "public"
+    "bin": {
+        "nzyme": "dist/esm/cli.js"
     },
     "files": [
         "dist"
     ],
-    "bin": {
-        "nzyme": "dist/esm/cli.js"
-    },
-    "engines": {
-        "node": ">=20"
-    },
     "scripts": {
         "build:esm": "tsc --build ./tsconfig.esm.json"
+    },
+    "oclif": {
+        "bin": "nzyme",
+        "commands": {
+            "strategy": "explicit",
+            "target": "./dist/esm/commands.js"
+        },
+        "plugins": [
+            "@oclif/plugin-help",
+            "@oclif/plugin-version"
+        ],
+        "topicSeparator": " "
     },
     "dependencies": {
         "@lerna/package": "^6.4.1",
@@ -60,16 +66,10 @@
         "ts-node": "^10.9.2",
         "typescript": "^5.8.2"
     },
-    "oclif": {
-        "bin": "nzyme",
-        "commands": {
-            "strategy": "explicit",
-            "target": "./dist/esm/commands.js"
-        },
-        "plugins": [
-            "@oclif/plugin-help",
-            "@oclif/plugin-version"
-        ],
-        "topicSeparator": " "
+    "engines": {
+        "node": ">=20"
+    },
+    "publishConfig": {
+        "access": "public"
     }
 }

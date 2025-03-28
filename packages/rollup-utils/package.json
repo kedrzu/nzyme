@@ -1,6 +1,14 @@
 {
     "name": "@nzyme/rollup-utils",
     "version": "0.9.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/kedrzu/nzyme.git"
+    },
+    "license": "MIT",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "sideEffects": false,
+    "type": "module",
     "exports": {
         ".": {
             "import": {
@@ -16,17 +24,6 @@
                 "default": "./dist/esm/index.js"
             }
         }
-    },
-    "sideEffects": false,
-    "license": "MIT",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/kedrzu/nzyme.git"
-    },
-    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
-    "type": "module",
-    "publishConfig": {
-        "access": "public"
     },
     "files": [
         "dist"
@@ -65,5 +62,8 @@
         "@types/node": "^22.13.14",
         "@types/source-map-support": "^0.5.10",
         "typescript": "^5.8.2"
+    },
+    "publishConfig": {
+        "access": "public"
     }
 }

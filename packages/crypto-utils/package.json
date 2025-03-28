@@ -1,33 +1,15 @@
 {
     "name": "@nzyme/crypto-utils",
     "version": "0.9.0",
-    "sideEffects": false,
-    "license": "MIT",
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
     },
+    "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "sideEffects": false,
     "type": "module",
-    "publishConfig": {
-        "access": "public"
-    },
-    "files": [
-        "dist"
-    ],
-    "main": "./dist/cjs/index.node.cjs",
-    "types": "./dist/cjs/index.node.d.ts",
     "exports": {
-        "node": {
-            "import": {
-                "types": "./dist/esm/index.node.d.ts",
-                "default": "./dist/esm/index.node.js"
-            },
-            "require": {
-                "types": "./dist/cjs/index.node.d.ts",
-                "default": "./dist/cjs/index.node.cjs"
-            }
-        },
         "default": {
             "import": {
                 "types": "./dist/esm/index.browser.d.ts",
@@ -37,14 +19,29 @@
                 "types": "./dist/cjs/index.browser.d.ts",
                 "default": "./dist/cjs/index.browser.cjs"
             }
+        },
+        "node": {
+            "import": {
+                "types": "./dist/esm/index.node.d.ts",
+                "default": "./dist/esm/index.node.js"
+            },
+            "require": {
+                "types": "./dist/cjs/index.node.d.ts",
+                "default": "./dist/cjs/index.node.cjs"
+            }
         }
     },
+    "main": "./dist/cjs/index.node.cjs",
+    "types": "./dist/cjs/index.node.d.ts",
+    "files": [
+        "dist"
+    ],
     "scripts": {
-        "eslint": "eslint . --fix --cache",
-        "build:esm": "tsc --build ./tsconfig.esm.json",
         "build:cjs": "tsc --build ./tsconfig.cjs.json",
-        "smoke:mjs": "node tests/smoke.test.mjs",
-        "smoke:cjs": "node tests/smoke.test.cjs"
+        "build:esm": "tsc --build ./tsconfig.esm.json",
+        "eslint": "eslint . --fix --cache",
+        "smoke:cjs": "node tests/smoke.test.cjs",
+        "smoke:mjs": "node tests/smoke.test.mjs"
     },
     "dependencies": {
         "@nzyme/types": "^0.9.0",
@@ -59,6 +56,9 @@
         "@types/node": "^22.13.14",
         "@types/spark-md5": "^3.0.5",
         "typescript": "^5.8.2"
+    },
+    "publishConfig": {
+        "access": "public"
     },
     "depcheck": {
         "ignoreFiles": [

@@ -1,22 +1,14 @@
 {
     "name": "@nzyme/zchema",
     "version": "0.9.0",
-    "license": "MIT",
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
     },
+    "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
-    "type": "module",
-    "publishConfig": {
-        "access": "public"
-    },
-    "files": [
-        "dist"
-    ],
     "sideEffects": false,
-    "main": "./dist/cjs/index.cjs",
-    "types": "./dist/cjs/index.d.ts",
+    "type": "module",
     "exports": {
         ".": {
             "import": {
@@ -33,12 +25,17 @@
             }
         }
     },
+    "main": "./dist/cjs/index.cjs",
+    "types": "./dist/cjs/index.d.ts",
+    "files": [
+        "dist"
+    ],
     "scripts": {
+        "build:cjs": "tsc --build ./tsconfig.cjs.json",
+        "build:esm": "tsc --build ./tsconfig.esm.json",
         "eslint": "eslint . --fix --cache",
         "smoke:cjs": "node tests/smoke.test.cjs",
-        "smoke:mjs": "node tests/smoke.test.mjs",
-        "build:esm": "tsc --build ./tsconfig.esm.json",
-        "build:cjs": "tsc --build ./tsconfig.cjs.json"
+        "smoke:mjs": "node tests/smoke.test.mjs"
     },
     "dependencies": {
         "@nzyme/types": "^0.9.0",
@@ -53,5 +50,8 @@
         "@types/lodash.merge": "^4.6.9",
         "typescript": "^5.8.2",
         "vitest": "^3.0.9"
+    },
+    "publishConfig": {
+        "access": "public"
     }
 }

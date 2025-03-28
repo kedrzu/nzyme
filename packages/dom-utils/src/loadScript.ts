@@ -6,10 +6,20 @@ type ScriptCache = {
 };
 
 /**
+ * Options for {@link loadScript}.
+ */
+export interface LoadScriptOptions {
+    /**
+     * The document to load the script into.
+     */
+    document?: Document;
+}
+
+/**
  * Loads a given script into the page.
  * If script was already loaded, it won't load it again
  */
-export function loadScript(url: string, options?: { document?: Document }) {
+export function loadScript(url: string, options?: LoadScriptOptions) {
     const cache = getScriptCache((options?.document ?? document) as ScriptCache);
     if (cache[url]) {
         return cache[url];

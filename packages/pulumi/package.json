@@ -41,8 +41,8 @@
         "@nzyme/project-utils": "^0.8.0",
         "@nzyme/types": "^0.8.0",
         "@nzyme/utils": "^0.8.0",
-        "@pulumi/aws": "^6.73.0",
-        "@pulumi/pulumi": "^3.158.0",
+        "@pulumi/aws": "^6.74.0",
+        "@pulumi/pulumi": "^3.159.0",
         "@rollup/plugin-babel": "^6.0.4",
         "@rollup/plugin-commonjs": "^28.0.3",
         "@rollup/plugin-json": "^6.1.0",
@@ -63,7 +63,7 @@
         "@nzyme/eslint": "^0.8.0",
         "@nzyme/tsconfig": "^0.8.0",
         "@nzyme/vitest": "^0.8.0",
-        "@types/node": "^22.13.13",
+        "@types/node": "^22.13.14",
         "typescript": "^5.8.2"
     }
 }

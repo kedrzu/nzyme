@@ -153,5 +153,9 @@ function getQualifiedQuery(query: Record<string, string | undefined>) {
         qq += `${key}=${encoded}`;
     }
 
+    if (qq.length === 0) {
+        return undefined;
+    }
+
     return qq;
 }

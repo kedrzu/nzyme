@@ -5,6 +5,7 @@ import type { ResolveDependencies, ServiceDependencies } from '@nzyme/ioc';
 import { defineService } from '@nzyme/ioc';
 import type { EmptyObject } from '@nzyme/types';
 import { toPascalCase } from '@nzyme/utils';
+import { OutputMap } from '@pulumi/pulumi/automation/stack.js';
 
 /**
  * Output of a Pulumi stack.
@@ -32,7 +33,7 @@ export type StackOutputResult<TOutput extends StackOutput> = {
  */
 export interface StackOptions<
     TDeps extends ServiceDependencies = ServiceDependencies,
-    TOutput extends StackOutput | void = StackOutput | void,
+    TOutput extends StackOutput = StackOutput,
 > {
     /**
      * Name of the stack.
@@ -45,7 +46,20 @@ export interface StackOptions<
     /**
      * Setup function for the stack.
      */
-    setup: (deps: ResolveDependencies<TDeps>) => Promise<TOutput> | TOutput;
+    program: (deps: ResolveDependencies<TDeps>) => Promise<TOutput> | TOutput;
+
+    /**
+     * Program to run before the stack is deployed.
+     */
+    beforeDeploy?: (deps: ResolveDependencies<TDeps>) => Promise<void> | void;
+
+    /**
+     * Program to run after the stack is deployed.
+     */
+    afterDeploy?: (
+        output: pulumi.Unwrap<TOutput>,
+        deps: ResolveDependencies<TDeps>,
+    ) => Promise<void> | void;
 }
 
 /**
@@ -85,7 +99,17 @@ export interface StackDefinition<TOutput extends StackOutput = StackOutput> {
     /**
      * Get the outputs of the stack.
      */
-    outputs: (stack: automation.Stack) => Promise<StackOutputResult<TOutput>>;
+    outputs: (stack: automation.Stack) => Promise<pulumi.Unwrap<TOutput>>;
+
+    /**
+     * Function to run before the stack is deployed.
+     */
+    beforeDeploy: () => Promise<void> | void;
+
+    /**
+     * Function to run after the stack is deployed.
+     */
+    afterDeploy: (output: OutputMap) => Promise<void> | void;
 }
 
 /**
@@ -114,7 +138,7 @@ export function defineStack<
             return {
                 name,
                 program: async () => {
-                    const output = await options.setup(deps);
+                    const output = await options.program(deps);
                     return output || {};
                 },
                 ref: refOptions => {
@@ -123,7 +147,20 @@ export function defineStack<
                     return createStackReference(path);
                 },
                 outputs: async (stack: automation.Stack) => {
-                    return (await stack.outputs()) as StackOutputResult<TOutput>;
+                    return unwrapOutput(await stack.outputs()) as pulumi.Unwrap<TOutput>;
+                },
+                beforeDeploy: async () => {
+                    if (options.beforeDeploy) {
+                        await options.beforeDeploy(deps);
+                    }
+                },
+                afterDeploy: async output => {
+                    if (options.afterDeploy) {
+                        await options.afterDeploy(
+                            unwrapOutput(output) as pulumi.Unwrap<TOutput>,
+                            deps,
+                        );
+                    }
                 },
             };
         },
@@ -137,4 +174,10 @@ function createStackReference<TOutput extends StackOutput>(path: string): StackR
         getOutput: <K extends keyof TOutput>(key: K & string): TOutput[K] =>
             ref.getOutput(key) as TOutput[K],
     };
+}
+
+function unwrapOutput<TOutput extends StackOutput>(output: StackOutputResult<TOutput>): TOutput {
+    return Object.fromEntries(
+        Object.entries(output).map(([key, value]) => [key, value.value]),
+    ) as TOutput;
 }

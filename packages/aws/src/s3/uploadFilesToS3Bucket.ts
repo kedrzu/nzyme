@@ -36,7 +36,7 @@ export type UploadFilesOptions = {
     /**
      * The cache control header to set for the files.
      */
-    cacheControl?: string;
+    cacheControl?: string | ((key: string) => string);
     /**
      * Whether to delete missing files.
      */
@@ -58,11 +58,12 @@ export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
     });
 
     try {
-        const source = options.sourcePath;
-        const dest = options.destinationPath;
+        const { sourcePath, destinationPath, cacheControl } = options;
+        const cacheControlFunction =
+            typeof cacheControl === 'function' ? cacheControl : () => cacheControl;
 
-        logger.info(`Uploading ${chalk.green(source)} to ${chalk.green(dest)}`);
-        const output = await client.sync(source, dest, {
+        logger.info(`Uploading ${chalk.green(sourcePath)} to ${chalk.green(destinationPath)}`);
+        const output = await client.sync(sourcePath, destinationPath, {
             del: !!options.deleteMissing,
             filters:
                 options.include || options.exclude
@@ -81,26 +82,28 @@ export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
 
                 return {
                     ContentType: mimeLookup(key) || 'text/html',
-                    CacheControl: options.cacheControl,
+                    CacheControl: cacheControlFunction(key),
                 };
             },
         });
 
-        logger.info(`Finished uploading ${chalk.green(source)} to ${chalk.green(dest)}`);
+        logger.info(
+            `Finished uploading ${chalk.green(sourcePath)} to ${chalk.green(destinationPath)}`,
+        );
 
         if (output.created.length) {
             logger.info(
-                `Created ${chalk.green(output.created.length)} files in ${chalk.green(dest)}`,
+                `Created ${chalk.green(output.created.length)} files in ${chalk.green(destinationPath)}`,
             );
         }
         if (output.updated.length) {
             logger.info(
-                `Updated ${chalk.green(output.updated.length)} files in ${chalk.green(dest)}`,
+                `Updated ${chalk.green(output.updated.length)} files in ${chalk.green(destinationPath)}`,
             );
         }
         if (output.deleted.length) {
             logger.info(
-                `Deleted ${chalk.green(output.deleted.length)} files in ${chalk.green(dest)}`,
+                `Deleted ${chalk.green(output.deleted.length)} files in ${chalk.green(destinationPath)}`,
             );
         }
     } finally {

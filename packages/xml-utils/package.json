@@ -1,8 +1,14 @@
 {
     "name": "@nzyme/xml-utils",
     "version": "0.9.0",
-    "main": "./dist/cjs/index.cjs",
-    "types": "./dist/cjs/index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/kedrzu/nzyme.git"
+    },
+    "license": "MIT",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "sideEffects": false,
+    "type": "module",
     "exports": {
         ".": {
             "import": {
@@ -19,34 +25,28 @@
             }
         }
     },
-    "sideEffects": false,
-    "license": "MIT",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/kedrzu/nzyme.git"
-    },
-    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
-    "type": "module",
-    "publishConfig": {
-        "access": "public"
-    },
+    "main": "./dist/cjs/index.cjs",
+    "types": "./dist/cjs/index.d.ts",
     "files": [
         "dist"
     ],
     "scripts": {
-        "build:esm": "tsc --build ./tsconfig.esm.json",
         "build:cjs": "tsc --build ./tsconfig.cjs.json",
+        "build:esm": "tsc --build ./tsconfig.esm.json",
         "eslint": "eslint . --fix --cache",
-        "smoke:mjs": "node tests/smoke.test.mjs",
-        "smoke:cjs": "node tests/smoke.test.cjs"
+        "smoke:cjs": "node tests/smoke.test.cjs",
+        "smoke:mjs": "node tests/smoke.test.mjs"
     },
     "dependencies": {
-        "fast-xml-parser": "^5.0.9",
+        "fast-xml-parser": "^5.2.0",
         "tslib": "^2.8.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.9.0",
         "@nzyme/tsconfig": "^0.9.0",
         "typescript": "^5.8.2"
+    },
+    "publishConfig": {
+        "access": "public"
     }
 }

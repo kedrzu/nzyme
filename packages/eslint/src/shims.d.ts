@@ -22,3 +22,10 @@ declare module 'eslint-plugin-import' {
     };
     export default plugin;
 }
+
+declare module 'eslint-plugin-package-json' {
+    import { ESLint } from 'eslint';
+    export const configs: {
+        recommended: ESLint.Config;
+    };
+}

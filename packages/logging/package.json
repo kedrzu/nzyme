@@ -1,30 +1,27 @@
 {
     "name": "@nzyme/logging",
-    "private": true,
     "version": "0.9.0",
-    "sideEffects": false,
-    "license": "MIT",
+    "private": true,
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
     },
+    "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "sideEffects": false,
     "type": "module",
-    "publishConfig": {
-        "access": "public"
-    },
-    "files": [
-        "dist"
-    ],
     "exports": {
         ".": {
             "import": "./dist/esm/index.js",
             "types": "./dist/esm/index.d.ts"
         }
     },
+    "files": [
+        "dist"
+    ],
     "scripts": {
-        "eslint": "eslint . --fix --cache",
         "build:esm": "tsc --build ./tsconfig.esm.json",
+        "eslint": "eslint . --fix --cache",
         "smoke:mjs": "node tests/smoke.test.mjs"
     },
     "dependencies": {
@@ -39,7 +36,10 @@
     "devDependencies": {
         "@nzyme/eslint": "^0.9.0",
         "@nzyme/tsconfig": "^0.9.0",
-        "@types/node": "^22.13.14",
+        "@types/node": "^22.14.0",
         "typescript": "^5.8.2"
+    },
+    "publishConfig": {
+        "access": "public"
     }
 }

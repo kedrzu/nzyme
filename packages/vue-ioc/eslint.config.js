@@ -1,8 +1,10 @@
-import { imports, jsdoc, typescript } from '@nzyme/eslint';
+import { imports, jsdoc, packageJson, typescript, vue } from '@nzyme/eslint';
 
 export default [
     //
     ...typescript({ target: 'browser' }),
-    ...jsdoc(),
     ...imports(),
+    ...jsdoc(),
+    ...vue(),
+    ...packageJson(),
 ];

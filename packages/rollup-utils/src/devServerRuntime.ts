@@ -4,6 +4,9 @@ import chalk from 'chalk';
 import { consola } from 'consola';
 import sourceMap from 'source-map-support';
 
+/**
+ * This is the runtime for the dev server worker.
+ */
 export function devServerRuntime() {
     sourceMap.install();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access

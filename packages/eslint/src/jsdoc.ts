@@ -8,7 +8,7 @@ export function jsdoc(): Linter.Config[] {
             plugins: {
                 jsdoc: jsdocPlugin,
             },
-
+            ignores: ['dist/**/*', 'node_modules/**/*'],
             rules: {
                 'jsdoc/require-jsdoc': [
                     1,

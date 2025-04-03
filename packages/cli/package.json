@@ -1,27 +1,33 @@
 {
     "name": "@nzyme/cli",
     "version": "0.9.0",
-    "license": "MIT",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/kedrzu/nzyme.git"
     },
+    "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "type": "module",
-    "publishConfig": {
-        "access": "public"
+    "bin": {
+        "nzyme": "dist/esm/cli.js"
     },
     "files": [
         "dist"
     ],
-    "bin": {
-        "nzyme": "dist/esm/cli.js"
-    },
-    "engines": {
-        "node": ">=20"
-    },
     "scripts": {
         "build:esm": "tsc --build ./tsconfig.esm.json"
+    },
+    "oclif": {
+        "bin": "nzyme",
+        "commands": {
+            "strategy": "explicit",
+            "target": "./dist/esm/commands.js"
+        },
+        "plugins": [
+            "@oclif/plugin-help",
+            "@oclif/plugin-version"
+        ],
+        "topicSeparator": " "
     },
     "dependencies": {
         "@lerna/package": "^6.4.1",
@@ -51,25 +57,19 @@
         "@types/lerna__package": "^5.1.3",
         "@types/lerna__project": "^5.1.2",
         "@types/lodash.merge": "^4.6.9",
-        "@types/node": "^22.13.14",
-        "@types/react": "^19.0.12",
+        "@types/node": "^22.14.0",
+        "@types/react": "^19.1.0",
         "@types/source-map-support": "^0.5.10",
         "eslint-plugin-react": "^7.37.4",
         "eslint-plugin-react-hooks": "^5.2.0",
-        "oclif": "^4.17.41",
+        "oclif": "^4.17.42",
         "ts-node": "^10.9.2",
         "typescript": "^5.8.2"
     },
-    "oclif": {
-        "bin": "nzyme",
-        "commands": {
-            "strategy": "explicit",
-            "target": "./dist/esm/commands.js"
-        },
-        "plugins": [
-            "@oclif/plugin-help",
-            "@oclif/plugin-version"
-        ],
-        "topicSeparator": " "
+    "engines": {
+        "node": ">=20"
+    },
+    "publishConfig": {
+        "access": "public"
     }
 }

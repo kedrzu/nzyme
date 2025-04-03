@@ -1,3 +1,20 @@
+## 0.10.0 (2025-04-03)
+
+### 🚀 Features
+
+- **apis:** heremaps geocoding endpoint ([10dc498](https://github.com/kedrzu/nzyme/commit/10dc498))
+- **aws:** added cloudfront helpers ([b04360e](https://github.com/kedrzu/nzyme/commit/b04360e))
+- **eslint:** react linting ([8c3e7cf](https://github.com/kedrzu/nzyme/commit/8c3e7cf))
+
+### 🩹 Fixes
+
+- **eslint:** package.json linting ([d60a1d8](https://github.com/kedrzu/nzyme/commit/d60a1d8))
+- **eslint:** fix jsdoc ([8f02260](https://github.com/kedrzu/nzyme/commit/8f02260))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.9.0 (2025-03-28)
 
 ### 🚀 Features

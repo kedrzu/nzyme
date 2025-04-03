@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/typography",
-    "version": "0.9.0",
+    "version": "0.10.0",
     "private": true,
     "repository": {
         "type": "git",
@@ -39,13 +39,13 @@
         "smoke:mjs": "node tests/smoke.test.mjs"
     },
     "dependencies": {
-        "@nzyme/types": "^0.9.0",
-        "@nzyme/utils": "^0.9.0",
+        "@nzyme/types": "^0.10.0",
+        "@nzyme/utils": "^0.10.0",
         "tslib": "^2.8.1"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.9.0",
-        "@nzyme/tsconfig": "^0.9.0",
+        "@nzyme/eslint": "^0.10.0",
+        "@nzyme/tsconfig": "^0.10.0",
         "typescript": "^5.8.2"
     },
     "publishConfig": {

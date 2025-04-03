@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/dom-utils",
-    "version": "0.9.0",
+    "version": "0.10.0",
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
@@ -38,14 +38,14 @@
         "smoke:mjs": "node tests/smoke.test.mjs"
     },
     "dependencies": {
-        "@nzyme/crypto-utils": "0.9.0",
-        "@nzyme/utils": "^0.9.0",
+        "@nzyme/crypto-utils": "0.10.0",
+        "@nzyme/utils": "^0.10.0",
         "lodash.debounce": "^4.0.8",
         "tslib": "^2.8.1"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.9.0",
-        "@nzyme/tsconfig": "^0.9.0",
+        "@nzyme/eslint": "^0.10.0",
+        "@nzyme/tsconfig": "^0.10.0",
         "@types/lodash.debounce": "^4.0.9",
         "typescript": "^5.8.2"
     },

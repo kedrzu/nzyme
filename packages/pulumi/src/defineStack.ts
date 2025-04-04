@@ -1,11 +1,11 @@
 import * as pulumi from '@pulumi/pulumi';
 import type { automation } from '@pulumi/pulumi';
+import type { OutputMap } from '@pulumi/pulumi/automation/stack.js';
 
 import type { ResolveDependencies, ServiceDependencies } from '@nzyme/ioc';
 import { defineService } from '@nzyme/ioc';
 import type { EmptyObject } from '@nzyme/types';
 import { toPascalCase } from '@nzyme/utils';
-import { OutputMap } from '@pulumi/pulumi/automation/stack.js';
 
 /**
  * Output of a Pulumi stack.
@@ -39,10 +39,28 @@ export interface StackOptions<
      * Name of the stack.
      */
     name: string;
+
+    /**
+     * Project name.
+     */
+    project: string;
+
+    /**
+     * Organization name.
+     */
+    organization?: string;
+
     /**
      * Dependencies of the stack.
      */
     deps?: TDeps;
+
+    /**
+     * Whether to enable the stack.
+     * @default true
+     */
+    enabled?: boolean;
+
     /**
      * Setup function for the stack.
      */
@@ -63,21 +81,6 @@ export interface StackOptions<
 }
 
 /**
- * Options for creating a stack reference.
- */
-export interface StackReferenceOptions {
-    /**
-     * The project name to use for the stack.
-     */
-    project: string;
-
-    /**
-     * The organization name to use for the stack.
-     */
-    organization?: string;
-}
-
-/**
  * Definition of a Pulumi stack.
  */
 export interface StackDefinition<TOutput extends StackOutput = StackOutput> {
@@ -87,6 +90,21 @@ export interface StackDefinition<TOutput extends StackOutput = StackOutput> {
     name: string;
 
     /**
+     * Project name.
+     */
+    project: string;
+
+    /**
+     * Organization name.
+     */
+    organization?: string;
+
+    /**
+     * Whether the stack is enabled.
+     */
+    enabled: boolean;
+
+    /**
      * Program to run for the stack.
      */
     program: () => Promise<TOutput>;
@@ -94,7 +112,7 @@ export interface StackDefinition<TOutput extends StackOutput = StackOutput> {
     /**
      * Create a reference to the stack.
      */
-    ref: (options: StackReferenceOptions) => StackReference<TOutput>;
+    ref: () => StackReference<TOutput>;
 
     /**
      * Get the outputs of the stack.
@@ -134,16 +152,21 @@ export function defineStack<
         deps: options.deps,
         setup(deps): StackDefinition<TOutput> {
             const name = options.name;
+            const project = options.project;
+            const organization = options.organization;
 
             return {
                 name,
+                project,
+                organization,
+                enabled: options.enabled ?? true,
                 program: async () => {
                     const output = await options.program(deps);
                     return output || {};
                 },
-                ref: refOptions => {
-                    const org = refOptions.organization ?? 'organization';
-                    const path = `${org}/${refOptions.project}/${name}`;
+                ref: () => {
+                    const org = organization ?? 'organization';
+                    const path = `${org}/${project}/${name}`;
                     return createStackReference(path);
                 },
                 outputs: async (stack: automation.Stack) => {

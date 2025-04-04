@@ -13,16 +13,6 @@ export interface CreateOrSelectStackOptions {
     stack: StackDefinition;
 
     /**
-     * The project name to use for the stack.
-     */
-    projectName: string;
-
-    /**
-     * The project description to use for the stack.
-     */
-    projectDescription?: string;
-
-    /**
      * The cwd to use for the stack.
      * @default process.cwd()
      */
@@ -73,7 +63,7 @@ export async function createOrSelectStack(options: CreateOrSelectStackOptions) {
 
     const stack = await automation.LocalWorkspace.createOrSelectStack(
         {
-            projectName: options.projectName,
+            projectName: options.stack.project,
             stackName: options.stack.name,
             program: options.stack.program,
         },
@@ -82,8 +72,7 @@ export async function createOrSelectStack(options: CreateOrSelectStackOptions) {
             stackSettings,
             secretsProvider: options.secretsProvider,
             projectSettings: {
-                name: options.projectName,
-                description: options.projectDescription,
+                name: options.stack.project,
                 runtime: 'nodejs',
             },
         },

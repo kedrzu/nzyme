@@ -5,3 +5,7 @@ export * from './createOrSelectStack.js';
 export * from './createAwsProvider.js';
 export * from './compileFunction.js';
 export * from './compileCloudFrontFunction.js';
+export * from './deployStack.js';
+export * from './destroyStack.js';
+export * from './cancelStack.js';
+export * from './refreshStack.js';

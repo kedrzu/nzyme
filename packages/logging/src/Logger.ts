@@ -13,6 +13,10 @@ export interface LoggerObject {
      */
     err?: unknown;
     /**
+     * An error object.
+     */
+    error?: unknown;
+    /**
      * Additional properties.
      */
     [key: string]: unknown;

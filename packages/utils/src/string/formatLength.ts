@@ -30,6 +30,10 @@ export function formatLength(value: number | null | undefined, unit?: LengthUnit
 
     value = normalizeLength(value, unit ?? 'm');
 
+    if (value === 0) {
+        return `0\u202f${unit}`;
+    }
+
     if (value < CENTIMETER) {
         return `${value}\u202fmm`;
     }

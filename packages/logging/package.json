@@ -1,7 +1,6 @@
 {
     "name": "@nzyme/logging",
     "version": "0.10.0",
-    "private": true,
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"

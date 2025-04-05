@@ -1,32 +1,38 @@
 {
-    "license": "MIT",
+    "name": "nzyme",
+    "version": "0.0.0",
+    "private": true,
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
     },
+    "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "type": "module",
-    "packageManager": "yarn@4.1.0",
     "workspaces": [
         "packages/*"
     ],
     "scripts": {
-        "setup": "turbo run build:esm --filter=@nzyme/cli && yarn monorepo",
-        "monorepo": "nzyme monorepo",
-        "clean": "del \"**/dist\" \"**/.turbo\" \"**/.nzyme\" \"**/.tsbuildinfo\" \"**/*.tsbuildinfo\" \"!**/node_modules/**\"",
-        "build:esm": "tsc --build ./.nzyme/tsconfig.esm.json",
-        "build:cjs": "tsc --build ./.nzyme/tsconfig.cjs.json && yarn nzyme rename-cjs",
         "build": "yarn build:esm && yarn build:cjs",
+        "build:cjs": "tsc --build ./.nzyme/tsconfig.cjs.json && yarn nzyme rename-cjs",
+        "build:esm": "tsc --build ./.nzyme/tsconfig.esm.json",
         "build:turbo": "turbo run build:esm build:cjs",
-        "watch": "yarn build:esm --watch",
-        "watch:cjs": "yarn build:cjs --watch",
-        "smoke": "turbo run smoke:cjs smoke:mjs",
-        "release": "nx release --yes",
-        "dev": "yarn && yarn monorepo && yarn watch",
-        "test": "vitest run",
+        "clean": "del \"**/dist\" \"**/.turbo\" \"**/.nzyme\" \"**/.tsbuildinfo\" \"**/*.tsbuildinfo\" \"!**/node_modules/**\"",
         "coverage": "vitest run --coverage",
+        "dev": "yarn && yarn monorepo && yarn watch",
+        "groundup": "yarn && yarn clean &&yarn setup && yarn build",
+        "monorepo": "nzyme monorepo",
+        "release": "nx release --yes",
+        "setup": "turbo run build:esm --filter=@nzyme/cli && yarn monorepo",
+        "smoke": "turbo run smoke:cjs smoke:mjs",
+        "test": "vitest run",
         "upgrade": "yarn upgrade-interactive",
-        "groundup": "yarn && yarn clean &&yarn setup && yarn build"
+        "upgrade:self": "yarn set version berry",
+        "watch": "yarn build:esm --watch",
+        "watch:cjs": "yarn build:cjs --watch"
+    },
+    "dependencies": {
+        "tslib": "^2.8.1"
     },
     "devDependencies": {
         "@nx/js": "^20.7.1",
@@ -41,12 +47,10 @@
         "typescript": "^5.8.2",
         "vitest": "^3.1.1"
     },
+    "packageManager": "yarn@4.1.0",
     "depcheck": {
         "ignoreDeps": [
             "*"
         ]
-    },
-    "dependencies": {
-        "tslib": "^2.8.1"
     }
 }

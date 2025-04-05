@@ -1,3 +1,14 @@
+## 0.11.0 (2025-04-05)
+
+### 🚀 Features
+
+- add logging package to release ([d286a4f](https://github.com/kedrzu/nzyme/commit/d286a4f))
+- **pulumi:** add stack management commands ([a42aeb3](https://github.com/kedrzu/nzyme/commit/a42aeb3))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.10.0 (2025-04-03)
 
 ### 🚀 Features

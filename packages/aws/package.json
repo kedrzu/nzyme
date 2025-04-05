@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/aws",
-    "version": "0.10.0",
+    "version": "0.11.0",
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
@@ -33,10 +33,10 @@
         "@aws-sdk/client-dynamodb": "^3.777.0",
         "@aws-sdk/client-s3": "^3.779.0",
         "@aws-sdk/client-sqs": "^3.777.0",
-        "@nzyme/ioc": "^0.10.0",
-        "@nzyme/logging": "^0.10.0",
-        "@nzyme/types": "^0.10.0",
-        "@nzyme/utils": "^0.10.0",
+        "@nzyme/ioc": "^0.11.0",
+        "@nzyme/logging": "^0.11.0",
+        "@nzyme/types": "^0.11.0",
+        "@nzyme/utils": "^0.11.0",
         "@types/aws-lambda": "^8.10.148",
         "@types/mime-types": "^2.1.4",
         "mime-types": "^3.0.1",
@@ -45,9 +45,9 @@
         "tslib": "^2.8.1"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.10.0",
-        "@nzyme/tsconfig": "^0.10.0",
-        "@nzyme/vitest": "^0.10.0",
+        "@nzyme/eslint": "^0.11.0",
+        "@nzyme/tsconfig": "^0.11.0",
+        "@nzyme/vitest": "^0.11.0",
         "@types/node": "^22.14.0",
         "typescript": "^5.8.2"
     },

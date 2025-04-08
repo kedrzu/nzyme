@@ -134,6 +134,12 @@ async function processPackageCore(pkg: Package, packages: Package[]): Promise<Pa
         fileName: 'tsconfig.json',
         extends: tsconfig.path,
         references: esmReferences,
+        config: {
+            compilerOptions: {
+                tsBuildInfoFile:
+                    tsconfig.config.compilerOptions?.tsBuildInfoFile ?? 'tsconfig.esm.tsbuildinfo',
+            },
+        },
     });
 
     const config = getNzymeConfig(pkg);
@@ -153,6 +159,7 @@ async function processPackageCore(pkg: Package, packages: Package[]): Promise<Pa
                     module: 'CommonJS',
                     moduleResolution: 'Node',
                     outDir: `${dist}-cjs`,
+                    tsBuildInfoFile: 'tsconfig.cjs.tsbuildinfo',
                 },
             },
         });

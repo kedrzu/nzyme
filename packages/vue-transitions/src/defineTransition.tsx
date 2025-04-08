@@ -34,15 +34,15 @@ type TransitionProp<TProps extends ComponentObjectPropsOptions, TValue> =
 type TransitionDefProps<TProps extends ComponentObjectPropsOptions = SomeObject> = {
     name: string;
     props?: TProps;
-    enterFromClass?: TransitionProp<TProps, string>;
-    enterActiveClass?: TransitionProp<TProps, string>;
-    enterToClass?: TransitionProp<TProps, string>;
-    appearFromClass?: TransitionProp<TProps, string>;
-    appearActiveClass?: TransitionProp<TProps, string>;
-    appearToClass?: TransitionProp<TProps, string>;
-    leaveFromClass?: TransitionProp<TProps, string>;
-    leaveActiveClass?: TransitionProp<TProps, string>;
-    leaveToClass?: TransitionProp<TProps, string>;
+    enterFromClass?: TransitionProp<TProps, string | undefined>;
+    enterActiveClass?: TransitionProp<TProps, string | undefined>;
+    enterToClass?: TransitionProp<TProps, string | undefined>;
+    appearFromClass?: TransitionProp<TProps, string | undefined>;
+    appearActiveClass?: TransitionProp<TProps, string | undefined>;
+    appearToClass?: TransitionProp<TProps, string | undefined>;
+    leaveFromClass?: TransitionProp<TProps, string | undefined>;
+    leaveActiveClass?: TransitionProp<TProps, string | undefined>;
+    leaveToClass?: TransitionProp<TProps, string | undefined>;
 };
 
 /**

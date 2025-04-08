@@ -1,8 +1,0 @@
-{
-    "compilerOptions": {
-        "rootDir": "./src",
-        "lib": ["DOM", "DOM.Iterable", "ESNext"]
-    },
-    "include": ["src"],
-    "exclude": ["src/**/*.test.ts"]
-}

@@ -15,6 +15,7 @@ export type RecordSchemaOptions<T extends SchemaAny = SchemaAny> = SchemaOptions
     RecordValue<Infer<T>>
 > & {
     of: T;
+    default?: () => RecordValue<Infer<T>>;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

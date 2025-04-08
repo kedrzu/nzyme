@@ -11,17 +11,17 @@
     "type": "module",
     "exports": {
         ".": {
-            "types": "./dist/esm/index.d.ts",
-            "default": "./dist/esm/index.js"
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
         },
         "./*": {
-            "types": "./dist/esm/*.d.ts",
-            "default": "./dist/esm/*.js"
+            "types": "./dist/*.d.ts",
+            "default": "./dist/*.js"
         }
     },
-    "main": "./dist/esm/index.js",
-    "module": "./dist/esm/index.js",
-    "types": "./dist/esm/index.d.ts",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "files": [
         "dist"
     ],

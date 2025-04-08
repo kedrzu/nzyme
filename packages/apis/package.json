@@ -12,37 +12,37 @@
     "exports": {
         ".": {
             "import": {
-                "types": "./dist/esm/index.d.ts",
-                "default": "./dist/esm/index.js"
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.js"
             },
             "require": {
-                "types": "./dist/cjs/index.d.ts",
-                "default": "./dist/cjs/index.cjs"
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.cjs"
             },
             "default": {
-                "types": "./dist/esm/index.d.ts",
-                "default": "./dist/esm/index.js"
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.js"
             }
         },
         "./*": {
             "import": {
-                "types": "./dist/esm/*.d.ts",
-                "default": "./dist/esm/*.js"
+                "types": "./dist/*.d.ts",
+                "default": "./dist/*.js"
             },
             "require": {
-                "types": "./dist/cjs/*.d.ts",
-                "default": "./dist/cjs/*.cjs"
+                "types": "./dist/*.d.ts",
+                "default": "./dist/*.cjs"
             },
             "default": {
-                "types": "./dist/esm/*.d.ts",
-                "default": "./dist/esm/*.js"
+                "types": "./dist/*.d.ts",
+                "default": "./dist/*.js"
             }
         }
     },
     "typesVersions": {
         "*": {
             "*": [
-                "./dist/esm/*.d.ts"
+                "./dist/*.d.ts"
             ]
         }
     },

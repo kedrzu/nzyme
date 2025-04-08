@@ -3,6 +3,9 @@ import { identity } from '@nzyme/utils';
 import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
 import { defineSchema } from '../defineSchema.js';
 
+/**
+ * String schema options.
+ */
 export type StringSchema<O extends SchemaOptions<string> = SchemaOptions<string>> = Schema<
     string,
     O
@@ -17,11 +20,13 @@ const proto: SchemaProto<string> = {
 
 type StringSchemaBase = {
     // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-    <O extends SchemaOptions<string> = {}>(
-        options?: O & SchemaOptions<string>,
-    ): StringSchema<SchemaOptionsSimlify<O>>;
+    (): StringSchema<{}>;
+    <O extends object>(options: O & SchemaOptions<string>): StringSchema<SchemaOptionsSimlify<O>>;
 };
 
+/**
+ * Creates a string schema.
+ */
 export const string = defineSchema<StringSchemaBase>({
     name: 'string',
     proto: () => proto,

@@ -1,7 +1,20 @@
 import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
 import { defineSchema } from '../defineSchema.js';
 
-export type DateSchema<O extends SchemaOptions<Date>> = Schema<Date, O>;
+/**
+ * Date schema options.
+ */
+export type DateSchemaOptions = SchemaOptions<Date> & {
+    /**
+     * Default value.
+     */
+    default?: () => Date;
+};
+
+/**
+ * Date schema.
+ */
+export type DateSchema<O extends DateSchemaOptions = DateSchemaOptions> = Schema<Date, O>;
 
 const proto: SchemaProto<Date> = {
     coerce: val => new Date(val as string | number),
@@ -12,11 +25,13 @@ const proto: SchemaProto<Date> = {
 
 type DateSchemaBase = {
     // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-    <O extends SchemaOptions<Date> = {}>(
-        options?: O & SchemaOptions<Date>,
-    ): DateSchema<SchemaOptionsSimlify<O>>;
+    (): DateSchema<{}>;
+    <O extends object>(options: O & SchemaOptions<Date>): DateSchema<SchemaOptionsSimlify<O>>;
 };
 
+/**
+ * Creates a date schema.
+ */
 export const date = defineSchema<DateSchemaBase>({
     name: 'date',
     proto: () => proto,

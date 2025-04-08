@@ -28,7 +28,7 @@
     "typescript.format.enable": false,
     "typescript.tsdk": "node_modules/typescript/lib",
     "eslint.lintTask.enable": true,
-    "eslint.useFlatConfig": false,
+    "eslint.useFlatConfig": true,
     "eslint.codeAction.showDocumentation": {
         "enable": true
     },

@@ -29,3 +29,6 @@ yarn-error.log
 
 # not needed for lib and messes up monorepos
 yarn.lock
+
+# we auto-generate this file
+tsconfig.json

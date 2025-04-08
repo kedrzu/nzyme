@@ -1,7 +1,14 @@
 import type { FunctionParams } from '@nzyme/types';
-import { createNamedFunction, identity } from '@nzyme/utils';
+import { createNamedFunction, identity, nullable } from '@nzyme/utils';
 
-import type { SchemaAny, SchemaBase, SchemaOptions, SchemaProto, Infer } from './Schema.js';
+import type {
+    SchemaAny,
+    SchemaBase,
+    SchemaOptions,
+    SchemaProto,
+    Infer,
+    SchemaDefault,
+} from './Schema.js';
 
 type SchemaBaseValue<F extends SchemaBase> = Exclude<Infer<ReturnType<F>>, undefined | null>;
 
@@ -33,9 +40,9 @@ export function defineSchema<
     const SchemaBase: SchemaBase = createNamedFunction(definition.name, (...args) => {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         const options = optionsFactory(...(args as FunctionParams<F>)) ?? ({} as O);
-
         const schema: SchemaAny = {
             ...options,
+            default: wrapDefault(options.default),
             nullable: options.nullable ?? false,
             optional: options.optional ?? false,
             validators: (options.validators ?? []) as SchemaAny['validators'],
@@ -47,4 +54,12 @@ export function defineSchema<
     });
 
     return SchemaBase as F;
+}
+
+function wrapDefault<T>(def: SchemaDefault<T> | undefined): (() => T) | undefined {
+    if (def !== undefined && typeof def !== 'function') {
+        return () => def;
+    }
+
+    return def as (() => T) | undefined;
 }

@@ -19,10 +19,10 @@ type ForceName<T> = T & FF;
 export type EnumSchemaValue<O extends EnumSchemaOptions> = O['values'][number];
 
 type EnumSchemaBase = {
-    <const V extends Primitive[]>(values: V): EnumSchema<{ values: V }>;
     <const V extends Primitive[], O extends EnumSchemaOptions<V>>(
         options: O & EnumSchemaOptions<V>,
     ): EnumSchema<SchemaOptionsSimlify<O>>;
+    <const V extends Primitive[]>(values: V): EnumSchema<{ values: V }>;
 };
 
 export const enumSchema = defineSchema<EnumSchemaBase, EnumSchemaOptions>({

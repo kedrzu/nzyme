@@ -4,7 +4,7 @@
     "tasks": {
         "build:esm": {
             "cache": true,
-            "outputs": ["dist/esm/**"],
+            "outputs": ["dist/**"],
             "dependsOn": ["^build:esm"]
         },
         "build:cjs": {

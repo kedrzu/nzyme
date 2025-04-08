@@ -2,8 +2,7 @@
     "extends": "@nzyme/tsconfig/esm.json",
     "compilerOptions": {
         "rootDir": "./src",
-        "outDir": "./dist/esm",
-        "tsBuildInfoFile": "./tsconfig.esm.tsbuildinfo"
+        "outDir": "./dist"
     },
     "include": ["src"],
     "exclude": ["src/**/*.test.ts"]

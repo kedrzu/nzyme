@@ -4,6 +4,5 @@ export default [
     //
     ...typescript({ target: 'node', project: ['./tsconfig.json', './tsconfig.tests.json'] }),
     ...imports(),
-    ...jsdoc(),
     ...packageJson(),
 ];

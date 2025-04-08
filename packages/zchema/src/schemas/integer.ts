@@ -3,6 +3,9 @@ import { identity } from '@nzyme/utils';
 import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
 import { defineSchema } from '../defineSchema.js';
 
+/**
+ * Integer schema options.
+ */
 export type IntegerSchema<O extends SchemaOptions<number> = SchemaOptions<number>> = Schema<
     number,
     O
@@ -17,11 +20,13 @@ const proto: SchemaProto<number> = {
 
 type IntegerSchemaBase = {
     // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-    <O extends SchemaOptions<number> = {}>(
-        options?: O & SchemaOptions<number>,
-    ): IntegerSchema<SchemaOptionsSimlify<O>>;
+    (): IntegerSchema<{}>;
+    <O extends object>(options: O & SchemaOptions<number>): IntegerSchema<SchemaOptionsSimlify<O>>;
 };
 
+/**
+ * Creates an integer schema.
+ */
 export const integer = defineSchema<IntegerSchemaBase>({
     name: 'integer',
     proto: () => proto,

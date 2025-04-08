@@ -4,6 +4,7 @@ import { serialize } from '../utils/serialize.js';
 
 export type UnionSchemaOptions<T extends Schema[] = Schema[]> = SchemaOptions<Infer<T[number]>> & {
     of: T;
+    default?: () => Infer<T[number]>;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

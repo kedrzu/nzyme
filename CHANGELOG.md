@@ -1,3 +1,17 @@
+## 0.12.0 (2025-04-08)
+
+### 🚀 Features
+
+- improving monorepo building ([dca6d7e](https://github.com/kedrzu/nzyme/commit/dca6d7e))
+
+### 🩹 Fixes
+
+- improved monorepo build ([9974ec2](https://github.com/kedrzu/nzyme/commit/9974ec2))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.11.0 (2025-04-05)
 
 ### 🚀 Features

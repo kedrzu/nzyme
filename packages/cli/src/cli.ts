@@ -1,18 +1,21 @@
 #!/usr/bin/env node
 
-import { execute, settings } from '@oclif/core';
 import { consola } from 'consola';
 import sourceMap from 'source-map-support';
 
 import { patchNodeWarnings } from '@nzyme/node-utils';
+import { defineProgram } from './defineProgram.js';
+import { BuildCommand } from './commands/BuildCommand.js';
+import { MonorepoCommand } from './commands/MonorepoCommand.js';
+import { DepcheckCommand } from './commands/DepcheckCommand.js';
 
 consola.wrapAll();
 sourceMap.install();
 patchNodeWarnings();
 
-// In dev mode, always show stack traces
-settings.debug = true;
-settings.performanceEnabled = true;
+const program = defineProgram({
+    name: 'nzyme',
+    commands: [BuildCommand, MonorepoCommand, DepcheckCommand],
+});
 
-// Start the CLI
-await execute({ dir: import.meta.url });
+await program.runAndExit();

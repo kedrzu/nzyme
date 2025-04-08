@@ -5,6 +5,7 @@ import { defineSchema } from '../defineSchema.js';
 
 export type ConstSchemaOptions<V extends Primitive = Primitive> = SchemaOptions<V> & {
     value: V;
+    default?: undefined;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -29,6 +29,7 @@ export type ObjectSchemaPropsValue<TProps extends ObjectSchemaProps> = Flatten<
 export type ObjectSchemaOptions<TProps extends ObjectSchemaProps = ObjectSchemaProps> =
     SchemaOptions<ObjectSchemaPropsValue<TProps>> & {
         props: TProps;
+        default?: () => ObjectSchemaPropsValue<TProps>;
     };
 
 type ObjectSchemaOptionsProps<O extends ObjectSchemaOptions> =

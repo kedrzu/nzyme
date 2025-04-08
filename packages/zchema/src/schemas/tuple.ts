@@ -14,6 +14,7 @@ export type TupleSchemaOptions<T extends SchemaAny[] = SchemaAny[]> = SchemaOpti
     TupleSchemaValue<T>
 > & {
     of: T;
+    default?: () => TupleSchemaValue<T>;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

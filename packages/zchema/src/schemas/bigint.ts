@@ -12,9 +12,8 @@ const proto: SchemaProto<bigint> = {
 
 type BigintSchemaBase = {
     // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-    <O extends SchemaOptions<bigint> = {}>(
-        options?: O & SchemaOptions<bigint>,
-    ): BigintSchema<SchemaOptionsSimlify<O>>;
+    (): BigintSchema<{}>;
+    <O extends object>(options: O & SchemaOptions<bigint>): BigintSchema<SchemaOptionsSimlify<O>>;
 };
 
 export const bigint = defineSchema<BigintSchemaBase>({

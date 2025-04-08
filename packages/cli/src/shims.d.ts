@@ -17,6 +17,6 @@ declare module '@lerna/filter-packages' {
         include: string[] = [],
         exclude: string[] = [],
         showPrivate?: boolean,
-        continueIfNoMatch?: boolean
+        continueIfNoMatch?: boolean,
     ): Package[];
 }

@@ -11,7 +11,7 @@ export interface FetchRequest extends RequestInit {
     headers?: Record<string, string>;
 }
 
-export async function fetchRequest(request: FetchRequest) {
+export async function fetchRequest(request: FetchRequest): Promise<Response> {
     const url = request.query ? withQuery(request.url, request.query) : request.url;
     const response = await fetch(url, request);
 

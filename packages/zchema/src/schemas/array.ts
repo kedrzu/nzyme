@@ -15,6 +15,7 @@ import { serialize } from '../utils/serialize.js';
 
 export type ArraySchemaOptions<T extends SchemaAny = SchemaAny> = SchemaOptions<Infer<T>[]> & {
     of: T;
+    default?: () => Infer<T>[];
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

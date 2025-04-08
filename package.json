@@ -12,10 +12,10 @@
     ],
     "scripts": {
         "build": "yarn build:esm && yarn build:cjs",
-        "build:cjs": "tsc --build ./.nzyme/tsconfig.cjs.json && yarn nzyme rename-cjs",
-        "build:esm": "tsc --build ./.nzyme/tsconfig.esm.json",
+        "build:esm": "tsc --build",
+        "build:cjs": "nzyme build cjs",
         "build:turbo": "turbo run build:esm build:cjs",
-        "clean": "del \"**/dist\" \"**/.turbo\" \"**/.nzyme\" \"**/.tsbuildinfo\" \"**/*.tsbuildinfo\" \"!**/node_modules/**\"",
+        "clean": "del \"**/dist\" \"**/dist-cjs\" \"**/.turbo\" \"**/.tsbuildinfo\" \"**/*.tsbuildinfo\" \"!**/node_modules/**\"",
         "coverage": "vitest run --coverage",
         "dev": "yarn && yarn monorepo && yarn watch",
         "groundup": "yarn && yarn clean &&yarn setup && yarn build",
@@ -26,8 +26,7 @@
         "test": "vitest run",
         "upgrade": "yarn upgrade-interactive",
         "upgrade:self": "yarn set version berry",
-        "watch": "yarn build:esm --watch",
-        "watch:cjs": "yarn build:cjs --watch"
+        "watch": "tsc --build --watch"
     },
     "dependencies": {
         "tslib": "^2.8.1"

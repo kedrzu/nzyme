@@ -1,8 +1,0 @@
-{
-    "compilerOptions": {
-        "rootDir": "./src",
-        "lib": ["esnext", "esnext.asynciterable", "DOM", "DOM.Iterable"]
-    },
-    "include": ["src"],
-    "exclude": ["src/**/*.test.ts"]
-}

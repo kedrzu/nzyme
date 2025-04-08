@@ -4,6 +4,7 @@ import type { Extend } from '../utils/extend.js';
 
 export type LazySchemaOptions<T extends Schema = Schema> = SchemaOptions<Infer<T>> & {
     of: () => T;
+    default?: () => Infer<T>;
 };
 
 export type LazySchema<O extends LazySchemaOptions = LazySchemaOptions> = ForceName<

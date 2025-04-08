@@ -11,12 +11,12 @@
     "type": "module",
     "exports": {
         ".": {
-            "import": "./dist/esm/index.js",
-            "types": "./dist/cjs/index.d.ts"
+            "import": "./dist/index.js",
+            "types": "./dist/index.d.ts"
         },
         "./setup": {
-            "import": "./dist/esm/setup.js",
-            "types": "./dist/esm/setup.d.ts"
+            "import": "./dist/setup.js",
+            "types": "./dist/setup.d.ts"
         }
     },
     "files": [

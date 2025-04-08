@@ -8,7 +8,7 @@ import {
     watch,
 } from 'vue';
 
-import { clearFocus, virtualHistory } from '@nzyme/dom-utils';
+import { clearFocus, onHistoryBack } from '@nzyme/dom-utils';
 import { defineService } from '@nzyme/ioc';
 import type { Writable } from '@nzyme/types';
 import { arrayRemove, CancelError, createPromise } from '@nzyme/utils';
@@ -58,11 +58,10 @@ export const ModalService = defineService({
             let modalResult: ModalResultState | undefined;
 
             const modal = result.promise as Writable<Modal<T>>;
-            const historyHandle = virtualHistory.pushState(() => modal.handler.close());
+            const historyHandle = onHistoryBack(() => modal.handler.close());
 
             // When modal is opened, we want to clear focus from the previously focused element.
             clearFocus();
-
 
             modal.id = Symbol('modal');
             modal.props = options.props as ModalProps<T>;
@@ -134,11 +133,11 @@ export const ModalService = defineService({
                 if (!open.value) {
                     return;
                 }
-    
-                modalResult = { result  };
+
+                modalResult = { result };
                 closeModal();
-    }
-    
+            }
+
             return modal;
         }
 

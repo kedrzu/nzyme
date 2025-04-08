@@ -23,7 +23,7 @@ export type ServiceDependencies = {
 export type ResolveDependencies<D extends ServiceDependencies> = keyof D extends never
     ? void
     : PartialOnUndefined<{
-          [K in keyof D]: D[K] extends Injectable<infer T> ? T : unknown;
+          readonly [K in keyof D]: D[K] extends Injectable<infer T> ? T : unknown;
       }>;
 
 /**

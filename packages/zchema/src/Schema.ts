@@ -10,9 +10,11 @@ export interface SchemaOptionsBase {
 }
 
 export interface SchemaOptions<V = unknown> extends SchemaProps<V>, SchemaOptionsBase {
-    default?: () => V;
+    default?: SchemaDefault<V>;
     validators?: Validator<V>[];
 }
+
+export type SchemaDefault<V> = V | (() => V);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type SchemaOptionsSimlify<O extends SchemaOptions<any>> = Simplify<{

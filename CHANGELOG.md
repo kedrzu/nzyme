@@ -1,3 +1,13 @@
+## 0.12.1 (2025-04-08)
+
+### 🩹 Fixes
+
+- **cli:** fix tsconfig.cjs.tsbuildinfo ([f654e9e](https://github.com/kedrzu/nzyme/commit/f654e9e))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.12.0 (2025-04-08)
 
 ### 🚀 Features

@@ -44,7 +44,7 @@ async function processProject() {
     const cwd = process.cwd();
     const packages = await loadPackages(cwd);
 
-    const tsconfigPath = path.join(cwd, './tsconfig.json');
+    const tsconfigPath = path.join(cwd, './tsconfig.esm.json');
 
     const esmReferences: string[] = [];
     const cjsReferences: string[] = [];
@@ -62,16 +62,22 @@ async function processProject() {
 
     await saveTsReferences({
         cwd,
-        fileName: '.nzyme/tsconfig.esm.json',
+        fileName: 'tsconfig.json',
         extends: tsconfigPath,
         references: esmReferences,
+        config: {
+            include: [],
+        },
     });
 
     await saveTsReferences({
         cwd,
-        fileName: '.nzyme/tsconfig.cjs.json',
+        fileName: 'tsconfig.cjs.json',
         extends: tsconfigPath,
         references: cjsReferences,
+        config: {
+            include: [],
+        },
     });
 }
 
@@ -132,17 +138,21 @@ async function processPackageCore(pkg: Package, packages: Package[]): Promise<Pa
 
     const config = getNzymeConfig(pkg);
     if (config?.cjs) {
+        let dist = tsconfig.config.compilerOptions?.outDir ?? './dist';
+        if (dist.endsWith('/')) {
+            dist = dist.slice(0, -1);
+        }
+
         cjsResult = await saveTsReferences({
             cwd: pkg.location,
-            fileName: '.nzyme/tsconfig.cjs.json',
+            fileName: 'tsconfig.cjs.json',
             extends: tsconfig.path,
             references: cjsReferences,
             config: {
                 compilerOptions: {
                     module: 'CommonJS',
                     moduleResolution: 'Node',
-                    outDir: './dist/cjs',
-                    tsBuildInfoFile: './tsconfig.cjs.tsbuildinfo',
+                    outDir: `${dist}-cjs`,
                 },
             },
         });

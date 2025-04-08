@@ -65,7 +65,7 @@ function createCommandClass(command: Command, container: Container) {
 
 function createCommandPaths(path: string | string[]) {
     if (typeof path === 'string') {
-        return [[path]];
+        return [path.split(' ')];
     }
 
     return path.map(p => p.split(' '));

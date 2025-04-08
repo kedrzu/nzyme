@@ -10,8 +10,8 @@ import { outputFile } from 'fs-extra';
 import { defineCommand } from '../defineCommand.js';
 
 export const BuildCommand = defineCommand({
-    path: 'build',
-    description: 'Build the project',
+    path: 'build cjs',
+    description: 'Build the project in CommonJS',
     exec: async () => {
         const cwd = process.cwd();
         const jsRegex = /\.js([^\w]|$)/g;
@@ -22,20 +22,16 @@ export const BuildCommand = defineCommand({
             shell: true,
         });
 
-        await cli`tsc --build ./.nzyme/tsconfig.esm.json`;
-        await cli`tsc --build ./.nzyme/tsconfig.cjs.json`;
+        await cli`tsc --build ./tsconfig.cjs.json`;
 
         const packages = await getPackages(cwd);
 
         await Promise.all(packages.map(processPackage));
 
         async function processPackage(pkg: Package) {
-            const files = await glob(
-                ['./.nzyme/dist/cjs/**/*.js', './.nzyme/dist/cjs/**/*.js.map'],
-                {
-                    cwd: pkg.location,
-                },
-            );
+            const files = await glob(['./dist-cjs/**/*.js', './dist-cjs/**/*.js.map'], {
+                cwd: pkg.location,
+            });
 
             await Promise.all(files.map(file => processFile(file, pkg)));
         }
@@ -45,7 +41,7 @@ export const BuildCommand = defineCommand({
 
             const content = await fs.readFile(filePath, 'utf8');
             const newContent = replaceJs(content);
-            const newPath = replaceJs(filePath).replace('/.nzyme/dist/cjs/', '/dist/');
+            const newPath = replaceJs(filePath).replace('/dist-cjs/', '/dist/');
 
             await outputFile(newPath, newContent);
         }

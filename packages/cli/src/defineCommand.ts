@@ -12,7 +12,7 @@ export interface Command<
     examples?: [title: string, command: string][];
     args?: TArgs;
     deps?: TDeps;
-    exec: (params: CommandParams<TArgs, TDeps>) => Promise<void> | void;
+    execute: (params: CommandParams<TArgs, TDeps>) => Promise<void> | void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

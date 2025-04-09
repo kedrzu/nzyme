@@ -15,7 +15,7 @@ export const DepcheckCommand = defineCommand({
             description: 'Fix the dependencies',
         }),
     },
-    exec: async ({ args }) => {
+    execute: async ({ args }) => {
         const cwd = process.cwd();
         const packages = await getPackages(cwd);
 

@@ -12,7 +12,7 @@ import { defineCommand } from '../defineCommand.js';
 export const BuildCommand = defineCommand({
     path: 'build cjs',
     description: 'Build the project in CommonJS',
-    exec: async () => {
+    execute: async () => {
         const cwd = process.cwd();
         const jsRegex = /\.js([^\w]|$)/g;
 

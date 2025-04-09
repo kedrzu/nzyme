@@ -48,7 +48,7 @@ function createCommandClass(command: Command, container: Container) {
 
         override async execute() {
             const deps = command.deps ? resolveDeps(command.deps, container) : {};
-            await command.exec({ args: this as Record<string, unknown>, deps });
+            await command.execute({ args: this as Record<string, unknown>, deps });
         }
     };
 

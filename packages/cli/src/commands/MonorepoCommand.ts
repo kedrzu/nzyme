@@ -13,8 +13,8 @@ import type { TsConfigJson } from 'type-fest';
 
 import { asArray } from '@nzyme/utils';
 
+import type { NzymePackageConfig } from '../NzymePackageConfig.js';
 import { defineCommand } from '../defineCommand.js';
-import type { NzymeConfig } from './../NzymeConfig.js';
 
 interface TsConfig {
     path: string;
@@ -30,12 +30,9 @@ interface PackageCache {
 const tsConfigsCache = new Map<string, TsConfig | null>();
 const packageCache = new Map<string, Promise<PackageCache>>();
 
-export /**
- *
- */
-const MonorepoCommand = defineCommand({
+export const MonorepoCommand = defineCommand({
     path: 'monorepo',
-    exec: async () => {
+    execute: async () => {
         await processProject();
     },
 });
@@ -307,5 +304,5 @@ async function saveTsReferences(params: {
 }
 
 function getNzymeConfig(pkg: Package) {
-    return pkg.get('nzyme') as NzymeConfig | undefined | null;
+    return pkg.get('nzyme') as NzymePackageConfig | undefined | null;
 }

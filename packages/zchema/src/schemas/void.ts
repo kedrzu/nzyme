@@ -1,6 +1,9 @@
 import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
 import { defineSchema } from '../defineSchema.js';
 
+/**
+ * Type of the schema that matches `void`.
+ */
 export type VoidSchema<O extends SchemaOptions<void> = SchemaOptions<void>> = ForceName<
     Schema<void, O>
 >;
@@ -24,6 +27,9 @@ type VoidSchemaBase = {
     ): VoidSchema<SchemaOptionsSimlify<O>>;
 };
 
+/**
+ * Create a schema that matches `void`.
+ */
 export const voidSchema = defineSchema<VoidSchemaBase>({
     name: 'void',
     options: (options?: SchemaOptions<void>) => ({

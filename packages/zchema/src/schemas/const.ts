@@ -20,6 +20,13 @@ type ConstSchemaBase = {
 
 export const constSchema = defineSchema<ConstSchemaBase, ConstSchemaOptions>({
     name: 'const',
+    options: (value: Primitive) => {
+        const options: ConstSchemaOptions = {
+            value,
+        };
+
+        return options;
+    },
     proto: (options: ConstSchemaOptions) => {
         const value = options.value;
         const getter = () => value;

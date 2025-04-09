@@ -2,20 +2,25 @@ import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '.
 import { defineSchema } from '../defineSchema.js';
 
 /**
- * Date schema options.
+ * Options for defining a date schema.
  */
 export type DateSchemaOptions = SchemaOptions<Date> & {
     /**
-     * Default value.
+     * Function that returns the default date value.
+     * @returns A new Date instance
      */
     default?: () => Date;
 };
 
 /**
- * Date schema.
+ * Schema type for Date objects.
+ * @template O - Date schema options type
  */
 export type DateSchema<O extends DateSchemaOptions = DateSchemaOptions> = Schema<Date, O>;
 
+/**
+ * Protocol implementation for date schema.
+ */
 const proto: SchemaProto<Date> = {
     coerce: val => new Date(val as string | number),
     serialize: date => date.toISOString(),
@@ -23,14 +28,25 @@ const proto: SchemaProto<Date> = {
     default: () => new Date(0),
 };
 
+/**
+ * Base type for date schema definition.
+ */
 type DateSchemaBase = {
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+    /** Creates a date schema with default options */
     (): DateSchema<{}>;
+    /** Creates a date schema with custom options */
     <O extends object>(options: O & SchemaOptions<Date>): DateSchema<SchemaOptionsSimlify<O>>;
 };
 
 /**
- * Creates a date schema.
+ * Creates a schema for Date objects.
+ *
+ * @example
+ * ```ts
+ * const dateField = date();
+ * const requiredDate = date({ required: true });
+ * const defaultDate = date({ default: () => new Date() });
+ * ```
  */
 export const date = defineSchema<DateSchemaBase>({
     name: 'date',

@@ -1,33 +1,50 @@
 import { isIterable } from '@nzyme/utils';
 
 import type {
+    Infer,
     Schema,
     SchemaAny,
     SchemaOptions,
     SchemaOptionsSimlify,
     SchemaProto,
-    Infer,
 } from '../Schema.js';
 import { defineSchema } from '../defineSchema.js';
 import { coerce } from '../utils/coerce.js';
 import { isSchema } from '../utils/isSchema.js';
 import { serialize } from '../utils/serialize.js';
 
+/**
+ * Options for defining an array schema.
+ * @template T - The type of schema for array elements
+ */
 export type ArraySchemaOptions<T extends SchemaAny = SchemaAny> = SchemaOptions<Infer<T>[]> & {
+    /** Schema that defines the type of array elements */
     of: T;
+    /** Optional function that returns default array value */
     default?: () => Infer<T>[];
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/**
+ * Schema type for arrays.
+ * @template O - Array schema options type
+ */
 export type ArraySchema<O extends ArraySchemaOptions = ArraySchemaOptions> = ForceName<
     O extends ArraySchemaOptions<infer T extends SchemaAny> ? Schema<Infer<T>[], O> : never
 >;
 
+// Helper type to force type name preservation
 declare class FF {}
 type ForceName<T> = T & FF;
 
+/**
+ * Value type for array schema.
+ * @template O - Array schema options type
+ */
 export type ArraySchemaValue<O extends ArraySchemaOptions> = Infer<O['of']>[];
 
+/**
+ * Base type for array schema definition.
+ */
 type ArraySchemaBase = {
     <S extends SchemaAny>(of: S): ArraySchema<{ of: S }>;
     <O extends ArraySchemaOptions>(
@@ -35,6 +52,19 @@ type ArraySchemaBase = {
     ): ArraySchema<SchemaOptionsSimlify<O>>;
 };
 
+/**
+ * Creates a schema for arrays.
+ *
+ * @example
+ * ```ts
+ * const numberArray = array(number());
+ * const stringArray = array(string());
+ * const customArray = array({
+ *   of: number(),
+ *   default: () => [1, 2, 3]
+ * });
+ * ```
+ */
 export const array = defineSchema<ArraySchemaBase, ArraySchemaOptions>({
     name: 'array',
     options: (optionsOrSchema: SchemaAny | ArraySchemaOptions) => {

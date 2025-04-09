@@ -6,4 +6,9 @@ export default [
     ...imports(),
     ...jsdoc(),
     ...packageJson(),
+    {
+        rules: {
+            '@typescript-eslint/no-empty-object-type': 'off',
+        },
+    },
 ];

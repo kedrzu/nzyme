@@ -4,13 +4,17 @@ import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '.
 import { defineSchema } from '../defineSchema.js';
 
 /**
- * String schema options.
+ * Schema type for string values.
+ * @template O - Schema options type
  */
 export type StringSchema<O extends SchemaOptions<string> = SchemaOptions<string>> = Schema<
     string,
     O
 >;
 
+/**
+ * Protocol implementation for string schema.
+ */
 const proto: SchemaProto<string> = {
     coerce: String,
     serialize: identity,
@@ -18,14 +22,25 @@ const proto: SchemaProto<string> = {
     default: () => '',
 };
 
+/**
+ * Base type for string schema definition.
+ */
 type StringSchemaBase = {
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+    /** Creates a string schema with default options */
     (): StringSchema<{}>;
+    /** Creates a string schema with custom options */
     <O extends object>(options: O & SchemaOptions<string>): StringSchema<SchemaOptionsSimlify<O>>;
 };
 
 /**
- * Creates a string schema.
+ * Creates a schema for string values.
+ *
+ * @example
+ * ```ts
+ * const name = string();
+ * const requiredName = string({ required: true });
+ * const defaultName = string({ default: () => 'Anonymous' });
+ * ```
  */
 export const string = defineSchema<StringSchemaBase>({
     name: 'string',

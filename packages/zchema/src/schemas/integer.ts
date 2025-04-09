@@ -4,13 +4,17 @@ import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '.
 import { defineSchema } from '../defineSchema.js';
 
 /**
- * Integer schema options.
+ * Schema type for integer values.
+ * @template O - Schema options type
  */
 export type IntegerSchema<O extends SchemaOptions<number> = SchemaOptions<number>> = Schema<
     number,
     O
 >;
 
+/**
+ * Protocol implementation for integer schema.
+ */
 const proto: SchemaProto<number> = {
     coerce: v => Math.ceil(Number(v)),
     serialize: identity,
@@ -18,14 +22,25 @@ const proto: SchemaProto<number> = {
     default: () => 0,
 };
 
+/**
+ * Base type for integer schema definition.
+ */
 type IntegerSchemaBase = {
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+    /** Creates an integer schema with default options */
     (): IntegerSchema<{}>;
+    /** Creates an integer schema with custom options */
     <O extends object>(options: O & SchemaOptions<number>): IntegerSchema<SchemaOptionsSimlify<O>>;
 };
 
 /**
- * Creates an integer schema.
+ * Creates a schema for integer values.
+ *
+ * @example
+ * ```ts
+ * const age = integer();
+ * const requiredAge = integer({ required: true });
+ * const defaultAge = integer({ default: () => 18 });
+ * ```
  */
 export const integer = defineSchema<IntegerSchemaBase>({
     name: 'integer',

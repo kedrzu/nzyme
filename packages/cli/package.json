@@ -22,6 +22,7 @@
         "@lerna/project": "^6.4.1",
         "@nzyme/ioc": "^0.12.1",
         "@nzyme/node-utils": "^0.12.1",
+        "@nzyme/project-utils": "^0.12.1",
         "@nzyme/types": "^0.12.1",
         "@nzyme/utils": "^0.12.1",
         "@nzyme/zchema": "^0.12.1",

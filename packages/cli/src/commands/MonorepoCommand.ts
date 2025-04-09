@@ -30,6 +30,9 @@ interface PackageCache {
 const tsConfigsCache = new Map<string, TsConfig | null>();
 const packageCache = new Map<string, Promise<PackageCache>>();
 
+/**
+ * Command to process the monorepo and generate tsconfig.json files for each package
+ */
 export const MonorepoCommand = defineCommand({
     path: 'monorepo',
     execute: async () => {

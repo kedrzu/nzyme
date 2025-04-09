@@ -35,8 +35,10 @@ export function loadEnvVariables(options: EnvVariablesOptions = {}) {
     // Load environment variables from the project root.
     loadEnvFilesInDir(project.rootPath, options.env, envVariables);
 
-    // Load environment variables from the current working directory.
-    loadEnvFilesInDir(cwd, options.env, envVariables);
+    if (cwd !== project.rootPath) {
+        // Load environment variables from the current working directory.
+        loadEnvFilesInDir(cwd, options.env, envVariables);
+    }
 
     return envVariables;
 }

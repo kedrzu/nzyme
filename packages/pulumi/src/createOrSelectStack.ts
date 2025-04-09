@@ -1,3 +1,5 @@
+import path from 'path';
+
 import { automation } from '@pulumi/pulumi';
 
 import type { AwsConfig } from './AwsConfig.js';
@@ -65,10 +67,11 @@ export async function createOrSelectStack(options: CreateOrSelectStackOptions) {
         {
             projectName: options.stack.project,
             stackName: options.stack.name,
-            program: options.stack.program,
+            program: options.stack.resources,
         },
         {
             workDir: cwd,
+            pulumiHome: path.join(cwd, '.pulumi'),
             stackSettings,
             secretsProvider: options.secretsProvider,
             projectSettings: {

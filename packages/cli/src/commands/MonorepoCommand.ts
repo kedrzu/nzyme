@@ -42,7 +42,7 @@ const MonorepoCommand = defineCommand({
 
 async function processProject() {
     const cwd = process.cwd();
-    const packages = await loadPackages(cwd);
+    const packages = await getPackages(cwd);
 
     const tsconfigPath = path.join(cwd, './tsconfig.esm.json');
 
@@ -121,13 +121,14 @@ async function processPackageCore(pkg: Package, packages: Package[]): Promise<Pa
     let cjsResult: string | null = null;
 
     const tsconfig = await loadTsConfigForPackage(pkg);
-
-    if (!tsconfig || !isMonorepoPackage(tsconfig)) {
+    if (!tsconfig) {
         return {
             esm: null,
             cjs: null,
         };
     }
+
+    const isComposite = isCompositePackage(tsconfig);
 
     esmResult = await saveTsReferences({
         cwd: pkg.location,
@@ -166,8 +167,8 @@ async function processPackageCore(pkg: Package, packages: Package[]): Promise<Pa
     }
 
     return {
-        esm: esmResult,
-        cjs: cjsResult,
+        esm: isComposite ? esmResult : null,
+        cjs: isComposite ? cjsResult : null,
     };
 }
 
@@ -175,7 +176,7 @@ async function loadTsConfigForPackage(pkg: Package) {
     return await loadTsConfig(path.join(pkg.location, 'tsconfig.esm.json'));
 }
 
-function isMonorepoPackage(tsconfig: TsConfig | null): tsconfig is TsConfig {
+function isCompositePackage(tsconfig: TsConfig | null): tsconfig is TsConfig {
     return (
         !!tsconfig &&
         !!tsconfig.resolved.compilerOptions &&
@@ -303,13 +304,6 @@ async function saveTsReferences(params: {
     consola.success(outputPath);
 
     return outputPath;
-}
-
-async function loadPackages(cwd: string) {
-    const packages = await getPackages(cwd);
-    return packages.filter(
-        p => p.get('main') || p.get('exports') || p.get('bin') || p.get('module') || p.get('types'),
-    );
 }
 
 function getNzymeConfig(pkg: Package) {

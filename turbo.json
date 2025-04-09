@@ -9,7 +9,7 @@
         },
         "build:cjs": {
             "cache": true,
-            "outputs": ["dist/cjs/**"],
+            "outputs": ["dist/**"],
             "dependsOn": ["^build:cjs"]
         },
         "dev": {

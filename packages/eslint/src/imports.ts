@@ -1,5 +1,5 @@
-import tseslint from 'typescript-eslint';
 import importsPlugin from 'eslint-plugin-import';
+import { defineConfig } from 'eslint/config';
 
 export interface ImportGroup {
     pattern: string;
@@ -12,7 +12,7 @@ export interface ImportsOptions {
 }
 
 export function imports(options: ImportsOptions = {}) {
-    return tseslint.config({
+    return defineConfig({
         extends: [importsPlugin.flatConfigs.recommended, importsPlugin.flatConfigs.typescript],
         ignores: ['dist/**/*', 'dist-*/**/*', 'node_modules/**/*'],
         rules: {

@@ -24,8 +24,8 @@
         "setup": "turbo run build:esm --filter=@nzyme/cli && yarn monorepo",
         "smoke": "turbo run smoke:cjs smoke:mjs",
         "test": "vitest run",
-        "upgrade": "yarn upgrade-interactive",
-        "upgrade:self": "yarn set version berry",
+        "update": "yarn update-interactive",
+        "update:self": "yarn set version berry",
         "watch": "tsc --build --watch"
     },
     "dependencies": {

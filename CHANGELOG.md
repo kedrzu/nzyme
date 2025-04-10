@@ -1,3 +1,20 @@
+## 0.13.0 (2025-04-10)
+
+### 🚀 Features
+
+- **cli:** add pulumi commands ([2b4ee0d](https://github.com/kedrzu/nzyme/commit/2b4ee0d))
+- **eslint:** add common config ([8fc02a1](https://github.com/kedrzu/nzyme/commit/8fc02a1))
+- **pulumi:** add preview command ([f7066d3](https://github.com/kedrzu/nzyme/commit/f7066d3))
+
+### 🩹 Fixes
+
+- small fixes in cli and logging ([c54966c](https://github.com/kedrzu/nzyme/commit/c54966c))
+- **cli:** fixes in cli ([e7ee94b](https://github.com/kedrzu/nzyme/commit/e7ee94b))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.12.1 (2025-04-08)
 
 ### 🩹 Fixes

@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/cli",
-    "version": "0.12.1",
+    "version": "0.13.0",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/kedrzu/nzyme.git"
@@ -26,13 +26,13 @@
     "dependencies": {
         "@lerna/package": "^6.4.1",
         "@lerna/project": "^6.4.1",
-        "@nzyme/ioc": "^0.12.1",
-        "@nzyme/logging": "^0.12.1",
-        "@nzyme/node-utils": "^0.12.1",
-        "@nzyme/project-utils": "^0.12.1",
-        "@nzyme/types": "^0.12.1",
-        "@nzyme/utils": "^0.12.1",
-        "@nzyme/zchema": "^0.12.1",
+        "@nzyme/ioc": "^0.13.0",
+        "@nzyme/logging": "^0.13.0",
+        "@nzyme/node-utils": "^0.13.0",
+        "@nzyme/project-utils": "^0.13.0",
+        "@nzyme/types": "^0.13.0",
+        "@nzyme/utils": "^0.13.0",
+        "@nzyme/zchema": "^0.13.0",
         "@types/fs-extra": "^11.0.4",
         "@types/yargs": "^17.0.33",
         "chalk": "^5.4.1",
@@ -52,8 +52,8 @@
         "type-fest": "^4.39.1"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.12.1",
-        "@nzyme/tsconfig": "^0.12.1",
+        "@nzyme/eslint": "^0.13.0",
+        "@nzyme/tsconfig": "^0.13.0",
         "@types/lerna__package": "^5.1.3",
         "@types/lerna__project": "^5.1.2",
         "@types/lodash.merge": "^4.6.9",

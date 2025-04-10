@@ -28,7 +28,7 @@
         "eslint-plugin-import": "^2.31.0",
         "eslint-plugin-jsdoc": "^50.6.9",
         "eslint-plugin-monorepo": "^0.3.2",
-        "eslint-plugin-package-json": "^0.29.0",
+        "eslint-plugin-package-json": "^0.29.1",
         "eslint-plugin-react": "^7.37.5",
         "eslint-plugin-vue": "^10.0.0",
         "eslint-plugin-workspaces": "^0.10.1",

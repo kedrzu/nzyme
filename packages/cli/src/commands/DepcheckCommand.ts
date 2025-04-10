@@ -8,6 +8,9 @@ import depcheckImport from 'depcheck';
 
 import { defineCommand } from '../defineCommand.js';
 
+/**
+ * Command to check and manage package dependencies
+ */
 export const DepcheckCommand = defineCommand({
     path: 'depcheck',
     args: {
@@ -15,7 +18,7 @@ export const DepcheckCommand = defineCommand({
             description: 'Fix the dependencies',
         }),
     },
-    exec: async ({ args }) => {
+    execute: async ({ args }) => {
         const cwd = process.cwd();
         const packages = await getPackages(cwd);
 

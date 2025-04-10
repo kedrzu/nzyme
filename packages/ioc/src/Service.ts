@@ -1,4 +1,4 @@
-import type { EmptyObject, PartialOnUndefined, Writable } from '@nzyme/types';
+import type { EmptyObject, IfLiteral, IfUnknown, PartialOnUndefined, Writable } from '@nzyme/types';
 
 import type { ContainerScope } from './ContainerScope.js';
 import { INJECTABLE_SYMBOL, type Injectable } from './Injectable.js';
@@ -20,11 +20,14 @@ export type ServiceDependencies = {
 /**
  *
  */
-export type ResolveDependencies<D extends ServiceDependencies> = keyof D extends never
-    ? void
-    : PartialOnUndefined<{
-          readonly [K in keyof D]: D[K] extends Injectable<infer T> ? T : unknown;
-      }>;
+export type ResolveDependencies<D extends ServiceDependencies> = IfLiteral<
+    keyof D,
+    PartialOnUndefined<{
+        readonly [K in keyof D]: D[K] extends Injectable<infer T> ? T : unknown;
+    }>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    keyof D extends never ? void : any
+>;
 
 /**
  *

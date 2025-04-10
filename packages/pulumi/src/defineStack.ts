@@ -2,7 +2,7 @@ import * as pulumi from '@pulumi/pulumi';
 import type { automation } from '@pulumi/pulumi';
 import type { OutputMap } from '@pulumi/pulumi/automation/stack.js';
 
-import type { ResolveDependencies, ServiceDependencies } from '@nzyme/ioc';
+import type { ResolveDependencies, Service, ServiceDependencies } from '@nzyme/ioc';
 import { defineService } from '@nzyme/ioc';
 import type { EmptyObject } from '@nzyme/types';
 import { toPascalCase } from '@nzyme/utils';
@@ -13,19 +13,25 @@ import { toPascalCase } from '@nzyme/utils';
 export type StackOutput = Record<string, unknown>;
 
 /**
+ * Value of a stack output.
+ */
+export type StackOutputValue<T = unknown> = {
+    /**
+     * Whether the output is a secret.
+     */
+    secret: boolean;
+
+    /**
+     * Value of the output.
+     */
+    value: T;
+};
+
+/**
  * Result of a stack output.
  */
 export type StackOutputResult<TOutput extends StackOutput> = {
-    [K in keyof TOutput]: {
-        /**
-         * Whether the output is a secret.
-         */
-        secret: boolean;
-        /**
-         * Value of the output.
-         */
-        value: pulumi.Unwrap<TOutput[K]>;
-    };
+    [K in keyof TOutput]: StackOutputValue<TOutput[K]>;
 };
 
 /**
@@ -62,14 +68,14 @@ export interface StackOptions<
     enabled?: boolean;
 
     /**
-     * Setup function for the stack.
+     * Resources to deploy.
      */
-    program: (deps: ResolveDependencies<TDeps>) => Promise<TOutput> | TOutput;
+    resources: (deps: ResolveDependencies<TDeps>) => Promise<TOutput> | TOutput;
 
     /**
      * Program to run before the stack is deployed.
      */
-    beforeDeploy?: (deps: ResolveDependencies<TDeps>) => Promise<void> | void;
+    build?: (deps: ResolveDependencies<TDeps>, ctx: StackBuildContext) => Promise<void> | void;
 
     /**
      * Program to run after the stack is deployed.
@@ -81,9 +87,19 @@ export interface StackOptions<
 }
 
 /**
+ * Parameters for the {@link Stack.build} function.
+ */
+export interface StackBuildContext {
+    /**
+     * Whether the stack is being previewed.
+     */
+    preview: boolean;
+}
+
+/**
  * Definition of a Pulumi stack.
  */
-export interface StackDefinition<TOutput extends StackOutput = StackOutput> {
+export interface Stack<TOutput extends StackOutput = StackOutput> {
     /**
      * Name of the stack.
      */
@@ -105,14 +121,14 @@ export interface StackDefinition<TOutput extends StackOutput = StackOutput> {
     enabled: boolean;
 
     /**
-     * Program to run for the stack.
-     */
-    program: () => Promise<TOutput>;
-
-    /**
      * Create a reference to the stack.
      */
     ref: () => StackReference<TOutput>;
+
+    /**
+     * Program to run for the stack.
+     */
+    resources: () => Promise<TOutput>;
 
     /**
      * Get the outputs of the stack.
@@ -122,13 +138,15 @@ export interface StackDefinition<TOutput extends StackOutput = StackOutput> {
     /**
      * Function to run before the stack is deployed.
      */
-    beforeDeploy: () => Promise<void> | void;
+    build: (params: StackBuildContext) => Promise<void> | void;
 
     /**
      * Function to run after the stack is deployed.
      */
     afterDeploy: (output: OutputMap) => Promise<void> | void;
 }
+
+export type StackDefinition = Service<Stack>;
 
 /**
  * Reference to a stack.
@@ -150,7 +168,7 @@ export function defineStack<
     return defineService({
         name: `Stack:${toPascalCase(options.name)}`,
         deps: options.deps,
-        setup(deps): StackDefinition<TOutput> {
+        setup(deps): Stack<TOutput> {
             const name = options.name;
             const project = options.project;
             const organization = options.organization;
@@ -160,21 +178,21 @@ export function defineStack<
                 project,
                 organization,
                 enabled: options.enabled ?? true,
-                program: async () => {
-                    const output = await options.program(deps);
-                    return output || {};
-                },
                 ref: () => {
                     const org = organization ?? 'organization';
                     const path = `${org}/${project}/${name}`;
                     return createStackReference(path);
                 },
+                resources: async () => {
+                    const output = await options.resources(deps);
+                    return output || {};
+                },
                 outputs: async (stack: automation.Stack) => {
                     return unwrapOutput(await stack.outputs()) as pulumi.Unwrap<TOutput>;
                 },
-                beforeDeploy: async () => {
-                    if (options.beforeDeploy) {
-                        await options.beforeDeploy(deps);
+                build: async (ctx: StackBuildContext) => {
+                    if (options.build) {
+                        await options.build(deps, ctx);
                     }
                 },
                 afterDeploy: async output => {
@@ -199,8 +217,12 @@ function createStackReference<TOutput extends StackOutput>(path: string): StackR
     };
 }
 
-function unwrapOutput<TOutput extends StackOutput>(output: StackOutputResult<TOutput>): TOutput {
-    return Object.fromEntries(
-        Object.entries(output).map(([key, value]) => [key, value.value]),
-    ) as TOutput;
+function unwrapOutput<TOutput extends StackOutput>(output: StackOutputResult<TOutput>) {
+    const result: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(output)) {
+        result[key] = (value as StackOutputValue).value;
+    }
+
+    return result as TOutput;
 }

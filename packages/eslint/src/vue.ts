@@ -1,8 +1,13 @@
 import pluginVue from 'eslint-plugin-vue';
 import tseslint from 'typescript-eslint';
+import { defineConfig } from 'eslint/config';
+import { ESLint } from 'eslint';
 
 export function vue() {
-    return tseslint.config({
+    return defineConfig({
+        plugins: {
+            '@typescript-eslint': tseslint.plugin as ESLint.Plugin,
+        },
         extends: [pluginVue.configs['flat/recommended']],
         rules: {
             'vue/multi-word-component-names': 'off',

@@ -24,7 +24,7 @@
     ],
     "scripts": {
         "build:esm": "tsc --build ./tsconfig.esm.json",
-        "eslint": "eslint . --fix --cache"
+        "lint": "eslint . --fix --cache"
     },
     "dependencies": {
         "date-fns": "^4.1.0",
@@ -34,6 +34,7 @@
     "devDependencies": {
         "@nzyme/eslint": "^0.12.1",
         "@nzyme/tsconfig": "^0.12.1",
+        "eslint": "^9.24.0",
         "typescript": "^5.8.3"
     },
     "publishConfig": {

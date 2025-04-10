@@ -9,3 +9,4 @@ export * from './deployStack.js';
 export * from './destroyStack.js';
 export * from './cancelStack.js';
 export * from './refreshStack.js';
+export * from './previewStack.js';

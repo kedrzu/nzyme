@@ -9,10 +9,13 @@ import { outputFile } from 'fs-extra';
 
 import { defineCommand } from '../defineCommand.js';
 
+/**
+ * Command to build the project in CommonJS format
+ */
 export const BuildCommand = defineCommand({
     path: 'build cjs',
     description: 'Build the project in CommonJS',
-    exec: async () => {
+    execute: async () => {
         const cwd = process.cwd();
         const jsRegex = /\.js([^\w]|$)/g;
 
@@ -28,6 +31,10 @@ export const BuildCommand = defineCommand({
 
         await Promise.all(packages.map(processPackage));
 
+        /**
+         * Process a single package in the monorepo
+         * @param pkg - Package to process
+         */
         async function processPackage(pkg: Package) {
             const files = await glob(['./dist-cjs/**/*.js', './dist-cjs/**/*.js.map'], {
                 cwd: pkg.location,

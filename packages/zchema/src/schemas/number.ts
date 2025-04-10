@@ -4,10 +4,14 @@ import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '.
 import { defineSchema } from '../defineSchema.js';
 
 /**
- * Number schema options.
+ * Schema type for number values.
+ * @template O - Schema options type
  */
 export type NumberSchema<O extends SchemaOptions<number>> = Schema<number, O>;
 
+/**
+ * Protocol implementation for number schema.
+ */
 const proto: SchemaProto<number> = {
     coerce: Number,
     serialize: identity,
@@ -15,14 +19,25 @@ const proto: SchemaProto<number> = {
     default: () => 0,
 };
 
+/**
+ * Base type for number schema definition.
+ */
 type NumberSchemaBase = {
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+    /** Creates a number schema with default options */
     (): NumberSchema<{}>;
+    /** Creates a number schema with custom options */
     <O extends object>(options: O & SchemaOptions<number>): NumberSchema<SchemaOptionsSimlify<O>>;
 };
 
 /**
- * Creates a number schema.
+ * Creates a schema for number values.
+ *
+ * @example
+ * ```ts
+ * const price = number();
+ * const requiredPrice = number({ required: true });
+ * const defaultPrice = number({ default: () => 99.99 });
+ * ```
  */
 export const number = defineSchema<NumberSchemaBase>({
     name: 'number',

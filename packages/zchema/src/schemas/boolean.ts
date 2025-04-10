@@ -4,10 +4,14 @@ import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '.
 import { defineSchema } from '../defineSchema.js';
 
 /**
- * Boolean schema.
+ * Schema type for boolean values.
+ * @template O - Schema options type
  */
 export type BooleanSchema<O extends SchemaOptions<boolean>> = Schema<boolean, O>;
 
+/**
+ * Protocol implementation for boolean schema.
+ */
 const proto: SchemaProto<boolean> = {
     coerce: Boolean,
     serialize: identity,
@@ -15,14 +19,25 @@ const proto: SchemaProto<boolean> = {
     default: () => false,
 };
 
+/**
+ * Base type for boolean schema definition.
+ */
 type BooleanSchemaBase = {
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+    /** Creates a boolean schema with default options */
     (): BooleanSchema<{}>;
+    /** Creates a boolean schema with custom options */
     <O extends object>(options: O & SchemaOptions<boolean>): BooleanSchema<SchemaOptionsSimlify<O>>;
 };
 
 /**
- * Creates a boolean schema.
+ * Creates a schema for boolean values.
+ *
+ * @example
+ * ```ts
+ * const bool = boolean();
+ * const requiredBool = boolean({ required: true });
+ * const defaultBool = boolean({ default: () => true });
+ * ```
  */
 export const boolean = defineSchema<BooleanSchemaBase>({
     name: 'boolean',

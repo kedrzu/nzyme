@@ -13,6 +13,7 @@ export interface DhlPickUpPoint {
         number: string;
         isBusiness: boolean;
         postalCode: string;
+        addition?: string;
     };
     geoLocation: { latitude: number; longitude: number };
     distance: number;

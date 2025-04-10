@@ -3,21 +3,39 @@ import { Builtins, Cli, Command as CommandBase } from 'clipanion';
 
 import type { Container } from '@nzyme/ioc';
 import { createContainer, resolveDeps } from '@nzyme/ioc';
+import { Logger, PrettyLogger } from '@nzyme/logging';
 
 import type { Command, CommandAny } from './defineCommand.js';
 
+/**
+ * Options for creating a CLI program
+ */
 export interface ProgramOptions {
+    /** Name of the CLI program */
     name: string;
+    /** Optional title for the CLI program */
     title?: string;
+    /** Optional dependency injection container */
     container?: Container;
+    /** List of commands to register */
     commands: CommandAny[];
 }
 
+/**
+ * Interface representing a CLI program
+ */
 export interface Program {
+    /** Run the program with optional arguments */
     run: (args?: string[]) => Promise<number>;
+    /** Run the program and exit with the result code */
     runAndExit: (args?: string[]) => Promise<void>;
 }
 
+/**
+ * Creates a new CLI program
+ * @param program - Program configuration options
+ * @returns Program instance
+ */
 export function defineProgram(program: ProgramOptions): Program {
     const cli = new Cli({
         binaryName: program.name,
@@ -25,6 +43,9 @@ export function defineProgram(program: ProgramOptions): Program {
     });
 
     const container = program.container ?? createContainer();
+
+    container.set(Logger, PrettyLogger);
+
     for (const command of program.commands) {
         const commandClass = createCommandClass(command as Command, container);
         cli.register(commandClass);
@@ -48,7 +69,7 @@ function createCommandClass(command: Command, container: Container) {
 
         override async execute() {
             const deps = command.deps ? resolveDeps(command.deps, container) : {};
-            await command.exec({ args: this as Record<string, unknown>, deps });
+            await command.execute({ args: this as Record<string, unknown>, deps });
         }
     };
 

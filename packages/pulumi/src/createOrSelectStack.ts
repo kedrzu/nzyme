@@ -1,7 +1,9 @@
+import path from 'path';
+
 import { automation } from '@pulumi/pulumi';
 
 import type { AwsConfig } from './AwsConfig.js';
-import type { StackDefinition } from './defineStack.js';
+import type { Stack } from './defineStack.js';
 
 /**
  * Options for the {@link createOrSelectStack} function.
@@ -10,7 +12,7 @@ export interface CreateOrSelectStackOptions {
     /**
      * The stack definition to create or select.
      */
-    stack: StackDefinition;
+    stack: Stack;
 
     /**
      * The cwd to use for the stack.
@@ -65,10 +67,11 @@ export async function createOrSelectStack(options: CreateOrSelectStackOptions) {
         {
             projectName: options.stack.project,
             stackName: options.stack.name,
-            program: options.stack.program,
+            program: options.stack.resources,
         },
         {
             workDir: cwd,
+            pulumiHome: path.join(cwd, '.pulumi'),
             stackSettings,
             secretsProvider: options.secretsProvider,
             projectSettings: {

@@ -3,9 +3,9 @@ import { createOrSelectStack } from './createOrSelectStack.js';
 import type { Stack, StackOutput } from './defineStack.js';
 
 /**
- * Options for the {@link deployStack} function.
+ * Options for the {@link previewStack} function.
  */
-export interface DeployStackOptions {
+export interface PreviewStackOptions {
     /**
      * Whether to refresh the stack.
      * @default false
@@ -13,31 +13,31 @@ export interface DeployStackOptions {
     refresh?: boolean;
 
     /**
-     * Whether to build the stack before deploying.
+     * Whether to build the stack before previewing.
      * @default true
      */
     build?: boolean;
 }
 
 /**
- * Deploy a stack.
+ * Preview a stack.
  */
-export async function deployStack<TOut extends StackOutput>(
+export async function previewStack<TOut extends StackOutput>(
     stack: Stack<TOut>,
-    options: DeployStackOptions = {},
+    options: PreviewStackOptions = {},
 ) {
     assertStackEnabled(stack);
 
     if (options.build !== false) {
-        await stack.build({ preview: false });
+        await stack.build({ preview: true });
     }
 
     const stackInstance = await createOrSelectStack({ stack });
 
-    const output = await stackInstance.up({
+    const output = await stackInstance.preview({
         onOutput: console.log,
         refresh: options.refresh,
     });
 
-    await stack.afterDeploy(output.outputs);
+    return output;
 }

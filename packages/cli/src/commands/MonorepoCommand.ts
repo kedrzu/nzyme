@@ -13,8 +13,8 @@ import type { TsConfigJson } from 'type-fest';
 
 import { asArray } from '@nzyme/utils';
 
+import type { NzymePackageConfig } from '../NzymePackageConfig.js';
 import { defineCommand } from '../defineCommand.js';
-import type { NzymeConfig } from './../NzymeConfig.js';
 
 interface TsConfig {
     path: string;
@@ -30,19 +30,19 @@ interface PackageCache {
 const tsConfigsCache = new Map<string, TsConfig | null>();
 const packageCache = new Map<string, Promise<PackageCache>>();
 
-export /**
- *
+/**
+ * Command to process the monorepo and generate tsconfig.json files for each package
  */
-const MonorepoCommand = defineCommand({
+export const MonorepoCommand = defineCommand({
     path: 'monorepo',
-    exec: async () => {
+    execute: async () => {
         await processProject();
     },
 });
 
 async function processProject() {
     const cwd = process.cwd();
-    const packages = await loadPackages(cwd);
+    const packages = await getPackages(cwd);
 
     const tsconfigPath = path.join(cwd, './tsconfig.esm.json');
 
@@ -121,13 +121,14 @@ async function processPackageCore(pkg: Package, packages: Package[]): Promise<Pa
     let cjsResult: string | null = null;
 
     const tsconfig = await loadTsConfigForPackage(pkg);
-
-    if (!tsconfig || !isMonorepoPackage(tsconfig)) {
+    if (!tsconfig) {
         return {
             esm: null,
             cjs: null,
         };
     }
+
+    const isComposite = isCompositePackage(tsconfig);
 
     esmResult = await saveTsReferences({
         cwd: pkg.location,
@@ -166,8 +167,8 @@ async function processPackageCore(pkg: Package, packages: Package[]): Promise<Pa
     }
 
     return {
-        esm: esmResult,
-        cjs: cjsResult,
+        esm: isComposite ? esmResult : null,
+        cjs: isComposite ? cjsResult : null,
     };
 }
 
@@ -175,7 +176,7 @@ async function loadTsConfigForPackage(pkg: Package) {
     return await loadTsConfig(path.join(pkg.location, 'tsconfig.esm.json'));
 }
 
-function isMonorepoPackage(tsconfig: TsConfig | null): tsconfig is TsConfig {
+function isCompositePackage(tsconfig: TsConfig | null): tsconfig is TsConfig {
     return (
         !!tsconfig &&
         !!tsconfig.resolved.compilerOptions &&
@@ -305,13 +306,6 @@ async function saveTsReferences(params: {
     return outputPath;
 }
 
-async function loadPackages(cwd: string) {
-    const packages = await getPackages(cwd);
-    return packages.filter(
-        p => p.get('main') || p.get('exports') || p.get('bin') || p.get('module') || p.get('types'),
-    );
-}
-
 function getNzymeConfig(pkg: Package) {
-    return pkg.get('nzyme') as NzymeConfig | undefined | null;
+    return pkg.get('nzyme') as NzymePackageConfig | undefined | null;
 }

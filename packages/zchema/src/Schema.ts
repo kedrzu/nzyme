@@ -1,4 +1,4 @@
-import type { IfAny, IfUnknown, Simplify } from '@nzyme/types';
+import type { IfAny, IfUnknown, PartialOnUndefined, Simplify } from '@nzyme/types';
 import type { Validator } from '@nzyme/validation';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unused-vars
@@ -14,6 +14,9 @@ export interface SchemaOptions<V = unknown> extends SchemaProps<V>, SchemaOption
     validators?: Validator<V>[];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type SchemaOptionsAny = SchemaOptions<any>;
+
 export type SchemaDefault<V> = V | (() => V);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,6 +31,13 @@ export interface SchemaProto<V = unknown, U = V> {
     default: () => V;
     visit?: (value: U, visitor: SchemaVisitor) => void;
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type SchemaProtoAny = SchemaProto<any, any>;
+
+export type SchemaFactory<T = unknown, O extends SchemaOptions<T> = SchemaOptions<T>> = (
+    options: O,
+) => Schema<T, O>;
 
 export type SchemaBase<S extends Schema = Schema> = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,9 +58,9 @@ export type Schema<V = unknown, O extends SchemaOptions<V> = SchemaOptions<V>> =
     optional: IfAny<O, boolean, IfUnknown<O['optional'], false, Exclude<O['optional'], undefined>>>;
     default?: () => V;
     validators: Validator[];
-} & {
-    [K in Exclude<keyof O, keyof SchemaOptions<V>>]: O[K];
-};
+} & PartialOnUndefined<{
+        [K in Exclude<keyof O, keyof SchemaOptions<V>>]: O[K];
+    }>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type SchemaAny = Schema<any, any>;

@@ -33,7 +33,7 @@
     "scripts": {
         "build:cjs": "tsc --build ./tsconfig.cjs.json",
         "build:esm": "tsc --build ./tsconfig.esm.json",
-        "eslint": "eslint . --fix --cache",
+        "lint": "eslint . --fix --cache",
         "smoke:cjs": "node tests/smoke.test.cjs",
         "smoke:mjs": "node tests/smoke.test.mjs"
     },
@@ -42,6 +42,7 @@
         "type-fest": "^4.39.1"
     },
     "devDependencies": {
+        "eslint": "^9.24.0",
         "typescript": "^5.8.3"
     },
     "publishConfig": {

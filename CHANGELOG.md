@@ -1,3 +1,18 @@
+## 0.14.0 (2025-04-10)
+
+### 🚀 Features
+
+- **cli:** add Command class ([f9ba018](https://github.com/kedrzu/nzyme/commit/f9ba018))
+
+### 🩹 Fixes
+
+- **cli:** fix command container init ([97deb54](https://github.com/kedrzu/nzyme/commit/97deb54))
+- **cli:** fix build command path ([254abe9](https://github.com/kedrzu/nzyme/commit/254abe9))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.13.0 (2025-04-10)
 
 ### 🚀 Features

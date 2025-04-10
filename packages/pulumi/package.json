@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/pulumi",
-    "version": "0.13.0",
+    "version": "0.14.0",
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
@@ -36,13 +36,13 @@
         "@babel/core": "^7.26.10",
         "@babel/plugin-syntax-import-attributes": "^7.26.0",
         "@babel/preset-env": "^7.26.9",
-        "@nzyme/cli": "^0.13.0",
-        "@nzyme/esm": "0.13.0",
-        "@nzyme/ioc": "^0.13.0",
-        "@nzyme/logging": "^0.13.0",
-        "@nzyme/project-utils": "^0.13.0",
-        "@nzyme/types": "^0.13.0",
-        "@nzyme/utils": "^0.13.0",
+        "@nzyme/cli": "^0.14.0",
+        "@nzyme/esm": "0.14.0",
+        "@nzyme/ioc": "^0.14.0",
+        "@nzyme/logging": "^0.14.0",
+        "@nzyme/project-utils": "^0.14.0",
+        "@nzyme/types": "^0.14.0",
+        "@nzyme/utils": "^0.14.0",
         "@pulumi/aws": "^6.76.0",
         "@pulumi/pulumi": "^3.162.0",
         "@rollup/plugin-babel": "^6.0.4",
@@ -62,9 +62,9 @@
         "tslib": "^2.8.1"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.13.0",
-        "@nzyme/tsconfig": "^0.13.0",
-        "@nzyme/vitest": "^0.13.0",
+        "@nzyme/eslint": "^0.14.0",
+        "@nzyme/tsconfig": "^0.14.0",
+        "@nzyme/vitest": "^0.14.0",
         "@types/node": "^22.14.0",
         "eslint": "^9.24.0",
         "typescript": "^5.8.3"

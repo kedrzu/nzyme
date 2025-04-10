@@ -14,7 +14,7 @@ import type { TsConfigJson } from 'type-fest';
 import { asArray } from '@nzyme/utils';
 
 import type { NzymePackageConfig } from '../NzymePackageConfig.js';
-import { defineCommand } from '../defineCommand.js';
+import { Command } from '../Command.js';
 
 interface TsConfig {
     path: string;
@@ -33,12 +33,21 @@ const packageCache = new Map<string, Promise<PackageCache>>();
 /**
  * Command to process the monorepo and generate tsconfig.json files for each package
  */
-export const MonorepoCommand = defineCommand({
-    path: 'monorepo',
-    execute: async () => {
+export class MonorepoCommand extends Command {
+    static override paths = [['monorepo']];
+
+    static override usage = Command.Usage({
+        category: 'Monorepo',
+        description: 'Process the monorepo and generate tsconfig.json files for each package',
+    });
+
+    /**
+     * Execute the command.
+     */
+    override async run() {
         await processProject();
-    },
-});
+    }
+}
 
 async function processProject() {
     const cwd = process.cwd();

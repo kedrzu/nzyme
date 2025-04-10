@@ -1,6 +1,6 @@
 import { assertStackEnabled } from './assertStackEnabled.js';
 import { createOrSelectStack } from './createOrSelectStack.js';
-import type { StackDefinition, StackOutput } from './defineStack.js';
+import type { Stack, StackOutput } from './defineStack.js';
 
 /**
  * Options for the {@link previewStack} function.
@@ -23,7 +23,7 @@ export interface PreviewStackOptions {
  * Preview a stack.
  */
 export async function previewStack<TOut extends StackOutput>(
-    stack: StackDefinition<TOut>,
+    stack: Stack<TOut>,
     options: PreviewStackOptions = {},
 ) {
     assertStackEnabled(stack);

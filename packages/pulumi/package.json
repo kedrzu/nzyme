@@ -17,6 +17,10 @@
         "./aws": {
             "types": "./dist/aws.d.ts",
             "default": "./dist/aws.js"
+        },
+        "./cli": {
+            "types": "./dist/cli.d.ts",
+            "default": "./dist/cli.js"
         }
     },
     "main": "./dist/index.js",
@@ -32,6 +36,7 @@
         "@babel/core": "^7.26.10",
         "@babel/plugin-syntax-import-attributes": "^7.26.0",
         "@babel/preset-env": "^7.26.9",
+        "@nzyme/cli": "^0.12.1",
         "@nzyme/esm": "0.12.1",
         "@nzyme/ioc": "^0.12.1",
         "@nzyme/logging": "^0.12.1",

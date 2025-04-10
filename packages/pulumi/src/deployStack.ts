@@ -1,6 +1,6 @@
 import { assertStackEnabled } from './assertStackEnabled.js';
 import { createOrSelectStack } from './createOrSelectStack.js';
-import type { StackDefinition, StackOutput } from './defineStack.js';
+import type { Stack, StackOutput } from './defineStack.js';
 
 /**
  * Options for the {@link deployStack} function.
@@ -23,7 +23,7 @@ export interface DeployStackOptions {
  * Deploy a stack.
  */
 export async function deployStack<TOut extends StackOutput>(
-    stack: StackDefinition<TOut>,
+    stack: Stack<TOut>,
     options: DeployStackOptions = {},
 ) {
     assertStackEnabled(stack);

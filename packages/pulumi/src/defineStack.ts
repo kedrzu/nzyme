@@ -2,7 +2,7 @@ import * as pulumi from '@pulumi/pulumi';
 import type { automation } from '@pulumi/pulumi';
 import type { OutputMap } from '@pulumi/pulumi/automation/stack.js';
 
-import type { ResolveDependencies, ServiceDependencies } from '@nzyme/ioc';
+import type { ResolveDependencies, Service, ServiceDependencies } from '@nzyme/ioc';
 import { defineService } from '@nzyme/ioc';
 import type { EmptyObject } from '@nzyme/types';
 import { toPascalCase } from '@nzyme/utils';
@@ -87,7 +87,7 @@ export interface StackOptions<
 }
 
 /**
- * Parameters for the {@link StackDefinition.build} function.
+ * Parameters for the {@link Stack.build} function.
  */
 export interface StackBuildContext {
     /**
@@ -99,7 +99,7 @@ export interface StackBuildContext {
 /**
  * Definition of a Pulumi stack.
  */
-export interface StackDefinition<TOutput extends StackOutput = StackOutput> {
+export interface Stack<TOutput extends StackOutput = StackOutput> {
     /**
      * Name of the stack.
      */
@@ -146,6 +146,8 @@ export interface StackDefinition<TOutput extends StackOutput = StackOutput> {
     afterDeploy: (output: OutputMap) => Promise<void> | void;
 }
 
+export type StackDefinition = Service<Stack>;
+
 /**
  * Reference to a stack.
  */
@@ -166,7 +168,7 @@ export function defineStack<
     return defineService({
         name: `Stack:${toPascalCase(options.name)}`,
         deps: options.deps,
-        setup(deps): StackDefinition<TOutput> {
+        setup(deps): Stack<TOutput> {
             const name = options.name;
             const project = options.project;
             const organization = options.organization;

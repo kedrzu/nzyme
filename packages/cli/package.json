@@ -8,6 +8,12 @@
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "type": "module",
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
     "bin": {
         "nzyme": "dist/cli.js"
     },
@@ -21,6 +27,7 @@
         "@lerna/package": "^6.4.1",
         "@lerna/project": "^6.4.1",
         "@nzyme/ioc": "^0.12.1",
+        "@nzyme/logging": "^0.12.1",
         "@nzyme/node-utils": "^0.12.1",
         "@nzyme/project-utils": "^0.12.1",
         "@nzyme/types": "^0.12.1",

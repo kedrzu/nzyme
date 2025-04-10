@@ -3,6 +3,7 @@ import { Builtins, Cli, Command as CommandBase } from 'clipanion';
 
 import type { Container } from '@nzyme/ioc';
 import { createContainer, resolveDeps } from '@nzyme/ioc';
+import { Logger, PrettyLogger } from '@nzyme/logging';
 
 import type { Command, CommandAny } from './defineCommand.js';
 
@@ -42,6 +43,9 @@ export function defineProgram(program: ProgramOptions): Program {
     });
 
     const container = program.container ?? createContainer();
+
+    container.set(Logger, PrettyLogger);
+
     for (const command of program.commands) {
         const commandClass = createCommandClass(command as Command, container);
         cli.register(commandClass);

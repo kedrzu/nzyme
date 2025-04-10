@@ -14,7 +14,7 @@ const jsRegex = /\.js([^\w]|$)/g;
  * Command to build the project in CommonJS format
  */
 export class BuildCommand extends Command {
-    static override paths = [['build']];
+    static override paths = [['build', 'cjs']];
 
     static override usage = Command.Usage({
         category: 'Build',

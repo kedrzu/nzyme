@@ -30,7 +30,7 @@
     ],
     "scripts": {
         "build:esm": "tsc --build ./tsconfig.esm.json",
-        "eslint": "eslint . --fix --cache",
+        "lint": "eslint . --fix --cache",
         "smoke:mjs": "node tests/smoke.test.mjs"
     },
     "dependencies": {
@@ -61,6 +61,7 @@
         "@types/koa": "^2.15.0",
         "@types/node": "^22.14.0",
         "@types/source-map-support": "^0.5.10",
+        "eslint": "^9.24.0",
         "typescript": "^5.8.3"
     },
     "publishConfig": {

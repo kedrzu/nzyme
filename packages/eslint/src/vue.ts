@@ -3,6 +3,9 @@ import tseslint from 'typescript-eslint';
 
 export function vue() {
     return tseslint.config({
+        plugins: {
+            '@typescript-eslint': tseslint.plugin,
+        },
         extends: [pluginVue.configs['flat/recommended']],
         rules: {
             'vue/multi-word-component-names': 'off',

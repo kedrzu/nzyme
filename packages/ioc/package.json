@@ -33,7 +33,7 @@
     "scripts": {
         "build:cjs": "tsc --build ./tsconfig.cjs.json",
         "build:esm": "tsc --build ./tsconfig.esm.json",
-        "eslint": "eslint . --fix --cache",
+        "lint": "eslint . --fix --cache",
         "smoke:cjs": "node tests/smoke.test.cjs",
         "smoke:mjs": "node tests/smoke.test.mjs"
     },
@@ -46,6 +46,7 @@
         "@nzyme/eslint": "^0.12.1",
         "@nzyme/tsconfig": "^0.12.1",
         "@nzyme/vitest": "^0.12.1",
+        "eslint": "^9.24.0",
         "typescript": "^5.8.3",
         "vitest": "^3.1.1"
     },

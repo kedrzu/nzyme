@@ -1,29 +1,26 @@
 {
     "name": "@nzyme/eslint",
     "version": "0.12.1",
-    "license": "MIT",
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
     },
+    "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
-    "publishConfig": {
-        "access": "public"
-    },
-    "type": "module",
     "sideEffects": false,
-    "files": [
-        "dist"
-    ],
+    "type": "module",
     "exports": {
         ".": {
             "import": "./dist/index.js",
             "types": "./dist/index.d.ts"
         }
     },
+    "files": [
+        "dist"
+    ],
     "dependencies": {
         "@eslint/js": "9.24.0",
-        "eslint": "9.24.0",
+        "eslint": "^9.24.0",
         "eslint-config-prettier": "^10.1.2",
         "eslint-plugin-import": "^2.31.0",
         "eslint-plugin-jsdoc": "^50.6.9",
@@ -42,5 +39,8 @@
         "@nzyme/tsconfig": "0.12.1",
         "jiti": "^2.4.2",
         "typescript": "^5.8.3"
+    },
+    "publishConfig": {
+        "access": "public"
     }
 }

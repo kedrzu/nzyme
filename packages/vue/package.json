@@ -1,8 +1,14 @@
 {
     "name": "@nzyme/vue",
     "version": "0.12.1",
-    "main": "./src/index.ts",
-    "types": "./src/index.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/kedrzu/nzyme.git"
+    },
+    "license": "MIT",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "sideEffects": false,
+    "type": "module",
     "exports": {
         ".": {
             "source": "./src/index.ts",
@@ -13,22 +19,13 @@
             "types": "./src/shims.d.ts"
         }
     },
-    "sideEffects": false,
-    "license": "MIT",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/kedrzu/nzyme.git"
-    },
-    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
-    "type": "module",
-    "publishConfig": {
-        "access": "public"
-    },
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
     "files": [
         "src"
     ],
     "scripts": {
-        "eslint": "eslint . --fix --cache"
+        "lint": "eslint . --fix --cache"
     },
     "dependencies": {
         "@nzyme/dom-utils": "^0.12.1",
@@ -45,7 +42,11 @@
         "@nzyme/eslint": "^0.12.1",
         "@nzyme/tsconfig": "^0.12.1",
         "@types/lodash.debounce": "^4.0.9",
+        "eslint": "^9.24.0",
         "sass": "1.86.3",
         "typescript": "^5.8.3"
+    },
+    "publishConfig": {
+        "access": "public"
     }
 }

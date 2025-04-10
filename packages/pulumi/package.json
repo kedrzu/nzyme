@@ -23,14 +23,14 @@
             "default": "./dist/cli.js"
         }
     },
-    "main": "./dist/index.js",
+    "main": "./dist/index.cjs",
     "module": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "files": [
         "dist"
     ],
     "scripts": {
-        "eslint": "eslint . --fix --cache"
+        "lint": "eslint . --fix --cache"
     },
     "dependencies": {
         "@babel/core": "^7.26.10",
@@ -66,6 +66,7 @@
         "@nzyme/tsconfig": "^0.12.1",
         "@nzyme/vitest": "^0.12.1",
         "@types/node": "^22.14.0",
+        "eslint": "^9.24.0",
         "typescript": "^5.8.3"
     },
     "publishConfig": {

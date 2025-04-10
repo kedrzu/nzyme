@@ -2,13 +2,17 @@ import jsdocPlugin from 'eslint-plugin-jsdoc';
 
 import { Linter } from 'eslint';
 
-export function jsdoc(): Linter.Config[] {
+export interface JsdocOptions {
+    ignores?: string[];
+}
+
+export function jsdoc(options: JsdocOptions = {}): Linter.Config[] {
     return [
         {
             plugins: {
                 jsdoc: jsdocPlugin,
             },
-            ignores: ['dist/**/*', 'node_modules/**/*'],
+            ignores: ['dist/**/*', 'dist-*/**/*', 'node_modules/**/*', ...(options.ignores || [])],
             rules: {
                 'jsdoc/require-jsdoc': [
                     1,

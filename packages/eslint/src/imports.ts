@@ -14,7 +14,7 @@ export interface ImportsOptions {
 export function imports(options: ImportsOptions = {}) {
     return tseslint.config({
         extends: [importsPlugin.flatConfigs.recommended, importsPlugin.flatConfigs.typescript],
-        ignores: ['dist/**/*', 'node_modules/**/*'],
+        ignores: ['dist/**/*', 'dist-*/**/*', 'node_modules/**/*'],
         rules: {
             'sort-imports': [
                 'warn',
@@ -46,6 +46,7 @@ export function imports(options: ImportsOptions = {}) {
             ],
             // we have TypeScript handling that
             'import/no-unresolved': 'off',
+            'import/namespace': 'off',
         },
     });
 }

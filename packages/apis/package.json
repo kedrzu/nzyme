@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/apis",
-    "version": "0.12.1",
+    "version": "0.13.0",
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
@@ -53,15 +53,15 @@
         "lint": "eslint . --fix --cache"
     },
     "dependencies": {
-        "@nzyme/fetch-utils": "^0.12.1",
-        "@nzyme/ioc": "^0.12.1",
-        "@nzyme/types": "^0.12.1",
-        "@nzyme/utils": "^0.12.1",
+        "@nzyme/fetch-utils": "^0.13.0",
+        "@nzyme/ioc": "^0.13.0",
+        "@nzyme/types": "^0.13.0",
+        "@nzyme/utils": "^0.13.0",
         "tslib": "^2.8.1"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.12.1",
-        "@nzyme/tsconfig": "^0.12.1",
+        "@nzyme/eslint": "^0.13.0",
+        "@nzyme/tsconfig": "^0.13.0",
         "eslint": "^9.24.0",
         "typescript": "^5.8.3"
     },

@@ -31,12 +31,12 @@
         "dist"
     ],
     "scripts": {
-    "build:cjs": "tsc --build ./tsconfig.cjs.json",
-    "build:esm": "tsc --build ./tsconfig.esm.json",
-    "lint": "eslint . --fix --cache",
-    "smoke:cjs": "node tests/smoke.test.cjs",
-    "smoke:mjs": "node tests/smoke.test.mjs"
-  },
+        "build:cjs": "tsc --build ./tsconfig.cjs.json",
+        "build:esm": "tsc --build ./tsconfig.esm.json",
+        "lint": "eslint . --fix --cache",
+        "smoke:cjs": "node tests/smoke.test.cjs",
+        "smoke:mjs": "node tests/smoke.test.mjs"
+    },
     "dependencies": {
         "@nzyme/ioc": "^0.12.1",
         "@nzyme/types": "^0.12.1",

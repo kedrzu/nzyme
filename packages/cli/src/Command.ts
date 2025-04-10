@@ -32,7 +32,7 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
     }
 
     protected setup(): Promise<void> {
-        this.#container = this.container.createChild(CommandScope);
+        this.#container = this.context.container.createChild(CommandScope);
         this.#container.set(Logger, PrettyLogger);
 
         return Promise.resolve();

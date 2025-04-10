@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/rollup-utils",
-    "version": "0.13.0",
+    "version": "0.14.0",
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
@@ -34,9 +34,9 @@
         "smoke:mjs": "node tests/smoke.test.mjs"
     },
     "dependencies": {
-        "@nzyme/esm": "^0.13.0",
-        "@nzyme/logging": "^0.13.0",
-        "@nzyme/utils": "^0.13.0",
+        "@nzyme/esm": "^0.14.0",
+        "@nzyme/logging": "^0.14.0",
+        "@nzyme/utils": "^0.14.0",
         "@rollup/plugin-commonjs": "^28.0.3",
         "@rollup/plugin-json": "^6.1.0",
         "@rollup/plugin-node-resolve": "^16.0.1",
@@ -54,8 +54,8 @@
         "type-fest": "^4.39.1"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.13.0",
-        "@nzyme/tsconfig": "^0.13.0",
+        "@nzyme/eslint": "^0.14.0",
+        "@nzyme/tsconfig": "^0.14.0",
         "@types/connect": "^3.4.38",
         "@types/express": "^5.0.1",
         "@types/koa": "^2.15.0",

@@ -6,7 +6,7 @@ export default [
     ...typescript({
         target: 'browser',
         project: ['./tsconfig.json', './tsconfig.tests.json'],
-        internalImports: ['@paczkoapi/*', 'paczkoapi', 'paczkoapi/*'],
+        internalImports: ['@nzyme/*', 'nzyme', 'nzyme/*'],
     }),
     ...jsdoc(),
     ...packageJson(),

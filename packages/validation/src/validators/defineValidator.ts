@@ -1,16 +1,36 @@
 import type { Validator } from '../Validator.js';
 
-export type ValidatorOptions<T> = {
-    message: (params: { value: T }) => string;
-};
-
+/**
+ *
+ */
 export type DefineValidatorOptions<T> = ValidatorOptions<T> & {
+    /**
+     *
+     */
     validator: (value: T) => boolean;
 };
 
+/**
+ *
+ */
+export type ValidatorOptions<T> = {
+    /**
+     *
+     */
+    message: (params: {
+        /**
+         *
+         */
+        value: T;
+    }) => string;
+};
+
+/**
+ *
+ */
 export function defineValidator<T>(
     options: DefineValidatorOptions<T>,
-): Validator<T | null | undefined> {
+): Validator<null | T | undefined> {
     const { message, validator } = options;
 
     return (value, ctx) => {

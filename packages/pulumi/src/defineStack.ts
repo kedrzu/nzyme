@@ -4,7 +4,7 @@ import type { OutputMap } from '@pulumi/pulumi/automation/stack.js';
 
 import type { ResolveDependencies, Service, ServiceDependencies } from '@nzyme/ioc';
 import { defineService } from '@nzyme/ioc';
-import type { EmptyObject } from '@nzyme/types';
+import type { EmptyObject, SomeObject } from '@nzyme/types';
 import { toPascalCase } from '@nzyme/utils';
 
 /**
@@ -146,6 +146,9 @@ export interface Stack<TOutput extends StackOutput = StackOutput> {
     afterDeploy: (output: OutputMap) => Promise<void> | void;
 }
 
+/**
+ * Definition of a Pulumi stack.
+ */
 export type StackDefinition = Service<Stack>;
 
 /**
@@ -162,7 +165,7 @@ export interface StackReference<TOutput extends StackOutput = StackOutput> {
  * Define a Pulumi stack.
  */
 export function defineStack<
-    TDeps extends ServiceDependencies = EmptyObject,
+    TDeps extends ServiceDependencies = SomeObject,
     TOutput extends StackOutput = EmptyObject,
 >(options: StackOptions<TDeps, TOutput>) {
     return defineService({

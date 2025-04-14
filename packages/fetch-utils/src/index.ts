@@ -14,4 +14,3 @@ export * from './xmlResponse.js';
 
 export * from './types/HttpHeaders.js';
 export * from './types/HttpMethod.js';
-export * from './types/HttpResponse.js';

@@ -1,0 +1,55 @@
+{
+    "name": "@nzyme/api-server",
+    "version": "0.14.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/kedrzu/nzyme.git"
+    },
+    "license": "MIT",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "sideEffects": false,
+    "type": "module",
+    "exports": {
+        ".": {
+            "import": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.js"
+            },
+            "default": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.js"
+            }
+        }
+    },
+    "main": "./dist/index.cjs",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build:esm": "tsc --build ./tsconfig.esm.json",
+        "lint": "eslint . --fix --cache"
+    },
+    "dependencies": {
+        "@nzyme/api-core": "^0.14.0",
+        "@nzyme/crypto-utils": "^0.14.0",
+        "@nzyme/fetch-utils": "^0.14.0",
+        "@nzyme/ioc": "^0.14.0",
+        "@nzyme/logging": "^0.14.0",
+        "@nzyme/types": "^0.14.0",
+        "@nzyme/utils": "^0.14.0",
+        "@nzyme/validation": "^0.14.0",
+        "@nzyme/zchema": "^0.14.0",
+        "rou3": "^0.5.1",
+        "tslib": "^2.8.1"
+    },
+    "devDependencies": {
+        "@nzyme/eslint": "^0.14.0",
+        "@nzyme/tsconfig": "^0.14.0",
+        "eslint": "^9.24.0",
+        "typescript": "^5.8.3"
+    },
+    "publishConfig": {
+        "access": "public"
+    }
+}

@@ -4,25 +4,31 @@ import { assertResponse } from './assertResponse.js';
 import type { Endpoint } from './defineEndpoint.js';
 
 /**
- * Parameters for a fetch endpoint.
+ * Parameters for configuring a fetch endpoint request.
+ * Includes endpoint parameters, base URL, and additional headers.
  */
 export interface FetchEndpointParams<TParams> {
     /**
-     * The parameters for the endpoint.
+     * The parameters for the endpoint request
      */
     params: TParams;
     /**
-     * The base URL for the endpoint.
+     * Optional base URL to prepend to the endpoint URL
      */
     baseUrl?: string;
     /**
-     * Additional headers for the endpoint.
+     * Optional additional headers to include in the request
      */
     headers?: Record<string, string>;
 }
 
 /**
+ * Executes a fetch request for a configured endpoint.
+ * Handles URL joining, header merging, and response processing.
  *
+ * @param endpoint - The endpoint configuration to execute
+ * @param params - Parameters for the endpoint request
+ * @returns A promise that resolves to the processed response
  */
 export async function fetchEndpoint<TParams, TResult>(
     endpoint: Endpoint<TParams, TResult>,

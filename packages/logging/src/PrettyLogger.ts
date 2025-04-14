@@ -3,6 +3,7 @@ import pretty from 'pino-pretty';
 
 import { callerName, defineService } from '@nzyme/ioc';
 
+import { fromPino } from './fromPino.js';
 import { Logger } from './Logger.js';
 
 /**
@@ -19,6 +20,6 @@ export const PrettyLogger = defineService({
         const stream = pretty({ colorize: true });
         const logger = pino({ name }, stream);
 
-        return logger;
+        return fromPino(logger);
     },
 });

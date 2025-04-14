@@ -1,13 +1,28 @@
 import type { Validator } from '../Validator.js';
 
+/**
+ *
+ */
 export type RegexValidatorOptions = {
+    /**
+     *
+     */
+    message: (params: {
+        /**
+         *
+         */
+        value: string;
+    }) => string;
+    /**
+     *
+     */
     regex: RegExp;
-    message: (params: { value: string }) => string;
 };
 
-export function regexValidator(
-    options: RegexValidatorOptions,
-): Validator<string | null | undefined> {
+/**
+ *
+ */
+export function regex(options: RegexValidatorOptions): Validator<null | string | undefined> {
     const { regex, message } = options;
 
     return (value, ctx) => {

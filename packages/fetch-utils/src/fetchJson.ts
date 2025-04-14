@@ -3,22 +3,46 @@ import { withQuery } from 'ufo';
 
 import { FetchError } from './FetchError.js';
 
+/**
+ * Base configuration for all JSON fetch requests
+ */
 interface BaseRequest {
+    /** The target URL for the request */
     url: string;
+    /** Optional query parameters to append to the URL */
     query?: QueryObject;
+    /** Optional request headers */
     headers?: Record<string, string>;
 }
 
+/**
+ * Configuration for methods that don't include a request body
+ */
 interface SimpleRequest extends BaseRequest {
+    /** HTTP method for requests without a body */
     method?: 'GET' | 'HEAD' | 'DELETE';
+    /** Explicitly prevent data for these methods */
     data?: never;
 }
 
+/**
+ * Configuration for methods that include a request body
+ */
 interface DataRequest extends BaseRequest {
+    /** HTTP method for requests with a body */
     method: 'POST' | 'PUT' | 'PATCH';
+    /** Optional data to be sent as JSON */
     data?: unknown;
 }
 
+/**
+ * Performs a fetch request with JSON handling for both request and response.
+ * Automatically handles query parameters, JSON serialization, and common status codes.
+ *
+ * @param request - The request configuration
+ * @returns A promise that resolves to the parsed JSON response, or null for 204 responses
+ * @throws {FetchError} If the response status is not ok
+ */
 export async function fetchJson<T>(request: SimpleRequest | DataRequest) {
     const headers: Record<string, string> = { ...request.headers };
     let url = request.url;

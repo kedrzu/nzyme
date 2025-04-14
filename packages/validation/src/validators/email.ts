@@ -1,5 +1,5 @@
-import { defineValidator, type ValidatorOptions } from './defineValidator.js';
 import type { Validator } from '../Validator.js';
+import { defineValidator, type ValidatorOptions } from './defineValidator.js';
 
 const EMAIL_REGEX =
     // eslint-disable-next-line no-useless-escape
@@ -7,15 +7,19 @@ const EMAIL_REGEX =
 
 const EMAIL_MESSAGE = () => 'Invalid email address';
 
-export function emailValidator(
-    options?: ValidatorOptions<string>,
-): Validator<string | null | undefined> {
+/**
+ *
+ */
+export function email(options?: ValidatorOptions<string>): Validator<null | string | undefined> {
     return defineValidator({
         validator: isEmailValid,
         message: options?.message ?? EMAIL_MESSAGE,
     });
 }
 
+/**
+ *
+ */
 export function isEmailValid(value: string): boolean {
     return EMAIL_REGEX.test(value);
 }

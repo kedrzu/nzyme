@@ -2,7 +2,7 @@ import { pino } from 'pino';
 import { lambdaRequestTracker, pinoLambdaDestination } from 'pino-lambda';
 
 import { callerName, defineService } from '@nzyme/ioc';
-import { Logger, fromPino } from '@nzyme/logging';
+import { fromPino, Logger } from '@nzyme/logging';
 
 /**
  * A logger for lambda functions.

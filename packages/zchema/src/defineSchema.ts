@@ -10,6 +10,15 @@ import type {
     SchemaProtoAny,
 } from './Schema.js';
 
+type SchemaDefinition<
+    F extends SchemaBase = SchemaBase,
+    O extends SchemaOptionsAny = SchemaOptions,
+> = {
+    name: string;
+    options?: SchemaOptionsFactory<F>;
+    proto: SchemaProtoFactory<O>;
+};
+
 type SchemaOptionsFactory<F extends SchemaBase = SchemaBase> = (
     ...args: FunctionParams<F>
 ) => SchemaOptionsAny;
@@ -17,15 +26,6 @@ type SchemaOptionsFactory<F extends SchemaBase = SchemaBase> = (
 type SchemaProtoFactory<O extends SchemaOptionsAny = SchemaOptions> = (
     options: O,
 ) => SchemaProtoAny;
-
-type SchemaDefinition<
-    F extends SchemaBase = SchemaBase,
-    O extends SchemaOptionsAny = SchemaOptions,
-> = {
-    options?: SchemaOptionsFactory<F>;
-    proto: SchemaProtoFactory<O>;
-    name: string;
-};
 
 /**
  * Define a new schema.

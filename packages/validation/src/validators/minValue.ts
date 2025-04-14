@@ -1,15 +1,40 @@
-import type { ValidationContext, Validator } from '../Validator.js';
 import type { Comparable } from '../types.js';
+import type { ValidationContext, Validator } from '../Validator.js';
 
+/**
+ *
+ */
 export interface MinValidatorOptions<T extends Comparable> {
+    /**
+     *
+     */
     minValue: T;
+    /**
+     *
+     */
     exclusive?: boolean;
-    message?: (params: ValidationContext & { minValue: T; value: T }) => string;
+    /**
+     *
+     */
+    message?: (
+        params: ValidationContext & {
+            /**
+             *
+             */
+            minValue: T /**
+             *
+             */;
+            value: T;
+        },
+    ) => string;
 }
 
-export function minValidator<T extends Comparable>(
+/**
+ *
+ */
+export function minValue<T extends Comparable>(
     options: MinValidatorOptions<T>,
-): Validator<T | null | undefined> {
+): Validator<null | T | undefined> {
     const { minValue, exclusive, message } = options;
 
     return (value, ctx) => {

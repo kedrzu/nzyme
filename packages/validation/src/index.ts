@@ -1,15 +1,13 @@
-export * from './Validator.js';
-export * from './ValidationError.js';
-
-export * from './utils/normalizeErrors.js';
-export * from './utils/mergeErrors.js';
 export * from './utils/concatKeys.js';
-
+export * from './utils/mergeErrors.js';
+export * from './utils/normalizeErrors.js';
+export * from './ValidationError.js';
+export * from './Validator.js';
 export * from './validators/defineValidator.js';
-export * from './validators/emailValidator.js';
-export * from './validators/filenameValidator.js';
-export * from './validators/maxValidator.js';
-export * from './validators/minValidator.js';
-export * from './validators/minLengthValidator.js';
-export * from './validators/regexValidator.js';
-export * from './validators/requiredValidator.js';
+export * from './validators/email.js';
+export * from './validators/filename.js';
+export * from './validators/maxValue.js';
+export * from './validators/minLength.js';
+export * from './validators/minValue.js';
+export * from './validators/regex.js';
+export * from './validators/required.js';

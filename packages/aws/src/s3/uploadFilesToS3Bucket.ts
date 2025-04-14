@@ -51,7 +51,7 @@ export type UploadFilesOptions = {
  * Uploads files to an S3 bucket.
  */
 export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
-    const logger = options.logger ?? PrettyLogger({ name: undefined });
+    const logger = options.logger ?? PrettyLogger.create({ name: undefined });
     const s3Client = new S3Client();
     const client = new S3SyncClient({
         client: s3Client,

@@ -1,24 +1,27 @@
 import type { FetchRequest } from './fetchRequest.js';
 
 /**
- * A fetch function.
+ * A fetch function configuration object that defines how to make HTTP requests and handle responses.
  */
 export interface FetchOptions<TParams, TResult> {
     /**
-     * The request for the endpoint.
+     * Creates a fetch request configuration based on the provided parameters.
      */
     request: (params: TParams) => FetchRequest;
     /**
-     * The response for the endpoint.
+     * Optional function to transform the raw Response into the desired result type.
      */
     response?: (response: Response, params: TParams) => Promise<TResult>;
 }
 
 /**
- * Define a fetch function.
+ * Creates a typed fetch function with specified request and response handling.
+ * Use this to define reusable fetch operations with consistent typing.
  *
- * #__NO_SIDE_EFFECTS__
+ * @param fetch - The fetch configuration object
+ * @returns The provided fetch configuration for use in HTTP requests
  */
+// #__NO_SIDE_EFFECTS__
 export function defineFetch<TParams = void, TResult = void>(fetch: FetchOptions<TParams, TResult>) {
     return fetch;
 }

@@ -1,10 +1,13 @@
-import { imports, jsdoc, packageJson, typescript, common } from './src/index.js';
+import { jsdoc, packageJson, typescript, common } from './src/index.js';
 
 export default [
     //
     ...common(),
-    ...typescript({ target: 'node', project: ['./tsconfig.json', './tsconfig.node.json'] }),
+    ...typescript({
+        target: 'node',
+        project: ['./tsconfig.json', './tsconfig.tests.json'],
+        internalImports: ['@nzyme/*'],
+    }),
     ...jsdoc(),
-    ...imports(),
     ...packageJson(),
 ];

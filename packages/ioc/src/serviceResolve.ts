@@ -1,43 +1,77 @@
-import { noop, createMemo } from '@nzyme/utils';
+import { createMemo, noop } from '@nzyme/utils';
 
 import type { Container } from './Container.js';
 import type { Injectable } from './Injectable.js';
-import type { Service, ServiceOptions } from './Service.js';
+import type { Service } from './Service.js';
 import { resolveDeps } from './utils/resolveDeps.js';
 
-export type ServiceResolutionParams = {
-    service: Service;
-    options: ServiceOptions;
-    container: Container;
-    caller?: Injectable;
-};
+/**
+ * Function that determines how a service instance is created and cached.
+ *
+ * @param service - The service to resolve
+ * @param container - The container used for dependency resolution
+ * @param caller - Optional injectable that requested this resolution
+ * @returns The resolved service instance
+ */
+export type ServiceResolutionStrategy = (
+    service: Service,
+    container: Container,
+    caller?: Injectable,
+) => unknown;
 
-export type ServiceResolutionStrategy = (params: ServiceResolutionParams) => unknown;
-export type ServiceResolutionType = 'transient' | 'singleton' | 'lazy';
+/**
+ * Built-in service resolution strategies:
+ * - 'transient': Creates a new instance on each resolution
+ * - 'singleton': Creates and caches a single instance
+ * - 'lazy': Creates a proxy that resolves to a singleton on first use
+ */
+export type ServiceResolutionType = 'lazy' | 'singleton' | 'transient';
 
-export function getResolutionStrategy(strategy: ServiceResolutionType | ServiceResolutionStrategy) {
+/**
+ * Creates a new service resolution strategy.
+ * This is a type-safe wrapper that ensures the function matches the ServiceResolutionStrategy interface.
+ *
+ * @param strategy - The function that implements the resolution strategy
+ * @returns The same function, properly typed as a ServiceResolutionStrategy
+ */
+// #__NO_SIDE_EFFECTS__
+export function defineResolutionStrategy(strategy: ServiceResolutionStrategy) {
+    return strategy;
+}
+
+/**
+ * Gets the resolution strategy function for a given strategy type or function.
+ *
+ * @param strategy - The strategy type or function
+ * @returns The resolution strategy function
+ * @throws Error if the strategy type is invalid
+ */
+export function getResolutionStrategy(strategy: ServiceResolutionStrategy | ServiceResolutionType) {
     if (typeof strategy === 'function') {
         return strategy;
     }
 
     switch (strategy) {
-        case 'transient':
-            return transientStrategy;
-        case 'singleton':
-            return singletonStrategy;
         case 'lazy':
             return lazyStrategy;
+        case 'singleton':
+            return singletonStrategy;
+        case 'transient':
+            return transientStrategy;
         default:
             throw new Error(`Invalid service resolution strategy: ${strategy as string}`);
     }
 }
 
-export function singletonStrategy({
-    service,
-    options,
-    container,
-    caller,
-}: ServiceResolutionParams) {
+/**
+ * Resolution strategy that creates and caches a single instance of the service.
+ * The instance is:
+ * - Created on first resolution
+ * - Cached in the container
+ * - Reused for subsequent resolutions
+ * - Scoped to the container's scope
+ */
+export const singletonStrategy = defineResolutionStrategy((service, container, caller) => {
     let instance = container.get(service);
     if (instance) {
         return instance;
@@ -60,22 +94,24 @@ export function singletonStrategy({
 
     const deps = resolveDeps(service.deps, container, caller);
 
-    instance = options.setup(deps);
+    instance = service.create(deps);
     container.set(service, instance);
 
-    if (options.implements && !container.get(options.implements)) {
-        container.set(options.implements, instance);
+    if (service.implements && !container.get(service.implements)) {
+        container.set(service.implements, instance);
     }
 
     return instance;
-}
+});
 
-export function transientStrategy({
-    service,
-    options,
-    container,
-    caller,
-}: ServiceResolutionParams) {
+/**
+ * Resolution strategy that creates a new instance of the service on each resolution.
+ * The instance is:
+ * - Created on each resolution
+ * - Not cached in the container
+ * - Scoped to the container's scope
+ */
+export const transientStrategy = defineResolutionStrategy((service, container, caller) => {
     if (service.scope) {
         while (container.scope !== service.scope) {
             if (!container.parent) {
@@ -89,32 +125,40 @@ export function transientStrategy({
     }
 
     const deps = resolveDeps(service.deps, container, caller);
-    return options.setup(deps);
-}
+    return service.create(deps);
+});
 
-export function lazyStrategy(params: ServiceResolutionParams) {
+/**
+ * Resolution strategy that creates a proxy that resolves to a singleton on first use.
+ * The proxy:
+ * - Is created immediately
+ * - Defers instance creation until first use
+ * - Caches the instance after creation
+ * - Forwards all operations to the cached instance
+ */
+export const lazyStrategy = defineResolutionStrategy((service, container, caller) => {
     // Short-circuit if already resolved
-    const existing = params.container.get(params.service);
+    const existing = container.get(service);
     if (existing) {
         return existing;
     }
 
-    const memo = createMemo(() => singletonStrategy(params));
+    const memo = createMemo(() => singletonStrategy(service, container, caller));
     const proxy = new Proxy(noop, {
-        get: (target, prop) => {
+        get: (_target, prop) => {
             return (memo() as Record<string | symbol, unknown>)[prop];
         },
-        set: (target, prop, value) => {
+        set: (_target, prop, value) => {
             (memo() as Record<string | symbol, unknown>)[prop] = value;
             return true;
         },
-        has: (target, prop) => {
+        has: (_target, prop) => {
             return prop in (memo() as Record<string | symbol, unknown>);
         },
-        apply: (target, thisArg, args: unknown[]) => {
+        apply: (_target, _thisArg, args: unknown[]) => {
             return (memo() as (...args: unknown[]) => unknown)(...args);
         },
     });
 
     return proxy;
-}
+});

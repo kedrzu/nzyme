@@ -1,7 +1,10 @@
+import type { Infer, Schema } from '../Schema.js';
 import { coerce } from './coerce.js';
-import type { Schema, Infer } from '../Schema.js';
 
-export function parseJson<S extends Schema>(schema: S, json: string | undefined | null): Infer<S> {
+/**
+ * Parses a JSON string into a value.
+ */
+export function parseJson<S extends Schema>(schema: S, json: null | string | undefined): Infer<S> {
     if (!json) {
         return coerce(schema);
     }

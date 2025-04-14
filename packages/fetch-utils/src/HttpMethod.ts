@@ -2,12 +2,12 @@
  * HTTP method types
  */
 export type HttpMethod =
+    | 'CONNECT'
+    | 'DELETE'
     | 'GET'
+    | 'HEAD'
+    | 'OPTIONS'
+    | 'PATCH'
     | 'POST'
     | 'PUT'
-    | 'DELETE'
-    | 'PATCH'
-    | 'OPTIONS'
-    | 'HEAD'
-    | 'CONNECT'
     | 'TRACE';

@@ -1,10 +1,10 @@
+import { HttpError } from './HttpError.js';
+
 /**
  * Custom error class for handling failed HTTP requests.
  * Provides access to the original Response object and commonly needed properties.
  */
-export class FetchError extends Error {
-    /** The HTTP status code of the failed request */
-    public readonly status: number;
+export class FetchError extends HttpError {
     /** The URL that was requested */
     public readonly url: string;
 
@@ -19,8 +19,8 @@ export class FetchError extends Error {
         public readonly response: Response,
         message?: string,
     ) {
-        super(message || response.statusText);
+        super(response.status, message || response.statusText);
         this.url = response.url;
-        this.status = response.status;
+        this.name = 'FetchError';
     }
 }

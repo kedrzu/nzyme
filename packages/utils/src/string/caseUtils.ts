@@ -6,14 +6,21 @@ const CAMEL_TO_SEPARATOR = /([a-z])([A-Z])/g;
  */
 export type ConvertCaseOptions = {
     /**
-     * Transform a word according to the case format.
-     */
-    transformWord: (word: string, index: number) => string;
-    /**
      * Join the transformed words with a separator.
      */
     joinWord: (str: string, word: string, index: number) => string;
+    /**
+     * Transform a word according to the case format.
+     */
+    transformWord: (word: string, index: number) => string;
 };
+
+/**
+ * Capitalize the first letter of a string.
+ */
+export function capitalizeFirstLetter(str: string): string {
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
 
 /**
  * Convert a string to a specific case format.
@@ -62,22 +69,22 @@ export function toCamelCase(str: string): string {
 }
 
 /**
+ * Convert a string to kebab-case (e.g., "hello world" -> "hello-world")
+ */
+export function toKebabCase(str: string): string {
+    return convertCase(str, {
+        transformWord: word => word.toLowerCase(),
+        joinWord: (result, word) => `${result}-${word}`,
+    });
+}
+
+/**
  * Convert a string to PascalCase (e.g., "hello world" -> "HelloWorld")
  */
 export function toPascalCase(str: string): string {
     return convertCase(str, {
         transformWord: capitalizeFirstLetter,
         joinWord: (result, word) => result + word,
-    });
-}
-
-/**
- * Convert a string to Title Case (e.g., "hello world" -> "Hello World")
- */
-export function toTitleCase(str: string): string {
-    return convertCase(str, {
-        transformWord: capitalizeFirstLetter,
-        joinWord: (result, word) => `${result} ${word}`,
     });
 }
 
@@ -92,18 +99,11 @@ export function toSnakeCase(str: string): string {
 }
 
 /**
- * Convert a string to kebab-case (e.g., "hello world" -> "hello-world")
+ * Convert a string to Title Case (e.g., "hello world" -> "Hello World")
  */
-export function toKebabCase(str: string): string {
+export function toTitleCase(str: string): string {
     return convertCase(str, {
-        transformWord: word => word.toLowerCase(),
-        joinWord: (result, word) => `${result}-${word}`,
+        transformWord: capitalizeFirstLetter,
+        joinWord: (result, word) => `${result} ${word}`,
     });
-}
-
-/**
- * Capitalize the first letter of a string.
- */
-export function capitalizeFirstLetter(str: string): string {
-    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }

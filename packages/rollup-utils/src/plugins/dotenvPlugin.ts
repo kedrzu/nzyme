@@ -1,6 +1,24 @@
 import type { Plugin } from 'rollup';
 
-export function dotenvPlugin(vars: Record<string, string | number | boolean>): Plugin {
+/**
+ * Creates a Rollup plugin that generates a .env file from the provided environment variables.
+ * This plugin is useful for bundling applications that need environment variables at runtime.
+ *
+ * @param vars - An object containing environment variables to include in the .env file
+ * @returns A Rollup plugin that generates a .env file during the build process
+ *
+ * @example
+ * ```typescript
+ * // In your Rollup config:
+ * plugins: [
+ *   dotenvPlugin({
+ *     NODE_ENV: 'production',
+ *     API_URL: 'https://api.example.com'
+ *   })
+ * ]
+ * ```
+ */
+export function dotenvPlugin(vars: Record<string, boolean | number | string>): Plugin {
     return {
         name: 'dotenv',
         generateBundle() {

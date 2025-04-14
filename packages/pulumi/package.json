@@ -55,7 +55,7 @@
         "consola": "^3.4.2",
         "execa": "^9.5.2",
         "fs-extra": "^11.3.0",
-        "rollup": "^4.39.0",
+        "rollup": "^4.40.0",
         "rollup-plugin-sourcemaps": "^0.6.3",
         "rollup-plugin-terser": "^7.0.2",
         "terser": "^5.39.0",
@@ -65,7 +65,7 @@
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
         "@nzyme/vitest": "^0.14.0",
-        "@types/node": "^22.14.0",
+        "@types/node": "^22.14.1",
         "eslint": "^9.24.0",
         "typescript": "^5.8.3"
     },

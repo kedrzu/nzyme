@@ -2,9 +2,10 @@ import { addRoute, createRouter, findRoute } from 'rou3';
 
 import type { Endpoint } from '@nzyme/api-core';
 import type { HttpResponseHeaders } from '@nzyme/fetch-utils';
+import { HttpError } from '@nzyme/fetch-utils';
 import { Container, defineService, envVariable } from '@nzyme/ioc';
 import { Logger } from '@nzyme/logging';
-import { HttpError, isPlainObject } from '@nzyme/utils';
+import { isPlainObject } from '@nzyme/utils';
 import { ValidationError } from '@nzyme/validation';
 import * as z from '@nzyme/zchema';
 

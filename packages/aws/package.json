@@ -29,10 +29,10 @@
         "lint": "eslint . --fix --cache"
     },
     "dependencies": {
-        "@aws-sdk/client-cloudfront": "^3.782.0",
-        "@aws-sdk/client-dynamodb": "^3.786.0",
-        "@aws-sdk/client-s3": "^3.782.0",
-        "@aws-sdk/client-sqs": "^3.782.0",
+        "@aws-sdk/client-cloudfront": "^3.787.0",
+        "@aws-sdk/client-dynamodb": "^3.788.0",
+        "@aws-sdk/client-s3": "^3.787.0",
+        "@aws-sdk/client-sqs": "^3.787.0",
         "@nzyme/ioc": "^0.14.0",
         "@nzyme/logging": "^0.14.0",
         "@nzyme/types": "^0.14.0",
@@ -48,7 +48,7 @@
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
         "@nzyme/vitest": "^0.14.0",
-        "@types/node": "^22.14.0",
+        "@types/node": "^22.14.1",
         "eslint": "^9.24.0",
         "typescript": "^5.8.3"
     },

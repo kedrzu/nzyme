@@ -4,11 +4,30 @@ import { fileURLToPath } from 'url';
 import { copy } from 'fs-extra';
 import type { Plugin } from 'rollup';
 
+/**
+ * Configuration options for the Prisma plugin.
+ */
 export type PrismaPluginOptions = {
-    prismaImport: string;
+    /**
+     * The import.meta object for resolving module paths
+     */
     importMeta?: ImportMeta;
+    /**
+     * The import path to the Prisma client
+     */
+    prismaImport: string;
 };
 
+/**
+ * Creates a Rollup plugin that handles Prisma client bundling.
+ * This plugin:
+ * - Resolves Prisma client imports
+ * - Copies Prisma schema and client files to the output directory
+ * - Handles Prisma client initialization
+ *
+ * @param options - Configuration options for the plugin
+ * @returns A Rollup plugin that handles Prisma client bundling
+ */
 export function prismaPlugin(options: PrismaPluginOptions): Plugin {
     const importMeta = options.importMeta ?? import.meta;
     const prismaPackage = fileURLToPath(importMeta.resolve(options.prismaImport));

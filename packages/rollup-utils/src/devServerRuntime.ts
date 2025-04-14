@@ -5,7 +5,10 @@ import { consola } from 'consola';
 import sourceMap from 'source-map-support';
 
 /**
- * This is the runtime for the dev server worker.
+ * Creates a runtime environment for the development server worker thread.
+ * This function sets up source map support and provides methods to start the server.
+ *
+ * @returns An object containing the server port and start method
  */
 export function devServerRuntime() {
     sourceMap.install();
@@ -17,6 +20,10 @@ export function devServerRuntime() {
         start,
     };
 
+    /**
+     * Starts the development server and notifies the parent thread.
+     * This method should be called after the server is ready to accept connections.
+     */
     function start() {
         // Notify the parent thread that server started.
         parentPort?.postMessage('START');

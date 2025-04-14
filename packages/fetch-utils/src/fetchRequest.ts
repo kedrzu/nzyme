@@ -2,7 +2,7 @@ import type { QueryObject } from 'ufo';
 import { withQuery } from 'ufo';
 
 import { assertResponse } from './assertResponse.js';
-import type { HttpMethod } from './types/HttpMethod.js';
+import type { HttpMethod } from './HttpMethod.js';
 
 /**
  * Extended fetch request configuration that includes URL, query parameters, and standard RequestInit options.

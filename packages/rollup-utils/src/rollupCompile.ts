@@ -8,7 +8,11 @@ import { formatElapsedMs } from '@nzyme/utils';
 import type { RollupOptions } from './types.js';
 
 /**
- * Compiles a Rollup bundle.
+ * Compiles a Rollup bundle with the given configuration options.
+ *
+ * @param options - The Rollup configuration options including input and output settings
+ * @throws {Error} If the output directory cannot be cleared or if compilation fails
+ * @returns A promise that resolves when compilation is complete
  */
 export async function rollupCompile(options: RollupOptions) {
     const start = performance.now();

@@ -1,36 +1,51 @@
 import debounce from 'lodash.debounce';
-import { type Ref, ref, watch, toRaw, onBeforeUnmount } from 'vue';
+import { onBeforeUnmount, type Ref, ref, toRaw, watch } from 'vue';
 
 import { useHistory } from '../useHistory.js';
 
+/**
+ *
+ */
 export interface HistoryStateRef<T> extends Ref<T> {
+    /**
+     *
+     */
     save(): void;
 }
 
-type HistoryStateRefOptions = {
-    key: string;
-    deep?: boolean;
-    debounce?: number;
+type HistoryStateRefDefault<T> = {
+    default: () => T;
 };
 
 type HistoryStateRefNoDefault = {
     default?: never;
 };
 
-type HistoryStateRefDefault<T> = {
-    default: () => T;
+type HistoryStateRefOptions = {
+    debounce?: number;
+    deep?: boolean;
+    key: string;
 };
 
-export function historyStateRef<T>(
-    options: HistoryStateRefOptions & HistoryStateRefDefault<T>,
+export /**
+ *
+ */
+function historyStateRef<T>(
+    options: HistoryStateRefDefault<T> & HistoryStateRefOptions,
 ): HistoryStateRef<T>;
-export function historyStateRef<T>(
-    options: HistoryStateRefOptions & HistoryStateRefNoDefault,
-): HistoryStateRef<T | null>;
+export /**
+ *
+ */
+function historyStateRef<T>(
+    options: HistoryStateRefNoDefault & HistoryStateRefOptions,
+): HistoryStateRef<null | T>;
 
+/**
+ *
+ */
 export function historyStateRef<T>(
     options: HistoryStateRefOptions & Partial<HistoryStateRefDefault<T>>,
-): HistoryStateRef<T | null> {
+): HistoryStateRef<null | T> {
     const history = useHistory();
     const key = options.key;
 
@@ -58,7 +73,7 @@ export function historyStateRef<T>(
         return (state[key] as T | undefined) ?? getDefault();
     }
 
-    function write(value: T | null) {
+    function write(value: null | T) {
         if (!history) {
             return;
         }

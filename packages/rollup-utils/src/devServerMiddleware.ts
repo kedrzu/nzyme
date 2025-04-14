@@ -13,7 +13,12 @@ import { createPromise, formatDurationMs, formatElapsedMs } from '@nzyme/utils';
 import { onRollupWarning } from './onRollupWarning.js';
 
 /**
+ * Creates a middleware function that handles development server requests and hot reloading.
+ * This middleware manages the Rollup watcher and worker thread for the development server.
  *
+ * @param options - Rollup watch configuration options
+ * @returns A middleware function that handles development server requests
+ * @throws {Error} If the input or output configuration is invalid
  */
 export function devServerMiddleware(options: RollupWatchOptions): NextHandleFunction {
     const outputFile = getOutputFile(options);
@@ -36,6 +41,9 @@ export function devServerMiddleware(options: RollupWatchOptions): NextHandleFunc
         }
     };
 
+    /**
+     * Starts the Rollup watcher and handles compilation events
+     */
     function startRollup() {
         const watcher = watch({
             onwarn: onRollupWarning,
@@ -57,11 +65,15 @@ export function devServerMiddleware(options: RollupWatchOptions): NextHandleFunc
         });
     }
 
+    /**
+     * Creates a new development server instance
+     * @returns An object containing the server's middleware and control methods
+     */
     function createServer() {
         // Stop the current server
         void server?.stop();
 
-        let worker: Worker | undefined;
+        let worker: undefined | Worker;
         const proxyPromise = createPromise<NextHandleFunction>();
 
         const middleware: NextHandleFunction = (req, res, next) => {
@@ -74,6 +86,9 @@ export function devServerMiddleware(options: RollupWatchOptions): NextHandleFunc
             stop,
         };
 
+        /**
+         * Starts the worker thread and sets up the proxy middleware
+         */
         async function start(this: unknown) {
             if (worker) {
                 // already started
@@ -120,6 +135,9 @@ export function devServerMiddleware(options: RollupWatchOptions): NextHandleFunc
             });
         }
 
+        /**
+         * Stops the worker thread and cleans up resources
+         */
         async function stop() {
             server = undefined;
             await worker?.terminate();
@@ -127,6 +145,12 @@ export function devServerMiddleware(options: RollupWatchOptions): NextHandleFunc
     }
 }
 
+/**
+ * Determines the output file path from Rollup watch options
+ * @param options - Rollup watch configuration options
+ * @returns The absolute path to the output file
+ * @throws {Error} If the input or output configuration is invalid
+ */
 function getOutputFile(options: RollupWatchOptions) {
     if (typeof options.input !== 'string') {
         throw new Error('Input must be single file');

@@ -1,0 +1,36 @@
+.moving {
+    cursor: grabbing;
+}
+
+.carousel {
+    @include flex-column;
+    position: relative;
+    overflow-x: hidden;
+
+    user-select: none;
+    -webkit-user-drag: none;
+
+    * {
+        user-select: none;
+        -webkit-user-drag: none;
+    }
+
+    touch-action: pan-y;
+
+    .moving & {
+        // this prevents from clicking some link inside
+        // when finished sliding with mouse
+        pointer-events: none;
+    }
+}
+
+.items {
+    display: flex;
+    padding: 0;
+    overflow: visible;
+    transition: transform 0.3s ease-out;
+
+    &_swiping {
+        transition: none;
+    }
+}

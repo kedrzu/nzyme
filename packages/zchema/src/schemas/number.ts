@@ -10,7 +10,7 @@ import { defineSchema } from '../defineSchema.js';
 export type NumberSchema<O extends SchemaOptions<number>> = Schema<number, O>;
 
 /**
- * Protocol implementation for number schema.
+ * Prototype implementation for number schema.
  */
 const proto: SchemaProto<number> = {
     coerce: Number,

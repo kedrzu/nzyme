@@ -16,23 +16,23 @@ interface BaseRequest {
 }
 
 /**
- * Configuration for methods that don't include a request body
- */
-interface SimpleRequest extends BaseRequest {
-    /** HTTP method for requests without a body */
-    method?: 'GET' | 'HEAD' | 'DELETE';
-    /** Explicitly prevent data for these methods */
-    data?: never;
-}
-
-/**
  * Configuration for methods that include a request body
  */
 interface DataRequest extends BaseRequest {
     /** HTTP method for requests with a body */
-    method: 'POST' | 'PUT' | 'PATCH';
+    method: 'PATCH' | 'POST' | 'PUT';
     /** Optional data to be sent as JSON */
     data?: unknown;
+}
+
+/**
+ * Configuration for methods that don't include a request body
+ */
+interface SimpleRequest extends BaseRequest {
+    /** HTTP method for requests without a body */
+    method?: 'DELETE' | 'GET' | 'HEAD';
+    /** Explicitly prevent data for these methods */
+    data?: never;
 }
 
 /**
@@ -43,7 +43,7 @@ interface DataRequest extends BaseRequest {
  * @returns A promise that resolves to the parsed JSON response, or null for 204 responses
  * @throws {FetchError} If the response status is not ok
  */
-export async function fetchJson<T>(request: SimpleRequest | DataRequest) {
+export async function fetchJson<T>(request: DataRequest | SimpleRequest) {
     const headers: Record<string, string> = { ...request.headers };
     let url = request.url;
     if (request.query) {

@@ -1,15 +1,23 @@
 import {
     mergeErrors,
     normalizeErrors,
-    ValidationError,
     type ValidationContext,
+    ValidationError,
     type ValidationErrors,
     type ValidationResult,
 } from '@nzyme/validation';
 
-import type { SchemaAny, Infer } from '../Schema.js';
+import type { Infer, SchemaAny } from '../Schema.js';
 import { lazyResolve } from '../schemas/lazy.js';
 
+/**
+ * Validates a value against a schema and returns any validation errors.
+ * @template S - The schema type
+ * @param schema - The schema to validate against
+ * @param value - The value to validate
+ * @param ctx - Optional validation context
+ * @returns Normalized validation errors, or undefined if the value is valid
+ */
 export function validate<S extends SchemaAny>(
     schema: S,
     value: Infer<S>,
@@ -19,6 +27,14 @@ export function validate<S extends SchemaAny>(
     return normalizeErrors(errors);
 }
 
+/**
+ * Validates a value against a schema and throws a ValidationError if invalid.
+ * @template S - The schema type
+ * @param schema - The schema to validate against
+ * @param value - The value to validate
+ * @param ctx - Optional validation context
+ * @throws {ValidationError} If the value is invalid
+ */
 export function validateOrThrow<S extends SchemaAny>(
     schema: S,
     value: Infer<S>,
@@ -30,11 +46,19 @@ export function validateOrThrow<S extends SchemaAny>(
     }
 }
 
+/**
+ * Internal function that performs the actual validation logic.
+ * @template S - The schema type
+ * @param schema - The schema to validate against
+ * @param value - The value to validate
+ * @param ctx - Validation context
+ * @returns Raw validation errors, or undefined if the value is valid
+ */
 function validateInner<S extends SchemaAny>(
     schema: S,
     value: Infer<S>,
     ctx: ValidationContext,
-): ValidationResult {
+): undefined | ValidationResult {
     lazyResolve(schema);
 
     const proto = schema.proto;
@@ -51,7 +75,7 @@ function validateInner<S extends SchemaAny>(
         return ['Invalid value'];
     }
 
-    let errors: ValidationErrors | undefined;
+    let errors: undefined | ValidationErrors;
 
     if (value != null && proto.visit != null) {
         proto.visit(value, (schema, value, key) => {

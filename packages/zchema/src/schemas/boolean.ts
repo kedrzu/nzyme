@@ -10,7 +10,7 @@ import { defineSchema } from '../defineSchema.js';
 export type BooleanSchema<O extends SchemaOptions<boolean>> = Schema<boolean, O>;
 
 /**
- * Protocol implementation for boolean schema.
+ * Prototype implementation for boolean schema.
  */
 const proto: SchemaProto<boolean> = {
     coerce: Boolean,

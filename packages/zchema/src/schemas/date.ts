@@ -19,7 +19,7 @@ export type DateSchemaOptions = SchemaOptions<Date> & {
 export type DateSchema<O extends DateSchemaOptions = DateSchemaOptions> = Schema<Date, O>;
 
 /**
- * Protocol implementation for date schema.
+ * Prototype implementation for date schema.
  */
 const proto: SchemaProto<Date> = {
     coerce: val => new Date(val as string | number),

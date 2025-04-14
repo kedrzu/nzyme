@@ -1,8 +1,16 @@
 import type { Primitive } from '@nzyme/types';
 import { identity } from '@nzyme/utils';
 
-import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
 import { defineSchema } from '../defineSchema.js';
+import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
+
+/**
+ * Schema type for enum values.
+ * @template O - Enum schema options type
+ */
+export type EnumSchema<O extends EnumSchemaOptions = EnumSchemaOptions> = ForceName<
+    Schema<O['values'][number], O>
+>;
 
 /**
  * Options for defining an enum schema.
@@ -14,18 +22,6 @@ export type EnumSchemaOptions<V extends Primitive[] = Primitive[]> = SchemaOptio
 };
 
 /**
- * Schema type for enum values.
- * @template O - Enum schema options type
- */
-export type EnumSchema<O extends EnumSchemaOptions = EnumSchemaOptions> = ForceName<
-    Schema<O['values'][number], O>
->;
-
-// Helper type to force type name preservation
-declare class FF {}
-type ForceName<T> = T & FF;
-
-/**
  * Value type for enum schema.
  * @template O - Enum schema options type
  */
@@ -33,18 +29,34 @@ export type EnumSchemaValue<O extends EnumSchemaOptions> = O['values'][number];
 
 /**
  * Base type for enum schema definition.
+ * Provides overloads for creating enum schemas with different options.
  */
 type EnumSchemaBase = {
     /** Creates an enum schema with custom options */
     <const V extends Primitive[], O extends EnumSchemaOptions<V>>(
-        options: O & EnumSchemaOptions<V>,
+        options: EnumSchemaOptions<V> & O,
     ): EnumSchema<SchemaOptionsSimlify<O>>;
     /** Creates an enum schema with array of values */
     <const V extends Primitive[]>(values: V): EnumSchema<{ values: V }>;
 };
 
 /**
+ * Helper type to force type name preservation.
+ * @template T - The type to preserve
+ * @internal
+ */
+type ForceName<T> = FF & T;
+
+/**
+ * Internal class used to force type names in TypeScript.
+ * @internal
+ */
+declare class FF {}
+
+/**
  * Creates a schema for enum values.
+ * This schema validates that a value is one of the allowed values in the enum.
+ * If a value is not in the enum, it is coerced to the first value in the enum.
  *
  * @example
  * ```ts

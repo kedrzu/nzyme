@@ -13,7 +13,7 @@ export type StringSchema<O extends SchemaOptions<string> = SchemaOptions<string>
 >;
 
 /**
- * Protocol implementation for string schema.
+ * Prototype implementation for string schema.
  */
 const proto: SchemaProto<string> = {
     coerce: String,

@@ -1,5 +1,5 @@
-import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
 import { defineSchema } from '../defineSchema.js';
+import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
 
 /**
  * Schema type for void values.
@@ -9,12 +9,22 @@ export type VoidSchema<O extends SchemaOptions<void> = SchemaOptions<void>> = Fo
     Schema<void, O>
 >;
 
-// Helper type to force type name preservation
-declare class FF {}
-type ForceName<T> = T & FF;
+/**
+ * Helper type to force type name preservation.
+ * @template T - The type to preserve
+ * @internal
+ */
+type ForceName<T> = FF & T;
 
 /**
- * Protocol implementation for void schema.
+ * Internal class used to force type names in TypeScript.
+ * @internal
+ */
+declare class FF {}
+
+/**
+ * Prototype implementation for void schema.
+ * This prototype only accepts undefined values and always returns undefined.
  */
 const proto: SchemaProto<void> = {
     coerce: () => undefined,
@@ -27,6 +37,7 @@ const proto: SchemaProto<void> = {
 
 /**
  * Base type for void schema definition.
+ * Provides overloads for creating void schemas with different options.
  */
 type VoidSchemaBase = {
     /** Creates a void schema with custom options */

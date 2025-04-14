@@ -4,11 +4,11 @@ import { defineEndpoint } from '@nzyme/api-core';
 import type { Container } from '@nzyme/ioc';
 import { createContainer } from '@nzyme/ioc';
 import { HttpError } from '@nzyme/utils';
+import * as v from '@nzyme/validation';
 import * as z from '@nzyme/zchema';
 
-import { ApiRouter } from '../ApiRouter.js';
-import { defineEndpointHandler } from '../defineEndpointHandler.js';
-import { requiredValidator } from '@nzyme/validation';
+import { ApiRouter } from './ApiRouter.js';
+import { defineEndpointHandler } from './defineEndpointHandler.js';
 
 let container: Container;
 let router: ApiRouter;
@@ -149,7 +149,7 @@ it('should handle validation errors', async () => {
         path: '/test',
         input: {
             required: z.string({
-                validators: [requiredValidator()],
+                validators: [v.required()],
             }),
         },
         output: z.object({

@@ -1,7 +1,7 @@
 import { identity } from '@nzyme/utils';
 
-import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
 import { defineSchema } from '../defineSchema.js';
+import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
 
 /**
  * Schema type for integer values.
@@ -13,7 +13,9 @@ export type IntegerSchema<O extends SchemaOptions<number> = SchemaOptions<number
 >;
 
 /**
- * Protocol implementation for integer schema.
+ * Prototype implementation for integer schema.
+ * This prototype validates that a value is an integer and coerces non-integer values
+ * by rounding them up to the nearest integer.
  */
 const proto: SchemaProto<number> = {
     coerce: v => Math.ceil(Number(v)),
@@ -24,6 +26,7 @@ const proto: SchemaProto<number> = {
 
 /**
  * Base type for integer schema definition.
+ * Provides overloads for creating integer schemas with different options.
  */
 type IntegerSchemaBase = {
     /** Creates an integer schema with default options */
@@ -34,6 +37,8 @@ type IntegerSchemaBase = {
 
 /**
  * Creates a schema for integer values.
+ * This schema validates that a value is an integer and coerces non-integer values
+ * by rounding them up to the nearest integer.
  *
  * @example
  * ```ts

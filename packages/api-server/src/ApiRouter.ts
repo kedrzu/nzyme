@@ -199,7 +199,7 @@ export const ApiRouter = defineService({
             return deserialized;
         }
 
-        function parseJson(input: null | string | undefined): unknown {
+        function parseJson(input: string | null | undefined): unknown {
             if (input == null) {
                 return null;
             }

@@ -50,7 +50,8 @@ it('should handle GET requests with query parameters', async () => {
         }),
     });
 
-    const handler = defineEndpointHandler(endpoint, {
+    const handler = defineEndpointHandler({
+        endpoint,
         setup() {
             return ({ name }) => ({
                 name,
@@ -86,7 +87,8 @@ it('should handle POST requests with JSON body', async () => {
         }),
     });
 
-    const handler = defineEndpointHandler(endpoint, {
+    const handler = defineEndpointHandler({
+        endpoint,
         setup() {
             return ({ data }) => ({
                 success: true,
@@ -122,7 +124,8 @@ it('should handle path parameters', async () => {
         }),
     });
 
-    const handler = defineEndpointHandler(endpoint, {
+    const handler = defineEndpointHandler({
+        endpoint,
         setup() {
             return ({ id }) => ({
                 success: true,
@@ -149,7 +152,7 @@ it('should handle validation errors', async () => {
         path: '/test',
         input: {
             required: z.string({
-                validators: [v.required()],
+                validate: v.required(),
             }),
         },
         output: z.object({
@@ -159,7 +162,8 @@ it('should handle validation errors', async () => {
         }),
     });
 
-    const handler = defineEndpointHandler(endpoint, {
+    const handler = defineEndpointHandler({
+        endpoint,
         setup() {
             return () => ({
                 success: true,
@@ -191,7 +195,8 @@ it('should handle HTTP errors', async () => {
         }),
     });
 
-    const handler = defineEndpointHandler(endpoint, {
+    const handler = defineEndpointHandler({
+        endpoint,
         setup() {
             return () => {
                 throw new HttpError(403, 'Forbidden');
@@ -226,7 +231,8 @@ it('should handle unhandled errors', async () => {
         }),
     });
 
-    const handler = defineEndpointHandler(endpoint, {
+    const handler = defineEndpointHandler({
+        endpoint,
         setup() {
             return () => {
                 throw new Error('Unexpected error');

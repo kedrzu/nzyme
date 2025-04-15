@@ -82,9 +82,7 @@ function setupTextArea() {
                 rows={1}
                 tabindex={props.tabindex}
                 title={props.label}
-            >
-                {field.value}
-            </textarea>
+            />
         );
     }
 }

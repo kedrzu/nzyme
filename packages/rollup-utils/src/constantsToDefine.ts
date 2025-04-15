@@ -20,7 +20,7 @@
  * // }
  * ```
  */
-export function constantsToDefine<T extends Record<string, string>>(constants: T) {
+export function constantsToDefine<T extends object>(constants: T) {
     const result: Record<string, string> = {};
 
     for (const key in constants) {

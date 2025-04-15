@@ -25,6 +25,10 @@ export interface EndpointHandlerOptions<
     /**
      *
      */
+    readonly endpoint: E;
+    /**
+     *
+     */
     readonly deps?: D;
     /**
      *
@@ -37,14 +41,13 @@ export interface EndpointHandlerOptions<
  */
 // #__NO_SIDE_EFFECTS__*/
 export function defineEndpointHandler<E extends EndpointAny>(
-    endpoint: E,
     options: EndpointHandlerOptions<E>,
 ): EndpointHandler<E> {
     return {
-        ...endpoint,
+        ...options.endpoint,
         ...defineService({
             deps: options.deps,
-            name: `endpoint:${endpoint.path}`,
+            name: `endpoint:${options.endpoint.path}`,
             setup: options.setup,
         }),
     };

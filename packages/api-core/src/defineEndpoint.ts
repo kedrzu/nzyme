@@ -7,9 +7,19 @@ import type { ObjectOptions, ValueFromOptions } from './types.js';
 /**
  *
  */
+export type EndpointInputOptions = ObjectOptions | undefined;
+
+/**
+ *
+ */
+export type EndpointOutputOptions = z.Schema | undefined;
+
+/**
+ *
+ */
 export type Endpoint<
-    TInput extends ObjectOptions | undefined = ObjectOptions | undefined,
-    TOutput extends undefined | z.Schema = undefined | z.Schema,
+    TInput extends EndpointInputOptions = EndpointInputOptions,
+    TOutput extends EndpointOutputOptions = EndpointOutputOptions,
 > = {
     /**
      *

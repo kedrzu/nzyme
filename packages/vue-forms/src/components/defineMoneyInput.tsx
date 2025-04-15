@@ -33,7 +33,7 @@ export function defineMoneyInput() {
         const field = fieldDef.create({ props });
 
         const value = computed(() => {
-            const money = props.value;
+            const money = props.modelValue;
             if (money == null) {
                 return 0;
             }

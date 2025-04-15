@@ -2,6 +2,7 @@ import workspaces from 'eslint-plugin-workspaces';
 import monorepo from 'eslint-plugin-monorepo';
 import globals from 'globals';
 import js from '@eslint/js';
+import importPlugin from 'eslint-plugin-import';
 import perfectionist from 'eslint-plugin-perfectionist';
 
 import tseslint from 'typescript-eslint';
@@ -19,14 +20,15 @@ export interface TypescriptOptions {
 export function typescript(options: TypescriptOptions = {}) {
     const config: Linter.Config = {
         ignores: ['dist/**/*', 'dist-*/**/*', 'node_modules/**/*', 'eslint.config.js'],
-        files: ['**/*.{ts,tsx}'],
         plugins: {
             workspaces,
             monorepo,
+            import: importPlugin,
         },
         languageOptions: {
             parserOptions: {
                 project: options.project || './tsconfig.json',
+                extraFileExtensions: ['.vue'],
             },
         },
         rules: {
@@ -45,10 +47,12 @@ export function typescript(options: TypescriptOptions = {}) {
             ],
             '@typescript-eslint/consistent-type-imports': 'error',
             '@typescript-eslint/no-import-type-side-effects': 'error',
+            // '@typescript-eslint/explicit-member-accessibility': 'warn',
             'workspaces/no-relative-imports': 'error',
             'workspaces/no-absolute-imports': 'error',
             'workspaces/require-dependency': 'error',
             'monorepo/no-relative-import': 'error',
+            'import/consistent-type-specifier-style': ['warn', 'prefer-top-level'],
             'perfectionist/sort-imports': [
                 'warn',
                 {
@@ -63,15 +67,54 @@ export function typescript(options: TypescriptOptions = {}) {
                     ],
                 },
             ],
-            'perfectionist/sort-interfaces': [
-                'warn',
-                {
-                    // often we want a custom prop order for better readability
-                    type: 'unsorted',
-                },
-            ],
+            // often we want a custom prop order for better readability
+            'perfectionist/sort-interfaces': ['warn', { type: 'unsorted' }],
             // this is super risky, as key order is preserved in js
             'perfectionist/sort-objects': 'off',
+            'perfectionist/sort-modules': ['warn', { type: 'unsorted' }],
+            'perfectionist/sort-union-types': [
+                'warn',
+                {
+                    type: 'natural',
+                    groups: [
+                        'conditional',
+                        'function',
+                        'import',
+                        'intersection',
+                        'keyword',
+                        'named',
+                        'object',
+                        'operator',
+                        'tuple',
+                        'union',
+                        'literal',
+                        'nullish',
+                    ],
+                },
+            ],
+            'perfectionist/sort-classes': [
+                'warn',
+                {
+                    type: 'unsorted',
+                    groups: [
+                        'index-signature',
+                        'static-property',
+                        'static-block',
+                        ['public-property', 'public-accessor-property'],
+                        ['public-get-method', 'public-set-method'],
+                        ['protected-property', 'protected-accessor-property'],
+                        ['protected-get-method', 'protected-set-method'],
+                        ['private-property', 'private-accessor-property'],
+                        ['private-get-method', 'private-set-method'],
+                        'constructor',
+                        'static-method',
+                        'public-method',
+                        'protected-method',
+                        'private-method',
+                        'unknown',
+                    ],
+                },
+            ],
         },
     };
 

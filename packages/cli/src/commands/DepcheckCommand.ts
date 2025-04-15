@@ -4,6 +4,7 @@ import chalk from 'chalk';
 import { compareVersions } from 'compare-versions';
 import { consola } from 'consola';
 import depcheckImport from 'depcheck';
+
 import { Command } from '../Command.js';
 import { Option } from '../index.js';
 
@@ -22,6 +23,9 @@ export class DepcheckCommand extends Command {
         description: 'Fix the dependencies',
     });
 
+    /**
+     *
+     */
     override async run() {
         const cwd = process.cwd();
         const packages = await getPackages(cwd);

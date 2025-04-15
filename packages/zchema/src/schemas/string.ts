@@ -1,7 +1,7 @@
 import { identity } from '@nzyme/utils';
 
-import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
 import { defineSchema } from '../defineSchema.js';
+import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
 
 /**
  * Schema type for string values.

@@ -6,6 +6,7 @@ import { getPackages } from '@lerna/project';
 import { $ } from 'execa';
 import glob from 'fast-glob';
 import { outputFile } from 'fs-extra';
+
 import { Command } from '../Command.js';
 
 const jsRegex = /\.js([^\w]|$)/g;

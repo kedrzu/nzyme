@@ -8,13 +8,13 @@ import * as json from 'comment-json';
 import { consola } from 'consola';
 import fsExtra from 'fs-extra/esm';
 import merge from 'lodash.merge';
-import { format as prettierFormat, resolveConfig as prettierResolveConfig } from 'prettier';
 import type { TsConfigJson } from 'type-fest';
 
 import { asArray } from '@nzyme/utils';
 
-import type { NzymePackageConfig } from '../NzymePackageConfig.js';
 import { Command } from '../Command.js';
+import type { NzymePackageConfig } from '../NzymePackageConfig.js';
+import { saveFile } from '../utils/saveFile.js';
 
 interface TsConfig {
     path: string;
@@ -284,13 +284,12 @@ function resolveTsConfigPath(cwd: string, filePath: string) {
 }
 
 async function saveTsReferences(params: {
-    cwd: string;
-    fileName: string;
-    extends: string;
-    references: string[];
     config?: TsConfigJson;
+    cwd: string;
+    extends: string;
+    fileName: string;
+    references: string[];
 }) {
-    const prettierConfig = await prettierResolveConfig(params.cwd);
     const outputPath = path.join(params.cwd, params.fileName);
     const extendsPath = getRelativePath(outputPath, params.extends);
     const tsconfig = {
@@ -303,18 +302,14 @@ async function saveTsReferences(params: {
         }),
     };
 
-    let configJson = json.stringify(tsconfig, undefined, 2);
-    configJson = await prettierFormat(configJson, {
-        ...prettierConfig,
-        parser: 'json',
-    });
+    const configJson = json.stringify(tsconfig, undefined, 2);
+    await saveFile(outputPath, configJson);
 
-    await fsExtra.outputFile(outputPath, configJson, { encoding: 'utf8' });
     consola.success(outputPath);
 
     return outputPath;
 }
 
 function getNzymeConfig(pkg: Package) {
-    return pkg.get('nzyme') as NzymePackageConfig | undefined | null;
+    return pkg.get('nzyme') as NzymePackageConfig | null | undefined;
 }

@@ -54,7 +54,7 @@ export type Schema<
         >;
         proto: SchemaProto<V, unknown>;
         type: SchemaBase;
-        validators: Validator[];
+        validate: Validator[];
     };
 
 /**
@@ -77,21 +77,6 @@ export type SchemaBase<S extends Schema = Schema> = {
  * @template V - The type of the default value
  */
 export type SchemaDefault<V> = (() => V) | V;
-
-declare const SCHEMA_FACTORY_OPTIONS: unique symbol;
-
-/**
- * Interface for schema factory functions that create schemas with specific options.
- * @template T - The value type that the schema validates
- * @template O - The options type for the schema
- */
-export interface SchemaFactory<T = unknown, O extends SchemaOptions<T> = SchemaOptions<T>> {
-    <OO extends O>(options: OO): Schema<T, OO>;
-    /**
-     * @internal
-     */
-    [SCHEMA_FACTORY_OPTIONS]: O;
-}
 
 /**
  * Creates a schema that matches a given TypeScript type.
@@ -123,7 +108,7 @@ export interface SchemaOptions<V = unknown> extends SchemaOptionsBase, SchemaPro
     /**
      * Array of validators to apply to values
      */
-    validators?: Validator<V>[];
+    validate?: Validator<V> | Validator<V>[];
 }
 
 /**
@@ -158,7 +143,7 @@ export type SchemaOptionsOf<S extends SchemaAny> = S extends Schema<any, infer O
  * @template O - The schema options type to simplify
  */
 export type SchemaOptionsSimlify<O extends SchemaOptionsAny> = Simplify<{
-    [K in Exclude<keyof O, 'default' | 'validators'>]: O[K];
+    [K in Exclude<keyof O, 'default' | 'validate'>]: O[K];
 }>;
 
 /**

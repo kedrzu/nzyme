@@ -1,13 +1,11 @@
 import pluginVue from 'eslint-plugin-vue';
-import tseslint from 'typescript-eslint';
+import vueParser from 'vue-eslint-parser';
+import tsParser from '@typescript-eslint/parser';
 import { defineConfig } from 'eslint/config';
-import { ESLint } from 'eslint';
 
 export function vue() {
     return defineConfig({
-        plugins: {
-            '@typescript-eslint': tseslint.plugin as ESLint.Plugin,
-        },
+        files: ['**/*.vue', '**/*.ts', '**/*.tsx'],
         extends: [pluginVue.configs['flat/recommended']],
         rules: {
             'vue/multi-word-component-names': 'off',
@@ -15,18 +13,12 @@ export function vue() {
             'vue/require-v-for-key': 'off',
             'vue/require-default-prop': 'off',
             'vue/one-component-per-file': 'off',
-            // allow importing h from vue for jsx
-            '@typescript-eslint/no-unused-vars': [
-                'error',
-                {
-                    args: 'all',
-                    argsIgnorePattern: '^_',
-                    caughtErrors: 'all',
-                    caughtErrorsIgnorePattern: '^_',
-                    destructuredArrayIgnorePattern: '^_',
-                    varsIgnorePattern: '(^_)|(^h$)',
-                },
-            ],
+        },
+        languageOptions: {
+            parser: vueParser,
+            parserOptions: {
+                parser: tsParser,
+            },
         },
     });
 }

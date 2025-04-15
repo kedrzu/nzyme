@@ -1,12 +1,5 @@
-import {
-    computed,
-    reactive,
-    ref,
-    unref,
-    onBeforeUnmount,
-    type PropType,
-    type ExtractPropTypes,
-} from 'vue';
+import { computed, onBeforeUnmount, reactive, ref, unref } from 'vue';
+import type { ExtractPropTypes, PropType } from 'vue';
 
 import { scrollToTopElement } from '@nzyme/dom-utils';
 import { defineProp, injectContext, useInstanceProxy } from '@nzyme/vue-utils';
@@ -14,27 +7,27 @@ import { defineProp, injectContext, useInstanceProxy } from '@nzyme/vue-utils';
 import { FormContext } from '../FormContext.js';
 import type { Validation } from '../validation.js';
 
-export interface FormFieldOptions<T> {
-    props: FormFieldProps<T>;
-}
-
 export type FormField<T> = ReturnType<typeof createFormField<T>>;
 
 export type FormFieldDefinition<T> = ReturnType<typeof defineFormField<T>>;
-export type FormFieldPropsDefinition<T> = FormFieldDefinition<T>['props'];
 
+export interface FormFieldOptions<T> {
+    props: FormFieldProps<T>;
+}
 export type FormFieldProps<T> = ExtractPropTypes<FormFieldPropsDefinition<T>>;
 
+export type FormFieldPropsDefinition<T> = FormFieldDefinition<T>['props'];
+
 /*#__NO_SIDE_EFFECTS__*/
-export function defineFormField<T>(type?: PropType<T | null | undefined>) {
+export function defineFormField<T>(type?: PropType<null | T | undefined>) {
     return {
         props: {
-            value: { type: type as PropType<T | null | undefined> },
-            field: defineProp<Validation<T | null>>(),
+            modelValue: { type: type as PropType<null | T | undefined> },
+            field: defineProp<Validation<null | T>>(),
             errors: defineProp<string | string[]>(),
         },
         emits: {
-            'update:value': undefined as unknown as (value: T) => boolean,
+            'update:modelValue': undefined as unknown as (value: T) => boolean,
             focus: undefined as unknown as (event: FocusEvent) => boolean,
             blur: undefined as unknown as (event: FocusEvent) => boolean,
         },
@@ -47,7 +40,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
     const vm = useInstanceProxy();
     const formCtx = injectContext(FormContext, { optional: true });
 
-    const value = computed<T | null | undefined>({
+    const value = computed<null | T | undefined>({
         get: getValue,
         set: setValue,
     });
@@ -115,10 +108,10 @@ function createFormField<T>(options: FormFieldOptions<T>) {
     });
 
     function getValue() {
-        return props.field ? props.field.$model : (props.value as T | null | undefined);
+        return props.field ? props.field.$model : (props.modelValue as null | T | undefined);
     }
 
-    function setValue(value: T | null | undefined) {
+    function setValue(value: null | T | undefined) {
         const current = getValue();
         if (value === current) {
             return;
@@ -128,7 +121,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
             props.field.$model = value ?? null;
         }
 
-        vm.$emit('update:value', value);
+        vm.$emit('update:modelValue', value);
     }
 
     function touch() {

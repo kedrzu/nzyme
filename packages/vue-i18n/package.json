@@ -1,0 +1,45 @@
+{
+    "name": "@nzyme/vue-i18n",
+    "version": "0.14.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/kedrzu/nzyme.git"
+    },
+    "license": "MIT",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "sideEffects": false,
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build:cjs": "tsc --build ./tsconfig.cjs.json",
+        "build:esm": "tsc --build ./tsconfig.esm.json",
+        "lint": "eslint . --fix --cache",
+        "smoke:cjs": "node tests/smoke.test.cjs",
+        "smoke:mjs": "node tests/smoke.test.mjs"
+    },
+    "dependencies": {
+        "@nzyme/i18n": "^0.14.0",
+        "@nzyme/types": "^0.14.0",
+        "@nzyme/utils": "^0.14.0",
+        "@nzyme/vue-utils": "^0.14.0",
+        "tslib": "^2.8.1",
+        "vue": "^3.5.13"
+    },
+    "devDependencies": {
+        "@nzyme/eslint": "^0.14.0",
+        "@nzyme/tsconfig": "^0.14.0",
+        "eslint": "^9.24.0",
+        "typescript": "^5.8.3"
+    },
+    "publishConfig": {
+        "access": "public"
+    }
+}

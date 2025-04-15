@@ -10,12 +10,12 @@
     user-select: none;
     -webkit-user-drag: none;
 
+    touch-action: pan-y;
+
     * {
         user-select: none;
         -webkit-user-drag: none;
     }
-
-    touch-action: pan-y;
 
     .moving & {
         // this prevents from clicking some link inside

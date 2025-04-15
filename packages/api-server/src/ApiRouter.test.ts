@@ -1,9 +1,9 @@
 import { beforeEach, expect, it } from 'vitest';
 
 import { defineEndpoint } from '@nzyme/api-core';
+import { HttpError } from '@nzyme/fetch-utils';
 import type { Container } from '@nzyme/ioc';
 import { createContainer } from '@nzyme/ioc';
-import { HttpError } from '@nzyme/utils';
 import * as v from '@nzyme/validation';
 import * as z from '@nzyme/zchema';
 

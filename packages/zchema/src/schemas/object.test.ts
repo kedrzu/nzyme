@@ -1,13 +1,13 @@
 import { expect, test } from 'vitest';
 
-import { minValidator, regexValidator } from '@nzyme/validation';
+import * as v from '@nzyme/validation';
 
+import { coerce } from '../utils/coerce.js';
+import { validate } from '../utils/validate.js';
 import { array } from './array.js';
 import { number } from './number.js';
 import { object } from './object.js';
 import { string } from './string.js';
-import { coerce } from '../utils/coerce.js';
-import { validate } from '../utils/validate.js';
 
 test('basic object schema', () => {
     const schema = object({
@@ -42,11 +42,11 @@ test('validate object schema', () => {
         props: {
             number: number({
                 nullable: true,
-                validators: [minValidator({ minValue: 10 })],
+                validate: [v.minValue({ minValue: 10 })],
             }),
             string: string({
-                validators: [
-                    regexValidator({
+                validate: [
+                    v.regex({
                         regex: /^[a-z]+$/,
                         message: () => 'Must be lowercase letters',
                     }),

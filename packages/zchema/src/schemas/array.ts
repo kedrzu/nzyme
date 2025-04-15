@@ -1,5 +1,6 @@
 import { isIterable } from '@nzyme/utils';
 
+import { defineSchema } from '../defineSchema.js';
 import type {
     Infer,
     Schema,
@@ -8,7 +9,6 @@ import type {
     SchemaOptionsSimlify,
     SchemaProto,
 } from '../Schema.js';
-import { defineSchema } from '../defineSchema.js';
 import { coerce } from '../utils/coerce.js';
 import { isSchema } from '../utils/isSchema.js';
 import { serialize } from '../utils/serialize.js';
@@ -18,23 +18,18 @@ import { serialize } from '../utils/serialize.js';
  * @template T - The type of schema for array elements
  */
 export type ArraySchemaOptions<T extends SchemaAny = SchemaAny> = SchemaOptions<Infer<T>[]> & {
-    /** Schema that defines the type of array elements */
-    of: T;
     /** Optional function that returns default array value */
     default?: () => Infer<T>[];
+    /** Schema that defines the type of array elements */
+    of: T;
 };
 
 /**
  * Schema type for arrays.
  * @template O - Array schema options type
  */
-export type ArraySchema<O extends ArraySchemaOptions = ArraySchemaOptions> = ForceName<
-    O extends ArraySchemaOptions<infer T extends SchemaAny> ? Schema<Infer<T>[], O> : never
->;
-
-// Helper type to force type name preservation
-declare class FF {}
-type ForceName<T> = T & FF;
+export type ArraySchema<O extends ArraySchemaOptions = ArraySchemaOptions> = ForceName &
+    Schema<Infer<O['of']>[], O>;
 
 /**
  * Value type for array schema.
@@ -48,9 +43,12 @@ export type ArraySchemaValue<O extends ArraySchemaOptions> = Infer<O['of']>[];
 type ArraySchemaBase = {
     <S extends SchemaAny>(of: S): ArraySchema<{ of: S }>;
     <O extends ArraySchemaOptions>(
-        options: O & ArraySchemaOptions<O['of']>,
+        options: ArraySchemaOptions<O['of']> & O,
     ): ArraySchema<SchemaOptionsSimlify<O>>;
 };
+
+// Helper type to force type name preservation
+declare class ForceName {}
 
 /**
  * Creates a schema for arrays.
@@ -67,7 +65,7 @@ type ArraySchemaBase = {
  */
 export const array = defineSchema<ArraySchemaBase, ArraySchemaOptions>({
     name: 'array',
-    options: (optionsOrSchema: SchemaAny | ArraySchemaOptions) => {
+    options: (optionsOrSchema: ArraySchemaOptions | SchemaAny) => {
         const options: ArraySchemaOptions = isSchema(optionsOrSchema)
             ? { of: optionsOrSchema }
             : optionsOrSchema;

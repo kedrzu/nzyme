@@ -4,7 +4,6 @@ import { assignProps } from '@nzyme/utils';
 import { defineProps, useProps } from '@nzyme/vue-utils';
 
 import { defineFormField } from './defineFormField.js';
-import css from './useTextarea.module.scss';
 
 const TEXT_AREA_FIELD = defineFormField(String);
 const TEXT_AREA_PROPS = defineProps({
@@ -34,7 +33,7 @@ function setupTextArea() {
     const field = TEXT_AREA_FIELD.create({ props });
     const textarea = ref<HTMLTextAreaElement>();
 
-    onMounted(updateHeight);
+    onMounted(updateValue);
     watch(() => field.value, updateValue);
 
     return {
@@ -42,16 +41,22 @@ function setupTextArea() {
         component,
     };
 
-    function updateHeight() {
-        if (textarea.value) {
-            textarea.value.style.height = textarea.value.scrollHeight + 'px';
+    function updateValue() {
+        if (!textarea.value) {
+            return;
         }
+
+        textarea.value.value = field.value || '';
+        updateHeight();
     }
 
-    function updateValue() {
-        if (textarea.value) {
-            textarea.value.value = field.value || '';
+    function updateHeight() {
+        if (!textarea.value) {
+            return;
         }
+
+        textarea.value.style.height = '0';
+        textarea.value.style.height = textarea.value.scrollHeight + 'px';
     }
 
     function onInput(event: Event) {
@@ -59,16 +64,13 @@ function setupTextArea() {
         const value = props.trim ? target.value.trim() : target.value;
 
         field.value = value;
-
-        target.style.height = '0';
-        target.style.height = target.scrollHeight + 'px';
+        updateHeight();
     }
 
     function component() {
         return (
             <textarea
                 aria-label={props.label}
-                class={css.textarea}
                 disabled={props.disabled}
                 name={props.name}
                 onBlur={field.inputAttrs.onBlur}
@@ -77,6 +79,7 @@ function setupTextArea() {
                 placeholder={props.placeholder}
                 readonly={props.readonly}
                 ref={textarea}
+                rows={1}
                 tabindex={props.tabindex}
                 title={props.label}
             >

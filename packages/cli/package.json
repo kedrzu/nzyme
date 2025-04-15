@@ -26,6 +26,7 @@
     "dependencies": {
         "@lerna/package": "^6.4.1",
         "@lerna/project": "^6.4.1",
+        "@nzyme/i18n-compiler": "^0.14.0",
         "@nzyme/ioc": "^0.14.0",
         "@nzyme/logging": "^0.14.0",
         "@nzyme/node-utils": "^0.14.0",
@@ -36,6 +37,7 @@
         "@types/fs-extra": "^11.0.4",
         "@types/yargs": "^17.0.33",
         "chalk": "^5.4.1",
+        "chokidar": "^4.0.3",
         "clipanion": "^4.0.0-rc.4",
         "comment-json": "^4.2.5",
         "compare-versions": "^6.1.1",

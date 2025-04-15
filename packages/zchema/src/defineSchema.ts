@@ -1,5 +1,5 @@
 import type { FunctionParams } from '@nzyme/types';
-import { createNamedFunction, identity } from '@nzyme/utils';
+import { asArray, createNamedFunction, identity } from '@nzyme/utils';
 
 import type {
     SchemaAny,
@@ -62,7 +62,7 @@ export function defineSchema<F extends SchemaBase, O extends SchemaOptionsAny = 
             default: wrapDefault(options.default),
             nullable: options.nullable ?? false,
             optional: options.optional ?? false,
-            validators: (options.validators ?? []) as SchemaAny['validators'],
+            validate: asArray(options.validate) as SchemaAny['validate'],
             type: SchemaBase,
             proto: protoFactory(options as O) as SchemaAny['proto'],
         };

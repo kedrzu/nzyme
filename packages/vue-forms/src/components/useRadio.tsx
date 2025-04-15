@@ -46,7 +46,7 @@ function setupRadio<T extends null | Primitive = null | Primitive>() {
                     onChange={onChange}
                     tabindex={props.tabindex}
                     type="radio"
-                    value={props.value}
+                    value={props.modelValue}
                 />
                 {ctx.slots.default?.()}
             </label>

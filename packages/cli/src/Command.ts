@@ -1,20 +1,34 @@
-import {
-    BaseContext,
-    Command as ClipanionCommand,
-    CommandClass as ClipanionCommandClass,
-} from 'clipanion';
+import type { BaseContext, CommandClass as ClipanionCommandClass } from 'clipanion';
+import { Command as ClipanionCommand } from 'clipanion';
 
-import { Container, defineScope } from '@nzyme/ioc';
+import type { Container } from '@nzyme/ioc';
+import { defineScope } from '@nzyme/ioc';
 import { Logger } from '@nzyme/logging';
 import { PrettyLogger } from '@nzyme/logging';
 
+/**
+ *
+ */
 export interface CommandContext extends BaseContext {
+    /**
+     *
+     */
     container: Container;
 }
 
+/**
+ *
+ */
 export const CommandScope = defineScope('command');
+
+/**
+ *
+ */
 export type CommandClass = ClipanionCommandClass<CommandContext>;
 
+/**
+ *
+ */
 export abstract class Command extends ClipanionCommand<CommandContext> {
     protected get container(): Container {
         if (!this.#container) {
@@ -26,9 +40,12 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
 
     #container: Container | null = null;
 
+    /**
+     *
+     */
     override async execute() {
         await this.setup();
-        await this.run();
+        return await this.run();
     }
 
     protected setup(): Promise<void> {
@@ -38,5 +55,5 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
         return Promise.resolve();
     }
 
-    protected abstract run(): Promise<void>;
+    protected abstract run(): Promise<number | void>;
 }

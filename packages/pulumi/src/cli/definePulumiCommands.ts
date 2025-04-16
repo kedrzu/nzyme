@@ -7,6 +7,7 @@ import type { StackDefinition } from '../defineStack.js';
 import { deployStack } from '../deployStack.js';
 import { destroyStack } from '../destroyStack.js';
 import { previewStack } from '../previewStack.js';
+import type { PulumiConfig } from '../PulumiConfig.js';
 import { refreshStack } from '../refreshStack.js';
 
 /**
@@ -22,6 +23,11 @@ export interface PulumiCommandsOptions {
      * Whether to prevent deletion of the stacks.
      */
     preventDeletion?: boolean;
+
+    /**
+     * The Pulumi config to use for the stacks.
+     */
+    config: PulumiConfig;
 }
 
 /**
@@ -71,6 +77,7 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                 await deployStack(stack, {
                     refresh: this.refresh,
                     build: !this.skipBuild,
+                    config: options.config,
                 });
             }
         }
@@ -100,7 +107,9 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
             }
 
             for (const stack of stacks) {
-                await cancelStack(stack);
+                await cancelStack(stack, {
+                    config: options.config,
+                });
             }
         }
     };
@@ -140,6 +149,7 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
                 await previewStack(stack, {
                     refresh: this.refresh,
                     build: !this.skipBuild,
+                    config: options.config,
                 });
             }
         }
@@ -169,7 +179,9 @@ function defineRefreshCommand(options: PulumiCommandsOptions) {
             }
 
             for (const stack of stacks) {
-                await refreshStack(stack);
+                await refreshStack(stack, {
+                    config: options.config,
+                });
             }
         }
     };
@@ -202,7 +214,9 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
             }
 
             for (const stack of stacks) {
-                await destroyStack(stack);
+                await destroyStack(stack, {
+                    config: options.config,
+                });
             }
         }
     };

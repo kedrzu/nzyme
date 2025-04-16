@@ -47,16 +47,6 @@ export interface StackOptions<
     name: string;
 
     /**
-     * Project name.
-     */
-    project: string;
-
-    /**
-     * Organization name.
-     */
-    organization?: string;
-
-    /**
      * Dependencies of the stack.
      */
     deps?: TDeps;
@@ -104,16 +94,6 @@ export interface Stack<TOutput extends StackOutput = StackOutput> {
      * Name of the stack.
      */
     name: string;
-
-    /**
-     * Project name.
-     */
-    project: string;
-
-    /**
-     * Organization name.
-     */
-    organization?: string;
 
     /**
      * Whether the stack is enabled.
@@ -173,16 +153,13 @@ export function defineStack<
         deps: options.deps,
         setup(deps): Stack<TOutput> {
             const name = options.name;
-            const project = options.project;
-            const organization = options.organization;
 
             return {
                 name,
-                project,
-                organization,
                 enabled: options.enabled ?? true,
                 ref: () => {
-                    const org = organization ?? 'organization';
+                    const org = pulumi.getOrganization();
+                    const project = pulumi.getProject();
                     const path = `${org}/${project}/${name}`;
                     return createStackReference(path);
                 },

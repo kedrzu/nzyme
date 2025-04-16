@@ -17,7 +17,7 @@ export interface TypescriptOptions {
     internalImports?: string[];
 }
 
-export function typescript(options: TypescriptOptions = {}) {
+export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
     const config: Linter.Config = {
         ignores: ['dist/**/*', 'dist-*/**/*', 'node_modules/**/*', 'eslint.config.js'],
         plugins: {
@@ -141,7 +141,7 @@ export function typescript(options: TypescriptOptions = {}) {
             perfectionist.configs['recommended-natural'],
         ],
         ...config,
-    });
+    }) as Linter.Config[];
 }
 
 function getTargetGlobals(target: Target) {

@@ -43,7 +43,7 @@
         "@nzyme/project-utils": "^0.14.0",
         "@nzyme/types": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
-        "@pulumi/aws": "^6.76.0",
+        "@pulumi/aws": "^6.77.0",
         "@pulumi/pulumi": "^3.162.0",
         "@rollup/plugin-babel": "^6.0.4",
         "@rollup/plugin-commonjs": "^28.0.3",

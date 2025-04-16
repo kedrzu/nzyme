@@ -1,6 +1,7 @@
 import { assertStackEnabled } from './assertStackEnabled.js';
 import { createOrSelectStack } from './createOrSelectStack.js';
 import type { Stack, StackOutput } from './defineStack.js';
+import type { PulumiConfig } from './PulumiConfig.js';
 
 /**
  * Options for the {@link deployStack} function.
@@ -17,6 +18,11 @@ export interface DeployStackOptions {
      * @default true
      */
     build?: boolean;
+
+    /**
+     * The Pulumi config to use for the stack.
+     */
+    config: PulumiConfig;
 }
 
 /**
@@ -24,7 +30,7 @@ export interface DeployStackOptions {
  */
 export async function deployStack<TOut extends StackOutput>(
     stack: Stack<TOut>,
-    options: DeployStackOptions = {},
+    options: DeployStackOptions,
 ) {
     assertStackEnabled(stack);
 
@@ -32,7 +38,7 @@ export async function deployStack<TOut extends StackOutput>(
         await stack.build({ preview: false });
     }
 
-    const stackInstance = await createOrSelectStack({ stack });
+    const stackInstance = await createOrSelectStack(stack, options.config);
 
     const output = await stackInstance.up({
         onOutput: console.log,

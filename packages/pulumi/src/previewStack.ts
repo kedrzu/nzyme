@@ -1,6 +1,7 @@
 import { assertStackEnabled } from './assertStackEnabled.js';
 import { createOrSelectStack } from './createOrSelectStack.js';
 import type { Stack, StackOutput } from './defineStack.js';
+import type { PulumiConfig } from './PulumiConfig.js';
 
 /**
  * Options for the {@link previewStack} function.
@@ -17,6 +18,11 @@ export interface PreviewStackOptions {
      * @default true
      */
     build?: boolean;
+
+    /**
+     * The Pulumi config to use for the stack.
+     */
+    config: PulumiConfig;
 }
 
 /**
@@ -24,7 +30,7 @@ export interface PreviewStackOptions {
  */
 export async function previewStack<TOut extends StackOutput>(
     stack: Stack<TOut>,
-    options: PreviewStackOptions = {},
+    options: PreviewStackOptions,
 ) {
     assertStackEnabled(stack);
 
@@ -32,7 +38,7 @@ export async function previewStack<TOut extends StackOutput>(
         await stack.build({ preview: true });
     }
 
-    const stackInstance = await createOrSelectStack({ stack });
+    const stackInstance = await createOrSelectStack(stack, options.config);
 
     const output = await stackInstance.preview({
         onOutput: console.log,

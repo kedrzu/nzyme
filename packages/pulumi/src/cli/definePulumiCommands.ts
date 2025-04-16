@@ -1,5 +1,6 @@
-import { Command, CommandClass, Option, UsageError } from '@nzyme/cli';
-import { Container } from '@nzyme/ioc';
+import type { CommandClass } from '@nzyme/cli';
+import { Command, Option, UsageError } from '@nzyme/cli';
+import type { Container } from '@nzyme/ioc';
 
 import { cancelStack } from '../cancelStack.js';
 import type { StackDefinition } from '../defineStack.js';
@@ -61,7 +62,12 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
         });
 
         override async run() {
-            for (const stack of resolveStacks(this.container, options, this.stacks)) {
+            const stacks = resolveStacks(this.container, options, this.stacks);
+            if (stacks.length === 0) {
+                throw new UsageError('No stacks to deploy.');
+            }
+
+            for (const stack of stacks) {
                 await deployStack(stack, {
                     refresh: this.refresh,
                     build: !this.skipBuild,
@@ -88,7 +94,12 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
         stacks = Option.Rest();
 
         override async run() {
-            for (const stack of resolveStacks(this.container, options, this.stacks)) {
+            const stacks = resolveStacks(this.container, options, this.stacks);
+            if (stacks.length === 0) {
+                throw new UsageError('No stacks to cancel.');
+            }
+
+            for (const stack of stacks) {
                 await cancelStack(stack);
             }
         }
@@ -120,7 +131,12 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
         });
 
         override async run() {
-            for (const stack of resolveStacks(this.container, options, this.stacks)) {
+            const stacks = resolveStacks(this.container, options, this.stacks);
+            if (stacks.length === 0) {
+                throw new UsageError('No stacks to preview.');
+            }
+
+            for (const stack of stacks) {
                 await previewStack(stack, {
                     refresh: this.refresh,
                     build: !this.skipBuild,
@@ -147,7 +163,12 @@ function defineRefreshCommand(options: PulumiCommandsOptions) {
         stacks = Option.Rest();
 
         override async run() {
-            for (const stack of resolveStacks(this.container, options, this.stacks)) {
+            const stacks = resolveStacks(this.container, options, this.stacks);
+            if (stacks.length === 0) {
+                throw new UsageError('No stacks to refresh.');
+            }
+
+            for (const stack of stacks) {
                 await refreshStack(stack);
             }
         }
@@ -175,7 +196,12 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                 throw new UsageError('Stack deletion is prohibited.');
             }
 
-            for (const stack of resolveStacks(this.container, options, this.stacks)) {
+            const stacks = resolveStacks(this.container, options, this.stacks);
+            if (stacks.length === 0) {
+                throw new UsageError('No stacks to destroy.');
+            }
+
+            for (const stack of stacks) {
                 await destroyStack(stack);
             }
         }

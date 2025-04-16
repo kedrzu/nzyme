@@ -1,6 +1,9 @@
-import { Container, createContainer } from '@nzyme/ioc';
 import { Builtins, Cli } from 'clipanion';
-import { CommandClass, CommandContext } from './Command.js';
+
+import type { Container } from '@nzyme/ioc';
+import { createContainer } from '@nzyme/ioc';
+
+import type { CommandClass, CommandContext } from './Command.js';
 
 /**
  * Options for creating a CLI program

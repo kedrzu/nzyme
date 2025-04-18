@@ -1,26 +1,23 @@
 import { defineSchema } from '../defineSchema.js';
-import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
+import type {
+    Schema,
+    SchemaConfigBase,
+    SchemaConfigSimplify,
+    SchemaOptions,
+    SchemaProto,
+} from '../Schema.js';
 
 /**
  * Schema type for void values.
  * @template O - Schema options type
  */
-export type VoidSchema<O extends SchemaOptions<void> = SchemaOptions<void>> = ForceName<
-    Schema<void, O>
->;
-
-/**
- * Helper type to force type name preservation.
- * @template T - The type to preserve
- * @internal
- */
-type ForceName<T> = FF & T;
+export type VoidSchema<O extends SchemaConfigBase = SchemaConfigBase> = ForceName & Schema<void, O>;
 
 /**
  * Internal class used to force type names in TypeScript.
  * @internal
  */
-declare class FF {}
+declare class ForceName {}
 
 /**
  * Prototype implementation for void schema.
@@ -39,11 +36,17 @@ const proto: SchemaProto<void> = {
  * Base type for void schema definition.
  * Provides overloads for creating void schemas with different options.
  */
-type VoidSchemaBase = {
+export type VoidSchemaConstructor = {
+    /** Creates a void schema with default options */
+    (): VoidSchema<{}>;
     /** Creates a void schema with custom options */
-    <O extends SchemaOptions<void> = {}>(
-        options?: O & SchemaOptions<void>,
-    ): VoidSchema<SchemaOptionsSimlify<O>>;
+    <
+        TNullable extends boolean = false,
+        TOptional extends boolean = true,
+        TMeta extends object | undefined = undefined,
+    >(
+        options?: SchemaOptions<void, TNullable, TOptional, TMeta>,
+    ): VoidSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta>>;
 };
 
 /**
@@ -57,7 +60,7 @@ type VoidSchemaBase = {
  * const requiredVoid = voidSchema({ required: true });
  * ```
  */
-export const voidSchema = defineSchema<VoidSchemaBase>({
+export const voidSchema = defineSchema<VoidSchemaConstructor>({
     name: 'void',
     options: (options?: SchemaOptions<void>) => ({
         ...options,

@@ -1,16 +1,19 @@
 import { identity } from '@nzyme/utils';
 
 import { defineSchema } from '../defineSchema.js';
-import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
+import type {
+    Schema,
+    SchemaConfigBase,
+    SchemaConfigSimplify,
+    SchemaOptions,
+    SchemaProto,
+} from '../Schema.js';
 
 /**
  * Schema type for integer values.
  * @template O - Schema options type
  */
-export type IntegerSchema<O extends SchemaOptions<number> = SchemaOptions<number>> = Schema<
-    number,
-    O
->;
+export type IntegerSchema<O extends SchemaConfigBase = SchemaConfigBase> = Schema<number, O>;
 
 /**
  * Prototype implementation for integer schema.
@@ -28,11 +31,17 @@ const proto: SchemaProto<number> = {
  * Base type for integer schema definition.
  * Provides overloads for creating integer schemas with different options.
  */
-type IntegerSchemaBase = {
+export type IntegerSchemaConstructor = {
     /** Creates an integer schema with default options */
     (): IntegerSchema<{}>;
     /** Creates an integer schema with custom options */
-    <O extends object>(options: O & SchemaOptions<number>): IntegerSchema<SchemaOptionsSimlify<O>>;
+    <
+        TNullable extends boolean | undefined = undefined,
+        TOptional extends boolean | undefined = undefined,
+        TMeta extends object | undefined = undefined,
+    >(
+        options: SchemaOptions<number, TNullable, TOptional, TMeta>,
+    ): IntegerSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta>>;
 };
 
 /**
@@ -47,7 +56,7 @@ type IntegerSchemaBase = {
  * const defaultAge = integer({ default: () => 18 });
  * ```
  */
-export const integer = defineSchema<IntegerSchemaBase>({
+export const integer = defineSchema<IntegerSchemaConstructor>({
     name: 'integer',
     proto: () => proto,
 });

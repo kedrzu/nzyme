@@ -1,10 +1,17 @@
 import type { Override, PartialOnUndefined } from '@nzyme/types';
 
-import type { Schema, SchemaOptions, Infer } from '../Schema.js';
+import type { Infer, Schema, SchemaOptions } from '../Schema.js';
+
+/**
+ *
+ */
+export type Extend<S extends Schema, O> = ForceName & PartialOnUndefined<Override<S, O>>;
 
 declare class ForceName {}
-export type Extend<S extends Schema, O> = PartialOnUndefined<Override<S, O>> & ForceName;
 
+/**
+ *
+ */
 export function extend<S extends Schema, O>(schema: S, options: O & SchemaOptions<Infer<S>>) {
     const merged = {
         ...schema,

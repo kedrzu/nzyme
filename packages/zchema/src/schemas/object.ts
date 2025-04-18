@@ -1,23 +1,31 @@
 import type { Flatten } from '@nzyme/types';
 import { isPlainObject } from '@nzyme/utils';
 
+import { defineSchema } from '../defineSchema.js';
 import type {
+    Infer,
     Schema,
     SchemaAny,
+    SchemaConfigBase,
+    SchemaConfigSimplify,
     SchemaOptions,
-    SchemaOptionsSimlify,
     SchemaProto,
-    Infer,
     SchemaVisitor,
 } from '../Schema.js';
-import { defineSchema } from '../defineSchema.js';
 import { coerce } from '../utils/coerce.js';
 import { serialize } from '../utils/serialize.js';
+import { isSchema } from '../utils/isSchema.js';
 
+/**
+ *
+ */
 export type ObjectSchemaProps = {
     [key: string]: SchemaAny;
 };
 
+/**
+ *
+ */
 export type ObjectSchemaPropsValue<TProps extends ObjectSchemaProps> = Flatten<
     {
         [K in keyof TProps as TProps[K]['optional'] extends false ? K : never]: Infer<TProps[K]>;
@@ -26,42 +34,86 @@ export type ObjectSchemaPropsValue<TProps extends ObjectSchemaProps> = Flatten<
     }
 >;
 
-export type ObjectSchemaOptions<TProps extends ObjectSchemaProps = ObjectSchemaProps> =
-    SchemaOptions<ObjectSchemaPropsValue<TProps>> & {
-        props: TProps;
-        default?: () => ObjectSchemaPropsValue<TProps>;
+/**
+ *
+ */
+export type ObjectOptions<TProps extends ObjectSchemaProps = ObjectSchemaProps> = {
+    /**
+     *
+     */
+    props: TProps;
+};
+
+/**
+ *
+ */
+export type ObjectSchema<
+    O extends SchemaConfigBase<ObjectOptions> = SchemaConfigBase<ObjectOptions>,
+> = ForceName &
+    Schema<ObjectSchemaValue<O>, O> & {
+        /**
+         *
+         */
+        props: O['props'];
     };
 
-type ObjectSchemaOptionsProps<O extends ObjectSchemaOptions> =
-    O extends ObjectSchemaOptions<infer P extends ObjectSchemaProps> ? P : never;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ObjectSchema<O extends ObjectSchemaOptions = ObjectSchemaOptions> = ForceName<
-    O extends ObjectSchemaOptions<infer P extends ObjectSchemaProps>
-        ? Schema<ObjectSchemaPropsValue<P>, O>
-        : never
->;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ObjectSchemaAny = Schema<any> & {
+/**
+ *
+ */
+export type ObjectSchemaAny = SchemaAny & {
+    /**
+     *
+     */
     props: ObjectSchemaProps;
 };
 
-declare class FF {}
-type ForceName<T> = T & FF;
+/**
+ *
+ */
+export type ObjectSchemaValue<O extends ObjectOptions> = ObjectSchemaPropsValue<O['props']>;
 
-export type ObjectSchemaValue<O extends ObjectSchemaOptions> = ObjectSchemaPropsValue<O['props']>;
+/**
+ *
+ */
+export type ObjectSchemaConstructor = {
+    <
+        P extends ObjectSchemaProps,
+        TNullable extends boolean | undefined = undefined,
+        TOptional extends boolean | undefined = undefined,
+        TMeta extends object | undefined = undefined,
+    >(
+        options: SchemaOptions<
+            ObjectSchemaPropsValue<P>,
+            TNullable,
+            TOptional,
+            TMeta,
+            ObjectOptions<P>
+        >,
+    ): ObjectSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta, ObjectOptions<P>>>;
 
-type ObjectSchemaBase = {
-    <O extends ObjectSchemaOptions>(
-        options: O & ObjectSchemaOptions<ObjectSchemaOptionsProps<O>>,
-    ): ObjectSchema<SchemaOptionsSimlify<O>>;
+    <P extends ObjectSchemaProps>(props: P): ObjectSchema<{ props: P }>;
 };
 
-export const object = defineSchema<ObjectSchemaBase, ObjectSchemaOptions>({
+declare class ForceName {}
+
+/**
+ *
+ */
+export const object = defineSchema<ObjectSchemaConstructor, SchemaConfigBase<ObjectOptions>>({
     name: 'object',
+    options: (optionsOrProps: ObjectOptions | ObjectSchemaProps) => {
+        const options =
+            optionsOrProps.props && !isSchema(optionsOrProps.props)
+                ? optionsOrProps
+                : { props: optionsOrProps.props };
+
+        return options as SchemaConfigBase<ObjectOptions>;
+    },
     proto: options => {
         const props: [name: string, schema: Schema][] = [];
+        /**
+         *
+         */
         type ObjectType = Record<string, unknown>;
 
         for (const propKey in options.props) {

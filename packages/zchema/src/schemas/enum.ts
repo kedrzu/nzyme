@@ -2,56 +2,59 @@ import type { Primitive } from '@nzyme/types';
 import { identity } from '@nzyme/utils';
 
 import { defineSchema } from '../defineSchema.js';
-import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
+import type {
+    Schema,
+    SchemaConfigBase,
+    SchemaConfigSimplify,
+    SchemaOptions,
+    SchemaProto,
+} from '../Schema.js';
 
 /**
  * Schema type for enum values.
  * @template O - Enum schema options type
  */
-export type EnumSchema<O extends EnumSchemaOptions = EnumSchemaOptions> = ForceName<
-    Schema<O['values'][number], O>
->;
+export type EnumSchema<O extends SchemaConfigBase<EnumOptions> = SchemaConfigBase<EnumOptions>> =
+    Schema<EnumValue<O['values']>, O> & {
+        /**
+         *
+         */
+        values: O['values'];
+    };
 
 /**
  * Options for defining an enum schema.
  * @template V - Array of primitive values that form the enum
  */
-export type EnumSchemaOptions<V extends Primitive[] = Primitive[]> = SchemaOptions<V[number]> & {
+export type EnumOptions<V extends Primitive[] = Primitive[]> = {
     /** Array of allowed primitive values */
     values: V;
 };
 
 /**
  * Value type for enum schema.
- * @template O - Enum schema options type
+ * @template V - Array of primitive values
  */
-export type EnumSchemaValue<O extends EnumSchemaOptions> = O['values'][number];
+export type EnumValue<V extends Primitive[]> = V[number];
 
 /**
  * Base type for enum schema definition.
  * Provides overloads for creating enum schemas with different options.
  */
-type EnumSchemaBase = {
+type EnumSchemaConstructor = {
     /** Creates an enum schema with custom options */
-    <const V extends Primitive[], O extends EnumSchemaOptions<V>>(
-        options: EnumSchemaOptions<V> & O,
-    ): EnumSchema<SchemaOptionsSimlify<O>>;
+    <
+        const V extends Primitive[],
+        TNullable extends boolean | undefined = undefined,
+        TOptional extends boolean | undefined = undefined,
+        TMeta extends object | undefined = undefined,
+    >(
+        options: SchemaOptions<V[number], TNullable, TOptional, TMeta, EnumOptions<V>>,
+    ): EnumSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta, EnumOptions<V>>>;
+
     /** Creates an enum schema with array of values */
     <const V extends Primitive[]>(values: V): EnumSchema<{ values: V }>;
 };
-
-/**
- * Helper type to force type name preservation.
- * @template T - The type to preserve
- * @internal
- */
-type ForceName<T> = FF & T;
-
-/**
- * Internal class used to force type names in TypeScript.
- * @internal
- */
-declare class FF {}
 
 /**
  * Creates a schema for enum values.
@@ -67,10 +70,10 @@ declare class FF {}
  * });
  * ```
  */
-export const enumSchema = defineSchema<EnumSchemaBase, EnumSchemaOptions>({
+export const enumSchema = defineSchema<EnumSchemaConstructor, SchemaConfigBase<EnumOptions>>({
     name: 'enum',
-    options: (optionsOrValues: EnumSchemaOptions | Primitive[]) => {
-        const options: EnumSchemaOptions = Array.isArray(optionsOrValues)
+    options: (optionsOrValues: EnumOptions | Primitive[]) => {
+        const options: SchemaConfigBase<EnumOptions> = Array.isArray(optionsOrValues)
             ? { values: optionsOrValues }
             : optionsOrValues;
 

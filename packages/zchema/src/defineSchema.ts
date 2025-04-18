@@ -2,6 +2,7 @@ import type { FunctionParams } from '@nzyme/types';
 import { asArray, createNamedFunction, identity } from '@nzyme/utils';
 
 import type {
+    Schema,
     SchemaAny,
     SchemaBase,
     SchemaDefault,
@@ -57,7 +58,7 @@ export function defineSchema<F extends SchemaBase, O extends SchemaOptionsAny = 
     const protoFactory = definition.proto;
     const SchemaBase: SchemaBase = createNamedFunction(definition.name, (...args) => {
         const options = optionsFactory(...(args as FunctionParams<F>)) ?? ({} as O);
-        const schema: SchemaAny = {
+        const schema: Schema = {
             ...options,
             default: wrapDefault(options.default),
             nullable: options.nullable ?? false,
@@ -65,6 +66,7 @@ export function defineSchema<F extends SchemaBase, O extends SchemaOptionsAny = 
             validate: asArray(options.validate) as SchemaAny['validate'],
             type: SchemaBase,
             proto: protoFactory(options as O) as SchemaAny['proto'],
+            meta: options.meta ?? {},
         };
 
         return schema;
@@ -81,7 +83,7 @@ export function defineSchema<F extends SchemaBase, O extends SchemaOptionsAny = 
  */
 function wrapDefault<T>(def: SchemaDefault<T> | undefined): (() => T) | undefined {
     if (def !== undefined && typeof def !== 'function') {
-        return () => def;
+        return (() => def) as () => T;
     }
 
     return def as (() => T) | undefined;

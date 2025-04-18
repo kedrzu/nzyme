@@ -1,8 +1,8 @@
-import { expect, test, describe } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import { number } from './number.js';
 import { coerce } from '../utils/coerce.js';
 import { serialize } from '../utils/serialize.js';
+import { number } from './number.js';
 
 describe('non-nullable number schema', () => {
     const schema = number();

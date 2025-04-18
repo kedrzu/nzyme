@@ -1,4 +1,4 @@
-import type { IfAny, IfUnknown, PartialOnUndefined, Simplify } from '@nzyme/types';
+import type { Flatten, IfAny, IfUnknown, OmitPropTypes, Primitive } from '@nzyme/types';
 import type { Validator } from '@nzyme/validation';
 
 /**
@@ -6,7 +6,7 @@ import type { Validator } from '@nzyme/validation';
  * @template TSchema - The schema type to infer from
  * @returns The inferred type, including null and undefined if the schema allows them
  */
-export type Infer<TSchema extends SchemaAny> =
+export type Infer<TSchema extends Schema> =
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     TSchema extends Schema<infer V, any>
         ? NullableValue<TSchema['nullable']> | OptionalValue<TSchema['optional']> | V
@@ -34,28 +34,15 @@ export type InferOr<TSchema, T = undefined> = TSchema extends Schema ? Infer<TSc
  * @template V - The value type that the schema validates
  * @template O - The options type for the schema
  */
-export type Schema<
-    V = unknown,
-    O extends SchemaOptions<V> = SchemaOptions<V>,
-> = PartialOnUndefined<{
-    [K in Exclude<keyof O, keyof SchemaOptions<V>>]: O[K];
-}> &
-    SchemaProps<V> & {
-        default?: () => V;
-        nullable: IfAny<
-            O,
-            boolean,
-            IfUnknown<O['nullable'], false, Exclude<O['nullable'], undefined>>
-        >;
-        optional: IfAny<
-            O,
-            boolean,
-            IfUnknown<O['optional'], false, Exclude<O['optional'], undefined>>
-        >;
-        proto: SchemaProto<V, unknown>;
-        type: SchemaBase;
-        validate: Validator[];
-    };
+export type Schema<V = unknown, O extends SchemaConfigBase = SchemaConfigBase> = {
+    default?: () => V;
+    meta: Flatten<O['meta'] & object>;
+    nullable: IfAny<O, boolean, IfUnknown<O['nullable'], false, Exclude<O['nullable'], undefined>>>;
+    optional: IfAny<O, boolean, IfUnknown<O['optional'], false, Exclude<O['optional'], undefined>>>;
+    proto: SchemaProto<V, unknown>;
+    type: SchemaBase;
+    validate: Validator[];
+};
 
 /**
  * Type representing any schema, regardless of its value or options type.
@@ -76,7 +63,11 @@ export type SchemaBase<S extends Schema = Schema> = {
  * Type representing a default value for a schema, either as a value or a function that returns a value.
  * @template V - The type of the default value
  */
-export type SchemaDefault<V> = (() => V) | V;
+export type SchemaDefault<V> = IfUnknown<
+    V,
+    (() => V) | V,
+    V extends Primitive ? (() => V) | V : () => V
+>;
 
 /**
  * Creates a schema that matches a given TypeScript type.
@@ -100,16 +91,34 @@ export type SchemaOf<T> = Schema<
  * Interface for schema options that can be passed to schema factories.
  * @template V - The value type that the schema validates
  */
-export interface SchemaOptions<V = unknown> extends SchemaOptionsBase, SchemaProps<V> {
+export type SchemaOptions<
+    V = unknown,
+    TNullable extends boolean | undefined = boolean | undefined,
+    TOptional extends boolean | undefined = boolean | undefined,
+    TMeta extends object | undefined = object | undefined,
+    TOptions extends object = {},
+> = TOptions & {
     /**
      * Default value or function for the schema
      */
     default?: SchemaDefault<V>;
     /**
+     *
+     */
+    meta?: TMeta;
+    /**
+     * Whether the schema accepts null values
+     */
+    nullable?: TNullable;
+    /**
+     * Whether the schema accepts undefined values
+     */
+    optional?: TOptional;
+    /**
      * Array of validators to apply to values
      */
     validate?: Validator<V> | Validator<V>[];
-}
+};
 
 /**
  * Type representing any schema options, regardless of value type.
@@ -118,40 +127,57 @@ export interface SchemaOptions<V = unknown> extends SchemaOptionsBase, SchemaPro
 export type SchemaOptionsAny = SchemaOptions<any>;
 
 /**
+ *
+ */
+export type SchemaConfigBase<TOptions extends object = {}> = Flatten<
+    TOptions & {
+        /**
+         *
+         */
+        meta?: object;
+        /**
+         * Whether the schema accepts null values
+         */
+        nullable?: boolean;
+        /**
+         * Whether the schema accepts undefined values
+         */
+        optional?: boolean;
+    }
+>;
+
+/**
  * Base interface for schema options that define nullability and optionality.
  */
-export interface SchemaOptionsBase {
-    /**
-     * Whether the schema accepts null values
-     */
-    nullable?: boolean;
-    /**
-     * Whether the schema accepts undefined values
-     */
-    optional?: boolean;
-}
+export type SchemaConfigSimplify<
+    TNullable extends boolean | undefined,
+    TOptional extends boolean | undefined,
+    TMeta extends object | undefined,
+    TOptions extends object = {},
+> = Flatten<
+    OmitPropTypes<
+        {
+            meta: TMeta;
+            /**
+             * Whether the schema accepts null values
+             */
+            nullable: TNullable;
+            /**
+             * Whether the schema accepts undefined values
+             */
+            optional: TOptional;
+        },
+        undefined
+    > &
+        TOptions
+>;
 
 /**
  * Extracts the options type from a schema type.
  * @template S - The schema type to extract options from
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type SchemaOptionsOf<S extends SchemaAny> = S extends Schema<any, infer O> ? O : never;
-
-/**
- * Simplifies a schema options type by removing default and validators properties.
- * @template O - The schema options type to simplify
- */
-export type SchemaOptionsSimlify<O extends SchemaOptionsAny> = Simplify<{
-    [K in Exclude<keyof O, 'default' | 'validate'>]: O[K];
-}>;
-
-/**
- * Interface for schema properties that can be extended by specific schema types.
- * @template V - The value type that the schema validates
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export interface SchemaProps<V> {}
+export type SchemaConfigOf<S extends SchemaAny> = S extends Schema<any, infer O> ? O : never;
 
 /**
  * Interface defining the prototype methods for a schema.
@@ -162,7 +188,7 @@ export interface SchemaProto<V = unknown, U = V> {
     /**
      * Coerces a value to the schema's type, or returns undefined if coercion fails
      */
-    coerce: (value: unknown) => undefined | V;
+    coerce: (value: unknown) => V | undefined;
     /**
      * Serializes a value to a format suitable for storage or transmission
      */

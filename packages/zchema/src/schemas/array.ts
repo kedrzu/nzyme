@@ -5,8 +5,9 @@ import type {
     Infer,
     Schema,
     SchemaAny,
+    SchemaConfigBase,
+    SchemaConfigSimplify,
     SchemaOptions,
-    SchemaOptionsSimlify,
     SchemaProto,
 } from '../Schema.js';
 import { coerce } from '../utils/coerce.js';
@@ -17,9 +18,7 @@ import { serialize } from '../utils/serialize.js';
  * Options for defining an array schema.
  * @template T - The type of schema for array elements
  */
-export type ArraySchemaOptions<T extends SchemaAny = SchemaAny> = SchemaOptions<Infer<T>[]> & {
-    /** Optional function that returns default array value */
-    default?: () => Infer<T>[];
+export type ArrayOptions<T extends SchemaAny = SchemaAny> = {
     /** Schema that defines the type of array elements */
     of: T;
 };
@@ -28,27 +27,31 @@ export type ArraySchemaOptions<T extends SchemaAny = SchemaAny> = SchemaOptions<
  * Schema type for arrays.
  * @template O - Array schema options type
  */
-export type ArraySchema<O extends ArraySchemaOptions = ArraySchemaOptions> = ForceName &
-    Schema<Infer<O['of']>[], O>;
-
-/**
- * Value type for array schema.
- * @template O - Array schema options type
- */
-export type ArraySchemaValue<O extends ArraySchemaOptions> = Infer<O['of']>[];
+export type ArraySchema<O extends SchemaConfigBase<ArrayOptions> = SchemaConfigBase<ArrayOptions>> =
+    Schema<Infer<O['of']>[], O> & {
+        /**
+         *
+         */
+        of: O['of'];
+    };
 
 /**
  * Base type for array schema definition.
  */
-type ArraySchemaBase = {
+type ArraySchemaConstructor = {
+    /** Creates an array schema with a schema for items */
     <S extends SchemaAny>(of: S): ArraySchema<{ of: S }>;
-    <O extends ArraySchemaOptions>(
-        options: ArraySchemaOptions<O['of']> & O,
-    ): ArraySchema<SchemaOptionsSimlify<O>>;
-};
 
-// Helper type to force type name preservation
-declare class ForceName {}
+    /** Creates an array schema with custom options */
+    <
+        S extends SchemaAny,
+        TNullable extends boolean | undefined = undefined,
+        TOptional extends boolean | undefined = undefined,
+        TMeta extends object | undefined = undefined,
+    >(
+        options: SchemaOptions<Infer<S>[], TNullable, TOptional, TMeta, ArrayOptions<S>>,
+    ): ArraySchema<SchemaConfigSimplify<TNullable, TOptional, TMeta, ArrayOptions<S>>>;
+};
 
 /**
  * Creates a schema for arrays.
@@ -63,10 +66,10 @@ declare class ForceName {}
  * });
  * ```
  */
-export const array = defineSchema<ArraySchemaBase, ArraySchemaOptions>({
+export const array = defineSchema<ArraySchemaConstructor, SchemaConfigBase<ArrayOptions>>({
     name: 'array',
-    options: (optionsOrSchema: ArraySchemaOptions | SchemaAny) => {
-        const options: ArraySchemaOptions = isSchema(optionsOrSchema)
+    options: (optionsOrSchema: ArrayOptions | SchemaAny) => {
+        const options: SchemaConfigBase<ArrayOptions> = isSchema(optionsOrSchema)
             ? { of: optionsOrSchema }
             : optionsOrSchema;
 

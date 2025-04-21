@@ -40,7 +40,7 @@
         "@nzyme/utils": "^0.14.0",
         "@nzyme/validation": "^0.14.0",
         "@nzyme/zchema": "^0.14.0",
-        "rou3": "^0.5.1",
+        "rou3": "^0.6.0",
         "tslib": "^2.8.1"
     },
     "devDependencies": {

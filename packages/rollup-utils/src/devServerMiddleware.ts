@@ -6,7 +6,8 @@ import type { NextHandleFunction } from 'connect';
 import { consola } from 'consola';
 import getPort from 'get-port';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { type RollupWatchOptions, watch } from 'rollup';
+import { watch } from 'rollup';
+import type { RollupWatchOptions } from 'rollup';
 
 import { createPromise, formatDurationMs, formatElapsedMs } from '@nzyme/utils';
 
@@ -73,7 +74,7 @@ export function devServerMiddleware(options: RollupWatchOptions): NextHandleFunc
         // Stop the current server
         void server?.stop();
 
-        let worker: undefined | Worker;
+        let worker: Worker | undefined;
         const proxyPromise = createPromise<NextHandleFunction>();
 
         const middleware: NextHandleFunction = (req, res, next) => {
@@ -121,6 +122,8 @@ export function devServerMiddleware(options: RollupWatchOptions): NextHandleFunc
                 if (server === this) {
                     server = undefined;
                 }
+
+                consola.info(`Worker ${port} exited`);
             });
 
             const proxy = createProxyMiddleware({
@@ -138,9 +141,9 @@ export function devServerMiddleware(options: RollupWatchOptions): NextHandleFunc
         /**
          * Stops the worker thread and cleans up resources
          */
-        async function stop() {
+        function stop() {
             server = undefined;
-            await worker?.terminate();
+            worker?.postMessage('STOP');
         }
     }
 }

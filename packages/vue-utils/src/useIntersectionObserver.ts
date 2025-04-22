@@ -1,25 +1,19 @@
-import {
-    onMounted,
-    ref,
-    onUnmounted,
-    type ComponentPublicInstance,
-    computed,
-    type Ref,
-    unref,
-    watch,
-    reactive,
-} from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, unref, watch } from 'vue';
+import type { ComponentPublicInstance, Ref } from 'vue';
 
 import { isBrowser } from '@nzyme/dom-utils';
 
 type Options = IntersectionObserverInit & {
     immediate?: boolean;
-    onVisible?: () => void | Promise<void>;
-    onHidden?: () => void | Promise<void>;
+    onHidden?: () => Promise<void> | void;
+    onVisible?: () => Promise<void> | void;
 };
 
+/**
+ *
+ */
 export function useIntersectionObserver(
-    target: Ref<Element | ComponentPublicInstance | null | undefined>,
+    target: Ref<ComponentPublicInstance | Element | null | undefined>,
     options: Options = { root: null, rootMargin: '0px' },
 ) {
     const intersectionRatio = ref(0);

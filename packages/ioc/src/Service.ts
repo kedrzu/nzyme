@@ -144,6 +144,7 @@ export interface ServiceSetup<T = unknown, TDeps extends ServiceDependencies = S
  * @param options - Configuration options for the service
  * @returns A new service instance
  */
+// #__NO_SIDE_EFFECTS__
 export function defineService<
     T,
     TExtend extends T = T,

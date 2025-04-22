@@ -71,6 +71,7 @@ export interface InterfaceOptions<T = unknown> {
  * @param options - Configuration options for the interface
  * @returns A new interface instance
  */
+// #__NO_SIDE_EFFECTS__
 export function defineInterface<T>(options: InterfaceOptions<T> = {}): Interface<T> {
     return {
         [INJECTABLE_SYMBOL]: INTERFACE_SYMBOL,

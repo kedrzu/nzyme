@@ -7,6 +7,7 @@ export * from './createOrSelectStack.js';
 export * from './defineStack.js';
 export * from './deployStack.js';
 export * from './destroyStack.js';
+export * from './getStackOutputs.js';
 export * from './login.js';
 export * from './previewStack.js';
 export * from './PulumiConfig.js';

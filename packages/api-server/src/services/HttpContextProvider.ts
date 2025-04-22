@@ -42,11 +42,16 @@ export const HttpContextProvider = defineService({
         return {
             clear,
             get,
+            getRequest,
             setRequest,
         };
 
         function get(): HttpContext | undefined {
             return ctxProvider.get<HttpContext>(ctxSymbol);
+        }
+
+        function getRequest(): HttpRequest | undefined {
+            return get()?.request;
         }
 
         function setRequest(value: HttpRequest) {

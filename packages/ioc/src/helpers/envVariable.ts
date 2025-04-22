@@ -1,4 +1,5 @@
 import { defineInjectable } from '../Injectable.js';
+import { EnvVariables } from './EnvVariables.js';
 
 /**
  * Options for {@link envVariable}.
@@ -24,8 +25,9 @@ export function envVariable<TRequired extends boolean = false>(
 
     return defineInjectable<Result>({
         name: `env:${name}`,
-        resolve: () => {
-            const value = process.env[name];
+        resolve: container => {
+            const env = container.resolve(EnvVariables);
+            const value = env[name];
 
             if (options?.required && !value) {
                 throw new Error(`Environment variable ${name} not set`);

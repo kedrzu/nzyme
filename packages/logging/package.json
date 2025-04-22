@@ -10,9 +10,25 @@
     "sideEffects": false,
     "type": "module",
     "exports": {
-        ".": {
-            "import": "./dist/index.js",
-            "types": "./dist/index.d.ts"
+        "node": {
+            "import": {
+                "types": "./dist/index.node.d.ts",
+                "default": "./dist/index.node.js"
+            },
+            "require": {
+                "types": "./dist/index.node.d.ts",
+                "default": "./dist/index.node.cjs"
+            }
+        },
+        "default": {
+            "import": {
+                "types": "./dist/index.browser.d.ts",
+                "default": "./dist/index.browser.js"
+            },
+            "require": {
+                "types": "./dist/index.browser.d.ts",
+                "default": "./dist/index.browser.cjs"
+            }
         }
     },
     "files": [

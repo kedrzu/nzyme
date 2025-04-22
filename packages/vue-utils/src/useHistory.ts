@@ -3,12 +3,15 @@ import { createEventEmitter } from '@nzyme/utils';
 type HistoryState = Record<string, unknown>;
 
 type HistoryEvents = {
+    popState: { state: HistoryState | null };
     pushState: { state: HistoryState | null };
     replaceState: { state: HistoryState | null };
-    popState: { state: HistoryState | null };
 };
 let history: ReturnType<typeof initializeHistory> | null = null;
 
+/**
+ *
+ */
 export function useHistory() {
     if (!history) {
         history = initializeHistory();

@@ -1,3 +1,6 @@
+/**
+ * Patches Node.js process.emit to suppress ExperimentalWarning and punycode DeprecationWarning
+ */
 export function patchNodeWarnings() {
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const originalEmit = process.emit;

@@ -2,12 +2,28 @@ import type { Block, KnownBlock } from '@slack/web-api';
 
 import { mapNotNull } from '@nzyme/utils';
 
-export function blocksToMarkdown(blocks: (KnownBlock | Block)[]): string {
+/**
+ * Converts an array of Slack blocks to markdown format
+ *
+ * @param blocks Array of Slack blocks to convert
+ * @returns Markdown string representation of the blocks
+ */
+export function blocksToMarkdown(blocks: (Block | KnownBlock)[]): string {
     return mapNotNull(blocks as KnownBlock[], blockToMarkdown).join('\n\n');
 }
 
+/**
+ * Converts a single Slack block to markdown format
+ *
+ * @param block Slack block to convert
+ * @returns Markdown string representation of the block or undefined if conversion not supported
+ */
 export function blockToMarkdown(block: KnownBlock): string | undefined {
     switch (block.type) {
+        case 'divider':
+            return '---';
+        case 'header':
+            return `# ${block.text?.text ?? ''}`;
         case 'section': {
             let text = block.text?.text ?? '';
 
@@ -17,10 +33,6 @@ export function blockToMarkdown(block: KnownBlock): string | undefined {
 
             return text;
         }
-        case 'header':
-            return `# ${block.text?.text ?? ''}`;
-        case 'divider':
-            return '---';
         case 'image': {
             const title = block.title?.text ?? block.alt_text;
 

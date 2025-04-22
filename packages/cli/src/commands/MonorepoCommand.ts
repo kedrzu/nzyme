@@ -4,13 +4,15 @@ import { fileURLToPath } from 'url';
 
 import type { Package } from '@lerna/package';
 import { getPackages } from '@lerna/project';
+import { watch } from 'chokidar';
+import { Option } from 'clipanion';
 import * as json from 'comment-json';
 import { consola } from 'consola';
 import fsExtra from 'fs-extra/esm';
 import merge from 'lodash.merge';
 import type { TsConfigJson } from 'type-fest';
 
-import { asArray } from '@nzyme/utils';
+import { asArray, debounceAsyncFunction, waitForever } from '@nzyme/utils';
 
 import { Command } from '../Command.js';
 import type { NzymePackageConfig } from '../NzymePackageConfig.js';
@@ -30,6 +32,8 @@ interface PackageCache {
 const tsConfigsCache = new Map<string, TsConfig | null>();
 const packageCache = new Map<string, Promise<PackageCache>>();
 
+const PACKAGE_JSON_REGEX = /\/?package\.json$/;
+
 /**
  * Command to process the monorepo and generate tsconfig.json files for each package
  */
@@ -41,10 +45,48 @@ export class MonorepoCommand extends Command {
         description: 'Process the monorepo and generate tsconfig.json files for each package',
     });
 
+    watch = Option.Boolean('--watch,-w', {
+        description: 'Watch for changes',
+    });
+
+    cwd = process.cwd();
+
     /**
      * Execute the command.
      */
     override async run() {
+        await processProject();
+
+        if (this.watch) {
+            await this.startWatcher();
+        }
+    }
+
+    private async startWatcher() {
+        const watcher = watch('.', {
+            cwd: this.cwd,
+            ignored: ['node_modules', 'dist'],
+            ignoreInitial: true,
+        });
+
+        consola.info('Watching for changes...');
+
+        const onFileChange = debounceAsyncFunction(this.onFileChange.bind(this), {
+            trailing: true,
+        });
+
+        watcher.on('add', file => void onFileChange(file));
+        watcher.on('change', file => void onFileChange(file));
+        watcher.on('unlink', file => void onFileChange(file));
+
+        await waitForever();
+    }
+
+    private async onFileChange(file: string) {
+        if (!PACKAGE_JSON_REGEX.test(file)) {
+            return;
+        }
+
         await processProject();
     }
 }

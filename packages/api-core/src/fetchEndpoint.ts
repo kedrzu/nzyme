@@ -1,5 +1,5 @@
 import { FetchError } from '@nzyme/fetch-utils';
-import type { HttpRequestHeaders } from '@nzyme/fetch-utils';
+import type { HttpMethod, HttpRequestHeaders } from '@nzyme/fetch-utils';
 import type { ValidationErrors } from '@nzyme/validation';
 import { ValidationError } from '@nzyme/validation';
 import * as z from '@nzyme/zchema';
@@ -9,22 +9,69 @@ import type { Endpoint, EndpointInput, EndpointOutput } from './defineEndpoint.j
 const PATH_PARAM_REGEX = /\/:([^/]+)/g;
 
 /**
- *
+ * Options for the fetchEndpoint function, combining base options and parameter options.
  */
 export type FetchEndpointOptions<E extends Endpoint> = FetchEndpointOptionsBase<E> &
     FetchEndpointOptionsParams<E>;
 
+/**
+ * Represents the request structure used in the fetchEndpoint function.
+ */
+export type FetchEndpointRequest = {
+    /**
+     * The body of the request, if any.
+     */
+    body?: string;
+    /**
+     * HTTP headers to be sent with the request.
+     */
+    headers: HttpRequestHeaders;
+    /**
+     * HTTP method to be used for the request (GET, POST, etc).
+     */
+    method: HttpMethod;
+    /**
+     * The URL to which the request will be sent.
+     */
+    url: string;
+};
+
+/**
+ * Base options for fetchEndpoint function.
+ */
 type FetchEndpointOptionsBase<E extends Endpoint> = {
+    /**
+     * The endpoint definition to be used for the request.
+     */
     endpoint: E;
+    /**
+     * Optional custom fetch implementation.
+     */
+    fetch?: (request: FetchEndpointRequest) => Promise<Response>;
+    /**
+     * Optional HTTP headers to be included in the request.
+     */
     headers?: HttpRequestHeaders;
+    /**
+     * Optional base URL for the request.
+     */
     url?: string;
 };
 
+/**
+ * Parameter options for the fetchEndpoint function.
+ * If the endpoint requires input parameters, they must be provided.
+ */
 type FetchEndpointOptionsParams<E extends Endpoint> =
     E extends Endpoint<undefined> ? { params?: undefined } : { params: EndpointInput<E> };
 
 /**
+ * Fetches data from an API endpoint with proper type validation.
  *
+ * @param options - Configuration options for the request
+ * @returns A promise that resolves to the endpoint's output type
+ * @throws {ValidationError} When input validation fails or server returns validation errors
+ * @throws {FetchError} When the server returns a non-200 response
  */
 export async function fetchEndpoint<E extends Endpoint>(
     options: FetchEndpointOptions<E>,
@@ -33,9 +80,10 @@ export async function fetchEndpoint<E extends Endpoint>(
     const params = (options.params || {}) as Record<string, unknown>;
     const headers: HttpRequestHeaders = { ...options.headers };
 
-    const request: RequestInit = {
+    const request: FetchEndpointRequest = {
         method: endpoint.method,
-        headers: headers as RequestInit['headers'],
+        headers: headers,
+        url: options.url || '',
     };
 
     if (endpoint.input) {
@@ -46,12 +94,11 @@ export async function fetchEndpoint<E extends Endpoint>(
         z.validateOrThrow(endpoint.input, params ?? {});
     }
 
-    let url = options.url || '';
-    if (url.endsWith('/')) {
-        url = url.slice(0, -1);
+    if (request.url.endsWith('/')) {
+        request.url = request.url.slice(0, -1);
     }
 
-    url += endpoint.path.replace(PATH_PARAM_REGEX, (_, param: string) => {
+    request.url += endpoint.path.replace(PATH_PARAM_REGEX, (_, param: string) => {
         const value = params[param];
         delete params[param];
         return `/${String(value)}`;
@@ -64,7 +111,7 @@ export async function fetchEndpoint<E extends Endpoint>(
         }
 
         if (query.size > 0) {
-            url += `?${query.toString()}`;
+            request.url += `?${query.toString()}`;
         }
     } else {
         if (Object.keys(params).length > 0) {
@@ -73,8 +120,7 @@ export async function fetchEndpoint<E extends Endpoint>(
         }
     }
 
-    const response = await fetch(url, request);
-
+    const response = await (options.fetch || fetchRequest)(request);
     if (response.status === 400) {
         const result = (await response.json()) as {
             errors: ValidationErrors;
@@ -95,4 +141,12 @@ export async function fetchEndpoint<E extends Endpoint>(
     }
 
     return undefined as EndpointOutput<E>;
+}
+
+function fetchRequest(request: FetchEndpointRequest) {
+    return fetch(request.url, {
+        method: request.method,
+        headers: request.headers as RequestInit['headers'],
+        body: request.body,
+    });
 }

@@ -69,10 +69,10 @@ const TRANSITION_PROPS = {
     onAfterLeave: defineProp<TransitionHook | TransitionHook[]>(),
 };
 
-/*#__NO_SIDE_EFFECTS__*/
 /**
  *
  */
+// #__NO_SIDE_EFFECTS__
 export function defineTransition<TProps extends ComponentObjectPropsOptions = SomeObject>(
     def: TransitionDefProps<TProps>,
 ) {

@@ -66,6 +66,7 @@ export type Injected<T> = T extends Injectable ? ReturnType<T['resolve']> : neve
  * @param options - Configuration options for the injectable
  * @returns A new injectable instance
  */
+// #__NO_SIDE_EFFECTS__
 export function defineInjectable<T>(options: InjectableOptions<T>): Injectable<T> {
     return {
         ...options,

@@ -43,10 +43,8 @@ it('should handle GET requests with query parameters', async () => {
             name: z.string(),
         },
         output: z.object({
-            props: {
-                name: z.string(),
-                success: z.boolean(),
-            },
+            name: z.string(),
+            success: z.boolean(),
         }),
     });
 
@@ -81,9 +79,8 @@ it('should handle POST requests with JSON body', async () => {
             data: z.string(),
         },
         output: z.object({
-            props: {
-                success: z.boolean(),
-            },
+            success: z.boolean(),
+            data: z.string(),
         }),
     });
 
@@ -118,9 +115,8 @@ it('should handle path parameters', async () => {
             id: z.string(),
         },
         output: z.object({
-            props: {
-                success: z.boolean(),
-            },
+            success: z.boolean(),
+            id: z.string(),
         }),
     });
 
@@ -156,9 +152,7 @@ it('should handle validation errors', async () => {
             }),
         },
         output: z.object({
-            props: {
-                success: z.boolean(),
-            },
+            success: z.boolean(),
         }),
     });
 
@@ -189,9 +183,7 @@ it('should handle HTTP errors', async () => {
         method: 'GET',
         path: '/test',
         output: z.object({
-            props: {
-                success: z.boolean(),
-            },
+            success: z.boolean(),
         }),
     });
 
@@ -225,9 +217,7 @@ it('should handle unhandled errors', async () => {
         method: 'GET',
         path: '/test',
         output: z.object({
-            props: {
-                success: z.boolean(),
-            },
+            success: z.boolean(),
         }),
     });
 

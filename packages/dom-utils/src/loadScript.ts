@@ -16,8 +16,12 @@ export interface LoadScriptOptions {
 }
 
 /**
- * Loads a given script into the page.
- * If script was already loaded, it won't load it again
+ * Loads a JavaScript file into the page by creating a script tag.
+ * If the script was already loaded, returns the existing Promise without loading it again.
+ *
+ * @param url The URL of the script to load
+ * @param options Additional options for loading the script
+ * @returns A Promise that resolves when the script has been loaded, or rejects on error
  */
 export function loadScript(url: string, options?: LoadScriptOptions) {
     const cache = getScriptCache((options?.document ?? document) as ScriptCache);
@@ -49,6 +53,13 @@ export function loadScript(url: string, options?: LoadScriptOptions) {
     return promise;
 }
 
+/**
+ * Gets the script cache object from a document or creates one if it doesn't exist.
+ * Uses a Symbol to avoid conflicts with other properties.
+ *
+ * @param cache The document or object to use as cache storage
+ * @returns The script cache object for the document
+ */
 function getScriptCache(cache: ScriptCache) {
     if (!cache[CACHE_SYMBOL]) {
         cache[CACHE_SYMBOL] = {};

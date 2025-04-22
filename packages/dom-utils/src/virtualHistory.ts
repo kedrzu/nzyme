@@ -1,26 +1,44 @@
-import { randomGuid } from '@nzyme/crypto-utils';
+import { randomString } from '@nzyme/crypto-utils';
 
+/**
+ * Handle object returned when registering a back navigation callback
+ */
+export interface VirtualHistoryHandle {
+    /** The index position in the history stack */
+    readonly index: number;
+    /** Cancels the registered callback */
+    cancel(this: void): void;
+}
+
+/**
+ * State object extending the browser's history state
+ */
 interface VirtualHistoryState {
     virtualHistory?: VirtualHistoryData;
 }
 
+/**
+ * Internal data used to track virtual history state
+ */
 interface VirtualHistoryData {
     sessionUid: string;
     index: number;
     virtual: boolean;
 }
 
-export interface VirtualHistoryHandle {
-    readonly index: number;
-    cancel(this: void): void;
-}
-
 type Callback = () => void;
 
 let initialized = false;
 const callbacks = new Map<number, Callback | null>();
-const uid = randomGuid();
+const uid = randomString(16);
 
+/**
+ * Registers a callback to be executed when the user navigates back in browser history.
+ * Creates a virtual history entry that doesn't actually change the URL.
+ *
+ * @param callback Function to execute when the user navigates back to this point
+ * @returns A handle object that can be used to cancel the callback
+ */
 export function onHistoryBack(callback: Callback): VirtualHistoryHandle {
     initialize();
 

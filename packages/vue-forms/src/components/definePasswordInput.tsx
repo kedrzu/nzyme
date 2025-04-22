@@ -1,12 +1,5 @@
-import {
-    type ButtonHTMLAttributes,
-    computed,
-    h,
-    nextTick,
-    reactive,
-    ref,
-    type SetupContext,
-} from 'vue';
+import { computed, h, nextTick, reactive, ref } from 'vue';
+import type { ButtonHTMLAttributes, SetupContext } from 'vue';
 
 import { defineProps, useProps } from '@nzyme/vue-utils';
 

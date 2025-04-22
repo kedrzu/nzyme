@@ -139,7 +139,14 @@ const b1 = 1n,
     b57 = 57n;
 
 /**
- * Source https://stackoverflow.com/a/62110601/2202583
+ * Finds the position of the most significant bit (MSB) in a BigInt
+ *
+ * Uses a De Bruijn sequence algorithm for efficient bit scanning in bigint values.
+ * This is useful for various cryptographic and mathematical operations.
+ *
+ * @param value - The BigInt value to analyze
+ * @returns The position of the most significant bit (1-based indexing, returns 0 for value of 0)
+ * @see https://stackoverflow.com/a/62110601/2202583
  */
 export function getBigintMostSignificantBit(value: bigint) {
     value |= value >> b1;
@@ -154,7 +161,14 @@ export function getBigintMostSignificantBit(value: bigint) {
 }
 
 /**
- * Source https://stackoverflow.com/a/62110601/2202583
+ * Finds the position of the least significant bit (LSB) in a BigInt
+ *
+ * Uses a De Bruijn sequence algorithm for efficient bit scanning in bigint values.
+ * This is useful for various cryptographic and mathematical operations.
+ *
+ * @param value - The BigInt value to analyze
+ * @returns The position of the least significant bit (1-based indexing, returns 0 for value of 0)
+ * @see https://stackoverflow.com/a/62110601/2202583
  */
 export function getBigintLeastSignificantBit(value: bigint) {
     value = -value | value;

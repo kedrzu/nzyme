@@ -2,8 +2,19 @@ import type { AppMentionEvent, BotMessageEvent, GenericMessageEvent } from '@sla
 
 import { blocksToMarkdown } from './blocksToMarkdown.js';
 
+/**
+ * Helper type for extracting file type from message events
+ */
+type File = NonNullable<GenericMessageEvent['files']>[number];
+
+/**
+ * Converts a Slack message to markdown format
+ *
+ * @param message Slack message event to convert
+ * @returns Markdown string representation of the message
+ */
 export function messageToMarkdown(
-    message: GenericMessageEvent | AppMentionEvent | BotMessageEvent,
+    message: AppMentionEvent | BotMessageEvent | GenericMessageEvent,
 ) {
     let content = '';
 
@@ -44,8 +55,12 @@ export function messageToMarkdown(
     return content;
 }
 
-type File = NonNullable<GenericMessageEvent['files']>[number];
-
+/**
+ * Appends a newline to content if it's not empty
+ *
+ * @param content String to append newline to
+ * @returns String with newline appended if not empty
+ */
 function appendNewline(content: string) {
     if (content.length > 0) {
         return content + '\n';
@@ -54,6 +69,12 @@ function appendNewline(content: string) {
     return content;
 }
 
+/**
+ * Type guard to check if an object is a Slack file
+ *
+ * @param file Object to check
+ * @returns Boolean indicating if the object is a Slack file
+ */
 function isFile(file: File | { id: string }): file is File {
     return 'mimetype' in file;
 }

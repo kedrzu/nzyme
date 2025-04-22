@@ -1,7 +1,11 @@
 import { onScopeDispose } from 'vue';
 
-import { createEventEmitter, type EventEmitterCallback } from '@nzyme/utils';
+import { createEventEmitter } from '@nzyme/utils';
+import type { EventEmitterCallback } from '@nzyme/utils';
 
+/**
+ *
+ */
 export function useEventEmitter<TEvents extends object>() {
     const emitter = createEventEmitter<TEvents>();
     const emitterOn = emitter.on;

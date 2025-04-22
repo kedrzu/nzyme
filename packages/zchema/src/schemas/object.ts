@@ -105,7 +105,7 @@ export const object = defineSchema<ObjectSchemaConstructor, SchemaConfigBase<Obj
         const options =
             optionsOrProps.props && !isSchema(optionsOrProps.props)
                 ? optionsOrProps
-                : { props: optionsOrProps.props };
+                : { props: optionsOrProps };
 
         return options as SchemaConfigBase<ObjectOptions>;
     },

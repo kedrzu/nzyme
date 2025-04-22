@@ -17,36 +17,44 @@ import type { HttpResponse } from './types/HttpResponse.js';
 import { createJsonResponse } from './utils/createJsonResponse.js';
 
 /**
- *
+ * Interface for the API router responsible for registering endpoints and handling HTTP requests.
+ * The router maps incoming requests to the appropriate endpoint handlers and processes their results.
  */
 export interface ApiRouter {
     /**
+     * Registers an endpoint handler with the router.
      *
+     * @param endpoint - The endpoint handler to register
      */
     addEndpoint(endpoint: EndpointHandler): void;
+
     /**
+     * Processes an HTTP request and returns an HTTP response.
+     * This method handles routing, input validation, endpoint execution, and error handling.
      *
+     * @param request - The HTTP request to process
+     * @returns A promise that resolves to an HTTP response
      */
     execute(request: HttpRequest): Promise<HttpResponse>;
 }
 
 /**
- *
+ * Configuration options for creating an API router.
  */
 export interface ApiRouterOptions {
     /**
-     *
+     * The dependency injection container used to resolve endpoint handlers.
      */
     container: Container;
 
     /**
-     *
+     * An array of endpoint handlers to register with the router initially.
      */
     endpoints: EndpointHandler[];
 }
 
 /**
- *
+ * Service definition for the API router that handles HTTP requests and routes them to the appropriate endpoint handlers.
  */
 export const ApiRouter = defineService({
     deps: {
@@ -112,7 +120,7 @@ export const ApiRouter = defineService({
                 }
 
                 return createJsonResponse({
-                    body: result,
+                    body: handler.output ? z.serialize(handler.output, result) : undefined,
                     // Cache only if no authorization header is not present
                     // We don't want to cache anything that is user-specific.
                     cache: request.method === 'GET' && !request.headers['authorization'],

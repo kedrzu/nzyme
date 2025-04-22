@@ -9,8 +9,11 @@ let currentPaddingRight = '';
 let currentOverflow = '';
 
 /**
- * Locks the body scroll.
- * @returns A function that unlocks the scroll.
+ * Locks the body scroll to prevent page scrolling, typically used for modals and overlays.
+ * Handles multiple lock requests by tracking the lock count, ensuring that the scroll remains
+ * locked until all locks are released. Compensates for scrollbar width to prevent layout shifts.
+ *
+ * @returns A cleanup function that unlocks the scroll when called. Must be called to release the lock.
  */
 export function lockBodyScroll() {
     if (lockCount === 0) {

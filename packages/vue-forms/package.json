@@ -36,7 +36,7 @@
         "@nzyme/vue-utils": "^0.14.0",
         "@vuelidate/core": "^2.0.3",
         "@vuelidate/validators": "^2.0.4",
-        "libphonenumber-js": "^1.12.6",
+        "libphonenumber-js": "^1.12.7",
         "postal-codes-js": "^2.5.2",
         "tslib": "^2.8.1",
         "vue": "^3.5.13",
@@ -45,7 +45,7 @@
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
-        "eslint": "^9.24.0",
+        "eslint": "^9.25.1",
         "typescript": "^5.8.3"
     },
     "publishConfig": {

@@ -6,7 +6,7 @@
  * @returns A JSON string representation of the value
  * @throws {TypeError} If the value contains circular references
  */
-export function toJson<T>(value: T, space?: number | string): string {
+export function toJsonString<T>(value: T, space?: number | string): string {
     if (value == null) {
         return 'null';
     }

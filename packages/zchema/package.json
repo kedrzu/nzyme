@@ -48,9 +48,9 @@
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
         "@types/lodash.merge": "^4.6.9",
-        "eslint": "^9.24.0",
+        "eslint": "^9.25.1",
         "typescript": "^5.8.3",
-        "vitest": "^3.1.1"
+        "vitest": "^3.1.2"
     },
     "publishConfig": {
         "access": "public"

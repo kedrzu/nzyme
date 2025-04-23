@@ -1,6 +1,6 @@
 import { getMd5Hash } from '@nzyme/crypto-utils';
 import type { HttpResponseHeaders } from '@nzyme/fetch-utils';
-import { toJson } from '@nzyme/zchema';
+import { toJsonString } from '@nzyme/zchema';
 
 import { CACHE_CONTROL_DISABLED } from './cacheControl.js';
 import type { HttpResponse } from '../types/HttpResponse.js';
@@ -31,7 +31,7 @@ export type JsonResponse = {
  *
  */
 export function createJsonResponse(response: JsonResponse): HttpResponse {
-    const body = toJson(response.body);
+    const body = toJsonString(response.body);
 
     const headers = {
         ...response.headers,

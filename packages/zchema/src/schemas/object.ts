@@ -13,8 +13,8 @@ import type {
     SchemaVisitor,
 } from '../Schema.js';
 import { coerce } from '../utils/coerce.js';
-import { serialize } from '../utils/serialize.js';
 import { isSchema } from '../utils/isSchema.js';
+import { serialize } from '../utils/serialize.js';
 
 /**
  *

@@ -1,6 +1,9 @@
 <script lang="ts" setup generic="T">
-import type { Translation } from '@nzyme/i18n';
 import type { Slot } from 'vue';
+
+import type { Translation } from '@nzyme/i18n';
+import { LanguageProvider } from '@nzyme/i18n';
+import { useService } from '@nzyme/vue-ioc';
 
 const props = defineProps<{
   t: Translation<T>;
@@ -10,8 +13,9 @@ const slots = defineSlots<{
   [K in keyof T]: [];
 }>();
 
+const lang = useService(LanguageProvider);
+
 const render = () => {
-  const lang = 'pl';
   const params: Record<string, unknown> = {};
   for (const [key, slot] of Object.entries(slots)) {
     if (key !== 't') {
@@ -19,7 +23,7 @@ const render = () => {
     }
   }
 
-  return props.t(lang, params as T);
+  return props.t(lang(), params as T);
 };
 </script>
 

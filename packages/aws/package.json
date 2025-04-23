@@ -40,6 +40,7 @@
         "@types/aws-lambda": "^8.10.149",
         "@types/mime-types": "^2.1.4",
         "mime-types": "^3.0.1",
+        "pino": "^9.6.0",
         "pino-lambda": "^4.4.1",
         "s3-sync-client": "^4.3.1",
         "tslib": "^2.8.1"
@@ -49,7 +50,7 @@
         "@nzyme/tsconfig": "^0.14.0",
         "@nzyme/vitest": "^0.14.0",
         "@types/node": "^22.14.1",
-        "eslint": "^9.24.0",
+        "eslint": "^9.25.1",
         "typescript": "^5.8.3"
     },
     "publishConfig": {

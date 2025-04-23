@@ -98,7 +98,7 @@ export const union = defineSchema<UnionSchemaConstructor, SchemaConfigBase<Union
                     return serialize(schema, value);
                 }
             },
-            check(value): value is unknown[] {
+            check(value): value is unknown {
                 for (const schema of schemas) {
                     if (schema.proto.check(value)) {
                         return true;

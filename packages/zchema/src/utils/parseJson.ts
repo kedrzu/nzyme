@@ -9,7 +9,7 @@ import { coerce } from './coerce.js';
  * @returns The parsed and coerced value according to the schema
  * @throws {SyntaxError} If the JSON string is invalid and cannot be parsed
  */
-export function parseJson<S extends Schema>(schema: S, json: null | string | undefined): Infer<S> {
+export function parseJson<S extends Schema>(schema: S, json: string | null | undefined): Infer<S> {
     if (!json) {
         return coerce(schema);
     }

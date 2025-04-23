@@ -12,7 +12,7 @@ export type RequiredValidatorParams<T> = {
             /**
              *
              */
-            value: null | T | undefined;
+            value: T | null | undefined;
         },
     ) => string;
 };
@@ -20,7 +20,7 @@ export type RequiredValidatorParams<T> = {
 /**
  *
  */
-export function required<T>(params?: RequiredValidatorParams<T>): Validator<null | T | undefined> {
+export function required<T>(params?: RequiredValidatorParams<T>): Validator<T | null | undefined> {
     const message = params && params.message;
 
     return (value, ctx) => {

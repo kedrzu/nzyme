@@ -1,5 +1,7 @@
 import type { IncomingMessage, RequestListener, ServerResponse } from 'http';
 
+import { parsePath, parseQuery } from 'ufo';
+
 import type { HttpMethod } from '@nzyme/fetch-utils';
 
 import type { ApiRouter } from './ApiRouter.js';
@@ -24,9 +26,11 @@ export function createListener(api: ApiRouter): RequestListener {
      * @param res - The server response to write to
      */
     async function handleRequest(req: IncomingMessage, res: ServerResponse) {
+        const url = parsePath(req.url || '/');
         const response = await api.execute({
             method: (req.method || 'GET') as HttpMethod,
-            path: req.url || '/',
+            path: url.pathname,
+            query: parseQuery(url.search),
             headers: req.headers,
             body: await getBody(req),
         });

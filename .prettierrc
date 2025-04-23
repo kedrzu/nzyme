@@ -8,7 +8,7 @@
     "singleAttributePerLine": true,
     "overrides": [
         {
-            "files": ["*.yml", "*.yaml"],
+            "files": ["*.yml", "*.yaml", "*.html", "*.vue"],
             "options": {
                 "tabWidth": 2
             }

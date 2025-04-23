@@ -22,7 +22,7 @@ export type RegexValidatorOptions = {
 /**
  *
  */
-export function regex(options: RegexValidatorOptions): Validator<null | string | undefined> {
+export function regex(options: RegexValidatorOptions): Validator<string | null | undefined> {
     const { regex, message } = options;
 
     return (value, ctx) => {

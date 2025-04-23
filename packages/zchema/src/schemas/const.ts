@@ -34,7 +34,13 @@ export type ConstSchemaOpts<V extends Primitive = Primitive> = {
  */
 export type ConstSchema<
     O extends SchemaConfigBase<ConstSchemaOpts> = SchemaConfigBase<ConstSchemaOpts>,
-> = ForceName & Schema<O extends { value: infer V extends Primitive } ? V : never, O>;
+> = ForceName &
+    Schema<O extends { value: infer V extends Primitive } ? V : never, O> & {
+        /**
+         * The constant value that this schema will match
+         */
+        value: O['value'];
+    };
 
 /**
  * Base type for constant schema definition.

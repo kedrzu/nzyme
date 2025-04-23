@@ -1,9 +1,9 @@
 import { defineInterface } from '@nzyme/ioc';
 
-export interface LocaleProvider {
-    locale: string;
+export interface LanguageProvider {
+    (): string;
 }
 
-export const LocaleProvider = defineInterface<LocaleProvider>({
-    name: 'LocaleProvider',
+export const LanguageProvider = defineInterface<LanguageProvider>({
+    name: 'LanguageProvider',
 });

@@ -20,12 +20,12 @@ export * from './schemas/union.js';
 export * from './schemas/unknown.js';
 export type * from './schemas/void.js';
 export { voidSchema as void } from './schemas/void.js';
-
 export * from './utils/coerce.js';
 export * from './utils/coerceNonNull.js';
 export * from './utils/extend.js';
 export * from './utils/fromJsonSchema.js';
 export * from './utils/isSchema.js';
+export * from './utils/isValue.js';
 export * from './utils/nonNullable.js';
 export * from './utils/nonNullish.js';
 export * from './utils/nullable.js';

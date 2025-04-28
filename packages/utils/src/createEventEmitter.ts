@@ -61,6 +61,8 @@ export type EventEmitter<TEvents> = EventEmitterPublic<TEvents> & {
         event: E,
         value: TEvents[E],
     ): Promise<void>;
+
+    public: EventEmitterPublic<TEvents>;
 };
 
 /**
@@ -77,7 +79,7 @@ export type EventEmitterCallback<TEvents, E extends keyof TEvents> = TEvents[E] 
  * @template TEmitter - The type of the event emitter
  */
 export type EventEmitterEvents<TEmitter> =
-    TEmitter extends EventEmitter<infer TEvents> ? TEvents : never;
+    TEmitter extends EventEmitterPublic<infer TEvents> ? TEvents : never;
 
 /**
  * Public interface of an event emitter that can be used by consumers.
@@ -193,6 +195,10 @@ export function createEventEmitter<TEvents>(): EventEmitter<TEvents> {
         off,
         emit,
         emitAsync,
+        public: {
+            on,
+            off,
+        },
     };
 
     function on<E extends keyof TEvents>(event: E, callback: EventEmitterCallback<TEvents, E>) {

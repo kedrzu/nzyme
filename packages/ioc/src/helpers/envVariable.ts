@@ -23,13 +23,15 @@ export function envVariable<TRequired extends boolean = false>(
 ) {
     type Result = TRequired extends true ? string : string | undefined;
 
+    const required = options?.required ?? false;
+
     return defineInjectable<Result>({
         name: `env:${name}`,
         resolve: container => {
             const env = container.resolve(EnvVariables);
             const value = env[name];
 
-            if (options?.required && !value) {
+            if (required && !value) {
                 throw new Error(`Environment variable ${name} not set`);
             }
 

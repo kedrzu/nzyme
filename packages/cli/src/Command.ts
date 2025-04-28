@@ -4,7 +4,7 @@ import { Command as ClipanionCommand } from 'clipanion';
 import type { Container } from '@nzyme/ioc';
 import { defineScope } from '@nzyme/ioc';
 import { Logger } from '@nzyme/logging';
-import { PrettyLogger } from '@nzyme/logging';
+import { PinoPrettyLogger } from '@nzyme/logging/pino';
 
 /**
  *
@@ -50,7 +50,7 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
 
     protected setup(): Promise<void> {
         this.#container = this.context.container.createChild(CommandScope);
-        this.#container.set(Logger, PrettyLogger);
+        this.#container.set(Logger, PinoPrettyLogger);
 
         return Promise.resolve();
     }

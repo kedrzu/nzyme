@@ -53,11 +53,11 @@ export type Container = {
      * Resolves an injectable to its concrete instance.
      * @template T - The type of the injectable
      * @param injectable - The injectable to resolve
-     * @param source - Optional source interface for resolution
+     * @param caller - Optional source interface for resolution
      * @returns The resolved instance
      * @throws Error if the injectable cannot be resolved
      */
-    resolve<T>(this: void, injectable: Injectable<T>, source?: Interface): T;
+    resolve<T>(this: void, injectable: Injectable<T>, caller?: Interface): T;
     /**
      * Optional scope that defines the lifecycle and visibility of services.
      */
@@ -80,10 +80,10 @@ export type Container = {
      * Attempts to resolve an injectable, returning undefined if resolution fails.
      * @template T - The type of the injectable
      * @param injectable - The injectable to resolve
-     * @param source - Optional source interface for resolution
+     * @param caller - Optional source interface for resolution
      * @returns The resolved instance if successful, undefined otherwise
      */
-    tryResolve<T>(this: void, injectable: Injectable<T>, source?: Interface): T | undefined;
+    tryResolve<T>(this: void, injectable: Injectable<T>, caller?: Interface): T | undefined;
 };
 
 /**
@@ -146,7 +146,7 @@ export function createContainer(options?: ContainerOptions) {
         createChild,
         get,
         set,
-        resolve: injectable => injectable.resolve(container),
+        resolve: (injectable, caller) => injectable.resolve(container, caller),
         tryResolve,
     };
 

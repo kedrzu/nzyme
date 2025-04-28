@@ -1,7 +1,6 @@
 {
     "name": "@nzyme/typography",
     "version": "0.14.0",
-    "private": true,
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
@@ -41,13 +40,22 @@
     "dependencies": {
         "@nzyme/types": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
-        "tslib": "^2.8.1"
+        "@types/mdast": "^4.0.4",
+        "mdast-util-newline-to-break": "^2.0.0",
+        "micromark": "^4.0.2",
+        "remark-behead": "^3.1.0",
+        "remark-directive": "^3.0.1",
+        "remark-parse": "^11.0.0",
+        "tslib": "^2.8.1",
+        "unified": "^11.0.5",
+        "unist-util-visit": "^5.0.0"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
         "eslint": "^9.25.1",
-        "typescript": "^5.8.3"
+        "typescript": "^5.8.3",
+        "vitest": "^3.1.2"
     },
     "publishConfig": {
         "access": "public"

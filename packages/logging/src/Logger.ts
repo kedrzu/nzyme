@@ -1,8 +1,7 @@
-import { pino } from 'pino';
-
 import { callerName, defineInterface, defineService } from '@nzyme/ioc';
+import { noop } from '@nzyme/utils';
 
-import { fromPino } from './fromPino.js';
+import type { LoggerLevel } from './LoggerLevel.js';
 
 /**
  * A logger instance.
@@ -43,7 +42,7 @@ export interface Logger {
  */
 export interface LoggerContextFunction {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    <T extends Record<string, any>>(name: string, ctx: null | T | undefined): void;
+    <T extends Record<string, any>>(name: string, ctx: T | null | undefined): void;
 }
 
 /**
@@ -76,18 +75,43 @@ export interface LoggerObject {
  */
 export const Logger = defineInterface<Logger>({
     name: 'Logger',
-    default: (container, caller): Logger => DefaultLogger.resolve(container, caller),
+    default: (container, caller): Logger => ConsoleLogger.resolve(container, caller),
 });
 
 /**
- * A default logger service.
+ * A console logger service.
  */
-export const DefaultLogger = defineService({
-    name: 'DefaultLogger',
+export const ConsoleLogger = defineService({
+    name: 'ConsoleLogger',
     implements: Logger,
     resolution: 'transient',
     deps: {
         name: callerName(),
     },
-    setup: ({ name }) => fromPino(pino({ name })),
+    setup: ({ name }) => ({
+        error: (msg: string, obj?: LoggerObject) => logConsole(name, 'error', msg, obj),
+        warn: (msg: string, obj?: LoggerObject) => logConsole(name, 'warn', msg, obj),
+        info: (msg: string, obj?: LoggerObject) => logConsole(name, 'info', msg, obj),
+        debug: (msg: string, obj?: LoggerObject) => logConsole(name, 'debug', msg, obj),
+        trace: (msg: string, obj?: LoggerObject) => logConsole(name, 'trace', msg, obj),
+        fatal: (msg: string, obj?: LoggerObject) => logConsole(name, 'error', msg, obj),
+        context: noop,
+    }),
 });
+
+function logConsole(
+    name: string | undefined,
+    level: Exclude<LoggerLevel, 'fatal'>,
+    msg: string,
+    obj?: LoggerObject,
+) {
+    if (name) {
+        msg = `[${name}] ${msg}`;
+    }
+
+    if (obj) {
+        console[level](msg, obj);
+    } else {
+        console[level](msg);
+    }
+}

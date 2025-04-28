@@ -1,5 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import * as fsExtra from 'fs-extra';
 
 import chalk from 'chalk';
 import { watch } from 'chokidar';
@@ -82,7 +83,7 @@ export class LocaliseCommand extends Command {
         }
 
         const outputPath = this.toTypesScriptPath(file);
-        await fs.unlink(outputPath);
+        await fsExtra.remove(outputPath);
     }
 
     private async compileFile(file: string) {

@@ -33,7 +33,7 @@
         "mime-types": "^3.0.1",
         "nuxt": "3.16.2",
         "rollup": "^4.40.0",
-        "vite": "^6.3.2"
+        "vite": "^6.3.3"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",

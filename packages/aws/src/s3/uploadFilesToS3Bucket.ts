@@ -4,54 +4,55 @@ import chalk from 'chalk';
 import { lookup as mimeLookup } from 'mime-types';
 import { S3SyncClient } from 's3-sync-client';
 
-import { type Logger, PrettyLogger } from '@nzyme/logging';
+import { ConsoleLogger } from '@nzyme/logging';
+import type { Logger } from '@nzyme/logging';
 import { assertValue } from '@nzyme/utils';
-
-type Filter = (key: string) => boolean;
 
 /**
  * Options for uploading files to an S3 bucket.
  */
 export type UploadFilesOptions = {
     /**
-     * The path to the source files.
-     */
-    sourcePath: string;
-    /**
-     * The path to the destination files.
-     */
-    destinationPath: string;
-    /**
-     * A filter for the files to include.
-     */
-    include?: RegExp | Filter;
-    /**
-     * A filter for the files to exclude.
-     */
-    exclude?: RegExp | Filter;
-    /**
-     * A function to rename the files.
-     */
-    rename?: (key: string) => string;
-    /**
      * The cache control header to set for the files.
      */
-    cacheControl?: string | ((key: string) => string);
+    cacheControl?: ((key: string) => string) | string;
     /**
      * Whether to delete missing files.
      */
     deleteMissing?: boolean;
     /**
+     * The path to the destination files.
+     */
+    destinationPath: string;
+    /**
+     * A filter for the files to exclude.
+     */
+    exclude?: Filter | RegExp;
+    /**
+     * A filter for the files to include.
+     */
+    include?: Filter | RegExp;
+    /**
      * A logger to use for logging.
      */
     logger?: Logger;
+    /**
+     * A function to rename the files.
+     */
+    rename?: (key: string) => string;
+    /**
+     * The path to the source files.
+     */
+    sourcePath: string;
 };
+
+type Filter = (key: string) => boolean;
 
 /**
  * Uploads files to an S3 bucket.
  */
 export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
-    const logger = options.logger ?? PrettyLogger.create({ name: undefined });
+    const logger = options.logger ?? ConsoleLogger.create({ name: undefined });
     const s3Client = new S3Client();
     const client = new S3SyncClient({
         client: s3Client,
@@ -111,7 +112,7 @@ export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
     }
 }
 
-function createFilter(filter: RegExp | Filter | undefined | null): Filter | undefined {
+function createFilter(filter: Filter | RegExp | null | undefined): Filter | undefined {
     if (!filter) {
         return undefined;
     }

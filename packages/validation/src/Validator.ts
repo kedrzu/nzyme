@@ -1,9 +1,13 @@
+import type { Container } from '@nzyme/ioc';
+
 /**
  * Context object passed to validators during validation
  */
 export interface ValidationContext {
     /** Language code for error messages */
     lang?: string;
+    /** Container for dependency injection */
+    container?: Container;
 }
 
 /**

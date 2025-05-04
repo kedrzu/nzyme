@@ -44,7 +44,7 @@
         "mdast-util-newline-to-break": "^2.0.0",
         "micromark": "^4.0.2",
         "remark-behead": "^3.1.0",
-        "remark-directive": "^3.0.1",
+        "remark-directive": "^4.0.0",
         "remark-parse": "^11.0.0",
         "tslib": "^2.8.1",
         "unified": "^11.0.5",
@@ -53,7 +53,7 @@
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
-        "eslint": "^9.25.1",
+        "eslint": "^9.26.0",
         "typescript": "^5.8.3",
         "vitest": "^3.1.2"
     },

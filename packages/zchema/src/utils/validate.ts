@@ -1,7 +1,7 @@
 import { mergeErrors, normalizeErrors, ValidationError } from '@nzyme/validation';
 import type { ValidationContext, ValidationErrors, ValidationResult } from '@nzyme/validation';
 
-import type { Infer, SchemaAny } from '../Schema.js';
+import type { Infer, SchemaAny, SchemaVisitor } from '../Schema.js';
 import { lazyResolve } from '../schemas/lazy.js';
 
 /**
@@ -65,14 +65,14 @@ function validateInner<S extends SchemaAny>(
         if (!schema.optional) {
             return ['Invalid value'];
         }
-    } else if (!proto.check(value)) {
+    } else if (!proto.check(value, ctx)) {
         return ['Invalid value'];
     }
 
     let errors: ValidationErrors | undefined;
 
     if (value != null && proto.visit != null) {
-        proto.visit(value, (schema, value, key) => {
+        const visitor: SchemaVisitor = (schema, value, key) => {
             const result = validateInner(schema, value, ctx);
 
             if (!result) {
@@ -84,7 +84,9 @@ function validateInner<S extends SchemaAny>(
             }
 
             mergeErrors(errors, result, key);
-        });
+        };
+
+        proto.visit(value, visitor, ctx);
     }
 
     for (const validator of schema.validate) {

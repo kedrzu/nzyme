@@ -1,3 +1,4 @@
+import type { Container } from '@nzyme/ioc';
 import type { Flatten, IfAny, IfUnknown, OmitPropTypes, Primitive } from '@nzyme/types';
 import type { Validator } from '@nzyme/validation';
 
@@ -43,6 +44,12 @@ export type Schema<V = unknown, O extends SchemaConfigBase = SchemaConfigBase> =
     type: SchemaBase;
     validate: Validator[];
 };
+
+export interface SchemaContext {
+    container?: Container;
+}
+
+export const DEFAULT_SCHEMA_CONTEXT: SchemaContext = Object.freeze({});
 
 /**
  * Type representing any schema, regardless of its value or options type.
@@ -188,23 +195,23 @@ export interface SchemaProto<V = unknown, U = V> {
     /**
      * Coerces a value to the schema's type, or returns undefined if coercion fails
      */
-    coerce: (value: unknown) => V | undefined;
+    coerce: (value: unknown, context: SchemaContext) => V | undefined;
     /**
      * Serializes a value to a format suitable for storage or transmission
      */
-    serialize: (value: U) => unknown;
+    serialize: (value: U, context: SchemaContext) => unknown;
     /**
      * Checks if a value is valid according to the schema
      */
-    check: (value: unknown) => boolean;
+    check: (value: unknown, context: SchemaContext) => boolean;
     /**
      * Returns the default value for the schema
      */
-    default: () => V;
+    default: (context: SchemaContext) => V;
     /**
      * Optional method to visit values during traversal
      */
-    visit?: (value: U, visitor: SchemaVisitor) => void;
+    visit?: (value: U, visitor: SchemaVisitor, context: SchemaContext) => void;
 }
 
 /**

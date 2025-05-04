@@ -1,4 +1,4 @@
-import type { Schema } from '../Schema.js';
+import { DEFAULT_SCHEMA_CONTEXT, type Schema, type SchemaContext } from '../Schema.js';
 
 /**
  * Checks if the value is of the given schema type.
@@ -7,6 +7,10 @@ import type { Schema } from '../Schema.js';
  * @param schema - The schema to check against.
  * @returns `true` if the value is of the given schema type, `false` otherwise.
  */
-export function isValue<T>(value: unknown, schema: Schema<T>): value is T {
-    return schema.proto.check(value);
+export function isValue<T>(
+    value: unknown,
+    schema: Schema<T>,
+    ctx: SchemaContext = DEFAULT_SCHEMA_CONTEXT,
+): value is T {
+    return schema.proto.check(value, ctx);
 }

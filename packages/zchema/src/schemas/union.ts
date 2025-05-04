@@ -81,26 +81,26 @@ export const union = defineSchema<UnionSchemaConstructor, SchemaConfigBase<Union
         const schemas = options.of;
 
         const proto: SchemaProto<unknown> = {
-            coerce(value) {
+            coerce(value, ctx) {
                 for (const schema of schemas) {
-                    const result = schema.proto.coerce(value);
+                    const result = schema.proto.coerce(value, ctx);
                     if (result !== undefined) {
                         return result;
                     }
                 }
             },
-            serialize(value) {
+            serialize(value, ctx) {
                 for (const schema of schemas) {
-                    if (!schema.proto.check(value)) {
+                    if (!schema.proto.check(value, ctx)) {
                         continue;
                     }
 
-                    return serialize(schema, value);
+                    return serialize(schema, value, ctx);
                 }
             },
-            check(value): value is unknown {
+            check(value, ctx): value is unknown {
                 for (const schema of schemas) {
-                    if (schema.proto.check(value)) {
+                    if (schema.proto.check(value, ctx)) {
                         return true;
                     }
                 }
@@ -108,13 +108,13 @@ export const union = defineSchema<UnionSchemaConstructor, SchemaConfigBase<Union
                 return false;
             },
             default: () => [],
-            visit(value, visitor) {
+            visit(value, visitor, ctx) {
                 for (const schema of schemas) {
-                    if (!schema.proto.check(value)) {
+                    if (!schema.proto.check(value, ctx)) {
                         continue;
                     }
 
-                    schema.proto.visit?.(value, visitor);
+                    schema.proto.visit?.(value, visitor, ctx);
                 }
             },
         };

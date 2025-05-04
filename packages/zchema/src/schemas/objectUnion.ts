@@ -101,17 +101,17 @@ const objectUnion = defineSchema<
         }
 
         const proto: SchemaProto<unknown> = {
-            coerce(value) {
+            coerce(value, ctx) {
                 const discriminatorValue = (value as Record<string, unknown>)[discriminator];
                 const schema = schemasPerDiscriminator.get(discriminatorValue);
 
-                return schema?.proto.coerce(value);
+                return schema?.proto.coerce(value, ctx);
             },
-            serialize(value) {
+            serialize(value, ctx) {
                 const discriminatorValue = (value as Record<string, unknown>)[discriminator];
                 const schema = schemasPerDiscriminator.get(discriminatorValue);
 
-                return schema?.proto.serialize(value);
+                return schema?.proto.serialize(value, ctx);
             },
             check(value): value is object {
                 if (!isPlainObject(value)) {
@@ -124,7 +124,7 @@ const objectUnion = defineSchema<
                 return schema !== undefined;
             },
             default: () => [],
-            visit(value, visitor) {
+            visit(value, visitor, ctx) {
                 const discriminatorValue = (value as Record<string, unknown>)[discriminator];
                 const schema = schemasPerDiscriminator.get(discriminatorValue);
 
@@ -133,7 +133,7 @@ const objectUnion = defineSchema<
                     return;
                 }
 
-                schema.proto.visit?.(value, visitor);
+                schema.proto.visit?.(value, visitor, ctx);
             },
         };
 

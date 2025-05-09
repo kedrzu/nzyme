@@ -36,7 +36,7 @@
         "@nzyme/vue-utils": "^0.14.0",
         "@vuelidate/core": "^2.0.3",
         "@vuelidate/validators": "^2.0.4",
-        "libphonenumber-js": "^1.12.7",
+        "libphonenumber-js": "^1.12.8",
         "postal-codes-js": "^2.5.2",
         "tslib": "^2.8.1",
         "vue": "^3.5.13",

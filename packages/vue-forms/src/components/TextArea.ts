@@ -4,9 +4,8 @@ import { useTextArea } from './useTextArea.js';
 
 /**
  *
- * @__NO_SIDE_EFFECTS__
  */
-export const TextArea = defineComponent({
+export const TextArea = /*@__PURE__*/ defineComponent({
     name: 'TextArea',
     props: useTextArea.props,
     emits: useTextArea.emits,

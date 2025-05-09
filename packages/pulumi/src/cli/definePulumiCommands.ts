@@ -214,7 +214,7 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                 throw new UsageError('No stacks to destroy.');
             }
 
-            for (const stack of stacks) {
+            for (const stack of [...stacks].reverse()) {
                 await destroyStack(stack, {
                     config: options.config,
                 });

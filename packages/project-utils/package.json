@@ -30,13 +30,13 @@
         "chalk": "^5.4.1",
         "consola": "^3.4.2",
         "dotenv": "^16.5.0",
-        "execa": "^9.5.2",
+        "execa": "^9.5.3",
         "tslib": "^2.8.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
-        "@types/node": "^22.15.14",
+        "@types/node": "^22.15.17",
         "eslint": "^9.26.0",
         "typescript": "^5.8.3"
     },

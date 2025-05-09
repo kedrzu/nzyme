@@ -16,15 +16,17 @@ export interface DestroyStackOptions {
 /**
  * Destroy a stack.
  */
-export async function destroyStack<TOut extends StackOutput>(
-    stack: Stack<TOut>,
-    options: DestroyStackOptions,
-) {
+export async function destroyStack<TOut extends StackOutput>(stack: Stack<TOut>, options: DestroyStackOptions) {
     assertStackEnabled(stack);
 
     const stackInstance = await createOrSelectStack(stack, options.config);
+    const stackOutputs = await stack.outputs(stackInstance);
+
+    await stack.beforeDestroy(stackOutputs);
 
     await stackInstance.destroy({
         onOutput: console.log,
     });
+
+    await stack.afterDestroy(stackOutputs);
 }

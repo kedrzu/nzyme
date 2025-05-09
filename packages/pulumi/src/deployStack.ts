@@ -28,10 +28,7 @@ export interface DeployStackOptions {
 /**
  * Deploy a stack.
  */
-export async function deployStack<TOut extends StackOutput>(
-    stack: Stack<TOut>,
-    options: DeployStackOptions,
-) {
+export async function deployStack<TOut extends StackOutput>(stack: Stack<TOut>, options: DeployStackOptions) {
     assertStackEnabled(stack);
 
     if (options.build !== false) {
@@ -39,6 +36,8 @@ export async function deployStack<TOut extends StackOutput>(
     }
 
     const stackInstance = await createOrSelectStack(stack, options.config);
+
+    await stack.beforeDeploy();
 
     const output = await stackInstance.up({
         onOutput: console.log,

@@ -1,4 +1,5 @@
-import { computed, type PropType, reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
+import type { PropType } from 'vue';
 
 import { assignProps, waitFor } from '@nzyme/utils';
 import { defineProps, injectContext, useProps } from '@nzyme/vue-utils';

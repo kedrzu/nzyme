@@ -20,7 +20,7 @@ const SERVICE_SYMBOL = Symbol('service');
  * @template D - The service dependencies type
  * @returns A type with all dependencies resolved to their concrete types
  */
-export type ResolveDependencies<D extends ServiceDependencies> = IfLiteral<
+export type ResolveDeps<D extends ServiceDependencies> = IfLiteral<
     keyof D,
     PartialOnUndefined<{
         readonly [K in keyof D]: D[K] extends Injectable<infer T> ? T : unknown;
@@ -68,7 +68,7 @@ export interface Service<T = unknown, TDeps extends ServiceDependencies = any>
      * @param deps - The resolved dependencies for the service
      * @returns The initialized service instance
      */
-    readonly create: (deps: ResolveDependencies<TDeps>) => T;
+    readonly create: (deps: ResolveDeps<TDeps>) => T;
 }
 
 /**
@@ -130,7 +130,7 @@ export interface ServiceSetup<TDeps extends ServiceDependencies, TService> {
      * @param deps - The resolved dependencies for the service
      * @returns The initialized service instance
      */
-    (deps: ResolveDependencies<TDeps>): TService;
+    (deps: ResolveDeps<TDeps>): TService;
 }
 
 /**

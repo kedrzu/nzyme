@@ -2,7 +2,7 @@ import * as pulumi from '@pulumi/pulumi';
 import type { automation } from '@pulumi/pulumi';
 import type { OutputMap } from '@pulumi/pulumi/automation/stack.js';
 
-import type { ResolveDependencies, Service, ServiceDependencies } from '@nzyme/ioc';
+import type { ResolveDeps, Service, ServiceDependencies } from '@nzyme/ioc';
 import { defineService } from '@nzyme/ioc';
 import type { EmptyObject, SomeObject } from '@nzyme/types';
 import { toPascalCase } from '@nzyme/utils';
@@ -60,20 +60,37 @@ export interface StackOptions<
     /**
      * Resources to deploy.
      */
-    resources: (deps: ResolveDependencies<TDeps>) => Promise<TOutput> | TOutput;
+    resources: (deps: ResolveDeps<TDeps>) => Promise<TOutput> | TOutput;
 
     /**
      * Program to run before the stack is deployed.
      */
-    build?: (deps: ResolveDependencies<TDeps>, ctx: StackBuildContext) => Promise<void> | void;
+    build?: (deps: ResolveDeps<TDeps>, ctx: StackBuildContext) => Promise<void> | void;
+
+    /**
+     * Program to run before the stack is deployed.
+     */
+    beforeDeploy?: (deps: ResolveDeps<TDeps>) => Promise<void> | void;
 
     /**
      * Program to run after the stack is deployed.
      */
-    afterDeploy?: (
-        output: pulumi.Unwrap<TOutput>,
-        deps: ResolveDependencies<TDeps>,
-    ) => Promise<void> | void;
+    afterDeploy?: (output: pulumi.Unwrap<TOutput>, deps: ResolveDeps<TDeps>) => Promise<void> | void;
+
+    /**
+     * Program to run before the stack is destroyed.
+     */
+    beforeDestroy?: (output: pulumi.Unwrap<TOutput>, deps: ResolveDeps<TDeps>) => Promise<void> | void;
+
+    /**
+     * Program to run after the stack is destroyed.
+     */
+    afterDestroy?: (output: pulumi.Unwrap<TOutput>, deps: ResolveDeps<TDeps>) => Promise<void> | void;
+
+    /**
+     * Program to run when an event occurs.
+     */
+    onEvent?: (event: automation.EngineEvent) => Promise<void> | void;
 }
 
 /**
@@ -121,9 +138,24 @@ export interface Stack<TOutput extends StackOutput = StackOutput> {
     build: (params: StackBuildContext) => Promise<void> | void;
 
     /**
+     * Function to run before the stack is deployed.
+     */
+    beforeDeploy: () => Promise<void>;
+
+    /**
      * Function to run after the stack is deployed.
      */
-    afterDeploy: (output: OutputMap) => Promise<void> | void;
+    afterDeploy: (output: OutputMap) => Promise<void>;
+
+    /**
+     * Function to run before the stack is destroyed.
+     */
+    beforeDestroy: (output: OutputMap) => Promise<void>;
+
+    /**
+     * Function to run after the stack is destroyed.
+     */
+    afterDestroy: (output: OutputMap) => Promise<void>;
 }
 
 /**
@@ -145,10 +177,9 @@ export interface StackReference<TOutput extends StackOutput = StackOutput> {
  * Define a Pulumi stack.
  * @__NO_SIDE_EFFECTS__
  */
-export function defineStack<
-    TDeps extends ServiceDependencies = SomeObject,
-    TOutput extends StackOutput = EmptyObject,
->(options: StackOptions<TDeps, TOutput>) {
+export function defineStack<TDeps extends ServiceDependencies = SomeObject, TOutput extends StackOutput = EmptyObject>(
+    options: StackOptions<TDeps, TOutput>,
+) {
     return defineService({
         name: `Stack:${toPascalCase(options.name)}`,
         deps: options.deps,
@@ -176,13 +207,17 @@ export function defineStack<
                         await options.build(deps, ctx);
                     }
                 },
+                beforeDeploy: async () => {
+                    await options.beforeDeploy?.(deps);
+                },
                 afterDeploy: async output => {
-                    if (options.afterDeploy) {
-                        await options.afterDeploy(
-                            unwrapOutput(output) as pulumi.Unwrap<TOutput>,
-                            deps,
-                        );
-                    }
+                    await options.afterDeploy?.(unwrapOutput(output) as pulumi.Unwrap<TOutput>, deps);
+                },
+                beforeDestroy: async output => {
+                    await options.beforeDestroy?.(unwrapOutput(output) as pulumi.Unwrap<TOutput>, deps);
+                },
+                afterDestroy: async output => {
+                    await options.afterDestroy?.(unwrapOutput(output) as pulumi.Unwrap<TOutput>, deps);
                 },
             };
         },
@@ -193,8 +228,7 @@ function createStackReference<TOutput extends StackOutput>(path: string): StackR
     const ref = new pulumi.StackReference(path);
 
     return {
-        getOutput: <K extends keyof TOutput>(key: K & string): TOutput[K] =>
-            ref.getOutput(key) as TOutput[K],
+        getOutput: <K extends keyof TOutput>(key: K & string): TOutput[K] => ref.getOutput(key) as TOutput[K],
     };
 }
 

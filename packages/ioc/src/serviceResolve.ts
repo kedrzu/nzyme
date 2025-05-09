@@ -71,7 +71,7 @@ export function getResolutionStrategy(strategy: ServiceResolutionStrategy | Serv
  * - Reused for subsequent resolutions
  * - Scoped to the container's scope
  */
-export const singletonStrategy = defineResolutionStrategy((service, container, caller) => {
+export const singletonStrategy = defineResolutionStrategy((service, container) => {
     let instance = container.get(service);
     if (instance) {
         return instance;
@@ -92,7 +92,7 @@ export const singletonStrategy = defineResolutionStrategy((service, container, c
         }
     }
 
-    const deps = resolveDeps(service.deps, container, caller);
+    const deps = resolveDeps(service.deps, container, service);
 
     instance = service.create(deps);
     container.set(service, instance);

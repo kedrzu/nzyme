@@ -4,8 +4,9 @@ import { defineSchema } from '../defineSchema.js';
 import type {
     Infer,
     Schema,
-    SchemaConfigBase,
-    SchemaConfigSimplify,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
     SchemaOptions,
     SchemaProto,
 } from '../Schema.js';
@@ -32,7 +33,7 @@ export type ObjectUnionOptions<T extends ObjectSchema[] = ObjectSchema[]> = {
  * @template O - ObjectUnion schema options type
  */
 export type ObjectUnionSchema<
-    O extends SchemaConfigBase<ObjectUnionOptions> = SchemaConfigBase<ObjectUnionOptions>,
+    O extends SchemaOptionsBase<ObjectUnionOptions> = SchemaOptionsBase<ObjectUnionOptions>,
 > = Schema<ObjectUnionValue<O>, O> & {
     /**
      *
@@ -62,7 +63,7 @@ type ObjectUnionSchemaConstructor = {
         S extends ObjectSchema[],
         TNullable extends boolean | undefined = undefined,
         TOptional extends boolean | undefined = undefined,
-        TMeta extends object | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
     >(
         options: SchemaOptions<
             Infer<S[number]>,
@@ -71,7 +72,7 @@ type ObjectUnionSchemaConstructor = {
             TMeta,
             ObjectUnionOptions<S>
         >,
-    ): ObjectUnionSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta, ObjectUnionOptions<S>>>;
+    ): ObjectUnionSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, ObjectUnionOptions<S>>>;
 };
 
 export /**
@@ -79,7 +80,7 @@ export /**
  */
 const objectUnion = defineSchema<
     ObjectUnionSchemaConstructor,
-    SchemaConfigBase<ObjectUnionOptions>
+    SchemaOptionsBase<ObjectUnionOptions>
 >({
     name: 'union',
     proto: options => {

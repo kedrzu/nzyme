@@ -6,8 +6,8 @@
  * @param array - The array to group
  * @param key - Function that extracts the grouping key from each element
  * @returns An object where keys are the grouping keys and values are arrays of elements
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function groupBy<T, K extends number | string>(array: readonly T[], key: (item: T) => K) {
     const result = {} as Record<K, T[] | undefined>;
 

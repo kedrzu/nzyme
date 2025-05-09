@@ -3,7 +3,9 @@
     "compilerOptions": {
         "outDir": "./dist",
         "rootDir": "./src",
-        "emitDeclarationOnly": true
+        "emitDeclarationOnly": true,
+        "composite": false
     },
-    "include": ["./src/**/*.ts", "./src/**/*.tsx", "./src/**/*.json", "./src/**/*.scss"]
+    "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.json", "src/**/*.scss"],
+    "exclude": ["node_modules", "dist"]
 }

@@ -1,4 +1,4 @@
-import type { IfLiteral, NonVoidPropKeys, VoidPropKeys } from '@nzyme/types';
+import type { IfLiteral, IfUnknown, NonVoidPropKeys, VoidPropKeys } from '@nzyme/types';
 
 import { arrayRemove } from './array/arrayRemove.js';
 
@@ -6,7 +6,7 @@ import { arrayRemove } from './array/arrayRemove.js';
  * Complete interface of an event emitter including internal methods.
  * @template TEvents - The type of all possible events
  */
-export type EventEmitter<TEvents> = EventEmitterPublic<TEvents> & {
+export interface EventEmitter<TEvents> extends EventEmitterPublic<TEvents> {
     /**
      * Emits an event with no payload.
      * @param event - The event to emit
@@ -25,7 +25,13 @@ export type EventEmitter<TEvents> = EventEmitterPublic<TEvents> & {
         event: E,
         value: TEvents[E],
     ): void;
+    /**
+     *
+     */
     emit<E extends keyof TEvents & VoidPropKeys<GenericEvents<TEvents>>>(event: E): void;
+    /**
+     *
+     */
     emit<E extends keyof TEvents & NonVoidPropKeys<GenericEvents<TEvents>>>(
         this: void,
         event: E,
@@ -52,18 +58,27 @@ export type EventEmitter<TEvents> = EventEmitterPublic<TEvents> & {
         event: E,
         value: TEvents[E],
     ): Promise<void>;
+    /**
+     *
+     */
     emitAsync<E extends keyof TEvents & VoidPropKeys<GenericEvents<TEvents>>>(
         this: void,
         event: E,
     ): void;
+    /**
+     *
+     */
     emitAsync<E extends keyof TEvents & NonVoidPropKeys<GenericEvents<TEvents>>>(
         this: void,
         event: E,
         value: TEvents[E],
     ): Promise<void>;
 
+    /**
+     *
+     */
     public: EventEmitterPublic<TEvents>;
-};
+}
 
 /**
  * Type representing a callback function for an event.
@@ -79,7 +94,8 @@ export type EventEmitterCallback<TEvents, E extends keyof TEvents> = TEvents[E] 
  * @template TEmitter - The type of the event emitter
  */
 export type EventEmitterEvents<TEmitter> =
-    TEmitter extends EventEmitterPublic<infer TEvents> ? TEvents : never;
+    | (TEmitter extends EventEmitter<infer TEvents> ? IfUnknown<TEvents, never> : never)
+    | (TEmitter extends EventEmitterPublic<infer TEvents> ? IfUnknown<TEvents, never> : never);
 
 /**
  * Public interface of an event emitter that can be used by consumers.

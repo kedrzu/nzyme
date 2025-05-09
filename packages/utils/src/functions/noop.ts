@@ -3,8 +3,8 @@
  *
  * @param args - Any arguments (ignored)
  * @returns
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function noop(...args: unknown[]): void;
 export function noop(...args: unknown[]): undefined;
 export function noop(): undefined {}

@@ -18,7 +18,10 @@ export type FormFieldProps<T> = ExtractPropTypes<FormFieldPropsDefinition<T>>;
 
 export type FormFieldPropsDefinition<T> = FormFieldDefinition<T>['props'];
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 export function defineFormField<T>(type?: PropType<null | T | undefined>) {
     return {
         props: {

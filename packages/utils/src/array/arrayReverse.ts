@@ -4,8 +4,8 @@
  * @template T - The type of elements in the array
  * @param array - The array to iterate over in reverse
  * @returns An iterable that yields elements from the array in reverse order
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function arrayReverse<T>(array: readonly T[]): Iterable<T> {
     let index = array.length;
 

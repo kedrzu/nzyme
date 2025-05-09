@@ -143,8 +143,8 @@ export interface StackReference<TOutput extends StackOutput = StackOutput> {
 
 /**
  * Define a Pulumi stack.
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function defineStack<
     TDeps extends ServiceDependencies = SomeObject,
     TOutput extends StackOutput = EmptyObject,

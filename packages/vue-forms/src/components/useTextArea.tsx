@@ -21,13 +21,19 @@ const TEXT_AREA_PROPS = defineProps({
     readonly: Boolean,
 });
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 export const useTextArea = assignProps(setupTextArea, {
     props: TEXT_AREA_PROPS,
     emits: TEXT_AREA_FIELD.emits,
 });
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 function setupTextArea() {
     const props = useProps(TEXT_AREA_PROPS);
     const field = TEXT_AREA_FIELD.create({ props });

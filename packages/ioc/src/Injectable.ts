@@ -66,10 +66,30 @@ export type Injected<T> = T extends Injectable ? ReturnType<T['resolve']> : neve
  * @param options - Configuration options for the injectable
  * @returns A new injectable instance
  */
-// #__NO_SIDE_EFFECTS__
-export function defineInjectable<T>(options: InjectableOptions<T>): Injectable<T> {
+export function defineInjectable<T>(options: InjectableOptions<T>): Injectable<T>;
+/**
+ * Creates a new injectable with the specified resolve function.
+ * @template T - The type that the injectable will resolve to
+ * @param resolve - Function that resolves the injectable to its concrete instance
+ * @returns A new injectable instance
+ */
+export function defineInjectable<T>(resolve: InjectableResolve<T>): Injectable<T>;
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
+export function defineInjectable<T>(
+    optionsOrResolve: InjectableOptions<T> | InjectableResolve<T>,
+): Injectable<T> {
+    if (typeof optionsOrResolve === 'function') {
+        return {
+            resolve: optionsOrResolve,
+            [INJECTABLE_SYMBOL]: true,
+        };
+    }
+
     return {
-        ...options,
+        ...optionsOrResolve,
         [INJECTABLE_SYMBOL]: true,
     };
 }

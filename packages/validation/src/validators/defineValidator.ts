@@ -27,8 +27,8 @@ export type ValidatorOptions<T> = {
 
 /**
  *
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function defineValidator<T>(
     options: DefineValidatorOptions<T>,
 ): Validator<null | T | undefined> {

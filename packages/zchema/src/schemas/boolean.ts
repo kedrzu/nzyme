@@ -3,8 +3,9 @@ import { identity } from '@nzyme/utils';
 import { defineSchema } from '../defineSchema.js';
 import type {
     Schema,
-    SchemaConfigBase,
-    SchemaConfigSimplify,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
     SchemaOptions,
     SchemaProto,
 } from '../Schema.js';
@@ -13,7 +14,7 @@ import type {
  * Schema type for boolean values.
  * @template O - Schema options type
  */
-export type BooleanSchema<O extends SchemaConfigBase = SchemaConfigBase> = Schema<boolean, O>;
+export type BooleanSchema<O extends SchemaOptionsBase = SchemaOptionsBase> = Schema<boolean, O>;
 
 /**
  * Prototype implementation for boolean schema.
@@ -35,10 +36,10 @@ export type BooleanSchemaBase = {
     <
         TNullable extends boolean | undefined = undefined,
         TOptional extends boolean | undefined = undefined,
-        TMeta extends object | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
     >(
         options: SchemaOptions<boolean, TNullable, TOptional, TMeta>,
-    ): BooleanSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta>>;
+    ): BooleanSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta>>;
 };
 
 /**

@@ -32,8 +32,8 @@ export interface PulumiCommandsOptions {
 
 /**
  * Define the Pulumi commands.
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function definePulumiCommands(options: PulumiCommandsOptions): CommandClass[] {
     return [
         defineDeployCommand(options),

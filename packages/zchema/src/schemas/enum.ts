@@ -4,8 +4,9 @@ import { identity } from '@nzyme/utils';
 import { defineSchema } from '../defineSchema.js';
 import type {
     Schema,
-    SchemaConfigBase,
-    SchemaConfigSimplify,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
     SchemaOptions,
     SchemaProto,
 } from '../Schema.js';
@@ -14,7 +15,7 @@ import type {
  * Schema type for enum values.
  * @template O - Enum schema options type
  */
-export type EnumSchema<O extends SchemaConfigBase<EnumOptions> = SchemaConfigBase<EnumOptions>> =
+export type EnumSchema<O extends SchemaOptionsBase<EnumOptions> = SchemaOptionsBase<EnumOptions>> =
     Schema<EnumValue<O['values']>, O> & {
         /**
          *
@@ -47,10 +48,10 @@ type EnumSchemaConstructor = {
         const V extends Primitive[],
         TNullable extends boolean | undefined = undefined,
         TOptional extends boolean | undefined = undefined,
-        TMeta extends object | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
     >(
         options: SchemaOptions<V[number], TNullable, TOptional, TMeta, EnumOptions<V>>,
-    ): EnumSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta, EnumOptions<V>>>;
+    ): EnumSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, EnumOptions<V>>>;
 
     /** Creates an enum schema with array of values */
     <const V extends Primitive[]>(values: V): EnumSchema<{ values: V }>;
@@ -70,10 +71,10 @@ type EnumSchemaConstructor = {
  * });
  * ```
  */
-export const enumSchema = defineSchema<EnumSchemaConstructor, SchemaConfigBase<EnumOptions>>({
+export const enumSchema = defineSchema<EnumSchemaConstructor, SchemaOptionsBase<EnumOptions>>({
     name: 'enum',
     options: (optionsOrValues: EnumOptions | Primitive[]) => {
-        const options: SchemaConfigBase<EnumOptions> = Array.isArray(optionsOrValues)
+        const options: SchemaOptionsBase<EnumOptions> = Array.isArray(optionsOrValues)
             ? { values: optionsOrValues }
             : optionsOrValues;
 

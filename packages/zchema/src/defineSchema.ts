@@ -50,8 +50,8 @@ type SchemaProtoFactory<O extends SchemaOptionsAny = SchemaOptions> = (
  * @template O - The schema options type
  * @param definition - The schema definition containing name, options factory, and prototype factory
  * @returns A schema factory function that creates schemas with the specified configuration
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function defineSchema<F extends SchemaBase, O extends SchemaOptionsAny = SchemaOptions>(
     definition: SchemaDefinition<F, O>,
 ) {

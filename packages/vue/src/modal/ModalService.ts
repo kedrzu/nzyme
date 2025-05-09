@@ -1,12 +1,5 @@
-import {
-    type Ref,
-    defineComponent,
-    h,
-    ref,
-    type ComponentInternalInstance,
-    nextTick,
-    watch,
-} from 'vue';
+import { defineComponent, h, nextTick, ref, watch } from 'vue';
+import type { ComponentInternalInstance, Ref } from 'vue';
 
 import { clearFocus, onHistoryBack } from '@nzyme/dom-utils';
 import { defineService } from '@nzyme/ioc';
@@ -14,18 +7,18 @@ import type { Writable } from '@nzyme/types';
 import { arrayRemove, CancelError, createPromise } from '@nzyme/utils';
 import { provideContext, reactive } from '@nzyme/vue-utils';
 
-import type {
-    ModalComponent,
-    Modal,
-    OpenModalOptions,
-    ModalResult,
-    ModalProps,
-    ModalComponentView,
-    ModalHandlerProps,
-    ModalHandler,
-} from './ModalTypes.js';
 import { onKeyUp } from '../onKeyUp.js';
 import { ModalContext } from './ModalContext.js';
+import type {
+    Modal,
+    ModalComponent,
+    ModalComponentView,
+    ModalHandler,
+    ModalHandlerProps,
+    ModalProps,
+    ModalResult,
+    OpenModalOptions,
+} from './ModalTypes.js';
 
 interface ModalServiceOpenOptions {
     /**
@@ -34,7 +27,10 @@ interface ModalServiceOpenOptions {
     parent?: ComponentInternalInstance | null;
 }
 
-export const ModalService = defineService({
+export /**
+ *
+ */
+const ModalService = defineService({
     name: 'ModalService',
     setup() {
         const modals = ref<Modal[]>([]);
@@ -46,12 +42,18 @@ export const ModalService = defineService({
         });
 
         function open<T extends ModalComponent>(
-            options: OpenModalOptions<T> & ModalServiceOpenOptions,
+            options: ModalServiceOpenOptions & OpenModalOptions<T>,
         ): Modal<T> {
             const open = ref(true);
             const result = createPromise<ModalResult<T>>();
 
+            /**
+             *
+             */
             type ModalResultState = {
+                /**
+                 *
+                 */
                 result: ModalResult<T>;
             };
 

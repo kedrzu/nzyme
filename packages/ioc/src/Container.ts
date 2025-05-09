@@ -127,8 +127,8 @@ export const Container = defineInjectable({
  * Creates a new dependency injection container with the specified options.
  * @param options - Optional configuration for the container
  * @returns A new container instance
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function createContainer(options?: ContainerOptions) {
     const instances = new Map<object, unknown>();
     const injectables = new Map<object, Injectable>();

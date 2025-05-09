@@ -3,8 +3,9 @@ import { identity } from '@nzyme/utils';
 import { defineSchema } from '../defineSchema.js';
 import type {
     Schema,
-    SchemaConfigBase,
-    SchemaConfigSimplify,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
     SchemaOptions,
     SchemaProto,
 } from '../Schema.js';
@@ -14,8 +15,10 @@ import type {
  * @template V - Value type
  * @template O - Schema options type
  */
-export type UnknownSchema<V = unknown, O extends SchemaConfigBase = SchemaConfigBase> = ForceName &
-    Schema<V, O>;
+export type UnknownSchema<
+    V = unknown,
+    O extends SchemaOptionsBase = SchemaOptionsBase,
+> = ForceName & Schema<V, O>;
 
 /**
  * Internal class used to force type names in TypeScript.
@@ -48,10 +51,10 @@ export type UnknownSchemaConstructor = {
         V = unknown,
         TNullable extends boolean = true,
         TOptional extends boolean = true,
-        TMeta extends object | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
     >(
         options?: SchemaOptions<V, TNullable, TOptional, TMeta>,
-    ): UnknownSchema<V, SchemaConfigSimplify<TNullable, TOptional, TMeta>>;
+    ): UnknownSchema<V, SchemaOptionsSimplify<TNullable, TOptional, TMeta>>;
 };
 
 /**

@@ -20,8 +20,8 @@ export interface FetchOptions<TParams, TResult> {
  *
  * @param fetch - The fetch configuration object
  * @returns The provided fetch configuration for use in HTTP requests
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function defineFetch<TParams = void, TResult = void>(fetch: FetchOptions<TParams, TResult>) {
     return fetch;
 }

@@ -10,7 +10,6 @@ import type { ServiceDependencies } from '../Service.js';
  * @returns The resolved dependencies.
  */
 export function resolveDeps(deps: ServiceDependencies, container: Container, caller?: Injectable) {
-    console.log('resolveDeps', { deps, container, caller });
     const resolved: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(deps)) {

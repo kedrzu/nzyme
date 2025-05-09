@@ -28,8 +28,8 @@ export type Module<TParams extends unknown[] = [], TResult = void> = {
  * @template TResult - Type of the result that the module returns
  * @param module - The function to convert into a module
  * @returns The same function, properly typed as a Module
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function defineModule<TParams extends unknown[], TResult>(module: Module<TParams, TResult>) {
     return module;
 }

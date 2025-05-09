@@ -3,8 +3,9 @@ import { identity } from '@nzyme/utils';
 import { defineSchema } from '../defineSchema.js';
 import type {
     Schema,
-    SchemaConfigBase,
-    SchemaConfigSimplify,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
     SchemaOptions,
     SchemaProto,
 } from '../Schema.js';
@@ -13,7 +14,7 @@ import type {
  * Schema type for number values.
  * @template O - Schema options type
  */
-export type NumberSchema<O extends SchemaConfigBase = SchemaConfigBase> = Schema<number, O>;
+export type NumberSchema<O extends SchemaOptionsBase = SchemaOptionsBase> = Schema<number, O>;
 
 /**
  * Prototype implementation for number schema.
@@ -35,10 +36,10 @@ export type NumberSchemaConstructor = {
     <
         TNullable extends boolean | undefined = undefined,
         TOptional extends boolean | undefined = undefined,
-        TMeta extends object | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
     >(
         options: SchemaOptions<number, TNullable, TOptional, TMeta>,
-    ): NumberSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta>>;
+    ): NumberSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta>>;
 };
 
 /**

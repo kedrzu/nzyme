@@ -1,13 +1,11 @@
-import type { IfAny, IfLiteral, PartialOnUndefined, SomeObject } from '@nzyme/types';
+import type { EmptyObject, IfAny, IfLiteral, PartialOnUndefined, SomeObject } from '@nzyme/types';
 
 import type { ContainerScope } from './ContainerScope.js';
-import { type Injectable, INJECTABLE_SYMBOL } from './Injectable.js';
+import { INJECTABLE_SYMBOL } from './Injectable.js';
+import type { Injectable } from './Injectable.js';
 import type { Interface } from './Interface.js';
-import {
-    getResolutionStrategy,
-    type ServiceResolutionStrategy,
-    type ServiceResolutionType,
-} from './serviceResolve.js';
+import { getResolutionStrategy } from './serviceResolve.js';
+import type { ServiceResolutionStrategy, ServiceResolutionType } from './serviceResolve.js';
 
 /**
  * Symbol used to identify service instances.
@@ -28,7 +26,7 @@ export type ResolveDependencies<D extends ServiceDependencies> = IfLiteral<
         readonly [K in keyof D]: D[K] extends Injectable<infer T> ? T : unknown;
     }>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    keyof D extends never ? void : any
+    D[keyof D] extends never ? void : any
 >;
 
 /**
@@ -117,22 +115,22 @@ export interface ServiceOptions<
     /**
      * Function that initializes the service with its dependencies.
      */
-    readonly setup: ServiceSetup<TExtend, TDeps>;
+    readonly setup: ServiceSetup<TDeps, TExtend>;
 }
 
 /**
  * Function that initializes a service with its resolved dependencies.
  *
- * @template T - The type that the service will resolve to
+ * @template TService - The type that the service will resolve to
  * @template TDeps - The type of the service's dependencies
  */
-export interface ServiceSetup<T = unknown, TDeps extends ServiceDependencies = SomeObject> {
+export interface ServiceSetup<TDeps extends ServiceDependencies, TService> {
     /**
      * Creates a new service instance with the provided dependencies.
      * @param deps - The resolved dependencies for the service
      * @returns The initialized service instance
      */
-    (deps: ResolveDependencies<TDeps>): T;
+    (deps: ResolveDependencies<TDeps>): TService;
 }
 
 /**
@@ -143,8 +141,8 @@ export interface ServiceSetup<T = unknown, TDeps extends ServiceDependencies = S
  * @template TDeps - The type of the service's dependencies
  * @param options - Configuration options for the service
  * @returns A new service instance
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function defineService<
     T,
     TExtend extends T = T,

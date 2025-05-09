@@ -6,8 +6,8 @@
  * @param array - The array to group
  * @param key - A function that extracts the grouping key from each element
  * @returns A Map where keys are the grouping keys and values are arrays of elements
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function groupByToMap<T, K extends number | string>(
     array: readonly T[],
     key: (item: T) => K,

@@ -3,8 +3,9 @@ import type {
     Infer,
     Schema,
     SchemaAny,
-    SchemaConfigBase,
-    SchemaConfigSimplify,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
     SchemaOptions,
     SchemaProto,
 } from '../Schema.js';
@@ -26,14 +27,15 @@ export type TupleOptions<T extends Schema[] = Schema[]> = {
  * @template T - Array of schema types
  * @template O - Schema options type
  */
-export type TupleSchema<O extends SchemaConfigBase<TupleOptions> = SchemaConfigBase<TupleOptions>> =
-    ForceName &
-        Schema<TupleValue<O['of']>, O> & {
-            /**
-             *
-             */
-            of: O['of'];
-        };
+export type TupleSchema<
+    O extends SchemaOptionsBase<TupleOptions> = SchemaOptionsBase<TupleOptions>,
+> = ForceName &
+    Schema<TupleValue<O['of']>, O> & {
+        /**
+         *
+         */
+        of: O['of'];
+    };
 
 /**
  * Value type for tuple schemas.
@@ -52,11 +54,11 @@ type TupleSchemaBase = {
         const S extends Schema[],
         TNullable extends boolean | undefined = undefined,
         TOptional extends boolean | undefined = undefined,
-        TMeta extends object | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
     >(
-        options: SchemaConfigBase &
+        options: SchemaOptionsBase &
             SchemaOptions<TupleValue<S>, TNullable, TOptional, TMeta, TupleOptions<S>>,
-    ): TupleSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta, TupleOptions<S>>>;
+    ): TupleSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, TupleOptions<S>>>;
 
     /** Creates a tuple schema with schemas for elements */
     <const S extends Schema[]>(of: S): TupleSchema<{ of: S }>;
@@ -79,10 +81,10 @@ declare class ForceName {}
  * const userTuple = tuple([string(), number(), boolean()]);
  * ```
  */
-export const tuple = defineSchema<TupleSchemaBase, SchemaConfigBase<TupleOptions>>({
+export const tuple = defineSchema<TupleSchemaBase, SchemaOptionsBase<TupleOptions>>({
     name: 'tuple',
     options: (optionsOrSchema: SchemaAny[] | TupleOptions) => {
-        const options: SchemaConfigBase<TupleOptions> = Array.isArray(optionsOrSchema)
+        const options: SchemaOptionsBase<TupleOptions> = Array.isArray(optionsOrSchema)
             ? { of: optionsOrSchema }
             : optionsOrSchema;
 

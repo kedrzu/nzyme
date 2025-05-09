@@ -20,16 +20,25 @@ export type ContextOf<T> =
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ContextParams<T> = T extends ContextDefinition<infer TParams, any> ? TParams : never;
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 export function defineContext<TContext>(
     name: string,
 ): ContextDefinition<[context: TContext], TContext>;
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 export function defineContext<TParams extends unknown[], TContext>(
     name: string,
     context: ContextConstructor<TParams, TContext>,
 ): ContextDefinition<TParams, TContext>;
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 export function defineContext<TParams extends unknown[], TContext>(
     name: string,
     context?: ContextConstructor<TParams, TContext>,

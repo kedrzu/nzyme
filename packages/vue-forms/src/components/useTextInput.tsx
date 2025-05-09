@@ -26,13 +26,19 @@ const TEXT_INPUT_PROPS = defineProps({
     readonly: Boolean,
 });
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 export const useTextInput = assignProps(setupTextInput, {
     props: TEXT_INPUT_PROPS,
     emits: TEXT_INPUT_FIELD.emits,
 });
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 function setupTextInput() {
     const props = useProps(TEXT_INPUT_PROPS);
     const field = TEXT_INPUT_FIELD.create({ props });

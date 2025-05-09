@@ -6,9 +6,10 @@ import type {
     Infer,
     Schema,
     SchemaAny,
-    SchemaConfigBase,
-    SchemaConfigSimplify,
+    SchemaMeta,
     SchemaOptions,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
     SchemaProto,
     SchemaVisitor,
 } from '../Schema.js';
@@ -19,9 +20,7 @@ import { serialize } from '../utils/serialize.js';
 /**
  *
  */
-export type ObjectSchemaProps = {
-    [key: string]: SchemaAny;
-};
+export type ObjectSchemaProps = Record<string, Schema>;
 
 /**
  *
@@ -48,7 +47,7 @@ export type ObjectOptions<TProps extends ObjectSchemaProps = ObjectSchemaProps> 
  *
  */
 export type ObjectSchema<
-    O extends SchemaConfigBase<ObjectOptions> = SchemaConfigBase<ObjectOptions>,
+    O extends SchemaOptionsBase<ObjectOptions> = SchemaOptionsBase<ObjectOptions>,
 > = ForceName &
     Schema<ObjectSchemaValue<O>, O> & {
         /**
@@ -77,21 +76,20 @@ export type ObjectSchemaValue<O extends ObjectOptions> = ObjectSchemaPropsValue<
  */
 export type ObjectSchemaConstructor = {
     <
-        P extends ObjectSchemaProps,
+        TProps extends ObjectSchemaProps,
         TNullable extends boolean | undefined = undefined,
         TOptional extends boolean | undefined = undefined,
-        TMeta extends object | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
     >(
         options: SchemaOptions<
-            ObjectSchemaPropsValue<P>,
+            ObjectSchemaPropsValue<TProps>,
             TNullable,
             TOptional,
             TMeta,
-            ObjectOptions<P>
+            ObjectOptions<TProps>
         >,
-    ): ObjectSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta, ObjectOptions<P>>>;
-
-    <P extends ObjectSchemaProps>(props: P): ObjectSchema<{ props: P }>;
+    ): ObjectSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, ObjectOptions<TProps>>>;
+    <TProps extends ObjectSchemaProps>(props: TProps): ObjectSchema<{ props: TProps }>;
 };
 
 declare class ForceName {}
@@ -99,7 +97,7 @@ declare class ForceName {}
 /**
  *
  */
-export const object = defineSchema<ObjectSchemaConstructor, SchemaConfigBase<ObjectOptions>>({
+export const object = defineSchema<ObjectSchemaConstructor, SchemaOptionsBase<ObjectOptions>>({
     name: 'object',
     options: (optionsOrProps: ObjectOptions | ObjectSchemaProps) => {
         const options =
@@ -107,7 +105,7 @@ export const object = defineSchema<ObjectSchemaConstructor, SchemaConfigBase<Obj
                 ? optionsOrProps
                 : { props: optionsOrProps };
 
-        return options as SchemaConfigBase<ObjectOptions>;
+        return options as SchemaOptionsBase<ObjectOptions>;
     },
     proto: options => {
         const props: [name: string, schema: Schema][] = [];

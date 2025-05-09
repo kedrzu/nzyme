@@ -3,9 +3,10 @@ import { identity } from '@nzyme/utils';
 import { defineSchema } from '../defineSchema.js';
 import type {
     Schema,
-    SchemaConfigBase,
-    SchemaConfigSimplify,
+    SchemaMeta,
     SchemaOptions,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
     SchemaProto,
 } from '../Schema.js';
 
@@ -13,7 +14,7 @@ import type {
  * Schema type for string values.
  * @template O - Schema options type
  */
-export type StringSchema<O extends SchemaConfigBase = SchemaConfigBase> = Schema<string, O>;
+export type StringSchema<O extends SchemaOptionsBase = SchemaOptionsBase> = Schema<string, O>;
 
 /**
  * Prototype implementation for string schema.
@@ -35,10 +36,10 @@ type StringSchemaBase = {
     <
         TNullable extends boolean | undefined = undefined,
         TOptional extends boolean | undefined = undefined,
-        TMeta extends object | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
     >(
         options: SchemaOptions<string, TNullable, TOptional, TMeta>,
-    ): StringSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta>>;
+    ): StringSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta>>;
 };
 
 /**

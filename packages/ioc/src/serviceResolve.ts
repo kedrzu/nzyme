@@ -33,8 +33,8 @@ export type ServiceResolutionType = 'lazy' | 'singleton' | 'transient';
  *
  * @param strategy - The function that implements the resolution strategy
  * @returns The same function, properly typed as a ServiceResolutionStrategy
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function defineResolutionStrategy(strategy: ServiceResolutionStrategy) {
     return strategy;
 }

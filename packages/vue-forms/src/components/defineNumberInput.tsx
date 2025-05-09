@@ -17,7 +17,10 @@ const NUMBER_PROPS = defineProps({
     readonly: Boolean,
 });
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 export const useNumberInput = assignProps(setupNumberInput, {
     props: NUMBER_PROPS,
     emits: NUMBER_FIELD.emits,

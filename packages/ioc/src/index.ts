@@ -7,6 +7,7 @@ export * from './helpers/constValue.js';
 export * from './helpers/envVariable.js';
 export * from './helpers/EnvVariables.js';
 export * from './helpers/fallback.js';
+export * from './helpers/injectLazy.js';
 export * from './Injectable.js';
 export * from './Interface.js';
 export * from './Module.js';

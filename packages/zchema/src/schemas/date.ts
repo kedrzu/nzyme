@@ -1,8 +1,9 @@
 import { defineSchema } from '../defineSchema.js';
 import type {
     Schema,
-    SchemaConfigBase,
-    SchemaConfigSimplify,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
     SchemaOptions,
     SchemaProto,
 } from '../Schema.js';
@@ -22,7 +23,7 @@ export type DateSchemaOptions = SchemaOptions<Date> & {
  * Schema type for Date objects.
  * @template O - Date schema options type
  */
-export type DateSchema<O extends SchemaConfigBase = SchemaConfigBase> = Schema<Date, O>;
+export type DateSchema<O extends SchemaOptionsBase = SchemaOptionsBase> = Schema<Date, O>;
 
 /**
  * Prototype implementation for date schema.
@@ -44,10 +45,10 @@ export type DateSchemaConstructor = {
     <
         TNullable extends boolean | undefined = undefined,
         TOptional extends boolean | undefined = undefined,
-        TMeta extends object | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
     >(
         options: SchemaOptions<Date, TNullable, TOptional, TMeta>,
-    ): DateSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta>>;
+    ): DateSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta>>;
 };
 
 /**

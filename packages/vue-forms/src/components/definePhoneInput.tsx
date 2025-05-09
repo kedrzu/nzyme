@@ -6,7 +6,10 @@ import { defineProp, defineProps, useProps } from '@nzyme/vue-utils';
 
 import { defineFormField } from './defineFormField.js';
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 export function definePhoneInput() {
     const fieldDef = defineFormField(String);
     const propsDef = defineProps({

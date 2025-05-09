@@ -1,8 +1,9 @@
 import { defineSchema } from '../defineSchema.js';
 import type {
     Schema,
-    SchemaConfigBase,
-    SchemaConfigSimplify,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
     SchemaOptions,
     SchemaProto,
 } from '../Schema.js';
@@ -11,7 +12,8 @@ import type {
  * Schema type for void values.
  * @template O - Schema options type
  */
-export type VoidSchema<O extends SchemaConfigBase = SchemaConfigBase> = ForceName & Schema<void, O>;
+export type VoidSchema<O extends SchemaOptionsBase = SchemaOptionsBase> = ForceName &
+    Schema<void, O>;
 
 /**
  * Internal class used to force type names in TypeScript.
@@ -43,10 +45,10 @@ export type VoidSchemaConstructor = {
     <
         TNullable extends boolean = false,
         TOptional extends boolean = true,
-        TMeta extends object | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
     >(
         options?: SchemaOptions<void, TNullable, TOptional, TMeta>,
-    ): VoidSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta>>;
+    ): VoidSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta>>;
 };
 
 /**

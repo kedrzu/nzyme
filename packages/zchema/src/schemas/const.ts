@@ -1,7 +1,13 @@
 import type { Primitive } from '@nzyme/types';
 
 import { defineSchema } from '../defineSchema.js';
-import type { Schema, SchemaConfigBase, SchemaConfigSimplify, SchemaOptions } from '../Schema.js';
+import type {
+    Schema,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
+    SchemaOptions,
+} from '../Schema.js';
 
 /**
  * Options for defining a constant schema.
@@ -33,7 +39,7 @@ export type ConstSchemaOpts<V extends Primitive = Primitive> = {
  * @template O - Schema options type
  */
 export type ConstSchema<
-    O extends SchemaConfigBase<ConstSchemaOpts> = SchemaConfigBase<ConstSchemaOpts>,
+    O extends SchemaOptionsBase<ConstSchemaOpts> = SchemaOptionsBase<ConstSchemaOpts>,
 > = ForceName &
     Schema<O extends { value: infer V extends Primitive } ? V : never, O> & {
         /**
@@ -53,10 +59,10 @@ type ConstSchemaBase = {
         V extends Primitive,
         TNullable extends boolean = false,
         TOptional extends boolean = false,
-        TMeta extends object | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
     >(
         options: ConstSchemaOptions<V, TNullable, TOptional, TMeta>,
-    ): ConstSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta, { value: V }>>;
+    ): ConstSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, { value: V }>>;
 };
 
 // Helper type to force type name preservation

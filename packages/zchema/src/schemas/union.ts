@@ -2,8 +2,9 @@ import { defineSchema } from '../defineSchema.js';
 import type {
     Infer,
     Schema,
-    SchemaConfigBase,
-    SchemaConfigSimplify,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
     SchemaOptions,
     SchemaProto,
 } from '../Schema.js';
@@ -22,13 +23,14 @@ export type UnionOptions<T extends Schema[] = Schema[]> = {
  * Schema type for union values.
  * @template O - Union schema options type
  */
-export type UnionSchema<O extends SchemaConfigBase<UnionOptions> = SchemaConfigBase<UnionOptions>> =
-    Schema<UnionValue<O>, O> & {
-        /**
-         *
-         */
-        of: O['of'];
-    };
+export type UnionSchema<
+    O extends SchemaOptionsBase<UnionOptions> = SchemaOptionsBase<UnionOptions>,
+> = Schema<UnionValue<O>, O> & {
+    /**
+     *
+     */
+    of: O['of'];
+};
 
 /**
  *
@@ -47,10 +49,10 @@ type UnionSchemaConstructor = {
         S extends Schema[],
         TNullable extends boolean | undefined = undefined,
         TOptional extends boolean | undefined = undefined,
-        TMeta extends object | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
     >(
         options: SchemaOptions<Infer<S[number]>, TNullable, TOptional, TMeta, UnionOptions<S>>,
-    ): UnionSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta, UnionOptions<S>>>;
+    ): UnionSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, UnionOptions<S>>>;
 };
 
 /**
@@ -67,11 +69,11 @@ type UnionSchemaConstructor = {
  * });
  * ```
  */
-export const union = defineSchema<UnionSchemaConstructor, SchemaConfigBase<UnionOptions>>({
+export const union = defineSchema<UnionSchemaConstructor, SchemaOptionsBase<UnionOptions>>({
     name: 'union',
     options: (optionsOrSchema: Schema[] | UnionOptions) => {
         // TODO: check if there are no multi objects or arrays
-        const options: SchemaConfigBase<UnionOptions> = Array.isArray(optionsOrSchema)
+        const options: SchemaOptionsBase<UnionOptions> = Array.isArray(optionsOrSchema)
             ? { of: optionsOrSchema }
             : optionsOrSchema;
 

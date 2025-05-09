@@ -5,8 +5,8 @@
  * @param array - The iterable to search
  * @param value - Function that extracts a numeric value from each element
  * @returns The element with the maximum value, or undefined if the iterable is empty
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function findMax<T>(array: Iterable<T>, value: (item: T) => number) {
     let max: T | undefined;
     for (const item of array) {

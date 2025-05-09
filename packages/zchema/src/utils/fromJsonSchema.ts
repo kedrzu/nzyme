@@ -3,7 +3,7 @@ import type { JSONSchema7 } from 'json-schema';
 import type { Primitive } from '@nzyme/types';
 import { assert, mapObject } from '@nzyme/utils';
 
-import type { Schema, SchemaConfigBase } from '../Schema.js';
+import type { Schema, SchemaOptionsBase } from '../Schema.js';
 import { array } from '../schemas/array.js';
 import { boolean } from '../schemas/boolean.js';
 import { enumSchema } from '../schemas/enum.js';
@@ -88,7 +88,7 @@ export function fromJsonSchema(schema: JSONSchema7, options: FromJsonSchemaOptio
 
 function schemaProps(schema: JSONSchema7, options: FromJsonSchemaOptions) {
     const meta: Record<string, unknown> = {};
-    const props: Record<string, unknown> & SchemaConfigBase = {
+    const props: Record<string, unknown> & SchemaOptionsBase = {
         nullable:
             schema.type === 'null' || (Array.isArray(schema.type) && schema.type.includes('null')),
         optional: options.optional,

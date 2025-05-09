@@ -10,7 +10,10 @@ export type MoneyInputOptions = {
     currency: Currency;
 };
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 export function defineMoneyInput() {
     const fieldDef = defineFormField(Number);
     const propsDef = defineProps({

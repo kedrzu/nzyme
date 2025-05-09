@@ -3,8 +3,9 @@ import type {
     Infer,
     Schema,
     SchemaAny,
-    SchemaConfigBase,
-    SchemaConfigSimplify,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
     SchemaOptions,
     SchemaProto,
 } from '../Schema.js';
@@ -26,7 +27,7 @@ export type RecordOptions<T extends SchemaAny = SchemaAny> = {
  * @template O - Record schema options type
  */
 export type RecordSchema<
-    O extends SchemaConfigBase<RecordOptions> = SchemaConfigBase<RecordOptions>,
+    O extends SchemaOptionsBase<RecordOptions> = SchemaOptionsBase<RecordOptions>,
 > = Schema<RecordValue<Infer<O['of']>>, O> & {
     /**
      *
@@ -52,7 +53,7 @@ type RecordSchemaConstructor = {
         S extends SchemaAny,
         TNullable extends boolean | undefined = undefined,
         TOptional extends boolean | undefined = undefined,
-        TMeta extends object | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
     >(
         options: SchemaOptions<
             RecordValue<Infer<S>>,
@@ -61,7 +62,7 @@ type RecordSchemaConstructor = {
             TMeta,
             RecordOptions<S>
         >,
-    ): RecordSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta, RecordOptions<S>>>;
+    ): RecordSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, RecordOptions<S>>>;
 };
 
 /**
@@ -78,10 +79,10 @@ type RecordSchemaConstructor = {
  * });
  * ```
  */
-export const record = defineSchema<RecordSchemaConstructor, SchemaConfigBase<RecordOptions>>({
+export const record = defineSchema<RecordSchemaConstructor, SchemaOptionsBase<RecordOptions>>({
     name: 'record',
     options: (optionsOrSchema: RecordOptions | SchemaAny) => {
-        const options: SchemaConfigBase<RecordOptions> = isSchema(optionsOrSchema)
+        const options: SchemaOptionsBase<RecordOptions> = isSchema(optionsOrSchema)
             ? { of: optionsOrSchema }
             : optionsOrSchema;
 

@@ -18,8 +18,8 @@ export type ContainerScope = {
  * The scope object is frozen to prevent modifications after creation.
  * @param name - Unique identifier for the scope
  * @returns A frozen scope object that cannot be modified
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function defineScope(name: string) {
     return Object.freeze({
         name,

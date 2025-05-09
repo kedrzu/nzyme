@@ -7,8 +7,8 @@ import type { Immutable } from '@nzyme/types';
  * @param array - The array to get the last element from
  * @returns The last element of the array
  * @throws Error if the array is empty
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function getLastItem<T>(array: Immutable<T[]>) {
     if (!array.length) {
         throw new Error('Collection is empty');

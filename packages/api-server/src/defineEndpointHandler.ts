@@ -23,25 +23,25 @@ export interface EndpointHandlerFunction<E extends EndpointAny = EndpointAny> {
 /**
  * Configuration options for defining an endpoint handler.
  *
- * @template E - The endpoint type
- * @template D - The service dependencies
+ * @template TEndpoint - The endpoint type
+ * @template TDeps - The service dependencies
  */
 export interface EndpointHandlerOptions<
-    E extends EndpointAny = EndpointAny,
-    D extends ServiceDependencies = ServiceDependencies,
+    TEndpoint extends EndpointAny = EndpointAny,
+    TDeps extends ServiceDependencies = ServiceDependencies,
 > {
     /**
      * The endpoint definition to handle.
      */
-    readonly endpoint: E;
+    readonly endpoint: TEndpoint;
     /**
      * Optional dependencies needed by the handler.
      */
-    readonly deps?: D;
+    readonly deps?: TDeps;
     /**
      * Setup function that configures how the handler processes requests.
      */
-    readonly setup: ServiceSetup<EndpointHandlerFunction<E>, D>;
+    readonly setup: ServiceSetup<TDeps, EndpointHandlerFunction<TEndpoint>>;
 }
 
 /**
@@ -51,8 +51,8 @@ export interface EndpointHandlerOptions<
  * @template D - The service dependencies
  * @param options - Configuration options for the endpoint handler
  * @returns A combined endpoint and service object
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__*/
 export function defineEndpointHandler<E extends EndpointAny, D extends ServiceDependencies>(
     options: EndpointHandlerOptions<E, D>,
 ): EndpointHandler<E> {

@@ -60,8 +60,8 @@ export type CommandResult<T extends Command<any>> =
  * @template TDeps - Dependencies required by the command
  * @param options - Configuration options for the command
  * @returns A new command instance
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function defineCommand<
     T extends CommandFunction,
     TExtend extends T = T,

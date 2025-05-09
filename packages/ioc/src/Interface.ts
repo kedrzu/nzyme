@@ -70,8 +70,8 @@ export interface InterfaceOptions<T = unknown> {
  * @template T - The type that the interface will resolve to
  * @param options - Configuration options for the interface
  * @returns A new interface instance
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function defineInterface<T>(options: InterfaceOptions<T> = {}): Interface<T> {
     return {
         [INJECTABLE_SYMBOL]: INTERFACE_SYMBOL,

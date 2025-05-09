@@ -29,13 +29,19 @@ const BUTTON_EMITS = {
     click: (event: Event) => !!event,
 };
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 export const useButton = assignProps(setupButton, {
     props: BUTTON_PROPS,
     emits: BUTTON_EMITS,
 });
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 function setupButton() {
     const props = useProps(BUTTON_PROPS);
     const emitAsync = useEmitAsync(BUTTON_EMITS);

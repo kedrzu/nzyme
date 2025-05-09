@@ -1,8 +1,9 @@
 import { defineSchema } from '../defineSchema.js';
 import type {
     Schema,
-    SchemaConfigBase,
-    SchemaConfigSimplify,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
     SchemaOptions,
     SchemaProto,
 } from '../Schema.js';
@@ -11,7 +12,7 @@ import type {
  * Schema type for bigint values.
  * @template O - Schema options type
  */
-export type BigintSchema<O extends SchemaConfigBase = SchemaConfigBase> = Schema<bigint, O>;
+export type BigintSchema<O extends SchemaOptionsBase = SchemaOptionsBase> = Schema<bigint, O>;
 
 /**
  * Prototype implementation for bigint schema.
@@ -33,10 +34,10 @@ export type BigintSchemaConstructor = {
     <
         TNullable extends boolean | undefined = undefined,
         TOptional extends boolean | undefined = undefined,
-        TMeta extends object | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
     >(
         options: SchemaOptions<bigint, TNullable, TOptional, TMeta>,
-    ): BigintSchema<SchemaConfigSimplify<TNullable, TOptional, TMeta>>;
+    ): BigintSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta>>;
 };
 
 /**

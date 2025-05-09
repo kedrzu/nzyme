@@ -35,20 +35,75 @@ export type InferOr<TSchema, T = undefined> = TSchema extends Schema ? Infer<TSc
  * @template V - The value type that the schema validates
  * @template O - The options type for the schema
  */
-export type Schema<V = unknown, O extends SchemaConfigBase = SchemaConfigBase> = {
+export type Schema<
+    V = unknown,
+    O extends SchemaOptionsBase = SchemaOptionsBase,
+> = SchemaProps<V> & {
+    /**
+     * Function that returns the default value for the schema when no value is provided.
+     * The function is called with the schema context as its parameter.
+     */
     default?: () => V;
-    meta: Flatten<O['meta'] & object>;
+    /**
+     * Metadata associated with the schema. This can be used to store additional
+     * information about the schema that doesn't affect its validation behavior.
+     */
+    meta: Flatten<O['meta'] & SchemaMeta>;
+    /**
+     * Indicates whether the schema accepts null values. When true, the schema
+     * will validate null as a valid value.
+     */
     nullable: IfAny<O, boolean, IfUnknown<O['nullable'], false, Exclude<O['nullable'], undefined>>>;
+    /**
+     * Indicates whether the schema accepts undefined values. When true, the schema
+     * will validate undefined as a valid value.
+     */
     optional: IfAny<O, boolean, IfUnknown<O['optional'], false, Exclude<O['optional'], undefined>>>;
+    /**
+     * The prototype methods for the schema, containing validation and transformation
+     * logic for the schema.
+     */
     proto: SchemaProto<V, unknown>;
+    /**
+     * The base type of the schema, used for type inference and factory function
+     * creation.
+     */
     type: SchemaBase;
+    /**
+     * Array of validators that will be applied to values when validating against
+     * this schema.
+     */
     validate: Validator[];
 };
 
+/**
+ * Base schema properties. Can be extended to add custom properties to schemas.
+ * @template V - The value type of the schema
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export interface SchemaProps<V> {}
+
+/**
+ * Base schema meta. Can be extended to add custom meta to schemas.
+ */
+export interface SchemaMeta {}
+
+/**
+ * Interface representing the context in which a schema operates.
+ * This context is passed to schema methods during validation and transformation.
+ */
 export interface SchemaContext {
+    /**
+     * Optional dependency injection container that can be used by schema methods
+     * to resolve dependencies.
+     */
     container?: Container;
 }
 
+/**
+ * Default schema context with no container or additional context.
+ * This is used as the base context when no specific context is provided.
+ */
 export const DEFAULT_SCHEMA_CONTEXT: SchemaContext = Object.freeze({});
 
 /**
@@ -102,30 +157,31 @@ export type SchemaOptions<
     V = unknown,
     TNullable extends boolean | undefined = boolean | undefined,
     TOptional extends boolean | undefined = boolean | undefined,
-    TMeta extends object | undefined = object | undefined,
+    TMeta extends SchemaMeta | undefined = SchemaMeta | undefined,
     TOptions extends object = {},
-> = TOptions & {
-    /**
-     * Default value or function for the schema
-     */
-    default?: SchemaDefault<V>;
-    /**
-     *
-     */
-    meta?: TMeta;
-    /**
-     * Whether the schema accepts null values
-     */
-    nullable?: TNullable;
-    /**
-     * Whether the schema accepts undefined values
-     */
-    optional?: TOptional;
-    /**
-     * Array of validators to apply to values
-     */
-    validate?: Validator<V> | Validator<V>[];
-};
+> = SchemaProps<V> &
+    TOptions & {
+        /**
+         * Default value or function for the schema
+         */
+        default?: SchemaDefault<V>;
+        /**
+         *
+         */
+        meta?: TMeta;
+        /**
+         * Whether the schema accepts null values
+         */
+        nullable?: TNullable;
+        /**
+         * Whether the schema accepts undefined values
+         */
+        optional?: TOptional;
+        /**
+         * Array of validators to apply to values
+         */
+        validate?: Validator<V> | Validator<V>[];
+    };
 
 /**
  * Type representing any schema options, regardless of value type.
@@ -136,7 +192,7 @@ export type SchemaOptionsAny = SchemaOptions<any>;
 /**
  *
  */
-export type SchemaConfigBase<TOptions extends object = {}> = Flatten<
+export type SchemaOptionsBase<TOptions extends object = {}> = Flatten<
     TOptions & {
         /**
          *
@@ -156,7 +212,7 @@ export type SchemaConfigBase<TOptions extends object = {}> = Flatten<
 /**
  * Base interface for schema options that define nullability and optionality.
  */
-export type SchemaConfigSimplify<
+export type SchemaOptionsSimplify<
     TNullable extends boolean | undefined,
     TOptional extends boolean | undefined,
     TMeta extends object | undefined,

@@ -18,13 +18,19 @@ const DATE_PROPS = defineProps({
     max: Date,
 });
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 export const useDateInput = assignProps(setupDateInput, {
     props: DATE_PROPS,
     emits: DATE_FIELD.emits,
 });
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 function setupDateInput() {
     const props = useProps(DATE_PROPS);
     const field = DATE_FIELD.create({ props });

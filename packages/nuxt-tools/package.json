@@ -31,9 +31,9 @@
         "@types/mime-types": "^2.1.4",
         "fs-extra": "^11.3.0",
         "mime-types": "^3.0.1",
-        "nuxt": "3.17.1",
-        "rollup": "^4.40.1",
-        "vite": "^6.3.4"
+        "nuxt": "3.17.2",
+        "rollup": "^4.40.2",
+        "vite": "^6.3.5"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",

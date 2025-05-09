@@ -28,8 +28,8 @@ interface FetchClientInput {
  *
  * @param client - The raw fetch client implementation
  * @returns A typed fetch client for executing endpoints
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function defineFetchClient(client: FetchClientInput) {
     return client as FetchClient;
 }

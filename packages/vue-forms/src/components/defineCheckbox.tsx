@@ -1,11 +1,15 @@
-import { type FunctionalComponent, h } from 'vue';
+import { h } from 'vue';
+import type { FunctionalComponent } from 'vue';
 
 import { defineProps, useProps } from '@nzyme/vue-utils';
 
 import css from './components.module.scss';
 import { defineFormField } from './defineFormField.js';
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 export function defineCheckbox() {
     const fieldDef = defineFormField(Boolean);
     const propsDef = defineProps({

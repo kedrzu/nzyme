@@ -22,13 +22,19 @@ const RADIO_EMITS = {
     selected: undefined as unknown as (value: Primitive) => boolean,
 };
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 export const useRadio = assignProps(setupRadio, {
     props: RADIO_PROPS,
     emits: RADIO_EMITS,
 });
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 function setupRadio<T extends null | Primitive = null | Primitive>() {
     const props = useProps(RADIO_PROPS);
     const emit = useEmit(RADIO_EMITS);

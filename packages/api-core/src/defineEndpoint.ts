@@ -81,8 +81,8 @@ export type EndpointPath = `/${string}`;
  * @template TOutput - The output schema type
  * @param endpoint - The endpoint configuration
  * @returns The typed endpoint definition
+ * @__NO_SIDE_EFFECTS__
  */
-// #__NO_SIDE_EFFECTS__
 export function defineEndpoint<
     TInput extends ObjectOptions = undefined,
     TOutput extends z.Schema = z.VoidSchema,

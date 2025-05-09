@@ -5,7 +5,10 @@ import { defineProps, useProps } from '@nzyme/vue-utils';
 
 import { defineFormField } from './defineFormField.js';
 
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 export function defineSelectInput() {
     const fieldDef = defineFormField(String);
     const propsDef = defineProps({

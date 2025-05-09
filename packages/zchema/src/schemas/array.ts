@@ -5,8 +5,9 @@ import type {
     Infer,
     Schema,
     SchemaAny,
-    SchemaConfigBase,
-    SchemaConfigSimplify,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
     SchemaOptions,
     SchemaProto,
 } from '../Schema.js';
@@ -27,13 +28,14 @@ export type ArrayOptions<T extends SchemaAny = SchemaAny> = {
  * Schema type for arrays.
  * @template O - Array schema options type
  */
-export type ArraySchema<O extends SchemaConfigBase<ArrayOptions> = SchemaConfigBase<ArrayOptions>> =
-    Schema<Infer<O['of']>[], O> & {
-        /**
-         *
-         */
-        of: O['of'];
-    };
+export type ArraySchema<
+    O extends SchemaOptionsBase<ArrayOptions> = SchemaOptionsBase<ArrayOptions>,
+> = Schema<Infer<O['of']>[], O> & {
+    /**
+     *
+     */
+    of: O['of'];
+};
 
 /**
  * Base type for array schema definition.
@@ -47,10 +49,10 @@ type ArraySchemaConstructor = {
         S extends SchemaAny,
         TNullable extends boolean | undefined = undefined,
         TOptional extends boolean | undefined = undefined,
-        TMeta extends object | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
     >(
         options: SchemaOptions<Infer<S>[], TNullable, TOptional, TMeta, ArrayOptions<S>>,
-    ): ArraySchema<SchemaConfigSimplify<TNullable, TOptional, TMeta, ArrayOptions<S>>>;
+    ): ArraySchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, ArrayOptions<S>>>;
 };
 
 /**
@@ -66,10 +68,10 @@ type ArraySchemaConstructor = {
  * });
  * ```
  */
-export const array = defineSchema<ArraySchemaConstructor, SchemaConfigBase<ArrayOptions>>({
+export const array = defineSchema<ArraySchemaConstructor, SchemaOptionsBase<ArrayOptions>>({
     name: 'array',
     options: (optionsOrSchema: ArrayOptions | SchemaAny) => {
-        const options: SchemaConfigBase<ArrayOptions> = isSchema(optionsOrSchema)
+        const options: SchemaOptionsBase<ArrayOptions> = isSchema(optionsOrSchema)
             ? { of: optionsOrSchema }
             : optionsOrSchema;
 

@@ -2,8 +2,9 @@ import { defineSchema } from '../defineSchema.js';
 import type {
     Infer,
     Schema,
-    SchemaConfigBase,
-    SchemaConfigSimplify,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
     SchemaOptions,
     SchemaProto,
 } from '../Schema.js';
@@ -24,7 +25,7 @@ export type LazyOptions<T extends Schema = Schema> = {
  * Schema type for lazy-loaded schema values.
  * @template O - Schema options type
  */
-export type LazySchema<O extends SchemaConfigBase<LazyOptions> = SchemaConfigBase<LazyOptions>> =
+export type LazySchema<O extends SchemaOptionsBase<LazyOptions> = SchemaOptionsBase<LazyOptions>> =
     ForceName &
         Schema<LazyValue<O>, O> & {
             /**
@@ -37,15 +38,15 @@ export type LazySchema<O extends SchemaConfigBase<LazyOptions> = SchemaConfigBas
  * Helper type to extract the underlying value type from a lazy schema.
  * @template O - Lazy schema options
  */
-export type LazyValue<O extends SchemaConfigBase<LazyOptions>> =
-    O extends SchemaConfigBase<LazyOptions<infer T extends Schema>> ? Infer<T> : never;
+export type LazyValue<O extends SchemaOptionsBase<LazyOptions>> =
+    O extends SchemaOptionsBase<LazyOptions<infer T extends Schema>> ? Infer<T> : never;
 
 /**
  * Type representing the resolved lazy schema.
  * @template S - Lazy schema type
  */
 export type LazySchemaResolved<S extends LazySchema> =
-    S extends LazySchema<infer O extends SchemaConfigBase<LazyOptions>>
+    S extends LazySchema<infer O extends SchemaOptionsBase<LazyOptions>>
         ? Extend<LazySchemaInner<S>, Omit<O, 'proto' | 'type'>>
         : never;
 
@@ -54,7 +55,7 @@ export type LazySchemaResolved<S extends LazySchema> =
  * @template S - Lazy schema type
  */
 export type LazySchemaInner<S extends LazySchema> =
-    S extends LazySchema<infer O extends SchemaConfigBase<LazyOptions>>
+    S extends LazySchema<infer O extends SchemaOptionsBase<LazyOptions>>
         ? ReturnType<O['of']>
         : never;
 
@@ -63,17 +64,17 @@ export type LazySchemaInner<S extends LazySchema> =
  */
 type LazySchemaConstructor = {
     /** Creates a lazy schema with a schema factory function */
-    <S extends Schema>(of: () => S): LazySchema<SchemaConfigBase<LazyOptions<S>>>;
+    <S extends Schema>(of: () => S): LazySchema<SchemaOptionsBase<LazyOptions<S>>>;
 
     /** Creates a lazy schema with custom options */
     <
         S extends Schema,
         TNullable extends boolean | undefined = undefined,
         TOptional extends boolean | undefined = undefined,
-        TMeta extends object | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
     >(
         options: SchemaOptions<Infer<S>, TNullable, TOptional, TMeta, LazyOptions<S>>,
-    ): LazySchema<SchemaConfigSimplify<TNullable, TOptional, TMeta, LazyOptions<S>>>;
+    ): LazySchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, LazyOptions<S>>>;
 };
 
 /**
@@ -115,9 +116,9 @@ const lazyProto: SchemaProto<unknown> = {
  * });
  * ```
  */
-export const lazy = defineSchema<LazySchemaConstructor, SchemaConfigBase<LazyOptions>>({
+export const lazy = defineSchema<LazySchemaConstructor, SchemaOptionsBase<LazyOptions>>({
     name: 'lazy',
-    options: (optionsOrSchema: (() => Schema) | LazyOptions): SchemaConfigBase<LazyOptions> => {
+    options: (optionsOrSchema: (() => Schema) | LazyOptions): SchemaOptionsBase<LazyOptions> => {
         if (typeof optionsOrSchema === 'function') {
             return {
                 of: lazyWrapper(optionsOrSchema),

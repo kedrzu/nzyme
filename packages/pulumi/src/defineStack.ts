@@ -1,11 +1,12 @@
 import * as pulumi from '@pulumi/pulumi';
 import type { automation } from '@pulumi/pulumi';
-import type { OutputMap } from '@pulumi/pulumi/automation/stack.js';
 
 import type { ResolveDeps, Service, ServiceDependencies } from '@nzyme/ioc';
 import { defineService } from '@nzyme/ioc';
 import type { EmptyObject, SomeObject } from '@nzyme/types';
 import { toPascalCase } from '@nzyme/utils';
+
+import { unwrapStackOutput } from './utils/unwrapStackOutput.js';
 
 /**
  * Output of a Pulumi stack.
@@ -25,13 +26,6 @@ export type StackOutputValue<T = unknown> = {
      * Value of the output.
      */
     value: T;
-};
-
-/**
- * Result of a stack output.
- */
-export type StackOutputResult<TOutput extends StackOutput> = {
-    [K in keyof TOutput]: StackOutputValue<TOutput[K]>;
 };
 
 /**
@@ -80,12 +74,12 @@ export interface StackOptions<
     /**
      * Program to run before the stack is destroyed.
      */
-    beforeDestroy?: (output: pulumi.Unwrap<TOutput>, deps: ResolveDeps<TDeps>) => Promise<void> | void;
+    beforeDestroy?: (output: Partial<pulumi.Unwrap<TOutput>>, deps: ResolveDeps<TDeps>) => Promise<void> | void;
 
     /**
      * Program to run after the stack is destroyed.
      */
-    afterDestroy?: (output: pulumi.Unwrap<TOutput>, deps: ResolveDeps<TDeps>) => Promise<void> | void;
+    afterDestroy?: (output: Partial<pulumi.Unwrap<TOutput>>, deps: ResolveDeps<TDeps>) => Promise<void> | void;
 
     /**
      * Program to run when an event occurs.
@@ -145,17 +139,17 @@ export interface Stack<TOutput extends StackOutput = StackOutput> {
     /**
      * Function to run after the stack is deployed.
      */
-    afterDeploy: (output: OutputMap) => Promise<void>;
+    afterDeploy: (output: Record<string, unknown>) => Promise<void>;
 
     /**
      * Function to run before the stack is destroyed.
      */
-    beforeDestroy: (output: OutputMap) => Promise<void>;
+    beforeDestroy: (output: Record<string, unknown>) => Promise<void>;
 
     /**
      * Function to run after the stack is destroyed.
      */
-    afterDestroy: (output: OutputMap) => Promise<void>;
+    afterDestroy: (output: Record<string, unknown>) => Promise<void>;
 }
 
 /**
@@ -200,7 +194,7 @@ export function defineStack<TDeps extends ServiceDependencies = SomeObject, TOut
                     return output || {};
                 },
                 outputs: async (stack: automation.Stack) => {
-                    return unwrapOutput(await stack.outputs()) as pulumi.Unwrap<TOutput>;
+                    return unwrapStackOutput<TOutput>(await stack.outputs());
                 },
                 build: async (ctx: StackBuildContext) => {
                     if (options.build) {
@@ -211,13 +205,13 @@ export function defineStack<TDeps extends ServiceDependencies = SomeObject, TOut
                     await options.beforeDeploy?.(deps);
                 },
                 afterDeploy: async output => {
-                    await options.afterDeploy?.(unwrapOutput(output) as pulumi.Unwrap<TOutput>, deps);
+                    await options.afterDeploy?.(output as pulumi.Unwrap<TOutput>, deps);
                 },
                 beforeDestroy: async output => {
-                    await options.beforeDestroy?.(unwrapOutput(output) as pulumi.Unwrap<TOutput>, deps);
+                    await options.beforeDestroy?.(output as Partial<pulumi.Unwrap<TOutput>>, deps);
                 },
                 afterDestroy: async output => {
-                    await options.afterDestroy?.(unwrapOutput(output) as pulumi.Unwrap<TOutput>, deps);
+                    await options.afterDestroy?.(output as Partial<pulumi.Unwrap<TOutput>>, deps);
                 },
             };
         },
@@ -230,14 +224,4 @@ function createStackReference<TOutput extends StackOutput>(path: string): StackR
     return {
         getOutput: <K extends keyof TOutput>(key: K & string): TOutput[K] => ref.getOutput(key) as TOutput[K],
     };
-}
-
-function unwrapOutput<TOutput extends StackOutput>(output: StackOutputResult<TOutput>) {
-    const result: Record<string, unknown> = {};
-
-    for (const [key, value] of Object.entries(output)) {
-        result[key] = (value as StackOutputValue).value;
-    }
-
-    return result as TOutput;
 }

@@ -2,13 +2,13 @@ import path from 'path';
 
 import { automation } from '@pulumi/pulumi';
 
-import type { Stack } from './defineStack.js';
+import type { Stack, StackOutput } from './defineStack.js';
 import type { PulumiConfig } from './PulumiConfig.js';
 
 /**
  * Creates or selects a stack.
  */
-export async function createOrSelectStack(stack: Stack, config: PulumiConfig) {
+export async function createOrSelectStack<TOutput extends StackOutput>(stack: Stack<TOutput>, config: PulumiConfig) {
     const cwd = config.cwd ?? process.cwd();
     const envVars = { ...process.env } as Record<string, string>;
     const stackConfig: Record<string, automation.StackSettingsConfigValue> = {};
@@ -38,6 +38,10 @@ export async function createOrSelectStack(stack: Stack, config: PulumiConfig) {
 
     if (config.backendUrl) {
         envVars.PULUMI_BACKEND_URL = config.backendUrl;
+    }
+
+    if (config.secretsPassphrase) {
+        envVars.PULUMI_PASSPHRASE = config.secretsPassphrase;
     }
 
     return await automation.LocalWorkspace.createOrSelectStack(

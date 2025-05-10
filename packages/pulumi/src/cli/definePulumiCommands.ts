@@ -1,3 +1,5 @@
+import chalk from 'chalk';
+
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
 import type { Container } from '@nzyme/ioc';
@@ -6,6 +8,7 @@ import { cancelStack } from '../cancelStack.js';
 import type { StackDefinition } from '../defineStack.js';
 import { deployStack } from '../deployStack.js';
 import { destroyStack } from '../destroyStack.js';
+import { getStackOutputs } from '../getStackOutputs.js';
 import { previewStack } from '../previewStack.js';
 import type { PulumiConfig } from '../PulumiConfig.js';
 import { refreshStack } from '../refreshStack.js';
@@ -41,6 +44,7 @@ export function definePulumiCommands(options: PulumiCommandsOptions): CommandCla
         definePreviewCommand(options),
         defineRefreshCommand(options),
         defineDestroyCommand(options),
+        defineOutputCommand(options),
     ];
 }
 
@@ -48,7 +52,7 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
     return class DeployCommand extends Command {
         static override paths = [['deploy']];
         static override usage = Command.Usage({
-            category: 'Deploy',
+            category: 'Pulumi',
             description: 'Deploy the application',
             details: 'Deploy the application to the selected stacks',
             examples: [
@@ -61,7 +65,7 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
         stacks = Option.Rest();
 
         refresh = Option.Boolean('--refresh,-r', {
-            description: 'Refresh the stack state',
+            description: 'Refresh the stack state before deploy',
         });
 
         skipBuild = Option.Boolean('--skip-build,-s', {
@@ -89,7 +93,7 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
     return class CancelCommand extends Command {
         static override paths = [['cancel']];
         static override usage = Command.Usage({
-            category: 'Cancel',
+            category: 'Pulumi',
             description: 'Cancel the application',
             details: 'Cancel the application from the selected stacks',
             examples: [
@@ -120,7 +124,7 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
     return class PreviewCommand extends Command {
         static override paths = [['preview']];
         static override usage = Command.Usage({
-            category: 'Preview',
+            category: 'Pulumi',
             description: 'Preview the application',
             details: 'Preview the application from the selected stacks',
             examples: [
@@ -133,7 +137,7 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
         stacks = Option.Rest();
 
         refresh = Option.Boolean('--refresh,-r', {
-            description: 'Refresh the stack state',
+            description: 'Refresh the stack state before previewing',
         });
 
         skipBuild = Option.Boolean('--skip-build,-s', {
@@ -161,7 +165,7 @@ function defineRefreshCommand(options: PulumiCommandsOptions) {
     return class RefreshCommand extends Command {
         static override paths = [['refresh']];
         static override usage = Command.Usage({
-            category: 'Refresh',
+            category: 'Pulumi',
             description: 'Refresh the application',
             details: 'Refresh the application from the selected stacks',
             examples: [
@@ -192,14 +196,22 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
     return class DestroyCommand extends Command {
         static override paths = [['destroy']];
         static override usage = Command.Usage({
-            category: 'Destroy',
+            category: 'Pulumi',
             description: 'Destroy the application',
-            details: 'Destroy the application from the selected stacks',
+            details: 'Destroy the selected stacks',
             examples: [
                 ['Destroy all stacks', 'destroy'],
                 ['Destroy single stack', 'destroy core'],
                 ['Destroy multiple stacks', 'destroy core api'],
             ],
+        });
+
+        refresh = Option.Boolean('--refresh,-r', {
+            description: 'Refresh the stack state before destroying',
+        });
+
+        remove = Option.Boolean('--remove,-R', {
+            description: 'Remove the stack and its configuration after destroying',
         });
 
         stacks = Option.Rest();
@@ -217,7 +229,37 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
             for (const stack of [...stacks].reverse()) {
                 await destroyStack(stack, {
                     config: options.config,
+                    refresh: this.refresh,
+                    remove: this.remove,
                 });
+            }
+        }
+    };
+}
+
+function defineOutputCommand(options: PulumiCommandsOptions) {
+    return class OutputCommand extends Command {
+        static override paths = [['output']];
+        static override usage = Command.Usage({
+            category: 'Pulumi',
+            description: 'Print the output of the selected stacks',
+        });
+
+        stacks = Option.Rest();
+
+        override async run() {
+            const stacks = resolveStacks(this.container, options, this.stacks);
+            if (stacks.length === 0) {
+                throw new UsageError('No stacks to output.');
+            }
+
+            for (const stack of stacks) {
+                const outputs = await getStackOutputs(stack, {
+                    config: options.config,
+                });
+
+                console.log(`Outputs for stack ${chalk.green(stack.name)}:`);
+                console.log(chalk.gray(JSON.stringify(outputs, null, 2)));
             }
         }
     };

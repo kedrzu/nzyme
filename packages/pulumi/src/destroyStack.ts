@@ -11,6 +11,16 @@ export interface DestroyStackOptions {
      * The Pulumi config to use for the stack.
      */
     config: PulumiConfig;
+
+    /**
+     * Remove the stack and its configuration after all resources in the stack have been deleted.
+     */
+    remove?: boolean;
+
+    /**
+     * Refresh the state of the stack's resources against the cloud provider before running destroy.
+     */
+    refresh?: boolean;
 }
 
 /**
@@ -26,6 +36,8 @@ export async function destroyStack<TOut extends StackOutput>(stack: Stack<TOut>,
 
     await stackInstance.destroy({
         onOutput: console.log,
+        remove: options.remove,
+        refresh: options.refresh,
     });
 
     await stack.afterDestroy(stackOutputs);

@@ -26,6 +26,11 @@ export interface PulumiConfig {
     secretsProvider?: string;
 
     /**
+     * The passphrase to use for the stack.
+     */
+    secretsPassphrase?: string;
+
+    /**
      * The naming pattern to use for the stack.
      */
     namingPattern?: string;

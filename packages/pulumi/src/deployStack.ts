@@ -2,6 +2,7 @@ import { assertStackEnabled } from './assertStackEnabled.js';
 import { createOrSelectStack } from './createOrSelectStack.js';
 import type { Stack, StackOutput } from './defineStack.js';
 import type { PulumiConfig } from './PulumiConfig.js';
+import { unwrapStackOutput } from './utils/unwrapStackOutput.js';
 
 /**
  * Options for the {@link deployStack} function.
@@ -44,5 +45,7 @@ export async function deployStack<TOut extends StackOutput>(stack: Stack<TOut>, 
         refresh: options.refresh,
     });
 
-    await stack.afterDeploy(output.outputs);
+    const unwrapped = unwrapStackOutput<TOut>(output.outputs);
+
+    await stack.afterDeploy(unwrapped);
 }

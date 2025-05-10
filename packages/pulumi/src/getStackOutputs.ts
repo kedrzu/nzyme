@@ -17,5 +17,5 @@ export interface StackOutputsOptions {
  */
 export async function getStackOutputs(stack: Stack, options: StackOutputsOptions) {
     const stackInstance = await createOrSelectStack(stack, options.config);
-    return stackInstance.outputs();
+    return await stack.outputs(stackInstance);
 }

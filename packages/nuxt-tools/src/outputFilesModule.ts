@@ -5,15 +5,18 @@ import { lookup as mimeLookup } from 'mime-types';
 import { defineNuxtModule } from 'nuxt/kit';
 import type { Connect } from 'vite';
 
-type FileContent = string | (() => string | Promise<string>);
+type FileContent = (() => string | Promise<string>) | string;
 
 type PublicFilesModuleOptions = {
     [fileName: string]: FileContent;
 };
 
-export function publicFilesModule(options: PublicFilesModuleOptions) {
+/**
+ * This module is used to output files to the output directory.
+ */
+export function outputFilesModule(options: PublicFilesModuleOptions) {
     return defineNuxtModule({
-        setup(opts, nuxt) {
+        setup(_opts, nuxt) {
             const rootDir = nuxt.options.rootDir;
             const publicDir = path.join(rootDir, '.output/public');
 
@@ -40,7 +43,7 @@ export function publicFilesModule(options: PublicFilesModuleOptions) {
 function createMiddleware(fileName: string, fileContent: FileContent): Connect.NextHandleFunction {
     const mimeType = mimeLookup(fileName) || 'application/octet-stream';
 
-    return (req, res) => {
+    return (_req, res) => {
         void resolveFileContent(fileContent).then(content => {
             res.writeHead(200, {
                 'Content-Length': content.length,

@@ -1,2 +1,2 @@
-export * from './publicFilesModule.js';
+export * from './outputFilesModule.js';
 export * from './simplifyAliasesModule.js';

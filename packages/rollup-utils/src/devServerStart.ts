@@ -1,14 +1,14 @@
 import chalk from 'chalk';
 import connect from 'connect';
 import { consola } from 'consola';
-import type { RollupWatchOptions } from 'rollup';
 
+import type { DevServerMiddlewareOptions } from './devServerMiddleware.js';
 import { devServerMiddleware } from './devServerMiddleware.js';
 
 /**
  * Options for the dev server.
  */
-export type DevServerOptions = RollupWatchOptions & {
+export type DevServerOptions = DevServerMiddlewareOptions & {
     /**
      * The port to listen on.
      */

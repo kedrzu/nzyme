@@ -23,7 +23,7 @@ const TEXT_AREA_PROPS = defineProps({
 
 /**
  *
- * @__NO_SIDE_EFFECTS__
+ * @__PURE__
  */
 export const useTextArea = assignProps(setupTextArea, {
     props: TEXT_AREA_PROPS,

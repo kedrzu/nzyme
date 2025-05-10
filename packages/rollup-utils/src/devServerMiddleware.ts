@@ -14,6 +14,16 @@ import { createPromise, formatDurationMs, formatElapsedMs } from '@nzyme/utils';
 import { onRollupWarning } from './onRollupWarning.js';
 
 /**
+ * Options for the development server middleware.
+ */
+export interface DevServerMiddlewareOptions extends RollupWatchOptions {
+    /**
+     * Environment variables to set in the worker thread.
+     */
+    env?: Record<string, string>;
+}
+
+/**
  * Creates a middleware function that handles development server requests and hot reloading.
  * This middleware manages the Rollup watcher and worker thread for the development server.
  *
@@ -21,7 +31,7 @@ import { onRollupWarning } from './onRollupWarning.js';
  * @returns A middleware function that handles development server requests
  * @throws {Error} If the input or output configuration is invalid
  */
-export function devServerMiddleware(options: RollupWatchOptions): NextHandleFunction {
+export function devServerMiddleware(options: DevServerMiddlewareOptions): NextHandleFunction {
     const outputFile = getOutputFile(options);
 
     startRollup();

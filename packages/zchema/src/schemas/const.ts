@@ -1,13 +1,7 @@
 import type { Primitive } from '@nzyme/types';
 
 import { defineSchema } from '../defineSchema.js';
-import type {
-    Schema,
-    SchemaOptionsBase,
-    SchemaOptionsSimplify,
-    SchemaMeta,
-    SchemaOptions,
-} from '../Schema.js';
+import type { Schema, SchemaMeta, SchemaOptions, SchemaOptionsBase, SchemaOptionsSimplify } from '../Schema.js';
 
 /**
  * Options for defining a constant schema.
@@ -38,9 +32,7 @@ export type ConstSchemaOpts<V extends Primitive = Primitive> = {
  * @template V - The primitive value type
  * @template O - Schema options type
  */
-export type ConstSchema<
-    O extends SchemaOptionsBase<ConstSchemaOpts> = SchemaOptionsBase<ConstSchemaOpts>,
-> = ForceName &
+export type ConstSchema<O extends SchemaOptionsBase<ConstSchemaOpts> = SchemaOptionsBase<ConstSchemaOpts>> = ForceName &
     Schema<O extends { value: infer V extends Primitive } ? V : never, O> & {
         /**
          * The constant value that this schema will match

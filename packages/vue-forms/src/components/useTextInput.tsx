@@ -28,7 +28,7 @@ const TEXT_INPUT_PROPS = defineProps({
 
 /**
  *
- * @__NO_SIDE_EFFECTS__
+ * @__PURE__
  */
 export const useTextInput = assignProps(setupTextInput, {
     props: TEXT_INPUT_PROPS,

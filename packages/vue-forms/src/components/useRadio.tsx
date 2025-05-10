@@ -1,4 +1,5 @@
-import { computed, type FunctionalComponent, h, reactive } from 'vue';
+import { computed, h, reactive } from 'vue';
+import type { FunctionalComponent } from 'vue';
 
 import type { Primitive } from '@nzyme/types';
 import { assignProps } from '@nzyme/utils';
@@ -24,7 +25,7 @@ const RADIO_EMITS = {
 
 /**
  *
- * @__NO_SIDE_EFFECTS__
+ * @__PURE__
  */
 export const useRadio = assignProps(setupRadio, {
     props: RADIO_PROPS,
@@ -35,7 +36,7 @@ export const useRadio = assignProps(setupRadio, {
  *
  * @__NO_SIDE_EFFECTS__
  */
-function setupRadio<T extends null | Primitive = null | Primitive>() {
+function setupRadio<T extends Primitive | null = Primitive | null>() {
     const props = useProps(RADIO_PROPS);
     const emit = useEmit(RADIO_EMITS);
     const field = RADIO_FIELD.create({ props });

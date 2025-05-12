@@ -22,6 +22,11 @@ export type EnvVariablesOptions = {
      * When provided, it will load files with the `.env.<env>` format.
      */
     env?: string | string[];
+    /**
+     * The output object to assign the environment variables to.
+     * @default process.env
+     */
+    output?: Record<string, string>;
 };
 
 /**
@@ -30,25 +35,18 @@ export type EnvVariablesOptions = {
 export function loadEnvVariables(options: EnvVariablesOptions = {}) {
     const cwd = options.cwd ?? process.cwd();
     const root = getProjectRoot({ cwd });
-
-    const envVariables: Record<string, string> = {};
+    const output: Record<string, string> = options.output ?? (process.env as Record<string, string>);
 
     // Load environment variables from the project root.
-    loadEnvFilesInDir(root, options.env, envVariables);
+    loadEnvFilesInDir(root, options.env, output);
 
     if (cwd !== root) {
         // Load environment variables from the current working directory.
-        loadEnvFilesInDir(cwd, options.env, envVariables);
+        loadEnvFilesInDir(cwd, options.env, output);
     }
-
-    return envVariables;
 }
 
-function loadEnvFilesInDir(
-    dir: string,
-    env: string | string[] | undefined,
-    output: Record<string, string>,
-) {
+function loadEnvFilesInDir(dir: string, env: string | string[] | undefined, output: Record<string, string>) {
     const envFile = path.join(dir, '.env');
 
     loadEnvFile(envFile, output);
@@ -65,9 +63,8 @@ function loadEnvFile(file: string, output: Record<string, string>) {
         return;
     }
 
-    const result = configDotenv({ path: file, override: true });
+    const result = configDotenv({ path: file, override: true, processEnv: output });
     if (result.parsed) {
         consola.info(`Loaded environment variables from ${chalk.green(file)}`);
-        Object.assign(output, result.parsed);
     }
 }

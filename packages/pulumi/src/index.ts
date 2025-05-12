@@ -12,3 +12,4 @@ export * from './login.js';
 export * from './previewStack.js';
 export * from './PulumiConfig.js';
 export * from './refreshStack.js';
+export * from './types.js';

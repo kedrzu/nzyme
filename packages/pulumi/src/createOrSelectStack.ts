@@ -55,7 +55,10 @@ export async function createOrSelectStack<TOutput extends StackOutput>(stack: St
             workDir: cwd,
             pulumiHome: path.join(cwd, '.pulumi'),
             stackSettings: {
-                [stack.name]: { config: stackConfig },
+                [stack.name]: {
+                    secretsProvider: config.secretsProvider,
+                    config: stackConfig,
+                },
             },
             secretsProvider: config.secretsProvider,
             projectSettings: {

@@ -41,6 +41,7 @@
         "@nzyme/ioc": "^0.14.0",
         "@nzyme/logging": "^0.14.0",
         "@nzyme/project-utils": "^0.14.0",
+        "@nzyme/rollup-utils": "0.14.0",
         "@nzyme/types": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
         "@pulumi/aws": "^6.80.0",

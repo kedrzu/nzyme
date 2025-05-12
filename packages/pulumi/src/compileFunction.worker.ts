@@ -15,6 +15,7 @@ import sourcemaps from 'rollup-plugin-sourcemaps';
 import { terser } from 'rollup-plugin-terser';
 
 import { unwrapCjsDefaultImport } from '@nzyme/esm';
+import { normalizeBuiltinsPlugin } from '@nzyme/rollup-utils';
 import { formatElapsedMs, sortBy } from '@nzyme/utils';
 
 import type { CompileFunctionOptions, CompileFunctionResult } from './compileFunction.js';
@@ -34,6 +35,7 @@ await emptyDir(outputDir);
 const rollupResult = await rollup({
     input: options.inputFile,
     plugins: [
+        normalizeBuiltinsPlugin(),
         nodeResolve({
             preferBuiltins: true,
             exportConditions: ['module', 'import', 'node', 'require'],
@@ -96,10 +98,7 @@ const rollupResult = await rollup({
             return;
         }
 
-        if (
-            warning.code === 'CIRCULAR_DEPENDENCY' &&
-            warning.ids?.find(id => id.includes('node_modules/'))
-        ) {
+        if (warning.code === 'CIRCULAR_DEPENDENCY' && warning.ids?.find(id => id.includes('node_modules/'))) {
             return;
         }
 
@@ -130,9 +129,7 @@ for (const file of outputFiles) {
 
 await rollupResult.close();
 
-consola.success(
-    `Compiled ${chalk.green(options.inputFile)} in ${chalk.green(formatElapsedMs(start))}`,
-);
+consola.success(`Compiled ${chalk.green(options.inputFile)} in ${chalk.green(formatElapsedMs(start))}`);
 
 const output: CompileFunctionResult = {
     dirPath: outputDir,

@@ -55,5 +55,5 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
         return Promise.resolve();
     }
 
-    protected abstract run(): Promise<number | void>;
+    protected abstract run(): Promise<number | void> | number | void;
 }

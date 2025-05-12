@@ -19,7 +19,7 @@ export interface TypescriptOptions {
 
 export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
     const config: Linter.Config = {
-        ignores: ['dist/**/*', 'dist-*/**/*', 'node_modules/**/*', 'eslint.config.js'],
+        ignores: ['dist/**/*', 'dist-*/**/*', 'node_modules/**/*', 'eslint.config.js', 'package.json'],
         plugins: {
             workspaces,
             monorepo,
@@ -121,10 +121,7 @@ export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
     if (Array.isArray(options.target)) {
         config.languageOptions = {
             ...config.languageOptions,
-            globals: options.target.reduce(
-                (acc, target) => ({ ...acc, ...getTargetGlobals(target) }),
-                {},
-            ),
+            globals: options.target.reduce((acc, target) => ({ ...acc, ...getTargetGlobals(target) }), {}),
         };
     } else if (options.target) {
         config.languageOptions = {

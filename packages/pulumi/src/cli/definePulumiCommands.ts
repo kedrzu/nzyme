@@ -31,6 +31,11 @@ export interface PulumiCommandsOptions {
      * The Pulumi config to use for the stacks.
      */
     config: PulumiConfig;
+
+    /**
+     * The prefix to use for commands.
+     */
+    prefix?: string;
 }
 
 /**
@@ -39,6 +44,7 @@ export interface PulumiCommandsOptions {
  */
 export function definePulumiCommands(options: PulumiCommandsOptions): CommandClass[] {
     return [
+        defineListCommand(options),
         defineDeployCommand(options),
         defineCancelCommand(options),
         definePreviewCommand(options),
@@ -48,9 +54,36 @@ export function definePulumiCommands(options: PulumiCommandsOptions): CommandCla
     ];
 }
 
+function defineListCommand(options: PulumiCommandsOptions) {
+    return class ListCommand extends Command {
+        static override paths = getCommandPaths(options, 'list');
+        static override usage = Command.Usage({
+            category: 'Pulumi',
+            description: 'List stacks',
+            details: 'List all stacks',
+        });
+
+        override run() {
+            console.log(chalk.bold('All available stacks:'));
+            let i = 0;
+            const padding = options.stacks.length.toString().length + 1;
+
+            for (const stack of options.stacks) {
+                const resolvedStack = this.container.resolve(stack);
+                const disabled = !resolvedStack.enabled ? chalk.red('[disabled]') : '';
+
+                // Increment counter and format with right padding to align stack names
+                const number = chalk.gray(`${++i}.`.padStart(padding));
+
+                console.log(`${number}${resolvedStack.name} ${disabled}`);
+            }
+        }
+    };
+}
+
 function defineDeployCommand(options: PulumiCommandsOptions) {
     return class DeployCommand extends Command {
-        static override paths = [['deploy']];
+        static override paths = getCommandPaths(options, 'deploy');
         static override usage = Command.Usage({
             category: 'Pulumi',
             description: 'Deploy the application',
@@ -91,7 +124,7 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
 
 function defineCancelCommand(options: PulumiCommandsOptions) {
     return class CancelCommand extends Command {
-        static override paths = [['cancel']];
+        static override paths = getCommandPaths(options, 'cancel');
         static override usage = Command.Usage({
             category: 'Pulumi',
             description: 'Cancel the application',
@@ -122,7 +155,7 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
 
 function definePreviewCommand(options: PulumiCommandsOptions) {
     return class PreviewCommand extends Command {
-        static override paths = [['preview']];
+        static override paths = getCommandPaths(options, 'preview');
         static override usage = Command.Usage({
             category: 'Pulumi',
             description: 'Preview the application',
@@ -163,7 +196,7 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
 
 function defineRefreshCommand(options: PulumiCommandsOptions) {
     return class RefreshCommand extends Command {
-        static override paths = [['refresh']];
+        static override paths = getCommandPaths(options, 'refresh');
         static override usage = Command.Usage({
             category: 'Pulumi',
             description: 'Refresh the application',
@@ -194,7 +227,7 @@ function defineRefreshCommand(options: PulumiCommandsOptions) {
 
 function defineDestroyCommand(options: PulumiCommandsOptions) {
     return class DestroyCommand extends Command {
-        static override paths = [['destroy']];
+        static override paths = getCommandPaths(options, 'destroy');
         static override usage = Command.Usage({
             category: 'Pulumi',
             description: 'Destroy the application',
@@ -239,7 +272,7 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
 
 function defineOutputCommand(options: PulumiCommandsOptions) {
     return class OutputCommand extends Command {
-        static override paths = [['output']];
+        static override paths = getCommandPaths(options, 'output');
         static override usage = Command.Usage({
             category: 'Pulumi',
             description: 'Print the output of the selected stacks',
@@ -280,4 +313,12 @@ function resolveStacks(container: Container, options: PulumiCommandsOptions, sta
 
         return stackDef;
     });
+}
+
+function getCommandPaths(options: PulumiCommandsOptions, command: string) {
+    if (options.prefix) {
+        return [[options.prefix, command]];
+    }
+
+    return [[command]];
 }

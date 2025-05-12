@@ -45,6 +45,7 @@
  * // result is typed as { a: number; b: number; c: number }
  * // target.b is overwritten with props.b
  * ```
+ * @__NO_SIDE_EFFECTS__
  */
 export function assignProps<T, P extends Record<string, unknown>>(target: T, props: P) {
     return Object.assign(target as object, props) as P & T;

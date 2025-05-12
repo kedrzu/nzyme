@@ -1,7 +1,4 @@
-import { callerName, defineInterface, defineService } from '@nzyme/ioc';
-import { noop } from '@nzyme/utils';
-
-import type { LoggerLevel } from './LoggerLevel.js';
+import { defineInterface } from '@nzyme/ioc';
 
 /**
  * A logger instance.
@@ -27,10 +24,6 @@ export interface Logger {
      * Log a trace message.
      */
     trace: LoggerLogFunction;
-    /**
-     * Log a fatal message.
-     */
-    fatal: LoggerLogFunction;
     /**
      * Log context.
      */
@@ -59,10 +52,6 @@ export interface LoggerObject {
     /**
      * An error object.
      */
-    err?: unknown;
-    /**
-     * An error object.
-     */
     error?: unknown;
     /**
      * Additional properties.
@@ -75,43 +64,4 @@ export interface LoggerObject {
  */
 export const Logger = defineInterface<Logger>({
     name: 'Logger',
-    default: (container, caller): Logger => ConsoleLogger.resolve(container, caller),
 });
-
-/**
- * A console logger service.
- */
-export const ConsoleLogger = defineService({
-    name: 'ConsoleLogger',
-    implements: Logger,
-    resolution: 'transient',
-    deps: {
-        name: callerName(),
-    },
-    setup: ({ name }) => ({
-        error: (msg: string, obj?: LoggerObject) => logConsole(name, 'error', msg, obj),
-        warn: (msg: string, obj?: LoggerObject) => logConsole(name, 'warn', msg, obj),
-        info: (msg: string, obj?: LoggerObject) => logConsole(name, 'info', msg, obj),
-        debug: (msg: string, obj?: LoggerObject) => logConsole(name, 'debug', msg, obj),
-        trace: (msg: string, obj?: LoggerObject) => logConsole(name, 'trace', msg, obj),
-        fatal: (msg: string, obj?: LoggerObject) => logConsole(name, 'error', msg, obj),
-        context: noop,
-    }),
-});
-
-function logConsole(
-    name: string | undefined,
-    level: Exclude<LoggerLevel, 'fatal'>,
-    msg: string,
-    obj?: LoggerObject,
-) {
-    if (name) {
-        msg = `[${name}] ${msg}`;
-    }
-
-    if (obj) {
-        console[level](msg, obj);
-    } else {
-        console[level](msg);
-    }
-}

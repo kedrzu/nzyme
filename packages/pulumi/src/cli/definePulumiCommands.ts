@@ -5,7 +5,7 @@ import { Command, Option, UsageError } from '@nzyme/cli';
 import type { Container } from '@nzyme/ioc';
 
 import { cancelStack } from '../cancelStack.js';
-import type { StackDefinition } from '../defineStack.js';
+import type { Stack, StackDefinition } from '../defineStack.js';
 import { deployStack } from '../deployStack.js';
 import { destroyStack } from '../destroyStack.js';
 import { getStackOutputs } from '../getStackOutputs.js';
@@ -145,6 +145,7 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
             }
 
             for (const stack of stacks) {
+                console.log(`Cancelling stack ${chalk.green(stack.name)}...`);
                 await cancelStack(stack, {
                     config: options.config,
                 });
@@ -243,7 +244,7 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
             description: 'Refresh the stack state before destroying',
         });
 
-        remove = Option.Boolean('--remove,-R', {
+        remove = Option.Boolean('--remove,-rm', {
             description: 'Remove the stack and its configuration after destroying',
         });
 
@@ -299,20 +300,31 @@ function defineOutputCommand(options: PulumiCommandsOptions) {
 }
 
 function resolveStacks(container: Container, options: PulumiCommandsOptions, stackNames: string[]) {
-    const allStackDefs = options.stacks.map(s => container.resolve(s)).filter(s => s.enabled);
+    const allStack = options.stacks.map(s => container.resolve(s));
 
     if (stackNames.length === 0) {
-        return allStackDefs;
+        return allStack.filter(s => s.enabled);
     }
 
-    return stackNames.map(stackName => {
-        const stackDef = allStackDefs.find(s => s.name === stackName);
-        if (!stackDef) {
-            throw new UsageError(`Stack ${stackName} does not exist.`);
-        }
+    const stackNamesSet = new Set(stackNames);
+    const stacks: Stack[] = [];
 
-        return stackDef;
-    });
+    for (const stack of allStack) {
+        if (stackNamesSet.has(stack.name)) {
+            stacks.push(stack);
+            stackNamesSet.delete(stack.name);
+
+            if (!stack.enabled) {
+                throw new UsageError(`Stack ${stack.name} is disabled.`);
+            }
+        }
+    }
+
+    if (stackNamesSet.size > 0) {
+        throw new UsageError(`Stack(s) ${Array.from(stackNamesSet).join(', ')} do not exist.`);
+    }
+
+    return stacks;
 }
 
 function getCommandPaths(options: PulumiCommandsOptions, command: string) {

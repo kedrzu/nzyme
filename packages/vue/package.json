@@ -43,7 +43,7 @@
         "@nzyme/tsconfig": "^0.14.0",
         "@types/lodash.debounce": "^4.0.9",
         "eslint": "^9.26.0",
-        "sass": "1.87.0",
+        "sass": "1.88.0",
         "typescript": "^5.8.3"
     },
     "publishConfig": {

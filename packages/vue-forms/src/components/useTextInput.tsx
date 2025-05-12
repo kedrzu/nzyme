@@ -28,7 +28,6 @@ const TEXT_INPUT_PROPS = defineProps({
 
 /**
  *
- * @__PURE__
  */
 export const useTextInput = assignProps(setupTextInput, {
     props: TEXT_INPUT_PROPS,

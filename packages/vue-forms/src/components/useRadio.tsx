@@ -25,7 +25,6 @@ const RADIO_EMITS = {
 
 /**
  *
- * @__PURE__
  */
 export const useRadio = assignProps(setupRadio, {
     props: RADIO_PROPS,

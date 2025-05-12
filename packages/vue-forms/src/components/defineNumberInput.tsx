@@ -19,7 +19,6 @@ const NUMBER_PROPS = defineProps({
 
 /**
  *
- * @__PURE__
  */
 export const useNumberInput = assignProps(setupNumberInput, {
     props: NUMBER_PROPS,

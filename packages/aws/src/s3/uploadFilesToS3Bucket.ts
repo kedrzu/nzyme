@@ -60,8 +60,7 @@ export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
 
     try {
         const { sourcePath, destinationPath, cacheControl } = options;
-        const cacheControlFunction =
-            typeof cacheControl === 'function' ? cacheControl : () => cacheControl;
+        const cacheControlFunction = typeof cacheControl === 'function' ? cacheControl : () => cacheControl;
 
         logger.info(`Uploading ${chalk.green(sourcePath)} to ${chalk.green(destinationPath)}`);
         const output = await client.sync(sourcePath, destinationPath, {
@@ -88,24 +87,16 @@ export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
             },
         });
 
-        logger.info(
-            `Finished uploading ${chalk.green(sourcePath)} to ${chalk.green(destinationPath)}`,
-        );
+        logger.info(`Finished uploading ${chalk.green(sourcePath)} to ${chalk.green(destinationPath)}`);
 
         if (output.created.length) {
-            logger.info(
-                `Created ${chalk.green(output.created.length)} files in ${chalk.green(destinationPath)}`,
-            );
+            logger.info(`Created ${chalk.green(output.created.length)} files in ${chalk.green(destinationPath)}`);
         }
         if (output.updated.length) {
-            logger.info(
-                `Updated ${chalk.green(output.updated.length)} files in ${chalk.green(destinationPath)}`,
-            );
+            logger.info(`Updated ${chalk.green(output.updated.length)} files in ${chalk.green(destinationPath)}`);
         }
         if (output.deleted.length) {
-            logger.info(
-                `Deleted ${chalk.green(output.deleted.length)} files in ${chalk.green(destinationPath)}`,
-            );
+            logger.info(`Deleted ${chalk.green(output.deleted.length)} files in ${chalk.green(destinationPath)}`);
         }
     } finally {
         s3Client.destroy();

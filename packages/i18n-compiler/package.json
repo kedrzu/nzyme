@@ -34,9 +34,7 @@
     "scripts": {
         "build:cjs": "tsc --build ./tsconfig.cjs.json",
         "build:esm": "tsc --build ./tsconfig.esm.json",
-        "lint": "eslint . --fix --cache",
-        "smoke:cjs": "node tests/smoke.test.cjs",
-        "smoke:mjs": "node tests/smoke.test.mjs"
+        "lint": "eslint . --fix --cache"
     },
     "dependencies": {
         "@nzyme/i18n": "^0.14.0",

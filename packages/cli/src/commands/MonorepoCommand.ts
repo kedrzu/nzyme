@@ -145,14 +145,9 @@ async function processPackage(pkg: Package, packages: Package[]): Promise<Packag
 }
 
 async function processPackageCore(pkg: Package, packages: Package[]): Promise<PackageCache> {
-    const dependencyNames = [
-        ...Object.keys(pkg.dependencies || {}),
-        ...Object.keys(pkg.devDependencies || {}),
-    ];
+    const dependencyNames = [...Object.keys(pkg.dependencies || {}), ...Object.keys(pkg.devDependencies || {})];
 
-    const dependencies = dependencyNames
-        .map(d => packages.find(p => p.name === d)!)
-        .filter(Boolean);
+    const dependencies = dependencyNames.map(d => packages.find(p => p.name === d)!).filter(Boolean);
 
     const esmReferences: string[] = [];
     const cjsReferences: string[] = [];
@@ -188,8 +183,7 @@ async function processPackageCore(pkg: Package, packages: Package[]): Promise<Pa
         references: esmReferences,
         config: {
             compilerOptions: {
-                tsBuildInfoFile:
-                    tsconfig.config.compilerOptions?.tsBuildInfoFile ?? 'tsconfig.esm.tsbuildinfo',
+                tsBuildInfoFile: tsconfig.config.compilerOptions?.tsBuildInfoFile ?? 'tsconfig.esm.tsbuildinfo',
             },
         },
     });
@@ -285,14 +279,16 @@ async function loadTsConfigCore(filePath: string) {
                 break;
             }
 
+            if (!(await fsExtra.pathExists(extendsPath))) {
+                break;
+            }
+
             configFile = await fs.readFile(extendsPath, { encoding: 'utf8' });
 
             const extendedConfig = json.parse(configFile) as TsConfigJson;
             if (extendedConfig.extends) {
                 const cwd = path.dirname(extendsPath);
-                const extendsPaths = asArray(extendedConfig.extends).map(p =>
-                    resolveTsConfigPath(cwd, p),
-                );
+                const extendsPaths = asArray(extendedConfig.extends).map(p => resolveTsConfigPath(cwd, p));
                 extend.push(...extendsPaths);
             }
 

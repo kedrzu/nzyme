@@ -2,7 +2,7 @@ import { defineNuxtModule } from 'nuxt/kit';
 
 export function simplifyAliasesModule() {
     return defineNuxtModule({
-        setup(opts, nuxt) {
+        setup(_opts, nuxt) {
             // We only use @/ alias, remove all others.
             delete nuxt.options.alias['@@'];
             delete nuxt.options.alias['~'];

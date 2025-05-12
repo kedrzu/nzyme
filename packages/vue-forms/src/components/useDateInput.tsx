@@ -20,7 +20,6 @@ const DATE_PROPS = defineProps({
 
 /**
  *
- * @__PURE__
  */
 export const useDateInput = assignProps(setupDateInput, {
     props: DATE_PROPS,

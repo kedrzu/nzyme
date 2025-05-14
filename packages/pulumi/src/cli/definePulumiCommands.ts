@@ -36,6 +36,11 @@ export interface PulumiCommandsOptions {
      * The prefix to use for commands.
      */
     prefix?: string;
+
+    /**
+     * The function to call before each command.
+     */
+    beforeEach?: () => Promise<void>;
 }
 
 /**
@@ -63,7 +68,9 @@ function defineListCommand(options: PulumiCommandsOptions) {
             details: 'List all stacks',
         });
 
-        override run() {
+        override async run() {
+            await options.beforeEach?.();
+
             console.log(chalk.bold('All available stacks:'));
             let i = 0;
             const padding = options.stacks.length.toString().length + 1;
@@ -106,6 +113,8 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
         });
 
         override async run() {
+            await options.beforeEach?.();
+
             const stacks = resolveStacks(this.container, options, this.stacks);
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to deploy.');
@@ -139,6 +148,8 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
         stacks = Option.Rest();
 
         override async run() {
+            await options.beforeEach?.();
+
             const stacks = resolveStacks(this.container, options, this.stacks);
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to cancel.');
@@ -179,6 +190,8 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
         });
 
         override async run() {
+            await options.beforeEach?.();
+
             const stacks = resolveStacks(this.container, options, this.stacks);
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to preview.');
@@ -212,6 +225,8 @@ function defineRefreshCommand(options: PulumiCommandsOptions) {
         stacks = Option.Rest();
 
         override async run() {
+            await options.beforeEach?.();
+
             const stacks = resolveStacks(this.container, options, this.stacks);
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to refresh.');
@@ -251,6 +266,8 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
         stacks = Option.Rest();
 
         override async run() {
+            await options.beforeEach?.();
+
             if (options.preventDeletion) {
                 throw new UsageError('Stack deletion is prohibited.');
             }
@@ -282,6 +299,8 @@ function defineOutputCommand(options: PulumiCommandsOptions) {
         stacks = Option.Rest();
 
         override async run() {
+            await options.beforeEach?.();
+
             const stacks = resolveStacks(this.container, options, this.stacks);
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to output.');

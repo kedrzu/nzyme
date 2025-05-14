@@ -38,10 +38,12 @@ export function vueLibConfig(options: VueLibConfigOptions) {
             libInjectCss(),
         ],
         logLevel: 'warn',
+
         build: {
             minify: false,
             cssMinify: false,
             cssCodeSplit: true,
+            emptyOutDir: false,
             lib: {
                 entry: options.entry,
                 formats: ['es'],

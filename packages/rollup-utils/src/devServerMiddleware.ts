@@ -1,16 +1,15 @@
 import path from 'node:path';
-import { Worker } from 'node:worker_threads';
 
 import chalk from 'chalk';
 import type { NextHandleFunction } from 'connect';
 import { consola } from 'consola';
-import getPort from 'get-port';
-import { createProxyMiddleware } from 'http-proxy-middleware';
 import { watch } from 'rollup';
 import type { RollupWatchOptions } from 'rollup';
 
-import { createPromise, formatDurationMs, formatElapsedMs } from '@nzyme/utils';
+import { formatDurationMs } from '@nzyme/utils';
 
+import type { DevServer } from './createDevServer.js';
+import { createDevServer } from './createDevServer.js';
 import { onRollupWarning } from './onRollupWarning.js';
 
 /**
@@ -37,12 +36,11 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions): NextHa
     startRollup();
 
     let compiled = false;
-    let server: ReturnType<typeof createServer> | undefined;
+    let server: DevServer | undefined;
 
     return (req, res, next) => {
         if (!server && compiled) {
-            server = createServer();
-            void server.start();
+            void createServer().start();
         }
 
         if (server) {
@@ -63,7 +61,7 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions): NextHa
 
         watcher.on('event', event => {
             if (event.code === 'BUNDLE_START') {
-                server = createServer();
+                createServer();
             } else if (event.code === 'BUNDLE_END') {
                 compiled = true;
 
@@ -84,77 +82,16 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions): NextHa
         // Stop the current server
         void server?.stop();
 
-        let worker: Worker | undefined;
-        const proxyPromise = createPromise<NextHandleFunction>();
+        const newServer = createDevServer({ file: outputFile });
+        server = newServer;
 
-        const middleware: NextHandleFunction = (req, res, next) => {
-            void proxyPromise.promise.then(p => p(req, res, next));
-        };
-
-        return {
-            middleware,
-            start,
-            stop,
-        };
-
-        /**
-         * Starts the worker thread and sets up the proxy middleware
-         */
-        async function start(this: unknown) {
-            if (worker) {
-                // already started
-                return;
+        newServer.on('stopped', () => {
+            if (server === newServer) {
+                server = undefined;
             }
+        });
 
-            const start = performance.now();
-            const port = await getPort();
-
-            worker = new Worker(outputFile, {
-                stderr: true,
-                stdout: true,
-                workerData: {
-                    port,
-                },
-                env: {
-                    ...process.env,
-                    DEBUG_COLORS: '1', // without this settings, colors won't be shown
-                },
-            });
-
-            worker.stdout.pipe(process.stdout);
-            worker.stderr.pipe(process.stderr);
-
-            worker.on('error', err => {
-                consola.error(err);
-            });
-
-            worker.on('exit', () => {
-                if (server === this) {
-                    server = undefined;
-                }
-
-                consola.info(`Worker ${port} exited`);
-            });
-
-            const proxy = createProxyMiddleware({
-                target: `http://localhost:${port}`,
-            });
-
-            worker.on('message', e => {
-                if (e === 'START') {
-                    consola.info(`Server started in ${chalk.green(formatElapsedMs(start))}`);
-                    proxyPromise.resolve(proxy as NextHandleFunction);
-                }
-            });
-        }
-
-        /**
-         * Stops the worker thread and cleans up resources
-         */
-        function stop() {
-            server = undefined;
-            worker?.postMessage('STOP');
-        }
+        return newServer;
     }
 }
 

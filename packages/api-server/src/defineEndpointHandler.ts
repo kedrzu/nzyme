@@ -2,13 +2,14 @@ import type { EndpointAny, EndpointInput, EndpointOutput } from '@nzyme/api-core
 import type { Service, ServiceDependencies, ServiceSetup } from '@nzyme/ioc';
 import { defineService } from '@nzyme/ioc';
 
+import type { HttpRequest } from './types/HttpRequest.js';
+
 /**
  * Represents an endpoint handler that combines endpoint definition with service functionality.
  *
  * @template E - The endpoint type
  */
-export type EndpointHandler<E extends EndpointAny = EndpointAny> = E &
-    Service<EndpointHandlerFunction<E>>;
+export type EndpointHandler<E extends EndpointAny = EndpointAny> = E & Service<EndpointHandlerFunction<E>>;
 
 /**
  * Function signature for handling an endpoint request.
@@ -17,7 +18,7 @@ export type EndpointHandler<E extends EndpointAny = EndpointAny> = E &
  * @template E - The endpoint type
  */
 export interface EndpointHandlerFunction<E extends EndpointAny = EndpointAny> {
-    (input: EndpointInput<E>): EndpointOutput<E> | Promise<EndpointOutput<E>>;
+    (input: EndpointInput<E>, request: HttpRequest): EndpointOutput<E> | Promise<EndpointOutput<E>>;
 }
 
 /**

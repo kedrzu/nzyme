@@ -55,6 +55,9 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions): NextHa
      */
     function startRollup() {
         const watcher = watch({
+            watch: {
+                clearScreen: false,
+            },
             onwarn: onRollupWarning,
             ...options,
         });

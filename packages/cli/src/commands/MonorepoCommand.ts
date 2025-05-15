@@ -55,7 +55,7 @@ export class MonorepoCommand extends Command {
      * Execute the command.
      */
     override async run() {
-        await processProject();
+        await processProject(true);
 
         if (this.watch) {
             await this.startWatcher();
@@ -87,11 +87,11 @@ export class MonorepoCommand extends Command {
             return;
         }
 
-        await processProject();
+        await processProject(false);
     }
 }
 
-async function processProject() {
+async function processProject(throwOnError: boolean) {
     const cwd = process.cwd();
     const packages = await getPackages(cwd);
 
@@ -101,7 +101,7 @@ async function processProject() {
     const cjsReferences: string[] = [];
 
     for (const pkg of packages) {
-        const result = await processPackage(pkg, packages);
+        const result = await processPackage(pkg, packages, throwOnError);
         if (result.esm) {
             esmReferences.push(result.esm);
         }
@@ -132,28 +132,37 @@ async function processProject() {
     });
 }
 
-async function processPackage(pkg: Package, packages: Package[]): Promise<PackageCache> {
+async function processPackage(pkg: Package, packages: Package[], throwOnError: boolean): Promise<PackageCache> {
     const existing = packageCache.get(pkg.name);
     if (existing) {
         return await existing;
     }
 
-    const result = processPackageCore(pkg, packages);
-    packageCache.set(pkg.name, result);
+    try {
+        const result = processPackageCore(pkg, packages, throwOnError);
+        packageCache.set(pkg.name, result);
 
-    return await result;
+        return await result;
+    } catch (error) {
+        if (throwOnError) {
+            throw error;
+        }
+
+        consola.error(`Failed to process package ${pkg.name}`, error);
+        packageCache.set(pkg.name, Promise.resolve({ esm: null, cjs: null }));
+        return { esm: null, cjs: null };
+    }
 }
 
-async function processPackageCore(pkg: Package, packages: Package[]): Promise<PackageCache> {
+async function processPackageCore(pkg: Package, packages: Package[], throwOnError: boolean): Promise<PackageCache> {
     const dependencyNames = [...Object.keys(pkg.dependencies || {}), ...Object.keys(pkg.devDependencies || {})];
-
     const dependencies = dependencyNames.map(d => packages.find(p => p.name === d)!).filter(Boolean);
 
     const esmReferences: string[] = [];
     const cjsReferences: string[] = [];
 
     for (const dep of dependencies) {
-        const depResult = await processPackage(dep, packages);
+        const depResult = await processPackage(dep, packages, throwOnError);
         if (depResult.esm) {
             esmReferences.push(depResult.esm);
         }

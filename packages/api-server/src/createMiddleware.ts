@@ -1,5 +1,6 @@
 import type { IncomingMessage, RequestListener, ServerResponse } from 'http';
 
+import type { NextFunction } from 'connect';
 import { parsePath, parseQuery } from 'ufo';
 
 import type { HttpMethod } from '@nzyme/fetch-utils';
@@ -7,15 +8,39 @@ import type { HttpMethod } from '@nzyme/fetch-utils';
 import type { ApiRouter } from './ApiRouter.js';
 
 /**
+ * Options for the {@link createMiddleware} function.
+ */
+export interface CreateMiddlewareOptions {
+    /**
+     * The API router that will handle the requests.
+     */
+    router: ApiRouter;
+
+    /**
+     * A function that will be called before a request is handled by the router.
+     * Can be used to log requests, etc.
+     */
+    beforeRequest?: (req: IncomingMessage, res: ServerResponse) => void;
+
+    /**
+     * A function that will be called after a request is handled by the router.
+     * Can be used to log requests, etc.
+     */
+    afterRequest?: (req: IncomingMessage, res: ServerResponse) => void;
+}
+
+/**
  * Creates a new HTTP request listener for the API router.
  *
  * This function bridges the Node.js HTTP server with the API router by converting
  * Node.js's request/response objects into the format expected by the router.
  *
- * @param api - The API router that will handle the requests
+ * @param router - The API router that will handle the requests
  * @returns A request listener compatible with Node.js HTTP server
  */
-export function createListener(api: ApiRouter): RequestListener {
+export function createMiddleware(options: CreateMiddlewareOptions): RequestListener {
+    const { router, beforeRequest, afterRequest } = options;
+
     return (req, res) => void handleRequest(req, res);
 
     /**
@@ -25,9 +50,11 @@ export function createListener(api: ApiRouter): RequestListener {
      * @param req - The incoming HTTP request
      * @param res - The server response to write to
      */
-    async function handleRequest(req: IncomingMessage, res: ServerResponse) {
+    async function handleRequest(req: IncomingMessage, res: ServerResponse, next?: NextFunction) {
+        beforeRequest?.(req, res);
+
         const url = parsePath(req.url || '/');
-        const response = await api.execute({
+        const response = await router.execute({
             method: (req.method || 'GET') as HttpMethod,
             path: url.pathname,
             query: parseQuery(url.search),
@@ -37,6 +64,9 @@ export function createListener(api: ApiRouter): RequestListener {
 
         res.writeHead(response.status, response.statusText, response.headers);
         res.end(response.body);
+
+        afterRequest?.(req, res);
+        next?.();
     }
 }
 

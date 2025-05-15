@@ -1,1 +1,4 @@
-export type LoggerLevel = 'debug' | 'error' | 'fatal' | 'info' | 'trace' | 'warn';
+/**
+ *
+ */
+export type LoggerLevel = 'debug' | 'error' | 'info' | 'trace' | 'warn';

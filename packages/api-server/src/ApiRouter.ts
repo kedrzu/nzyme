@@ -64,7 +64,7 @@ export const ApiRouter = defineService({
         logger: Logger,
         debug: envVariable('DEBUG'),
     },
-    name: 'Router',
+    name: 'ApiRouter',
     setup({ container, contextProvider, httpContextProvider, logger, debug }): ApiRouter {
         const router = createRouter<EndpointHandler>();
 
@@ -102,7 +102,7 @@ export const ApiRouter = defineService({
                 }
 
                 const handlerInstance = container.resolve(handler);
-                const result = await handlerInstance(input);
+                const result = await handlerInstance(input, request);
 
                 if (result instanceof Response) {
                     const headers: HttpResponseHeaders = httpContext.response.headers;
@@ -132,8 +132,8 @@ export const ApiRouter = defineService({
                     return createJsonResponse({
                         body: {
                             error: error.name,
-                            message: error.message,
                             stack: debug ? error.stack : undefined,
+                            ...error.payload,
                         },
                         status: error.status,
                     });
@@ -174,11 +174,7 @@ export const ApiRouter = defineService({
             }
         }
 
-        function parseInput(
-            endpoint: Endpoint,
-            request: HttpRequest,
-            params?: Record<string, string>,
-        ) {
+        function parseInput(endpoint: Endpoint, request: HttpRequest, params?: Record<string, string>) {
             if (!endpoint.input) {
                 return null;
             }

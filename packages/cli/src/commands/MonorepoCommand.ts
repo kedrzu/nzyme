@@ -12,11 +12,11 @@ import fsExtra from 'fs-extra/esm';
 import merge from 'lodash.merge';
 import type { TsConfigJson } from 'type-fest';
 
+import { saveFile } from '@nzyme/project-utils';
 import { asArray, debounceAsyncFunction, waitForever } from '@nzyme/utils';
 
 import { Command } from '../Command.js';
 import type { NzymePackageConfig } from '../NzymePackageConfig.js';
-import { saveFile } from '../utils/saveFile.js';
 
 interface TsConfig {
     path: string;
@@ -92,44 +92,52 @@ export class MonorepoCommand extends Command {
 }
 
 async function processProject(throwOnError: boolean) {
-    const cwd = process.cwd();
-    const packages = await getPackages(cwd);
+    try {
+        const cwd = process.cwd();
+        const packages = await getPackages(cwd);
 
-    const tsconfigPath = path.join(cwd, './tsconfig.esm.json');
+        const tsconfigPath = path.join(cwd, './tsconfig.esm.json');
 
-    const esmReferences: string[] = [];
-    const cjsReferences: string[] = [];
+        const esmReferences: string[] = [];
+        const cjsReferences: string[] = [];
 
-    for (const pkg of packages) {
-        const result = await processPackage(pkg, packages, throwOnError);
-        if (result.esm) {
-            esmReferences.push(result.esm);
+        for (const pkg of packages) {
+            const result = await processPackage(pkg, packages, throwOnError);
+            if (result.esm) {
+                esmReferences.push(result.esm);
+            }
+
+            if (result.cjs) {
+                cjsReferences.push(result.cjs);
+            }
         }
 
-        if (result.cjs) {
-            cjsReferences.push(result.cjs);
+        await saveTsReferences({
+            cwd,
+            fileName: 'tsconfig.json',
+            extends: tsconfigPath,
+            references: esmReferences,
+            config: {
+                include: [],
+            },
+        });
+
+        await saveTsReferences({
+            cwd,
+            fileName: 'tsconfig.cjs.json',
+            extends: tsconfigPath,
+            references: cjsReferences,
+            config: {
+                include: [],
+            },
+        });
+    } catch (error) {
+        if (throwOnError) {
+            throw error;
         }
+
+        consola.error('Failed to process project', error);
     }
-
-    await saveTsReferences({
-        cwd,
-        fileName: 'tsconfig.json',
-        extends: tsconfigPath,
-        references: esmReferences,
-        config: {
-            include: [],
-        },
-    });
-
-    await saveTsReferences({
-        cwd,
-        fileName: 'tsconfig.cjs.json',
-        extends: tsconfigPath,
-        references: cjsReferences,
-        config: {
-            include: [],
-        },
-    });
 }
 
 async function processPackage(pkg: Package, packages: Package[], throwOnError: boolean): Promise<PackageCache> {

@@ -11,6 +11,6 @@
 export * from './getMd5Hash.node.js';
 export * from './index.common.js';
 export * from './randomInt.node.js';
-export * from './stringEqualsTimingSafe.js';
+export * from './stringEqualsTimingSafe.node.js';
 export * from './validateBasicAuth.js';
 export * from './validateBearerToken.js';

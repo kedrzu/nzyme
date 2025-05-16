@@ -1,5 +1,5 @@
 import { parseBasicAuth } from './parseBasicAuth.js';
-import { stringEqualTimingSafe } from './stringEqualsTimingSafe.js';
+import { stringEqualTimingSafe } from './stringEqualsTimingSafe.node.js';
 
 /**
  * Parameters for validating Basic Authentication credentials
@@ -30,8 +30,5 @@ export function validateBasicAuth(params: BasicAuthParams) {
     }
 
     const parsed = parseBasicAuth(token);
-    return (
-        stringEqualTimingSafe(parsed.login, params.login) &&
-        stringEqualTimingSafe(parsed.password, params.password)
-    );
+    return stringEqualTimingSafe(parsed.login, params.login) && stringEqualTimingSafe(parsed.password, params.password);
 }

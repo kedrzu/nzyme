@@ -10,17 +10,29 @@
     "sideEffects": false,
     "type": "module",
     "exports": {
-        "default": {
-            "import": {
-                "types": "./dist/index.browser.d.ts",
-                "default": "./dist/index.browser.js"
+        ".": {
+            "default": {
+                "import": {
+                    "types": "./dist/index.browser.d.ts",
+                    "default": "./dist/index.browser.js"
+                },
+                "require": {
+                    "types": "./dist/index.browser.d.ts",
+                    "default": "./dist/index.browser.cjs"
+                }
             },
-            "require": {
-                "types": "./dist/index.browser.d.ts",
-                "default": "./dist/index.browser.cjs"
+            "node": {
+                "import": {
+                    "types": "./dist/index.node.d.ts",
+                    "default": "./dist/index.node.js"
+                },
+                "require": {
+                    "types": "./dist/index.node.d.ts",
+                    "default": "./dist/index.node.cjs"
+                }
             }
         },
-        "node": {
+        "./node": {
             "import": {
                 "types": "./dist/index.node.d.ts",
                 "default": "./dist/index.node.js"
@@ -28,6 +40,16 @@
             "require": {
                 "types": "./dist/index.node.d.ts",
                 "default": "./dist/index.node.cjs"
+            }
+        },
+        "./browser": {
+            "import": {
+                "types": "./dist/index.browser.d.ts",
+                "default": "./dist/index.browser.js"
+            },
+            "require": {
+                "types": "./dist/index.browser.d.ts",
+                "default": "./dist/index.browser.cjs"
             }
         }
     },

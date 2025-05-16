@@ -11,10 +11,7 @@ export interface EventEmitter<TEvents> extends EventEmitterPublic<TEvents> {
      * Emits an event with no payload.
      * @param event - The event to emit
      */
-    emit<E extends keyof TEvents & VoidPropKeys<PredefinedEvents<TEvents>>>(
-        this: void,
-        event: E,
-    ): void;
+    emit<E extends keyof TEvents & VoidPropKeys<PredefinedEvents<TEvents>>>(this: void, event: E): void;
     /**
      * Emits an event with a payload.
      * @param event - The event to emit
@@ -43,10 +40,7 @@ export interface EventEmitter<TEvents> extends EventEmitterPublic<TEvents> {
      * @param event - The event to emit
      * @returns A promise that resolves when all callbacks complete
      */
-    emitAsync<E extends keyof TEvents & VoidPropKeys<PredefinedEvents<TEvents>>>(
-        this: void,
-        event: E,
-    ): Promise<void>;
+    emitAsync<E extends keyof TEvents & VoidPropKeys<PredefinedEvents<TEvents>>>(this: void, event: E): Promise<void>;
     /**
      * Emits an event with a payload and waits for all callbacks to complete.
      * @param event - The event to emit
@@ -61,10 +55,7 @@ export interface EventEmitter<TEvents> extends EventEmitterPublic<TEvents> {
     /**
      *
      */
-    emitAsync<E extends keyof TEvents & VoidPropKeys<GenericEvents<TEvents>>>(
-        this: void,
-        event: E,
-    ): void;
+    emitAsync<E extends keyof TEvents & VoidPropKeys<GenericEvents<TEvents>>>(this: void, event: E): void;
     /**
      *
      */
@@ -115,19 +106,11 @@ export type EventEmitterPublic<TEvents> = {
     /**
      *
      */
-    off<E extends keyof GenericEvents<TEvents>>(
-        this: void,
-        event: E,
-        callback: EventEmitterCallback<TEvents, E>,
-    ): void;
+    off<E extends keyof GenericEvents<TEvents>>(this: void, event: E, callback: EventEmitterCallback<TEvents, E>): void;
     /**
      *
      */
-    off<E extends keyof TEvents>(
-        this: void,
-        event: E,
-        callback: EventEmitterCallback<TEvents, E>,
-    ): void;
+    off<E extends keyof TEvents>(this: void, event: E, callback: EventEmitterCallback<TEvents, E>): void;
 
     /**
      * Registers a callback for a specific event.
@@ -142,19 +125,11 @@ export type EventEmitterPublic<TEvents> = {
     /**
      *
      */
-    on<E extends keyof GenericEvents<TEvents>>(
-        this: void,
-        event: E,
-        callback: EventEmitterCallback<TEvents, E>,
-    ): void;
+    on<E extends keyof GenericEvents<TEvents>>(this: void, event: E, callback: EventEmitterCallback<TEvents, E>): void;
     /**
      *
      */
-    on<E extends keyof TEvents>(
-        this: void,
-        event: E,
-        callback: EventEmitterCallback<TEvents, E>,
-    ): void;
+    on<E extends keyof TEvents>(this: void, event: E, callback: EventEmitterCallback<TEvents, E>): void;
 };
 
 /**
@@ -206,6 +181,8 @@ export function createEventEmitter<TEvents>(): EventEmitter<TEvents> {
     type Callback = EventEmitterCallback<TEvents, keyof TEvents>;
     const listeners = new Map<keyof TEvents, Callback[]>();
 
+    console.warn('createEventEmitter', listeners);
+
     return {
         on,
         off,
@@ -225,6 +202,7 @@ export function createEventEmitter<TEvents>(): EventEmitter<TEvents> {
         }
 
         callbacks.push(callback as Callback);
+        console.warn('on', event, callback, listeners);
     }
 
     function off<E extends keyof TEvents>(event: E, callback: EventEmitterCallback<TEvents, E>) {
@@ -232,10 +210,12 @@ export function createEventEmitter<TEvents>(): EventEmitter<TEvents> {
         if (callbacks) {
             arrayRemove(callbacks, callback as Callback);
         }
+        console.warn('off', event, callback, listeners);
     }
 
     function emit<E extends keyof TEvents>(event: E, value?: TEvents[E]): void {
         const callbacks = listeners.get(event);
+        console.warn('emit', event, value, callbacks);
         if (!callbacks) {
             return;
         }
@@ -247,6 +227,7 @@ export function createEventEmitter<TEvents>(): EventEmitter<TEvents> {
 
     async function emitAsync<E extends keyof TEvents>(event: E, value?: TEvents[E]): Promise<void> {
         const callbacks = listeners.get(event);
+        console.warn('emitAsync', event, value, listeners);
         if (!callbacks) {
             return;
         }

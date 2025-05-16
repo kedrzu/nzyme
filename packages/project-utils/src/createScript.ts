@@ -1,3 +1,8 @@
+/**
+ *
+ */
+export type ScriptBuilder = ReturnType<typeof createScript>;
+
 interface ImportParams {
     from: string;
     import?: string;
@@ -10,6 +15,9 @@ interface ExportParams {
     name?: string;
 }
 
+/**
+ *
+ */
 export function createScript() {
     const imports: string[] = [];
     const statements: string[] = [];
@@ -97,5 +105,3 @@ export function createScript() {
         return code;
     }
 }
-
-export type ScriptBuilder = ReturnType<typeof createScript>;

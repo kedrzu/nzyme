@@ -1,5 +1,5 @@
 import { parseBearerToken } from './parseBearerToken.js';
-import { stringEqualTimingSafe } from './stringEqualsTimingSafe.js';
+import { stringEqualTimingSafe } from './stringEqualsTimingSafe.node.js';
 
 /**
  * Parameters for validating a Bearer token

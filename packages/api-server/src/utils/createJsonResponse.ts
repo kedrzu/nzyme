@@ -2,8 +2,8 @@ import { getMd5Hash } from '@nzyme/crypto-utils';
 import type { HttpResponseHeaders } from '@nzyme/fetch-utils';
 import { toJsonString } from '@nzyme/zchema';
 
-import { CACHE_CONTROL_DISABLED } from './cacheControl.js';
 import type { HttpResponse } from '../types/HttpResponse.js';
+import { CACHE_CONTROL_DISABLED } from './cacheControl.js';
 
 /**
  *
@@ -12,11 +12,11 @@ export type JsonResponse = {
     /**
      *
      */
-    status: number;
+    body: unknown;
     /**
      *
      */
-    body: unknown;
+    cache?: boolean;
     /**
      *
      */
@@ -24,7 +24,7 @@ export type JsonResponse = {
     /**
      *
      */
-    cache?: boolean;
+    status: number;
 };
 
 /**

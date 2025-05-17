@@ -53,6 +53,11 @@ export interface StackOptions<
     enabled?: boolean;
 
     /**
+     * Whether to prevent the stack from being destroyed.
+     */
+    preventDestroy?: boolean;
+
+    /**
      * Resources to deploy.
      */
     resources(this: Stack, deps: ResolveDeps<TDeps>): Promise<TOutput> | TOutput;
@@ -111,6 +116,11 @@ export interface Stack<TOutput extends StackOutput = StackOutput> {
      * Whether the stack is enabled.
      */
     enabled: boolean;
+
+    /**
+     * Whether to prevent the stack from being destroyed.
+     */
+    preventDestroy: boolean;
 
     /**
      * Create a reference to the stack.
@@ -183,6 +193,7 @@ export function defineStack<TDeps extends ServiceDependencies = SomeObject, TOut
             const stack: Stack<TOutput> = {
                 name,
                 enabled: options.enabled ?? true,
+                preventDestroy: options.preventDestroy ?? false,
                 ref: () => {
                     const org = pulumi.getOrganization();
                     const project = pulumi.getProject();

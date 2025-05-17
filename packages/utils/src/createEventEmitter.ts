@@ -181,8 +181,6 @@ export function createEventEmitter<TEvents>(): EventEmitter<TEvents> {
     type Callback = EventEmitterCallback<TEvents, keyof TEvents>;
     const listeners = new Map<keyof TEvents, Callback[]>();
 
-    console.warn('createEventEmitter', listeners);
-
     return {
         on,
         off,
@@ -202,7 +200,6 @@ export function createEventEmitter<TEvents>(): EventEmitter<TEvents> {
         }
 
         callbacks.push(callback as Callback);
-        console.warn('on', event, callback, listeners);
     }
 
     function off<E extends keyof TEvents>(event: E, callback: EventEmitterCallback<TEvents, E>) {
@@ -210,12 +207,10 @@ export function createEventEmitter<TEvents>(): EventEmitter<TEvents> {
         if (callbacks) {
             arrayRemove(callbacks, callback as Callback);
         }
-        console.warn('off', event, callback, listeners);
     }
 
     function emit<E extends keyof TEvents>(event: E, value?: TEvents[E]): void {
         const callbacks = listeners.get(event);
-        console.warn('emit', event, value, callbacks);
         if (!callbacks) {
             return;
         }
@@ -227,7 +222,6 @@ export function createEventEmitter<TEvents>(): EventEmitter<TEvents> {
 
     async function emitAsync<E extends keyof TEvents>(event: E, value?: TEvents[E]): Promise<void> {
         const callbacks = listeners.get(event);
-        console.warn('emitAsync', event, value, listeners);
         if (!callbacks) {
             return;
         }

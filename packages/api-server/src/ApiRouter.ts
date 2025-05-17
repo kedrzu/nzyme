@@ -123,7 +123,10 @@ export const ApiRouter = defineService({
                     body: handler.output ? z.serialize(handler.output, result) : undefined,
                     // Cache only if no authorization header is not present
                     // We don't want to cache anything that is user-specific.
-                    cache: request.method === 'GET' && !request.headers['authorization'],
+                    cache:
+                        request.method === 'GET' &&
+                        !request.headers['authorization'] &&
+                        !!request.headers['cache-control'],
                     headers: httpContext.response.headers,
                     status: 200,
                 });

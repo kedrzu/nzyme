@@ -1,3 +1,5 @@
+import type * as pulumi from '@pulumi/pulumi';
+
 import type { AwsConfig } from './AwsConfig.js';
 
 /**
@@ -39,4 +41,9 @@ export interface PulumiConfig {
      * The backend URL to use for the stack.
      */
     backendUrl?: string;
+
+    /**
+     * The resource transformation to use for the stacks.
+     */
+    resourceTransformation?: pulumi.ResourceTransformation;
 }

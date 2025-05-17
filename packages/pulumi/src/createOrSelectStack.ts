@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { automation } from '@pulumi/pulumi';
+import { automation, runtime } from '@pulumi/pulumi';
 
 import type { Stack, StackOutput } from './defineStack.js';
 import type { PulumiConfig } from './PulumiConfig.js';
@@ -48,7 +48,13 @@ export async function createOrSelectStack<TOutput extends StackOutput>(stack: St
         {
             projectName: config.project,
             stackName: stack.name,
-            program: stack.resources,
+            program: async () => {
+                if (config.resourceTransformation) {
+                    runtime.registerStackTransformation(config.resourceTransformation);
+                }
+
+                return await stack.resources();
+            },
         },
         {
             envVars,

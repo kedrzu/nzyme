@@ -23,9 +23,9 @@ export interface PulumiCommandsOptions {
     stacks: StackDefinition[];
 
     /**
-     * Whether to prevent deletion of the stacks.
+     * Whether to prevent the stacks from being destroyed.
      */
-    preventDeletion?: boolean;
+    preventDestroy?: boolean;
 
     /**
      * The Pulumi config to use for the stacks.
@@ -268,7 +268,7 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
         override async run() {
             await options.beforeEach?.();
 
-            if (options.preventDeletion) {
+            if (options.preventDestroy) {
                 throw new UsageError('Stack deletion is prohibited.');
             }
 
@@ -278,6 +278,11 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
             }
 
             for (const stack of [...stacks].reverse()) {
+                if (stack.preventDestroy) {
+                    console.warn(`Stack ${chalk.yellow(stack.name)} is protected and cannot be destroyed.`);
+                    continue;
+                }
+
                 await destroyStack(stack, {
                     config: options.config,
                     refresh: this.refresh,

@@ -14,10 +14,6 @@ export interface ApiGatewayCloudfrontOriginOptions {
      * The API Gateway URL.
      */
     apiUrl: pulumi.Input<string>;
-    /**
-     * Optional element that causes CloudFront to request your content from a directory in your Amazon S3 bucket or your custom origin.
-     */
-    originPath?: pulumi.Input<string>;
 }
 
 /**
@@ -27,9 +23,9 @@ export function createApiGatewayCloudfrontOrigin(options: ApiGatewayCloudfrontOr
     const apiUrl = pulumi.interpolate`${options.apiUrl}`.apply(url => new URL(url));
 
     return {
-        domainName: apiUrl.apply(url => url.hostname),
         originId: options.originId,
-        originPath: options.originPath,
+        domainName: apiUrl.apply(url => url.hostname),
+        originPath: apiUrl.apply(url => url.pathname),
         customOriginConfig: {
             httpPort: 80,
             httpsPort: 443,

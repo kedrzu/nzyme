@@ -34,6 +34,8 @@
         "@aws-sdk/client-s3": "^3.808.0",
         "@aws-sdk/client-sqs": "^3.808.0",
         "@aws-sdk/credential-providers": "^3.808.0",
+        "@nzyme/api-core": "^0.14.0",
+        "@nzyme/api-server": "^0.14.0",
         "@nzyme/ioc": "^0.14.0",
         "@nzyme/logging": "^0.14.0",
         "@nzyme/types": "^0.14.0",

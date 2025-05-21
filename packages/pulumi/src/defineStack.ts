@@ -4,10 +4,14 @@ import * as pulumi from '@pulumi/pulumi';
 
 import type { ResolveDeps, Service, ServiceDependencies } from '@nzyme/ioc';
 import { defineService } from '@nzyme/ioc';
-import type { EmptyObject, SomeObject } from '@nzyme/types';
+import { PrettyLogger } from '@nzyme/logging';
+import type { Logger } from '@nzyme/logging';
+import type { EmptyObject, Flatten, SomeObject } from '@nzyme/types';
 import { toPascalCase } from '@nzyme/utils';
 
 import { unwrapStackOutput } from './utils/unwrapStackOutput.js';
+
+const STACK_SYMBOL = Symbol('Stack');
 
 /**
  * Output of a Pulumi stack.
@@ -123,6 +127,11 @@ export interface Stack<TOutput extends StackOutput = StackOutput> {
     preventDestroy: boolean;
 
     /**
+     * Logger.
+     */
+    logger: Logger;
+
+    /**
      * Create a reference to the stack.
      */
     ref: () => StackReference<TOutput>;
@@ -166,7 +175,28 @@ export interface Stack<TOutput extends StackOutput = StackOutput> {
 /**
  * Definition of a Pulumi stack.
  */
-export type StackDefinition = Service<Stack>;
+export type StackDefinition<
+    TDeps extends ServiceDependencies = ServiceDependencies,
+    TOutput extends StackOutput = StackOutput,
+> = Service<Stack<TOutput>, TDeps> & {
+    /**
+     * Whether the stack is enabled.
+     */
+    enabled: boolean;
+    /**
+     * Whether to prevent the stack from being destroyed.
+     */
+    preventDestroy: boolean;
+    /**
+     * Symbol to identify the stack.
+     * @internal
+     */
+    [STACK_SYMBOL]: true;
+    /**
+     * Name of the stack.
+     */
+    stackName: string;
+};
 
 /**
  * Reference to a stack.
@@ -175,7 +205,7 @@ export interface StackReference<TOutput extends StackOutput = StackOutput> {
     /**
      * Get the output of the stack.
      */
-    getOutput<K extends keyof TOutput>(key: K & string): TOutput[K];
+    getOutput<K extends keyof TOutput>(key: K & string): pulumi.Output<TOutput[K]>;
 }
 
 /**
@@ -185,15 +215,19 @@ export interface StackReference<TOutput extends StackOutput = StackOutput> {
 export function defineStack<TDeps extends ServiceDependencies = SomeObject, TOutput extends StackOutput = EmptyObject>(
     options: StackOptions<TDeps, TOutput>,
 ) {
-    return defineService({
-        name: `Stack:${toPascalCase(options.name)}`,
+    const enabled = options.enabled ?? true;
+    const preventDestroy = options.preventDestroy ?? false;
+    const serviceName = `Stack:${toPascalCase(options.name)}`;
+    const service = defineService({
+        name: serviceName,
         deps: options.deps,
-        setup(deps): Stack<TOutput> {
+        setup(deps) {
             const name = options.name;
             const stack: Stack<TOutput> = {
                 name,
-                enabled: options.enabled ?? true,
-                preventDestroy: options.preventDestroy ?? false,
+                enabled,
+                preventDestroy,
+                logger: PrettyLogger.create({ name: serviceName }),
                 ref: () => {
                     const org = pulumi.getOrganization();
                     const project = pulumi.getProject();
@@ -229,12 +263,30 @@ export function defineStack<TDeps extends ServiceDependencies = SomeObject, TOut
             return stack;
         },
     });
+
+    const stackDef: StackDefinition<TDeps, TOutput> = {
+        ...service,
+        enabled,
+        preventDestroy,
+        stackName: options.name,
+        [STACK_SYMBOL]: true,
+    };
+
+    return stackDef as unknown as StackDefinition<TDeps, Flatten<pulumi.Unwrap<TOutput>>>;
+}
+
+/**
+ * Check if an object is a stack definition.
+ */
+export function isStackDefinition(obj: unknown): obj is StackDefinition {
+    return obj instanceof Object && STACK_SYMBOL in obj;
 }
 
 function createStackReference<TOutput extends StackOutput>(path: string): StackReference<TOutput> {
     const ref = new pulumi.StackReference(path);
 
     return {
-        getOutput: <K extends keyof TOutput>(key: K & string): TOutput[K] => ref.getOutput(key) as TOutput[K],
+        getOutput: <K extends keyof TOutput>(key: K & string): pulumi.Output<TOutput[K]> =>
+            ref.getOutput(key) as pulumi.Output<TOutput[K]>,
     };
 }

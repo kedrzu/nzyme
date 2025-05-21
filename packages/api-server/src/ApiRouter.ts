@@ -62,7 +62,7 @@ export const ApiRouter = defineService({
         contextProvider: ContextProvider,
         httpContextProvider: HttpContextProvider,
         logger: Logger,
-        debug: envVariable('DEBUG'),
+        debug: envVariable('API_DEBUG'),
     },
     name: 'ApiRouter',
     setup({ container, contextProvider, httpContextProvider, logger, debug }): ApiRouter {

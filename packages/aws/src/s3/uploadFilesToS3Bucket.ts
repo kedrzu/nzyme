@@ -1,8 +1,9 @@
-import type { GetObjectCommandInput } from '@aws-sdk/client-s3';
+import type { GetObjectCommandInput, PutObjectCommandInput } from '@aws-sdk/client-s3';
 import { S3Client } from '@aws-sdk/client-s3';
 import chalk from 'chalk';
 import { lookup as mimeLookup } from 'mime-types';
 import { S3SyncClient } from 's3-sync-client';
+import { stringifyQuery } from 'ufo';
 
 import { ConsoleLogger } from '@nzyme/logging';
 import type { Logger } from '@nzyme/logging';
@@ -44,6 +45,10 @@ export type UploadFilesOptions = {
      * The path to the source files.
      */
     sourcePath: string;
+    /**
+     * The tags to set for the files.
+     E*/
+    tags?: ((key: string) => Record<string, string>) | Record<string, string>;
 };
 
 type Filter = (key: string) => boolean;
@@ -59,8 +64,9 @@ export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
     });
 
     try {
-        const { sourcePath, destinationPath, cacheControl } = options;
+        const { sourcePath, destinationPath, cacheControl, tags } = options;
         const cacheControlFunction = typeof cacheControl === 'function' ? cacheControl : () => cacheControl;
+        const tagsFunction = typeof tags === 'function' ? tags : () => tags;
 
         logger.info(`Uploading ${chalk.green(sourcePath)} to ${chalk.green(destinationPath)}`);
         const output = await client.sync(sourcePath, destinationPath, {
@@ -77,12 +83,14 @@ export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
             // Make all the files lowercase.
             // This way we can use case-insensitive routing in Cloudfront.
             relocations: options.rename ? [options.rename] : undefined,
-            commandInput: (input: Partial<GetObjectCommandInput>) => {
+            commandInput: (input: Partial<GetObjectCommandInput>): Partial<PutObjectCommandInput> => {
                 const key = assertValue(input.Key);
+                const tags = tagsFunction(key);
 
                 return {
                     ContentType: mimeLookup(key) || 'text/html',
                     CacheControl: cacheControlFunction(key),
+                    Tagging: tags ? stringifyQuery(tags) : undefined,
                 };
             },
         });

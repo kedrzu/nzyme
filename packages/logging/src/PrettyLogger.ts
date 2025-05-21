@@ -5,7 +5,6 @@ import { noop } from '@nzyme/utils';
 
 import type { LoggerObject } from './Logger.js';
 import { Logger } from './Logger.js';
-import type { LoggerLevel } from './LoggerLevel.js';
 
 let i = 0;
 const colors = [chalk.red, chalk.yellow, chalk.green, chalk.blue, chalk.magenta, chalk.cyan];
@@ -21,34 +20,52 @@ export const PrettyLogger = defineService({
         name: callerName(),
     },
     setup: ({ name }) => {
-        const color = colors[i++ % colors.length]!;
+        const prefix = getPrefix(name);
 
         return {
-            error: (msg: string, obj?: LoggerObject) => log(name, color, 'error', msg, obj),
-            warn: (msg: string, obj?: LoggerObject) => log(name, color, 'warn', msg, obj),
-            info: (msg: string, obj?: LoggerObject) => log(name, color, 'info', msg, obj),
-            debug: (msg: string, obj?: LoggerObject) => log(name, color, 'debug', msg, obj),
-            trace: (msg: string, obj?: LoggerObject) => log(name, color, 'trace', msg, obj),
-            fatal: (msg: string, obj?: LoggerObject) => log(name, color, 'error', msg, obj),
+            prefix,
+            error: (msg: string, obj?: LoggerObject) => log(prefix, console.error, msg, obj),
+            warn: (msg: string, obj?: LoggerObject) => log(prefix, console.warn, msg, obj),
+            info: (msg: string, obj?: LoggerObject) => log(prefix, console.log, msg, obj),
+            debug: (msg: string, obj?: LoggerObject) => log(prefix, console.debug, msg, obj),
+            trace: (msg: string, obj?: LoggerObject) => log(prefix, console.trace, msg, obj),
             context: noop,
         };
     },
 });
 
-function log(
-    name: string | undefined,
-    color: (msg: string) => string,
-    level: Exclude<LoggerLevel, 'fatal'>,
-    msg: string,
-    obj?: LoggerObject,
-) {
-    if (name) {
-        msg = `${color(`[${name}]`)} ${msg}`;
+function log(prefix: string | null, log: (...args: unknown[]) => void, msg: string, obj?: LoggerObject) {
+    const lines = msg.split('\n');
+    if (lines.length > 1) {
+        msg = '';
+
+        for (const line of lines) {
+            if (msg.length > 0) {
+                msg += '\n';
+            }
+
+            msg += `${prefix}${line}`;
+        }
+
+        if (obj) {
+            log(prefix, obj);
+        }
+    } else {
+        msg = `${prefix}${msg}`;
     }
 
     if (obj) {
-        console[level](msg, obj);
+        log(msg, obj);
     } else {
-        console[level](msg);
+        log(msg);
     }
+}
+
+function getPrefix(name: string | undefined) {
+    if (!name) {
+        return null;
+    }
+
+    const color = colors[i++ % colors.length]!;
+    return color(`[${name}] `);
 }

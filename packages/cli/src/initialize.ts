@@ -23,7 +23,7 @@ export interface InitializeOptions {
  * Initialize the CLI.
  */
 export function initialize(options: InitializeOptions = {}) {
-    consola.wrapAll();
+    consola.wrapConsole();
     sourceMap.install();
     patchNodeWarnings();
     loadEnvVariables({ env: options.env });

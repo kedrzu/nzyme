@@ -2,10 +2,12 @@ import chalk from 'chalk';
 
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
-import type { Container } from '@nzyme/ioc';
+import { getAllDeps, isDependentOn, sortByDependency } from '@nzyme/ioc';
+import { arrayRemoveWhere } from '@nzyme/utils';
 
 import { cancelStack } from '../cancelStack.js';
-import type { Stack, StackDefinition } from '../defineStack.js';
+import { isStackDefinition } from '../defineStack.js';
+import type { StackDefinition } from '../defineStack.js';
 import { deployStack } from '../deployStack.js';
 import { destroyStack } from '../destroyStack.js';
 import { getStackOutputs } from '../getStackOutputs.js';
@@ -43,6 +45,11 @@ export interface PulumiCommandsOptions {
     beforeEach?: () => Promise<void>;
 }
 
+interface ResolveStacksOptions extends PulumiCommandsOptions {
+    stackNames: string[];
+    recursive?: boolean;
+}
+
 /**
  * Define the Pulumi commands.
  * @__NO_SIDE_EFFECTS__
@@ -76,13 +83,13 @@ function defineListCommand(options: PulumiCommandsOptions) {
             const padding = options.stacks.length.toString().length + 1;
 
             for (const stack of options.stacks) {
-                const resolvedStack = this.container.resolve(stack);
-                const disabled = !resolvedStack.enabled ? chalk.red('[disabled]') : '';
+                const stackResolved = this.container.resolve(stack);
+                const disabled = !stackResolved.enabled ? chalk.red('[disabled]') : '';
 
                 // Increment counter and format with right padding to align stack names
                 const number = chalk.gray(`${++i}.`.padStart(padding));
 
-                console.log(`${number}${resolvedStack.name} ${disabled}`);
+                console.log(`${number}${stackResolved.name} ${disabled}`);
             }
         }
     };
@@ -108,6 +115,10 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
             description: 'Refresh the stack state before deploy',
         });
 
+        recursive = Option.Boolean('--recursive,-R', {
+            description: 'Deploy all stacks that depend on the selected stacks',
+        });
+
         skipBuild = Option.Boolean('--skip-build,-s', {
             description: 'Skip the build step',
         });
@@ -115,17 +126,65 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
         override async run() {
             await options.beforeEach?.();
 
-            const stacks = resolveStacks(this.container, options, this.stacks);
+            const stacks = resolveStacks({
+                ...options,
+                stackNames: this.stacks,
+                recursive: this.recursive,
+            });
+
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to deploy.');
             }
 
-            for (const stack of stacks) {
-                await deployStack(stack, {
-                    refresh: this.refresh,
-                    build: !this.skipBuild,
-                    config: options.config,
-                });
+            const deployed = new Set<StackDefinition>();
+            const current: { promise: Promise<void>; stack: StackDefinition }[] = [];
+
+            const deployNext = () => {
+                for (let i = 0; i < stacks.length; i++) {
+                    const stack = stacks[i]!;
+                    // Skip if already deployed
+                    if (deployed.has(stack) || current.some(s => s.stack === stack)) {
+                        continue;
+                    }
+
+                    // Check if all dependencies are deployed
+                    const awaitDeps = stacks.some(s => isDependentOn(stack, s) && !deployed.has(s));
+                    if (awaitDeps) {
+                        continue;
+                    }
+
+                    const stackResolved = this.container.resolve(stack);
+
+                    const stackPromise = deployStack(stackResolved, {
+                        refresh: this.refresh,
+                        build: !this.skipBuild,
+                        config: options.config,
+                    }).then(() => {
+                        arrayRemoveWhere(current, s => s.stack === stack);
+                        deployed.add(stack);
+                        void deployNext();
+                    });
+
+                    current.push({ promise: stackPromise, stack });
+                    return true;
+                }
+
+                return false;
+            };
+
+            // Start deploying stacks
+            while (deployNext()) {
+                // Deploy as many initial stacks as possible
+            }
+
+            // Wait for all stacks to complete
+            while (current.length > 0) {
+                await Promise.all(current.map(c => c.promise));
+
+                // Try to deploy more stacks
+                while (deployNext()) {
+                    // Deploy as many stacks as possible
+                }
             }
         }
     };
@@ -150,14 +209,19 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
         override async run() {
             await options.beforeEach?.();
 
-            const stacks = resolveStacks(this.container, options, this.stacks);
+            const stacks = resolveStacks({
+                ...options,
+                stackNames: this.stacks,
+            });
+
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to cancel.');
             }
 
             for (const stack of stacks) {
+                const stackResolved = this.container.resolve(stack);
                 console.log(`Cancelling stack ${chalk.green(stack.name)}...`);
-                await cancelStack(stack, {
+                await cancelStack(stackResolved, {
                     config: options.config,
                 });
             }
@@ -192,13 +256,18 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
         override async run() {
             await options.beforeEach?.();
 
-            const stacks = resolveStacks(this.container, options, this.stacks);
+            const stacks = resolveStacks({
+                ...options,
+                stackNames: this.stacks,
+            });
+
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to preview.');
             }
 
             for (const stack of stacks) {
-                await previewStack(stack, {
+                const stackResolved = this.container.resolve(stack);
+                await previewStack(stackResolved, {
                     refresh: this.refresh,
                     build: !this.skipBuild,
                     config: options.config,
@@ -227,13 +296,18 @@ function defineRefreshCommand(options: PulumiCommandsOptions) {
         override async run() {
             await options.beforeEach?.();
 
-            const stacks = resolveStacks(this.container, options, this.stacks);
+            const stacks = resolveStacks({
+                ...options,
+                stackNames: this.stacks,
+            });
+
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to refresh.');
             }
 
             for (const stack of stacks) {
-                await refreshStack(stack, {
+                const stackResolved = this.container.resolve(stack);
+                await refreshStack(stackResolved, {
                     config: options.config,
                 });
             }
@@ -272,18 +346,23 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                 throw new UsageError('Stack deletion is prohibited.');
             }
 
-            const stacks = resolveStacks(this.container, options, this.stacks);
+            const stacks = resolveStacks({
+                ...options,
+                stackNames: this.stacks,
+            });
+
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to destroy.');
             }
 
             for (const stack of [...stacks].reverse()) {
-                if (stack.preventDestroy) {
+                const stackResolved = this.container.resolve(stack);
+                if (stackResolved.preventDestroy) {
                     console.warn(`Stack ${chalk.yellow(stack.name)} is protected and cannot be destroyed.`);
                     continue;
                 }
 
-                await destroyStack(stack, {
+                await destroyStack(stackResolved, {
                     config: options.config,
                     refresh: this.refresh,
                     remove: this.remove,
@@ -306,13 +385,18 @@ function defineOutputCommand(options: PulumiCommandsOptions) {
         override async run() {
             await options.beforeEach?.();
 
-            const stacks = resolveStacks(this.container, options, this.stacks);
+            const stacks = resolveStacks({
+                ...options,
+                stackNames: this.stacks,
+            });
+
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to output.');
             }
 
             for (const stack of stacks) {
-                const outputs = await getStackOutputs(stack, {
+                const stackResolved = this.container.resolve(stack);
+                const outputs = await getStackOutputs(stackResolved, {
                     config: options.config,
                 });
 
@@ -323,23 +407,37 @@ function defineOutputCommand(options: PulumiCommandsOptions) {
     };
 }
 
-function resolveStacks(container: Container, options: PulumiCommandsOptions, stackNames: string[]) {
-    const allStack = options.stacks.map(s => container.resolve(s));
+function resolveStacks(options: ResolveStacksOptions) {
+    const stacksSet = filterStacks(options);
 
-    if (stackNames.length === 0) {
-        return allStack.filter(s => s.enabled);
+    if (options.recursive) {
+        for (const stack of [...stacksSet]) {
+            const deps = getAllDeps(stack);
+            for (const dep of deps) {
+                if (isStackDefinition(dep)) {
+                    stacksSet.add(dep);
+                }
+            }
+        }
     }
 
-    const stackNamesSet = new Set(stackNames);
-    const stacks: Stack[] = [];
+    return sortByDependency([...stacksSet]);
+}
 
-    for (const stack of allStack) {
-        if (stackNamesSet.has(stack.name)) {
-            stacks.push(stack);
-            stackNamesSet.delete(stack.name);
+function filterStacks(options: ResolveStacksOptions): Set<StackDefinition> {
+    if (options.stackNames.length === 0) {
+        return new Set(options.stacks.filter(s => s.enabled));
+    }
+
+    const stacks: Set<StackDefinition> = new Set();
+    const stackNamesSet = new Set(options.stackNames);
+    for (const stack of options.stacks) {
+        if (stackNamesSet.has(stack.stackName)) {
+            stacks.add(stack);
+            stackNamesSet.delete(stack.stackName);
 
             if (!stack.enabled) {
-                throw new UsageError(`Stack ${stack.name} is disabled.`);
+                throw new UsageError(`Stack ${stack.stackName} is disabled.`);
             }
         }
     }

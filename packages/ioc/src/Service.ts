@@ -1,4 +1,4 @@
-import type { EmptyObject, IfAny, IfLiteral, PartialOnUndefined, SomeObject } from '@nzyme/types';
+import type { IfAny, IfLiteral, PartialOnUndefined, SomeObject } from '@nzyme/types';
 
 import type { ContainerScope } from './ContainerScope.js';
 import { INJECTABLE_SYMBOL } from './Injectable.js';
@@ -41,8 +41,7 @@ export type ResolveDeps<D extends ServiceDependencies> = IfLiteral<
  * @template TDeps - The type of the service's dependencies
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface Service<T = unknown, TDeps extends ServiceDependencies = any>
-    extends Injectable<T> {
+export interface Service<T = unknown, TDeps extends ServiceDependencies = any> extends Injectable<T> {
     /**
      * Name of the service for debugging and identification.
      */
@@ -143,11 +142,9 @@ export interface ServiceSetup<TDeps extends ServiceDependencies, TService> {
  * @returns A new service instance
  * @__NO_SIDE_EFFECTS__
  */
-export function defineService<
-    T,
-    TExtend extends T = T,
-    TDeps extends ServiceDependencies = SomeObject,
->(options: ServiceOptions<T, TExtend, TDeps>): Service<TExtend, TDeps> {
+export function defineService<T, TExtend extends T = T, TDeps extends ServiceDependencies = SomeObject>(
+    options: ServiceOptions<T, TExtend, TDeps>,
+): Service<TExtend, TDeps> {
     const name = options.name ?? options.implements?.name ?? 'UnnamedService';
     const resolution = getResolutionStrategy(options.resolution ?? 'singleton');
 

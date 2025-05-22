@@ -41,7 +41,7 @@ export async function createOrSelectStack<TOutput extends StackOutput>(stack: St
     }
 
     if (config.secretsPassphrase) {
-        envVars.PULUMI_PASSPHRASE = config.secretsPassphrase;
+        envVars.PULUMI_CONFIG_PASSPHRASE = config.secretsPassphrase;
     }
 
     return await automation.LocalWorkspace.createOrSelectStack(

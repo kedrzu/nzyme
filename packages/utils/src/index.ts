@@ -1,3 +1,4 @@
+export * from './assertEnv.js';
 export * from './array/arrayRemove.js';
 export * from './array/arrayRemoveFirst.js';
 export * from './array/arrayRemoveWhere.js';

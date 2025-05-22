@@ -27,16 +27,14 @@ type HistoryStateRefOptions = {
     key: string;
 };
 
-export /**
+/**
  *
  */
-function historyStateRef<T>(
-    options: HistoryStateRefDefault<T> & HistoryStateRefOptions,
-): HistoryStateRef<T>;
-export /**
+export function historyStateRef<T>(options: HistoryStateRefDefault<T> & HistoryStateRefOptions): HistoryStateRef<T>;
+/**
  *
  */
-function historyStateRef<T>(
+export function historyStateRef<T>(
     options: HistoryStateRefNoDefault & HistoryStateRefOptions,
 ): HistoryStateRef<null | T>;
 

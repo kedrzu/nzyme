@@ -34,4 +34,5 @@ export type PickProps<T, K extends keyof T> = {
 /**
  *
  */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type SomeObject = {};

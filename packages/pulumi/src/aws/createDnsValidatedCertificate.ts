@@ -22,10 +22,7 @@ export interface CreateDnsValidatedCertificateOptions {
 /**
  * Creates a DNS validated certificate.
  */
-export function createDnsValidatedCertificate(
-    name: string,
-    options: CreateDnsValidatedCertificateOptions,
-) {
+export function createDnsValidatedCertificate(name: string, options: CreateDnsValidatedCertificateOptions) {
     const certificate = new aws.acm.Certificate(
         name,
         {
@@ -38,7 +35,7 @@ export function createDnsValidatedCertificate(
     const certfificateValidationOption = certificate.domainValidationOptions[0]!;
 
     // Create DNS validation records
-    const validationRecord = new aws.route53.Record(`${name}-validation`, {
+    const validationRecord = new aws.route53.Record(`${name}Validation`, {
         name: certfificateValidationOption.resourceRecordName,
         type: certfificateValidationOption.resourceRecordType,
         zoneId: options.zoneId,
@@ -48,7 +45,7 @@ export function createDnsValidatedCertificate(
 
     // Wait for certificate validation
     new aws.acm.CertificateValidation(
-        `${name}-validation`,
+        `${name}Validation`,
         {
             certificateArn: certificate.arn,
             validationRecordFqdns: [validationRecord.fqdn],

@@ -42,6 +42,7 @@ export async function deployStack<TOut extends StackOutput>(stack: Stack<TOut>, 
 
     const output = await stackInstance.up({
         onOutput: stack.logger.info,
+        onError: stack.logger.error,
         refresh: options.refresh,
     });
 

@@ -1,16 +1,9 @@
 import type { Plugin } from 'vue';
 
 import { CancelError } from '@nzyme/utils';
-import type { VueContainer } from '@nzyme/vue-ioc';
 
-export interface CommonPluginOptions {
-    container: VueContainer;
-}
-
-export const CommonPlugin: Plugin<CommonPluginOptions> = {
-    install(app, options: CommonPluginOptions) {
-        app.provide(options.container.injectionKey, options.container);
-
+export const CommonPlugin: Plugin = {
+    install(app) {
         if (typeof window !== 'undefined') {
             // unhandled promises are caught by this handler
             // we should preserve the previous one, to preserve default error handling

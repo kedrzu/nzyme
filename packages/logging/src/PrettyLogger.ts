@@ -7,7 +7,18 @@ import type { LoggerObject } from './Logger.js';
 import { Logger } from './Logger.js';
 
 let i = 0;
-const colors = [chalk.red, chalk.yellow, chalk.green, chalk.blue, chalk.magenta, chalk.cyan];
+const colors = [
+    chalk.red,
+    chalk.yellow,
+    chalk.green,
+    chalk.blue,
+    chalk.magenta,
+    chalk.cyan,
+    chalk.blueBright,
+    chalk.greenBright,
+    chalk.yellowBright,
+    chalk.redBright,
+];
 
 /**
  * A console logger service.

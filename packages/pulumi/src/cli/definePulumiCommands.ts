@@ -3,7 +3,6 @@ import chalk from 'chalk';
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
 import { getAllDeps, isDependentOn, sortByDependency } from '@nzyme/ioc';
-import { arrayRemoveWhere } from '@nzyme/utils';
 
 import { cancelStack } from '../cancelStack.js';
 import { isStackDefinition } from '../defineStack.js';
@@ -136,55 +135,77 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                 throw new UsageError('No stacks to deploy.');
             }
 
-            const deployed = new Set<StackDefinition>();
-            const current: { promise: Promise<void>; stack: StackDefinition }[] = [];
+            const stacksLeft = new Set<StackDefinition>(stacks);
+            const stacksDeploying = new Map<StackDefinition, Promise<void>>();
+            const stacksDeployed = new Set<StackDefinition>();
+            const stacksFailed = new Map<StackDefinition, unknown>();
 
             const deployNext = () => {
-                for (let i = 0; i < stacks.length; i++) {
-                    const stack = stacks[i]!;
+                if (stacksFailed.size > 0) {
+                    return false;
+                }
+
+                for (const stack of stacksLeft) {
                     // Skip if already deployed
-                    if (deployed.has(stack) || current.some(s => s.stack === stack)) {
+                    if (stacksDeployed.has(stack) || stacksDeploying.has(stack)) {
                         continue;
                     }
 
                     // Check if all dependencies are deployed
-                    const awaitDeps = stacks.some(s => isDependentOn(stack, s) && !deployed.has(s));
+                    const awaitDeps = stacks.some(s => isDependentOn(stack, s) && !stacksDeployed.has(s));
                     if (awaitDeps) {
                         continue;
                     }
 
                     const stackResolved = this.container.resolve(stack);
 
+                    stackResolved.logger.info(`🚀 Deploying stack ${chalk.green(stack.stackName)}...`);
+
                     const stackPromise = deployStack(stackResolved, {
                         refresh: this.refresh,
                         build: !this.skipBuild,
                         config: options.config,
-                    }).then(() => {
-                        arrayRemoveWhere(current, s => s.stack === stack);
-                        deployed.add(stack);
-                        void deployNext();
-                    });
+                    })
+                        .then(() => {
+                            stacksDeploying.delete(stack);
+                            stacksDeployed.add(stack);
+                            stacksLeft.delete(stack);
+                            stackResolved.logger.info(`🎉 Deployed stack ${chalk.green(stack.stackName)}`);
+                        })
+                        .catch(e => {
+                            stacksDeploying.delete(stack);
+                            stacksFailed.set(stack, e);
+                            stackResolved.logger.error(`❌ Failed to deploy stack ${chalk.red(stack.stackName)}.`, {
+                                error: e,
+                            });
+                        });
 
-                    current.push({ promise: stackPromise, stack });
+                    stacksDeploying.set(stack, stackPromise);
                     return true;
                 }
 
                 return false;
             };
 
-            // Start deploying stacks
-            while (deployNext()) {
-                // Deploy as many initial stacks as possible
-            }
-
-            // Wait for all stacks to complete
-            while (current.length > 0) {
-                await Promise.all(current.map(c => c.promise));
+            while (stacksLeft.size > 0) {
+                if (stacksFailed.size > 0) {
+                    break;
+                }
 
                 // Try to deploy more stacks
                 while (deployNext()) {
                     // Deploy as many stacks as possible
                 }
+
+                await Promise.any(stacksDeploying.values());
+            }
+
+            await Promise.allSettled(stacksDeploying.values());
+
+            if (stacksFailed.size > 0) {
+                throw new UsageError(
+                    `Failed to deploy stacks: ${[...stacksLeft.keys()].map(s => s.stackName).join(', ')}`,
+                );
             }
         }
     };

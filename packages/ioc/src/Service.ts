@@ -1,3 +1,5 @@
+import type { RequiredKeysOf } from 'type-fest';
+
 import type { IfAny, IfLiteral, PartialOnUndefined, SomeObject } from '@nzyme/types';
 
 import type { ContainerScope } from './ContainerScope.js';
@@ -22,12 +24,21 @@ const SERVICE_SYMBOL = Symbol('service');
  */
 export type ResolveDeps<D extends ServiceDependencies> = IfLiteral<
     keyof D,
-    PartialOnUndefined<{
-        readonly [K in keyof D]: D[K] extends Injectable<infer T> ? T : unknown;
-    }>,
+    ResolveDepsBase<D>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     D[keyof D] extends never ? void : any
 >;
+
+/**
+ * Type that represents a service constructor.
+ *
+ * @template T - The type that the service will resolve to
+ * @template TDeps - The type of the service's dependencies
+ */
+export type ServiceConstructor<T = unknown, TDeps extends ServiceDependencies = ServiceDependencies> =
+    RequiredKeysOf<ResolveDepsBase<TDeps>> extends never
+        ? (deps?: ResolveDeps<TDeps>) => T
+        : (deps: ResolveDeps<TDeps>) => T;
 
 /**
  * Represents a service in the dependency injection container.
@@ -67,7 +78,7 @@ export interface Service<T = unknown, TDeps extends ServiceDependencies = any> e
      * @param deps - The resolved dependencies for the service
      * @returns The initialized service instance
      */
-    readonly create: (deps: ResolveDeps<TDeps>) => T;
+    readonly create: ServiceConstructor<T, TDeps>;
 }
 
 /**
@@ -131,6 +142,10 @@ export interface ServiceSetup<TDeps extends ServiceDependencies, TService> {
      */
     (deps: ResolveDeps<TDeps>): TService;
 }
+
+type ResolveDepsBase<D extends ServiceDependencies> = PartialOnUndefined<{
+    readonly [K in keyof D]: D[K] extends Injectable<infer T> ? T : unknown;
+}>;
 
 /**
  * Creates a new service with the specified options.

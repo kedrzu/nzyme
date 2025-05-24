@@ -9,7 +9,7 @@ import type { ApiRouter } from '@nzyme/api-server';
  * @returns A lambda handler.
  * @__NO_SIDE_EFFECTS__
  */
-export function defineLambdaApiHandler(api: ApiRouter) {
+export function createLambdaApiHandler(api: ApiRouter) {
     return async (event: APIGatewayProxyEventV2) => {
         const method: HttpMethod =
             (event.requestContext?.http?.method.toUpperCase() as HttpMethod | undefined) || 'GET';

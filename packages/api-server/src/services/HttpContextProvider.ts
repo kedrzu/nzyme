@@ -37,7 +37,7 @@ export const HttpContextProvider = defineService({
     },
     name: 'HttpContextProvider',
     setup({ ctxProvider }) {
-        const ctxSymbol = Symbol();
+        const ctxSymbol = Symbol('HttpContext');
 
         return {
             clear,

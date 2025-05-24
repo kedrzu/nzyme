@@ -18,6 +18,12 @@ export type DevServerConfigOptions = {
      * The directory where compiled files will be output
      */
     outputDir: string;
+    /**
+     * Whether to use TypeScript
+     *
+     * @default true
+     */
+    typescript?: boolean;
 };
 
 /**
@@ -28,6 +34,8 @@ export type DevServerConfigOptions = {
  * @returns A Rollup configuration object with development-optimized settings
  */
 export function devServerConfig(options: DevServerConfigOptions): RollupOptions {
+    const ts = options.typescript ?? true;
+
     return {
         input: options.input,
         output: {
@@ -43,7 +51,7 @@ export function devServerConfig(options: DevServerConfigOptions): RollupOptions 
             }),
             unwrapCjsDefaultImport(commonjs)(),
             unwrapCjsDefaultImport(json)(),
-            unwrapCjsDefaultImport(typescript)(),
+            ts && unwrapCjsDefaultImport(typescript)(),
         ],
         external: source => {
             if (/^node:/.test(source) || /^[\w_-]+$/.test(source)) {

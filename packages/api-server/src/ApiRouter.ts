@@ -10,7 +10,6 @@ import { ValidationError } from '@nzyme/validation';
 import * as z from '@nzyme/zchema';
 
 import type { EndpointHandler } from './defineEndpointHandler.js';
-import { ContextProvider } from './services/ContextProvider.js';
 import { HttpContextProvider } from './services/HttpContextProvider.js';
 import type { HttpRequest } from './types/HttpRequest.js';
 import type { HttpResponse } from './types/HttpResponse.js';
@@ -59,13 +58,12 @@ export interface ApiRouterOptions {
 export const ApiRouter = defineService({
     deps: {
         container: Container,
-        contextProvider: ContextProvider,
         httpContextProvider: HttpContextProvider,
         logger: Logger,
         debug: envVariable('API_DEBUG'),
     },
     name: 'ApiRouter',
-    setup({ container, contextProvider, httpContextProvider, logger, debug }): ApiRouter {
+    setup({ container, httpContextProvider, logger, debug }): ApiRouter {
         const router = createRouter<EndpointHandler>();
 
         return {
@@ -80,8 +78,6 @@ export const ApiRouter = defineService({
 
             try {
                 const route = findRoute(router, request.method, request.path);
-
-                contextProvider.newContext();
                 const httpContext = httpContextProvider.setRequest(request);
 
                 if (!route) {

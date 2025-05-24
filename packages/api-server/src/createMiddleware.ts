@@ -20,13 +20,13 @@ export interface CreateMiddlewareOptions {
      * A function that will be called before a request is handled by the router.
      * Can be used to log requests, etc.
      */
-    beforeRequest?: (req: IncomingMessage, res: ServerResponse) => void;
+    beforeRequest?: (req: IncomingMessage, res: ServerResponse) => Promise<void> | void;
 
     /**
      * A function that will be called after a request is handled by the router.
      * Can be used to log requests, etc.
      */
-    afterRequest?: (req: IncomingMessage, res: ServerResponse) => void;
+    afterRequest?: (req: IncomingMessage, res: ServerResponse) => Promise<void> | void;
 }
 
 /**
@@ -51,7 +51,7 @@ export function createMiddleware(options: CreateMiddlewareOptions): RequestListe
      * @param res - The server response to write to
      */
     async function handleRequest(req: IncomingMessage, res: ServerResponse, next?: NextFunction) {
-        beforeRequest?.(req, res);
+        await beforeRequest?.(req, res);
 
         const url = parsePath(req.url || '/');
         const response = await router.execute({
@@ -65,7 +65,7 @@ export function createMiddleware(options: CreateMiddlewareOptions): RequestListe
         res.writeHead(response.status, response.statusText, response.headers);
         res.end(response.body);
 
-        afterRequest?.(req, res);
+        await afterRequest?.(req, res);
         next?.();
     }
 }

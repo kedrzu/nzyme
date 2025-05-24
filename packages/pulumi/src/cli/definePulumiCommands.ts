@@ -5,7 +5,7 @@ import { Command, Option, UsageError } from '@nzyme/cli';
 import { getAllDeps, isDependentOn, sortByDependency } from '@nzyme/ioc';
 
 import { cancelStack } from '../cancelStack.js';
-import { isStackDefinition } from '../defineStack.js';
+import { defineStack, isStackDefinition } from '../defineStack.js';
 import type { StackDefinition } from '../defineStack.js';
 import { deployStack } from '../deployStack.js';
 import { destroyStack } from '../destroyStack.js';
@@ -13,6 +13,7 @@ import { getStackOutputs } from '../getStackOutputs.js';
 import { previewStack } from '../previewStack.js';
 import type { PulumiConfig } from '../PulumiConfig.js';
 import { refreshStack } from '../refreshStack.js';
+import { arrayRemoveWhere } from '@nzyme/utils';
 
 /**
  * Options for the Pulumi commands.
@@ -358,6 +359,10 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
             description: 'Remove the stack and its configuration after destroying',
         });
 
+        force = Option.Boolean('--force,-f', {
+            description: 'Destroy the stack even if it is protected or orphaned',
+        });
+
         stacks = Option.Rest();
 
         override async run() {
@@ -365,6 +370,30 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
 
             if (options.preventDestroy) {
                 throw new UsageError('Stack deletion is prohibited.');
+            }
+
+            if (this.force) {
+                if (!this.stacks.length) {
+                    throw new UsageError('When using --force, you must specify stacks to destroy.');
+                }
+
+                for (const stack of this.stacks) {
+                    const stackDefinition = defineStack({
+                        name: stack,
+                        resources() {
+                            return {};
+                        },
+                    });
+
+                    const stackResolved = stackDefinition.create();
+                    await destroyStack(stackResolved, {
+                        config: options.config,
+                        refresh: this.refresh,
+                        remove: this.remove,
+                    });
+                }
+
+                return;
             }
 
             const stacks = resolveStacks({

@@ -1,6 +1,6 @@
 import type { Container } from '../Container.js';
 import type { Injectable } from '../Injectable.js';
-import type { ServiceDependencies } from '../Service.js';
+import type { Dependencies } from '../Service.js';
 
 /**
  * Resolves the dependencies of a service.
@@ -9,7 +9,7 @@ import type { ServiceDependencies } from '../Service.js';
  * @param caller - The caller of the service.
  * @returns The resolved dependencies.
  */
-export function resolveDeps(deps: ServiceDependencies, container: Container, caller?: Injectable) {
+export function resolveDeps(deps: Dependencies, container: Container, caller?: Injectable) {
     const resolved: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(deps)) {

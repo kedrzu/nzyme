@@ -1,27 +1,30 @@
 import type { Injectable } from '../Injectable.js';
 import { isService } from '../Service.js';
-import type { Service } from '../Service.js';
 
 const depsCacheSymbol = Symbol('ioc:deps');
 
-type ServiceWithDeps = Service & {
+type InjectableWithDeps = Injectable & {
     [depsCacheSymbol]?: Set<Injectable>;
 };
 
 /**
  * Returns a set of all direct and nested dependencies of a service.
  */
-export function getAllDeps(service: Service): ReadonlySet<Injectable> {
-    let deps = (service as ServiceWithDeps)[depsCacheSymbol];
+export function getAllDeps(injectable: Injectable): ReadonlySet<Injectable> {
+    let deps = (injectable as InjectableWithDeps)[depsCacheSymbol];
 
     if (deps) {
         return deps;
     }
 
     deps = new Set<Injectable>();
-    (service as ServiceWithDeps)[depsCacheSymbol] = deps;
+    (injectable as InjectableWithDeps)[depsCacheSymbol] = deps;
 
-    for (const dep of Object.values(service.deps)) {
+    if (!injectable.deps) {
+        return deps;
+    }
+
+    for (const dep of Object.values(injectable.deps)) {
         deps.add(dep);
         if (isService(dep)) {
             const nestedDeps = getAllDeps(dep);

@@ -22,7 +22,7 @@ const SERVICE_SYMBOL = Symbol('service');
  * @template D - The service dependencies type
  * @returns A type with all dependencies resolved to their concrete types
  */
-export type ResolveDeps<D extends ServiceDependencies> = IfLiteral<
+export type ResolveDeps<D extends Dependencies> = IfLiteral<
     keyof D,
     ResolveDepsBase<D>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,7 +35,7 @@ export type ResolveDeps<D extends ServiceDependencies> = IfLiteral<
  * @template T - The type that the service will resolve to
  * @template TDeps - The type of the service's dependencies
  */
-export type ServiceConstructor<T = unknown, TDeps extends ServiceDependencies = ServiceDependencies> =
+export type ServiceConstructor<T = unknown, TDeps extends Dependencies = Dependencies> =
     RequiredKeysOf<ResolveDepsBase<TDeps>> extends never
         ? (deps?: ResolveDeps<TDeps>) => T
         : (deps: ResolveDeps<TDeps>) => T;
@@ -52,7 +52,7 @@ export type ServiceConstructor<T = unknown, TDeps extends ServiceDependencies = 
  * @template TDeps - The type of the service's dependencies
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface Service<T = unknown, TDeps extends ServiceDependencies = any> extends Injectable<T> {
+export interface Service<T = unknown, TDeps extends Dependencies = any> extends Injectable<T> {
     /**
      * Name of the service for debugging and identification.
      */
@@ -71,7 +71,7 @@ export interface Service<T = unknown, TDeps extends ServiceDependencies = any> e
     /**
      * Dependencies required by this service.
      */
-    readonly deps: IfAny<TDeps, ServiceDependencies, TDeps>;
+    readonly deps: IfAny<TDeps, Dependencies, TDeps>;
 
     /**
      * Function that creates a new service instance with resolved dependencies.
@@ -85,7 +85,7 @@ export interface Service<T = unknown, TDeps extends ServiceDependencies = any> e
  * Represents a mapping of service dependencies.
  * Each key is a dependency name and its value is an injectable that provides the dependency.
  */
-export type ServiceDependencies = {
+export type Dependencies = {
     [key: string]: Injectable;
 };
 
@@ -96,11 +96,7 @@ export type ServiceDependencies = {
  * @template TExtend - The extended type that the service will resolve to (for inheritance)
  * @template TDeps - The type of the service's dependencies
  */
-export interface ServiceOptions<
-    T = unknown,
-    TExtend extends T = T,
-    TDeps extends ServiceDependencies = ServiceDependencies,
-> {
+export interface ServiceOptions<T = unknown, TExtend extends T = T, TDeps extends Dependencies = Dependencies> {
     /**
      * Optional name of the service for debugging and identification.
      */
@@ -134,7 +130,7 @@ export interface ServiceOptions<
  * @template TService - The type that the service will resolve to
  * @template TDeps - The type of the service's dependencies
  */
-export interface ServiceSetup<TDeps extends ServiceDependencies, TService> {
+export interface ServiceSetup<TDeps extends Dependencies, TService> {
     /**
      * Creates a new service instance with the provided dependencies.
      * @param deps - The resolved dependencies for the service
@@ -143,7 +139,7 @@ export interface ServiceSetup<TDeps extends ServiceDependencies, TService> {
     (deps: ResolveDeps<TDeps>): TService;
 }
 
-type ResolveDepsBase<D extends ServiceDependencies> = PartialOnUndefined<{
+type ResolveDepsBase<D extends Dependencies> = PartialOnUndefined<{
     readonly [K in keyof D]: D[K] extends Injectable<infer T> ? T : unknown;
 }>;
 
@@ -157,7 +153,7 @@ type ResolveDepsBase<D extends ServiceDependencies> = PartialOnUndefined<{
  * @returns A new service instance
  * @__NO_SIDE_EFFECTS__
  */
-export function defineService<T, TExtend extends T = T, TDeps extends ServiceDependencies = SomeObject>(
+export function defineService<T, TExtend extends T = T, TDeps extends Dependencies = SomeObject>(
     options: ServiceOptions<T, TExtend, TDeps>,
 ): Service<TExtend, TDeps> {
     const name = options.name ?? options.implements?.name ?? 'UnnamedService';

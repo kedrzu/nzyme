@@ -1,5 +1,5 @@
 import type { EndpointAny, EndpointInput, EndpointOutput } from '@nzyme/api-core';
-import type { Service, ServiceDependencies, ServiceSetup } from '@nzyme/ioc';
+import type { Service, Dependencies, ServiceSetup } from '@nzyme/ioc';
 import { defineService } from '@nzyme/ioc';
 
 import type { HttpRequest } from './types/HttpRequest.js';
@@ -29,7 +29,7 @@ export interface EndpointHandlerFunction<E extends EndpointAny = EndpointAny> {
  */
 export interface EndpointHandlerOptions<
     TEndpoint extends EndpointAny = EndpointAny,
-    TDeps extends ServiceDependencies = ServiceDependencies,
+    TDeps extends Dependencies = Dependencies,
 > {
     /**
      * The endpoint definition to handle.
@@ -54,7 +54,7 @@ export interface EndpointHandlerOptions<
  * @returns A combined endpoint and service object
  * @__NO_SIDE_EFFECTS__
  */
-export function defineEndpointHandler<E extends EndpointAny, D extends ServiceDependencies>(
+export function defineEndpointHandler<E extends EndpointAny, D extends Dependencies>(
     options: EndpointHandlerOptions<E, D>,
 ): EndpointHandler<E> {
     return {

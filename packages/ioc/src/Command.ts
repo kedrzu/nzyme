@@ -1,12 +1,7 @@
 import type { EmptyObject, OmitProps } from '@nzyme/types';
 import { createMemo } from '@nzyme/utils';
 
-import {
-    defineService,
-    type Service,
-    type ServiceDependencies,
-    type ServiceOptions,
-} from './Service.js';
+import { defineService, type Service, type Dependencies, type ServiceOptions } from './Service.js';
 import { defineResolutionStrategy, singletonStrategy } from './serviceResolve.js';
 
 /**
@@ -38,7 +33,7 @@ export type CommandFunction<P extends any[] = any[], R = unknown> = (...params: 
 export type CommandOptions<
     T extends CommandFunction,
     TExtend extends T = T,
-    TDeps extends ServiceDependencies = EmptyObject,
+    TDeps extends Dependencies = EmptyObject,
 > = OmitProps<ServiceOptions<T, TExtend, TDeps>, 'resolution'>;
 
 /**
@@ -48,8 +43,7 @@ export type CommandOptions<
  * @returns The resolved return type of the command, handling both sync and async results
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type CommandResult<T extends Command<any>> =
-    T extends Command<infer R> ? Awaited<ReturnType<R>> : never;
+export type CommandResult<T extends Command<any>> = T extends Command<infer R> ? Awaited<ReturnType<R>> : never;
 
 /**
  * Creates a new command with the specified options.
@@ -65,7 +59,7 @@ export type CommandResult<T extends Command<any>> =
 export function defineCommand<
     T extends CommandFunction,
     TExtend extends T = T,
-    TDeps extends ServiceDependencies = EmptyObject,
+    TDeps extends Dependencies = EmptyObject,
 >(options: ServiceOptions<T, TExtend, TDeps>) {
     return defineService<T, TExtend, TDeps>({
         ...options,

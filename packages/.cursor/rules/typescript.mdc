@@ -15,6 +15,7 @@ Use yarn to install packages.
 
 When file has one function/type/class exported it must be named after it.
 
+
 ## Functions
 When generating functions place them in the file in order from high to low abstraction.
 Also if function A uses B, A should be above B if possible.

@@ -7,7 +7,6 @@ export * from './normalizeBuiltinsPlugin.js';
 export * from './onRollupWarning.js';
 export * from './plugins/dotenvPlugin.js';
 export * from './plugins/packageJsonPlugin.js';
-export * from './plugins/prismaPlugin.js';
 export * from './rollupCompile.js';
 export * from './types.js';
 export * from './vueLibConfig.js';

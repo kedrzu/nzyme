@@ -1,5 +1,4 @@
 import type { Injectable } from '../Injectable.js';
-import { isService } from '../Service.js';
 
 const depsCacheSymbol = Symbol('ioc:deps');
 

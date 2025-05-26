@@ -13,7 +13,6 @@ import { getStackOutputs } from '../getStackOutputs.js';
 import { previewStack } from '../previewStack.js';
 import type { PulumiConfig } from '../PulumiConfig.js';
 import { refreshStack } from '../refreshStack.js';
-import { arrayRemoveWhere } from '@nzyme/utils';
 
 /**
  * Options for the Pulumi commands.
@@ -159,8 +158,9 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                     }
 
                     const stackResolved = this.container.resolve(stack);
+                    const stackName = chalk.bold(chalk.green(stack.stackName));
 
-                    stackResolved.logger.info(`🚀 Deploying stack ${chalk.green(stack.stackName)}...`);
+                    stackResolved.logger.info(`🚀 Deploying stack ${stackName}...`);
 
                     const stackPromise = deployStack(stackResolved, {
                         refresh: this.refresh,
@@ -171,12 +171,12 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                             stacksDeploying.delete(stack);
                             stacksDeployed.add(stack);
                             stacksLeft.delete(stack);
-                            stackResolved.logger.info(`🎉 Deployed stack ${chalk.green(stack.stackName)}`);
+                            stackResolved.logger.info(`🎉 Deployed stack ${stackName}`);
                         })
                         .catch(e => {
                             stacksDeploying.delete(stack);
                             stacksFailed.set(stack, e);
-                            stackResolved.logger.error(`❌ Failed to deploy stack ${chalk.red(stack.stackName)}.`, {
+                            stackResolved.logger.error(`❌ Failed to deploy stack ${stackName}.`, {
                                 error: e,
                             });
                         });

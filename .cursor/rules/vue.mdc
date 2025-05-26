@@ -1,0 +1,14 @@
+---
+description: 
+globs: **/*.vue
+alwaysApply: false
+---
+## Scripts
+Always follow a structure:
+- first any use, refs and all the other state-related variables
+- then all the hooks like onMounted
+- all the functions should be defined as normal ones (not arrow functions) and put at the end of the script to utilize hoisting
+
+## Styles
+Use BEM principles, but avoid too much nesting. Use a single characher separator for classes (ie _ not __).
+Use camel case class naming.

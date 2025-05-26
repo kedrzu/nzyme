@@ -13,7 +13,7 @@
  * value.toUpperCase(); // TypeScript knows value is string here
  * ```
  */
-export function assert<T>(value: null | T | undefined, message?: string): asserts value is T {
+export function assert(value: unknown, message?: string): asserts value {
     if (value == null) {
         throw new Error(message ?? 'Value is not provided.');
     }
@@ -36,11 +36,7 @@ export function assert<T>(value: null | T | undefined, message?: string): assert
  * assertEquals(value, 6); // Throws error
  * ```
  */
-export function assertEquals<T, E extends T = T>(
-    value: T,
-    expected: E,
-    message?: string,
-): asserts value is T {
+export function assertEquals<T, E extends T = T>(value: T, expected: E, message?: string): asserts value is T {
     if (value !== expected) {
         throw new Error(message ?? `Value is not equal to ${String(expected)}.`);
     }
@@ -82,7 +78,7 @@ export function assertTruthy(value: unknown, message?: string): asserts value {
  * nonNullValue.toUpperCase(); // TypeScript knows value is string here
  * ```
  */
-export function assertValue<T>(value: null | T | undefined, message?: string): T {
+export function assertValue<T>(value: T | null | undefined, message?: string): T {
     assert(value, message);
     return value;
 }

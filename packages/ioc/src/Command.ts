@@ -1,7 +1,7 @@
 import type { EmptyObject, OmitProps } from '@nzyme/types';
-import { createMemo } from '@nzyme/utils';
 
-import { defineService, type Service, type Dependencies, type ServiceOptions } from './Service.js';
+import { defineService } from './Service.js';
+import type { Dependencies, Service, ServiceOptions } from './Service.js';
 import { defineResolutionStrategy, singletonStrategy } from './serviceResolve.js';
 
 /**
@@ -75,9 +75,15 @@ export function defineCommand<
  * - Maintain consistent execution context
  */
 const commandStrategy = defineResolutionStrategy((service, container, caller) => {
-    const memo = createMemo(() => singletonStrategy(service, container, caller) as CommandFunction);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    const command: CommandFunction = (...args) => memo()(...args);
+    let instance: CommandFunction | undefined;
+
+    const command: CommandFunction = (...args: unknown[]) => {
+        if (instance === undefined) {
+            instance = singletonStrategy(service, container, caller) as CommandFunction;
+        }
+
+        return instance(...args);
+    };
 
     return command;
 });

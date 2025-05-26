@@ -26,11 +26,9 @@ export function getAllDeps(injectable: Injectable): ReadonlySet<Injectable> {
 
     for (const dep of Object.values(injectable.deps)) {
         deps.add(dep);
-        if (isService(dep)) {
-            const nestedDeps = getAllDeps(dep);
-            for (const nestedDep of nestedDeps) {
-                deps.add(nestedDep);
-            }
+        const nestedDeps = getAllDeps(dep);
+        for (const nestedDep of nestedDeps) {
+            deps.add(nestedDep);
         }
     }
 

@@ -2,7 +2,7 @@ import type { Unwrap } from '@pulumi/pulumi';
 import type { automation } from '@pulumi/pulumi';
 import * as pulumi from '@pulumi/pulumi';
 
-import type { Dependencies, Injectable, Resolved, ResolveDeps, Service } from '@nzyme/ioc';
+import type { Dependencies, Injectable, ResolveDeps, Service } from '@nzyme/ioc';
 import { defineInjectable, defineService } from '@nzyme/ioc';
 import { PrettyLogger } from '@nzyme/logging';
 import type { Logger } from '@nzyme/logging';

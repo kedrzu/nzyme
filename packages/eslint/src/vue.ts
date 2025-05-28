@@ -13,6 +13,7 @@ export function vue() {
             'vue/require-v-for-key': 'off',
             'vue/require-default-prop': 'off',
             'vue/one-component-per-file': 'off',
+            'vue/singleline-html-element-content-newline': 'off',
         },
         languageOptions: {
             parser: vueParser,

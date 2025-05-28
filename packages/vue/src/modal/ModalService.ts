@@ -5,9 +5,8 @@ import { clearFocus, onHistoryBack } from '@nzyme/dom-utils';
 import { defineService } from '@nzyme/ioc';
 import type { Writable } from '@nzyme/types';
 import { arrayRemove, CancelError, createPromise } from '@nzyme/utils';
-import { provideContext, reactive } from '@nzyme/vue-utils';
+import { onKeyUp, provideContext, reactive } from '@nzyme/vue-utils';
 
-import { onKeyUp } from '../onKeyUp.js';
 import { ModalContext } from './ModalContext.js';
 import type {
     Modal,
@@ -41,9 +40,7 @@ const ModalService = defineService({
             modals: modals as Readonly<Ref<readonly Modal[]>>,
         });
 
-        function open<T extends ModalComponent>(
-            options: ModalServiceOpenOptions & OpenModalOptions<T>,
-        ): Modal<T> {
+        function open<T extends ModalComponent>(options: ModalServiceOpenOptions & OpenModalOptions<T>): Modal<T> {
             const open = ref(true);
             const result = createPromise<ModalResult<T>>();
 

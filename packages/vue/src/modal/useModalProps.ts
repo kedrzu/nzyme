@@ -1,8 +1,12 @@
-import type { ModalHandler } from './ModalTypes.js';
-import { prop } from '../prop.js';
+import { defineProp } from '@nzyme/vue-utils';
 
+import type { ModalHandler } from './ModalTypes.js';
+
+/**
+ *
+ */
 export function useModalProps<T = void>() {
     return {
-        modal: prop<ModalHandler<T>>().required(),
+        modal: defineProp<ModalHandler<T>>({ required: true }),
     };
 }

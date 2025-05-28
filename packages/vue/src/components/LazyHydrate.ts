@@ -1,23 +1,18 @@
-import {
-    defineComponent,
-    watch,
-    h,
-    getCurrentInstance,
-    defineAsyncComponent,
-    onBeforeUnmount,
-    type RenderFunction,
-} from 'vue';
+import { defineAsyncComponent, defineComponent, getCurrentInstance, h, onBeforeUnmount, watch } from 'vue';
+import type { RenderFunction } from 'vue';
 
-import { requestIdleCallback, cancelIdleCallback, isBrowser } from '@nzyme/dom-utils';
+import { cancelIdleCallback, isBrowser, requestIdleCallback } from '@nzyme/dom-utils';
 import { createPromise } from '@nzyme/utils';
+import { defineProp } from '@nzyme/vue-utils';
 
-import { prop } from '../prop.js';
-
+/**
+ *
+ */
 export const LazyHydrate = defineComponent({
     name: 'LazyHydrate',
     props: {
-        whenIdle: prop<boolean | IdleRequestOptions>([Boolean, Object]).optional(),
-        whenVisible: prop<boolean | IntersectionObserverInit>([Boolean, Object]).optional(),
+        whenIdle: defineProp<boolean | IdleRequestOptions>(),
+        whenVisible: defineProp<boolean | IntersectionObserverInit>(),
         whenTriggered: Boolean,
     },
     emits: ['hydrated'],
@@ -75,10 +70,7 @@ export const LazyHydrate = defineComponent({
                         return;
                     }
 
-                    const idleCallbackId = requestIdleCallback(
-                        hydrate,
-                        whenIdle === true ? undefined : whenIdle,
-                    );
+                    const idleCallbackId = requestIdleCallback(hydrate, whenIdle === true ? undefined : whenIdle);
 
                     onCleanup(() => cancelIdleCallback(idleCallbackId));
                 },
@@ -101,9 +93,7 @@ export const LazyHydrate = defineComponent({
                     }
 
                     const observerOptions =
-                        typeof props.whenVisible === 'object'
-                            ? props.whenVisible
-                            : { rootMargin: '100px' };
+                        typeof props.whenVisible === 'object' ? props.whenVisible : { rootMargin: '100px' };
 
                     const io = new IntersectionObserver(entries => {
                         entries.forEach(entry => {
@@ -111,7 +101,7 @@ export const LazyHydrate = defineComponent({
                                 hydrate();
                             }
                         });
-                    }, observerOptions);
+                    }, observerOptions ?? undefined);
 
                     if (element instanceof Element) {
                         io.observe(element);

@@ -5,7 +5,7 @@ interface KeyConfig {
     alternative?: string;
 }
 
-type Key = 'Escape' | 'Enter' | 'ArrowLeft' | 'ArrowRight';
+type Key = 'ArrowLeft' | 'ArrowRight' | 'Enter' | 'Escape';
 type KeyCallback = (e: KeyboardEvent) => void;
 
 const keyConfigs: Record<Key, KeyConfig> = {
@@ -24,8 +24,17 @@ const keyConfigs: Record<Key, KeyConfig> = {
     },
 };
 
+/**
+ *
+ */
 export function onKeyUp(key: Key | Key[], callback: KeyCallback): void;
+/**
+ *
+ */
 export function onKeyUp(callback: KeyCallback): void;
+/**
+ *
+ */
 export function onKeyUp(keyOrCallback: Key | Key[] | KeyCallback, callback?: KeyCallback) {
     if (typeof keyOrCallback === 'function') {
         callback = keyOrCallback;
@@ -56,10 +65,7 @@ function isMatchingKey(event: KeyboardEvent, key: Key) {
     const keyConfig = keyConfigs[key];
 
     if ('key' in event) {
-        return (
-            event.key === key ||
-            (keyConfig.alternative != null && event.key === keyConfig.alternative)
-        );
+        return event.key === key || (keyConfig.alternative != null && event.key === keyConfig.alternative);
     } else {
         return (event as KeyboardEvent).keyCode === keyConfig.code;
     }

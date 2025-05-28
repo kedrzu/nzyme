@@ -1,7 +1,16 @@
 import type { PropType } from 'vue';
 
-type ClassType = string | boolean | object | number | null | undefined;
+/**
+ *
+ */
+export type ClassType = boolean | number | object | string | null | undefined;
 
-export const classProp = [String, Object, Array] as PropType<
-    ClassType | Record<string, boolean> | Array<ClassType>
->;
+/**
+ *
+ */
+export type ClassProp = Array<ClassType> | ClassType | Record<string, boolean>;
+
+/**
+ *
+ */
+export const classProp = [String, Object, Array] as PropType<Array<ClassProp>>;

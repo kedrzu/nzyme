@@ -39,7 +39,7 @@
         "libphonenumber-js": "^1.12.8",
         "postal-codes-js": "^2.5.2",
         "tslib": "^2.8.1",
-        "vue": "^3.5.14",
+        "vue": "^3.5.15",
         "vue-imask": "^7.6.1"
     },
     "devDependencies": {

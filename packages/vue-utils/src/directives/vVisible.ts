@@ -28,6 +28,8 @@ export const vVisible: ObjectDirective<VVisibleElement> = {
             if (value) {
                 const display = el.style.display;
                 el.style.display = 'none';
+                // force reflow
+                // eslint-disable-next-line @typescript-eslint/no-unused-expressions
                 window.getComputedStyle(el).display;
                 transition.beforeEnter(el);
                 el.style.display = display;

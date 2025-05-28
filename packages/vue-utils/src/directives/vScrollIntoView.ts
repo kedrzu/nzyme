@@ -1,11 +1,23 @@
 import type { ObjectDirective } from 'vue';
 
-type ScrollIntoViewOptions = {
-    trigger?: boolean | number;
+/**
+ *
+ */
+export type ScrollIntoViewDirectiveOptions = {
+    /**
+     *
+     */
     options?: globalThis.ScrollIntoViewOptions;
+    /**
+     *
+     */
+    trigger?: boolean | number;
 };
 
-export const vScrollIntoView: ObjectDirective<Element, ScrollIntoViewOptions | undefined | null> = {
+/**
+ * Scroll into view directive.
+ */
+export const vScrollIntoView: ObjectDirective<Element, ScrollIntoViewDirectiveOptions | null | undefined> = {
     mounted(el, binding) {
         const enabled = isEnabled(binding.value?.trigger);
         if (enabled) {

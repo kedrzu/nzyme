@@ -7,6 +7,9 @@ interface VShowElement extends HTMLElement {
     _vod: string;
 }
 
+/**
+ * Show directive.
+ */
 export const vShow: ObjectDirective<VShowElement> = {
     beforeMount(el, { value }, { transition }) {
         el._vod = el.style.display === 'none' ? '' : el.style.display;

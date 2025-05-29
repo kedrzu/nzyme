@@ -1,13 +1,9 @@
-import {
-    Transition,
-    TransitionGroup,
-    type TransitionProps as TransitionPropsVue,
-    type TransitionGroupProps as TransitionGroupPropsVue,
-    defineComponent,
-    type ExtractPropTypes,
-    computed,
-    type ComponentObjectPropsOptions,
-    h,
+import { computed, defineComponent, h, Transition, TransitionGroup } from 'vue';
+import type {
+    ComponentObjectPropsOptions,
+    ExtractPropTypes,
+    TransitionGroupProps as TransitionGroupPropsVue,
+    TransitionProps as TransitionPropsVue,
 } from 'vue';
 
 import type { SomeObject } from '@nzyme/types';
@@ -16,53 +12,47 @@ import { defineProp } from '@nzyme/vue-utils';
 /**
  * Transition props.
  */
-export type TransitionProps = Omit<TransitionPropsVue, 'name' | `${string}Class` | 'css'> & {
+export type TransitionProps = Omit<TransitionPropsVue, 'css' | 'name' | `${string}Class`> & {
     /**
      * Transition duration in milliseconds.
      */
     duration?: number;
-};
-
-type TransitionHook = (el: Element) => void;
-type TransitionGetter<TProps extends ComponentObjectPropsOptions, TValue> = (
-    props: ExtractPropTypes<TProps>,
-) => TValue;
-type TransitionProp<TProps extends ComponentObjectPropsOptions, TValue> =
-    | TValue
-    | TransitionGetter<TProps, TValue>;
-
-type TransitionDefProps<TProps extends ComponentObjectPropsOptions = SomeObject> = {
-    name: string;
-    props?: TProps;
-    enterFromClass?: TransitionProp<TProps, string | undefined>;
-    enterActiveClass?: TransitionProp<TProps, string | undefined>;
-    enterToClass?: TransitionProp<TProps, string | undefined>;
-    appearFromClass?: TransitionProp<TProps, string | undefined>;
-    appearActiveClass?: TransitionProp<TProps, string | undefined>;
-    appearToClass?: TransitionProp<TProps, string | undefined>;
-    leaveFromClass?: TransitionProp<TProps, string | undefined>;
-    leaveActiveClass?: TransitionProp<TProps, string | undefined>;
-    leaveToClass?: TransitionProp<TProps, string | undefined>;
 };
 
 /**
  * Transition group props.
  */
-export type TransitionGroupProps = Omit<
-    TransitionGroupPropsVue,
-    'name' | `${string}Class` | 'css'
-> & {
+export type TransitionGroupProps = Omit<TransitionGroupPropsVue, 'css' | 'name' | `${string}Class`> & {
     /**
      * Transition duration in milliseconds.
      */
     duration?: number;
 };
+type TransitionHook = (el: Element) => void;
+type TransitionGetter<TProps extends ComponentObjectPropsOptions, TValue> = (props: ExtractPropTypes<TProps>) => TValue;
+
+type TransitionProp<TProps extends ComponentObjectPropsOptions, TValue> = TransitionGetter<TProps, TValue> | TValue;
+
+type TransitionDefProps<TProps extends ComponentObjectPropsOptions = SomeObject> = {
+    appearActiveClass?: TransitionProp<TProps, string | undefined>;
+    appearFromClass?: TransitionProp<TProps, string | undefined>;
+    appearToClass?: TransitionProp<TProps, string | undefined>;
+    enterActiveClass?: TransitionProp<TProps, string | undefined>;
+    enterFromClass?: TransitionProp<TProps, string | undefined>;
+    enterToClass?: TransitionProp<TProps, string | undefined>;
+    leaveActiveClass?: TransitionProp<TProps, string | undefined>;
+    leaveFromClass?: TransitionProp<TProps, string | undefined>;
+    leaveToClass?: TransitionProp<TProps, string | undefined>;
+    name: string;
+    props?: TProps;
+};
 
 const TRANSITION_PROPS = {
+    appear: Boolean,
     duration: Number,
     delay: Number,
     group: defineProp<boolean | undefined>({ type: Boolean }),
-    mode: defineProp<'in-out' | 'out-in' | 'default'>(),
+    mode: defineProp<'default' | 'in-out' | 'out-in'>(),
     onBeforeEnter: defineProp<TransitionHook | TransitionHook[]>(),
     onAfterEnter: defineProp<TransitionHook | TransitionHook[]>(),
     onBeforeLeave: defineProp<TransitionHook | TransitionHook[]>(),
@@ -70,7 +60,6 @@ const TRANSITION_PROPS = {
 };
 
 /**
- *
  * @__NO_SIDE_EFFECTS__
  */
 export function defineTransition<TProps extends ComponentObjectPropsOptions = SomeObject>(
@@ -105,10 +94,10 @@ export function defineTransition<TProps extends ComponentObjectPropsOptions = So
                     return (
                         <TransitionGroup
                             {...classes.value}
-                            onBeforeEnter={onBeforeEnter}
                             onAfterEnter={onAfterEnter}
-                            onBeforeLeave={onBeforeLeave}
                             onAfterLeave={onAfterLeave}
+                            onBeforeEnter={onBeforeEnter}
+                            onBeforeLeave={onBeforeLeave}
                         >
                             {ctx.slots.default?.()}
                         </TransitionGroup>
@@ -119,10 +108,10 @@ export function defineTransition<TProps extends ComponentObjectPropsOptions = So
                     <Transition
                         {...classes.value}
                         mode={props.mode ?? 'out-in'}
-                        onBeforeEnter={onBeforeEnter}
                         onAfterEnter={onAfterEnter}
-                        onBeforeLeave={onBeforeLeave}
                         onAfterLeave={onAfterLeave}
+                        onBeforeEnter={onBeforeEnter}
+                        onBeforeLeave={onBeforeLeave}
                     >
                         {ctx.slots.default?.()}
                     </Transition>

@@ -2,7 +2,6 @@ import { existsSync } from 'fs';
 import * as path from 'node:path';
 
 import chalk from 'chalk';
-import { consola } from 'consola';
 import { config as configDotenv } from 'dotenv';
 
 import { asArray } from '@nzyme/utils';
@@ -65,6 +64,6 @@ function loadEnvFile(file: string, output: Record<string, string>) {
 
     const result = configDotenv({ path: file, override: true, processEnv: output });
     if (result.parsed) {
-        consola.info(`Loaded environment variables from ${chalk.green(file)}`);
+        console.info(`Loaded environment variables from ${chalk.green(file)}`);
     }
 }

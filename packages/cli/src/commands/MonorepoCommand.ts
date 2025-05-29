@@ -7,7 +7,6 @@ import { getPackages } from '@lerna/project';
 import { watch } from 'chokidar';
 import { Option } from 'clipanion';
 import * as json from 'comment-json';
-import { consola } from 'consola';
 import fsExtra from 'fs-extra/esm';
 import merge from 'lodash.merge';
 import type { TsConfigJson } from 'type-fest';
@@ -17,6 +16,7 @@ import { asArray, debounceAsyncFunction, waitForever } from '@nzyme/utils';
 
 import { Command } from '../Command.js';
 import type { NzymePackageConfig } from '../NzymePackageConfig.js';
+import chalk from 'chalk';
 
 interface TsConfig {
     path: string;
@@ -69,7 +69,7 @@ export class MonorepoCommand extends Command {
             ignoreInitial: true,
         });
 
-        consola.info('Watching for changes...');
+        console.info('Watching for changes...');
 
         const onFileChange = debounceAsyncFunction(this.onFileChange.bind(this), {
             trailing: true,
@@ -136,7 +136,7 @@ async function processProject(throwOnError: boolean) {
             throw error;
         }
 
-        consola.error('Failed to process project', error);
+        console.error('Failed to process project', error);
     }
 }
 
@@ -156,7 +156,7 @@ async function processPackage(pkg: Package, packages: Package[], throwOnError: b
             throw error;
         }
 
-        consola.error(`Failed to process package ${pkg.name}`, error);
+        console.error(`Failed to process package ${pkg.name}`, error);
         packageCache.set(pkg.name, Promise.resolve({ esm: null, cjs: null }));
         return { esm: null, cjs: null };
     }
@@ -360,7 +360,7 @@ async function saveTsReferences(params: {
     const configJson = json.stringify(tsconfig, undefined, 2);
     await saveFile(outputPath, configJson);
 
-    consola.success(outputPath);
+    console.info(`Generated ${chalk.green(outputPath)}`);
 
     return outputPath;
 }

@@ -35,5 +35,5 @@ function log(
     obj: LoggerObject | undefined,
     ctx: Context | undefined,
 ) {
-    console.log(JSON.stringify({ logger, level, msg, ...obj, ...ctx }));
+    console[level](JSON.stringify({ logger, level, msg, ...obj, ...ctx }));
 }

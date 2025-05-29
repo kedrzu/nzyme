@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import { consola } from 'consola';
 import { emptyDir } from 'fs-extra/esm';
 import { rollup } from 'rollup';
 
@@ -26,5 +25,5 @@ export async function rollupCompile(options: RollupOptions) {
     await result.write(options.output);
     await result.close();
 
-    consola.success(`Compiled in ${chalk.green(formatElapsedMs(start))}`);
+    console.info(`Compiled in ${chalk.green(formatElapsedMs(start))}`);
 }

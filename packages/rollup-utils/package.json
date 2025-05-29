@@ -46,7 +46,6 @@
         "@vitejs/plugin-vue-jsx": "^4.2.0",
         "chalk": "^5.4.1",
         "connect": "^3.7.0",
-        "consola": "^3.4.2",
         "fs-extra": "^11.3.0",
         "get-port": "^7.1.0",
         "http-proxy-middleware": "^3.0.5",

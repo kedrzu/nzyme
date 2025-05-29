@@ -41,7 +41,6 @@
         "clipanion": "^4.0.0-rc.4",
         "comment-json": "^4.2.5",
         "compare-versions": "^6.1.1",
-        "consola": "^3.4.2",
         "depcheck": "^1.4.7",
         "execa": "^9.6.0",
         "fast-glob": "^3.3.3",

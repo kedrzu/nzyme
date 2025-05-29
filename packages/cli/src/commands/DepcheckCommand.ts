@@ -2,7 +2,6 @@ import type { Package } from '@lerna/package';
 import { getPackages } from '@lerna/project';
 import chalk from 'chalk';
 import { compareVersions } from 'compare-versions';
-import { consola } from 'consola';
 import depcheckImport from 'depcheck';
 
 import { Command } from '../Command.js';
@@ -137,9 +136,9 @@ export class DepcheckCommand extends Command {
             const packageName = chalk.underline(chalk.magenta(pkg.name));
             const packagePath = `${pkg.location}/package.json`;
 
-            consola.log(`\n${packageName} (${packagePath})`);
+            console.log(`\n${packageName} (${packagePath})`);
             for (const line of toWrite) {
-                consola.log(line);
+                console.log(line);
             }
         }
 

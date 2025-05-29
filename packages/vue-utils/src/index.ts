@@ -1,3 +1,4 @@
+export * from './asyncComponent.js';
 export * from './classProp.js';
 export * from './component.js';
 export * from './computedAsync.js';
@@ -22,7 +23,7 @@ export * from './reactivity/constRef.js';
 export * from './reactivity/historyStateRef.js';
 export * from './reactivity/makeRef.js';
 export * from './reactivity/promiseRef.js';
-export * from './reactivity/reactive.js';
+export * from './reactivity/reactiveFor.js';
 export * from './reactivity/refAsync.js';
 export * from './reactivity/storageRef.js';
 export * from './reactivity/storageRefWithSchema.js';

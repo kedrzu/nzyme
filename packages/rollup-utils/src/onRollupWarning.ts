@@ -1,4 +1,3 @@
-import { consola } from 'consola';
 import type { WarningHandlerWithDefault } from 'rollup';
 
 /**
@@ -17,13 +16,10 @@ export const onRollupWarning: WarningHandlerWithDefault = warning => {
     }
 
     // Ignore circular dependencies in third party modules
-    if (
-        warning.code === 'CIRCULAR_DEPENDENCY' &&
-        warning.ids?.find(id => id.includes('node_modules/'))
-    ) {
+    if (warning.code === 'CIRCULAR_DEPENDENCY' && warning.ids?.find(id => id.includes('node_modules/'))) {
         return;
     }
 
     // console.warn everything else
-    consola.warn(warning.message);
+    console.warn(warning.message);
 };

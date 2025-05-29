@@ -1,5 +1,4 @@
 export * from './App.js';
-export * from './asyncImport.js';
 export { CommonPlugin } from './CommonPlugin.js';
 // TODO: decide if we want TSX or VUE version
 export * from './components/Collapse.jsx';

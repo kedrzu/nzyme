@@ -1,11 +1,11 @@
-import { defineComponent, h, nextTick, ref, watch } from 'vue';
+import { defineComponent, h, nextTick, reactive, ref, watch } from 'vue';
 import type { ComponentInternalInstance, Ref } from 'vue';
 
 import { clearFocus, onHistoryBack } from '@nzyme/dom-utils';
 import { defineService } from '@nzyme/ioc';
 import type { Writable } from '@nzyme/types';
 import { arrayRemove, CancelError, createPromise } from '@nzyme/utils';
-import { onKeyUp, provideContext, reactive } from '@nzyme/vue-utils';
+import { onKeyUp, provideContext, reactiveFor } from '@nzyme/vue-utils';
 
 import { ModalContext } from './ModalContext.js';
 import type {
@@ -64,7 +64,7 @@ const ModalService = defineService({
 
             modal.id = Symbol('modal');
             modal.props = options.props as ModalProps<T>;
-            modal.handler = reactive<ModalHandler<ModalResult<T>>>({
+            modal.handler = reactiveFor<ModalHandler<ModalResult<T>>>({
                 open,
                 setResult: result => {
                     modalResult = { result };

@@ -38,6 +38,10 @@ export function compileTranslations(yaml: string): TranslationResult {
         yaml,
     };
 
+    if (!root) {
+        return createEmptyResult(yaml);
+    }
+
     if (!isMap(root)) {
         result.errors.push({
             message: 'Document must be an object',
@@ -45,6 +49,10 @@ export function compileTranslations(yaml: string): TranslationResult {
         });
 
         return result;
+    }
+
+    if (root.items.length === 0) {
+        return createEmptyResult(yaml);
     }
 
     for (const item of root.items) {
@@ -58,10 +66,15 @@ export function compileTranslations(yaml: string): TranslationResult {
     return result;
 }
 
-function compileSingleTranslation(
-    item: Pair<ParsedNode, ParsedNode | null>,
-    result: TranslationResult,
-) {
+function createEmptyResult(yaml: string): TranslationResult {
+    return {
+        code: `export {};\n`,
+        errors: [],
+        yaml,
+    };
+}
+
+function compileSingleTranslation(item: Pair<ParsedNode, ParsedNode | null>, result: TranslationResult) {
     const key = item.key.toString();
 
     if (!KEY_REGEX.test(key)) {
@@ -120,12 +133,7 @@ function compileSingleTranslation(
     result.code += code;
 }
 
-function parseTranslationValue(
-    key: string,
-    lang: string,
-    item: ParsedNode,
-    result: TranslationResult,
-) {
+function parseTranslationValue(key: string, lang: string, item: ParsedNode, result: TranslationResult) {
     if (!isScalar(item)) {
         result.errors.push({
             key,

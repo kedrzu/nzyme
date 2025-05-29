@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import connect from 'connect';
-import { consola } from 'consola';
 
 import type { DevServerMiddlewareOptions } from './devServerMiddleware.js';
 import { devServerMiddleware } from './devServerMiddleware.js';
@@ -24,6 +23,6 @@ export function devServerStart(options: DevServerOptions) {
 
     app.use(middleware);
     app.listen(options.port, () => {
-        consola.info(`Server listening on ${chalk.green(`http://localhost:${options.port}`)}`);
+        console.info(`Server listening on ${chalk.green(`http://localhost:${options.port}`)}`);
     });
 }

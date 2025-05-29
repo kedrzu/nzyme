@@ -2,8 +2,8 @@ import { computed, reactive, ref } from 'vue';
 import type { PropType } from 'vue';
 
 import { assignProps, waitFor } from '@nzyme/utils';
-import { defineProps, injectContext, useProps } from '@nzyme/vue-utils';
-import { useEmitAsync } from '@nzyme/vue-utils';
+import { injectContext, useProps } from '@nzyme/vue-utils';
+import { defineProps, useEmitAsync } from '@nzyme/vue-utils';
 
 import { FormContext } from '../FormContext.js';
 
@@ -30,6 +30,17 @@ const BUTTON_EMITS = {
     click: (event: Event) => !!event,
 };
 
+export interface ButtonProps {
+    type?: 'button' | 'submit';
+    busy?: boolean;
+    disabled?: boolean;
+    preventDefault?: boolean;
+}
+
+export interface ButtonEmits {
+    click: Event;
+}
+
 /**
  *
  * @__NO_SIDE_EFFECTS__
@@ -39,13 +50,9 @@ export const useButton = assignProps(setupButton, {
     emits: BUTTON_EMITS,
 });
 
-/**
- *
- * @__NO_SIDE_EFFECTS__
- */
 function setupButton() {
-    const props = useProps(BUTTON_PROPS);
-    const emitAsync = useEmitAsync(BUTTON_EMITS);
+    const props = useProps<ButtonProps>();
+    const emitAsync = useEmitAsync<ButtonEmits>();
     const formCtx = injectContext(FormContext, { optional: true });
     const pending = ref(false);
 

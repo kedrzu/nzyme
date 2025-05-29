@@ -1,4 +1,4 @@
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
+import type { APIGatewayProxyHandlerV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 
 import type { HttpMethod } from '@nzyme/api-core';
 import type { ApiRouter } from '@nzyme/api-server';
@@ -9,8 +9,8 @@ import type { ApiRouter } from '@nzyme/api-server';
  * @returns A lambda handler.
  * @__NO_SIDE_EFFECTS__
  */
-export function createLambdaApiHandler(api: ApiRouter) {
-    return async (event: APIGatewayProxyEventV2) => {
+export function createLambdaApiHandler(api: ApiRouter): APIGatewayProxyHandlerV2 {
+    return async event => {
         const method: HttpMethod =
             (event.requestContext?.http?.method.toUpperCase() as HttpMethod | undefined) || 'GET';
 

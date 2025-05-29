@@ -1,4 +1,3 @@
-import { consola } from 'consola';
 import sourceMap from 'source-map-support';
 
 import { patchNodeWarnings } from '@nzyme/node-utils';
@@ -23,7 +22,6 @@ export interface InitializeOptions {
  * Initialize the CLI.
  */
 export function initialize(options: InitializeOptions = {}) {
-    consola.wrapConsole();
     sourceMap.install();
     patchNodeWarnings();
     loadEnvVariables({ env: options.env });

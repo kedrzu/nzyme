@@ -8,7 +8,6 @@ import json from '@rollup/plugin-json';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import chalk from 'chalk';
-import { consola } from 'consola';
 import { emptyDir } from 'fs-extra/esm';
 import { rollup } from 'rollup';
 import sourcemaps from 'rollup-plugin-sourcemaps';
@@ -27,8 +26,6 @@ const outputDir = options.outputDir;
 const fileName = 'index';
 const outputFile = path.join(outputDir, options.esm ? `${fileName}.mjs` : `${fileName}.js`);
 const outputHash = createHash('md5');
-
-consola.wrapConsole();
 
 await emptyDir(outputDir);
 
@@ -129,7 +126,7 @@ for (const file of outputFiles) {
 
 await rollupResult.close();
 
-consola.success(`Compiled ${chalk.green(options.inputFile)} in ${chalk.green(formatElapsedMs(start))}`);
+console.info(`Compiled ${chalk.green(options.inputFile)} in ${chalk.green(formatElapsedMs(start))}`);
 
 const output: CompileFunctionResult = {
     dirPath: outputDir,

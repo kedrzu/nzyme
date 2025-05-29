@@ -2,7 +2,6 @@ import path from 'node:path';
 
 import chalk from 'chalk';
 import type { NextHandleFunction } from 'connect';
-import { consola } from 'consola';
 import { watch } from 'rollup';
 import type { RollupWatchOptions } from 'rollup';
 
@@ -69,10 +68,10 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions): NextHa
                 compiled = true;
 
                 const duration = formatDurationMs(event.duration);
-                consola.info(`Server compiled in ${chalk.green(duration)}.`);
+                console.info(`Server compiled in ${chalk.green(duration)}.`);
                 void server?.start();
             } else if (event.code === 'ERROR') {
-                consola.error(event.error);
+                console.error(event.error);
             }
         });
     }

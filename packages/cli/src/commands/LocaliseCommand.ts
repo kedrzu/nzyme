@@ -4,7 +4,6 @@ import * as path from 'path';
 import chalk from 'chalk';
 import { watch } from 'chokidar';
 import { Option } from 'clipanion';
-import { consola } from 'consola';
 import glob from 'fast-glob';
 import * as fsExtra from 'fs-extra';
 
@@ -49,7 +48,7 @@ export class LocaliseCommand extends Command {
         }
 
         if (results.some(result => !result)) {
-            consola.error('Failed to compile some files');
+            console.error('Failed to compile some files');
             return 1;
         }
 
@@ -63,7 +62,7 @@ export class LocaliseCommand extends Command {
             ignoreInitial: true,
         });
 
-        consola.info('Watching for changes...');
+        console.info('Watching for changes...');
 
         watcher.on('add', file => void this.onAddFile(file));
         watcher.on('change', file => void this.onAddFile(file));
@@ -99,7 +98,7 @@ export class LocaliseCommand extends Command {
         await saveFile(outputPath, result.code);
 
         if (result.errors.length === 0) {
-            consola.success(`Compiled ${chalk.green(file)}`);
+            console.info(`Compiled ${chalk.green(file)}`);
             return true;
         }
 

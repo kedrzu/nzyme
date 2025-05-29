@@ -61,7 +61,7 @@ export interface StackOptions<TDeps extends Dependencies = Dependencies, TOutput
     /**
      * Resources to deploy.
      */
-    resources(this: Stack, deps: ResolveDeps<TDeps>): Promise<TOutput> | TOutput;
+    resources(this: Stack, deps: ResolveDeps<TDeps>): TOutput;
 
     /**
      * Program to run before the stack is deployed.
@@ -131,7 +131,7 @@ export interface Stack<TOutput extends StackOutput = StackOutput> {
     /**
      * Program to run for the stack.
      */
-    resources: () => Promise<TOutput>;
+    resources: () => TOutput;
 
     /**
      * Get the outputs of the stack.
@@ -249,8 +249,8 @@ export function defineStack<TDeps extends Dependencies = SomeObject, TOutput ext
                 enabled,
                 preventDestroy,
                 logger: PrettyLogger.create({ name: serviceName }),
-                resources: async () => {
-                    const output = await options.resources.call(stack, deps);
+                resources: () => {
+                    const output = options.resources.call(stack, deps);
                     return output || {};
                 },
                 outputs: async (stack: automation.Stack) => {

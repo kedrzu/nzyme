@@ -31,7 +31,7 @@ export interface PulumiCommandsOptions {
     /**
      * The Pulumi config to use for the stacks.
      */
-    config: PulumiConfig;
+    config: (() => Promise<PulumiConfig>) | (() => PulumiConfig) | PulumiConfig;
 
     /**
      * The prefix to use for commands.
@@ -135,6 +135,7 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                 throw new UsageError('No stacks to deploy.');
             }
 
+            const pulumiConfig = await getPulumiConfig(options);
             const stacksLeft = new Set<StackDefinition>(stacks);
             const stacksDeploying = new Map<StackDefinition, Promise<void>>();
             const stacksDeployed = new Set<StackDefinition>();
@@ -165,7 +166,7 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                     const stackPromise = deployStack(stackResolved, {
                         refresh: this.refresh,
                         build: !this.skipBuild,
-                        config: options.config,
+                        config: pulumiConfig,
                     })
                         .then(() => {
                             stacksDeploying.delete(stack);
@@ -231,6 +232,8 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
         override async run() {
             await options.beforeEach?.();
 
+            const pulumiConfig = await getPulumiConfig(options);
+
             const stacks = resolveStacks({
                 ...options,
                 stackNames: this.stacks,
@@ -244,7 +247,7 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
                 const stackResolved = this.container.resolve(stack);
                 console.log(`Cancelling stack ${chalk.green(stack.name)}...`);
                 await cancelStack(stackResolved, {
-                    config: options.config,
+                    config: pulumiConfig,
                 });
             }
         }
@@ -278,6 +281,8 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
         override async run() {
             await options.beforeEach?.();
 
+            const pulumiConfig = await getPulumiConfig(options);
+
             const stacks = resolveStacks({
                 ...options,
                 stackNames: this.stacks,
@@ -292,7 +297,7 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
                 await previewStack(stackResolved, {
                     refresh: this.refresh,
                     build: !this.skipBuild,
-                    config: options.config,
+                    config: pulumiConfig,
                 });
             }
         }
@@ -318,6 +323,8 @@ function defineRefreshCommand(options: PulumiCommandsOptions) {
         override async run() {
             await options.beforeEach?.();
 
+            const pulumiConfig = await getPulumiConfig(options);
+
             const stacks = resolveStacks({
                 ...options,
                 stackNames: this.stacks,
@@ -330,7 +337,7 @@ function defineRefreshCommand(options: PulumiCommandsOptions) {
             for (const stack of stacks) {
                 const stackResolved = this.container.resolve(stack);
                 await refreshStack(stackResolved, {
-                    config: options.config,
+                    config: pulumiConfig,
                 });
             }
         }
@@ -372,6 +379,8 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                 throw new UsageError('Stack deletion is prohibited.');
             }
 
+            const pulumiConfig = await getPulumiConfig(options);
+
             if (this.force) {
                 if (!this.stacks.length) {
                     throw new UsageError('When using --force, you must specify stacks to destroy.');
@@ -387,7 +396,7 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
 
                     const stackResolved = stackDefinition.create();
                     await destroyStack(stackResolved, {
-                        config: options.config,
+                        config: pulumiConfig,
                         refresh: this.refresh,
                         remove: this.remove,
                     });
@@ -413,7 +422,7 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                 }
 
                 await destroyStack(stackResolved, {
-                    config: options.config,
+                    config: pulumiConfig,
                     refresh: this.refresh,
                     remove: this.remove,
                 });
@@ -435,6 +444,8 @@ function defineOutputCommand(options: PulumiCommandsOptions) {
         override async run() {
             await options.beforeEach?.();
 
+            const pulumiConfig = await getPulumiConfig(options);
+
             const stacks = resolveStacks({
                 ...options,
                 stackNames: this.stacks,
@@ -447,7 +458,7 @@ function defineOutputCommand(options: PulumiCommandsOptions) {
             for (const stack of stacks) {
                 const stackResolved = this.container.resolve(stack);
                 const outputs = await getStackOutputs(stackResolved, {
-                    config: options.config,
+                    config: pulumiConfig,
                 });
 
                 console.log(`Outputs for stack ${chalk.green(stack.name)}:`);
@@ -505,4 +516,12 @@ function getCommandPaths(options: PulumiCommandsOptions, command: string) {
     }
 
     return [[command]];
+}
+
+async function getPulumiConfig(options: PulumiCommandsOptions): Promise<PulumiConfig> {
+    if (typeof options.config === 'function') {
+        return await options.config();
+    }
+
+    return options.config;
 }

@@ -20,8 +20,7 @@
     ],
     "scripts": {
         "build:esm": "tsc --build ./tsconfig.esm.json",
-        "lint": "eslint . --fix --cache",
-        "smoke:mjs": "node tests/smoke.test.mjs"
+        "lint": "eslint . --fix --cache"
     },
     "dependencies": {
         "tslib": "^2.8.1"

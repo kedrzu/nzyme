@@ -12,48 +12,24 @@
     "exports": {
         ".": {
             "default": {
-                "import": {
-                    "types": "./dist/index.browser.d.ts",
-                    "default": "./dist/index.browser.js"
-                },
-                "require": {
-                    "types": "./dist/index.browser.d.ts",
-                    "default": "./dist/index.browser.cjs"
-                }
-            },
-            "node": {
-                "import": {
-                    "types": "./dist/index.node.d.ts",
-                    "default": "./dist/index.node.js"
-                },
-                "require": {
-                    "types": "./dist/index.node.d.ts",
-                    "default": "./dist/index.node.cjs"
-                }
-            }
-        },
-        "./node": {
-            "import": {
-                "types": "./dist/index.node.d.ts",
-                "default": "./dist/index.node.js"
-            },
-            "require": {
-                "types": "./dist/index.node.d.ts",
-                "default": "./dist/index.node.cjs"
-            }
-        },
-        "./browser": {
-            "import": {
                 "types": "./dist/index.browser.d.ts",
                 "default": "./dist/index.browser.js"
             },
-            "require": {
-                "types": "./dist/index.browser.d.ts",
-                "default": "./dist/index.browser.cjs"
+            "node": {
+                "types": "./dist/index.node.d.ts",
+                "default": "./dist/index.node.js"
             }
+        },
+        "./node": {
+            "types": "./dist/index.node.d.ts",
+            "default": "./dist/index.node.js"
+        },
+        "./browser": {
+            "types": "./dist/index.browser.d.ts",
+            "default": "./dist/index.browser.js"
         }
     },
-    "main": "./dist/index.node.cjs",
+    "module": "./dist/index.node.js",
     "types": "./dist/index.node.d.ts",
     "files": [
         "dist"
@@ -61,9 +37,7 @@
     "scripts": {
         "build:cjs": "tsc --build ./tsconfig.cjs.json",
         "build:esm": "tsc --build ./tsconfig.esm.json",
-        "lint": "eslint . --fix --cache",
-        "smoke:cjs": "node tests/smoke.test.cjs",
-        "smoke:mjs": "node tests/smoke.test.mjs"
+        "lint": "eslint . --fix --cache"
     },
     "dependencies": {
         "@nzyme/types": "^0.14.0",

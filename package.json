@@ -22,7 +22,6 @@
         "monorepo": "nzyme monorepo",
         "release": "nx release --yes",
         "setup": "turbo run build:esm --filter=@nzyme/cli && yarn monorepo",
-        "smoke": "turbo run smoke:cjs smoke:mjs",
         "test": "vitest run",
         "update": "yarn upgrade-interactive",
         "update:self": "yarn set version berry",

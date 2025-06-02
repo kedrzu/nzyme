@@ -19,14 +19,6 @@
         "watch": {
             "cache": false,
             "persistent": true
-        },
-        "smoke:cjs": {
-            "cache": false,
-            "persistent": false
-        },
-        "smoke:mjs": {
-            "cache": false,
-            "persistent": false
         }
     },
     "ui": "stream"

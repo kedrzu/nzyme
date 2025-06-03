@@ -74,4 +74,5 @@ export * from './url/queryTypes.js';
 export * from './url/stringifyQuery.js';
 export * from './waitFor.js';
 export * from './waitForever.js';
+export * from './withSingleExecution.js';
 export * from './writable.js';

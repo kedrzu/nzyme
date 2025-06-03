@@ -1,7 +1,5 @@
 import { parentPort, workerData } from 'node:worker_threads';
 
-import sourceMap from 'source-map-support';
-
 import { createEventEmitter } from '@nzyme/utils';
 
 /**
@@ -11,7 +9,6 @@ import { createEventEmitter } from '@nzyme/utils';
  * @returns An object containing the server port and start method
  */
 export function devServerRuntime() {
-    sourceMap.install();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const port = workerData?.port as number;
     const events = createEventEmitter<{ exit: void }>();

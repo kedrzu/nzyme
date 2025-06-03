@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --enable-source-maps
 
 import { BuildCommand } from './commands/BuildCommand.js';
 import { DepcheckCommand } from './commands/DepcheckCommand.js';

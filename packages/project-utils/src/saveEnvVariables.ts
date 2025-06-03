@@ -31,7 +31,14 @@ export async function saveEnvVariables(options: SaveEnvVariablesOptions) {
 
     let envContent = '';
     for (const key of Object.keys(env).sort()) {
-        envContent += `${key}=${JSON.stringify(env[key])}\n`;
+        let value: string;
+        if (env[key] == null) {
+            value = '';
+        } else {
+            value = JSON.stringify(env[key]);
+        }
+
+        envContent += `${key}=${value}\n`;
     }
 
     const filePath = getFilePath(options);
@@ -41,9 +48,7 @@ export async function saveEnvVariables(options: SaveEnvVariablesOptions) {
 /**
  * Reads environment variables from a file.
  */
-export async function readEnvVariables(
-    options: ReadEnvVariablesOptions,
-): Promise<Record<string, string>> {
+export async function readEnvVariables(options: ReadEnvVariablesOptions): Promise<Record<string, string>> {
     const filePath = getFilePath(options);
 
     if (await pathExists(filePath)) {

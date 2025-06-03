@@ -39,7 +39,7 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions): NextHa
 
     return (req, res, next) => {
         if (!server && compiled) {
-            void createServer().start();
+            void newServer().start();
         }
 
         if (server) {
@@ -63,7 +63,7 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions): NextHa
 
         watcher.on('event', event => {
             if (event.code === 'BUNDLE_START') {
-                createServer();
+                newServer();
             } else if (event.code === 'BUNDLE_END') {
                 compiled = true;
 
@@ -80,7 +80,7 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions): NextHa
      * Creates a new development server instance
      * @returns An object containing the server's middleware and control methods
      */
-    function createServer() {
+    function newServer() {
         // Stop the current server
         void server?.stop();
 

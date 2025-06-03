@@ -2,6 +2,7 @@ export * from './Caller.js';
 export * from './Command.js';
 export * from './Container.js';
 export * from './ContainerScope.js';
+export * from './defineEnvVariable.js';
 export * from './helpers/callerName.js';
 export * from './helpers/constValue.js';
 export * from './helpers/envVariable.js';

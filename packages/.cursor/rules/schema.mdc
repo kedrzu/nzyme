@@ -1,7 +1,0 @@
----
-description: 
-globs: **/*.ts,**/*.tsx,**/*.vue
-alwaysApply: false
----
-For schemas use @nzyme/zchema package, not zod. Import it like this: 
-`import * as z from '@nzyme/zchema';`

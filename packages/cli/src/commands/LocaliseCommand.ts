@@ -89,28 +89,33 @@ export class LocaliseCommand extends Command {
     }
 
     private async compileFile(file: string) {
-        const absolutePath = this.toAbsolute(file);
-        const outputPath = this.toTypesScriptPath(file);
+        try {
+            const absolutePath = this.toAbsolute(file);
+            const outputPath = this.toTypesScriptPath(file);
 
-        const content = await fs.readFile(absolutePath, 'utf8');
-        const result = compileTranslations(content);
+            const content = await fs.readFile(absolutePath, 'utf8');
+            const result = compileTranslations(content);
 
-        await saveFile(outputPath, result.code);
+            await saveFile(outputPath, result.code);
 
-        if (result.errors.length === 0) {
-            console.info(`Compiled ${chalk.green(file)}`);
-            return true;
+            if (result.errors.length === 0) {
+                console.info(`Compiled ${chalk.green(file)}`);
+                return true;
+            }
+
+            for (const error of result.errors) {
+                const lang = error.lang ? `/${error.lang}` : '';
+                const key = error.key ? chalk.magenta(`[${error.key}${lang}]`) : '';
+                const message = `${chalk.cyan(file)}${chalk.yellow(`:${error.line}:${error.column}`)} ${key} - ${error.message}`;
+
+                console.error(message);
+            }
+
+            return false;
+        } catch (error) {
+            console.error(`Failed to compile ${file}`, error);
+            return false;
         }
-
-        for (const error of result.errors) {
-            const lang = error.lang ? `/${error.lang}` : '';
-            const key = error.key ? chalk.magenta(`[${error.key}${lang}]`) : '';
-            const message = `${chalk.cyan(file)}${chalk.yellow(`:${error.line}:${error.column}`)} ${key} - ${error.message}`;
-
-            console.error(message);
-        }
-
-        return false;
     }
 
     private toAbsolute(file: string) {

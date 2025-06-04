@@ -156,7 +156,7 @@ function parseTranslationValue(key: string, lang: string, item: ParsedNode, resu
         if (match.index && match.index > index) {
             // handle a piece of text
             const text = value.substring(index, match.index);
-            translation.push(`'${text}'`);
+            translation.push(JSON.stringify(text));
             index = match.index;
         }
 
@@ -170,7 +170,7 @@ function parseTranslationValue(key: string, lang: string, item: ParsedNode, resu
     // Add the rest of the text
     if (index < value.length) {
         const text = value.substring(index);
-        translation.push(`'${text}'`);
+        translation.push(JSON.stringify(text));
     }
 
     return {

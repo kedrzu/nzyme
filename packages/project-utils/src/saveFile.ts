@@ -6,7 +6,12 @@ import { format, resolveConfig } from 'prettier';
  */
 export async function saveFile(path: string, content: string) {
     const config = await resolveConfig(path);
-    const formatted = await format(content, { ...config, filepath: path });
 
-    await outputFile(path, formatted, { encoding: 'utf8' });
+    try {
+        content = await format(content, { ...config, filepath: path });
+    } catch (error) {
+        console.error(`Failed to format ${path}`, error);
+    }
+
+    await outputFile(path, content, { encoding: 'utf8' });
 }

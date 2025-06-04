@@ -8,10 +8,6 @@ import { defineFormField } from './defineFormField.js';
 const TEXT_INPUT_FIELD = defineFormField(String);
 const TEXT_INPUT_PROPS = defineProps({
     ...TEXT_INPUT_FIELD.props,
-    type: {
-        type: String,
-        default: 'text',
-    },
     label: String,
     name: String,
     autocomplete: String,
@@ -67,7 +63,7 @@ function setupTextInput() {
                 readonly={props.readonly}
                 tabindex={props.tabindex}
                 title={props.label}
-                type={props.type}
+                type="text"
                 value={field.value}
             />
         );

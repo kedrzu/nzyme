@@ -1,11 +1,11 @@
-import { computed, onBeforeUnmount, reactive, ref, unref } from 'vue';
-import type { ExtractPropTypes, PropType } from 'vue';
+import type { MaybeOutput, RegleFieldStatus } from '@regle/core';
+import { computed, onBeforeUnmount, reactive, ref } from 'vue';
+import type { ExtractPropTypes, PropType, UnwrapNestedRefs } from 'vue';
 
 import { scrollToTopElement } from '@nzyme/dom-utils';
 import { defineProp, injectContext, useInstanceProxy } from '@nzyme/vue-utils';
 
 import { FormContext } from '../FormContext.js';
-import type { Validation } from '../validation.js';
 
 export type FormField<T> = ReturnType<typeof createFormField<T>>;
 
@@ -18,15 +18,17 @@ export type FormFieldProps<T> = ExtractPropTypes<FormFieldPropsDefinition<T>>;
 
 export type FormFieldPropsDefinition<T> = FormFieldDefinition<T>['props'];
 
+export type FormFieldValue<T> = MaybeOutput<UnwrapNestedRefs<T> | null>;
+
 /**
  *
  * @__NO_SIDE_EFFECTS__
  */
-export function defineFormField<T>(type?: PropType<null | T | undefined>) {
+export function defineFormField<T>(type?: PropType<T | null | undefined>) {
     return {
         props: {
-            modelValue: { type: type as PropType<null | T | undefined> },
-            field: defineProp<Validation<null | T>>(),
+            modelValue: { type: type as PropType<T | null | undefined> },
+            field: defineProp<RegleFieldStatus<T | null>>(),
             errors: defineProp<string | string[]>(),
         },
         emits: {
@@ -43,7 +45,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
     const vm = useInstanceProxy();
     const formCtx = injectContext(FormContext, { optional: true });
 
-    const value = computed<null | T | undefined>({
+    const value = computed<FormFieldValue<T>>({
         get: getValue,
         set: setValue,
     });
@@ -59,11 +61,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
             return [];
         }
 
-        const errors = Array.isArray(props.errors)
-            ? props.errors.slice()
-            : props.errors
-              ? [props.errors]
-              : [];
+        const errors = Array.isArray(props.errors) ? props.errors.slice() : props.errors ? [props.errors] : [];
 
         if (!props.field?.$error) {
             return errors;
@@ -74,7 +72,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
         const field = props.field;
 
         for (const error of field.$errors) {
-            errors.push(unref(error.$message));
+            errors.push(error);
         }
 
         return errors;
@@ -85,9 +83,9 @@ function createFormField<T>(options: FormFieldOptions<T>) {
 
         return (
             field &&
-            field.$model != null &&
+            field.$value != null &&
             // should not be empty string
-            !(typeof field.$model === 'string' && field.$model === '') &&
+            !(typeof field.$value === 'string' && field.$value === '') &&
             !errors.value.length
         );
     });
@@ -111,17 +109,17 @@ function createFormField<T>(options: FormFieldOptions<T>) {
     });
 
     function getValue() {
-        return props.field ? props.field.$model : (props.modelValue as null | T | undefined);
+        return props.field ? props.field.$value : (props.modelValue as FormFieldValue<T>);
     }
 
-    function setValue(value: null | T | undefined) {
+    function setValue(value: FormFieldValue<T>) {
         const current = getValue();
         if (value === current) {
             return;
         }
 
         if (props.field) {
-            props.field.$model = value ?? null;
+            props.field.$value = value;
         }
 
         vm.$emit('update:modelValue', value);

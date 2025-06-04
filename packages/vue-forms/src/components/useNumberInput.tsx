@@ -25,6 +25,10 @@ export const useNumberInput = assignProps(setupNumberInput, {
     emits: NUMBER_FIELD.emits,
 });
 
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 function setupNumberInput() {
     const props = useProps(NUMBER_PROPS);
     const field = NUMBER_FIELD.create({ props });

@@ -7,7 +7,7 @@ export interface HttpResponse {
     /**
      *
      */
-    body?: Blob | string;
+    body?: string | Blob;
     /**
      *
      */

@@ -1,5 +1,6 @@
+import { toJsonString } from '@nzyme/utils';
 import type { Infer, Schema } from '@nzyme/zchema';
-import { coerce, parseJson, toJsonString } from '@nzyme/zchema';
+import { coerce, parseJson } from '@nzyme/zchema';
 
 import { storageRef } from './storageRef.js';
 import type { StorageRefOptions } from './storageRef.js';

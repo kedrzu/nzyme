@@ -5,7 +5,7 @@ import { parsePath, parseQuery } from 'ufo';
 
 import type { HttpMethod } from '@nzyme/fetch-utils';
 
-import type { ApiRouter } from './ApiRouter.js';
+import type { Router } from './createRouter.js';
 
 /**
  * Options for the {@link createMiddleware} function.
@@ -14,7 +14,7 @@ export interface CreateMiddlewareOptions {
     /**
      * The API router that will handle the requests.
      */
-    router: ApiRouter;
+    router: Router;
 
     /**
      * A function that will be called before a request is handled by the router.
@@ -54,7 +54,7 @@ export function createMiddleware(options: CreateMiddlewareOptions): RequestListe
         await beforeRequest?.(req, res);
 
         const url = parsePath(req.url || '/');
-        const response = await router.execute({
+        const response = await router({
             method: (req.method || 'GET') as HttpMethod,
             path: url.pathname,
             query: parseQuery(url.search),

@@ -1,20 +1,18 @@
-import type { DecoratedProcedure } from '@orpc/server';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import { resolveDeps } from '@nzyme/ioc';
-import type { Dependencies, ServiceSetup } from '@nzyme/ioc';
-import type { EmptyObject } from '@nzyme/types';
-
-import { api } from './api.js';
-import type { ApiContext } from './api.js';
+import { defineService } from '@nzyme/ioc';
+import type { Dependencies, Service, ServiceSetup } from '@nzyme/ioc';
+import type { EmptyObject, IfAny } from '@nzyme/types';
 
 /**
  * Represents an API endpoint definition with input/output schemas, HTTP method, and path.
- *
- * @template TInput - The input schema type
- * @template TOutput - The output schema type
  */
-export interface EndpointOptionsBase<TDeps extends Dependencies = Dependencies> {
+export interface EndpointOptionsBase<TName extends string, TDeps extends Dependencies = Dependencies> {
+    /**
+     * The name of the endpoint.
+     */
+    readonly name: TName;
+
     /**
      * Optional dependencies needed by the handler.
      */
@@ -24,8 +22,11 @@ export interface EndpointOptionsBase<TDeps extends Dependencies = Dependencies> 
 /**
  *
  */
-export interface EndpointOptionsWithoutInput<TOutput = unknown, TDeps extends Dependencies = Dependencies>
-    extends EndpointOptionsBase<TDeps> {
+export interface EndpointOptionsWithoutInput<
+    TName extends string = string,
+    TOutput = unknown,
+    TDeps extends Dependencies = Dependencies,
+> extends EndpointOptionsBase<TName, TDeps> {
     /**
      * Schema for validating the input data.
      */
@@ -41,10 +42,11 @@ export interface EndpointOptionsWithoutInput<TOutput = unknown, TDeps extends De
  *
  */
 export interface EndpointOptionsWithInput<
+    TName extends string = string,
     TInput = unknown,
     TOutput = unknown,
     TDeps extends Dependencies = Dependencies,
-> extends EndpointOptionsBase<TDeps> {
+> extends EndpointOptionsBase<TName, TDeps> {
     /**
      * Schema for validating the input data.
      */
@@ -59,64 +61,77 @@ export interface EndpointOptionsWithInput<
 /**
  *
  */
-export type EndpointDefinition<TInput = unknown, TOutput = unknown> = DecoratedProcedure<
-    ApiContext,
-    ApiContext,
-    StandardSchemaV1<unknown, TInput>,
-    StandardSchemaV1<TOutput, TOutput>,
-    EmptyObject,
-    EmptyObject
->;
+export type EndpointHandler<TInput = unknown, TOutput = unknown> = TInput extends void
+    ? () => Promise<TOutput> | TOutput
+    : (input: TInput) => Promise<TOutput> | TOutput;
 
 /**
  *
  */
-export interface EndpointHandler<TInput = unknown, TOutput = unknown> {
-    (input: TInput): Promise<TOutput> | TOutput;
+export interface Endpoint<
+    TName extends string = string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    TInput = any,
+    TOutput = unknown,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    TDeps extends Dependencies = any,
+> extends Service<EndpointHandler<TInput, TOutput>, TDeps> {
+    /**
+     *
+     */
+    readonly name: TName;
+
+    /**
+     *
+     */
+    readonly input: IfAny<
+        TInput,
+        StandardSchemaV1 | undefined,
+        void extends TInput ? undefined : StandardSchemaV1<unknown, TInput>
+    >;
 }
 
 /**
  *
  */
+export type EndpointName<E extends Endpoint> = E['name'];
 
 /**
  *
  */
-export function defineEndpoint<TInput, TOutput, TDeps extends Dependencies = EmptyObject>(
-    endpoint: EndpointOptionsWithInput<TInput, TOutput, TDeps>,
-): EndpointDefinition<TInput, TOutput>;
-/**
- *
- */
-export function defineEndpoint<TOutput, TDeps extends Dependencies = EmptyObject>(
-    endpoint: EndpointOptionsWithoutInput<TOutput, TDeps>,
-): EndpointDefinition<void, TOutput>;
-/**
- *
- */
-export function defineEndpoint(endpoint: EndpointOptionsWithInput | EndpointOptionsWithoutInput): EndpointDefinition {
-    const { input, setup, deps = {} } = endpoint;
-    const base = input ? api.input(input) : api;
-    const key = Symbol();
+export type EndpointInput<E extends Endpoint> =
+    E extends Endpoint<string, infer TInput, infer _TOutput, infer _TDeps> ? IfAny<TInput, unknown> : never;
 
-    return base.handler(({ context, input }) => {
-        const handler = resolveHandler(key, deps, setup as ServiceSetup<Dependencies, EndpointHandler>, context);
-        return handler(input);
+/**
+ *
+ */
+export type EndpointOutput<E extends Endpoint> =
+    E extends Endpoint<string, infer _TInput, infer TOutput, infer _TDeps> ? IfAny<TOutput, unknown> : never;
+
+/**
+ *
+ */
+export function defineEndpoint<TName extends string, TInput, TOutput, TDeps extends Dependencies = EmptyObject>(
+    endpoint: EndpointOptionsWithInput<TName, TInput, TOutput, TDeps>,
+): Endpoint<TName, TInput, TOutput, TDeps>;
+/**
+ *
+ */
+export function defineEndpoint<TName extends string, TOutput, TDeps extends Dependencies = EmptyObject>(
+    endpoint: EndpointOptionsWithoutInput<TName, TOutput, TDeps>,
+): Endpoint<TName, undefined, TOutput, TDeps>;
+/**
+ *
+ */
+export function defineEndpoint(endpoint: EndpointOptionsWithInput | EndpointOptionsWithoutInput): Endpoint {
+    const service = defineService({
+        name: endpoint.name,
+        deps: endpoint.deps,
+        setup: endpoint.setup,
     });
-}
 
-function resolveHandler<TDeps extends Dependencies = EmptyObject>(
-    key: symbol,
-    deps: TDeps,
-    setup: ServiceSetup<TDeps, EndpointHandler>,
-    ctx: ApiContext,
-): EndpointHandler {
-    let handler = ctx.cachedHandlers.get(key);
-    if (!handler) {
-        const resolvedDeps = resolveDeps(deps, ctx.container);
-        handler = setup(resolvedDeps);
-        ctx.cachedHandlers.set(key, handler);
-    }
-
-    return handler;
+    return {
+        ...(service as Endpoint),
+        input: endpoint.input,
+    };
 }

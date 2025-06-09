@@ -1,20 +1,20 @@
-import type { APIGatewayProxyHandlerV2, APIGatewayProxyResultV2 } from 'aws-lambda';
+import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 
-import type { HttpMethod } from '@nzyme/api-core';
-import type { ApiRouter } from '@nzyme/api-server';
+import type { HttpMethod } from '@nzyme/fetch-utils';
+import type { Router } from '@nzyme/rpc';
 
 /**
  * Defines a lambda handler for a given event and result type.
- * @param api - The API router to use.
+ * @param router - The API router to use.
  * @returns A lambda handler.
  * @__NO_SIDE_EFFECTS__
  */
-export function createLambdaApiHandler(api: ApiRouter): APIGatewayProxyHandlerV2 {
-    return async event => {
+export function createLambdaRpcHandler(router: Router) {
+    return async (event: APIGatewayProxyEventV2) => {
         const method: HttpMethod =
             (event.requestContext?.http?.method.toUpperCase() as HttpMethod | undefined) || 'GET';
 
-        const response = await api.execute({
+        const response = await router({
             method,
             path: event.pathParameters?.proxy || event.rawPath,
             query: event.queryStringParameters,

@@ -3,7 +3,7 @@ import type { Context } from 'aws-lambda';
 import { callerName, defineService } from '@nzyme/ioc';
 import type { LoggerLevel, LoggerObject } from '@nzyme/logging';
 import { Logger } from '@nzyme/logging';
-import { noop } from '@nzyme/utils';
+import { noop, toJsonString } from '@nzyme/utils';
 
 import { LambdaContextProvider } from './LambdaContextProvider.js';
 
@@ -35,5 +35,5 @@ function log(
     obj: LoggerObject | undefined,
     ctx: Context | undefined,
 ) {
-    console[level](JSON.stringify({ logger, level, msg, ...obj, ...ctx }));
+    console[level](toJsonString({ logger, level, msg, ...obj, ...ctx }));
 }

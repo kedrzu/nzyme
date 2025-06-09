@@ -33,5 +33,4 @@ export * from './utils/nullish.js';
 export * from './utils/optional.js';
 export * from './utils/parseJson.js';
 export * from './utils/serialize.js';
-export * from './utils/toJsonString.js';
 export * from './utils/validate.js';

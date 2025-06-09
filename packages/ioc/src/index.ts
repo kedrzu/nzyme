@@ -13,6 +13,7 @@ export * from './Injectable.js';
 export * from './Interface.js';
 export * from './Module.js';
 export * from './Service.js';
+export * from './services/ContextProvider.js';
 export * from './utils/getAllDeps.js';
 export * from './utils/isDependentOn.js';
 export * from './utils/resolveDeps.js';

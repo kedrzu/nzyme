@@ -29,12 +29,12 @@
     "dependencies": {
         "date-fns": "^4.1.0",
         "tslib": "^2.8.1",
-        "vitest": "^3.1.4"
+        "vitest": "^3.2.2"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
-        "eslint": "^9.27.0",
+        "eslint": "^9.28.0",
         "typescript": "^5.8.3"
     },
     "publishConfig": {

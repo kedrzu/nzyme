@@ -16,15 +16,15 @@
     ],
     "sideEffects": false,
     "dependencies": {
-        "@types/node": "^22.15.21",
+        "@types/node": "^22.15.30",
         "tslib": "^2.8.1",
         "typescript-plugin-css-modules": "^5.1.0",
         "typescript-vue-plugin": "^1.8.27",
         "vite": "^6.3.5",
-        "vue": "^3.5.15"
+        "vue": "^3.5.16"
     },
     "devDependencies": {
-        "eslint": "^9.27.0",
+        "eslint": "^9.28.0",
         "typescript": "^5.8.3"
     }
 }

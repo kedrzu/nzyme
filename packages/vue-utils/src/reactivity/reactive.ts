@@ -1,4 +1,4 @@
-import { reactive } from 'vue';
+import { reactive as reactiveVue } from 'vue';
 import type { Ref } from 'vue';
 
 /**
@@ -44,4 +44,4 @@ interface Reactive {
 /**
  *
  */
-export const reactiveFor = reactive as Reactive;
+export const reactive = reactiveVue as Reactive;

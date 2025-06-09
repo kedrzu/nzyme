@@ -49,9 +49,9 @@
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
         "@nzyme/vitest": "^0.14.0",
-        "@types/node": "^22.15.21",
+        "@types/node": "^22.15.30",
         "@types/spark-md5": "^3.0.5",
-        "eslint": "^9.27.0",
+        "eslint": "^9.28.0",
         "typescript": "^5.8.3"
     },
     "publishConfig": {

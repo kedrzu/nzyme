@@ -24,7 +24,7 @@
         "build:esm": "tsc --build ./tsconfig.esm.json"
     },
     "dependencies": {
-        "@aws-sdk/client-sts": "^3.817.0",
+        "@aws-sdk/client-sts": "^3.826.0",
         "@lerna/package": "^6.4.1",
         "@lerna/project": "^6.4.1",
         "@nzyme/i18n-compiler": "^0.14.0",
@@ -61,9 +61,9 @@
         "@types/lerna__package": "^5.1.3",
         "@types/lerna__project": "^5.1.2",
         "@types/lodash.merge": "^4.6.9",
-        "@types/node": "^22.15.21",
+        "@types/node": "^22.15.30",
         "@types/react": "^19.1.6",
-        "eslint": "^9.27.0",
+        "eslint": "^9.28.0",
         "ts-node": "^10.9.2",
         "typescript": "^5.8.3"
     },

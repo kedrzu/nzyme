@@ -19,7 +19,8 @@ export type DevServerOptions = DevServerMiddlewareOptions & {
  */
 export function devServerStart(options: DevServerOptions) {
     const app = connect();
-    const middleware = devServerMiddleware(options);
+    const { port: _, ...rest } = options;
+    const middleware = devServerMiddleware(rest);
 
     app.use(middleware);
     app.listen(options.port, () => {

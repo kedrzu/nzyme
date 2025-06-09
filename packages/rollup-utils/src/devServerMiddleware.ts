@@ -5,7 +5,7 @@ import type { NextHandleFunction } from 'connect';
 import { watch } from 'rollup';
 import type { RollupWatchOptions } from 'rollup';
 
-import { formatDurationMs } from '@nzyme/utils';
+import { formatDurationMs, omitProps } from '@nzyme/utils';
 
 import type { DevServer } from './createDevServer.js';
 import { createDevServer } from './createDevServer.js';
@@ -58,7 +58,7 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions): NextHa
                 clearScreen: false,
             },
             onwarn: onRollupWarning,
-            ...options,
+            ...omitProps(options, ['env']),
         });
 
         watcher.on('event', event => {

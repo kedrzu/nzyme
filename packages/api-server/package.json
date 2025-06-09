@@ -35,7 +35,7 @@
         "@nzyme/validation": "^0.14.0",
         "@nzyme/zchema": "^0.14.0",
         "connect": "^3.7.0",
-        "rou3": "^0.6.1",
+        "rou3": "^0.6.3",
         "tslib": "^2.8.1",
         "ufo": "^1.6.1"
     },
@@ -43,7 +43,7 @@
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
         "@types/connect": "^3.4.38",
-        "eslint": "^9.27.0",
+        "eslint": "^9.28.0",
         "typescript": "^5.8.3"
     },
     "publishConfig": {

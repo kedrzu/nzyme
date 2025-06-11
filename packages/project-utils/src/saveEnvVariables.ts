@@ -1,33 +1,30 @@
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import { outputFile } from 'fs-extra';
 
-import { parse } from 'dotenv';
-import { outputFile, pathExists } from 'fs-extra';
+import { getEnvFilePath } from './getEnvFilePath.js';
+import type { EnvFilePathOptions } from './getEnvFilePath.js';
+import { readEnvVariables } from './readEnvVariables.js';
 
-import { getProjectRoot } from './getProjectRoot.js';
-
-interface SaveEnvVariablesOptions {
+/**
+ *
+ */
+export interface SaveEnvVariablesOptions extends EnvFilePathOptions {
+    /**
+     * The environment variables to save.
+     */
     env: Record<string, unknown>;
-    cwd?: string;
-    file?: string;
-    root?: boolean;
-}
-
-interface ReadEnvVariablesOptions {
-    cwd?: string;
-    file?: string;
-    root?: boolean;
+    /**
+     * Whether to replace all existing variables.
+     * If false, only new variables will be added.
+     * @default false
+     */
+    replace?: boolean;
 }
 
 /**
  * Saves environment variables to a file.
  */
 export async function saveEnvVariables(options: SaveEnvVariablesOptions) {
-    const env = (await readEnvVariables(options)) as Record<string, unknown>;
-
-    for (const [key, value] of Object.entries(options.env)) {
-        env[key] = value;
-    }
+    const env = await getEnvVariablesToSave(options);
 
     let envContent = '';
     for (const key of Object.keys(env).sort()) {
@@ -41,26 +38,15 @@ export async function saveEnvVariables(options: SaveEnvVariablesOptions) {
         envContent += `${key}=${value}\n`;
     }
 
-    const filePath = getFilePath(options);
+    const filePath = getEnvFilePath(options);
     await outputFile(filePath, envContent);
 }
 
-/**
- * Reads environment variables from a file.
- */
-export async function readEnvVariables(options: ReadEnvVariablesOptions): Promise<Record<string, string>> {
-    const filePath = getFilePath(options);
-
-    if (await pathExists(filePath)) {
-        const fileContent = await fs.readFile(filePath, 'utf8');
-        return parse(fileContent);
+async function getEnvVariablesToSave(options: SaveEnvVariablesOptions) {
+    if (options.replace) {
+        return options.env;
     }
 
-    return {};
-}
-
-function getFilePath(options: ReadEnvVariablesOptions) {
-    const cwd = options.root ? getProjectRoot(options) : (options.cwd ?? process.cwd());
-    const fileName = options.file ?? '.env';
-    return path.join(cwd, fileName);
+    const env = (await readEnvVariables(options)) as Record<string, unknown>;
+    return Object.assign(env, options.env);
 }

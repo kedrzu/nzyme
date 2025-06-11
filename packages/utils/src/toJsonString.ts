@@ -11,10 +11,10 @@ export function toJsonString<T>(value: T, space?: number | string): string {
         return 'null';
     }
 
-    return JSON.stringify(value, seralizeValue, space);
+    return JSON.stringify(value, serializeValue, space);
 }
 
-function seralizeValue(_key: string, value: unknown) {
+function serializeValue(_key: string, value: unknown) {
     switch (typeof value) {
         case 'bigint':
             return value.toString();

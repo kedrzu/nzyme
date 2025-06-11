@@ -5,10 +5,15 @@ import { toJsonString } from '@nzyme/utils';
 /**
  *
  */
+export type BigIntString = `${bigint}`;
+
+/**
+ *
+ */
 export type Serialized<T> = T extends Date
     ? DateTimeISO
     : T extends bigint
-      ? string
+      ? BigIntString
       : T extends Set<infer U>
         ? Array<Serialized<U>>
         : T extends Map<infer K, infer V>

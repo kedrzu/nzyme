@@ -39,7 +39,7 @@
         "@types/lodash.merge": "^4.6.9",
         "eslint": "^9.28.0",
         "typescript": "^5.8.3",
-        "vitest": "^3.2.2"
+        "vitest": "^3.2.3"
     },
     "publishConfig": {
         "access": "public"

@@ -2,10 +2,10 @@ import { joinURL } from 'ufo';
 
 import { FetchError } from '@nzyme/fetch-utils';
 import type { HttpRequestHeaders } from '@nzyme/fetch-utils';
-import type { Simplify, UnionToIntersection } from '@nzyme/types';
+import type { UnionToIntersection } from '@nzyme/types';
 
 import type { Endpoint } from './defineEndpoint.js';
-import type { Serialized, Serializer } from './Serializer.js';
+import type { Serializer } from './Serializer.js';
 
 /**
  *
@@ -21,8 +21,8 @@ export interface ClientBase {
 export type ClientDefault<E extends Endpoint> = UnionToIntersection<
     E extends Endpoint<infer TName, infer TInput, infer TOutput>
         ? TInput extends void
-            ? { [K in TName]: (input?: void) => Promise<Serialized<TOutput>> }
-            : { [K in TName]: (input: Simplify<Serialized<TInput> | TInput>) => Promise<Serialized<TOutput>> }
+            ? (endpoint: TName, input?: void) => Promise<TOutput>
+            : (endpoint: TName, input: TInput) => Promise<TOutput>
         : never
 >;
 

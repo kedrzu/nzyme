@@ -15,7 +15,9 @@ export type Memo<T> = {
  * Type representing an async memoized value with utility methods.
  * @template T - The type of the memoized value
  */
-export type MemoAsync<T> = {
+export type MemoAsync<T> = T extends Promise<infer U> ? MemoAsyncInner<U> : MemoAsyncInner<T>;
+
+type MemoAsyncInner<T> = {
     /** Returns a promise that resolves to the memoized value */
     (): Promise<T>;
     /** Clears the memoized value and promise */

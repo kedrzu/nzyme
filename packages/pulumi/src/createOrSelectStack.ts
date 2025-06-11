@@ -48,12 +48,12 @@ export async function createOrSelectStack<TOutput extends StackOutput>(stack: St
         {
             projectName: config.project,
             stackName: stack.name,
-            program: async () => {
+            program: () => {
                 if (config.resourceTransformation) {
                     runtime.registerStackTransformation(config.resourceTransformation);
                 }
 
-                return await stack.resources();
+                return Promise.resolve(stack.resources());
             },
         },
         {

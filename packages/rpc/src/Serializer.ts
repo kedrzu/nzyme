@@ -1,4 +1,3 @@
-import { HttpError } from '@nzyme/fetch-utils';
 import type { DateTimeISO } from '@nzyme/types';
 import { toJsonString } from '@nzyme/utils';
 
@@ -34,32 +33,10 @@ export interface Serializer {
     /**
      *
      */
-    serialize(value: unknown): string;
-    /**
-     *
-     */
-    deserialize(value: string): unknown;
+    (value: unknown): string;
 }
 
 /**
  *
  */
-export const defaultSerializer: Serializer = {
-    deserialize: parseJson,
-    serialize: toJsonString,
-};
-
-/**
- *
- */
-function parseJson(input: string | null | undefined): unknown {
-    if (input == null) {
-        return null;
-    }
-
-    try {
-        return JSON.parse(input);
-    } catch {
-        throw new HttpError(400, 'Invalid JSON');
-    }
-}
+export const defaultSerializer: Serializer = toJsonString;

@@ -1,8 +1,5 @@
-import {
-    BatchWriteItemCommand,
-    type DynamoDBClient,
-    type WriteRequest,
-} from '@aws-sdk/client-dynamodb';
+import { BatchWriteItemCommand } from '@aws-sdk/client-dynamodb';
+import type { DynamoDBClient, WriteRequest } from '@aws-sdk/client-dynamodb';
 
 type BatchWriteRequest = {
     client: DynamoDBClient;

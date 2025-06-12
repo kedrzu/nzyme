@@ -35,7 +35,7 @@ export type JsonResponse = {
  *
  */
 export function createJsonResponse(response: JsonResponse): HttpResponse {
-    const body = response.serializer.serialize(response.body);
+    const body = response.serializer(response.body);
 
     const headers = {
         ...response.headers,

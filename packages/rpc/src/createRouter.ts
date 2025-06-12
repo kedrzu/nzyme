@@ -180,9 +180,23 @@ export function createRouter(options: RouterOptions): Router {
             return;
         }
 
-        const body = request.body ? serializer.deserialize(request.body) : null;
+        const body = request.body ? parseJson(request.body) : null;
         const input = await endpoint.input['~standard'].validate(body);
 
         return input;
+    }
+}
+/**
+ *
+ */
+function parseJson(input: string | null | undefined): unknown {
+    if (input == null) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(input);
+    } catch {
+        throw new HttpError(400, 'Invalid JSON');
     }
 }

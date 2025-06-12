@@ -61,7 +61,7 @@ export interface EnvVariable<TName extends string = string, TRequired extends bo
  */
 export function defineEnvVariable<TName extends string = string, TRequired extends boolean = true>(
     name: TName,
-    options?: EnvVariableOptionsRequired<TRequired>,
+    options?: EnvVariableOptionsRequired<TRequired> & { parse?: never },
 ): EnvVariable<TName, TRequired, string>;
 /**
  * Define an environment variable injectable.

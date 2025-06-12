@@ -7,7 +7,7 @@
  * @param o - The value to convert to an array
  * @returns An array containing the value(s)
  */
-export function asArray<T>(o: null | readonly T[] | T | undefined): readonly T[] {
+export function asArray<T>(o: T | readonly T[] | null | undefined): readonly T[] {
     if (o === null || o === undefined) {
         return [];
     }

@@ -65,7 +65,7 @@ export function createClient<C extends ClientBase>(options: CreateClientOptions)
             Object.assign(headers, await headersGetter(endpoint));
         }
 
-        const body = serializer.serialize(input);
+        const body = serializer(input);
 
         const response = await fetch(url, {
             method: 'POST',
@@ -78,8 +78,7 @@ export function createClient<C extends ClientBase>(options: CreateClientOptions)
             throw new FetchError(response, message);
         }
 
-        const result = await response.text();
-        return serializer.deserialize(result);
+        return await response.json();
     };
 
     const proxy = new Proxy(client, {

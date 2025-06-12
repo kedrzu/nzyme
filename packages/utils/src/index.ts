@@ -15,6 +15,7 @@ export * from './array/getLastItem.js';
 export * from './array/getSingleItem.js';
 export * from './array/groupBy.js';
 export * from './array/groupByToMap.js';
+export * from './array/isArray.js';
 export * from './array/isIterable.js';
 export * from './array/mapIterable.js';
 export * from './array/mapNotNull.js';

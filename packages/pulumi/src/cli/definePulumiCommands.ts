@@ -13,6 +13,7 @@ import { getStackOutputs } from '../getStackOutputs.js';
 import { previewStack } from '../previewStack.js';
 import type { PulumiConfig } from '../PulumiConfig.js';
 import { refreshStack } from '../refreshStack.js';
+import { listRemoteStacks } from '../utils/listRemoteStacks.js';
 
 /**
  * Options for the Pulumi commands.
@@ -71,16 +72,30 @@ function defineListCommand(options: PulumiCommandsOptions) {
         static override usage = Command.Usage({
             category: 'Pulumi',
             description: 'List stacks',
-            details: 'List all stacks',
+            details: 'List all stacks, including orphaned stacks from remote backend',
         });
 
         override async run() {
             await options.beforeEach?.();
 
-            console.log(chalk.bold('All available stacks:'));
-            let i = 0;
-            const padding = options.stacks.length.toString().length + 1;
+            const pulumiConfig = await getPulumiConfig(options);
 
+            // Get local stack names
+            const localStackNames = new Set(options.stacks.map(stack => stack.stackName));
+
+            // Get remote stacks from S3 backend
+            const remoteStacks = await listRemoteStacks(pulumiConfig);
+            const orphanedStacks = remoteStacks.filter(remoteName => !localStackNames.has(remoteName));
+
+            console.log(chalk.bold('All available stacks:'));
+
+            // Calculate padding for alignment
+            const totalCount = options.stacks.length + orphanedStacks.length;
+            const padding = totalCount.toString().length + 1;
+
+            let i = 0;
+
+            // List local stacks
             for (const stack of options.stacks) {
                 const stackResolved = this.container.resolve(stack);
                 const disabled = !stackResolved.enabled ? chalk.red('[disabled]') : '';
@@ -89,6 +104,27 @@ function defineListCommand(options: PulumiCommandsOptions) {
                 const number = chalk.gray(`${++i}.`.padStart(padding));
 
                 console.log(`${number}${stackResolved.name} ${disabled}`);
+            }
+
+            // List orphaned stacks
+            for (const orphanedStackName of orphanedStacks) {
+                const number = chalk.gray(`${++i}.`.padStart(padding));
+                const orphaned = chalk.magenta('[orphaned]');
+
+                console.log(`${number}${orphanedStackName} ${orphaned}`);
+            }
+
+            if (orphanedStacks.length > 0) {
+                console.log();
+                console.log(
+                    chalk.yellow(
+                        `Found ${orphanedStacks.length} orphaned stack(s) in remote backend that are not defined locally.`,
+                    ),
+                );
+                console.log(
+                    chalk.gray('Orphaned stacks can be destroyed using: ') +
+                        chalk.cyan('stack destroy --force <stack-name>'),
+                );
             }
         }
     };
@@ -355,6 +391,8 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                 ['Destroy all stacks', 'destroy'],
                 ['Destroy single stack', 'destroy core'],
                 ['Destroy multiple stacks', 'destroy core api'],
+                ['Preview destruction plan', 'destroy --preview'],
+                ['Preview specific stacks', 'destroy --preview core api'],
             ],
         });
 
@@ -368,6 +406,10 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
 
         force = Option.Boolean('--force,-f', {
             description: 'Destroy the stack even if it is protected or orphaned',
+        });
+
+        preview = Option.Boolean('--preview,-p', {
+            description: 'Show which stacks would be destroyed without actually destroying them',
         });
 
         stacks = Option.Rest();
@@ -395,11 +437,28 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                     });
 
                     const stackResolved = stackDefinition.create();
-                    await destroyStack(stackResolved, {
-                        config: pulumiConfig,
-                        refresh: this.refresh,
-                        remove: this.remove,
-                    });
+                    const stackName = chalk.bold(chalk.red(stack));
+
+                    try {
+                        stackResolved.logger.info(`🗑️  Force destroying stack ${stackName}...`);
+
+                        await destroyStack(stackResolved, {
+                            config: pulumiConfig,
+                            refresh: this.refresh,
+                            remove: this.remove,
+                        });
+
+                        if (this.remove) {
+                            stackResolved.logger.info(`💥 Force destroyed and removed stack ${stackName}`);
+                        } else {
+                            stackResolved.logger.info(`💥 Force destroyed stack ${stackName}`);
+                        }
+                    } catch (error) {
+                        stackResolved.logger.error(`❌ Failed to force destroy stack ${stackName}.`, {
+                            error,
+                        });
+                        throw error;
+                    }
                 }
 
                 return;
@@ -414,18 +473,89 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                 throw new UsageError('No stacks to destroy.');
             }
 
+            // Determine which stacks will actually be destroyed (filter out protected ones)
+            const stacksToDestroy: StackDefinition[] = [];
+            const protectedStacks: StackDefinition[] = [];
+
             for (const stack of [...stacks].reverse()) {
                 const stackResolved = this.container.resolve(stack);
                 if (stackResolved.preventDestroy) {
-                    console.warn(`Stack ${chalk.yellow(stack.name)} is protected and cannot be destroyed.`);
-                    continue;
+                    protectedStacks.push(stack);
+                } else {
+                    stacksToDestroy.push(stack);
                 }
+            }
 
-                await destroyStack(stackResolved, {
-                    config: pulumiConfig,
-                    refresh: this.refresh,
-                    remove: this.remove,
+            // Display the destruction plan
+            console.log(chalk.bold('\n🗑️  Stack Destruction Plan\n'));
+
+            if (stacksToDestroy.length > 0) {
+                console.log(chalk.bold('The following stacks will be destroyed in this order:'));
+                const padding = stacksToDestroy.length.toString().length + 1;
+
+                stacksToDestroy.forEach((stack, index) => {
+                    const number = chalk.gray(`${index + 1}.`.padStart(padding));
+                    const stackName = chalk.red.bold(stack.stackName);
+                    const removeFlag = this.remove ? chalk.gray(' [will be removed]') : '';
+                    console.log(`${number}${stackName}${removeFlag}`);
                 });
+                console.log();
+            }
+
+            if (protectedStacks.length > 0) {
+                console.log(chalk.bold('The following stacks are protected and will be skipped:'));
+                const padding = protectedStacks.length.toString().length + 1;
+
+                protectedStacks.forEach((stack, index) => {
+                    const number = chalk.gray(`${index + 1}.`.padStart(padding));
+                    const stackName = chalk.yellow.bold(stack.stackName);
+                    const protection = chalk.gray(' [protected]');
+                    console.log(`${number}${stackName}${protection}`);
+                });
+                console.log();
+            }
+
+            if (stacksToDestroy.length === 0) {
+                console.log(chalk.yellow('No stacks will be destroyed - all selected stacks are protected.'));
+                return;
+            }
+
+            // If preview mode, exit here without proceeding
+            if (this.preview) {
+                console.log(chalk.blue('Preview mode - no stacks will actually be destroyed.'));
+                return;
+            }
+
+            // Proceed with destruction
+            for (const stack of stacksToDestroy) {
+                const stackResolved = this.container.resolve(stack);
+                const stackName = chalk.bold(chalk.red(stack.stackName));
+
+                try {
+                    stackResolved.logger.info(`🗑️  Destroying stack ${stackName}...`);
+
+                    await destroyStack(stackResolved, {
+                        config: pulumiConfig,
+                        refresh: this.refresh,
+                        remove: this.remove,
+                    });
+
+                    if (this.remove) {
+                        stackResolved.logger.info(`💥 Destroyed and removed stack ${stackName}`);
+                    } else {
+                        stackResolved.logger.info(`💥 Destroyed stack ${stackName}`);
+                    }
+                } catch (error) {
+                    stackResolved.logger.error(`❌ Failed to destroy stack ${stackName}.`, {
+                        error,
+                    });
+                    throw error;
+                }
+            }
+
+            // Show warning for any protected stacks that were skipped
+            if (protectedStacks.length > 0) {
+                console.log(chalk.yellow(`\n⚠️  Skipped ${protectedStacks.length} protected stack(s).`));
             }
         }
     };

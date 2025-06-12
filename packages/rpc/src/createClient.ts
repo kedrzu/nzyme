@@ -2,9 +2,7 @@ import { joinURL } from 'ufo';
 
 import { FetchError } from '@nzyme/fetch-utils';
 import type { HttpRequestHeaders } from '@nzyme/fetch-utils';
-import type { UnionToIntersection } from '@nzyme/types';
 
-import type { Endpoint } from './defineEndpoint.js';
 import type { Serializer } from './Serializer.js';
 
 /**
@@ -12,24 +10,21 @@ import type { Serializer } from './Serializer.js';
  */
 export interface ClientBase {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [endpoint: string]: (input?: any) => Promise<unknown>;
+    [endpoint: string]: (input?: any, ...rest: any[]) => Promise<unknown>;
 }
 
 /**
  *
  */
-export type ClientDefault<E extends Endpoint> = UnionToIntersection<
-    E extends Endpoint<infer TName, infer TInput, infer TOutput>
-        ? TInput extends void
-            ? (endpoint: TName, input?: void) => Promise<TOutput>
-            : (endpoint: TName, input: TInput) => Promise<TOutput>
-        : never
->;
+export type ClientHeadersGetter<C extends ClientBase = ClientBase> = (
+    endpoint: keyof C,
+    ...rest: Parameters<C[keyof C]>
+) => HttpRequestHeaders | Promise<HttpRequestHeaders>;
 
 /**
  *
  */
-export interface CreateClientOptions {
+export interface CreateClientOptions<C extends ClientBase> {
     /**
      * The base URL of the API server.
      */
@@ -38,7 +33,7 @@ export interface CreateClientOptions {
     /**
      *
      */
-    headers?: (endpoint: string) => HttpRequestHeaders | Promise<HttpRequestHeaders>;
+    headers?: ClientHeadersGetter<C>;
 
     /**
      *
@@ -49,20 +44,20 @@ export interface CreateClientOptions {
 /**
  *
  */
-export function createClient<C extends ClientBase>(options: CreateClientOptions): C {
+export function createClient<C extends ClientBase>(options: CreateClientOptions<C>): C {
     const serializer = options.serializer;
     const baseUrl = options.baseUrl;
-    const headersGetter = options.headers;
-    const client: Record<string, (input?: unknown) => Promise<unknown>> = {};
+    const headersGetter = options.headers as ClientHeadersGetter;
+    const client: Record<string, (input: unknown, ...rest: unknown[]) => Promise<unknown>> = {};
 
-    const execute = async (endpoint: string, input: unknown): Promise<unknown> => {
+    const execute = async (endpoint: string, input: unknown, ...rest: unknown[]): Promise<unknown> => {
         const url = joinURL(baseUrl, endpoint);
         const headers: HttpRequestHeaders = {
             'Content-Type': 'application/json',
         };
 
         if (headersGetter) {
-            Object.assign(headers, await headersGetter(endpoint));
+            Object.assign(headers, await headersGetter(endpoint, input, ...rest));
         }
 
         const body = serializer(input);
@@ -85,7 +80,7 @@ export function createClient<C extends ClientBase>(options: CreateClientOptions)
         get(target, endpoint: string) {
             let fn = target[endpoint];
             if (!fn) {
-                fn = input => execute(endpoint, input);
+                fn = (...args) => execute(endpoint, ...args);
                 target[endpoint] = fn;
             }
 

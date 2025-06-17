@@ -1,4 +1,4 @@
-import { defineService } from '@nzyme/ioc';
+import { defineService } from '../Service.js';
 
 /**
  *

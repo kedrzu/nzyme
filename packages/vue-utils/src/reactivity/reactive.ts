@@ -8,7 +8,7 @@ import type { Ref } from 'vue';
  *
  * @template T The base object type whose values can be either refs or direct values
  */
-type ReactiveInput<T extends object> = {
+export type ReactiveInput<T extends object> = {
     [K in keyof T]: Ref<T[K]> | T[K];
 };
 

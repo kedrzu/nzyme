@@ -8,6 +8,7 @@ import type {
 
 import type { SomeObject } from '@nzyme/types';
 import { defineProp } from '@nzyme/vue-utils';
+import type { ClassProp } from '@nzyme/vue-utils';
 
 /**
  * Transition props.
@@ -28,7 +29,22 @@ export type TransitionGroupProps = Omit<TransitionGroupPropsVue, 'css' | 'name' 
      */
     duration?: number;
 };
+/**
+ *
+ */
+export interface TransitionGroupOptions {
+    /**
+     *
+     */
+    tag?: string;
+    /**
+     *
+     */
+    class?: ClassProp;
+}
+
 type TransitionHook = (el: Element) => void;
+
 type TransitionGetter<TProps extends ComponentObjectPropsOptions, TValue> = (props: ExtractPropTypes<TProps>) => TValue;
 
 type TransitionProp<TProps extends ComponentObjectPropsOptions, TValue> = TransitionGetter<TProps, TValue> | TValue;
@@ -51,7 +67,7 @@ const TRANSITION_PROPS = {
     appear: Boolean,
     duration: Number,
     delay: Number,
-    group: defineProp<boolean | undefined>({ type: Boolean }),
+    group: defineProp<boolean | TransitionGroupOptions | undefined>(),
     mode: defineProp<'default' | 'in-out' | 'out-in'>(),
     onBeforeEnter: defineProp<TransitionHook | TransitionHook[]>(),
     onAfterEnter: defineProp<TransitionHook | TransitionHook[]>(),
@@ -91,17 +107,24 @@ export function defineTransition<TProps extends ComponentObjectPropsOptions = So
 
             return () => {
                 if (props.group) {
-                    return (
-                        <TransitionGroup
-                            {...classes.value}
-                            onAfterEnter={onAfterEnter}
-                            onAfterLeave={onAfterLeave}
-                            onBeforeEnter={onBeforeEnter}
-                            onBeforeLeave={onBeforeLeave}
-                        >
-                            {ctx.slots.default?.()}
-                        </TransitionGroup>
-                    );
+                    let tag = 'div';
+                    let cls: ClassProp | undefined;
+                    if (typeof props.group === 'object') {
+                        tag = props.group.tag ?? 'div';
+                        cls = props.group.class;
+                    }
+
+                    const transitionProps = {
+                        class: cls,
+                        tag,
+                        ...classes.value,
+                        onAfterEnter: onAfterEnter,
+                        onAfterLeave: onAfterLeave,
+                        onBeforeEnter: onBeforeEnter,
+                        onBeforeLeave: onBeforeLeave,
+                    };
+
+                    return <TransitionGroup {...transitionProps}>{ctx.slots.default?.()}</TransitionGroup>;
                 }
 
                 return (

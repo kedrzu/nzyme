@@ -21,6 +21,11 @@ export interface QueueMessage {
      * The delay in seconds for the message.
      */
     delaySeconds?: number;
+
+    /**
+     * The receipt handle of the message.
+     */
+    receiptHandle?: string;
 }
 
 /**

@@ -18,9 +18,7 @@ const lang = useService(LanguageProvider);
 const render = () => {
   const params: Record<string, unknown> = {};
   for (const [key, slot] of Object.entries(slots)) {
-    if (key !== 't') {
-      params[key] = (slot as Slot)?.();
-    }
+    params[key] = (slot as Slot)?.();
   }
 
   return props.t(lang(), params as T);

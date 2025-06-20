@@ -26,6 +26,12 @@ export type EnvVariablesOptions = {
      * @default process.env
      */
     output?: Record<string, string>;
+
+    /**
+     * If true, it will load environment variables from the project root.
+     * @default true
+     */
+    root?: boolean;
 };
 
 /**
@@ -35,6 +41,11 @@ export function loadEnvVariables(options: EnvVariablesOptions = {}) {
     const cwd = options.cwd ?? process.cwd();
     const root = getProjectRoot({ cwd });
     const output: Record<string, string> = options.output ?? (process.env as Record<string, string>);
+
+    if (!options.root) {
+        loadEnvFilesInDir(cwd, options.env, output);
+        return;
+    }
 
     // Load environment variables from the project root.
     loadEnvFilesInDir(root, options.env, output);
@@ -64,6 +75,6 @@ function loadEnvFile(file: string, output: Record<string, string>) {
 
     const result = configDotenv({ path: file, override: true, processEnv: output });
     if (result.parsed) {
-        console.info(`Loaded environment variables from ${chalk.green(file)}`);
+        console.info(`📄 Loaded environment variables from ${chalk.green(file)}`);
     }
 }

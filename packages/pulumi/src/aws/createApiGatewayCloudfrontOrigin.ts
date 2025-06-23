@@ -9,7 +9,7 @@ export interface ApiGatewayCloudfrontOriginOptions {
     /**
      * The ID of the origin.
      */
-    originId: pulumi.Input<string>;
+    originId: string;
     /**
      * The API Gateway URL.
      */
@@ -19,10 +19,9 @@ export interface ApiGatewayCloudfrontOriginOptions {
 /**
  * Creates a Cloudfront origin for an API Gateway.
  */
-export function createApiGatewayCloudfrontOrigin(options: ApiGatewayCloudfrontOriginOptions): CloudfrontOriginProps {
+export function createApiGatewayCloudfrontOrigin(options: ApiGatewayCloudfrontOriginOptions) {
     const apiUrl = pulumi.interpolate`${options.apiUrl}`.apply(url => new URL(url));
-
-    return {
+    const origin: CloudfrontOriginProps = {
         originId: options.originId,
         domainName: apiUrl.apply(url => url.hostname),
         originPath: apiUrl.apply(url => url.pathname),
@@ -33,4 +32,6 @@ export function createApiGatewayCloudfrontOrigin(options: ApiGatewayCloudfrontOr
             originSslProtocols: ['TLSv1.2'],
         },
     };
+
+    return origin;
 }

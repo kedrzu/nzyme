@@ -50,8 +50,8 @@
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
         "@types/lodash.merge": "^4.6.9",
-        "@types/node": "^24.0.0",
-        "@types/source-map-support": "^0"
+        "@types/node": "^24.0.4",
+        "@types/source-map-support": "^0.5.10"
     },
     "engines": {
         "node": ">=20"

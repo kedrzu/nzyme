@@ -32,12 +32,12 @@
         "execa": "^9.6.0",
         "fs-extra": "^11.3.0",
         "pkg-types": "^2.1.0",
-        "prettier": "^3.5.3"
+        "prettier": "^3.6.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
-        "@types/node": "^24.0.0"
+        "@types/node": "^24.0.4"
     },
     "publishConfig": {
         "access": "public"

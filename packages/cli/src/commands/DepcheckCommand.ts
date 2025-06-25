@@ -316,11 +316,14 @@ export class DepcheckCommand extends Command {
     private getOptions(pkg: Package): depcheckImport.Options {
         const depcheckConfig: DepcheckConfig = (pkg.packageJson as { depcheck?: DepcheckConfig }).depcheck ?? {};
 
+        const ignoreFiles = ['dist/**', ...(depcheckConfig?.ignoreFiles ?? [])];
+        const ignoreDeps = depcheckConfig?.ignoreDeps ?? [];
+
         return {
             ignoreBinPackage: false, // ignore the packages with bin entry
             skipMissing: false, // skip calculation of missing dependencies
-            ignorePatterns: depcheckConfig?.ignoreFiles ?? [],
-            ignoreMatches: depcheckConfig?.ignoreDeps ?? [], //['@oclif/*'],
+            ignorePatterns: ignoreFiles,
+            ignoreMatches: ignoreDeps, //['@oclif/*'],
             parsers: {
                 // the target parsers
                 '**/*.js': depcheckImport.parser.es6,

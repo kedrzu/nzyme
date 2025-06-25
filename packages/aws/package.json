@@ -36,7 +36,6 @@
         "@nzyme/ioc": "^0.14.0",
         "@nzyme/logging": "^0.14.0",
         "@nzyme/rpc": "^0.14.0",
-        "@nzyme/types": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
         "@types/aws-lambda": "^8.10.150",
         "@types/mime-types": "^3.0.1",

@@ -28,15 +28,11 @@
     "dependencies": {
         "@nzyme/types": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
-        "tslib": "^2.8.1",
         "type-fest": "^4.41.0"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
-        "@nzyme/vitest": "^0.14.0",
-        "eslint": "^9.29.0",
-        "typescript": "^5.8.3",
         "vitest": "^3.2.4"
     },
     "publishConfig": {

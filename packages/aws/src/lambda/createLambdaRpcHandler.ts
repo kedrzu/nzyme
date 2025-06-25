@@ -1,7 +1,14 @@
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-
 import type { HttpMethod } from '@nzyme/fetch-utils';
 import type { Router } from '@nzyme/rpc';
+
+import type { types } from './types.js';
+
+/**
+ *
+ */
+export interface LambdaRpcHandler {
+    (event: types.APIGatewayProxyEventV2): Promise<types.APIGatewayProxyStructuredResultV2>;
+}
 
 /**
  * Defines a lambda handler for a given event and result type.
@@ -9,8 +16,8 @@ import type { Router } from '@nzyme/rpc';
  * @returns A lambda handler.
  * @__NO_SIDE_EFFECTS__
  */
-export function createLambdaRpcHandler(router: Router) {
-    return async (event: APIGatewayProxyEventV2) => {
+export function createLambdaRpcHandler(router: Router): LambdaRpcHandler {
+    return async event => {
         const method: HttpMethod =
             (event.requestContext?.http?.method.toUpperCase() as HttpMethod | undefined) || 'GET';
 
@@ -32,7 +39,7 @@ export function createLambdaRpcHandler(router: Router) {
             }
         }
 
-        const result: APIGatewayProxyResultV2 = {
+        const result: types.APIGatewayProxyResultV2 = {
             statusCode: response.status,
             body: response.body as string,
             headers: headers,

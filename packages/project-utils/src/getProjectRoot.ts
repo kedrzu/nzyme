@@ -1,20 +1,26 @@
-import type { ProjectOptions } from './getProject.js';
-import { getProject } from './getProject.js';
+import { findRootSync } from '@manypkg/find-root';
 
-const cache = new Map<string, string>();
+const projectRootCache = new Map<string, string>();
 
 /**
- * Get the root directory of the project.
+ * Get the root directory of the project (monorepo or package).
+ * Caches the result for each cwd for performance.
+ * Throws if no project root is found.
+ * @param cwd - The current working directory to resolve from.
+ * @returns The absolute path to the project root directory.
+ * @throws {Error} If no project root is found.
+ * @__NO_SIDE_EFFECTS__
  */
-export function getProjectRoot(options: ProjectOptions = {}) {
-    const cwd = options.cwd || process.cwd();
-    const cached = cache.get(cwd);
+export function getProjectRoot(cwd?: string): string {
+    const key = cwd ?? process.cwd();
+    const cached = projectRootCache.get(key);
     if (cached) {
         return cached;
     }
-
-    const project = getProject(options);
-    cache.set(cwd, project.rootPath);
-
-    return project.rootPath;
+    const result = findRootSync(key);
+    if (!result) {
+        throw new Error(`No project root found from ${cwd}`);
+    }
+    projectRootCache.set(key, result.rootDir);
+    return result.rootDir;
 }

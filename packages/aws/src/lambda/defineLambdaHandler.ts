@@ -1,4 +1,4 @@
-import type { Handler } from 'aws-lambda';
+import type { types } from './types.js';
 
 /**
  * Defines a lambda handler for a given event and result type.
@@ -6,6 +6,6 @@ import type { Handler } from 'aws-lambda';
  * @returns A promise that resolves to the handler.
  * @__NO_SIDE_EFFECTS__
  */
-export function defineLambdaHandler<THandler extends Handler>(handler: THandler) {
+export function defineLambdaHandler<THandler extends types.Handler>(handler: THandler) {
     return handler;
 }

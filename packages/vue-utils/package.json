@@ -30,13 +30,12 @@
         "@nzyme/types": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
         "@nzyme/zchema": "^0.14.0",
-        "tslib": "^2.8.1",
+        "lodash.debounce": "^4.0.8",
         "vue": "^3.5.16"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
-        "eslint": "^9.29.0",
         "typescript": "^5.8.3"
     },
     "publishConfig": {

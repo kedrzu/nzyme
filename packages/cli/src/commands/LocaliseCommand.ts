@@ -99,7 +99,7 @@ export class LocaliseCommand extends Command {
             await saveFile(outputPath, result.code);
 
             if (result.errors.length === 0) {
-                console.info(`Compiled ${chalk.green(file)}`);
+                console.info(`🌍 Compiled ${chalk.green(file)}`);
                 return true;
             }
 
@@ -113,7 +113,7 @@ export class LocaliseCommand extends Command {
 
             return false;
         } catch (error) {
-            console.error(`Failed to compile ${file}`, error);
+            console.error(`❌ Failed to compile ${file}`, error);
             return false;
         }
     }

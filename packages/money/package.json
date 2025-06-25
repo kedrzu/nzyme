@@ -25,17 +25,9 @@
         "build:esm": "tsc --build ./tsconfig.esm.json",
         "lint": "eslint . --fix --cache"
     },
-    "dependencies": {
-        "@nzyme/utils": "^0.14.0",
-        "tslib": "^2.8.1"
-    },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
-        "@nzyme/tsconfig": "^0.14.0",
-        "@nzyme/vitest": "^0.14.0",
-        "@types/node": "^24.0.0",
-        "eslint": "^9.29.0",
-        "typescript": "^5.8.3"
+        "@nzyme/tsconfig": "^0.14.0"
     },
     "publishConfig": {
         "access": "public"

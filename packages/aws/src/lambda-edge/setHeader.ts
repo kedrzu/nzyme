@@ -1,9 +1,9 @@
-import type { CloudFrontHeaders } from 'aws-lambda';
+import type { types } from '../lambda/types.js';
 
 /**
  * Sets a header on the response.
  */
-export function setHeader(headers: CloudFrontHeaders, key: string, value: string) {
+export function setHeader(headers: types.CloudFrontHeaders, key: string, value: string) {
     let header = headers[key];
     if (header == null) {
         header = [];

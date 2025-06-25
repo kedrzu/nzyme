@@ -1,11 +1,12 @@
 import * as fs from 'fs/promises';
 import path from 'path';
 
-import type { Package } from '@lerna/package';
-import { getPackages } from '@lerna/project';
 import { $ } from 'execa';
 import glob from 'fast-glob';
 import { outputFile } from 'fs-extra';
+
+import type { Package } from '@nzyme/project-utils';
+import { getPackages } from '@nzyme/project-utils';
 
 import { Command } from '../Command.js';
 
@@ -43,14 +44,14 @@ export class BuildCommand extends Command {
 
     private async processPackage(pkg: Package) {
         const files = await glob(['./dist-cjs/**/*.js', './dist-cjs/**/*.js.map'], {
-            cwd: pkg.location,
+            cwd: pkg.path,
         });
 
         await Promise.all(files.map(file => this.processFile(file, pkg)));
     }
 
     private async processFile(file: string, pkg: Package) {
-        const filePath = path.join(pkg.location, file);
+        const filePath = path.join(pkg.path, file);
 
         const content = await fs.readFile(filePath, 'utf8');
         const newContent = this.replaceJs(content);

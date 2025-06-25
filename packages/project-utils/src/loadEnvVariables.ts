@@ -39,7 +39,7 @@ export type EnvVariablesOptions = {
  */
 export function loadEnvVariables(options: EnvVariablesOptions = {}) {
     const cwd = options.cwd ?? process.cwd();
-    const root = getProjectRoot({ cwd });
+    const root = getProjectRoot(cwd);
     const output: Record<string, string> = options.output ?? (process.env as Record<string, string>);
 
     if (!options.root) {

@@ -2,8 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import type { Package } from '@lerna/package';
-import { getPackages } from '@lerna/project';
+import chalk from 'chalk';
 import { watch } from 'chokidar';
 import { Option } from 'clipanion';
 import * as json from 'comment-json';
@@ -11,12 +10,13 @@ import fsExtra from 'fs-extra/esm';
 import merge from 'lodash.merge';
 import type { TsConfigJson } from 'type-fest';
 
+import type { Package } from '@nzyme/project-utils';
+import { getPackages } from '@nzyme/project-utils';
 import { saveFile } from '@nzyme/project-utils';
 import { asArray, debounceAsyncFunction, waitForever } from '@nzyme/utils';
 
 import { Command } from '../Command.js';
 import type { NzymePackageConfig } from '../NzymePackageConfig.js';
-import chalk from 'chalk';
 
 interface TsConfig {
     path: string;
@@ -131,7 +131,7 @@ async function processProject(throwOnError: boolean) {
                 include: [],
             },
         });
-    } catch (error) {
+    } catch (error: unknown) {
         if (throwOnError) {
             throw error;
         }
@@ -141,30 +141,37 @@ async function processProject(throwOnError: boolean) {
 }
 
 async function processPackage(pkg: Package, packages: Package[], throwOnError: boolean): Promise<PackageCache> {
-    const existing = packageCache.get(pkg.name);
+    if (!pkg.packageJson.name) {
+        console.error('Package is missing a name:', pkg);
+        return { esm: null, cjs: null };
+    }
+    const existing = packageCache.get(pkg.packageJson.name);
     if (existing) {
         return await existing;
     }
 
     try {
         const result = processPackageCore(pkg, packages, throwOnError);
-        packageCache.set(pkg.name, result);
+        packageCache.set(pkg.packageJson.name, result);
 
         return await result;
-    } catch (error) {
+    } catch (error: unknown) {
         if (throwOnError) {
             throw error;
         }
 
-        console.error(`Failed to process package ${pkg.name}`, error);
-        packageCache.set(pkg.name, Promise.resolve({ esm: null, cjs: null }));
+        console.error(`Failed to process package ${pkg.packageJson.name}`, error);
+        packageCache.set(pkg.packageJson.name, Promise.resolve({ esm: null, cjs: null }));
         return { esm: null, cjs: null };
     }
 }
 
 async function processPackageCore(pkg: Package, packages: Package[], throwOnError: boolean): Promise<PackageCache> {
-    const dependencyNames = [...Object.keys(pkg.dependencies || {}), ...Object.keys(pkg.devDependencies || {})];
-    const dependencies = dependencyNames.map(d => packages.find(p => p.name === d)!).filter(Boolean);
+    const dependencyNames = [
+        ...Object.keys(pkg.packageJson.dependencies || {}),
+        ...Object.keys(pkg.packageJson.devDependencies || {}),
+    ];
+    const dependencies = dependencyNames.map(d => packages.find(p => p.packageJson.name === d)!).filter(Boolean);
 
     const esmReferences: string[] = [];
     const cjsReferences: string[] = [];
@@ -194,7 +201,7 @@ async function processPackageCore(pkg: Package, packages: Package[], throwOnErro
     const isComposite = isCompositePackage(tsconfig);
 
     esmResult = await saveTsReferences({
-        cwd: pkg.location,
+        cwd: pkg.path,
         fileName: 'tsconfig.json',
         extends: tsconfig.path,
         references: esmReferences,
@@ -213,7 +220,7 @@ async function processPackageCore(pkg: Package, packages: Package[], throwOnErro
         }
 
         cjsResult = await saveTsReferences({
-            cwd: pkg.location,
+            cwd: pkg.path,
             fileName: 'tsconfig.cjs.json',
             extends: tsconfig.path,
             references: cjsReferences,
@@ -235,7 +242,7 @@ async function processPackageCore(pkg: Package, packages: Package[], throwOnErro
 }
 
 async function loadTsConfigForPackage(pkg: Package) {
-    return await loadTsConfig(path.join(pkg.location, 'tsconfig.esm.json'));
+    return await loadTsConfig(path.join(pkg.path, 'tsconfig.esm.json'));
 }
 
 function isCompositePackage(tsconfig: TsConfig | null): tsconfig is TsConfig {
@@ -366,5 +373,5 @@ async function saveTsReferences(params: {
 }
 
 function getNzymeConfig(pkg: Package) {
-    return pkg.get('nzyme') as NzymePackageConfig | null | undefined;
+    return pkg.packageJson['nzyme'] as NzymePackageConfig | null | undefined;
 }

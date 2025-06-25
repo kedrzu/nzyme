@@ -27,14 +27,12 @@
     },
     "dependencies": {
         "@nzyme/utils": "^0.14.0",
-        "@slack/web-api": "7.9.2",
-        "tslib": "^2.8.1"
+        "@slack/types": "2.14.0",
+        "@slack/web-api": "7.9.2"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
-        "@nzyme/tsconfig": "^0.14.0",
-        "eslint": "^9.29.0",
-        "typescript": "^5.8.3"
+        "@nzyme/tsconfig": "^0.14.0"
     },
     "publishConfig": {
         "access": "public"

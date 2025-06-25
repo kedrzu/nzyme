@@ -1,6 +1,6 @@
-import type { Context } from 'aws-lambda';
-
 import { defineService } from '@nzyme/ioc';
+
+import type { types } from './types.js';
 
 /**
  *
@@ -8,18 +8,18 @@ import { defineService } from '@nzyme/ioc';
 export const LambdaContextProvider = defineService({
     name: 'LambdaContextProvider',
     setup: () => {
-        let ctx: Context | undefined;
+        let ctx: types.Context | undefined;
 
         return {
             set,
             get,
         };
 
-        function set(value: Context) {
+        function set(value: types.Context) {
             ctx = value;
         }
 
-        function get(): Context | undefined {
+        function get(): types.Context | undefined {
             return ctx;
         }
     },

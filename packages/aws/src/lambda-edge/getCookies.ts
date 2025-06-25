@@ -1,11 +1,10 @@
-import type { CloudFrontRequest } from 'aws-lambda';
-
+import type { types } from '../lambda/types.js';
 import { getRequestHeader } from './getRequestHeader.js';
 
 /**
  * Retrieves cookies from the request.
  */
-export function getCookies(request: CloudFrontRequest) {
+export function getCookies(request: types.CloudFrontRequest) {
     const header = getRequestHeader(request, 'cookie');
     const cookies: Record<string, string> = {};
 

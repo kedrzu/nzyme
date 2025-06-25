@@ -31,3 +31,17 @@ export type DateTimeISO =
  * Represent a date input.
  */
 export type DateInput = number | Date | DateISO | DateTimeISO;
+
+/**
+ *
+ */
+export type DurationISO = `${DurationP}${DurationT}`;
+
+type DurationY = `${number}Y` | ``;
+type DurationM = `${number}M` | ``;
+type DurationD = `${number}D` | ``;
+type DurationH = `${number}H` | ``;
+
+type DurationS = `${number}S` | ``;
+type DurationP = `P${DurationY}${DurationM}${DurationD}`;
+type DurationT = `` | `T${DurationH}${DurationM}${DurationS}`;

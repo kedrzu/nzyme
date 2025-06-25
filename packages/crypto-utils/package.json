@@ -51,7 +51,7 @@
         "@nzyme/vitest": "^0.14.0",
         "@types/node": "^24.0.0",
         "@types/spark-md5": "^3.0.5",
-        "eslint": "^9.28.0",
+        "eslint": "^9.29.0",
         "typescript": "^5.8.3"
     },
     "publishConfig": {

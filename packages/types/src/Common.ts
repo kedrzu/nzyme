@@ -95,3 +95,8 @@ export type RecordToUnion<T extends Record<string, any>> = T[keyof T];
  *
  */
 export type Func<A extends any[] = any[], T = void> = (...args: A) => T;
+
+/**
+ *
+ */
+export type String = string & {};

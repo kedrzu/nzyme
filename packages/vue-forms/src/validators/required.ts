@@ -1,9 +1,9 @@
 import { createRule } from '@regle/core';
 import { isFilled } from '@regle/rules';
 
-export const required = createRule({
+export const required = createRule<unknown, [], false, false, false>({
     type: 'required',
-    validator: isFilled,
+    validator: value => isFilled(value, true) as false,
     // TODO translation
-    message: 'Pole jest wymagane',
+    message: () => 'Pole jest wymagane',
 });

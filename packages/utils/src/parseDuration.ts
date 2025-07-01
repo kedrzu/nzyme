@@ -1,6 +1,6 @@
 import type { Duration } from 'date-fns';
 
-import type { DurationISO, String } from '@nzyme/types';
+import type { DurationISO, StringNonLiteral } from '@nzyme/types';
 
 /**
  * Parses an ISO 8601 duration string (e.g., 'P1Y2M3DT4H5M6S') or a string into a date-fns Duration object.
@@ -11,7 +11,7 @@ import type { DurationISO, String } from '@nzyme/types';
  * @throws {Error} If the input is not a valid ISO 8601 duration string.
  * @__NO_SIDE_EFFECTS__
  */
-export function parseDuration(duration: DurationISO | String): Duration {
+export function parseDuration(duration: DurationISO | StringNonLiteral): Duration {
     if (typeof duration !== 'string') {
         throw new Error('Duration must be a string');
     }

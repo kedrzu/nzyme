@@ -99,4 +99,4 @@ export type Func<A extends any[] = any[], T = void> = (...args: A) => T;
 /**
  *
  */
-export type String = string & {};
+export type StringNonLiteral = string & {};

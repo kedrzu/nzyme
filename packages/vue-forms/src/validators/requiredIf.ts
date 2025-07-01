@@ -10,7 +10,7 @@ export const requiredIf = createRule({
     type: 'requiredIf',
     validator(value: unknown, condition: boolean) {
         if (condition) {
-            return isFilled(value);
+            return isFilled(value, true) as false;
         }
 
         return true;

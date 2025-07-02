@@ -44,6 +44,12 @@ export interface CreateClientOptions<C extends ClientBase> {
 /**
  *
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ClientResult<T> = T extends (...args: any[]) => Promise<infer U> ? U : T;
+
+/**
+ *
+ */
 export function createClient<C extends ClientBase>(options: CreateClientOptions<C>): C {
     const serializer = options.serializer;
     const baseUrl = options.baseUrl;

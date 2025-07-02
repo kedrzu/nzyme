@@ -12,6 +12,7 @@ export * from './modal/ModalService.js';
 export type { Modal, ModalComponent, ModalHandler, ModalProps, ModalResult } from './modal/ModalTypes.js';
 export * from './modal/useModal.js';
 export * from './modal/useModalProps.js';
+export { default as Proxy } from './Proxy.vue';
 //export { default as Collapse } from './components/Collapse.vue';
 export * from './useEventBus.js';
 export * from './useScrollLock.js';

@@ -1,8 +1,10 @@
 import type { ContainerScope } from './ContainerScope.js';
-import { defineInjectable, type Injectable, isInjectable } from './Injectable.js';
+import { defineInjectable, isInjectable } from './Injectable.js';
+import type { Injectable } from './Injectable.js';
 import type { Interface } from './Interface.js';
 import type { Module } from './Module.js';
-import { isService, type Service } from './Service.js';
+import { isService } from './Service.js';
+import type { Service } from './Service.js';
 
 /**
  * Symbol used to identify container instances.
@@ -135,8 +137,7 @@ export function createContainer(options?: ContainerOptions) {
     const parent = options?.parent;
     const scope = options?.scope;
     const resolve = options?.resolve ?? ((service, source) => service.resolve(container, source));
-    const createChild =
-        options?.createChild ?? (scope => createContainer({ parent: container, scope }));
+    const createChild = options?.createChild ?? (scope => createContainer({ parent: container, scope }));
 
     const container: Container = {
         [CONTAINER_SYMBOL]: true,
@@ -146,7 +147,7 @@ export function createContainer(options?: ContainerOptions) {
         createChild,
         get,
         set,
-        resolve: (injectable, caller) => injectable.resolve(container, caller),
+        resolve: resolve as Container['resolve'],
         tryResolve,
     };
 
@@ -154,8 +155,7 @@ export function createContainer(options?: ContainerOptions) {
 
     function get<T>(injectable: Injectable<T>): Injectable<T> | T | undefined {
         return (
-            (instances.get(injectable) as T | undefined) ??
-            (injectables.get(injectable) as Injectable<T> | undefined)
+            (instances.get(injectable) as T | undefined) ?? (injectables.get(injectable) as Injectable<T> | undefined)
         );
     }
 

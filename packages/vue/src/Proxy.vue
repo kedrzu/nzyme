@@ -1,10 +1,14 @@
 <script lang="ts" setup generic="T">
 import type { VNodeChild } from 'vue';
 
-defineProps<{ value: T }>();
-defineSlots<{ default: (value: T) => VNodeChild }>();
+const props = defineProps<{ value: T }>();
+const slots = defineSlots<{ default: (value: T) => VNodeChild }>();
+
+const render = () => {
+  return slots.default?.(props.value);
+};
 </script>
 
 <template>
-  <slot v-bind="value" />
+  <render />
 </template>

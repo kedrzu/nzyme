@@ -17,8 +17,6 @@ const TEXT_AREA_PROPS = defineProps({
         type: Boolean,
         default: true,
     },
-    disabled: Boolean,
-    readonly: Boolean,
 });
 
 /**
@@ -76,6 +74,8 @@ function setupTextArea() {
         return (
             <textarea
                 aria-label={props.label}
+                aria-readonly={props.readonly}
+                aria-required={props.required}
                 disabled={props.disabled}
                 name={props.name}
                 onBlur={field.inputAttrs.onBlur}

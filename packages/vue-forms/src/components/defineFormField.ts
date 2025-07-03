@@ -1,5 +1,5 @@
 import type { MaybeOutput, RegleFieldStatus } from '@regle/core';
-import { computed, onBeforeUnmount, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import type { ExtractPropTypes, PropType, UnwrapNestedRefs } from 'vue';
 
 import { scrollToTopElement } from '@nzyme/dom-utils';
@@ -30,6 +30,9 @@ export function defineFormField<T>(type?: PropType<T | null | undefined>) {
             modelValue: { type: type as PropType<T | null | undefined> },
             field: defineProp<RegleFieldStatus<T | null>>(),
             errors: defineProp<string | string[]>(),
+            required: Boolean,
+            disabled: Boolean,
+            readonly: Boolean,
         },
         emits: {
             'update:modelValue': undefined as unknown as (value: T) => boolean,
@@ -49,6 +52,12 @@ function createFormField<T>(options: FormFieldOptions<T>) {
         get: getValue,
         set: setValue,
     });
+
+    const valueInternal = ref(props.modelValue);
+    watch(
+        () => props.modelValue,
+        value => (valueInternal.value = value),
+    );
 
     const focused = ref(false);
 
@@ -109,7 +118,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
     });
 
     function getValue() {
-        return props.field ? props.field.$value : (props.modelValue as FormFieldValue<T>);
+        return props.field ? props.field.$value : (valueInternal.value as FormFieldValue<T>);
     }
 
     function setValue(value: FormFieldValue<T>) {
@@ -121,6 +130,8 @@ function createFormField<T>(options: FormFieldOptions<T>) {
         if (props.field) {
             props.field.$value = value;
         }
+
+        valueInternal.value = value;
 
         vm.$emit('update:modelValue', value);
     }

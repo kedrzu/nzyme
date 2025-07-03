@@ -18,8 +18,6 @@ const TEXT_INPUT_PROPS = defineProps({
         type: Boolean,
         default: true,
     },
-    disabled: Boolean,
-    readonly: Boolean,
 });
 
 /**
@@ -40,19 +38,15 @@ function setupTextInput() {
 
     return {
         field,
-        component,
+        TextInput,
     };
 
-    function onInput(event: Event) {
-        const target = event.target as HTMLInputElement;
-        const value = props.trim ? target.value.trim() : target.value;
-        field.value = value;
-    }
-
-    function component() {
+    function TextInput() {
         return (
             <input
                 aria-label={props.label}
+                aria-readonly={props.readonly}
+                aria-required={props.required}
                 autocomplete={props.autocomplete}
                 disabled={props.disabled}
                 name={props.name ?? props.autocomplete}
@@ -67,5 +61,11 @@ function setupTextInput() {
                 value={field.value}
             />
         );
+    }
+
+    function onInput(event: Event) {
+        const target = event.target as HTMLInputElement;
+        const value = props.trim ? target.value.trim() : target.value;
+        field.value = value;
     }
 }

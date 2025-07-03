@@ -12,8 +12,6 @@ const DATE_PROPS = defineProps({
     name: String,
     placeholder: String,
     tabindex: Number,
-    disabled: Boolean,
-    readonly: Boolean,
     min: Date,
     max: Date,
 });
@@ -56,6 +54,8 @@ function setupDateInput() {
         return (
             <input
                 aria-label={props.label}
+                aria-readonly={props.readonly}
+                aria-required={props.required}
                 disabled={props.disabled}
                 max={formatDate(props.max)}
                 min={formatDate(props.min)}

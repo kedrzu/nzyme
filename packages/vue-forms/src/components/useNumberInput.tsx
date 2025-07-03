@@ -13,8 +13,6 @@ const NUMBER_PROPS = defineProps({
     autocomplete: String,
     placeholder: String,
     tabindex: Number,
-    disabled: Boolean,
-    readonly: Boolean,
 });
 
 /**
@@ -47,6 +45,8 @@ function setupNumberInput() {
         return (
             <input
                 aria-label={props.label}
+                aria-readonly={props.readonly}
+                aria-required={props.required}
                 autocomplete={props.autocomplete}
                 disabled={props.disabled}
                 name={props.autocomplete}

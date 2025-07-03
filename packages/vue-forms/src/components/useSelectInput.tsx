@@ -17,7 +17,6 @@ const SELECT_PROPS = defineProps({
     autocomplete: String,
     placeholder: String,
     tabindex: Number,
-    disabled: Boolean,
 });
 
 /**
@@ -40,6 +39,8 @@ function setupSelectInput() {
         return (
             <select
                 aria-label={props.label}
+                aria-readonly={props.readonly}
+                aria-required={props.required}
                 autocomplete={props.autocomplete}
                 disabled={props.disabled}
                 name={props.autocomplete}

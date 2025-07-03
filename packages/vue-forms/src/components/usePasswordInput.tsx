@@ -12,7 +12,6 @@ const PASSWORD_PROPS = defineProps({
     label: String,
     placeholder: String,
     tabindex: Number,
-    disabled: Boolean,
 });
 
 /**
@@ -47,6 +46,8 @@ function setupPasswordInput() {
         return (
             <input
                 aria-label={props.label}
+                aria-readonly={props.readonly}
+                aria-required={props.required}
                 autocomplete="off"
                 disabled={props.disabled}
                 name="password"
@@ -54,6 +55,7 @@ function setupPasswordInput() {
                 onFocus={field.inputAttrs.onFocus}
                 onInput={onInput}
                 placeholder={props.placeholder}
+                readonly={props.readonly}
                 ref={inputEl}
                 tabindex={props.tabindex}
                 title={props.label}

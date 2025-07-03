@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
 import { getAllDeps, isDependentOn, sortByDependency } from '@nzyme/ioc';
+import { forEachParalell } from '@nzyme/utils';
 
 import { cancelStack } from '../cancelStack.js';
 import { defineStack, isStackDefinition } from '../defineStack.js';
@@ -364,13 +365,17 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
                 throw new UsageError('No stacks to cancel.');
             }
 
-            for (const stack of stacks) {
-                const stackResolved = this.container.resolve(stack);
-                console.log(`Cancelling stack ${chalk.green(stack.name)}...`);
-                await cancelStack(stackResolved, {
-                    config: pulumiConfig,
-                });
-            }
+            await forEachParalell(stacks, {
+                concurrency: 5,
+                callback: async stack => {
+                    const stackResolved = this.container.resolve(stack);
+                    await cancelStack(stackResolved, {
+                        config: pulumiConfig,
+                    });
+
+                    stackResolved.logger.info(`🚫 Cancelled stack ${chalk.green(stack.stackName)}`);
+                },
+            });
         }
     };
 }
@@ -455,12 +460,17 @@ function defineRefreshCommand(options: PulumiCommandsOptions) {
                 throw new UsageError('No stacks to refresh.');
             }
 
-            for (const stack of stacks) {
-                const stackResolved = this.container.resolve(stack);
-                await refreshStack(stackResolved, {
-                    config: pulumiConfig,
-                });
-            }
+            await forEachParalell(stacks, {
+                concurrency: 5,
+                callback: async stack => {
+                    const stackResolved = this.container.resolve(stack);
+                    await refreshStack(stackResolved, {
+                        config: pulumiConfig,
+                    });
+
+                    stackResolved.logger.info(`🔄 Refreshed stack ${chalk.green(stack.stackName)}`);
+                },
+            });
         }
     };
 }

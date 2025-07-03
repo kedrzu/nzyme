@@ -62,6 +62,8 @@ function setupPhoneInput() {
         return (
             <input
                 aria-label={props.label}
+                aria-readonly={props.readonly}
+                aria-required={props.required}
                 autocomplete="tel"
                 disabled={props.disabled}
                 name={props.name ?? 'tel'}

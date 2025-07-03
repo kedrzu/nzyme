@@ -15,7 +15,6 @@ const RADIO_PROPS = defineProps({
     option: defineProp<Primitive>({ required: true }),
     tabindex: Number,
     name: String,
-    disabled: Boolean,
 });
 
 const RADIO_EMITS = {
@@ -45,6 +44,8 @@ function setupRadio<T extends Primitive | null = Primitive | null>() {
         return (
             <label>
                 <input
+                    aria-readonly={props.readonly}
+                    aria-required={props.required}
                     checked={selected.value}
                     class={css.hiddenInput}
                     disabled={props.disabled}

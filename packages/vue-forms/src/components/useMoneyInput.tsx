@@ -18,8 +18,6 @@ const MONEY_PROPS = defineProps({
     label: String,
     placeholder: String,
     tabindex: Number,
-    disabled: Boolean,
-    readonly: Boolean,
 });
 
 /**
@@ -72,6 +70,8 @@ function setupMoneyInput(options: MoneyInputOptions) {
         return (
             <IMaskComponent
                 aria-label={props.label}
+                aria-readonly={props.readonly}
+                aria-required={props.required}
                 blocks={blocks.value}
                 disabled={props.disabled}
                 inputmode="numeric"

@@ -2,7 +2,7 @@
 import type { Slot } from 'vue';
 
 import type { Translation } from '@nzyme/i18n';
-import { LanguageProvider } from '@nzyme/i18n';
+import { LanguageContext } from '@nzyme/i18n';
 import { useService } from '@nzyme/vue-ioc';
 
 const props = defineProps<{
@@ -13,7 +13,7 @@ const slots = defineSlots<{
   [K in keyof T]: [];
 }>();
 
-const lang = useService(LanguageProvider);
+const lang = useService(LanguageContext);
 
 const render = () => {
   const params: Record<string, unknown> = {};

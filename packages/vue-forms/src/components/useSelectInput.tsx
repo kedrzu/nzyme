@@ -35,7 +35,7 @@ function setupSelectInput() {
     const props = useProps(SELECT_PROPS);
     const field = SELECT_FIELD.create({ props });
 
-    const component: FunctionalComponent = (_, ctx) => {
+    const SelectInput: FunctionalComponent = (_, ctx) => {
         return (
             <select
                 aria-label={props.label}
@@ -59,7 +59,7 @@ function setupSelectInput() {
 
     return {
         field,
-        component,
+        SelectInput,
     };
 
     function onInput(event: Event) {

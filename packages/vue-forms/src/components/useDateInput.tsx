@@ -36,21 +36,11 @@ function setupDateInput() {
     return {
         field,
         input,
-        component,
+        DateInput,
         showCalendar,
     };
 
-    function onInput(event: Event) {
-        const target = event.target as HTMLInputElement;
-        field.value = target.valueAsDate ?? null;
-    }
-
-    function onFocus(e: FocusEvent) {
-        field.inputAttrs.onFocus(e);
-        showCalendar();
-    }
-
-    function component() {
+    function DateInput() {
         return (
             <input
                 aria-label={props.label}
@@ -72,6 +62,16 @@ function setupDateInput() {
                 value={formatDate(field.value)}
             />
         );
+    }
+
+    function onInput(event: Event) {
+        const target = event.target as HTMLInputElement;
+        field.value = target.valueAsDate ?? null;
+    }
+
+    function onFocus(e: FocusEvent) {
+        field.inputAttrs.onFocus(e);
+        showCalendar();
     }
 
     function showCalendar() {

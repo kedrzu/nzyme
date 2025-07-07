@@ -36,13 +36,13 @@ function setupPasswordInput() {
 
     return reactive({
         field,
+        PasswordInput,
+        ShowPasswordButton,
         showPassword,
         togglePassword,
-        component,
-        showPasswordButton,
     });
 
-    function component() {
+    function PasswordInput() {
         return (
             <input
                 aria-label={props.label}
@@ -65,7 +65,7 @@ function setupPasswordInput() {
         );
     }
 
-    function showPasswordButton(attrs: ButtonHTMLAttributes, ctx: SetupContext) {
+    function ShowPasswordButton(attrs: ButtonHTMLAttributes, ctx: SetupContext) {
         return (
             <button
                 {...attrs}

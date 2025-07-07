@@ -1,6 +1,6 @@
 import type { MaybeOutput, RegleFieldStatus } from '@regle/core';
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
-import type { ExtractPropTypes, PropType, UnwrapNestedRefs } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref, useModel, watch } from 'vue';
+import type { ExtractPropTypes, PropType, Ref, UnwrapNestedRefs } from 'vue';
 
 import { scrollToTopElement } from '@nzyme/dom-utils';
 import { defineProp, injectContext, useInstanceProxy } from '@nzyme/vue-utils';
@@ -28,7 +28,7 @@ export function defineFormField<T>(type?: PropType<T | null | undefined>) {
     return {
         props: {
             modelValue: { type: type as PropType<T | null | undefined> },
-            field: defineProp<RegleFieldStatus<T | null>>(),
+            field: defineProp<RegleFieldStatus<T | null | undefined>>(),
             errors: defineProp<string | string[]>(),
             required: Boolean,
             disabled: Boolean,
@@ -53,11 +53,11 @@ function createFormField<T>(options: FormFieldOptions<T>) {
         set: setValue,
     });
 
-    const valueInternal = ref(props.modelValue);
-    watch(
-        () => props.modelValue,
-        value => (valueInternal.value = value),
-    );
+    const model = useModel(props, 'modelValue') as Ref<FormFieldValue<T>>;
+
+    watch(model, value => {
+        console.log('valueInternal', value);
+    });
 
     const focused = ref(false);
 
@@ -118,7 +118,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
     });
 
     function getValue() {
-        return props.field ? props.field.$value : (valueInternal.value as FormFieldValue<T>);
+        return props.field ? props.field.$value : model.value;
     }
 
     function setValue(value: FormFieldValue<T>) {
@@ -131,7 +131,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
             props.field.$value = value;
         }
 
-        valueInternal.value = value;
+        model.value = value;
 
         vm.$emit('update:modelValue', value);
     }

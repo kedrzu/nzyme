@@ -33,7 +33,7 @@ function setupNumberInput() {
 
     return {
         field,
-        component,
+        NumberInput,
     };
 
     function onInput(event: Event) {
@@ -41,7 +41,7 @@ function setupNumberInput() {
         field.value = Number(target.value);
     }
 
-    function component() {
+    function NumberInput() {
         return (
             <input
                 aria-label={props.label}

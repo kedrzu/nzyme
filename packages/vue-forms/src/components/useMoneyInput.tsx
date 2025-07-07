@@ -57,16 +57,12 @@ function setupMoneyInput(options: MoneyInputOptions) {
         },
     }));
 
-    function onInput(value: number | null) {
-        field.value = value != null ? normalizeMoney(value, options.currency) : null;
-    }
-
     return {
         field,
-        component,
+        MoneyInput,
     };
 
-    function component() {
+    function MoneyInput() {
         return (
             <IMaskComponent
                 aria-label={props.label}
@@ -87,5 +83,9 @@ function setupMoneyInput(options: MoneyInputOptions) {
                 typed={value.value}
             />
         );
+    }
+
+    function onInput(value: number | null) {
+        field.value = value != null ? normalizeMoney(value, options.currency) : null;
     }
 }

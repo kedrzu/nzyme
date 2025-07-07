@@ -52,6 +52,12 @@ export type Container = {
      */
     readonly parent?: Container;
     /**
+     * Registers a service in the container.
+     * @template T - The type of the service
+     * @param service - The service to register
+     */
+    register<T>(this: void, service: Injectable<T>): void;
+    /**
      * Resolves an injectable to its concrete instance.
      * @template T - The type of the injectable
      * @param injectable - The injectable to resolve
@@ -147,6 +153,7 @@ export function createContainer(options?: ContainerOptions) {
         createChild,
         get,
         set,
+        register,
         resolve: resolve as Container['resolve'],
         tryResolve,
     };
@@ -164,6 +171,12 @@ export function createContainer(options?: ContainerOptions) {
             injectables.set(injectable, instanceOrService);
         } else {
             instances.set(injectable, instanceOrService);
+        }
+    }
+
+    function register<T>(service: Service<T>): void {
+        if (service.implements) {
+            injectables.set(service.implements, service);
         }
     }
 

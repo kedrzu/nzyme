@@ -10,7 +10,7 @@ export const TextArea = /*@__PURE__*/ defineComponent({
     props: useTextArea.props,
     emits: useTextArea.emits,
     setup() {
-        const { component } = useTextArea();
-        return component;
+        const { TextArea } = useTextArea();
+        return TextArea;
     },
 });

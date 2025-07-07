@@ -1,16 +1,22 @@
 import { onUnmounted, watch } from 'vue';
 
 import { onMountedInScope } from './onMountedInScope.js';
-import { makeRef, type RefParam } from './reactivity/makeRef.js';
+import { makeRef } from './reactivity/makeRef.js';
+import type { RefParam } from './reactivity/makeRef.js';
 
-type ElementParam = Element | undefined | null;
-type ClassParam = string | string[] | false | undefined | null;
+type ElementParam = Element | null | undefined;
+type ClassParam = string | string[] | false | null | undefined;
 
 type GlobalClassOptions = {
-    elements: RefParam<ElementParam | ElementParam[]>;
     class: RefParam<ClassParam>;
+    elements: RefParam<ElementParam | ElementParam[]>;
 };
 
+/**
+ * @description
+ * This hook is used to add and remove classes to elements.
+ * It is useful for adding and removing classes to elements like body, html, etc.
+ */
 export function useElementClass(options: GlobalClassOptions) {
     const classes = makeRef(options.class);
     const elements = makeRef(options.elements);

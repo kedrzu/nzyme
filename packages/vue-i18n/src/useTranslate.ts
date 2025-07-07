@@ -1,4 +1,4 @@
-import { LanguageProvider } from '@nzyme/i18n';
+import { LanguageContext } from '@nzyme/i18n';
 import type { Translation } from '@nzyme/i18n';
 import { useService } from '@nzyme/vue-ioc';
 
@@ -21,10 +21,10 @@ export interface TranslateFunction {
  *
  */
 export function useTranslate(): TranslateFunction {
-    const langProvider = useService(LanguageProvider);
+    const lang = useService(LanguageContext);
 
     return (translation: Translation<unknown>, params?: unknown) => {
-        const result = translation(langProvider(), params);
+        const result = translation(lang(), params);
         if (Array.isArray(result)) {
             return result.join('');
         }

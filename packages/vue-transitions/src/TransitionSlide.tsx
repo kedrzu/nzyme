@@ -5,8 +5,8 @@ import css from './TransitionSlide.module.scss';
 
 const transitionProps = {
     direction: {
-        type: String as PropType<'bottom' | 'left' | 'right' | 'top'>,
-        default: 'bottom',
+        type: String as PropType<'down' | 'left' | 'right' | 'up'>,
+        default: 'down',
     },
     fade: Boolean,
 };

@@ -1,6 +1,6 @@
 import { defineService } from '@nzyme/ioc';
 
-import { LanguageProvider } from './LanguageProvider.js';
+import { LanguageContext } from './LanguageContext.js';
 import type { Translation } from './Translation.js';
 
 /**
@@ -24,7 +24,7 @@ export interface Translator {
 export const Translator = defineService({
     name: 'Translator',
     deps: {
-        lang: LanguageProvider,
+        lang: LanguageContext,
     },
     setup({ lang }): Translator {
         return (translation: Translation<unknown>, params?: unknown) => {

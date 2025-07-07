@@ -1,4 +1,4 @@
-import { computed, h, reactive } from 'vue';
+import { computed, h } from 'vue';
 import type { FunctionalComponent } from 'vue';
 
 import type { Primitive } from '@nzyme/types';
@@ -40,7 +40,7 @@ function setupRadio<T extends Primitive | null = Primitive | null>() {
     const field = RADIO_FIELD.create({ props });
     const selected = computed(() => field.value === props.option);
 
-    const wrapper: FunctionalComponent = (_, ctx) => {
+    const Radio: FunctionalComponent = (_, ctx) => {
         return (
             <label>
                 <input
@@ -60,11 +60,11 @@ function setupRadio<T extends Primitive | null = Primitive | null>() {
         );
     };
 
-    return reactive({
+    return {
         field,
-        wrapper,
         selected,
-    });
+        Radio,
+    };
 
     function onChange(event: Event) {
         const target = event.target as HTMLInputElement;

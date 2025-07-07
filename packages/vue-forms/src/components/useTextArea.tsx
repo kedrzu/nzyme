@@ -41,7 +41,7 @@ function setupTextArea() {
 
     return {
         field,
-        component,
+        TextArea,
     };
 
     function updateValue() {
@@ -70,7 +70,7 @@ function setupTextArea() {
         updateHeight();
     }
 
-    function component() {
+    function TextArea() {
         return (
             <textarea
                 aria-label={props.label}

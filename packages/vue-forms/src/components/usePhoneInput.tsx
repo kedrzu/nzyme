@@ -55,10 +55,10 @@ function setupPhoneInput() {
 
     return {
         field,
-        component,
+        PhoneInput,
     };
 
-    function component() {
+    function PhoneInput() {
         return (
             <input
                 aria-label={props.label}

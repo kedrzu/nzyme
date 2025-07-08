@@ -1,5 +1,5 @@
 import type { MaybeOutput, RegleFieldStatus } from '@regle/core';
-import { computed, onBeforeUnmount, reactive, ref, useModel, watch } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref, useModel } from 'vue';
 import type { ExtractPropTypes, PropType, Ref, UnwrapNestedRefs } from 'vue';
 
 import { scrollToTopElement } from '@nzyme/dom-utils';
@@ -54,11 +54,6 @@ function createFormField<T>(options: FormFieldOptions<T>) {
     });
 
     const model = useModel(props, 'modelValue') as Ref<FormFieldValue<T>>;
-
-    watch(model, value => {
-        console.log('valueInternal', value);
-    });
-
     const focused = ref(false);
 
     const pending = computed(() => {

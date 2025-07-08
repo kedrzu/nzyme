@@ -36,6 +36,16 @@ export interface EnvVariableOptionsParse<TRequired extends boolean, TValue = str
 }
 
 /**
+ * Options for the env variable.
+ */
+export interface EnvVariableOptionsDefault<TValue = string> extends EnvVariableOptionsParse<false, TValue> {
+    /**
+     * Default value of the environment variable.
+     */
+    default: (() => TValue) | TValue;
+}
+
+/**
  *
  */
 export interface EnvVariable<TName extends string = string, TRequired extends boolean = boolean, TValue = unknown>
@@ -50,6 +60,11 @@ export interface EnvVariable<TName extends string = string, TRequired extends bo
      * Name of the environment variable.
      */
     name: TName;
+
+    /**
+     * Default value of the environment variable.
+     */
+    default?: () => TValue;
 }
 
 /**
@@ -61,7 +76,7 @@ export interface EnvVariable<TName extends string = string, TRequired extends bo
  */
 export function defineEnvVariable<TName extends string = string, TRequired extends boolean = true>(
     name: TName,
-    options?: EnvVariableOptionsRequired<TRequired> & { parse?: never },
+    options?: EnvVariableOptionsRequired<TRequired> & { default?: never; parse?: never },
 ): EnvVariable<TName, TRequired, string>;
 /**
  * Define an environment variable injectable.
@@ -72,18 +87,35 @@ export function defineEnvVariable<TName extends string = string, TRequired exten
  */
 export function defineEnvVariable<TName extends string = string, TRequired extends boolean = true, TValue = string>(
     name: TName,
-    options?: EnvVariableOptionsParse<TRequired, TValue>,
+    options?: EnvVariableOptionsParse<TRequired, TValue> & { default?: never },
 ): EnvVariable<TName, TRequired, TValue>;
+/**
+ * Define an environment variable injectable.
+ * @param name - Name of the environment variable.
+ * @param options - Options for the environment variable.
+ * @returns Environment variable injectable.
+ * @__NO_SIDE_EFFECTS__
+ */
+export function defineEnvVariable<TName extends string = string, TValue = string>(
+    name: TName,
+    options?: EnvVariableOptionsDefault<TValue>,
+): EnvVariable<TName, false, TValue>;
 /**
  *
  */
-export function defineEnvVariable(name: string, options?: EnvVariableOptionsParse<boolean, unknown>) {
+export function defineEnvVariable(
+    name: string,
+    options?: (EnvVariableOptionsParse<boolean, unknown> & { default?: never }) | EnvVariableOptionsDefault<unknown>,
+) {
+    const defaultValue = options?.default as EnvVariableOptionsDefault['default'];
+
     return defineInjectable<EnvVariable<string, boolean, unknown>>({
         name,
         deps: DEPS,
-        required: options?.required ?? true,
+        required: options?.required ?? (defaultValue ? false : true),
         parse: options?.parse,
         resolve,
+        default: defaultValue ? (typeof defaultValue === 'function' ? defaultValue : () => defaultValue) : undefined,
     });
 }
 
@@ -92,8 +124,14 @@ function resolve(this: EnvVariable, container: Container) {
     const env = container.resolve(EnvVariables);
     const value = env[name];
 
-    if (!value && this.required) {
-        throw new Error(`Environment variable ${name} is not set`);
+    if (!value) {
+        if (this.default) {
+            return this.default();
+        }
+
+        if (this.required) {
+            throw new Error(`Environment variable ${name} is not set`);
+        }
     }
 
     if (this.parse) {

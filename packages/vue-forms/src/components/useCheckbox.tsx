@@ -29,11 +29,7 @@ function setupCheckbox() {
     const props = useProps(CHECKBOX_PROPS);
     const field = CHECKBOX_FIELD.create({ props });
 
-    const CheckboxRoot: FunctionalComponent = (_props, ctx) => {
-        return <label>{ctx.slots.default?.()}</label>;
-    };
-
-    const CheckboxTick: FunctionalComponent = (_props, ctx) => {
+    const Checkbox: FunctionalComponent = (_props, ctx) => {
         return (
             <button
                 aria-checked={!!field.value}
@@ -53,16 +49,13 @@ function setupCheckbox() {
 
     return {
         field,
-        CheckboxRoot,
-        CheckboxTick,
+        Checkbox,
     };
 
     function toggle() {
         if (props.readonly || props.disabled) {
             return;
         }
-
-        console.log('toggle', field.value);
 
         field.value = !field.value;
     }

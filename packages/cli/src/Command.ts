@@ -29,7 +29,10 @@ export type CommandClass = ClipanionCommandClass<CommandContext>;
  *
  */
 export abstract class Command extends ClipanionCommand<CommandContext> {
-    protected get container(): Container {
+    /**
+     *
+     */
+    public get container(): Container {
         if (!this.#container) {
             throw new Error('Not initialized yet');
         }

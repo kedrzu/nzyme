@@ -99,7 +99,7 @@ export class DepcheckCommand extends Command {
         ) {
             const packageName = chalk.underline(chalk.magenta(pkg.packageJson.name));
             const packagePath = chalk.dim(`(${pkg.path}/package.json)`);
-            console.log(`\n📦 Processing ${packageName} ${packagePath}`);
+            this.logger.info(`\n📦 Processing ${packageName} ${packagePath}`);
         }
 
         let dependencies = pkg.packageJson.dependencies;
@@ -240,9 +240,9 @@ export class DepcheckCommand extends Command {
             const packageName = chalk.underline(chalk.magenta(pkg.packageJson.name));
             const packagePath = `${pkg.path}/package.json`;
 
-            console.log(`\n${packageName} (${packagePath})`);
+            this.logger.info(`\n${packageName} (${packagePath})`);
             for (const line of toWrite) {
-                console.log(line);
+                this.logger.info(line);
             }
         }
 
@@ -264,7 +264,7 @@ export class DepcheckCommand extends Command {
             return await latestVersion(packageName);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            console.warn(chalk.yellow(`⚠️  Could not fetch latest version for ${packageName}: ${errorMessage}`));
+            this.logger.warn(chalk.yellow(`⚠️  Could not fetch latest version for ${packageName}: ${errorMessage}`));
             return undefined;
         }
     }

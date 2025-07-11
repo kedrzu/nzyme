@@ -11,7 +11,7 @@ import merge from 'lodash.merge';
 import type { TsConfigJson } from 'type-fest';
 
 import type { Package } from '@nzyme/project-utils';
-import { getPackages } from '@nzyme/project-utils';
+import { getPackages, getProjectRoot } from '@nzyme/project-utils';
 import { saveFile } from '@nzyme/project-utils';
 import { asArray, debounceAsyncFunction, waitForever } from '@nzyme/utils';
 
@@ -28,9 +28,6 @@ interface PackageCache {
     esm: string | null;
     cjs: string | null;
 }
-
-const tsConfigsCache = new Map<string, TsConfig | null>();
-const packageCache = new Map<string, Promise<PackageCache>>();
 
 const PACKAGE_JSON_REGEX = /\/?package\.json$/;
 
@@ -51,11 +48,15 @@ export class MonorepoCommand extends Command {
 
     cwd = process.cwd();
 
+    private tsConfigsCache = new Map<string, TsConfig | null>();
+    private packageCache = new Map<string, Promise<PackageCache>>();
+    private projectRoot = getProjectRoot();
+
     /**
      * Execute the command.
      */
     override async run() {
-        await processProject(true);
+        await this.processProject(true);
 
         if (this.watch) {
             await this.startWatcher();
@@ -69,7 +70,7 @@ export class MonorepoCommand extends Command {
             ignoreInitial: true,
         });
 
-        console.info('Watching for changes...');
+        this.logger.info('Watching for changes...');
 
         const onFileChange = debounceAsyncFunction(this.onFileChange.bind(this), {
             trailing: true,
@@ -87,162 +88,201 @@ export class MonorepoCommand extends Command {
             return;
         }
 
-        await processProject(false);
+        await this.processProject(false);
     }
-}
 
-async function processProject(throwOnError: boolean) {
-    try {
-        const cwd = process.cwd();
-        const packages = await getPackages(cwd);
+    private async processProject(throwOnError: boolean) {
+        try {
+            const cwd = process.cwd();
+            const packages = await getPackages(cwd);
 
-        const tsconfigPath = path.join(cwd, './tsconfig.esm.json');
+            const tsconfigPath = path.join(cwd, './tsconfig.esm.json');
+
+            const esmReferences: string[] = [];
+            const cjsReferences: string[] = [];
+
+            for (const pkg of packages) {
+                const result = await this.processPackage(pkg, packages, throwOnError);
+                if (result.esm) {
+                    esmReferences.push(result.esm);
+                }
+
+                if (result.cjs) {
+                    cjsReferences.push(result.cjs);
+                }
+            }
+
+            await this.saveTsReferences({
+                cwd,
+                fileName: 'tsconfig.json',
+                extends: tsconfigPath,
+                references: esmReferences,
+                config: {
+                    include: [],
+                },
+            });
+
+            await this.saveTsReferences({
+                cwd,
+                fileName: 'tsconfig.cjs.json',
+                extends: tsconfigPath,
+                references: cjsReferences,
+                config: {
+                    include: [],
+                },
+            });
+        } catch (error: unknown) {
+            if (throwOnError) {
+                throw error;
+            }
+
+            this.logger.error(`Failed to process project`, { error });
+        }
+    }
+
+    private async processPackage(pkg: Package, packages: Package[], throwOnError: boolean): Promise<PackageCache> {
+        if (!pkg.packageJson.name) {
+            const relativePath = path.relative(this.projectRoot, pkg.path);
+            this.logger.error(`Package is missing a name: ${relativePath}`);
+            return { esm: null, cjs: null };
+        }
+        const existing = this.packageCache.get(pkg.packageJson.name);
+        if (existing) {
+            return await existing;
+        }
+
+        try {
+            const result = this.processPackageCore(pkg, packages, throwOnError);
+            this.packageCache.set(pkg.packageJson.name, result);
+
+            return await result;
+        } catch (error: unknown) {
+            if (throwOnError) {
+                throw error;
+            }
+
+            this.logger.error(`Failed to process package ${pkg.packageJson.name}`, { error });
+            this.packageCache.set(pkg.packageJson.name, Promise.resolve({ esm: null, cjs: null }));
+            return { esm: null, cjs: null };
+        }
+    }
+
+    private async processPackageCore(pkg: Package, packages: Package[], throwOnError: boolean): Promise<PackageCache> {
+        const dependencyNames = [
+            ...Object.keys(pkg.packageJson.dependencies || {}),
+            ...Object.keys(pkg.packageJson.devDependencies || {}),
+        ];
+        const dependencies = dependencyNames.map(d => packages.find(p => p.packageJson.name === d)!).filter(Boolean);
 
         const esmReferences: string[] = [];
         const cjsReferences: string[] = [];
 
-        for (const pkg of packages) {
-            const result = await processPackage(pkg, packages, throwOnError);
-            if (result.esm) {
-                esmReferences.push(result.esm);
+        for (const dep of dependencies) {
+            const depResult = await this.processPackage(dep, packages, throwOnError);
+            if (depResult.esm) {
+                esmReferences.push(depResult.esm);
             }
 
-            if (result.cjs) {
-                cjsReferences.push(result.cjs);
+            if (depResult.cjs) {
+                cjsReferences.push(depResult.cjs);
             }
         }
 
-        await saveTsReferences({
-            cwd,
+        let esmResult: string | null = null;
+        let cjsResult: string | null = null;
+
+        const tsconfig = await this.loadTsConfigForPackage(pkg);
+        if (!tsconfig) {
+            return {
+                esm: null,
+                cjs: null,
+            };
+        }
+
+        const isComposite = isCompositePackage(tsconfig);
+
+        esmResult = await this.saveTsReferences({
+            cwd: pkg.path,
             fileName: 'tsconfig.json',
-            extends: tsconfigPath,
+            extends: tsconfig.path,
             references: esmReferences,
             config: {
-                include: [],
-            },
-        });
-
-        await saveTsReferences({
-            cwd,
-            fileName: 'tsconfig.cjs.json',
-            extends: tsconfigPath,
-            references: cjsReferences,
-            config: {
-                include: [],
-            },
-        });
-    } catch (error: unknown) {
-        if (throwOnError) {
-            throw error;
-        }
-
-        console.error('Failed to process project', error);
-    }
-}
-
-async function processPackage(pkg: Package, packages: Package[], throwOnError: boolean): Promise<PackageCache> {
-    if (!pkg.packageJson.name) {
-        console.error('Package is missing a name:', pkg);
-        return { esm: null, cjs: null };
-    }
-    const existing = packageCache.get(pkg.packageJson.name);
-    if (existing) {
-        return await existing;
-    }
-
-    try {
-        const result = processPackageCore(pkg, packages, throwOnError);
-        packageCache.set(pkg.packageJson.name, result);
-
-        return await result;
-    } catch (error: unknown) {
-        if (throwOnError) {
-            throw error;
-        }
-
-        console.error(`Failed to process package ${pkg.packageJson.name}`, error);
-        packageCache.set(pkg.packageJson.name, Promise.resolve({ esm: null, cjs: null }));
-        return { esm: null, cjs: null };
-    }
-}
-
-async function processPackageCore(pkg: Package, packages: Package[], throwOnError: boolean): Promise<PackageCache> {
-    const dependencyNames = [
-        ...Object.keys(pkg.packageJson.dependencies || {}),
-        ...Object.keys(pkg.packageJson.devDependencies || {}),
-    ];
-    const dependencies = dependencyNames.map(d => packages.find(p => p.packageJson.name === d)!).filter(Boolean);
-
-    const esmReferences: string[] = [];
-    const cjsReferences: string[] = [];
-
-    for (const dep of dependencies) {
-        const depResult = await processPackage(dep, packages, throwOnError);
-        if (depResult.esm) {
-            esmReferences.push(depResult.esm);
-        }
-
-        if (depResult.cjs) {
-            cjsReferences.push(depResult.cjs);
-        }
-    }
-
-    let esmResult: string | null = null;
-    let cjsResult: string | null = null;
-
-    const tsconfig = await loadTsConfigForPackage(pkg);
-    if (!tsconfig) {
-        return {
-            esm: null,
-            cjs: null,
-        };
-    }
-
-    const isComposite = isCompositePackage(tsconfig);
-
-    esmResult = await saveTsReferences({
-        cwd: pkg.path,
-        fileName: 'tsconfig.json',
-        extends: tsconfig.path,
-        references: esmReferences,
-        config: {
-            compilerOptions: {
-                tsBuildInfoFile: tsconfig.config.compilerOptions?.tsBuildInfoFile ?? 'tsconfig.esm.tsbuildinfo',
-            },
-        },
-    });
-
-    const config = getNzymeConfig(pkg);
-    if (config?.cjs) {
-        let dist = tsconfig.config.compilerOptions?.outDir ?? './dist';
-        if (dist.endsWith('/')) {
-            dist = dist.slice(0, -1);
-        }
-
-        cjsResult = await saveTsReferences({
-            cwd: pkg.path,
-            fileName: 'tsconfig.cjs.json',
-            extends: tsconfig.path,
-            references: cjsReferences,
-            config: {
                 compilerOptions: {
-                    module: 'CommonJS',
-                    moduleResolution: 'Node',
-                    outDir: `${dist}-cjs`,
-                    tsBuildInfoFile: 'tsconfig.cjs.tsbuildinfo',
+                    tsBuildInfoFile: tsconfig.config.compilerOptions?.tsBuildInfoFile ?? 'tsconfig.esm.tsbuildinfo',
                 },
             },
         });
+
+        const config = getNzymeConfig(pkg);
+        if (config?.cjs) {
+            let dist = tsconfig.config.compilerOptions?.outDir ?? './dist';
+            if (dist.endsWith('/')) {
+                dist = dist.slice(0, -1);
+            }
+
+            cjsResult = await this.saveTsReferences({
+                cwd: pkg.path,
+                fileName: 'tsconfig.cjs.json',
+                extends: tsconfig.path,
+                references: cjsReferences,
+                config: {
+                    compilerOptions: {
+                        module: 'CommonJS',
+                        moduleResolution: 'Node',
+                        outDir: `${dist}-cjs`,
+                        tsBuildInfoFile: 'tsconfig.cjs.tsbuildinfo',
+                    },
+                },
+            });
+        }
+
+        return {
+            esm: isComposite ? esmResult : null,
+            cjs: isComposite ? cjsResult : null,
+        };
     }
 
-    return {
-        esm: isComposite ? esmResult : null,
-        cjs: isComposite ? cjsResult : null,
-    };
-}
+    private async loadTsConfigForPackage(pkg: Package) {
+        return await this.loadTsConfig(path.join(pkg.path, 'tsconfig.esm.json'));
+    }
 
-async function loadTsConfigForPackage(pkg: Package) {
-    return await loadTsConfig(path.join(pkg.path, 'tsconfig.esm.json'));
+    private async loadTsConfig(filePath: string) {
+        let tsConfig = this.tsConfigsCache.get(filePath);
+        if (!tsConfig) {
+            tsConfig = await loadTsConfigCore(filePath);
+            this.tsConfigsCache.set(filePath, tsConfig);
+        }
+
+        return tsConfig;
+    }
+
+    private async saveTsReferences(params: {
+        config?: TsConfigJson;
+        cwd: string;
+        extends: string;
+        fileName: string;
+        references: string[];
+    }) {
+        const outputPath = path.join(params.cwd, params.fileName);
+        const extendsPath = getRelativePath(outputPath, params.extends);
+        const tsconfig = {
+            ...params.config,
+            extends: extendsPath,
+            references: params.references.map(r => {
+                return {
+                    path: getRelativePath(outputPath, r),
+                };
+            }),
+        };
+
+        const configJson = json.stringify(tsconfig, undefined, 2);
+        await saveFile(outputPath, configJson);
+
+        const relativePath = path.relative(this.projectRoot, outputPath);
+        this.logger.info(`Generated ${chalk.green(relativePath)}`);
+
+        return outputPath;
+    }
 }
 
 function isCompositePackage(tsconfig: TsConfig | null): tsconfig is TsConfig {
@@ -265,16 +305,6 @@ function getRelativePath(fromPath: string, toPath: string) {
     }
 
     return relativePath;
-}
-
-async function loadTsConfig(filePath: string) {
-    let tsConfig = tsConfigsCache.get(filePath);
-    if (!tsConfig) {
-        tsConfig = await loadTsConfigCore(filePath);
-        tsConfigsCache.set(filePath, tsConfig);
-    }
-
-    return tsConfig;
 }
 
 async function loadTsConfigCore(filePath: string) {
@@ -343,33 +373,6 @@ function resolveTsConfigPath(cwd: string, filePath: string) {
     }
 
     return fileURLToPath(import.meta.resolve(filePath));
-}
-
-async function saveTsReferences(params: {
-    config?: TsConfigJson;
-    cwd: string;
-    extends: string;
-    fileName: string;
-    references: string[];
-}) {
-    const outputPath = path.join(params.cwd, params.fileName);
-    const extendsPath = getRelativePath(outputPath, params.extends);
-    const tsconfig = {
-        ...params.config,
-        extends: extendsPath,
-        references: params.references.map(r => {
-            return {
-                path: getRelativePath(outputPath, r),
-            };
-        }),
-    };
-
-    const configJson = json.stringify(tsconfig, undefined, 2);
-    await saveFile(outputPath, configJson);
-
-    console.info(`Generated ${chalk.green(outputPath)}`);
-
-    return outputPath;
 }
 
 function getNzymeConfig(pkg: Package) {

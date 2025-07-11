@@ -48,7 +48,7 @@ export class LocaliseCommand extends Command {
         }
 
         if (results.some(result => !result)) {
-            console.error('Failed to compile some files');
+            this.logger.error('Failed to compile some files');
             return 1;
         }
 
@@ -62,7 +62,7 @@ export class LocaliseCommand extends Command {
             ignoreInitial: true,
         });
 
-        console.info('Watching for changes...');
+        this.logger.info('Watching for changes...');
 
         watcher.on('add', file => void this.onAddFile(file));
         watcher.on('change', file => void this.onAddFile(file));
@@ -99,7 +99,7 @@ export class LocaliseCommand extends Command {
             await saveFile(outputPath, result.code);
 
             if (result.errors.length === 0) {
-                console.info(`🌍 Compiled ${chalk.green(file)}`);
+                this.logger.info(`🌍 Compiled ${chalk.green(file)}`);
                 return true;
             }
 
@@ -108,12 +108,12 @@ export class LocaliseCommand extends Command {
                 const key = error.key ? chalk.magenta(`[${error.key}${lang}]`) : '';
                 const message = `${chalk.cyan(file)}${chalk.yellow(`:${error.line}:${error.column}`)} ${key} - ${error.message}`;
 
-                console.error(message);
+                this.logger.error(message);
             }
 
             return false;
         } catch (error) {
-            console.error(`❌ Failed to compile ${file}`, error);
+            this.logger.error(`❌ Failed to compile ${file}`, { error });
             return false;
         }
     }

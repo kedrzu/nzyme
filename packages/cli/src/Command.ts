@@ -4,6 +4,7 @@ import { Command as ClipanionCommand } from 'clipanion';
 import type { Container } from '@nzyme/ioc';
 import { defineScope } from '@nzyme/ioc';
 import { Logger, PrettyLogger } from '@nzyme/logging';
+import { getClassName } from '@nzyme/utils';
 
 /**
  *
@@ -40,7 +41,19 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
         return this.#container;
     }
 
+    /**
+     *
+     */
+    public get logger(): Logger {
+        if (!this.#logger) {
+            throw new Error('Not initialized yet');
+        }
+
+        return this.#logger;
+    }
+
     #container: Container | null = null;
+    #logger: Logger | null = null;
 
     /**
      *
@@ -53,6 +66,7 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
     protected setup(): Promise<void> {
         this.#container = this.context.container.createChild(CommandScope);
         this.#container.set(Logger, PrettyLogger);
+        this.#logger = PrettyLogger.create({ name: getClassName(this) });
 
         return Promise.resolve();
     }

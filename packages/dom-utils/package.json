@@ -27,8 +27,8 @@
     },
     "dependencies": {
         "@nzyme/crypto-utils": "0.14.0",
-        "@nzyme/utils": "^0.14.0",
         "@nzyme/types": "^0.14.0",
+        "@nzyme/utils": "^0.14.0",
         "lodash.debounce": "^4.0.8"
     },
     "devDependencies": {

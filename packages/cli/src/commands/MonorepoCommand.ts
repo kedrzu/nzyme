@@ -88,7 +88,31 @@ export class MonorepoCommand extends Command {
             return;
         }
 
+        // Invalidate cache for the package whose package.json was changed
+        await this.invalidateCacheForChangedPackage(file);
+
         await this.processProject(false);
+    }
+
+    private async invalidateCacheForChangedPackage(packageJsonPath: string) {
+        try {
+            const packages = await getPackages(this.cwd);
+            const packageDir = path.dirname(path.resolve(this.cwd, packageJsonPath));
+
+            // Find the package that corresponds to the changed package.json
+            const changedPackage = packages.find(pkg => path.resolve(pkg.path) === packageDir);
+
+            if (changedPackage?.packageJson.name) {
+                // Clear the package cache for this specific package
+                this.packageCache.delete(changedPackage.packageJson.name);
+
+                // Also clear any tsconfig cache for this package directory
+                const tsconfigPath = path.join(changedPackage.path, 'tsconfig.esm.json');
+                this.tsConfigsCache.delete(tsconfigPath);
+            }
+        } catch (error) {
+            this.logger.error('Failed to invalidate cache for changed package', { error });
+        }
     }
 
     private async processProject(throwOnError: boolean) {

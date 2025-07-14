@@ -130,6 +130,7 @@ export function defineTransition<TProps extends ComponentObjectPropsOptions = So
                 return (
                     <Transition
                         {...classes.value}
+                        appear={props.appear}
                         mode={props.mode ?? 'out-in'}
                         onAfterEnter={onAfterEnter}
                         onAfterLeave={onAfterLeave}

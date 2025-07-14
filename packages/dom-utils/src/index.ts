@@ -1,5 +1,6 @@
 export * from './clearFocus.js';
 export * from './getChildrenHeight.js';
+export * from './getOs.js';
 export * from './getOuterHeight.js';
 export * from './getScrollBarWidth.js';
 export * from './isAncestorOf.js';

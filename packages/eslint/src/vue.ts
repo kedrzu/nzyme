@@ -11,6 +11,7 @@ export function vue() {
             'vue/multi-word-component-names': 'off',
             // Not needed in vue 3
             'vue/require-v-for-key': 'off',
+            'vue/html-self-closing': 'off',
             'vue/require-default-prop': 'off',
             'vue/one-component-per-file': 'off',
             'vue/singleline-html-element-content-newline': 'off',

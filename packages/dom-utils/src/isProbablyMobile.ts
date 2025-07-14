@@ -1,11 +1,3 @@
-declare global {
-    interface Navigator {
-        userAgentData?: {
-            mobile: boolean;
-        };
-    }
-}
-
 let isMobile: boolean | undefined;
 
 /**

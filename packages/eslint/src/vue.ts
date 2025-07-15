@@ -15,6 +15,10 @@ export function vue() {
             'vue/require-default-prop': 'off',
             'vue/one-component-per-file': 'off',
             'vue/singleline-html-element-content-newline': 'off',
+            // These are not working with more advanced vue 3 features like exposed refs
+            '@typescript-eslint/no-unsafe-member-access': 'off',
+            '@typescript-eslint/no-unsafe-assignment': 'off',
+            '@typescript-eslint/no-unsafe-argument': 'off',
         },
         languageOptions: {
             parser: vueParser,

@@ -29,7 +29,7 @@ export interface DevServerMiddlewareOptions extends RollupWatchOptions {
  * @returns A middleware function that handles development server requests
  * @throws {Error} If the input or output configuration is invalid
  */
-export function devServerMiddleware(options: DevServerMiddlewareOptions): NextHandleFunction {
+export function devServerMiddleware(options: DevServerMiddlewareOptions) {
     const outputFile = getOutputFile(options);
 
     startRollup();
@@ -37,7 +37,7 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions): NextHa
     let compiled = false;
     let server: DevServer | undefined;
 
-    return (req, res, next) => {
+    const middleware: NextHandleFunction = (req, res, next) => {
         if (!server && compiled) {
             void newServer().start();
         }
@@ -47,6 +47,11 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions): NextHa
         } else {
             next();
         }
+    };
+
+    return {
+        middleware,
+        restart,
     };
 
     /**
@@ -74,6 +79,10 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions): NextHa
                 console.error(event.error);
             }
         });
+    }
+
+    function restart() {
+        return newServer().start();
     }
 
     /**

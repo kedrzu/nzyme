@@ -18,12 +18,17 @@ export type DevServerOptions = DevServerMiddlewareOptions & {
  * Starts the dev server with auto-reload.
  */
 export function devServerStart(options: DevServerOptions) {
-    const app = connect();
+    const server = connect();
     const { port: _, ...rest } = options;
-    const middleware = devServerMiddleware(rest);
+    const { middleware, restart } = devServerMiddleware(rest);
 
-    app.use(middleware);
-    app.listen(options.port, () => {
+    server.use(middleware);
+    server.listen(options.port, () => {
         console.info(`Server listening on ${chalk.green(`http://localhost:${options.port}`)}`);
     });
+
+    return {
+        server,
+        restart,
+    };
 }

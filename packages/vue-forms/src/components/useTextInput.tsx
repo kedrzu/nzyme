@@ -1,4 +1,4 @@
-import { h } from 'vue';
+import { h, type HTMLAttributes } from 'vue';
 
 import { assignProps } from '@nzyme/utils';
 import { defineProps, useProps } from '@nzyme/vue-utils';
@@ -41,9 +41,10 @@ function setupTextInput() {
         TextInput,
     };
 
-    function TextInput() {
+    function TextInput(attrs: HTMLAttributes) {
         return (
             <input
+                {...attrs}
                 aria-label={props.label}
                 aria-readonly={props.readonly}
                 aria-required={props.required}

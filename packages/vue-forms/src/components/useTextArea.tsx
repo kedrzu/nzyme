@@ -1,4 +1,5 @@
 import { h, onMounted, ref, watch } from 'vue';
+import type { HTMLAttributes } from 'vue';
 
 import { assignProps } from '@nzyme/utils';
 import { defineProps, useProps } from '@nzyme/vue-utils';
@@ -70,9 +71,10 @@ function setupTextArea() {
         updateHeight();
     }
 
-    function TextArea() {
+    function TextArea(attrs: HTMLAttributes) {
         return (
             <textarea
+                {...attrs}
                 aria-label={props.label}
                 aria-readonly={props.readonly}
                 aria-required={props.required}

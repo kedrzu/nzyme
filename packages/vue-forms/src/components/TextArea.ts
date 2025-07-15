@@ -1,4 +1,4 @@
-import { defineComponent } from 'vue';
+import { defineComponent, h } from 'vue';
 
 import { useTextArea } from './useTextArea.js';
 
@@ -11,6 +11,6 @@ export const TextArea = /*@__PURE__*/ defineComponent({
     emits: useTextArea.emits,
     setup() {
         const { TextArea } = useTextArea();
-        return TextArea;
+        return () => h(TextArea);
     },
 });

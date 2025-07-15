@@ -1,5 +1,5 @@
 import { computed, h, nextTick, reactive, ref } from 'vue';
-import type { ButtonHTMLAttributes, SetupContext } from 'vue';
+import type { ButtonHTMLAttributes, HTMLAttributes, SetupContext } from 'vue';
 
 import { assignProps } from '@nzyme/utils';
 import { defineProps, useProps } from '@nzyme/vue-utils';
@@ -42,9 +42,10 @@ function setupPasswordInput() {
         togglePassword,
     });
 
-    function PasswordInput() {
+    function PasswordInput(attrs: HTMLAttributes) {
         return (
             <input
+                {...attrs}
                 aria-label={props.label}
                 aria-readonly={props.readonly}
                 aria-required={props.required}

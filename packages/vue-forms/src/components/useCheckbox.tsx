@@ -52,10 +52,13 @@ function setupCheckbox() {
         Checkbox,
     };
 
-    function toggle() {
+    function toggle(e: MouseEvent) {
         if (props.readonly || props.disabled) {
             return;
         }
+
+        e.preventDefault();
+        e.stopPropagation();
 
         field.value = !field.value;
     }

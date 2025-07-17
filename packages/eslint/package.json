@@ -19,22 +19,22 @@
         "dist"
     ],
     "dependencies": {
-        "@eslint/js": "9.29.0",
-        "@typescript-eslint/parser": "^8.36.0",
-        "eslint": "^9.29.0",
+        "@eslint/js": "9.31.0",
+        "@typescript-eslint/parser": "^8.37.0",
+        "eslint": "^9.31.0",
         "eslint-config-prettier": "^10.1.5",
         "eslint-plugin-import": "^2.32.0",
-        "eslint-plugin-jsdoc": "^51.2.3",
+        "eslint-plugin-jsdoc": "^51.4.1",
         "eslint-plugin-monorepo": "^0.3.2",
-        "eslint-plugin-package-json": "^0.42.0",
+        "eslint-plugin-package-json": "^0.44.1",
         "eslint-plugin-perfectionist": "^4.15.0",
         "eslint-plugin-react": "^7.37.5",
-        "eslint-plugin-vue": "^10.2.0",
+        "eslint-plugin-vue": "^10.3.0",
         "eslint-plugin-workspaces": "^0.11.0",
-        "globals": "^16.2.0",
+        "globals": "^16.3.0",
         "jsonc-eslint-parser": "^2.4.0",
-        "typescript-eslint": "^8.35.0",
-        "vue-eslint-parser": "^10.1.4"
+        "typescript-eslint": "^8.37.0",
+        "vue-eslint-parser": "^10.2.0"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "0.14.0",

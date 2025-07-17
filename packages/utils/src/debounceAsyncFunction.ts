@@ -29,7 +29,7 @@ interface DebounceAsyncFunctionOptions {
  * ```
  */
 export function debounceAsyncFunction<P extends unknown[], R>(
-    fn: (...args: P) => Promise<R>,
+    fn: (...args: P) => Promise<R> | R,
     options: DebounceAsyncFunctionOptions = {},
 ) {
     let pending: Promise<R> | undefined;
@@ -42,7 +42,7 @@ export function debounceAsyncFunction<P extends unknown[], R>(
             return pending;
         }
 
-        pending = fn(...args).finally(() => {
+        pending = Promise.resolve(fn(...args)).finally(() => {
             pending = undefined;
 
             if (trailing && waiting !== undefined) {

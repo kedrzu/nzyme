@@ -28,6 +28,7 @@ export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
         languageOptions: {
             parserOptions: {
                 project: options.project || './tsconfig.json',
+                tsconfigRootDir: process.cwd(),
                 extraFileExtensions: ['.vue'],
             },
         },
@@ -137,6 +138,7 @@ export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
             prettier,
             perfectionist.configs['recommended-natural'],
         ],
+
         ...config,
     }) as Linter.Config[];
 }

@@ -73,7 +73,7 @@ function loadEnvFile(file: string, output: Record<string, string>) {
         return;
     }
 
-    const result = configDotenv({ path: file, override: true, processEnv: output });
+    const result = configDotenv({ path: file, override: true, processEnv: output, quiet: true });
     if (result.parsed) {
         console.info(`🛠️ Loaded environment variables from ${chalk.green(file)}`);
     }

@@ -1,5 +1,5 @@
 import debounce from 'lodash.debounce';
-import { computed, isRef, ref, shallowRef, watch } from 'vue';
+import { computed, getCurrentScope, isRef, ref, shallowRef, watch } from 'vue';
 import type { Ref } from 'vue';
 
 import { isCancelablePromise } from '@nzyme/utils';
@@ -12,10 +12,7 @@ import type { RefParam } from './reactivity/makeRef.js';
  * Interface representing a data loader function that fetches data based on parameters
  */
 export interface DataSourceLoader<TParams, TResult> {
-    (
-        params: TParams,
-        oldValue: TResult | undefined,
-    ): CancelablePromise<TResult> | Promise<TResult> | TResult;
+    (params: TParams, oldValue: TResult | undefined): CancelablePromise<TResult> | Promise<TResult> | TResult;
 }
 
 /**
@@ -28,11 +25,7 @@ export type DataSourceBehavior = 'eager' | 'lazy';
 /**
  * Configuration options for creating a data source
  */
-export interface DataSourceOptions<
-    TParams,
-    TResult,
-    TDefault extends TResult | undefined = undefined,
-> {
+export interface DataSourceOptions<TParams, TResult, TDefault extends TResult | undefined = undefined> {
     /**
      * Request payload - it will be watched for changes to make calls.
      * Can be function or a reference.
@@ -83,8 +76,7 @@ export interface DataSourceOptions<
 /**
  * A reactive data source that manages loading, caching, and refreshing data
  */
-export interface DataSource<TResult, TDefault extends TResult | undefined = undefined>
-    extends Ref<TDefault | TResult> {
+export interface DataSource<TResult, TDefault extends TResult | undefined = undefined> extends Ref<TDefault | TResult> {
     /**
      * Currently pending promise if data is being loaded, otherwise null
      */
@@ -125,13 +117,12 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
     const behavior = opts.behavior;
     const loadRef = shallowRef(behavior !== 'lazy');
     const defaultRef = makeRef(opts.default);
-    const dataRef: Ref<TResult | undefined> = isRef(opts.data)
-        ? opts.data
-        : (shallowRef() as Ref<TResult | undefined>);
+    const dataRef: Ref<TResult | undefined> = isRef(opts.data) ? opts.data : (shallowRef() as Ref<TResult | undefined>);
     const dataCallback = isRef(opts.data) ? null : opts.data;
     const paramsRef = makeRef(opts.params);
     const dirtyRef = ref(false);
     const loadedRef = ref(false);
+    const effectScope = getCurrentScope();
 
     const pendingRef = ref<Promise<TResult> | null>(null);
 
@@ -243,9 +234,7 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
         let result: TResult;
 
         try {
-            pendingRef.value = promise = Promise.resolve(
-                opts.load(params as TParams, dataRef.value),
-            );
+            pendingRef.value = promise = Promise.resolve(opts.load(params as TParams, dataRef.value));
 
             result = await promise;
 
@@ -263,7 +252,15 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
             }
         }
 
-        opts.onLoad?.(result, params as TParams);
+        const onLoad = opts.onLoad;
+        if (onLoad) {
+            if (effectScope) {
+                effectScope.run(() => onLoad(result, params as TParams));
+            } else {
+                onLoad(result, params as TParams);
+            }
+        }
+
         return result;
     }
 }

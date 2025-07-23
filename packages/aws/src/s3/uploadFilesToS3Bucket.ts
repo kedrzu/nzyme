@@ -5,7 +5,6 @@ import { lookup as mimeLookup } from 'mime-types';
 import { S3SyncClient } from 's3-sync-client';
 import { stringifyQuery } from 'ufo';
 
-import { ConsoleLogger } from '@nzyme/logging';
 import type { Logger } from '@nzyme/logging';
 import { assertValue } from '@nzyme/utils';
 
@@ -57,7 +56,7 @@ type Filter = (key: string) => boolean;
  * Uploads files to an S3 bucket.
  */
 export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
-    const logger = options.logger ?? ConsoleLogger.create({ name: undefined });
+    const logger = options.logger;
     const s3Client = new S3Client();
     const client = new S3SyncClient({
         client: s3Client,
@@ -68,7 +67,7 @@ export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
         const cacheControlFunction = typeof cacheControl === 'function' ? cacheControl : () => cacheControl;
         const tagsFunction = typeof tags === 'function' ? tags : () => tags;
 
-        logger.info(`Uploading ${chalk.green(sourcePath)} to ${chalk.green(destinationPath)}`);
+        logger?.info(`Uploading ${chalk.green(sourcePath)} to ${chalk.green(destinationPath)}`);
         const output = await client.sync(sourcePath, destinationPath, {
             del: !!options.deleteMissing,
             filters:
@@ -95,16 +94,16 @@ export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
             },
         });
 
-        logger.info(`Finished uploading ${chalk.green(sourcePath)} to ${chalk.green(destinationPath)}`);
+        logger?.info(`Finished uploading ${chalk.green(sourcePath)} to ${chalk.green(destinationPath)}`);
 
         if (output.created.length) {
-            logger.info(`Created ${chalk.green(output.created.length)} files in ${chalk.green(destinationPath)}`);
+            logger?.info(`Created ${chalk.green(output.created.length)} files in ${chalk.green(destinationPath)}`);
         }
         if (output.updated.length) {
-            logger.info(`Updated ${chalk.green(output.updated.length)} files in ${chalk.green(destinationPath)}`);
+            logger?.info(`Updated ${chalk.green(output.updated.length)} files in ${chalk.green(destinationPath)}`);
         }
         if (output.deleted.length) {
-            logger.info(`Deleted ${chalk.green(output.deleted.length)} files in ${chalk.green(destinationPath)}`);
+            logger?.info(`Deleted ${chalk.green(output.deleted.length)} files in ${chalk.green(destinationPath)}`);
         }
     } finally {
         s3Client.destroy();

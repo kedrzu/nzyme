@@ -2,7 +2,7 @@ import { Builtins, Cli } from 'clipanion';
 
 import type { Container } from '@nzyme/ioc';
 import { createContainer } from '@nzyme/ioc';
-import { Logger, PrettyLogger } from '@nzyme/logging';
+import { PrettyLoggerTransport } from '@nzyme/logging';
 
 import type { CommandClass, CommandContext } from './Command.js';
 
@@ -32,7 +32,7 @@ export async function execute(options: ExecuteOptions): Promise<void> {
 
     const container = options.container ?? createContainer();
 
-    container.set(Logger, PrettyLogger);
+    container.register(PrettyLoggerTransport);
 
     for (const command of options.commands) {
         cli.register(command);

@@ -4,9 +4,8 @@ import * as pulumi from '@pulumi/pulumi';
 
 import type { Dependencies, Injectable, ResolveDeps, Service } from '@nzyme/ioc';
 import { defineInjectable, defineService } from '@nzyme/ioc';
-import { PrettyLogger } from '@nzyme/logging';
-import type { Logger } from '@nzyme/logging';
-import type { EmptyObject, Flatten, SomeObject } from '@nzyme/types';
+import { Logger } from '@nzyme/logging';
+import type { EmptyObject, Flatten, Override, SomeObject } from '@nzyme/types';
 import { createMemo, toPascalCase } from '@nzyme/utils';
 
 import { unwrapStackOutput } from './utils/unwrapStackOutput.js';
@@ -239,16 +238,20 @@ export function defineStack<TDeps extends Dependencies = SomeObject, TOutput ext
     const enabled = options.enabled ?? true;
     const preventDestroy = options.preventDestroy ?? false;
     const serviceName = `Stack:${toPascalCase(options.name)}`;
+    type Deps = Override<TDeps, { logger: Injectable<Logger> }>;
+    const depsDef = { ...options.deps, logger: Logger } as Deps;
+
     const service = defineService({
         name: serviceName,
-        deps: options.deps,
-        setup(deps) {
+        deps: depsDef,
+        setup(depsInput) {
+            const deps = depsInput as ResolveDeps<TDeps> & { logger: Logger };
             const name = options.name;
             const stack: Stack<TOutput> = {
                 name,
                 enabled,
                 preventDestroy,
-                logger: PrettyLogger.create({ name: serviceName }),
+                logger: deps.logger,
                 resources: () => {
                     const output = options.resources.call(stack, deps);
                     return output || {};
@@ -279,7 +282,7 @@ export function defineStack<TDeps extends Dependencies = SomeObject, TOutput ext
         },
     });
 
-    const stackDef: StackDefinition<TDeps, TOutput> = {
+    const stackDef: StackDefinition<Deps, TOutput> = {
         ...service,
         enabled,
         preventDestroy,

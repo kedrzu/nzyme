@@ -1,7 +1,6 @@
 import { DeleteObjectsCommand, ListObjectsV2Command, S3Client } from '@aws-sdk/client-s3';
 
 import type { Logger } from '@nzyme/logging';
-import { ConsoleLogger } from '@nzyme/logging';
 
 /**
  *
@@ -22,7 +21,7 @@ export interface EmptyS3BucketOptions {
  */
 export async function emptyS3Bucket(options: EmptyS3BucketOptions) {
     const s3Client = new S3Client({});
-    const logger = options.logger ?? ConsoleLogger.create({ name: undefined });
+    const logger = options.logger;
 
     // List all objects in the bucket
     const listResponse = await s3Client.send(
@@ -43,5 +42,5 @@ export async function emptyS3Bucket(options: EmptyS3BucketOptions) {
         );
     }
 
-    logger.info(`Successfully emptied bucket ${options.bucket} - ${listResponse.Contents?.length} objects deleted.`);
+    logger?.info(`Successfully emptied bucket ${options.bucket} - ${listResponse.Contents?.length} objects deleted.`);
 }

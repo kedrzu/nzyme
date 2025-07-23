@@ -1,8 +1,6 @@
-import { defineInterface } from '@nzyme/ioc';
 import { callerName, defineService } from '@nzyme/ioc';
-import { noop } from '@nzyme/utils';
 
-import type { LoggerLevel } from './LoggerLevel.js';
+import { LoggerTransport } from './LoggerTransport.js';
 
 /**
  * A logger instance.
@@ -38,8 +36,7 @@ export interface Logger {
  * A logger function that sets a context value.
  */
 export interface LoggerContextFunction {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    <T extends Record<string, any>>(name: string, ctx: T | null | undefined): void;
+    <T extends object>(name: string, ctx: T | null | undefined): void;
 }
 
 /**
@@ -66,39 +63,23 @@ export interface LoggerObject {
 /**
  * A logger interface.
  */
-export const Logger = defineInterface<Logger>({
+export const Logger = defineService({
     name: 'Logger',
-    default: (container, caler): Logger => ConsoleLogger.resolve(container, caler),
-});
-
-/**
- * A console logger service.
- */
-export const ConsoleLogger = defineService({
-    name: 'ConsoleLogger',
-    implements: Logger,
     resolution: 'transient',
     deps: {
         name: callerName(),
+        transport: LoggerTransport,
     },
-    setup: ({ name }) => ({
-        error: (msg: string, obj?: LoggerObject) => log(name, 'error', msg, obj),
-        warn: (msg: string, obj?: LoggerObject) => log(name, 'warn', msg, obj),
-        info: (msg: string, obj?: LoggerObject) => log(name, 'info', msg, obj),
-        debug: (msg: string, obj?: LoggerObject) => log(name, 'debug', msg, obj),
-        trace: (msg: string, obj?: LoggerObject) => log(name, 'trace', msg, obj),
-        context: noop,
-    }),
+    setup: ({ name, transport }) => {
+        const logger: Logger = {
+            error: (msg, obj) => transport.log(name, 'error', msg, obj),
+            warn: (msg, obj) => transport.log(name, 'warn', msg, obj),
+            info: (msg, obj) => transport.log(name, 'info', msg, obj),
+            debug: (msg, obj) => transport.log(name, 'debug', msg, obj),
+            trace: (msg, obj) => transport.log(name, 'trace', msg, obj),
+            context: (ctxName, ctx) => transport.ctx(name, ctxName, ctx),
+        };
+
+        return logger;
+    },
 });
-
-function log(name: string | undefined, level: LoggerLevel, msg: string, obj?: LoggerObject) {
-    if (name) {
-        msg = `[${name}] ${msg}`;
-    }
-
-    if (obj) {
-        console[level](msg, obj);
-    } else {
-        console[level](msg);
-    }
-}

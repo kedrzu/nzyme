@@ -15,6 +15,12 @@ const NUMBER_PROPS = defineProps({
     tabindex: Number,
 });
 
+export interface NumberInputAttrs {
+    min?: number;
+    max?: number;
+    step?: number;
+}
+
 /**
  *
  */
@@ -41,7 +47,7 @@ function setupNumberInput() {
         field.value = Number(target.value);
     }
 
-    function NumberInput() {
+    function NumberInput(attrs: NumberInputAttrs) {
         return (
             <input
                 aria-label={props.label}
@@ -59,6 +65,7 @@ function setupNumberInput() {
                 title={props.label}
                 type="number"
                 value={field.value}
+                {...attrs}
             />
         );
     }

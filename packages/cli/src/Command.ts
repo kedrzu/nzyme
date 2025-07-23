@@ -3,7 +3,7 @@ import { Command as ClipanionCommand } from 'clipanion';
 
 import type { Container } from '@nzyme/ioc';
 import { defineScope } from '@nzyme/ioc';
-import { Logger, PrettyLogger } from '@nzyme/logging';
+import { Logger, PrettyLoggerTransport } from '@nzyme/logging';
 import { getClassName } from '@nzyme/utils';
 
 /**
@@ -65,8 +65,9 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
 
     protected setup(): Promise<void> {
         this.#container = this.context.container.createChild(CommandScope);
-        this.#container.set(Logger, PrettyLogger);
-        this.#logger = PrettyLogger.create({ name: getClassName(this) });
+        this.#container.register(PrettyLoggerTransport);
+        const transport = this.#container.resolve(PrettyLoggerTransport);
+        this.#logger = Logger.create({ name: getClassName(this), transport });
 
         return Promise.resolve();
     }

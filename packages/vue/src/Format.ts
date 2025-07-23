@@ -19,7 +19,6 @@ export const Format = defineComponent({
 
             const vnodes: VNodeChild[] = [];
             let index = 0;
-
             let match: RegExpExecArray | null;
 
             while ((match = FORMAT_REGEX.exec(format))) {

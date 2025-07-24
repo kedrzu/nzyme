@@ -1,6 +1,7 @@
 import { defineService } from '@nzyme/ioc';
 
 import { LanguageContext } from './LanguageContext.js';
+import { translateToString } from './translateToString.js';
 import type { Translation } from './Translation.js';
 
 /**
@@ -28,12 +29,7 @@ export const Translator = defineService({
     },
     setup({ lang }): Translator {
         return (translation: Translation<unknown>, params?: unknown) => {
-            const result = translation(lang(), params);
-            if (Array.isArray(result)) {
-                return result.join('');
-            }
-
-            return result || '';
+            return translateToString(translation, lang(), params);
         };
     },
 });

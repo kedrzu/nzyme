@@ -1,10 +1,13 @@
 import type { Pair, ParsedNode, Range } from 'yaml';
 import { isMap, isScalar, parseDocument } from 'yaml';
 
+import { fixOrphans } from '@nzyme/typography';
+
 import type { TranslationError } from './types.js';
 
 const KEY_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]+$/;
 const SLOT_REGEX = /\{\s*(\w*)\s*\}/gm;
+const ESCAPE_REGEX = /\\([{}])/gm;
 const INDENT = '  ';
 
 /**
@@ -145,7 +148,7 @@ function parseTranslationValue(key: string, lang: string, item: ParsedNode, resu
         return null;
     }
 
-    const value = item.toString().trim();
+    const value = fixOrphans(item.toString().trim());
     const params: string[] = [];
     const translation: string[] = [];
 
@@ -155,7 +158,7 @@ function parseTranslationValue(key: string, lang: string, item: ParsedNode, resu
     while ((match = SLOT_REGEX.exec(value))) {
         if (match.index && match.index > index) {
             // handle a piece of text
-            const text = value.substring(index, match.index);
+            const text = escapeCharacters(value.substring(index, match.index));
             translation.push(JSON.stringify(text));
             index = match.index;
         }
@@ -169,7 +172,7 @@ function parseTranslationValue(key: string, lang: string, item: ParsedNode, resu
 
     // Add the rest of the text
     if (index < value.length) {
-        const text = value.substring(index);
+        const text = escapeCharacters(value.substring(index));
         translation.push(JSON.stringify(text));
     }
 
@@ -177,6 +180,10 @@ function parseTranslationValue(key: string, lang: string, item: ParsedNode, resu
         translation: translation.length === 1 ? translation[0] : `[${translation.join(', ')}]`,
         params: params,
     };
+}
+
+function escapeCharacters(text: string) {
+    return text.replace(ESCAPE_REGEX, '$1');
 }
 
 function rangeToLineColumn(range: Range, result: TranslationResult) {

@@ -23,4 +23,5 @@ export * from './validators/phoneNumber.js';
 export * from './validators/postCode.js';
 export * from './validators/regexValidator.js';
 export * from './validators/required.js';
+export * from './validators/requiredCustom.js';
 export * from './validators/requiredIf.js';

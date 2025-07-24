@@ -1,4 +1,5 @@
-import { h, type HTMLAttributes } from 'vue';
+import { h } from 'vue';
+import type { HTMLAttributes } from 'vue';
 
 import { assignProps } from '@nzyme/utils';
 import { defineProps, useProps } from '@nzyme/vue-utils';

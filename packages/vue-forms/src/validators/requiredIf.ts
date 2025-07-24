@@ -16,7 +16,7 @@ export const requiredIf = createRule({
         return true;
     },
     // TODO translation
-    message: 'Pole jest wymagane',
+    message: () => 'Pole jest wymagane',
     active({ $params: [condition] }) {
         return condition;
     },

@@ -19,7 +19,7 @@
         "typescript-plugin-css-modules": "^5.1.0",
         "typescript-vue-plugin": "^1.8.27",
         "vite": "^7.0.5",
-        "vue": "^3.5.17"
+        "vue": "^3.5.18"
     },
     "depcheck": {
         "ignoreDeps": [

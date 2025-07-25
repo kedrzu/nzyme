@@ -28,7 +28,7 @@
     "dependencies": {
         "@nzyme/ioc": "^0.14.0",
         "@nzyme/types": "^0.14.0",
-        "vue": "^3.5.17"
+        "vue": "^3.5.18"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",

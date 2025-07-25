@@ -44,8 +44,8 @@
         "@nzyme/rollup-utils": "0.14.0",
         "@nzyme/types": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
-        "@pulumi/aws": "^6.83.0",
-        "@pulumi/pulumi": "^3.183.0",
+        "@pulumi/aws": "^7.1.0",
+        "@pulumi/pulumi": "^3.185.0",
         "@rollup/plugin-babel": "^6.0.4",
         "@rollup/plugin-commonjs": "^28.0.6",
         "@rollup/plugin-json": "^6.1.0",
@@ -53,17 +53,22 @@
         "@rollup/plugin-replace": "^6.0.2",
         "@types/fs-extra": "^11.0.4",
         "chalk": "^5.4.1",
+        "decompress": "^4.2.1",
         "execa": "^9.6.0",
         "fs-extra": "^11.3.0",
         "rollup": "^4.45.1",
         "rollup-plugin-sourcemaps": "^0.6.3",
         "rollup-plugin-terser": "^7.0.2",
+        "semver": "^7.7.2",
+        "tar": "^7.4.3",
         "terser": "^5.43.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
+        "@types/decompress": "^4",
         "@types/node": "^24.0.14",
+        "@types/semver": "^7",
         "typescript": "^5.8.3"
     },
     "publishConfig": {

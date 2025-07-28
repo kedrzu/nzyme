@@ -227,6 +227,7 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                 ['Deploy all stacks', 'deploy'],
                 ['Deploy single stack', 'deploy core'],
                 ['Deploy multiple stacks', 'deploy core api'],
+                ['Cancel previous and deploy', 'deploy --cancel core'],
             ],
         });
 
@@ -240,8 +241,20 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
             description: 'Deploy all stacks that depend on the selected stacks',
         });
 
+        verbosity = Option.Counter('--verbose,-v', {
+            description: 'The verbosity of the logs',
+        });
+
+        debug = Option.Boolean('--debug,-d', {
+            description: 'Enable debug mode',
+        });
+
         skipBuild = Option.Boolean('--skip-build,-s', {
             description: 'Skip the build step',
+        });
+
+        cancel = Option.Boolean('--cancel,-c', {
+            description: 'Cancel previous deployment before deploying each stack',
         });
 
         override async run() {
@@ -285,11 +298,20 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
 
                     stackResolved.logger.info(`🚀 Deploying stack ${stackName}...`);
 
-                    const stackPromise = deployStack(stackResolved, {
-                        refresh: this.refresh,
-                        build: !this.skipBuild,
-                        config: pulumiConfig,
-                    })
+                    const stackPromise = (async () => {
+                        if (this.cancel) {
+                            stackResolved.logger.info(`🚫 Cancelling previous deployment for stack ${stackName}...`);
+                            await cancelStack(stackResolved, { config: pulumiConfig });
+                        }
+
+                        return deployStack(stackResolved, {
+                            refresh: this.refresh,
+                            build: !this.skipBuild,
+                            debug: this.debug,
+                            config: pulumiConfig,
+                            verbosity: this.verbosity,
+                        });
+                    })()
                         .then(() => {
                             stacksDeploying.delete(stack);
                             stacksDeployed.add(stack);
@@ -400,6 +422,10 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
             description: 'Refresh the stack state before previewing',
         });
 
+        verbosity = Option.Counter('--verbose,-v', {
+            description: 'The verbosity of the logs',
+        });
+
         skipBuild = Option.Boolean('--skip-build,-s', {
             description: 'Skip the build step',
         });
@@ -424,6 +450,7 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
                     refresh: this.refresh,
                     build: !this.skipBuild,
                     config: pulumiConfig,
+                    verbosity: this.verbosity,
                 });
             }
         }

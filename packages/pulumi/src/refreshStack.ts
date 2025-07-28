@@ -16,15 +16,13 @@ export interface RefreshStackOptions {
 /**
  * Refresh a stack state.
  */
-export async function refreshStack<TOut extends StackOutput>(
-    stack: Stack<TOut>,
-    options: RefreshStackOptions,
-) {
+export async function refreshStack<TOut extends StackOutput>(stack: Stack<TOut>, options: RefreshStackOptions) {
     assertStackEnabled(stack);
 
     const stackInstance = await createOrSelectStack(stack, options.config);
 
     await stackInstance.refresh({
+        color: 'always',
         onOutput: console.log,
     });
 }

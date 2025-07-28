@@ -14,6 +14,12 @@ export interface PreviewStackOptions {
     refresh?: boolean;
 
     /**
+     * The verbosity of the logs.
+     * @default 0
+     */
+    verbosity?: number;
+
+    /**
      * Whether to build the stack before previewing.
      * @default true
      */
@@ -28,10 +34,7 @@ export interface PreviewStackOptions {
 /**
  * Preview a stack.
  */
-export async function previewStack<TOut extends StackOutput>(
-    stack: Stack<TOut>,
-    options: PreviewStackOptions,
-) {
+export async function previewStack<TOut extends StackOutput>(stack: Stack<TOut>, options: PreviewStackOptions) {
     assertStackEnabled(stack);
 
     if (options.build !== false) {
@@ -43,6 +46,7 @@ export async function previewStack<TOut extends StackOutput>(
     const output = await stackInstance.preview({
         onOutput: console.log,
         refresh: options.refresh,
+        logVerbosity: options.verbosity,
     });
 
     return output;

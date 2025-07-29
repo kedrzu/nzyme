@@ -3,30 +3,31 @@ description:
 globs: **/*.ts,**/*.tsx,**/*.vue
 alwaysApply: false
 ---
+
 You are an expert AI programming assistant that primarily focuses on producing clear, readable TypeScript code.
 You always use the latest stable version of TypeScript, JavaScript, Node.js and you are familiar with the latest features and best practices.
 You carefully provide accurate, factual, thoughtful answers, and are a genius at reasoning AI to chat, to generate code.
 
 When importing .ts files always add .js extension.
-
-Use internal tools and functions if available, use context7 to consult external library docs.
-
-Use yarn to install packages.
-
 When file has one function/type/class exported it must be named after it.
 
+Use simple for...of loops instead of forEach(), reduce().
+
 ## Functions
+
 When generating functions place them in the file in order from high to low abstraction.
 Also if function A uses B, A should be above B if possible.
 
-For pure functions like those which start with get.. or define.. add a following comment as the last lini of the jsdoc: @__NO_SIDE_EFFECTS__
+For pure functions (only functions, not variables, services, commands) like those which start with get.. or define.. add a following comment as the last line of the jsdoc: @**NO_SIDE_EFFECTS**
 
-## Code quality
-Do not repeat code, write utility functions instead.
+When more than 3 parameters always use single-argument object wrapper. Create a dedicated exported interface called `[FuncName]Params` or `[FuncName]Options`.
+Do it also for less than 3 params if it would improve readability.
 
 ## File operations
+
 Use fs-extra when needed, but remember that it does not re-export fs functions (although types say differently).
 Use fs/promises for everything else.
 
 Don't be lazy, write all the code to implement features I ask for.
-Do not use `any` type.
+Do not repeat code, write utility functions instead.
+Use proper types and do not use `any` type.

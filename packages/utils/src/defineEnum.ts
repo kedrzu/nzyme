@@ -4,6 +4,8 @@
  */
 export type Enum<T extends string[]> = T & {
     [K in T[number] as K & string]: K;
+} & {
+    includes(value: string): value is T[number];
 };
 
 /**

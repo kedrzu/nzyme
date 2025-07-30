@@ -1,0 +1,11 @@
+itemsCount:
+  plural: count
+  cs:
+    zero: 'žádné položky'
+    one: 'jedna položka'
+    few: '{count} položky'
+    many: '{count} položek'
+  en:
+    zero: 'no items'
+    one: 'one item'
+    many: '{count} items'

@@ -1,4 +1,3 @@
-import * as fs from 'fs/promises';
 import * as path from 'path';
 
 import chalk from 'chalk';
@@ -7,8 +6,7 @@ import { Option } from 'clipanion';
 import glob from 'fast-glob';
 import * as fsExtra from 'fs-extra';
 
-import { compileTranslations } from '@nzyme/i18n-compiler';
-import { saveFile } from '@nzyme/project-utils';
+import { compileTranslationFile } from '@nzyme/i18n-compiler';
 import { waitForever } from '@nzyme/utils';
 
 import { Command } from '../Command.js';
@@ -93,12 +91,9 @@ export class LocaliseCommand extends Command {
             const absolutePath = this.toAbsolute(file);
             const outputPath = this.toTypesScriptPath(file);
 
-            const content = await fs.readFile(absolutePath, 'utf8');
-            const result = compileTranslations(content);
+            const result = await compileTranslationFile(absolutePath, outputPath);
 
-            await saveFile(outputPath, result.code);
-
-            if (result.errors.length === 0) {
+            if (result.success) {
                 this.logger.info(`🌍 Compiled ${chalk.green(file)}`);
                 return true;
             }

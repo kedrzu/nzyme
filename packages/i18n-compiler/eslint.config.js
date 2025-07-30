@@ -7,6 +7,8 @@ export default [
         project: ['./tsconfig.json', './tsconfig.tests.json'],
         internalImports: ['@nzyme/*'],
     }),
-    ...jsdoc(),
+    ...jsdoc({
+        ignores: ['tests/**/*'],
+    }),
     ...packageJson(),
 ];

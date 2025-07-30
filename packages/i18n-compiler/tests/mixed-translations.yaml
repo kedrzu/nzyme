@@ -1,0 +1,19 @@
+greeting:
+  pl: 'Witaj {name}!'
+  en: 'Hello {name}!'
+
+itemsCount:
+  plural: count
+  pl:
+    zero: 'brak elementów'
+    one: 'jeden element'
+    few: '{count} elementy'
+    many: '{count} elementów'
+  en:
+    zero: 'no items'
+    one: 'one item'
+    many: '{count} items'
+
+farewell:
+  pl: 'Do widzenia!'
+  en: 'Goodbye!'

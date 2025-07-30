@@ -1,0 +1,11 @@
+applesCount:
+  plural: count
+  pl:
+    zero: 'zero jabłek w {container}'
+    one: 'jedno jabłko w {container}'
+    few: '{count} jabłka w {container}'
+    many: '{count} jabłek w {container}'
+  en:
+    zero: 'no apples in {container}'
+    one: 'one apple in {container}'
+    many: '{count} apples in {container}'

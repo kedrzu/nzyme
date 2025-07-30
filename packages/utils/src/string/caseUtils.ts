@@ -31,7 +31,7 @@ export function convertCase(str: string, options: ConvertCaseOptions): string {
     }
 
     // First, convert any existing camelCase to space-separated words
-    const words = str.replace(CAMEL_TO_SEPARATOR, '$1 $2').split(/[\s-_]+/);
+    const words = str.replace(CAMEL_TO_SEPARATOR, (_match, p1, p2) => `${p1} ${p2}`).split(/[\s-_]+/);
 
     let result = '';
     for (let i = 0; i < words.length; i++) {

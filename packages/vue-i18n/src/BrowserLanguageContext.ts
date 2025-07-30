@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 
 import { LanguageContext, LanguageProvider } from '@nzyme/i18n';
+import type { Language } from '@nzyme/i18n';
 import { defineService } from '@nzyme/ioc';
 import { assignProps } from '@nzyme/utils';
 
@@ -11,7 +12,7 @@ export interface BrowserLanguageContext extends LanguageContext {
     /**
      * Set the language.
      */
-    set: (language: string) => void;
+    set: (language: Language) => void;
 }
 
 /**
@@ -27,18 +28,16 @@ export const BrowserLanguageContext = defineService({
     setup({ langProvider }) {
         const availableLanguages = langProvider();
         const initialLanguage = getStoredLanguage(availableLanguages) || getBestLanguageMatch(availableLanguages);
-        const lang = ref(initialLanguage);
+        const lang = ref<Language>(initialLanguage);
         const provider = () => lang.value;
 
         const ctx: BrowserLanguageContext = assignProps(provider, {
-            set: (language: string) => {
-                const availableLanguages = langProvider();
+            set: (language: Language) => {
+                const availableLanguages: Language[] = langProvider();
                 if (availableLanguages.includes(language)) {
                     lang.value = language;
                     storeLanguage(language);
                 }
-
-                return lang.value;
             },
         });
 
@@ -53,7 +52,7 @@ export const BrowserLanguageContext = defineService({
  * @returns The stored language code if valid, null otherwise
  * @__NO_SIDE_EFFECTS__
  */
-function getStoredLanguage(availableLanguages: string[]): string | null {
+function getStoredLanguage(availableLanguages: string[]): Language | null {
     if (typeof document === 'undefined') {
         return null;
     }
@@ -62,7 +61,8 @@ function getStoredLanguage(availableLanguages: string[]): string | null {
     for (const cookie of cookies) {
         const [name, value] = cookie.trim().split('=');
         if (name === 'lang' && value && availableLanguages.includes(value)) {
-            return value;
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+            return value as Language;
         }
     }
 
@@ -74,7 +74,7 @@ function getStoredLanguage(availableLanguages: string[]): string | null {
  *
  * @param language - The language code to store
  */
-function storeLanguage(language: string): void {
+function storeLanguage(language: Language): void {
     if (typeof document === 'undefined') {
         return;
     }
@@ -95,12 +95,12 @@ function storeLanguage(language: string): void {
  * @returns The best matching language code
  * @__NO_SIDE_EFFECTS__
  */
-function getBestLanguageMatch(availableLanguages: string[]): string {
+function getBestLanguageMatch(availableLanguages: Language[]): Language {
     if (typeof navigator === 'undefined') {
         return availableLanguages[0] || 'en';
     }
 
-    const browserLanguages = navigator.languages || [navigator.language];
+    const browserLanguages = (navigator.languages || [navigator.language]) as Language[];
 
     // First try exact matches
     for (const browserLang of browserLanguages) {
@@ -111,12 +111,12 @@ function getBestLanguageMatch(availableLanguages: string[]): string {
 
     // Then try partial matches (e.g., 'en-US' matches 'en')
     for (const browserLang of browserLanguages) {
-        const langCode = browserLang.split('-')[0];
+        const langCode = browserLang.split('-')[0] as Language | undefined;
         if (langCode && availableLanguages.includes(langCode)) {
             return langCode;
         }
     }
 
     // Fallback to first available language
-    return availableLanguages[0] || 'en';
+    return availableLanguages[0]!;
 }

@@ -1,3 +1,4 @@
+export * from './Language.js';
 export * from './LanguageContext.js';
 export * from './LanguageProvider.js';
 export * from './translateToString.js';

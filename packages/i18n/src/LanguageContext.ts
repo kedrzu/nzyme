@@ -1,10 +1,12 @@
 import { defineInterface } from '@nzyme/ioc';
 
+import type { Language } from './Language.js';
+
 /**
  * Provides current language.
  */
 export interface LanguageContext {
-    (): string;
+    (): Language;
 }
 
 /**

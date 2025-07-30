@@ -1,11 +1,13 @@
+import { identity } from './functions/identity.js';
+
 /**
  * Options for creating a cache.
  * @template TArg - The type of the argument used to look up values
  * @template TValue - The type of the cached values
  */
-export interface CacheOptions<TArg, TValue> {
+export interface CacheOptions<TArg, TValue, TKey = TArg> {
     /** Function that generates a cache key from an argument */
-    cacheKey: (arg: TArg) => number | string;
+    cacheKey?: (arg: TArg) => TKey;
     /** Function that computes a value if it's not in the cache */
     getValue: (arg: TArg) => TValue;
 }
@@ -32,9 +34,9 @@ export interface CacheOptions<TArg, TValue> {
  * cache.get(5); // Returns 20
  * ```
  */
-export function createCache<TArg, TValue>(options: CacheOptions<TArg, TValue>) {
-    const cache = new Map<number | string, TValue | undefined>();
-    const { cacheKey, getValue } = options;
+export function createCache<TArg, TValue, TKey = TArg>(options: CacheOptions<TArg, TValue, TKey>) {
+    const cache = new Map<TKey, TValue | undefined>();
+    const { cacheKey = identity, getValue } = options;
 
     return {
         get,

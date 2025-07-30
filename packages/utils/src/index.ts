@@ -32,6 +32,7 @@ export * from './cachedProp.js';
 export * from './call.js';
 export * from './Cancelable.js';
 export * from './CancelError.js';
+export * from './createAsyncCache.js';
 export * from './createAsyncQueue.js';
 export * from './createCache.js';
 export * from './createEventEmitter.js';

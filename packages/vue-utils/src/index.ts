@@ -32,6 +32,7 @@ export * from './reactivity/storageRefWithSchema.js';
 export * from './reactivity/triggerRef.js';
 export * from './slots.js';
 export * from './types.js';
+export * from './unwrapElement.js';
 export * from './useDataSource.js';
 export * from './useElement.js';
 export * from './useElementClass.js';

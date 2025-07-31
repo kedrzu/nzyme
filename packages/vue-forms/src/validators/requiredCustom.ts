@@ -8,7 +8,6 @@ import { createRule } from '@regle/core';
 export const requiredCustom = createRule({
     type: 'requiredCustom',
     validator(_value: unknown, condition: boolean) {
-        console.warn('condition', condition);
         return condition;
     },
     // TODO translation

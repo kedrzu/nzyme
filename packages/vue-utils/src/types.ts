@@ -9,3 +9,8 @@ export type ComponentProps<T> =
     T extends Constructor<ComponentPublicInstance>
         ? Omit<InstanceType<T>['$props'], keyof AllowedComponentProps | keyof VNodeProps>
         : void;
+
+/**
+ *
+ */
+export type ElementOrVue = ComponentPublicInstance | Document | Element | HTMLElement | SVGElement | Window;

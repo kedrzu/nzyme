@@ -1,8 +1,8 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 import { isBrowser } from '@nzyme/dom-utils';
-import type { RefParam } from '@nzyme/vue-utils';
-import { makeRef, onElementScroll, onWindowResize } from '@nzyme/vue-utils';
+import type { ElementOrVue, RefParam } from '@nzyme/vue-utils';
+import { makeRef, onElementScroll, onWindowResize, unwrapElement } from '@nzyme/vue-utils';
 
 /**
  * Position of the sticky element.
@@ -20,7 +20,7 @@ export interface StickyElementOptions {
     /**
      * Element to use as a container for the sticky element.
      */
-    container?: RefParam<HTMLElement | Window | null | undefined>;
+    container?: RefParam<ElementOrVue | null | undefined>;
     /**
      * Position of the sticky element.
      */
@@ -57,7 +57,7 @@ export function useStickyElement(options: StickyElementOptions) {
     function setupMutationObserver() {
         cleanupMutationObserver();
 
-        const container = containerElement.value;
+        const container = unwrapElement(containerElement.value);
         if (!container || container instanceof Window || !isBrowser()) {
             return;
         }
@@ -154,7 +154,7 @@ export function useStickyElement(options: StickyElementOptions) {
     }
 
     function getContainerRect() {
-        const container = containerElement.value;
+        const container = unwrapElement(containerElement.value);
         if (!container || container instanceof Window) {
             const scrollHeight = Math.max(
                 document.scrollingElement?.scrollHeight || 0,
@@ -169,6 +169,15 @@ export function useStickyElement(options: StickyElementOptions) {
                 paddingBottom: 0,
                 scrollTop: Math.round(window.scrollY),
                 scrollBottom: Math.floor(scrollHeight - window.scrollY - window.innerHeight),
+            };
+        }
+
+        if (!(container instanceof HTMLElement)) {
+            return {
+                top: 0,
+                bottom: window.innerHeight,
+                paddingTop: 0,
+                paddingBottom: 0,
             };
         }
 

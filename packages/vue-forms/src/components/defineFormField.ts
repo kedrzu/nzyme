@@ -1,4 +1,4 @@
-import type { MaybeOutput, RegleFieldStatus } from '@regle/core';
+import type { MaybeOutput, RegleFieldStatus, RegleStatus } from '@regle/core';
 import { computed, onBeforeUnmount, reactive, ref, useModel } from 'vue';
 import type { ExtractPropTypes, PropType, Ref, UnwrapNestedRefs } from 'vue';
 
@@ -8,6 +8,11 @@ import { defineProp, injectContext, useInstanceProxy } from '@nzyme/vue-utils';
 import { FormContext } from '../FormContext.js';
 
 export type FormField<T> = ReturnType<typeof createFormField<T>>;
+
+export type FormFieldModel<T> = T extends Record<string, unknown> | undefined
+    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      RegleStatus<T | undefined, any, any>
+    : RegleFieldStatus<T | null | undefined>;
 
 export type FormFieldDefinition<T> = ReturnType<typeof defineFormField<T>>;
 
@@ -20,6 +25,8 @@ export type FormFieldPropsDefinition<T> = FormFieldDefinition<T>['props'];
 
 export type FormFieldValue<T> = MaybeOutput<UnwrapNestedRefs<T> | null>;
 
+type RegleField = Partial<RegleFieldStatus<unknown>> | Partial<RegleStatus<Record<string, unknown>>>;
+
 /**
  *
  * @__NO_SIDE_EFFECTS__
@@ -28,7 +35,7 @@ export function defineFormField<T>(type?: PropType<T | null | undefined>) {
     return {
         props: {
             modelValue: { type: type as PropType<T | null | undefined> },
-            field: defineProp<RegleFieldStatus<T | null | undefined>>(),
+            field: defineProp<FormFieldModel<T>>(),
             errors: defineProp<string | string[]>(),
             required: Boolean,
             disabled: Boolean,
@@ -57,7 +64,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
     const focused = ref(false);
 
     const pending = computed(() => {
-        return !!props.field?.$pending;
+        return !!(props.field as RegleField)?.$pending;
     });
 
     const errors = computed(() => {
@@ -67,16 +74,14 @@ function createFormField<T>(options: FormFieldOptions<T>) {
 
         const errors = Array.isArray(props.errors) ? props.errors.slice() : props.errors ? [props.errors] : [];
 
-        if (!props.field?.$error) {
-            return errors;
-        }
+        const fieldErrors = (props.field as RegleField)?.$errors;
 
-        // Find all the errors in the field
-        // Props with name starting with $ are internal to vuelidate
-        const field = props.field;
-
-        for (const error of field.$errors) {
-            errors.push(error);
+        if (Array.isArray(fieldErrors)) {
+            for (const error of fieldErrors) {
+                errors.push(error);
+            }
+        } else if (fieldErrors?.$self) {
+            errors.push(...(fieldErrors.$self as string[]));
         }
 
         return errors;
@@ -84,12 +89,12 @@ function createFormField<T>(options: FormFieldOptions<T>) {
 
     const ok = computed(() => {
         const field = props.field;
+        const value = (field as RegleField)?.$value;
 
         return (
-            field &&
-            field.$value != null &&
+            value != null &&
             // should not be empty string
-            !(typeof field.$value === 'string' && field.$value === '') &&
+            !(typeof value === 'string' && value === '') &&
             !errors.value.length
         );
     });
@@ -112,8 +117,9 @@ function createFormField<T>(options: FormFieldOptions<T>) {
         },
     });
 
-    function getValue() {
-        return props.field ? props.field.$value : model.value;
+    function getValue(): FormFieldValue<T> {
+        const field = props.field as RegleField;
+        return (field ? field.$value : model.value) as FormFieldValue<T>;
     }
 
     function setValue(value: FormFieldValue<T>) {
@@ -123,7 +129,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
         }
 
         if (props.field) {
-            props.field.$value = value;
+            (props.field as RegleField).$value = value;
         }
 
         model.value = value;
@@ -132,7 +138,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
     }
 
     function touch() {
-        props.field?.$touch();
+        (props.field as RegleField)?.$touch?.();
     }
 
     function scrollToError() {

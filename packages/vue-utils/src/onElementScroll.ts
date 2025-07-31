@@ -2,10 +2,15 @@ import { onMounted, onUnmounted, watch } from 'vue';
 
 import type { RefParam } from './reactivity/makeRef.js';
 import { makeRef } from './reactivity/makeRef.js';
+import type { ElementOrVue } from './types.js';
+import { unwrapElement } from './unwrapElement.js';
 
-type ElementParam = Element | Window | undefined | null;
+type MaybeElement = ElementOrVue | null | undefined;
 
-export function onElementScroll(element: RefParam<ElementParam>, callback: (event: Event) => void) {
+/**
+ *
+ */
+export function onElementScroll(element: RefParam<MaybeElement>, callback: (event: Event) => void) {
     const elementRef = makeRef(element);
 
     watch(
@@ -19,11 +24,11 @@ export function onElementScroll(element: RefParam<ElementParam>, callback: (even
     onMounted(() => connect(elementRef.value));
     onUnmounted(() => disconnect(elementRef.value));
 
-    function connect(el: ElementParam) {
-        el?.addEventListener('scroll', callback, { passive: true });
+    function connect(el: MaybeElement) {
+        unwrapElement(el)?.addEventListener('scroll', callback, { passive: true });
     }
 
-    function disconnect(el: ElementParam) {
-        el?.removeEventListener('scroll', callback);
+    function disconnect(el: MaybeElement) {
+        unwrapElement(el)?.removeEventListener('scroll', callback);
     }
 }

@@ -25,6 +25,13 @@ export type OmitPropTypes<T, V> = {
 /**
  *
  */
+export type PickPropTypes<T, V> = {
+    [P in keyof T as T[P] extends V ? P : never]: T[P];
+};
+
+/**
+ *
+ */
 export type PickProps<T, K extends keyof T> = {
     [P in keyof T as P extends K ? never : P]?: never;
 } & {

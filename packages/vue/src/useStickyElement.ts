@@ -38,7 +38,8 @@ export function useStickyElement(options: StickyElementOptions) {
     const sticky = ref(false);
     const position = makeRef(options.position);
 
-    const containerElement = options.container ? makeRef(options.container) : computed(getScrollableContainer);
+    const containerRef = options.container ? makeRef(options.container) : null;
+    const containerElement = computed(getScrollableContainer);
 
     let mutationObserver: MutationObserver | null = null;
 
@@ -86,13 +87,17 @@ export function useStickyElement(options: StickyElementOptions) {
             return null;
         }
 
+        if (containerRef?.value) {
+            return unwrapElement(containerRef.value);
+        }
+
         let el = element.value || null;
         if (!(el instanceof HTMLElement)) {
             return null;
         }
 
         while (el) {
-            if (el === document.body) {
+            if (el == null) {
                 return window;
             }
 

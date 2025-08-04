@@ -56,7 +56,25 @@ test('should throw UsageError for invalid task ID formats', () => {
     expect(() => extractTaskIdFromBranch('SIG123')).toThrow(UsageError);
     expect(() => extractTaskIdFromBranch('SIG-')).toThrow(UsageError);
     expect(() => extractTaskIdFromBranch('123-SIG')).toThrow(UsageError);
-    expect(() => extractTaskIdFromBranch('sig-123')).toThrow(UsageError); // lowercase
+});
+
+test('should convert lowercase task IDs to uppercase', () => {
+    expect(extractTaskIdFromBranch('sig-123')).toBe('SIG-123');
+    expect(extractTaskIdFromBranch('team-456')).toBe('TEAM-456');
+    expect(extractTaskIdFromBranch('abc-999')).toBe('ABC-999');
+});
+
+test('should convert lowercase task IDs to uppercase in complex branch names', () => {
+    expect(extractTaskIdFromBranch('feature/sig-123-something')).toBe('SIG-123');
+    expect(extractTaskIdFromBranch('fix/team-456')).toBe('TEAM-456');
+    expect(extractTaskIdFromBranch('hotfix/abc-999-urgent')).toBe('ABC-999');
+    expect(extractTaskIdFromBranch('sig-123-feature-name')).toBe('SIG-123');
+});
+
+test('should handle mixed case task IDs', () => {
+    expect(extractTaskIdFromBranch('Sig-123')).toBe('SIG-123');
+    expect(extractTaskIdFromBranch('TeAm-456')).toBe('TEAM-456');
+    expect(extractTaskIdFromBranch('feature/AbC-999-fix')).toBe('ABC-999');
 });
 
 test('should throw UsageError for branch names with underscores around task ID', () => {

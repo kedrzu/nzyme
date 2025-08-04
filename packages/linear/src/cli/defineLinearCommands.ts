@@ -190,7 +190,7 @@ function defineTaskCommand(options: LinearCommandsOptions) {
 
 function definePushCommand(options: LinearCommandsOptions) {
     return class PushCommand extends Command {
-        static override paths = getCommandPaths(options, 'push');
+        static override paths = getCommandPaths(options, 'task', 'push');
         static override usage = Command.Usage({
             category: 'Linear',
             description: 'Convert current task from draft to ready for review',
@@ -256,12 +256,12 @@ function definePushCommand(options: LinearCommandsOptions) {
     };
 }
 
-function getCommandPaths(options: LinearCommandsOptions, command: string) {
+function getCommandPaths(options: LinearCommandsOptions, ...commands: string[]) {
     if (options.prefix) {
-        return [[options.prefix, command]];
+        return [[options.prefix, ...commands]];
     }
 
-    return [[command]];
+    return [[...commands]];
 }
 
 async function getLinearConfig(options: LinearCommandsOptions): Promise<LinearConfig> {

@@ -34,23 +34,39 @@ export async function createBranchAndPr(
     prTitle: string,
     description: string,
     issueId: string,
+    baseBranch?: string,
 ): Promise<CreateBranchAndPrResult> {
     const git = simpleGit();
 
     try {
-        // Get current branch (usually main/master)
-        const status = await git.status();
-        const baseBranch = status.current;
+        // Determine base branch - use provided baseBranch or fallback to current branch
+        let resolvedBaseBranch = baseBranch;
 
-        if (!baseBranch) {
-            throw new Error('Could not determine current branch');
+        if (!resolvedBaseBranch) {
+            const status = await git.status();
+            resolvedBaseBranch = status.current || undefined;
         }
 
-        // Ensure we're on the latest version of the base branch
-        await git.pull('origin', baseBranch);
+        if (!resolvedBaseBranch) {
+            throw new Error('Could not determine base branch');
+        }
 
-        // Create and checkout new branch
-        await git.checkoutLocalBranch(branchName);
+        // Check if branch exists, create and checkout if not, otherwise just checkout
+        const branches = await git.branchLocal();
+        if (branches.all.includes(branchName)) {
+            await git.checkout(branchName);
+        } else {
+            await git.checkoutLocalBranch(branchName);
+        }
+
+        // Check if the branch has any commits compared to base branch
+        const diffResult = await git.diff([`${resolvedBaseBranch}...${branchName}`, '--name-only']);
+        const hasCommits = diffResult.trim().length > 0;
+
+        // If no commits, create an empty commit
+        if (!hasCommits) {
+            await git.commit('Initial commit', [], { '--allow-empty': null });
+        }
 
         // Push the new branch to origin
         await git.push('origin', branchName, { '--set-upstream': null });
@@ -63,7 +79,7 @@ export async function createBranchAndPr(
             repo: config.repo,
             title: prTitle,
             head: branchName,
-            base: baseBranch,
+            base: resolvedBaseBranch,
             body: prBody,
             draft: true,
         });

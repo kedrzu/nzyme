@@ -72,6 +72,13 @@ export interface LinearCommandsOptions {
      * The function to call before each command.
      */
     beforeEach?: () => Promise<void>;
+
+    /**
+     * The base branch to use when creating new branches.
+     * Can be a string (e.g., 'main', 'develop') or a function that returns the base branch name.
+     * If not provided, defaults to the current branch.
+     */
+    baseBranch?: (() => Promise<string>) | (() => string) | string;
 }
 
 /**
@@ -149,6 +156,8 @@ function defineTaskCommand(options: LinearCommandsOptions) {
 
                     this.logger.info(`🌿 Creating branch: ${chalk.cyan(branchName)}`);
 
+                    const baseBranch = await getBaseBranch(options);
+
                     const result = await createBranchAndPr(
                         octokit,
                         githubConfig,
@@ -156,9 +165,11 @@ function defineTaskCommand(options: LinearCommandsOptions) {
                         prTitle,
                         issueData.description || '',
                         issueId,
+                        baseBranch,
                     );
 
                     this.logger.info(`✅ Created draft PR: ${chalk.blue(result.pr.title)} (#${result.pr.number})`);
+                    this.logger.info(`🔗 PR URL: ${chalk.underline(result.pr.html_url)}`);
                     this.logger.info(`🎉 Successfully created and checked out new branch for ${chalk.bold(issueId)}`);
                 }
 
@@ -263,4 +274,12 @@ async function getGitHubConfig(options: LinearCommandsOptions): Promise<GitHubCo
     }
 
     return options.github;
+}
+
+async function getBaseBranch(options: LinearCommandsOptions): Promise<string | undefined> {
+    if (typeof options.baseBranch === 'function') {
+        return await options.baseBranch();
+    }
+
+    return options.baseBranch;
 }

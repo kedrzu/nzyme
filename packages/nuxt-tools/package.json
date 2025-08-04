@@ -31,7 +31,7 @@
         "fs-extra": "^11.3.0",
         "mime-types": "^3.0.1",
         "nuxt": "4.0.1",
-        "vite": "^7.0.5"
+        "vite": "^7.0.6"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",

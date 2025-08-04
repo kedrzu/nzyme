@@ -10,6 +10,7 @@ import replace from '@rollup/plugin-replace';
 import chalk from 'chalk';
 import { emptyDir } from 'fs-extra/esm';
 import { rollup } from 'rollup';
+import { bundleStats } from 'rollup-plugin-bundle-stats';
 import sourcemaps from 'rollup-plugin-sourcemaps';
 import { terser } from 'rollup-plugin-terser';
 
@@ -62,6 +63,7 @@ const rollupResult = await rollup({
             sourceMap: true,
             preventAssignment: true,
         }),
+        bundleStats({}),
         options.sourcemaps &&
             sourcemaps({
                 // Sentry has some broken sourcemaps
@@ -105,12 +107,12 @@ const rollupResult = await rollup({
 });
 
 const rollupOutput = await rollupResult.write({
-    file: outputFile,
-    inlineDynamicImports: true,
+    dir: outputDir,
     format: options.esm ? 'esm' : 'cjs',
     exports: 'named',
     sourcemap: options.sourcemaps,
-    // entryFileNames: options.esm ? `${fileName}.mjs` : `${fileName}.js`,
+    entryFileNames: options.esm ? `${fileName}.mjs` : `${fileName}.js`,
+    chunkFileNames: options.esm ? `[name].[hash].mjs` : `[name].[hash].js`,
     hoistTransitiveImports: true,
 });
 

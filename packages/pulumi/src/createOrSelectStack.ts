@@ -4,6 +4,7 @@ import { automation, runtime } from '@pulumi/pulumi';
 
 import type { Stack, StackOutput } from './defineStack.js';
 import type { PulumiConfig } from './PulumiConfig.js';
+import { waitFor } from '@nzyme/utils';
 
 /**
  * Creates or selects a stack.
@@ -53,12 +54,16 @@ export async function createOrSelectStack<TOutput extends StackOutput>(stack: St
         {
             projectName: config.project,
             stackName: stack.name,
-            program: () => {
+            program: async () => {
                 if (config.resourceTransformation) {
                     runtime.registerStackTransformation(config.resourceTransformation);
                 }
 
-                return Promise.resolve(stack.resources());
+                const resources = stack.resources();
+
+                await waitFor(50);
+
+                return resources;
             },
         },
         {

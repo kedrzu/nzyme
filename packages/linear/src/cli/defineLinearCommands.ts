@@ -86,7 +86,11 @@ export interface LinearCommandsOptions {
  * @__NO_SIDE_EFFECTS__
  */
 export function defineLinearCommands(options: LinearCommandsOptions): CommandClass[] {
-    return [defineTaskCommand(options), definePushCommand(options)];
+    return [
+        //
+        definePushCommand(options),
+        defineTaskCommand(options),
+    ];
 }
 
 function defineTaskCommand(options: LinearCommandsOptions) {

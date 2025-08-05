@@ -34,13 +34,13 @@ function setupPasswordInput() {
     const showPassword = ref(false);
     const inputType = computed(() => (showPassword.value ? 'text' : 'password'));
 
-    return reactive({
+    return {
         field,
         PasswordInput,
         ShowPasswordButton,
         showPassword,
         togglePassword,
-    });
+    };
 
     function PasswordInput(attrs: HTMLAttributes) {
         return (

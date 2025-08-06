@@ -132,7 +132,7 @@ For the `task push` command to work, your branch name must contain the Linear ta
 
 Created PRs follow this format:
 
-**Title**: `[TASK-ID] Task Title`
+**Title**: `[TASK-ID][Project Name] Task Title`
 
 **Body**:
 
@@ -150,6 +150,8 @@ Created PRs follow this format:
 - [ ] Documentation updated
 - [ ] Ready for review
 ```
+
+**Example**: `[SIG-123][Authentication System] Implement user authentication feature`
 
 ## Configuration
 

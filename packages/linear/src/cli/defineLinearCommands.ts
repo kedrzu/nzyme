@@ -127,7 +127,7 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                 const issueId = parseTaskIdentifier(this.taskIdentifier, linearConfig.defaultPrefix);
                 this.logger.info(`🔍 Looking for Linear task: ${chalk.bold(issueId)}`);
 
-                // Get Linear issue details
+                // Get Linear issue details with team information
                 const linearClient = createLinearClient(linearConfig);
                 const issueData = await linearClient.issue(issueId);
 
@@ -176,7 +176,13 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                             .replace(/[^a-z0-9]/g, '-')
                             .replace(/-+/g, '-')
                             .slice(0, 50)}`;
-                    const prTitle = `[${issueId}] ${issueData.title}`;
+
+                    // Get project information for PR title
+                    const project = await issueData.project;
+                    const projectName = project?.name || '';
+                    const prTitle = projectName
+                        ? `[${issueId}][${projectName}] ${issueData.title}`
+                        : `[${issueId}] ${issueData.title}`;
 
                     this.logger.info(`🌿 Creating branch: ${chalk.cyan(branchName)}`);
 

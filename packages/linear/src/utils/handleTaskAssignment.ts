@@ -32,14 +32,25 @@ export async function handleTaskAssignment(
             logger.info(`✅ Task assigned to ${chalk.green(currentUser.displayName)}`);
         } else if (assignee.id !== currentUser.id) {
             // Task is assigned to someone else - ask if reassign
-            const { shouldReassign } = await enquirer.prompt<{ shouldReassign: boolean }>({
-                type: 'confirm',
-                name: 'shouldReassign',
-                message: `Task is assigned to ${chalk.yellow(assignee.displayName)}. Reassign to ${chalk.green(currentUser.displayName)}?`,
-                initial: false,
+            const { assignmentAction } = await enquirer.prompt<{ assignmentAction: string }>({
+                type: 'select',
+                name: 'assignmentAction',
+                message: `Task is assigned to ${chalk.yellow(assignee.displayName)}. What would you like to do?`,
+                choices: [
+                    {
+                        name: 'keep',
+                        message: `${chalk.yellow('Keep current assignee')} (${assignee.displayName})`,
+                        value: 'keep',
+                    },
+                    {
+                        name: 'reassign',
+                        message: `${chalk.green('Reassign to me')} (${currentUser.displayName})`,
+                        value: 'reassign',
+                    },
+                ],
             });
 
-            if (shouldReassign) {
+            if (assignmentAction === 'reassign') {
                 await issueData.update({
                     assigneeId: currentUser.id,
                 });

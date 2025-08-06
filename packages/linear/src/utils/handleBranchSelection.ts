@@ -41,14 +41,25 @@ export async function handleBranchSelection(
     const hasChanges = status.files.length > 0;
 
     // Ask user which branch to start from
-    const { startFromBase } = await enquirer.prompt<{ startFromBase: boolean }>({
-        type: 'confirm',
-        name: 'startFromBase',
-        message: `Start new branch from ${chalk.cyan(baseBranch)} (default) or current branch ${chalk.cyan(currentBranch)}?`,
-        initial: true,
+    const { branchChoice } = await enquirer.prompt<{ branchChoice: string }>({
+        type: 'select',
+        name: 'branchChoice',
+        message: 'Which branch do you want to start the new branch from?',
+        choices: [
+            {
+                name: 'base',
+                message: `${chalk.green(baseBranch)} (base branch)`,
+                value: 'base',
+            },
+            {
+                name: 'current',
+                message: `${chalk.yellow(currentBranch)} (current branch)`,
+                value: 'current',
+            },
+        ],
     });
 
-    if (!startFromBase) {
+    if (branchChoice === 'current') {
         // User wants to start from current branch
         logger.info(`🌿 Starting new branch from current branch: ${chalk.cyan(currentBranch)}`);
         return { useBaseBranch: false };

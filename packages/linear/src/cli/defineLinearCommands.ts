@@ -12,6 +12,8 @@ import { createOctokitClient } from '../utils/createOctokitClient.js';
 import { extractTaskIdFromBranch } from '../utils/extractTaskIdFromBranch.js';
 import { findMatchingPr } from '../utils/findMatchingPr.js';
 import { getCurrentBranch } from '../utils/getCurrentBranch.js';
+import { applyStashedChanges, handleBranchSelection } from '../utils/handleBranchSelection.js';
+import { handleTaskAssignment } from '../utils/handleTaskAssignment.js';
 import { parseTaskIdentifier } from '../utils/parseTaskIdentifier.js';
 
 /**
@@ -89,11 +91,11 @@ export function defineLinearCommands(options: LinearCommandsOptions): CommandCla
     return [
         //
         definePushCommand(options),
-        defineTaskCommand(options),
+        defineTaskStartCommand(options),
     ];
 }
 
-function defineTaskCommand(options: LinearCommandsOptions) {
+function defineTaskStartCommand(options: LinearCommandsOptions) {
     return class TaskCommand extends Command {
         static override paths = getCommandPaths(options, 'task');
         static override usage = Command.Usage({
@@ -112,8 +114,11 @@ function defineTaskCommand(options: LinearCommandsOptions) {
         override async run() {
             await options.beforeEach?.();
 
-            const linearConfig = await getLinearConfig(options);
-            const githubConfig = await getGitHubConfig(options);
+            // Load both configs in parallel
+            const [linearConfig, githubConfig] = await Promise.all([
+                getLinearConfig(options),
+                getGitHubConfig(options),
+            ]);
 
             try {
                 // Parse task identifier to get the issue ID
@@ -133,9 +138,12 @@ function defineTaskCommand(options: LinearCommandsOptions) {
                 // Create GitHub client
                 const octokit = createOctokitClient(githubConfig);
 
-                // Look for existing PR
+                // Handle task assignment and search for existing PR in parallel
                 this.logger.info(`🔍 Searching for existing GitHub PR...`);
-                const existingPr = await findMatchingPr(octokit, githubConfig, issueId);
+                const [, existingPr] = await Promise.all([
+                    handleTaskAssignment(linearClient, issueData, this.logger),
+                    findMatchingPr(octokit, githubConfig, issueId),
+                ]);
 
                 if (existingPr) {
                     // Checkout existing PR branch
@@ -149,6 +157,16 @@ function defineTaskCommand(options: LinearCommandsOptions) {
                     // Create new branch and PR
                     this.logger.info(`📝 No existing PR found. Creating new branch and draft PR...`);
 
+                    // Get current branch and base branch in parallel
+                    const [currentBranch, baseBranch] = await Promise.all([getCurrentBranch(), getBaseBranch(options)]);
+
+                    if (!baseBranch) {
+                        throw new UsageError('Base branch is not configured');
+                    }
+
+                    // Handle branch selection and stashing if needed
+                    const branchResult = await handleBranchSelection(currentBranch, baseBranch, issueId, this.logger);
+
                     const branchName =
                         issueData.branchName ||
                         `${issueId.toLowerCase()}-${issueData.title
@@ -160,7 +178,7 @@ function defineTaskCommand(options: LinearCommandsOptions) {
 
                     this.logger.info(`🌿 Creating branch: ${chalk.cyan(branchName)}`);
 
-                    const baseBranch = await getBaseBranch(options);
+                    const selectedBaseBranch = branchResult.useBaseBranch ? baseBranch : currentBranch;
 
                     const result = await createBranchAndPr(
                         octokit,
@@ -169,8 +187,14 @@ function defineTaskCommand(options: LinearCommandsOptions) {
                         prTitle,
                         issueData.description || '',
                         issueId,
-                        baseBranch,
+                        issueData.url,
+                        selectedBaseBranch,
                     );
+
+                    // Apply stashed changes if any
+                    if (branchResult.stashName) {
+                        await applyStashedChanges(branchResult.stashName, this.logger);
+                    }
 
                     this.logger.info(`✅ Created draft PR: ${chalk.blue(result.pr.title)} (#${result.pr.number})`);
                     this.logger.info(`🔗 PR URL: ${chalk.underline(result.pr.html_url)}`);

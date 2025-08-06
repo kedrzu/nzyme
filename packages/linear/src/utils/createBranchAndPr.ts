@@ -34,6 +34,7 @@ export async function createBranchAndPr(
     prTitle: string,
     description: string,
     issueId: string,
+    taskUrl: string,
     baseBranch?: string,
 ): Promise<CreateBranchAndPrResult> {
     const git = simpleGit();
@@ -72,7 +73,7 @@ export async function createBranchAndPr(
         await git.push('origin', branchName, { '--set-upstream': null });
 
         // Create draft PR
-        const prBody = buildPrBody(description, issueId);
+        const prBody = buildPrBody(description, issueId, taskUrl);
 
         const { data: pr } = await octokit.rest.pulls.create({
             owner: config.owner,
@@ -99,8 +100,8 @@ export async function createBranchAndPr(
     }
 }
 
-function buildPrBody(description: string, issueId: string): string {
-    const lines = [`## Linear Task: ${issueId}`, ''];
+function buildPrBody(description: string, issueId: string, taskUrl: string): string {
+    const lines = [`## Linear Task: [${issueId}](${taskUrl})`, ''];
 
     if (description) {
         lines.push('## Description');

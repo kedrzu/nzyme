@@ -34,9 +34,9 @@
         "@types/fs-extra": "^11.0.4",
         "@vitejs/plugin-vue": "^6.0.0",
         "@vitejs/plugin-vue-jsx": "^5.0.1",
-        "chalk": "^5.4.1",
+        "chalk": "^5.5.0",
         "connect": "^3.7.0",
-        "fs-extra": "^11.3.0",
+        "fs-extra": "^11.3.1",
         "get-port": "^7.1.0",
         "http-proxy-middleware": "^3.0.5",
         "rollup": "^4.46.2",
@@ -52,7 +52,7 @@
         "@nzyme/tsconfig": "^0.14.0",
         "@types/connect": "^3.4.38",
         "eslint": "^9.31.0",
-        "typescript": "^5.8.3"
+        "typescript": "^5.9.2"
     },
     "publishConfig": {
         "access": "public"

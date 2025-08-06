@@ -137,18 +137,9 @@ Created PRs follow this format:
 **Body**:
 
 ```markdown
-## Linear Task: SIG-123
+# [SIG-123](https://linear.app/sig/issue/SIG-123/task-title) Task Title
 
-## Description
-
-[Task description from Linear]
-
-## Checklist
-
-- [ ] Code changes implemented
-- [ ] Tests added/updated
-- [ ] Documentation updated
-- [ ] Ready for review
+[Full task description from Linear]
 ```
 
 **Example**: `[SIG-123][Authentication System] Implement user authentication feature`

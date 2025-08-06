@@ -196,6 +196,7 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                         issueData.description || '',
                         issueId,
                         issueData.url,
+                        issueData.title,
                         selectedBaseBranch,
                     );
 

@@ -1,4 +1,3 @@
-export * from './components/Carousel.jsx';
 export * from './components/defineFormField.js';
 export * from './components/Form.js';
 export * from './components/TextArea.js';

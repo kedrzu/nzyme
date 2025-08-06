@@ -1,5 +1,6 @@
 export * from './App.js';
 export { CommonPlugin } from './CommonPlugin.js';
+export * from './components/Carousel.jsx';
 // TODO: decide if we want TSX or VUE version
 export * from './components/Collapse.jsx';
 export { LazyHydrate } from './components/LazyHydrate.js';

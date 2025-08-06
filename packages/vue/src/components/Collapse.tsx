@@ -10,10 +10,10 @@ import { LazyHydrate } from './LazyHydrate.js';
 // Used to easily debug complex transition problems.
 const DEBUG = false;
 
-export /**
+/**
  *
  */
-const Collapse = defineComponent({
+export const Collapse = defineComponent({
     name: 'Collapse',
     props: {
         render: { type: String as PropType<'always' | 'lazy'>, default: 'lazy' },

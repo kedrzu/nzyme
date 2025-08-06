@@ -1,23 +1,8 @@
 import debounce from 'lodash.debounce';
-import {
-    computed,
-    defineComponent,
-    h,
-    nextTick,
-    onBeforeUnmount,
-    onMounted,
-    ref,
-    watch,
-} from 'vue';
+import { computed, defineComponent, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { JSX } from 'vue/jsx-runtime';
 
-import {
-    classProp,
-    defineSlots,
-    useElementClass,
-    useIntersectionObserver,
-    useSwipeHorizontal,
-} from '@nzyme/vue-utils';
+import { classProp, defineSlots, useElementClass, useIntersectionObserver, useSwipeHorizontal } from '@nzyme/vue-utils';
 
 import css from './Carousel.module.scss';
 
@@ -121,12 +106,10 @@ export const Carousel = defineComponent({
 
         const hasNext = computed(() => pageCurrent.value < pages.value.length - 1);
         const hasPrevious = computed(() => pageCurrent.value > 0);
-        const swiping = computed(() => swipe.isMouseDown);
+        const swiping = computed(() => swipe.isPressing);
 
         function getPages(): CarouselPage[] {
-            const elements = Array.from(carouselItemsRef.value?.childNodes || []).filter(
-                e => e instanceof HTMLElement,
-            );
+            const elements = Array.from(carouselItemsRef.value?.childNodes || []).filter(e => e instanceof HTMLElement);
 
             const pages: CarouselPage[] = [
                 {

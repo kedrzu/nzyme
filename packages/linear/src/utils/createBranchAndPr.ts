@@ -66,7 +66,7 @@ export async function createBranchAndPr(
 
         // If no commits, create an empty commit
         if (!hasCommits) {
-            await git.commit('Initial commit', [], { '--allow-empty': null });
+            await git.commit(prTitle, [], { '--allow-empty': null });
         }
 
         // Push the new branch to origin

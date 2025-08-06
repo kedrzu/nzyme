@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import open from 'open';
 
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
@@ -91,6 +92,7 @@ export function defineLinearCommands(options: LinearCommandsOptions): CommandCla
     return [
         //
         definePushCommand(options),
+        definePrCommand(options),
         defineTaskStartCommand(options),
     ];
 }
@@ -274,6 +276,63 @@ function definePushCommand(options: LinearCommandsOptions) {
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to push task to review: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
+}
+
+function definePrCommand(options: LinearCommandsOptions) {
+    return class PrCommand extends Command {
+        static override paths = getCommandPaths(options, 'task', 'pr');
+        static override usage = Command.Usage({
+            category: 'Linear',
+            description: 'Open the current task PR in browser',
+            details:
+                'Detects the task from the current branch and opens the associated GitHub PR in the default browser',
+            examples: [['Open current task PR in browser', 'task pr']],
+        });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            const githubConfig = await getGitHubConfig(options);
+
+            try {
+                // Get current branch
+                const currentBranch = await getCurrentBranch();
+                this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
+
+                // Extract task ID from branch name
+                const taskId = extractTaskIdFromBranch(currentBranch);
+                this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
+
+                // Create GitHub client
+                const octokit = createOctokitClient(githubConfig);
+
+                // Find the PR for this task
+                this.logger.info('🔍 Looking for associated GitHub PR...');
+                const pr = await findMatchingPr(octokit, githubConfig, taskId);
+
+                if (!pr) {
+                    throw new UsageError(
+                        `No GitHub PR found for task ${taskId}. ` +
+                            'Make sure you have created a PR for this task first using "task ' +
+                            taskId +
+                            '".',
+                    );
+                }
+
+                this.logger.info(`✅ Found PR: ${chalk.blue(pr.title)} (#${pr.number})`);
+                this.logger.info(`🌐 Opening PR in browser: ${chalk.underline(pr.html_url)}`);
+
+                // Open PR in default browser
+                await open(pr.html_url);
+
+                this.logger.info(`🎉 Successfully opened PR #${pr.number} in browser!`);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to open task PR: ${errorMessage}`);
                 throw error;
             }
         }

@@ -11,6 +11,11 @@ export interface VirtualHistoryHandle {
 }
 
 /**
+ * Callback function to be executed when the user navigates back in browser history.
+ */
+export type VirtualHistoryCallback = () => unknown;
+
+/**
  * State object extending the browser's history state
  */
 interface VirtualHistoryState {
@@ -26,10 +31,8 @@ interface VirtualHistoryData {
     virtual: boolean;
 }
 
-type Callback = () => void;
-
 let initialized = false;
-const callbacks = new Map<number, Callback | null>();
+const callbacks = new Map<number, VirtualHistoryCallback | null>();
 const uid = randomString(16);
 
 /**
@@ -39,7 +42,7 @@ const uid = randomString(16);
  * @param callback Function to execute when the user navigates back to this point
  * @returns A handle object that can be used to cancel the callback
  */
-export function onHistoryBack(callback: Callback): VirtualHistoryHandle {
+export function onHistoryBack(callback: VirtualHistoryCallback): VirtualHistoryHandle {
     initialize();
 
     history.pushState(history.state, document.title, null);
@@ -128,7 +131,7 @@ function onPopState(event: PopStateEvent) {
     });
 
     for (const entry of entries) {
-        entry.callback?.();
+        void entry.callback?.();
 
         if (entry.callback == null && entry.key === index + 1) {
             history.back();

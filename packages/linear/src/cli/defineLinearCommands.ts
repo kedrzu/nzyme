@@ -5,7 +5,7 @@ import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
 
 import { checkoutExistingBranch } from '../utils/checkoutExistingBranch.js';
-import { checkUncommittedChanges } from '../utils/checkUncommittedChanges.js';
+import { checkUnpushedCommits } from '../utils/checkUnpushedCommits.js';
 import { convertPrToReady } from '../utils/convertPrToReady.js';
 import { createBranchAndPr } from '../utils/createBranchAndPr.js';
 import { createLinearClient } from '../utils/createLinearClient.js';
@@ -13,7 +13,9 @@ import { createOctokitClient } from '../utils/createOctokitClient.js';
 import { extractTaskIdFromBranch } from '../utils/extractTaskIdFromBranch.js';
 import { findMatchingPr } from '../utils/findMatchingPr.js';
 import { getCurrentBranch } from '../utils/getCurrentBranch.js';
+import { getGitStatusInfo } from '../utils/getGitStatusInfo.js';
 import { applyStashedChanges, handleBranchSelection } from '../utils/handleBranchSelection.js';
+import { handleReadyPreparation } from '../utils/handleReadyPreparation.js';
 import { handleTaskAssignment } from '../utils/handleTaskAssignment.js';
 import { parseTaskIdentifier } from '../utils/parseTaskIdentifier.js';
 import { syncBaseBranch } from '../utils/syncBaseBranch.js';
@@ -247,10 +249,6 @@ function defineReadyCommand(options: LinearCommandsOptions) {
             const githubConfig = await getGitHubConfig(options);
 
             try {
-                // Check for uncommitted changes first
-                this.logger.info('🔍 Checking for uncommitted changes...');
-                await checkUncommittedChanges();
-
                 // Get current branch
                 const currentBranch = await getCurrentBranch();
                 this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
@@ -258,6 +256,13 @@ function defineReadyCommand(options: LinearCommandsOptions) {
                 // Extract task ID from branch name
                 const taskId = extractTaskIdFromBranch(currentBranch);
                 this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
+
+                // Check for unpushed commits and uncommitted changes in parallel
+                this.logger.info('🔍 Checking repository status...');
+                const [unpushedCommits, statusInfo] = await Promise.all([checkUnpushedCommits(), getGitStatusInfo()]);
+
+                // Handle preparation (push commits, commit changes) with user interaction
+                await handleReadyPreparation(unpushedCommits, statusInfo, this.logger);
 
                 // Create GitHub client
                 const octokit = createOctokitClient(githubConfig);

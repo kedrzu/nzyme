@@ -92,7 +92,7 @@ export interface LinearCommandsOptions {
 export function defineLinearCommands(options: LinearCommandsOptions): CommandClass[] {
     return [
         //
-        definePushCommand(options),
+        defineReadyCommand(options),
         definePrCommand(options),
         defineTaskStartCommand(options),
         defineTaskRefreshCommand(options),
@@ -230,15 +230,15 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
     };
 }
 
-function definePushCommand(options: LinearCommandsOptions) {
-    return class PushCommand extends Command {
-        static override paths = getCommandPaths(options, 'task', 'push');
+function defineReadyCommand(options: LinearCommandsOptions) {
+    return class ReadyCommand extends Command {
+        static override paths = getCommandPaths(options, 'task', 'ready');
         static override usage = Command.Usage({
             category: 'Linear',
             description: 'Convert current task from draft to ready for review',
             details:
                 'Detects the task from the current branch and converts the associated PR from draft to ready for review',
-            examples: [['Convert current task to ready for review', 'task push']],
+            examples: [['Convert current task to ready for review', 'task ready']],
         });
 
         override async run() {

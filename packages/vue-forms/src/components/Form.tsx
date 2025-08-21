@@ -13,7 +13,10 @@ export const Form = defineComponent({
     },
     emits: ['submit'],
     slots: defineSlots<{
-        default: { pending: boolean };
+        default: {
+            pending: boolean;
+            submit: () => void | Promise<void>;
+        };
     }>(),
     setup(props, { slots }) {
         const ctx = provideContext(FormContext);
@@ -31,7 +34,7 @@ export const Form = defineComponent({
                     tabindex="-1"
                     type="submit"
                 />
-                {slots.default?.({ pending: pending.value })}
+                {slots.default?.({ pending: pending.value, submit: ctx.submit })}
             </form>
         );
 

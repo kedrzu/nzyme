@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import open from 'open';
 
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
@@ -95,7 +94,7 @@ export function defineLinearCommands(options: LinearCommandsOptions): CommandCla
     return [
         //
         defineReadyCommand(options),
-        definePrCommand(options),
+        defineTaskInfoCommand(options),
         defineTaskStartCommand(options),
         defineTaskRefreshCommand(options),
     ];
@@ -303,21 +302,25 @@ function defineReadyCommand(options: LinearCommandsOptions) {
     };
 }
 
-function definePrCommand(options: LinearCommandsOptions) {
-    return class PrCommand extends Command {
-        static override paths = getCommandPaths(options, 'task', 'pr');
+function defineTaskInfoCommand(options: LinearCommandsOptions) {
+    return class TaskInfoCommand extends Command {
+        static override paths = getCommandPaths(options, 'task');
         static override usage = Command.Usage({
             category: 'Linear',
-            description: 'Open the current task PR in browser',
+            description: 'Display information about the current task',
             details:
-                'Detects the task from the current branch and opens the associated GitHub PR in the default browser',
-            examples: [['Open current task PR in browser', 'task pr']],
+                'Detects the task from the current branch and displays comprehensive information including task name, URLs, and associated PR',
+            examples: [['Show current task information', 'task info']],
         });
 
         override async run() {
             await options.beforeEach?.();
 
-            const githubConfig = await getGitHubConfig(options);
+            // Load both configs in parallel
+            const [linearConfig, githubConfig] = await Promise.all([
+                getLinearConfig(options),
+                getGitHubConfig(options),
+            ]);
 
             try {
                 // Get current branch
@@ -328,32 +331,44 @@ function definePrCommand(options: LinearCommandsOptions) {
                 const taskId = extractTaskIdFromBranch(currentBranch);
                 this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
 
-                // Create GitHub client
-                const octokit = createOctokitClient(githubConfig);
+                // Create clients in parallel
+                const [linearClient, octokit] = await Promise.all([
+                    Promise.resolve(createLinearClient(linearConfig)),
+                    Promise.resolve(createOctokitClient(githubConfig)),
+                ]);
 
-                // Find the PR for this task
-                this.logger.info('🔍 Looking for associated GitHub PR...');
-                const pr = await findMatchingPr(octokit, githubConfig, taskId);
+                // Get task details and search for PR in parallel
+                this.logger.info('🔍 Fetching task details and searching for associated PR...');
+                const [issueData, pr] = await Promise.all([
+                    linearClient.issue(taskId),
+                    findMatchingPr(octokit, githubConfig, taskId),
+                ]);
 
-                if (!pr) {
-                    throw new UsageError(
-                        `No GitHub PR found for task ${taskId}. ` +
-                            'Make sure you have created a PR for this task first using "task ' +
-                            taskId +
-                            '".',
-                    );
+                if (!issueData) {
+                    throw new UsageError(`Linear task ${taskId} not found`);
                 }
 
-                this.logger.info(`✅ Found PR: ${chalk.blue(pr.title)} (#${pr.number})`);
-                this.logger.info(`🌐 Opening PR in browser: ${chalk.underline(pr.html_url)}`);
+                // Display task information
+                this.logger.info('');
+                this.logger.info(chalk.bold.blue('📋 Task Information'));
+                this.logger.info('═'.repeat(50));
+                this.logger.info(`📝 Task Name: ${chalk.green(issueData.title)}`);
+                this.logger.info(`🔗 Task URL: ${chalk.underline(issueData.url)}`);
+                this.logger.info(`🌿 Branch Name: ${chalk.cyan(currentBranch)}`);
 
-                // Open PR in default browser
-                await open(pr.html_url);
+                if (pr) {
+                    this.logger.info(`📎 PR URL: ${chalk.underline(pr.html_url)}`);
+                    this.logger.info(
+                        `📊 PR Status: ${pr.draft ? chalk.yellow('Draft') : chalk.green('Ready for review')}`,
+                    );
+                } else {
+                    this.logger.info(`📎 PR URL: ${chalk.gray('No PR found for this task')}`);
+                }
 
-                this.logger.info(`🎉 Successfully opened PR #${pr.number} in browser!`);
+                this.logger.info('');
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                this.logger.error(`❌ Failed to open task PR: ${errorMessage}`);
+                this.logger.error(`❌ Failed to get task info: ${errorMessage}`);
                 throw error;
             }
         }

@@ -25,7 +25,7 @@ export interface CompileTranslationFileResult {
 
 /**
  * Compile a translation YAML file to TypeScript with formatting and ESLint fixes
- * @**NO_SIDE_EFFECTS**
+ * @__NO_SIDE_EFFECTS__
  */
 export async function compileTranslationFile(
     inputPath: string,

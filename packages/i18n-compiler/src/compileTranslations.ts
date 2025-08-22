@@ -401,7 +401,7 @@ function escapeCharacters(text: string) {
  * - "en" returns { language: "en", tags: [] }
  * - "en[auto]" returns { language: "en", tags: ["auto"] }
  * - "en[auto,draft]" returns { language: "en", tags: ["auto", "draft"] }
- * @**NO_SIDE_EFFECTS**
+ * @__NO_SIDE_EFFECTS__
  */
 function parseLanguageKey(langKey: string): { language: string; tags: string[] } {
     const match = LANG_TAG_REGEX.exec(langKey);

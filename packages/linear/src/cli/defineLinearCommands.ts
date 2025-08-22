@@ -93,11 +93,84 @@ export interface LinearCommandsOptions {
 export function defineLinearCommands(options: LinearCommandsOptions): CommandClass[] {
     return [
         //
-        defineReadyCommand(options),
         defineTaskInfoCommand(options),
         defineTaskStartCommand(options),
+        defineTaskReadyCommand(options),
         defineTaskRefreshCommand(options),
     ];
+}
+
+function defineTaskInfoCommand(options: LinearCommandsOptions) {
+    return class TaskInfoCommand extends Command {
+        static override paths = getCommandPaths(options, 'task');
+        static override usage = Command.Usage({
+            category: 'Linear',
+            description: 'Display information about the current task',
+            details:
+                'Detects the task from the current branch and displays comprehensive information including task name, URLs, and associated PR',
+            examples: [['Show current task information', 'task info']],
+        });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            // Load both configs in parallel
+            const [linearConfig, githubConfig] = await Promise.all([
+                getLinearConfig(options),
+                getGitHubConfig(options),
+            ]);
+
+            try {
+                // Get current branch
+                const currentBranch = await getCurrentBranch();
+                this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
+
+                // Extract task ID from branch name
+                const taskId = extractTaskIdFromBranch(currentBranch);
+                this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
+
+                // Create clients in parallel
+                const [linearClient, octokit] = await Promise.all([
+                    Promise.resolve(createLinearClient(linearConfig)),
+                    Promise.resolve(createOctokitClient(githubConfig)),
+                ]);
+
+                // Get task details and search for PR in parallel
+                this.logger.info('🔍 Fetching task details and searching for associated PR...');
+                const [issueData, pr] = await Promise.all([
+                    linearClient.issue(taskId),
+                    findMatchingPr(octokit, githubConfig, taskId),
+                ]);
+
+                if (!issueData) {
+                    throw new UsageError(`Linear task ${taskId} not found`);
+                }
+
+                // Display task information
+                this.logger.info('');
+                this.logger.info(chalk.bold.blue('📋 Task Information'));
+                this.logger.info('═'.repeat(50));
+                this.logger.info(`📝 Task Name: ${chalk.green(issueData.title)}`);
+                this.logger.info(`🔗 Task URL: ${chalk.underline(issueData.url)}`);
+                this.logger.info(`🌿 Branch Name: ${chalk.cyan(currentBranch)}`);
+
+                if (pr) {
+                    this.logger.info(`📎 PR URL: ${chalk.underline(pr.html_url)}`);
+                    this.logger.info(
+                        `📊 PR Status: ${pr.draft ? chalk.yellow('Draft') : chalk.green('Ready for review')}`,
+                    );
+                } else {
+                    this.logger.info(`📎 PR URL: ${chalk.gray('No PR found for this task')}`);
+                }
+
+                this.logger.info('');
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to get task info: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
 }
 
 function defineTaskStartCommand(options: LinearCommandsOptions) {
@@ -231,7 +304,7 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
     };
 }
 
-function defineReadyCommand(options: LinearCommandsOptions) {
+function defineTaskReadyCommand(options: LinearCommandsOptions) {
     return class ReadyCommand extends Command {
         static override paths = getCommandPaths(options, 'task', 'ready');
         static override usage = Command.Usage({
@@ -296,79 +369,6 @@ function defineReadyCommand(options: LinearCommandsOptions) {
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to push task to review: ${errorMessage}`);
-                throw error;
-            }
-        }
-    };
-}
-
-function defineTaskInfoCommand(options: LinearCommandsOptions) {
-    return class TaskInfoCommand extends Command {
-        static override paths = getCommandPaths(options, 'task');
-        static override usage = Command.Usage({
-            category: 'Linear',
-            description: 'Display information about the current task',
-            details:
-                'Detects the task from the current branch and displays comprehensive information including task name, URLs, and associated PR',
-            examples: [['Show current task information', 'task info']],
-        });
-
-        override async run() {
-            await options.beforeEach?.();
-
-            // Load both configs in parallel
-            const [linearConfig, githubConfig] = await Promise.all([
-                getLinearConfig(options),
-                getGitHubConfig(options),
-            ]);
-
-            try {
-                // Get current branch
-                const currentBranch = await getCurrentBranch();
-                this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
-
-                // Extract task ID from branch name
-                const taskId = extractTaskIdFromBranch(currentBranch);
-                this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
-
-                // Create clients in parallel
-                const [linearClient, octokit] = await Promise.all([
-                    Promise.resolve(createLinearClient(linearConfig)),
-                    Promise.resolve(createOctokitClient(githubConfig)),
-                ]);
-
-                // Get task details and search for PR in parallel
-                this.logger.info('🔍 Fetching task details and searching for associated PR...');
-                const [issueData, pr] = await Promise.all([
-                    linearClient.issue(taskId),
-                    findMatchingPr(octokit, githubConfig, taskId),
-                ]);
-
-                if (!issueData) {
-                    throw new UsageError(`Linear task ${taskId} not found`);
-                }
-
-                // Display task information
-                this.logger.info('');
-                this.logger.info(chalk.bold.blue('📋 Task Information'));
-                this.logger.info('═'.repeat(50));
-                this.logger.info(`📝 Task Name: ${chalk.green(issueData.title)}`);
-                this.logger.info(`🔗 Task URL: ${chalk.underline(issueData.url)}`);
-                this.logger.info(`🌿 Branch Name: ${chalk.cyan(currentBranch)}`);
-
-                if (pr) {
-                    this.logger.info(`📎 PR URL: ${chalk.underline(pr.html_url)}`);
-                    this.logger.info(
-                        `📊 PR Status: ${pr.draft ? chalk.yellow('Draft') : chalk.green('Ready for review')}`,
-                    );
-                } else {
-                    this.logger.info(`📎 PR URL: ${chalk.gray('No PR found for this task')}`);
-                }
-
-                this.logger.info('');
-            } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                this.logger.error(`❌ Failed to get task info: ${errorMessage}`);
                 throw error;
             }
         }

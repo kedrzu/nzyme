@@ -39,7 +39,7 @@
         "libphonenumber-js": "^1.12.13",
         "lodash.debounce": "^4.0.8",
         "postal-codes-js": "^2.5.2",
-        "vue": "^3.5.18",
+        "vue": "^3.5.20",
         "vue-imask": "^7.6.1"
     },
     "devDependencies": {

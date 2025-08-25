@@ -36,6 +36,7 @@ export * from './createAsyncCache.js';
 export * from './createAsyncQueue.js';
 export * from './createCache.js';
 export * from './createEventEmitter.js';
+export * from './createGetter.js';
 export * from './createMemo.js';
 export * from './createNamedFunction.js';
 export * from './createParalellRunner.js';

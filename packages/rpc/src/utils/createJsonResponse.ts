@@ -1,7 +1,7 @@
 import { getMd5Hash } from '@nzyme/crypto-utils';
 import type { HttpResponseHeaders } from '@nzyme/fetch-utils';
+import { toJsonString } from '@nzyme/utils';
 
-import type { Serializer } from '../Serializer.js';
 import type { HttpResponse } from '../types/HttpResponse.js';
 import { CACHE_CONTROL_DISABLED } from './cacheControl.js';
 
@@ -24,10 +24,6 @@ export type JsonResponse = {
     /**
      *
      */
-    serializer: Serializer;
-    /**
-     *
-     */
     status: number;
 };
 
@@ -35,7 +31,7 @@ export type JsonResponse = {
  *
  */
 export function createJsonResponse(response: JsonResponse): HttpResponse {
-    const body = response.serializer(response.body);
+    const body = toJsonString(response.body);
 
     const headers = {
         ...response.headers,

@@ -41,7 +41,6 @@
     },
     "devDependencies": {
         "@nzyme/tsconfig": "0.14.0",
-        "jiti": "^2.4.2",
         "typescript": "^5.9.2"
     },
     "publishConfig": {

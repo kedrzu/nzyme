@@ -1,5 +1,4 @@
 import type { DateTimeISO } from '@nzyme/types';
-import { toJsonString } from '@nzyme/utils';
 
 /**
  *
@@ -25,18 +24,3 @@ export type Serialized<T> = T extends Date
                 T extends Function
                 ? never
                 : T;
-
-/**
- *
- */
-export interface Serializer {
-    /**
-     *
-     */
-    (value: unknown): string;
-}
-
-/**
- *
- */
-export const defaultSerializer: Serializer = toJsonString;

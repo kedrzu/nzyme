@@ -4,7 +4,6 @@ import type { Container } from '@nzyme/ioc';
 import { Logger } from '@nzyme/logging';
 
 import type { Endpoint } from './defineEndpoint.js';
-import type { Serializer } from './Serializer.js';
 import { HttpContextProvider } from './services/HttpContextProvider.js';
 import type { HttpRequest } from './types/HttpRequest.js';
 import type { HttpResponse } from './types/HttpResponse.js';
@@ -40,11 +39,6 @@ export interface RouterOptions {
     endpoints: readonly Endpoint[];
 
     /**
-     *
-     */
-    serializer: Serializer;
-
-    /**
      * Whether to include stack traces in the response.
      */
     stackTraces?: boolean;
@@ -65,7 +59,6 @@ export function createRouter(options: RouterOptions): Router {
     const httpContextProvider = options.container.resolve(HttpContextProvider);
     const basePath = options.basePath ?? '/';
     const container = options.container;
-    const serializer = options.serializer;
     const stackTraces = options.stackTraces ?? false;
 
     for (const endpoint of options.endpoints) {
@@ -89,7 +82,6 @@ export function createRouter(options: RouterOptions): Router {
                         message: `No endpoint found for ${request.method} ${request.path}`,
                     },
                     status: 404,
-                    serializer,
                 });
             }
 
@@ -105,7 +97,6 @@ export function createRouter(options: RouterOptions): Router {
                         error: 'InvalidInput',
                         issues: input.issues,
                     },
-                    serializer,
                 });
             }
 
@@ -129,7 +120,6 @@ export function createRouter(options: RouterOptions): Router {
 
             return createJsonResponse({
                 body: result,
-                serializer,
                 // Cache only if no authorization header is not present
                 // We don't want to cache anything that is user-specific.
                 cache:
@@ -146,7 +136,6 @@ export function createRouter(options: RouterOptions): Router {
                         ...error.payload,
                     },
                     status: error.status,
-                    serializer,
                 });
             }
 
@@ -160,7 +149,6 @@ export function createRouter(options: RouterOptions): Router {
                         stack: stackTraces ? error.stack : undefined,
                     },
                     status: 500,
-                    serializer,
                 });
             }
 
@@ -170,7 +158,6 @@ export function createRouter(options: RouterOptions): Router {
                     message: 'Unknown error',
                 },
                 status: 500,
-                serializer,
             });
         }
     }

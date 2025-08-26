@@ -1,5 +1,10 @@
 import { createRule } from '@regle/core';
 
+import { translateToString } from '@nzyme/i18n';
+import type { Language } from '@nzyme/i18n';
+
+import * as l from './validators.loc.js';
+
 /**
  * Post code validator that checks if the value is a valid postal code for the given country
  * @param params - Parameters including country and optional message
@@ -7,10 +12,11 @@ import { createRule } from '@regle/core';
  */
 export const postCode = createRule({
     type: 'postCode',
-    validator(value: string | null | undefined, country: string | null | undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    validator(value: string | null | undefined, country: string | null | undefined, lang: Language) {
         return validatePostCode(value, country);
     },
-    message: 'Kod pocztowy jest niepoprawny.',
+    message: ({ $params: [_country, lang] }) => translateToString(l.invalidPostCode, lang),
 });
 
 /**

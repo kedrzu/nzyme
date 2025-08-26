@@ -1,17 +1,24 @@
 import { createRule } from '@regle/core';
 
+import { translateToString } from '@nzyme/i18n';
+import type { Language } from '@nzyme/i18n';
+
+import * as l from './validators.loc.js';
+
 /**
  * Maximum date validator that checks if the value is at most the specified maximum date
- * @param params - Parameters including maximum date and message
+ * @param params - Parameters including maximum date and language
  * @returns Regle validation rule
  */
-export function maxDateValidator(params: { max: Date; message: () => string }) {
-    return createRule({
-        type: 'maxDate',
-        validator: (value: unknown) => validateMaxDate(value, params.max),
-        message: params.message,
-    });
-}
+export const maxDateValidator = createRule({
+    type: 'maxDate',
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    validator: (value: unknown, maxDate: Date, lang: Language) => validateMaxDate(value, maxDate),
+    message: ({ $params: [maxDate, lang] }) =>
+        translateToString(l.maxDateExceeded, lang, {
+            maxDate: maxDate.toLocaleDateString(),
+        }),
+});
 
 /**
  * Validates if the value is at most the maximum date

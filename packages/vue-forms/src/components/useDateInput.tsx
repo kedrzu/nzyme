@@ -1,4 +1,4 @@
-import { h, ref, type ButtonHTMLAttributes, type SetupContext } from 'vue';
+import { h, ref, type ButtonHTMLAttributes, type InputHTMLAttributes, type SetupContext } from 'vue';
 
 import { useTranslate } from '@nzyme/vue-i18n';
 import { assignProps } from '@nzyme/utils';
@@ -12,6 +12,7 @@ const DATE_PROPS = defineProps({
     ...DATE_FIELD.props,
     label: String,
     name: String,
+    autocomplete: String,
     placeholder: String,
     tabindex: Number,
     min: Date,
@@ -44,13 +45,14 @@ function setupDateInput() {
         showCalendar,
     };
 
-    function DateInput(attrs: ButtonHTMLAttributes, ctx: SetupContext) {
+    function DateInput(attrs: InputHTMLAttributes, ctx: SetupContext) {
         return (
             <input
                 aria-label={props.label}
                 aria-readonly={props.readonly}
                 aria-required={props.required}
                 disabled={props.disabled}
+                autocomplete={props.autocomplete}
                 max={formatDate(props.max)}
                 min={formatDate(props.min)}
                 name={props.name}

@@ -1,17 +1,20 @@
 import { createRule } from '@regle/core';
 
+import { translateToString } from '@nzyme/i18n';
+import type { Language } from '@nzyme/i18n';
+
+import * as l from './validators.loc.js';
+
 /**
  * Regex validator that checks if the value matches a given regular expression
- * @param params - Parameters including regex pattern and optional message
  * @returns Regle validation rule
  */
-export function regexValidator(params: { message?: string | (() => string); regex: RegExp }) {
-    return createRule({
-        type: 'regex',
-        validator: (value: unknown) => validateRegex(value, params.regex),
-        message: params.message || 'Nieprawidłowy format.',
-    });
-}
+export const regexValidator = createRule({
+    type: 'regex',
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    validator: (value: unknown, regex: RegExp, lang: Language) => validateRegex(value, regex),
+    message: ({ $params: [_regex, lang] }) => translateToString(l.invalidFormat, lang),
+});
 
 /**
  * Validates if the value matches the regex pattern

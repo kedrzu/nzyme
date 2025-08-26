@@ -1,17 +1,23 @@
 import { createRule } from '@regle/core';
 
+import { translateToString } from '@nzyme/i18n';
+import type { Language } from '@nzyme/i18n';
+
+import * as l from './validators.loc.js';
+
 /**
  * Minimum date validator that checks if the value is at least the specified minimum date
- * @param params - Parameters including minimum date and message
  * @returns Regle validation rule
  */
-export function minDateValidator(params: { message: () => string; min: Date }) {
-    return createRule({
-        type: 'minDate',
-        validator: (value: unknown) => validateMinDate(value, params.min),
-        message: params.message,
-    });
-}
+export const minDateValidator = createRule({
+    type: 'minDate',
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    validator: (value: unknown, minDate: Date, lang: Language) => validateMinDate(value, minDate),
+    message: ({ $params: [minDate, lang] }) =>
+        translateToString(l.minDateNotMet, lang, {
+            minDate: minDate.toLocaleDateString(),
+        }),
+});
 
 /**
  * Validates if the value is at least the minimum date

@@ -1,17 +1,23 @@
 import { createRule } from '@regle/core';
 
+import { translateToString } from '@nzyme/i18n';
+import type { Language } from '@nzyme/i18n';
+
+import * as l from './validators.loc.js';
+
 /**
  * Minimum value validator that checks if the value is at least the specified minimum
- * @param params - Parameters including minimum value and optional message
  * @returns Regle validation rule
  */
-export function minValueValidator(params: { message?: () => string; min: number }) {
-    return createRule({
-        type: 'minValue',
-        validator: (value: unknown) => validateMinValue(value, params.min),
-        message: params.message || `Minimalna wartość to ${params.min}`,
-    });
-}
+export const minValueValidator = createRule({
+    type: 'minValue',
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    validator: (value: unknown, minValue: number, lang: Language) => validateMinValue(value, minValue),
+    message: ({ $params: [minValue, lang] }) =>
+        translateToString(l.minValueNotMet, lang, {
+            minValue: minValue.toString(),
+        }),
+});
 
 /**
  * Validates if the value is at least the minimum value

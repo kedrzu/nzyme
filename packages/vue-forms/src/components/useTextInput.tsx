@@ -1,5 +1,5 @@
 import { h } from 'vue';
-import type { HTMLAttributes } from 'vue';
+import type { HTMLAttributes, InputHTMLAttributes } from 'vue';
 
 import { assignProps } from '@nzyme/utils';
 import { defineProps, useProps } from '@nzyme/vue-utils';
@@ -42,7 +42,7 @@ function setupTextInput() {
         TextInput,
     };
 
-    function TextInput(attrs: HTMLAttributes) {
+    function TextInput(attrs: InputHTMLAttributes) {
         return (
             <input
                 {...attrs}

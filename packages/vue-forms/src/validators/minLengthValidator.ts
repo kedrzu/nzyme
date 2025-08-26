@@ -1,17 +1,23 @@
 import { createRule } from '@regle/core';
 
+import { translateToString } from '@nzyme/i18n';
+import type { Language } from '@nzyme/i18n';
+
+import * as l from './validators.loc.js';
+
 /**
  * Minimum length validator that checks if the value has at least the specified length
- * @param params - Parameters including minimum length and optional message
  * @returns Regle validation rule
  */
-export function minLengthValidator(params: { message?: () => string; min: number }) {
-    return createRule({
-        type: 'minLength',
-        validator: (value: unknown) => validateMinLength(value, params.min),
-        message: params.message || `Minimalna długość to ${params.min} znaków`,
-    });
-}
+export const minLengthValidator = createRule({
+    type: 'minLength',
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    validator: (value: unknown, minLength: number, lang: Language) => validateMinLength(value, minLength),
+    message: ({ $params: [minLength, lang] }) =>
+        translateToString(l.minLengthNotMet, lang, {
+            minLength: minLength.toString(),
+        }),
+});
 
 /**
  * Validates if the value has at least the minimum length

@@ -1,4 +1,4 @@
-import { computed, h } from 'vue';
+import { computed, h, type InputHTMLAttributes } from 'vue';
 import { IMaskComponent } from 'vue-imask';
 import type { FactoryArg } from 'imask';
 
@@ -61,7 +61,7 @@ export function defineMaskedInput<T = string>() {
             MaskedInput,
         };
 
-        function MaskedInput() {
+        function MaskedInput(attrs: InputHTMLAttributes) {
             return (
                 <IMaskComponent
                     aria-label={props.label}
@@ -81,6 +81,7 @@ export function defineMaskedInput<T = string>() {
                     title={props.label}
                     typed={typedValue.value}
                     placeholderChar={maskConfig.placeholderChar}
+                    {...attrs}
                 />
             );
         }

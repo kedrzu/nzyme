@@ -9,10 +9,7 @@ import { FormContext } from '../FormContext.js';
 
 export type FormField<T> = ReturnType<typeof createFormField<T>>;
 
-export type FormFieldModel<T> = T extends Record<string, unknown> | undefined
-    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      RegleStatus<T | undefined, any, any>
-    : RegleFieldStatus<T | null | undefined>;
+export type FormFieldModel<T> = RegleFieldStatus<T | null | undefined>;
 
 export type FormFieldDefinition<T> = ReturnType<typeof defineFormField<T>>;
 

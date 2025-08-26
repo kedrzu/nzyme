@@ -1,7 +1,11 @@
 import { createRule } from '@regle/core';
 import { isFilled } from '@regle/rules';
 
+import { translateToString } from '@nzyme/i18n';
+import type { Language } from '@nzyme/i18n';
 import { isEmailValid } from '@nzyme/validation';
+
+import * as l from './validators.loc.js';
 
 /**
  * Email validator that checks if the value is a valid email address
@@ -10,9 +14,11 @@ import { isEmailValid } from '@nzyme/validation';
  */
 export const email = createRule({
     type: 'email',
-    validator: validateEmail,
-    // TODO translation
-    message: 'Adres e-mail jest nieprawidłowy',
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    validator(value: unknown, lang: Language) {
+        return validateEmail(value);
+    },
+    message: ({ $params: [lang] }) => translateToString(l.invalidEmail, lang),
 });
 
 /**

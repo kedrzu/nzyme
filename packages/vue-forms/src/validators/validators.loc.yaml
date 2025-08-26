@@ -1,0 +1,35 @@
+invalidEmail:
+  pl: Adres e-mail jest nieprawidłowy
+  en: Email address is invalid
+
+minLengthNotMet:
+  pl: Minimalna długość to {minLength}_znaków
+  en: Minimum length is {minLength}_characters
+
+minValueNotMet:
+  pl: Minimalna wartość to {minValue}
+  en: Minimum value is {minValue}
+
+maxDateExceeded:
+  pl: Data nie może być późniejsza niż {maxDate}
+  en: Date cannot be later than {maxDate}
+
+minDateNotMet:
+  pl: Data nie może być wcześniejsza niż {minDate}
+  en: Date cannot be earlier than {minDate}
+
+invalidPhoneNumber:
+  pl: Numer telefonu jest niepoprawny
+  en: Phone number is invalid
+
+invalidPostCode:
+  pl: Kod pocztowy jest niepoprawny
+  en: Postal code is invalid
+
+invalidFormat:
+  pl: Nieprawidłowy format
+  en: Invalid format
+
+required:
+  pl: Pole jest wymagane
+  en: Field is required

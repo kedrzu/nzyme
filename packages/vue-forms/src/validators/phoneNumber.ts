@@ -1,13 +1,21 @@
 import { createRule } from '@regle/core';
 
+import { translateToString } from '@nzyme/i18n';
+import type { Language } from '@nzyme/i18n';
+
+import * as l from './validators.loc.js';
+
 /**
  * Phone number validator that checks if the value is a valid phone number
  * @returns Regle validation rule
  */
 export const phoneNumber = createRule({
     type: 'phoneNumber',
-    validator: validatePhoneNumber,
-    message: 'Numer telefonu jest niepoprawny.',
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    validator(value: string | null | undefined, lang: Language) {
+        return validatePhoneNumber(value);
+    },
+    message: ({ $params: [lang] }) => translateToString(l.invalidPhoneNumber, lang),
 });
 
 /**

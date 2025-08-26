@@ -1,9 +1,11 @@
-import { h, ref } from 'vue';
+import { h, ref, type ButtonHTMLAttributes, type SetupContext } from 'vue';
 
+import { useTranslate } from '@nzyme/vue-i18n';
 import { assignProps } from '@nzyme/utils';
 import { defineProps, useProps } from '@nzyme/vue-utils';
 
 import { defineFormField } from './defineFormField.js';
+import * as l from './useDateInput.loc.js';
 
 const DATE_FIELD = defineFormField<Date>(Date);
 const DATE_PROPS = defineProps({
@@ -32,15 +34,17 @@ function setupDateInput() {
     const props = useProps(DATE_PROPS);
     const field = DATE_FIELD.create({ props });
     const input = ref<HTMLInputElement>();
+    const translate = useTranslate();
 
     return {
         field,
         input,
         DateInput,
+        CalendarButton,
         showCalendar,
     };
 
-    function DateInput() {
+    function DateInput(attrs: ButtonHTMLAttributes, ctx: SetupContext) {
         return (
             <input
                 aria-label={props.label}
@@ -60,7 +64,25 @@ function setupDateInput() {
                 title={props.label}
                 type="date"
                 value={formatDate(field.value)}
+                {...attrs}
             />
+        );
+    }
+
+    function CalendarButton(attrs: ButtonHTMLAttributes, ctx: SetupContext) {
+        const slot = ctx.slots.default;
+
+        return (
+            <button
+                type="button"
+                onMousedown={showCalendar}
+                aria-label={translate(l.showCalendar)}
+                aria-expanded="false"
+                aria-haspopup="dialog"
+                {...attrs}
+            >
+                {slot && <slot />}
+            </button>
         );
     }
 
@@ -75,6 +97,10 @@ function setupDateInput() {
     }
 
     function showCalendar() {
+        if (props.disabled || props.readonly) {
+            return;
+        }
+
         input.value?.showPicker();
     }
 

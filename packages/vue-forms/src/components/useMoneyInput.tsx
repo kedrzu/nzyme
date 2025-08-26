@@ -1,91 +1,65 @@
-import { computed, h } from 'vue';
-import { IMaskComponent } from 'vue-imask';
+import { computed } from 'vue';
 
 import { CURRENCIES, denormalizeMoney, normalizeMoney } from '@nzyme/money';
 import type { Currency } from '@nzyme/money';
 import { assignProps } from '@nzyme/utils';
-import { defineProps, useProps } from '@nzyme/vue-utils';
 
-import { defineFormField } from './defineFormField.js';
+import { defineMaskedInput, type MaskedInputMaskConfig } from './useMaskedInput.jsx';
 
 export type MoneyInputOptions = {
     currency: Currency;
 };
 
-const MONEY_FIELD = defineFormField(Number);
-const MONEY_PROPS = defineProps({
-    ...MONEY_FIELD.props,
-    label: String,
-    placeholder: String,
-    tabindex: Number,
-});
+const MONEY_INPUT = defineMaskedInput<number>();
 
 /**
- *
+ * Creates a money input component with currency formatting and validation.
+ * This is a specialized version of useMaskedInput configured for money values.
  */
 export const useMoneyInput = assignProps(setupMoneyInput, {
-    props: MONEY_PROPS,
-    emits: MONEY_FIELD.emits,
+    props: MONEY_INPUT.props,
+    emits: MONEY_INPUT.emits,
 });
 
 /**
+ * Sets up a money input with currency-specific formatting.
  *
+ * @param options - Configuration options for the money input
  * @__NO_SIDE_EFFECTS__
  */
 function setupMoneyInput(options: MoneyInputOptions) {
-    const props = useProps(MONEY_PROPS);
-    const field = MONEY_FIELD.create({ props });
-
-    const value = computed(() => {
-        const money = props.modelValue;
-        if (money == null) {
-            return 0;
-        }
-
-        return denormalizeMoney(money, options.currency);
-    });
-
     const currency = computed(() => CURRENCIES[options.currency]);
 
-    const mask = computed(() => `num\u00A0${currency.value.symbol}`);
-    const blocks = computed(() => ({
-        num: {
-            mask: Number,
-            thousandsSeparator: '\u00A0',
-            radix: currency.value.fractionSymbol,
-            scale: currency.value.fractionDigits,
+    const maskConfig = computed<MaskedInputMaskConfig>(() => ({
+        mask: `num\u00A0${currency.value.symbol}`,
+        blocks: {
+            num: {
+                mask: Number,
+                thousandsSeparator: '\u00A0',
+                radix: currency.value.fractionSymbol,
+                scale: currency.value.fractionDigits,
+            },
         },
+        lazy: false,
+        inputmode: 'numeric',
     }));
 
+    const maskedInput = MONEY_INPUT({
+        maskConfig: maskConfig.value,
+        toModelValue: (typedValue: unknown) => {
+            const value = typedValue as number | null;
+            return value != null ? normalizeMoney(value, options.currency) : null;
+        },
+        toTypedValue: (modelValue: number | null | undefined) => {
+            if (modelValue == null) {
+                return 0;
+            }
+            return denormalizeMoney(modelValue, options.currency);
+        },
+    });
+
     return {
-        field,
-        MoneyInput,
+        field: maskedInput.field,
+        MoneyInput: maskedInput.MaskedInput,
     };
-
-    function MoneyInput() {
-        return (
-            <IMaskComponent
-                aria-label={props.label}
-                aria-readonly={props.readonly}
-                aria-required={props.required}
-                blocks={blocks.value}
-                disabled={props.disabled}
-                inputmode="numeric"
-                lazy={false}
-                mask={mask.value}
-                onBlur={field.inputAttrs.onBlur}
-                onFocus={field.inputAttrs.onFocus}
-                onUpdate:typed={onInput}
-                placeholder={props.placeholder}
-                readonly={props.readonly}
-                tabindex={props.tabindex}
-                title={props.label}
-                typed={value.value}
-            />
-        );
-    }
-
-    function onInput(value: number | null) {
-        field.value = value != null ? normalizeMoney(value, options.currency) : null;
-    }
 }

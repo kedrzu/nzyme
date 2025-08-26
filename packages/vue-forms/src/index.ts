@@ -1,4 +1,5 @@
 export * from './components/defineFormField.js';
+export * from './components/useMaskedInput.jsx';
 export * from './components/Form.js';
 export * from './components/TextArea.js';
 export * from './components/useButton.js';

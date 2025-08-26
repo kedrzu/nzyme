@@ -45,7 +45,6 @@ function setupPasswordInput() {
     function PasswordInput(attrs: HTMLAttributes) {
         return (
             <input
-                {...attrs}
                 aria-label={props.label}
                 aria-readonly={props.readonly}
                 aria-required={props.required}
@@ -62,19 +61,21 @@ function setupPasswordInput() {
                 title={props.label}
                 type={inputType.value}
                 value={field.value}
+                {...attrs}
             />
         );
     }
 
     function ShowPasswordButton(attrs: ButtonHTMLAttributes, ctx: SetupContext) {
+        const slot = ctx.slots.default;
         return (
             <button
-                {...attrs}
                 onClick={togglePassword}
                 tabindex="-1"
                 type="button"
+                {...attrs}
             >
-                {ctx.slots.default?.()}
+                {slot && <slot />}
             </button>
         );
     }

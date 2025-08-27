@@ -8,6 +8,7 @@ export * from './defineProps.js';
 export * from './directives/vAutofocus.js';
 export * from './directives/vFocus.js';
 export * from './directives/vOnClick.js';
+export * from './directives/vOnMounted.js';
 export * from './directives/vScrollIntoView.js';
 export * from './directives/vShow.js';
 export * from './directives/vUid.js';

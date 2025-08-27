@@ -14,5 +14,5 @@ export function getLastItem<T>(array: Immutable<T[]>) {
         throw new Error('Collection is empty');
     }
 
-    return array[array.length - 1];
+    return array[array.length - 1]!;
 }

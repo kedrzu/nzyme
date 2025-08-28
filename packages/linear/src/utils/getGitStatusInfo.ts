@@ -23,12 +23,33 @@ export interface GitStatusInfo {
      * Detailed breakdown of changes.
      */
     changes: {
+        /**
+         * Files with merge conflicts.
+         */
         conflicted: number;
+        /**
+         * New files that have been created.
+         */
         created: number;
+        /**
+         * Files that have been deleted.
+         */
         deleted: number;
+        /**
+         * Files that have been modified.
+         */
         modified: number;
+        /**
+         * Files that have been renamed.
+         */
         renamed: number;
+        /**
+         * Files staged for commit.
+         */
         staged: number;
+        /**
+         * Files not tracked by git.
+         */
         untracked: number;
     };
 }
@@ -43,17 +64,29 @@ export async function getGitStatusInfo(): Promise<GitStatusInfo> {
     try {
         const status = await git.status();
 
+        // Collect detailed breakdown as requested
         const changes = {
+            conflicted: status.conflicted.length,
+            created: status.created.length,
+            deleted: status.deleted.length,
             modified: status.modified.length,
+            renamed: status.renamed.length,
             staged: status.staged.length,
             untracked: status.not_added.length,
-            deleted: status.deleted.length,
-            created: status.created.length,
-            renamed: status.renamed.length,
-            conflicted: status.conflicted.length,
         };
 
-        const totalChanges = Object.values(changes).reduce((sum, count) => sum + count, 0);
+        // Calculate total without double counting staged files
+        // Total = all unique files (staged + unstaged + untracked + conflicted)
+        const allFiles = new Set([
+            ...status.conflicted,
+            ...status.created,
+            ...status.deleted,
+            ...status.modified,
+            ...status.not_added,
+            ...status.renamed.map(r => r.from || r.to),
+            ...status.staged,
+        ]);
+        const totalChanges = allFiles.size;
         const hasUncommittedChanges = totalChanges > 0;
 
         const changeTypes: string[] = [];
@@ -63,9 +96,6 @@ export async function getGitStatusInfo(): Promise<GitStatusInfo> {
         if (changes.staged > 0) {
             changeTypes.push(`${changes.staged} staged`);
         }
-        if (changes.untracked > 0) {
-            changeTypes.push(`${changes.untracked} untracked`);
-        }
         if (changes.deleted > 0) {
             changeTypes.push(`${changes.deleted} deleted`);
         }
@@ -74,6 +104,9 @@ export async function getGitStatusInfo(): Promise<GitStatusInfo> {
         }
         if (changes.renamed > 0) {
             changeTypes.push(`${changes.renamed} renamed`);
+        }
+        if (changes.untracked > 0) {
+            changeTypes.push(`${changes.untracked} untracked`);
         }
         if (changes.conflicted > 0) {
             changeTypes.push(`${changes.conflicted} conflicted`);

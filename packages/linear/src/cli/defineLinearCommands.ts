@@ -155,7 +155,7 @@ function defineTaskInfoCommand(options: LinearCommandsOptions) {
                 this.logger.info(`🌿 Branch Name: ${chalk.cyan(currentBranch)}`);
 
                 if (pr) {
-                    this.logger.info(`📎 PR URL: ${chalk.underline(pr.html_url)}`);
+                    this.logger.info(`📎 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
                     this.logger.info(
                         `📊 PR Status: ${pr.draft ? chalk.yellow('Draft') : chalk.green('Ready for review')}`,
                     );
@@ -289,7 +289,7 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                     }
 
                     this.logger.info(`✅ Created draft PR: ${chalk.blue(result.pr.title)} (#${result.pr.number})`);
-                    this.logger.info(`🔗 PR URL: ${chalk.underline(result.pr.html_url)}`);
+                    this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(result.pr.html_url))}`);
                     this.logger.info(`🎉 Successfully created and checked out new branch for ${chalk.bold(issueId)}`);
                 }
 
@@ -356,7 +356,7 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
 
                 if (!pr.draft) {
                     this.logger.info(`🎉 PR #${pr.number} is already ready for review!`);
-                    this.logger.info(`🔗 PR URL: ${chalk.underline(pr.html_url)}`);
+                    this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
                     return;
                 }
 
@@ -365,7 +365,7 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                 await convertPrToReady(octokit, githubConfig, pr.number);
 
                 this.logger.info(`🎉 Successfully converted PR #${pr.number} to ready for review!`);
-                this.logger.info(`🔗 PR URL: ${chalk.underline(pr.html_url)}`);
+                this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to push task to review: ${errorMessage}`);

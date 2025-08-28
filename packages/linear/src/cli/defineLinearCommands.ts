@@ -285,8 +285,8 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
                         name: 'projectChoice',
                         message: 'Select a project for the new task:',
                         choices: projects.map(project => ({
-                            name: `${chalk.bold(project.name)} ${formatProjectStatus(project.state)}`,
-                            value: project.id,
+                            name: project.id,
+                            message: `${chalk.bold(project.name)} ${formatProjectStatus(project.state)}`,
                         })),
                     });
 
@@ -311,6 +311,7 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
                 }
 
                 this.logger.info(`📝 Creating new Linear task: ${chalk.green(taskTitle)}`);
+                this.logger.info(`🏗️  Using project ID: ${chalk.yellow(selectedProjectId)}`);
 
                 // Create the Linear issue
                 const issueId = await createLinearIssue(linearClient, {

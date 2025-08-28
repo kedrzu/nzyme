@@ -392,7 +392,8 @@ function escapeCharacters(text: string) {
     return text
         .replace(ESCAPE_REGEX, '$1')
         .replace(/__/g, '\u00A0') // Replace __ with normal unbreakable space
-        .replace(/_/g, '\u202F'); // Replace _ with narrow unbreakable space
+        .replace(/_/g, '\u202F')
+        .replace(/--/g, '\u2011'); // Replace -- with narrow unbreakable hyphen
 }
 
 /**

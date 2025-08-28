@@ -1,22 +1,23 @@
 import chalk from 'chalk';
+import enquirer from 'enquirer';
 
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
 
-import { checkoutExistingBranch } from '../utils/checkoutExistingBranch.js';
 import { checkUnpushedCommits } from '../utils/checkUnpushedCommits.js';
 import { convertPrToReady } from '../utils/convertPrToReady.js';
-import { createBranchAndPr } from '../utils/createBranchAndPr.js';
 import { createLinearClient } from '../utils/createLinearClient.js';
+import { createLinearIssue } from '../utils/createLinearIssue.js';
 import { createOctokitClient } from '../utils/createOctokitClient.js';
 import { extractTaskIdFromBranch } from '../utils/extractTaskIdFromBranch.js';
 import { findMatchingPr } from '../utils/findMatchingPr.js';
+import { formatProjectStatus } from '../utils/formatProjectStatus.js';
 import { getCurrentBranch } from '../utils/getCurrentBranch.js';
 import { getGitStatusInfo } from '../utils/getGitStatusInfo.js';
-import { applyStashedChanges, handleBranchSelection } from '../utils/handleBranchSelection.js';
+import { getNonCompleteProjects } from '../utils/getProjects.js';
 import { handleReadyPreparation } from '../utils/handleReadyPreparation.js';
-import { handleTaskAssignment } from '../utils/handleTaskAssignment.js';
 import { parseTaskIdentifier } from '../utils/parseTaskIdentifier.js';
+import { switchToTask } from '../utils/switchToTask.js';
 import { syncBaseBranch } from '../utils/syncBaseBranch.js';
 
 /**
@@ -95,6 +96,7 @@ export function defineLinearCommands(options: LinearCommandsOptions): CommandCla
         //
         defineTaskInfoCommand(options),
         defineTaskStartCommand(options),
+        defineTaskNewCommand(options),
         defineTaskReadyCommand(options),
         defineTaskRefreshCommand(options),
     ];
@@ -213,91 +215,129 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
 
                 this.logger.info(`📝 Found task: ${chalk.green(issueData.title)}`);
 
-                // Create GitHub client
-                const octokit = createOctokitClient(githubConfig);
-
-                // Handle task assignment and search for existing PR in parallel
-                this.logger.info(`🔍 Searching for existing GitHub PR...`);
-                const [, existingPr] = await Promise.all([
-                    handleTaskAssignment(linearClient, issueData, this.logger),
-                    findMatchingPr(octokit, githubConfig, issueId),
+                // Create GitHub client and get base branch
+                const [octokit, baseBranch] = await Promise.all([
+                    Promise.resolve(createOctokitClient(githubConfig)),
+                    getBaseBranch(options),
                 ]);
 
-                if (existingPr) {
-                    // Checkout existing PR branch
-                    this.logger.info(`✅ Found existing PR: ${chalk.blue(existingPr.title)} (#${existingPr.number})`);
-                    this.logger.info(`🔄 Checking out branch: ${chalk.cyan(existingPr.head.ref)}`);
-
-                    await checkoutExistingBranch(existingPr.head.ref, issueId, this.logger);
-
-                    // Sync with base branch after checkout
-                    const baseBranch = await getBaseBranch(options);
-                    if (baseBranch) {
-                        this.logger.info(`🔄 Synchronizing with base branch ${chalk.cyan(baseBranch)}`);
-                        await syncBaseBranch(baseBranch, this.logger);
-                    }
-
-                    this.logger.info(`🎉 Successfully checked out existing branch for ${chalk.bold(issueId)}`);
-                } else {
-                    // Create new branch and PR
-                    this.logger.info(`📝 No existing PR found. Creating new branch and draft PR...`);
-
-                    // Get current branch and base branch in parallel
-                    const [currentBranch, baseBranch] = await Promise.all([getCurrentBranch(), getBaseBranch(options)]);
-
-                    if (!baseBranch) {
-                        throw new UsageError('Base branch is not configured');
-                    }
-
-                    // Handle branch selection and stashing if needed
-                    const branchResult = await handleBranchSelection(currentBranch, baseBranch, issueId, this.logger);
-
-                    const branchName =
-                        issueData.branchName ||
-                        `${issueId.toLowerCase()}-${issueData.title
-                            .toLowerCase()
-                            .replace(/[^a-z0-9]/g, '-')
-                            .replace(/-+/g, '-')
-                            .slice(0, 50)}`;
-
-                    // Get project information for PR title
-                    const project = await issueData.project;
-                    const projectName = project?.name || '';
-                    const prTitle = projectName
-                        ? `[${issueId}][${projectName}] ${issueData.title}`
-                        : `[${issueId}] ${issueData.title}`;
-
-                    this.logger.info(`🌿 Creating branch: ${chalk.cyan(branchName)}`);
-
-                    const selectedBaseBranch = branchResult.useBaseBranch ? baseBranch : currentBranch;
-
-                    const result = await createBranchAndPr(
-                        octokit,
-                        githubConfig,
-                        branchName,
-                        prTitle,
-                        issueData.description || '',
-                        issueId,
-                        issueData.url,
-                        issueData.title,
-                        selectedBaseBranch,
-                    );
-
-                    // Apply stashed changes if any
-                    if (branchResult.stashName) {
-                        await applyStashedChanges(branchResult.stashName, this.logger);
-                    }
-
-                    this.logger.info(`✅ Created draft PR: ${chalk.blue(result.pr.title)} (#${result.pr.number})`);
-                    this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(result.pr.html_url))}`);
-                    this.logger.info(`🎉 Successfully created and checked out new branch for ${chalk.bold(issueId)}`);
-                }
-
-                // Show task URL for reference
-                this.logger.info(`🔗 Linear task: ${chalk.underline(issueData.url)}`);
+                // Use the common switch to task utility
+                await switchToTask({
+                    issueId,
+                    linearClient,
+                    octokit,
+                    githubConfig,
+                    logger: this.logger,
+                    baseBranch,
+                });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to start work on task ${this.taskIdentifier}: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
+}
+
+function defineTaskNewCommand(options: LinearCommandsOptions) {
+    return class TaskNewCommand extends Command {
+        static override paths = getCommandPaths(options, 'task', 'new');
+        static override usage = Command.Usage({
+            category: 'Linear',
+            description: 'Create a new Linear task and start working on it',
+            details:
+                'Creates a new task in a Linear project, then automatically starts working on it by creating a branch and PR',
+            examples: [
+                ['Create new task with prompts', 'task new'],
+                ['Create task with title', 'task new "Fix authentication bug"'],
+                ['Create task with project and title', 'task new "Fix auth bug" --project PROJECT_ID'],
+            ],
+        });
+
+        title = Option.String({ required: false });
+        projectId = Option.String('--project, -p', { required: false });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            // Load both configs in parallel
+            const [linearConfig, githubConfig] = await Promise.all([
+                getLinearConfig(options),
+                getGitHubConfig(options),
+            ]);
+
+            try {
+                const linearClient = createLinearClient(linearConfig);
+                let selectedProjectId = this.projectId;
+                let taskTitle = this.title;
+
+                // If no project ID provided, prompt user to select one
+                if (!selectedProjectId) {
+                    this.logger.info('🔍 Loading available projects...');
+                    const projects = await getNonCompleteProjects(linearClient);
+
+                    if (projects.length === 0) {
+                        throw new UsageError('No active projects found in your Linear workspace');
+                    }
+
+                    const { projectChoice } = await enquirer.prompt<{ projectChoice: string }>({
+                        type: 'select',
+                        name: 'projectChoice',
+                        message: 'Select a project for the new task:',
+                        choices: projects.map(project => ({
+                            name: `${chalk.bold(project.name)} ${formatProjectStatus(project.state)}`,
+                            value: project.id,
+                        })),
+                    });
+
+                    selectedProjectId = projectChoice;
+                }
+
+                // If no title provided, prompt user to enter one
+                if (!taskTitle) {
+                    const { titleInput } = await enquirer.prompt<{ titleInput: string }>({
+                        type: 'input',
+                        name: 'titleInput',
+                        message: 'Enter the task title:',
+                        validate: (input: string) => {
+                            if (!input.trim()) {
+                                return 'Task title cannot be empty';
+                            }
+                            return true;
+                        },
+                    });
+
+                    taskTitle = titleInput.trim();
+                }
+
+                this.logger.info(`📝 Creating new Linear task: ${chalk.green(taskTitle)}`);
+
+                // Create the Linear issue
+                const issueId = await createLinearIssue(linearClient, {
+                    title: taskTitle,
+                    projectId: selectedProjectId,
+                });
+
+                this.logger.info(`✅ Created Linear task: ${chalk.bold(issueId)}`);
+
+                // Create GitHub client and get base branch
+                const [octokit, baseBranch] = await Promise.all([
+                    Promise.resolve(createOctokitClient(githubConfig)),
+                    getBaseBranch(options),
+                ]);
+
+                // Switch to the newly created task
+                await switchToTask({
+                    issueId,
+                    linearClient,
+                    octokit,
+                    githubConfig,
+                    logger: this.logger,
+                    baseBranch,
+                });
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to create new task: ${errorMessage}`);
                 throw error;
             }
         }

@@ -1,5 +1,11 @@
 export { defineLinearCommands } from './cli/defineLinearCommands.js';
 export type { GitHubConfig, LinearCommandsOptions, LinearConfig } from './cli/defineLinearCommands.js';
+export { createLinearIssue } from './utils/createLinearIssue.js';
+export type { CreateLinearIssueParams } from './utils/createLinearIssue.js';
 export { extractTaskIdFromBranch } from './utils/extractTaskIdFromBranch.js';
 export { createIssueIdRegex } from './utils/findMatchingPr.js';
 export { getCurrentBranch } from './utils/getCurrentBranch.js';
+export { getNonCompleteProjects } from './utils/getProjects.js';
+export type { ProjectInfo } from './utils/getProjects.js';
+export { switchToTask } from './utils/switchToTask.js';
+export type { SwitchToTaskParams } from './utils/switchToTask.js';

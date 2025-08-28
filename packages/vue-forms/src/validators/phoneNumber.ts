@@ -12,8 +12,12 @@ import * as l from './validators.loc.js';
 export const phoneNumber = createRule({
     type: 'phoneNumber',
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    validator(value: string | null | undefined, lang: Language) {
-        return validatePhoneNumber(value);
+    async validator(value: string | null | undefined, lang: Language) {
+        if (!value?.trim()) {
+            return true;
+        }
+
+        return await validatePhoneNumber(value);
     },
     message: ({ $params: [lang] }) => translateToString(l.invalidPhoneNumber, lang),
 });

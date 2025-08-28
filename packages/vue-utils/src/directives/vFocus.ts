@@ -19,6 +19,6 @@ function focusIf(el: ComponentPublicInstance | Element | undefined, value: boole
 
     const element = el instanceof Element ? el : (el.$el as Element | undefined);
     if (element instanceof HTMLElement) {
-        setTimeout(() => element.focus());
+        setTimeout(() => element.focus(), 50);
     }
 }

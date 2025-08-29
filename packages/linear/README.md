@@ -55,6 +55,25 @@ task 123
 task https://linear.app/your-team/issue/SIG-123/task-title
 ```
 
+#### `task list` - List and switch to active tasks
+
+```bash
+# Show interactive list of tasks in progress and in review assigned to you
+task list
+```
+
+This command will:
+
+1. Fetch all Linear tasks assigned to you with status "In Progress" or "In Review"
+2. Sort tasks by creation date (newest first)
+3. Look up associated GitHub pull requests for each task
+4. Display them in an interactive selection menu with:
+    - Task ID and status (color-coded: yellow for "In Progress", green for "In Review")
+    - Task title (truncated if long)
+    - Associated PR number (if available)
+    - "[Current]" indicator for the task matching your current branch
+5. Switch to the selected task using the same logic as `task <id>`
+
 #### `task push` - Convert current task to ready for review
 
 ```bash

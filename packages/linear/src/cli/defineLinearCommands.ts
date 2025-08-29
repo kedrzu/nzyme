@@ -99,6 +99,7 @@ export function defineLinearCommands(options: LinearCommandsOptions): CommandCla
         defineTaskNewCommand(options),
         defineTaskReadyCommand(options),
         defineTaskRefreshCommand(options),
+        defineTaskListCommand(options),
     ];
 }
 
@@ -203,17 +204,9 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
             try {
                 // Parse task identifier to get the issue ID
                 const issueId = parseTaskIdentifier(this.taskIdentifier, linearConfig.defaultPrefix);
-                this.logger.info(`🔍 Looking for Linear task: ${chalk.bold(issueId)}`);
 
                 // Get Linear issue details with team information
                 const linearClient = createLinearClient(linearConfig);
-                const issueData = await linearClient.issue(issueId);
-
-                if (!issueData) {
-                    throw new UsageError(`Linear task ${issueId} not found`);
-                }
-
-                this.logger.info(`📝 Found task: ${chalk.green(issueData.title)}`);
 
                 // Create GitHub client and get base branch
                 const [octokit, baseBranch] = await Promise.all([
@@ -464,6 +457,153 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to refresh task: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
+}
+
+function defineTaskListCommand(options: LinearCommandsOptions) {
+    return class TaskListCommand extends Command {
+        static override paths = getCommandPaths(options, 'task', 'list');
+        static override usage = Command.Usage({
+            category: 'Linear',
+            description: 'List and select from tasks in progress and in review assigned to you',
+            details:
+                'Shows all currently active tasks (In Progress and In Review) assigned to you, along with their associated GitHub PRs, in an interactive selection menu',
+            examples: [['Show task list and switch to selected task', 'task list']],
+        });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            // Load both configs in parallel
+            const [linearConfig, githubConfig] = await Promise.all([
+                getLinearConfig(options),
+                getGitHubConfig(options),
+            ]);
+
+            try {
+                // Create clients in parallel
+                const [linearClient, octokit] = await Promise.all([
+                    Promise.resolve(createLinearClient(linearConfig)),
+                    Promise.resolve(createOctokitClient(githubConfig)),
+                ]);
+
+                this.logger.info('🔍 Fetching your active tasks...');
+
+                // Get current user and their assigned issues in progress and review
+                const currentUser = await linearClient.viewer;
+                const assignedIssues = await currentUser.assignedIssues({
+                    filter: {
+                        state: {
+                            name: {
+                                in: ['In Progress', 'In Review'],
+                            },
+                        },
+                    },
+                });
+
+                const issues = assignedIssues.nodes;
+
+                if (issues.length === 0) {
+                    this.logger.info('📝 No active tasks found (In Progress or In Review)');
+                    return;
+                }
+
+                // Sort tasks by created date (newest first)
+                const sortedIssues = issues.sort((a, b) => {
+                    const dateA = new Date(a.createdAt);
+                    const dateB = new Date(b.createdAt);
+                    return dateB.getTime() - dateA.getTime();
+                });
+
+                this.logger.info(
+                    `✅ Found ${chalk.bold(sortedIssues.length.toString())} active task${sortedIssues.length === 1 ? '' : 's'}`,
+                );
+
+                // Get current branch to mark which task is currently active
+                const currentBranch = await getCurrentBranch();
+                let currentTaskId: string | null = null;
+                try {
+                    currentTaskId = extractTaskIdFromBranch(currentBranch);
+                } catch {
+                    // No task ID in current branch, that's fine
+                }
+
+                // Fetch PR information for each task in parallel
+                this.logger.info('🔍 Looking for associated GitHub PRs...');
+                const tasksWithPrInfo = await Promise.all(
+                    sortedIssues.map(async issue => {
+                        const pr = await findMatchingPr(octokit, githubConfig, issue.identifier);
+                        return {
+                            issue,
+                            pr,
+                        };
+                    }),
+                );
+
+                // Format choices for enquirer - get state information for each task
+                const choices = await Promise.all(
+                    tasksWithPrInfo.map(async ({ issue, pr }) => {
+                        const state = await issue.state;
+                        const stateName = state?.name || 'Unknown';
+                        const stateColor = stateName === 'In Progress' ? chalk.yellow : chalk.green;
+                        const prInfo = pr ? chalk.green(`#${pr.number}`) : chalk.gray('No PR');
+                        const isCurrentTask = currentTaskId === issue.identifier;
+                        const currentIndicator = isCurrentTask ? chalk.cyan('[Current]') : '';
+
+                        const messageParts = [
+                            chalk.bold(issue.identifier),
+                            stateColor(`[${stateName}]`),
+                            chalk.white(issue.title.slice(0, 60) + (issue.title.length > 60 ? '...' : '')),
+                            chalk.gray('PR:'),
+                            prInfo,
+                        ];
+
+                        if (currentIndicator) {
+                            messageParts.push(currentIndicator);
+                        }
+
+                        return {
+                            name: issue.identifier,
+                            message: messageParts.join(' '),
+                        };
+                    }),
+                );
+
+                // Show selection prompt
+                const { selectedTaskId } = await enquirer.prompt<{ selectedTaskId: string }>({
+                    type: 'select',
+                    name: 'selectedTaskId',
+                    message: 'Select a task to switch to:',
+                    choices,
+                });
+
+                // Find the selected task data
+                const selectedTaskData = tasksWithPrInfo.find(({ issue }) => issue.identifier === selectedTaskId);
+
+                if (!selectedTaskData) {
+                    throw new Error(`Task ${selectedTaskId} not found`);
+                }
+
+                this.logger.info(`🎯 Switching to task: ${chalk.bold(selectedTaskId)}`);
+
+                // Get base branch
+                const baseBranch = await getBaseBranch(options);
+
+                // Use the common switch to task utility
+                await switchToTask({
+                    issueId: selectedTaskId,
+                    linearClient,
+                    octokit,
+                    githubConfig,
+                    logger: this.logger,
+                    baseBranch,
+                });
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to list tasks: ${errorMessage}`);
                 throw error;
             }
         }

@@ -46,5 +46,6 @@ export * from './useInstance.js';
 export * from './useInstance.js';
 export * from './useIntersectionObserver.js';
 export * from './useProps.js';
+export * from './useSmsOtp.js';
 export * from './useSwipeHorizontal.js';
 export * from './useVirtualHistory.js';

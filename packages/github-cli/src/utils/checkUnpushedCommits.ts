@@ -22,7 +22,6 @@ export interface UnpushedCommitsResult {
 
 /**
  * Check if there are unpushed commits in the current branch.
- * @__NO_SIDE_EFFECTS__
  */
 export async function checkUnpushedCommits(): Promise<UnpushedCommitsResult> {
     const git = simpleGit();

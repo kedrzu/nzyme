@@ -1,4 +1,3 @@
-import type { LinearClient } from '@linear/sdk';
 import type { Octokit } from '@octokit/rest';
 import chalk from 'chalk';
 
@@ -14,21 +13,27 @@ import {
 import type { GitHubConfig } from '@nzyme/github-cli';
 import type { Logger } from '@nzyme/logging';
 
-import { handleTaskAssignment } from './handleTaskAssignment.js';
+import type { SentryApiClient } from './createSentryClient.js';
+import { getSentryIssue } from './getSentryIssue.js';
 
 /**
- * Parameters for switching to a task.
+ * Parameters for switching to a Sentry issue.
  */
-export interface SwitchToTaskParams {
+export interface SwitchToSentryIssueParams {
     /**
-     * The Linear issue ID (e.g., "SIG-123").
+     * The Sentry issue ID.
      */
     issueId: string;
 
     /**
-     * Linear client instance.
+     * Sentry organization slug.
      */
-    linearClient: LinearClient;
+    organizationSlug: string;
+
+    /**
+     * Sentry API client instance.
+     */
+    sentryClient: SentryApiClient;
 
     /**
      * GitHub Octokit client instance.
@@ -52,36 +57,33 @@ export interface SwitchToTaskParams {
 }
 
 /**
- * Switch to a task by checking out existing branch or creating new branch with PR.
- * This contains the common logic used by both "task start" and "task new" commands.
+ * Switch to a Sentry issue by checking out existing branch or creating new branch with PR.
+ * This contains the common logic used by both "issue start" and similar commands.
  */
-export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
-    const { issueId, linearClient, octokit, githubConfig, logger, baseBranch } = params;
+export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Promise<void> {
+    const { issueId, organizationSlug, sentryClient, octokit, githubConfig, logger, baseBranch } = params;
 
-    logger.info(`🔍 Looking for Linear task: ${chalk.bold(issueId)}`);
+    logger.info(`🔍 Looking for Sentry issue: ${chalk.bold(issueId)}`);
 
-    // Get Linear issue details
-    const issueData = await linearClient.issue(issueId);
+    // Get Sentry issue details
+    const issueData = await getSentryIssue(sentryClient, organizationSlug, issueId);
 
     if (!issueData) {
-        throw new Error(`Linear task ${issueId} not found`);
+        throw new Error(`Sentry issue ${issueId} not found`);
     }
 
-    logger.info(`📝 Found task: ${chalk.green(issueData.title)}`);
+    logger.info(`📝 Found issue: ${chalk.green(issueData.title)}`);
 
-    // Handle task assignment and search for existing PR in parallel
+    // Search for existing PR
     logger.info(`🔍 Searching for existing GitHub PR...`);
-    const [, existingPr] = await Promise.all([
-        handleTaskAssignment(linearClient, issueData, logger),
-        findMatchingPr(octokit, githubConfig, issueId),
-    ]);
+    const existingPr = await findMatchingPr(octokit, githubConfig, issueData.shortId);
 
     if (existingPr) {
         // Checkout existing PR branch
         logger.info(`✅ Found existing PR: ${chalk.blue(existingPr.title)} (#${existingPr.number})`);
         logger.info(`🔄 Checking out branch: ${chalk.cyan(existingPr.head.ref)}`);
 
-        await checkoutExistingBranch(existingPr.head.ref, issueId, logger);
+        await checkoutExistingBranch(existingPr.head.ref, issueData.shortId, logger);
 
         // Sync with base branch after checkout
         if (baseBranch) {
@@ -89,7 +91,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
             await syncBaseBranch(baseBranch, logger);
         }
 
-        logger.info(`🎉 Successfully checked out existing branch for ${chalk.bold(issueId)}`);
+        logger.info(`🎉 Successfully checked out existing branch for ${chalk.bold(issueData.shortId)}`);
     } else {
         // Create new branch and PR
         logger.info(`📝 No existing PR found. Creating new branch and draft PR...`);
@@ -102,22 +104,16 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
         }
 
         // Handle branch selection and stashing if needed
-        const branchResult = await handleBranchSelection(currentBranch, baseBranch, issueId, logger);
+        const branchResult = await handleBranchSelection(currentBranch, baseBranch, issueData.shortId, logger);
 
-        const branchName =
-            issueData.branchName ||
-            `${issueId.toLowerCase()}-${issueData.title
-                .toLowerCase()
-                .replace(/[^a-z0-9]/g, '-')
-                .replace(/-+/g, '-')
-                .slice(0, 50)}`;
+        const branchName = `${issueData.shortId.toLowerCase()}-${issueData.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '-')
+            .replace(/-+/g, '-')
+            .slice(0, 50)}`;
 
-        // Get project information for PR title
-        const project = await issueData.project;
-        const projectName = project?.name || '';
-        const prTitle = projectName
-            ? `[${issueId}][${projectName}] ${issueData.title}`
-            : `[${issueId}] ${issueData.title}`;
+        // Build PR title with project context
+        const prTitle = `[${issueData.shortId}][${issueData.project.name}] ${issueData.title}`;
 
         logger.info(`🌿 Creating branch: ${chalk.cyan(branchName)}`);
 
@@ -128,9 +124,9 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
             config: githubConfig,
             branchName,
             prTitle,
-            description: issueData.description || '',
-            issueId,
-            taskUrl: issueData.url,
+            description: `Sentry Issue: ${issueData.title}\n\nType: ${issueData.type}\nLevel: ${issueData.level}\nCount: ${issueData.count}`,
+            issueId: issueData.shortId,
+            taskUrl: issueData.permalink,
             issueTitle: issueData.title,
             baseBranch: selectedBaseBranch,
         });
@@ -142,9 +138,9 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
 
         logger.info(`✅ Created draft PR: ${chalk.blue(result.pr.title)} (#${result.pr.number})`);
         logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(result.pr.html_url))}`);
-        logger.info(`🎉 Successfully created and checked out new branch for ${chalk.bold(issueId)}`);
+        logger.info(`🎉 Successfully created and checked out new branch for ${chalk.bold(issueData.shortId)}`);
     }
 
-    // Show task URL for reference
-    logger.info(`🔗 Linear task: ${chalk.underline(issueData.url)}`);
+    // Show issue URL for reference
+    logger.info(`🔗 Sentry issue: ${chalk.underline(issueData.permalink)}`);
 }

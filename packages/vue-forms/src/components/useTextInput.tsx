@@ -14,11 +14,6 @@ const TEXT_INPUT_PROPS = defineProps({
     autocomplete: String,
     placeholder: String,
     tabindex: Number,
-    /** Trims the input text. Enabled by default. */
-    trim: {
-        type: Boolean,
-        default: true,
-    },
 });
 
 /**
@@ -67,7 +62,6 @@ function setupTextInput() {
 
     function onInput(event: Event) {
         const target = event.target as HTMLInputElement;
-        const value = props.trim ? target.value.trim() : target.value;
-        field.value = value;
+        field.value = target.value;
     }
 }

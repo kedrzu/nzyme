@@ -28,7 +28,7 @@ import { defineLinearCommands } from '@nzyme/linear';
 
 const commands = defineLinearCommands({
     linear: {
-        apiToken: process.env.LINEAR_API_TOKEN,
+        apiToken: process.env.LINEAR_TOKEN,
         defaultPrefix: 'SIG', // Optional: default team prefix
     },
     github: {
@@ -188,7 +188,7 @@ interface GitHubConfig {
 
 ```bash
 # Required
-LINEAR_API_TOKEN=your_linear_api_token
+LINEAR_TOKEN=your_linear_api_token
 GITHUB_TOKEN=your_github_token
 
 # Your configuration
@@ -247,7 +247,7 @@ The tool requires a GitHub Personal Access Token (PAT) to interact with the GitH
 
 3. **Add to Environment**
     ```bash
-    export LINEAR_API_TOKEN="lin_api_your_token_here"
+    export LINEAR_TOKEN="lin_api_your_token_here"
     ```
 
 ### Permissions Summary

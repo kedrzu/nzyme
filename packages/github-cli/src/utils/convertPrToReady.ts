@@ -2,7 +2,7 @@ import type { Octokit } from '@octokit/rest';
 
 import { UsageError } from '@nzyme/cli';
 
-import type { GitHubConfig } from '../cli/defineLinearCommands.js';
+import type { GitHubConfig } from '../index.js';
 
 /**
  * Convert a GitHub PR from draft to ready for review.

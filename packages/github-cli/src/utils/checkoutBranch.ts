@@ -2,7 +2,6 @@ import { simpleGit } from 'simple-git';
 
 /**
  * Checkout a git branch, fetching it from origin if necessary.
- * @__NO_SIDE_EFFECTS__
  */
 export async function checkoutBranch(branchName: string): Promise<void> {
     const git = simpleGit();

@@ -21,7 +21,6 @@ export interface BranchSelectionResult {
 
 /**
  * Handle branch selection when creating a new branch with uncommitted changes.
- * @__NO_SIDE_EFFECTS__
  */
 export async function handleBranchSelection(
     currentBranch: string,
@@ -95,7 +94,6 @@ export async function handleBranchSelection(
 
 /**
  * Apply previously stashed changes after creating a new branch.
- * @__NO_SIDE_EFFECTS__
  */
 export async function applyStashedChanges(stashName: string, logger: Logger): Promise<void> {
     const git = simpleGit();

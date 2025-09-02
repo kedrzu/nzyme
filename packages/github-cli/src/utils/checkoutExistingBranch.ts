@@ -8,7 +8,6 @@ import { checkoutBranch } from './checkoutBranch.js';
 
 /**
  * Checkout an existing branch, handling uncommitted changes by prompting the user.
- * @__NO_SIDE_EFFECTS__
  */
 export async function checkoutExistingBranch(branchName: string, taskId: string, logger: Logger): Promise<void> {
     const git = simpleGit();

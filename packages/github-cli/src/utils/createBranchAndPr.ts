@@ -1,7 +1,7 @@
 import type { Octokit } from '@octokit/rest';
 import { simpleGit } from 'simple-git';
 
-import type { GitHubConfig } from '../cli/defineLinearCommands.js';
+import type { GitHubConfig } from '../index.js';
 
 /**
  * Result of creating a branch and PR.
@@ -24,20 +24,60 @@ export interface CreateBranchAndPrResult {
 }
 
 /**
- * Create a new git branch and GitHub PR for a Linear issue.
- * @__NO_SIDE_EFFECTS__
+ * Parameters for creating a branch and PR.
  */
-export async function createBranchAndPr(
-    octokit: Octokit,
-    config: GitHubConfig,
-    branchName: string,
-    prTitle: string,
-    description: string,
-    issueId: string,
-    taskUrl: string,
-    issueTitle: string,
-    baseBranch?: string,
-): Promise<CreateBranchAndPrResult> {
+export interface CreateBranchAndPrParams {
+    /**
+     * GitHub Octokit client instance.
+     */
+    octokit: Octokit;
+
+    /**
+     * GitHub configuration.
+     */
+    config: GitHubConfig;
+
+    /**
+     * Name of the branch to create.
+     */
+    branchName: string;
+
+    /**
+     * Title for the pull request.
+     */
+    prTitle: string;
+
+    /**
+     * Description for the pull request body.
+     */
+    description: string;
+
+    /**
+     * Issue ID for reference.
+     */
+    issueId: string;
+
+    /**
+     * URL of the source issue/task.
+     */
+    taskUrl: string;
+
+    /**
+     * Title of the source issue/task.
+     */
+    issueTitle: string;
+
+    /**
+     * Base branch to create the PR against.
+     */
+    baseBranch?: string;
+}
+
+/**
+ * Create a new git branch and GitHub PR for an issue.
+ */
+export async function createBranchAndPr(params: CreateBranchAndPrParams): Promise<CreateBranchAndPrResult> {
+    const { octokit, config, branchName, prTitle, description, issueId, taskUrl, issueTitle, baseBranch } = params;
     const git = simpleGit();
 
     try {

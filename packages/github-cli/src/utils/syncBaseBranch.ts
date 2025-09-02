@@ -26,7 +26,6 @@ export interface SyncBaseBranchResult {
 
 /**
  * Fetch and fast-forward the base branch to latest.
- * @__NO_SIDE_EFFECTS__
  */
 export async function fetchAndFastForwardBaseBranch(baseBranch: string, logger: Logger): Promise<void> {
     const git = simpleGit();
@@ -46,7 +45,6 @@ export async function fetchAndFastForwardBaseBranch(baseBranch: string, logger: 
 
 /**
  * Check if the base branch is ahead of the current branch.
- * @__NO_SIDE_EFFECTS__
  */
 export async function checkBaseBranchAhead(baseBranch: string) {
     const git = simpleGit();
@@ -76,7 +74,6 @@ export async function checkBaseBranchAhead(baseBranch: string) {
 
 /**
  * Prompt user whether to merge base branch into current branch.
- * @__NO_SIDE_EFFECTS__
  */
 export async function promptForBaseBranchMerge(baseBranch: string, commitsAhead: number) {
     const { mergeChoice } = await enquirer.prompt<{ mergeChoice: string }>({
@@ -105,7 +102,6 @@ export async function promptForBaseBranchMerge(baseBranch: string, commitsAhead:
 
 /**
  * Merge base branch into current branch.
- * @__NO_SIDE_EFFECTS__
  */
 export async function mergeBaseBranch(baseBranch: string, logger: Logger): Promise<void> {
     const git = simpleGit();
@@ -123,7 +119,6 @@ export async function mergeBaseBranch(baseBranch: string, logger: Logger): Promi
 
 /**
  * Complete synchronization flow: fetch base branch, check if ahead, and optionally merge.
- * @__NO_SIDE_EFFECTS__
  */
 export async function syncBaseBranch(
     baseBranch: string,

@@ -1,9 +1,9 @@
 import type { Octokit } from '@octokit/rest';
 
-import type { GitHubConfig } from '../cli/defineLinearCommands.js';
+import type { GitHubConfig } from '../index.js';
 
 /**
- * Find a matching open GitHub PR for a Linear issue.
+ * Find a matching open GitHub PR for an issue.
  * Searches for the issue ID in PR titles and branch names using precise matching.
  * @__NO_SIDE_EFFECTS__
  */

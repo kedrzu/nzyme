@@ -3,22 +3,25 @@ import enquirer from 'enquirer';
 
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
+import {
+    checkUnpushedCommits,
+    convertPrToReady,
+    createOctokitClient,
+    findMatchingPr,
+    getCurrentBranch,
+    getGitStatusInfo,
+    handleReadyPreparation,
+    syncBaseBranch,
+} from '@nzyme/github-cli';
+import type { GitHubConfig } from '@nzyme/github-cli';
 
-import { checkUnpushedCommits } from '../utils/checkUnpushedCommits.js';
-import { convertPrToReady } from '../utils/convertPrToReady.js';
 import { createLinearClient } from '../utils/createLinearClient.js';
 import { createLinearIssue } from '../utils/createLinearIssue.js';
-import { createOctokitClient } from '../utils/createOctokitClient.js';
 import { extractTaskIdFromBranch } from '../utils/extractTaskIdFromBranch.js';
-import { findMatchingPr } from '../utils/findMatchingPr.js';
 import { formatProjectStatus } from '../utils/formatProjectStatus.js';
-import { getCurrentBranch } from '../utils/getCurrentBranch.js';
-import { getGitStatusInfo } from '../utils/getGitStatusInfo.js';
 import { getNonCompleteProjects } from '../utils/getProjects.js';
-import { handleReadyPreparation } from '../utils/handleReadyPreparation.js';
 import { parseTaskIdentifier } from '../utils/parseTaskIdentifier.js';
 import { switchToTask } from '../utils/switchToTask.js';
-import { syncBaseBranch } from '../utils/syncBaseBranch.js';
 
 /**
  * Configuration for Linear API access.
@@ -33,26 +36,6 @@ export interface LinearConfig {
      * Default team prefix (e.g., 'SIG' for SIG-123).
      */
     defaultPrefix?: string;
-}
-
-/**
- * Configuration for GitHub API access.
- */
-export interface GitHubConfig {
-    /**
-     * GitHub API token.
-     */
-    token: string;
-
-    /**
-     * GitHub repository owner.
-     */
-    owner: string;
-
-    /**
-     * GitHub repository name.
-     */
-    repo: string;
 }
 
 /**

@@ -1,6 +1,6 @@
 import { Octokit } from '@octokit/rest';
 
-import type { GitHubConfig } from '../cli/defineLinearCommands.js';
+import type { GitHubConfig } from '../index.js';
 
 /**
  * Create a GitHub API client.

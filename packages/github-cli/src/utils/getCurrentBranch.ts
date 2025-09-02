@@ -4,7 +4,6 @@ import { UsageError } from '@nzyme/cli';
 
 /**
  * Get the current git branch name.
- * @__NO_SIDE_EFFECTS__
  */
 export async function getCurrentBranch(): Promise<string> {
     const git = simpleGit();

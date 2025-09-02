@@ -49,7 +49,11 @@ export function useSmsOtp(options: UseSmsOtpOptions) {
     }
 
     function abort() {
-        abortController?.abort();
-        abortController = undefined;
+        try {
+            abortController?.abort('Cancelled');
+            abortController = undefined;
+        } catch {
+            // ignore
+        }
     }
 }

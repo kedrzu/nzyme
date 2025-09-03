@@ -5,7 +5,7 @@ import type { UnionToIntersection } from '@nzyme/types';
 import { useInstance } from './useInstance.js';
 
 export function useEmit(): EmitFn;
-export function useEmit<E extends EmitsOptions>(emitOptions: E): EmitFn<E>;
+export function useEmit<E extends EmitsOptions>(emitOptions?: E): EmitFn<E>;
 export function useEmit() {
     return useInstance().emit;
 }

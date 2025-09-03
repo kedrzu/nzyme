@@ -4,9 +4,12 @@ import { useService } from '@nzyme/vue-ioc';
 
 import { ModalService } from './ModalService.js';
 
+/**
+ *
+ */
 export const ModalHost = defineComponent({
     name: 'ModalHost',
-    setup(props, ctx) {
+    setup(_props, ctx) {
         const modalService = useService(ModalService);
 
         return () => {

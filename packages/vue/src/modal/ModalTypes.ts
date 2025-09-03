@@ -1,112 +1,70 @@
-import type { ComponentOptions } from 'vue';
+import type { Component, ComponentProps } from '@nzyme/vue-utils';
 
-import type { EmptyObject, Flatten } from '@nzyme/types';
-import type { ComponentProps } from '@nzyme/vue-utils';
+import type { ModalPropsBase } from './useModalProps.js';
 
 /**
- *
+ * Modal component.
  */
-export type ModalHandlerProps<TResult> = {
+export type ModalComponent<C> = (() => Promise<{ default: C }>) | C | Promise<{ default: C }>;
+
+/**
+ * Props of a modal.
+ */
+export type ModalProps<C> = Omit<ComponentProps<C>, 'modal'>;
+
+/**
+ * Result of a modal.
+ */
+export type ModalResult<C> = ComponentProps<C> extends ModalPropsBase<infer T> ? T : void;
+
+/**
+ * Modal controller.
+ */
+export interface ModalController<T = unknown> {
     /**
-     *
+     * Close and mark the modal as done.
      */
-    modal: ModalHandler<TResult>;
-};
-
-/**
- *
- */
-export type ModalComponent<TProps extends ModalHandlerProps<any> = any> = ComponentOptions<TProps>;
-
-/**
- *
- */
-export type ModalComponentView<T extends ModalComponent> =
-    | (() => Promise<{ default: T }>)
-    | Promise<{ default: T }>
-    | T;
-
-/**
- *
- */
-export type ModalProps<T extends ModalComponent> = keyof ModalPropsWithoutHandler<T> extends never
-    ? undefined
-    : ModalPropsWithoutHandler<T>;
-
-/**
- *
- */
-export type ModalResult<T extends ModalComponent> = ComponentProps<T> extends ModalHandlerProps<infer R> ? R : void;
-
-/**
- *
- */
-export interface ModalHandler<T = unknown> {
+    done: ModalDone<T>;
     /**
-     *
+     * Close the modal.
      */
-    setResult(this: void, result: T): void;
+    close: ModalClose;
     /**
-     *
-     */
-    done: T extends void ? () => void : (result: T) => void;
-    /**
-     *
-     */
-    close(this: void): void;
-    /**
-     *
-     */
-    cancel(this: void): void;
-    /**
-     *
+     * Whether the modal is open.
      */
     open: boolean;
 }
 
 /**
- *
+ * Modal close function.
  */
-export type OpenModalOptions<T extends ModalComponent = ModalComponent> =
-    ModalProps<T> extends void ? OpenModalOptionsWithoutProps<T> : OpenModalOptionsWithProps<T>;
+export type ModalClose = () => void;
 
 /**
- *
+ * Done function for a modal.
  */
-export interface Modal<T extends ModalComponent = ModalComponent> extends Promise<ModalResult<T>> {
+// export type ModalDone<T = unknown, R = void> = IfUndefined<T, (result?: T) => R, (result: T) => R>;
+export type ModalDone<T, R = void> = [undefined] extends [T] ? (result?: T) => R : (result: T) => R;
+
+/**
+ * Modal.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface Modal<C = any> extends Promise<ModalResult<C>> {
     /**
-     *
+     * Modal id.
      */
     readonly id: symbol;
     /**
-     *
+     * Modal controller.
      */
-    readonly handler: ModalHandler<ModalResult<T>>;
+    readonly controller: ModalController<ModalResult<C>>;
     /**
-     *
+     * Modal props.
      */
-    readonly props: ModalProps<T>;
+    readonly props: ModalProps<C>;
     /**
-     *
+     * Modal component.
      */
-    readonly component: ComponentOptions;
-}
-
-type ModalPropsWithoutHandler<T extends ModalComponent> = Flatten<Omit<ComponentProps<T>, 'modal'>>;
-
-type OpenModalOptionsBase<T extends ModalComponent = ModalComponent> = {
-    /**
-     * Modal component to be opened.
-     * Supports asynchronous components loaded with `import(...)`.
-     */
-    modal: ModalComponentView<T>;
-};
-
-interface OpenModalOptionsWithoutProps<T extends ModalComponent> extends OpenModalOptionsBase<T> {
-    props?: EmptyObject | undefined;
-}
-
-interface OpenModalOptionsWithProps<T extends ModalComponent> extends OpenModalOptionsBase<T> {
-    /** Props to pass to the modal. */
-    props: ModalProps<T>;
+    readonly component: Component;
 }

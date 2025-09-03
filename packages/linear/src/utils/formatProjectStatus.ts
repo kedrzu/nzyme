@@ -4,7 +4,7 @@ import chalk from 'chalk';
  * Format project status with colors and emphasis for better visual clarity.
  * @param state The project state to format
  * @returns Formatted string with appropriate colors and styling
- * @**NO_SIDE_EFFECTS**
+ * @__NO_SIDE_EFFECTS__
  */
 export function formatProjectStatus(state: string): string {
     const normalizedState = state.toLowerCase();

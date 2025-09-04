@@ -1,4 +1,5 @@
 export type * from './Array.js';
+export type * from './BracedParameters.js';
 export type * from './Common.js';
 export type * from './Config.js';
 export type * from './Constructors.js';

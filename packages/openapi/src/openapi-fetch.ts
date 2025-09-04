@@ -1,0 +1,141 @@
+import { joinURL, withQuery } from 'ufo';
+import type { BodyInit } from 'undici-types';
+
+import type { HttpMethod } from '@nzyme/fetch-utils';
+import { isPlainObject } from '@nzyme/utils';
+
+import type { ContentTypeOf, OpenApiFetchOptions, OpenApiFetchResponse, OperationOf } from './types.js';
+
+/**
+ * Configuration options for creating an OpenAPI fetch client
+ *
+ * @example
+ * ```typescript
+ * const client = createOpenApiFetch({
+ *   baseUrl: 'https://api.example.com',
+ *   headers: { 'Authorization': 'Bearer token' }
+ * });
+ * ```
+ */
+export interface OpenApiFetchConfig {
+    /** Base URL for all requests */
+    baseUrl?: string;
+    /** Default headers to include in all requests */
+    headers?: Record<string, string>;
+    /** Custom fetch implementation */
+    fetch?: typeof fetch;
+}
+
+/**
+ * Create an OpenAPI fetch client with default configuration
+ *
+ * @param config - Configuration options for the client
+ * @returns A typed fetch function for the given OpenAPI schema
+ *
+ * @example
+ * ```typescript
+ * import type { paths } from './api-schema';
+ *
+ * const apiClient = createOpenApiFetch<paths>({
+ *   baseUrl: 'https://api.example.com',
+ *   headers: { 'Authorization': 'Bearer token' }
+ * });
+ *
+ * const result = await apiClient({
+ *   method: 'GET',
+ *   path: '/pets/{id}',
+ *   pathParams: { id: 123 }
+ * });
+ * ```
+ */
+export function createOpenApiFetch<Paths>(config: OpenApiFetchConfig = {}) {
+    const { baseUrl = '', headers: defaultHeaders = {}, fetch: customFetch = fetch } = config;
+
+    /**
+     * Make a typed OpenAPI request
+     */
+    return async function openApiFetch<
+        const Path extends keyof Paths,
+        const Method extends HttpMethod,
+        const ContentType extends ContentTypeOf<OperationOf<Paths, Path, Method>>,
+    >(
+        options: OpenApiFetchOptions<Paths, Path, Method, ContentType>,
+    ): Promise<OpenApiFetchResponse<Paths, Path, Method>> {
+        const {
+            method,
+            path,
+            baseUrl: requestBaseUrl,
+            pathParams,
+            query,
+            contentType,
+            headers: requestHeaders = {},
+            fetchOptions = {},
+        } = options;
+
+        let body = options.body as object | BodyInit | null | undefined;
+
+        // Build URL
+        const finalBaseUrl = requestBaseUrl ?? baseUrl;
+        let url = joinURL(finalBaseUrl, path as string);
+
+        // Replace path parameters
+        if (pathParams) {
+            for (const [key, value] of Object.entries(pathParams as Record<string, unknown>)) {
+                url = url.replace(`{${key}}`, encodeURIComponent(String(value)));
+            }
+        }
+
+        // Add query parameters
+        if (query) {
+            url = withQuery(url, query as Record<string, boolean | number | string | undefined>);
+        }
+
+        // Prepare headers
+        const headers = new Headers({
+            ...defaultHeaders,
+            ...(requestHeaders as Record<string, string>),
+        });
+
+        // Prepare request body and content type
+        if (body !== undefined) {
+            if (body === null || Array.isArray(body) || isPlainObject(body)) {
+                body = JSON.stringify(body);
+                if (!headers.has('content-type')) {
+                    headers.set('content-type', contentType || 'application/json');
+                }
+            } else if (contentType && !headers.has('content-type')) {
+                headers.set('content-type', contentType);
+            }
+        }
+
+        // Make the request
+        const response = await customFetch(url, {
+            method,
+            headers,
+            body: body as BodyInit | undefined,
+            ...fetchOptions,
+        });
+
+        // Parse response based on content type
+        const responseContentType = response.headers.get('content-type') || '';
+        let data: unknown;
+
+        if (responseContentType.includes('application/json')) {
+            data = await response.json();
+        } else if (responseContentType.includes('text/')) {
+            data = await response.text();
+        } else if (response.status !== 204) {
+            // For non-JSON, non-text responses that are not No Content
+            data = await response.blob();
+        } else {
+            // No content response
+            data = undefined;
+        }
+
+        return {
+            status: response.status as OpenApiFetchResponse<Paths, Path, Method>['status'],
+            data: data as OpenApiFetchResponse<Paths, Path, Method>['data'],
+            response,
+        };
+    };
+}

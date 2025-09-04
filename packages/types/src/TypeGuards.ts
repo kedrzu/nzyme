@@ -22,3 +22,8 @@ export type IfUndefined<T, Y, N = T> = IfAny<T, T, T | undefined extends T ? Y :
  * If the type is unknown.
  */
 export type IfUnknown<T, Y, N = T> = IfAny<T, T, unknown extends T ? Y : N>;
+
+/**
+ * If the type is never.
+ */
+export type IfNever<T, Y, N = T> = [T] extends [never] ? Y : N;

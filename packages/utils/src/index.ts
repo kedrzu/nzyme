@@ -8,6 +8,7 @@ export * from './array/concatIterable.js';
 export * from './array/countWhere.js';
 export * from './array/filterNotNull.js';
 export * from './array/findAndRemove.js';
+export * from './array/findIndex.js';
 export * from './array/findMax.js';
 export * from './array/findMin.js';
 export * from './array/forEachParalell.js';

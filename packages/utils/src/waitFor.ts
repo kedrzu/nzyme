@@ -19,6 +19,6 @@ export function timeout(ms: number) {
  * await waitFor(1000);
  * ```
  */
-export function waitFor(ms: number) {
+export function waitFor(ms?: number) {
     return new Promise<void>(resolve => setTimeout(resolve, ms));
 }

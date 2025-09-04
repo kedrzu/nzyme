@@ -13,6 +13,7 @@ export * from './directives/vScrollIntoView.js';
 export * from './directives/vShow.js';
 export * from './directives/vUid.js';
 export * from './directives/vVisible.js';
+export * from './LoadingContext.js';
 export * from './nestedRef.js';
 export * from './onElementScroll.js';
 export * from './onEventEmitter.js';

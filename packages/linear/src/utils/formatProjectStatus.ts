@@ -19,7 +19,7 @@ export function formatProjectStatus(state: string): string {
         case 'archived':
         case 'blocked':
         case 'canceled':
-        case 'cancelled':
+        case 'canceled':
             return chalk.red.bold(`(${state})`);
 
         case 'backlog':

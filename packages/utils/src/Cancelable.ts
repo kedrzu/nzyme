@@ -1,6 +1,6 @@
 /**
- * Interface for objects that can be cancelled.
- * When cancelled, the object should stop its operation and clean up any resources.
+ * Interface for objects that can be canceled.
+ * When canceled, the object should stop its operation and clean up any resources.
  *
  * @example
  * ```typescript
@@ -23,7 +23,7 @@ export interface Cancelable {
 }
 
 /**
- * A promise that can be cancelled.
+ * A promise that can be canceled.
  * Combines the standard Promise interface with the Cancelable interface.
  *
  * @template T - The type of value the promise resolves to
@@ -31,7 +31,7 @@ export interface Cancelable {
  * ```typescript
  * const promise: CancelablePromise<string> = makePromiseCancelable(
  *     Promise.resolve("Hello"),
- *     () => console.log("Cancelled")
+ *     () => console.log("Canceled")
  * );
  * ```
  */
@@ -59,12 +59,12 @@ export function isCancelablePromise<T>(promise: Promise<T>): promise is Cancelab
 
 /**
  * Makes a promise cancelable by adding a cancel method.
- * When cancelled, the cancel callback is called.
+ * When canceled, the cancel callback is called.
  * The original promise remains unchanged.
  *
  * @template T - The type of value the promise resolves to
  * @param promise - The promise to make cancelable
- * @param cancelCallback - Function to call when the promise is cancelled
+ * @param cancelCallback - Function to call when the promise is canceled
  * @returns A cancelable version of the promise that includes a cancel method
  *
  * @example
@@ -75,10 +75,10 @@ export function isCancelablePromise<T>(promise: Promise<T>): promise is Cancelab
  * });
  *
  * const cancelable = makePromiseCancelable(promise, () => {
- *     console.log('Cancelled');
+ *     console.log('Canceled');
  * });
  *
- * cancelable.cancel(); // Logs "Cancelled"
+ * cancelable.cancel(); // Logs "Canceled"
  * ```
  */
 export function makePromiseCancelable<T>(promise: Promise<T>, cancelCallback: () => void) {

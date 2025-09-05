@@ -113,7 +113,7 @@ export async function checkoutExistingBranch(branchName: string, taskId: string,
             }
 
             case 'cancel': {
-                throw new Error('Operation cancelled by user. Please handle your uncommitted changes and try again.');
+                throw new Error('Operation canceled by user. Please handle your uncommitted changes and try again.');
             }
 
             default: {

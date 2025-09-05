@@ -50,7 +50,7 @@ export function useSmsOtp(options: UseSmsOtpOptions) {
 
     function abort() {
         try {
-            abortController?.abort('Cancelled');
+            abortController?.abort('Canceled');
             abortController = undefined;
         } catch {
             // ignore

@@ -395,7 +395,7 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
                         config: pulumiConfig,
                     });
 
-                    stackResolved.logger.info(`🚫 Cancelled stack ${chalk.green(stack.stackName)}`);
+                    stackResolved.logger.info(`🚫 Canceled stack ${chalk.green(stack.stackName)}`);
                 },
             });
         }

@@ -1,18 +1,35 @@
-import { CURRENCIES, type Currency } from './Currency.js';
+import { CURRENCIES } from './Currency.js';
+import type { Currency } from './Currency.js';
 import type { Money } from './Money.js';
 
+/**
+ * Format money options
+ */
 export type FormatMoneyOptions = {
-    withDecimals?: boolean;
+    /**
+     * Whether to include the currency symbol
+     * @default true
+     */
     withCurrency?: boolean;
+    /**
+     * Whether to include the decimals for non fractional amounts
+     * @default false
+     */
+    withDecimals?: boolean;
 };
 
 const OPTIONS_DEFAULT: FormatMoneyOptions = {};
 
-export type MoneyFormatter = (
-    amount: number | null | undefined,
-    options?: FormatMoneyOptions,
-) => string;
+/**
+ * Money formatter
+ */
+export interface MoneyFormatter {
+    (amount: number | null | undefined, options?: FormatMoneyOptions): string;
+}
 
+/**
+ * Format money
+ */
 export function formatMoney(money: Money, options?: FormatMoneyOptions): string {
     return getFormatter(money[1])(money[0], options);
 }
@@ -53,9 +70,7 @@ function createFormatter(currency: Currency): MoneyFormatter {
 
         const withDecimals = options.withDecimals || amount % 1 !== 0;
 
-        let formatted = withDecimals
-            ? withDecimalsFormat.format(amount)
-            : noDecimalsFormat.format(amount);
+        let formatted = withDecimals ? withDecimalsFormat.format(amount) : noDecimalsFormat.format(amount);
 
         formatted = formatted.replace(/\s/g, '\u00A0');
 

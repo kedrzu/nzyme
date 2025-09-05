@@ -4,6 +4,8 @@ import { defineService } from '@nzyme/ioc';
 import type { Dependencies, Service, ServiceSetup } from '@nzyme/ioc';
 import type { EmptyObject, IfAny } from '@nzyme/types';
 
+import type { HttpRequest } from './types/HttpRequest.js';
+
 /**
  * Represents an API endpoint definition with input/output schemas, HTTP method, and path.
  */
@@ -59,11 +61,21 @@ export interface EndpointOptionsWithInput<
 }
 
 /**
- *
+ * Endpoint context
  */
-export type EndpointHandler<TInput = unknown, TOutput = unknown> = TInput extends void
-    ? () => Promise<TOutput> | TOutput
-    : (input: TInput) => Promise<TOutput> | TOutput;
+export interface EndpointContext {
+    /**
+     * The HTTP request
+     */
+    request: HttpRequest;
+}
+
+/**
+ * Endpoint handler function
+ */
+export interface EndpointHandler<TInput = unknown, TOutput = unknown> {
+    (input: TInput, ctx: EndpointContext): Promise<TOutput> | TOutput;
+}
 
 /**
  *

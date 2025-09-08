@@ -18,8 +18,7 @@ export interface LambdaRpcHandler {
  */
 export function createLambdaRpcHandler(router: Router): LambdaRpcHandler {
     return async event => {
-        const method: HttpMethod =
-            (event.requestContext?.http?.method.toUpperCase() as HttpMethod | undefined) || 'GET';
+        const method: HttpMethod = (event.requestContext.http.method.toUpperCase() as HttpMethod | undefined) || 'GET';
 
         const response = await router({
             method,
@@ -27,6 +26,7 @@ export function createLambdaRpcHandler(router: Router): LambdaRpcHandler {
             query: event.queryStringParameters,
             headers: event.headers,
             body: event.body,
+            ip: event.requestContext.http.sourceIp,
         });
 
         // Convert headers to a format that can be used in the Lambda response

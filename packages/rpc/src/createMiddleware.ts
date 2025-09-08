@@ -60,6 +60,7 @@ export function createMiddleware(options: CreateMiddlewareOptions): RequestListe
             query: parseQuery(url.search),
             headers: req.headers,
             body: await getBody(req),
+            ip: getIp(req) || '::1',
         });
 
         res.writeHead(response.status, response.statusText, response.headers);
@@ -67,6 +68,19 @@ export function createMiddleware(options: CreateMiddlewareOptions): RequestListe
 
         await afterRequest?.(req, res);
         next?.();
+    }
+
+    function getIp(req: IncomingMessage) {
+        const xForwardedFor = req.headers['x-forwarded-for'];
+        if (Array.isArray(xForwardedFor)) {
+            return xForwardedFor[0];
+        }
+
+        if (xForwardedFor) {
+            return xForwardedFor;
+        }
+
+        return req.socket.remoteAddress;
     }
 }
 

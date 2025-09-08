@@ -10,6 +10,7 @@ export * from './loadScript.js';
 export * from './loadStyles.js';
 export * from './localStorageUtils.js';
 export * from './lockBodyScroll.js';
+export * from './navigateToUrl.js';
 export * from './requestIdleCallback.js';
 export * from './scrollToTopElement.js';
 export * from './virtualHistory.js';

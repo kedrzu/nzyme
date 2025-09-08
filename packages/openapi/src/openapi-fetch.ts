@@ -98,13 +98,68 @@ export function createOpenApiFetch<Paths>(config: OpenApiFetchConfig = {}) {
 
         // Prepare request body and content type
         if (body !== undefined) {
-            if (body === null || Array.isArray(body) || isPlainObject(body)) {
-                body = JSON.stringify(body);
-                if (!headers.has('content-type')) {
-                    headers.set('content-type', contentType || 'application/json');
+            const finalContentType = contentType || 'application/json';
+
+            if (!headers.has('content-type')) {
+                headers.set('content-type', finalContentType);
+            }
+
+            // Serialize body based on content type
+            if (finalContentType.includes('application/json')) {
+                if (body === null || Array.isArray(body) || isPlainObject(body)) {
+                    body = JSON.stringify(body);
                 }
-            } else if (contentType && !headers.has('content-type')) {
-                headers.set('content-type', contentType);
+            } else if (finalContentType.includes('application/x-www-form-urlencoded')) {
+                if (!isPlainObject(body)) {
+                    throw new Error('Body must be an object');
+                }
+
+                const urlSearchParams = new URLSearchParams();
+                for (const [key, value] of Object.entries(body)) {
+                    if (value !== undefined && value !== null) {
+                        switch (typeof value) {
+                            case 'boolean':
+                            case 'number':
+                            case 'string':
+                                urlSearchParams.append(key, String(value));
+                                break;
+                            default:
+                                urlSearchParams.append(key, JSON.stringify(value));
+                                break;
+                        }
+                    }
+                }
+
+                body = urlSearchParams;
+            } else if (finalContentType.includes('multipart/form-data')) {
+                if (!isPlainObject(body)) {
+                    throw new Error('Body must be an object');
+                }
+
+                const formData = new FormData();
+                for (const [key, value] of Object.entries(body)) {
+                    if (value !== undefined && value !== null) {
+                        if (value instanceof File || value instanceof Blob) {
+                            formData.append(key, value);
+                            continue;
+                        }
+
+                        switch (typeof value) {
+                            case 'boolean':
+                            case 'number':
+                                formData.append(key, String(value));
+                                break;
+                            case 'string':
+                                formData.append(key, value);
+                                break;
+                            default:
+                                formData.append(key, JSON.stringify(value));
+                                break;
+                        }
+                    }
+                }
+
+                body = formData;
             }
         }
 
@@ -112,6 +167,7 @@ export function createOpenApiFetch<Paths>(config: OpenApiFetchConfig = {}) {
         const response = await customFetch(url, {
             method,
             headers,
+            redirect: 'manual',
             body: body as BodyInit | undefined,
             ...fetchOptions,
         });

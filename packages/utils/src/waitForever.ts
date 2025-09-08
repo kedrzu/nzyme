@@ -10,6 +10,6 @@
  * await waitForever();
  * ```
  */
-export function waitForever() {
-    return new Promise<void>(() => void 0);
+export function waitForever(): Promise<never> {
+    return new Promise<never>(() => void 0);
 }

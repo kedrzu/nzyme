@@ -10,6 +10,11 @@ import { makeRef, onElementScroll, onWindowResize, unwrapElement } from '@nzyme/
 export type StickyElementPosition = 'bottom' | 'top';
 
 /**
+ * Container for the sticky element.
+ */
+export type StickyElementContainer = ElementOrVue | 'body' | null | undefined;
+
+/**
  * Options for the `useStickyElement` hook.
  */
 export interface StickyElementOptions {
@@ -20,7 +25,7 @@ export interface StickyElementOptions {
     /**
      * Element to use as a container for the sticky element.
      */
-    container?: RefParam<ElementOrVue | null | undefined>;
+    container?: RefParam<StickyElementContainer>;
     /**
      * Position of the sticky element.
      */
@@ -87,8 +92,13 @@ export function useStickyElement(options: StickyElementOptions) {
             return null;
         }
 
-        if (containerRef?.value) {
-            return unwrapElement(containerRef.value);
+        const container = containerRef?.value;
+        if (container === 'body') {
+            return document.body;
+        }
+
+        if (container) {
+            return unwrapElement(container);
         }
 
         let el = element.value || null;

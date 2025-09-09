@@ -1,233 +1,98 @@
-import type { IfLiteral, IfUnknown, NonVoidPropKeys, VoidPropKeys } from '@nzyme/types';
-
 import { arrayRemove } from './array/arrayRemove.js';
 
 /**
- * Complete interface of an event emitter including internal methods.
- * @template TEvents - The type of all possible events
+ * Type representing a callback function for a single event.
+ * @template TEvent - The type of the event data
  */
-export interface EventEmitter<TEvents> extends EventEmitterPublic<TEvents> {
-    /**
-     * Emits an event with no payload.
-     * @param event - The event to emit
-     */
-    emit<E extends keyof TEvents & VoidPropKeys<PredefinedEvents<TEvents>>>(this: void, event: E): void;
-    /**
-     * Emits an event with a payload.
-     * @param event - The event to emit
-     * @param value - The payload to send with the event
-     */
-    emit<E extends keyof TEvents & NonVoidPropKeys<PredefinedEvents<TEvents>>>(
-        this: void,
-        event: E,
-        value: TEvents[E],
-    ): void;
-    /**
-     *
-     */
-    emit<E extends keyof TEvents & VoidPropKeys<GenericEvents<TEvents>>>(event: E): void;
-    /**
-     *
-     */
-    emit<E extends keyof TEvents & NonVoidPropKeys<GenericEvents<TEvents>>>(
-        this: void,
-        event: E,
-        value: TEvents[E],
-    ): void;
+export type EventCallback<TEvent = unknown> = EventFunction<TEvent, unknown>;
 
-    /**
-     * Emits an event with no payload and waits for all callbacks to complete.
-     * @param event - The event to emit
-     * @returns A promise that resolves when all callbacks complete
-     */
-    emitAsync<E extends keyof TEvents & VoidPropKeys<PredefinedEvents<TEvents>>>(this: void, event: E): Promise<void>;
-    /**
-     * Emits an event with a payload and waits for all callbacks to complete.
-     * @param event - The event to emit
-     * @param value - The payload to send with the event
-     * @returns A promise that resolves when all callbacks complete
-     */
-    emitAsync<E extends keyof TEvents & NonVoidPropKeys<PredefinedEvents<TEvents>>>(
-        this: void,
-        event: E,
-        value: TEvents[E],
-    ): Promise<void>;
-    /**
-     *
-     */
-    emitAsync<E extends keyof TEvents & VoidPropKeys<GenericEvents<TEvents>>>(this: void, event: E): void;
-    /**
-     *
-     */
-    emitAsync<E extends keyof TEvents & NonVoidPropKeys<GenericEvents<TEvents>>>(
-        this: void,
-        event: E,
-        value: TEvents[E],
-    ): Promise<void>;
+/**
+ * Type representing a function that emits an event.
+ * @template TEvent - The type of the event data
+ */
+export type EventEmitSync<TEvent = unknown> = EventFunction<TEvent, void>;
 
+/**
+ * Type representing a function that emits an event asynchronously.
+ * @template TEvent - The type of the event data
+ */
+export type EventEmitAsync<TEvent = unknown> = EventFunction<TEvent, Promise<void>>;
+
+/**
+ * Type representing a function that can emit events both synchronously and asynchronously.
+ * @template TEvent - The type of the event data
+ */
+export type EventEmit<TEvent = unknown> = EventEmitSync<TEvent> & {
     /**
-     *
+     * Asynchronous version of the emit function that waits for all listeners to complete.
      */
-    public: EventEmitterPublic<TEvents>;
+    async: EventEmitAsync<TEvent>;
+};
+
+/**
+ * Interface for an event emitter that allows subscribing and unsubscribing from events.
+ * @template TEvent - The type of the event data
+ */
+export interface EventEmitter<TEvent = unknown> {
+    /**
+     * Subscribe to events by adding a callback function.
+     * @param callback - The function to call when an event is emitted
+     */
+    (this: void, callback: EventCallback<TEvent>): void;
+    /**
+     * Unsubscribe from events by removing a previously added callback function.
+     * @param callback - The callback function to remove
+     */
+    off: (callback: EventCallback<TEvent>) => void;
 }
 
 /**
- * Type representing a callback function for an event.
- * @template TEvents - The type of all possible events
- * @template E - The specific event type
+ * Internal type helper for creating event functions with optional parameters when TEvent includes undefined.
+ * @template TEvent - The type of the event data
+ * @template TResult - The return type of the function
  */
-export type EventEmitterCallback<TEvents, E extends keyof TEvents> = TEvents[E] extends void
-    ? () => Promise<unknown> | void
-    : (event: TEvents[E]) => Promise<unknown> | void;
+type EventFunction<TEvent, TResult> = ((event: TEvent) => TResult) &
+    (TEvent | undefined extends TEvent ? (event?: TEvent) => TResult : (event: TEvent) => TResult);
 
 /**
- * Extracts the events type from an event emitter.
- * @template TEmitter - The type of the event emitter
- */
-export type EventEmitterEvents<TEmitter> =
-    | (TEmitter extends EventEmitter<infer TEvents> ? IfUnknown<TEvents, never> : never)
-    | (TEmitter extends EventEmitterPublic<infer TEvents> ? IfUnknown<TEvents, never> : never);
-
-/**
- * Public interface of an event emitter that can be used by consumers.
- * @template TEvents - The type of all possible events
- */
-export type EventEmitterPublic<TEvents> = {
-    /**
-     * Removes a callback for a specific event.
-     * @param event - The event to stop listening for
-     * @param callback - The function to remove
-     */
-    off<E extends keyof PredefinedEvents<TEvents>>(
-        this: void,
-        event: E,
-        callback: EventEmitterCallback<TEvents, E>,
-    ): void;
-    /**
-     *
-     */
-    off<E extends keyof GenericEvents<TEvents>>(this: void, event: E, callback: EventEmitterCallback<TEvents, E>): void;
-    /**
-     *
-     */
-    off<E extends keyof TEvents>(this: void, event: E, callback: EventEmitterCallback<TEvents, E>): void;
-
-    /**
-     * Registers a callback for a specific event.
-     * @param event - The event to listen for
-     * @param callback - The function to call when the event occurs
-     */
-    on<E extends keyof PredefinedEvents<TEvents>>(
-        this: void,
-        event: E,
-        callback: EventEmitterCallback<TEvents, E>,
-    ): void;
-    /**
-     *
-     */
-    on<E extends keyof GenericEvents<TEvents>>(this: void, event: E, callback: EventEmitterCallback<TEvents, E>): void;
-    /**
-     *
-     */
-    on<E extends keyof TEvents>(this: void, event: E, callback: EventEmitterCallback<TEvents, E>): void;
-};
-
-/**
- * Type representing generic events in an event emitter.
- * @template TEvents - The type of all possible events
- * @private
- */
-type GenericEvents<TEvents> = {
-    [E in keyof TEvents as IfLiteral<E, never, E>]: TEvents[E];
-};
-
-/**
- * Type representing predefined events in an event emitter.
- * @template TEvents - The type of all possible events
- * @private
- */
-type PredefinedEvents<TEvents> = {
-    [E in keyof TEvents as IfLiteral<E, E, never>]: TEvents[E];
-};
-
-/**
- * Creates a new event emitter instance.
- *
- * @template TEvents - The type of all possible events
- * @returns A new event emitter instance
- *
+ * Creates a new event emitter instance with emit functionality.
+ * @template TEvent - The type of event data that will be emitted (defaults to void)
+ * @returns An object containing the event emitter and emit functions
  * @example
  * ```typescript
- * type Events = {
- *     'user:created': { id: string; name: string };
- *     'user:deleted': void;
- * };
+ * const { event, emit } = createEventEmitter<string>();
  *
- * const emitter = createEventEmitter<Events>();
+ * event.on((message) => console.log(message));
+ * emit('Hello World'); // Logs: Hello World
  *
- * emitter.on('user:created', user => {
- *     console.log(`User created: ${user.name}`);
- * });
- *
- * emitter.on('user:deleted', () => {
- *     console.log('User deleted');
- * });
- *
- * emitter.emit('user:created', { id: '1', name: 'John' });
- * emitter.emit('user:deleted');
+ * // Async emission
+ * await emit.async('Async Hello');
  * ```
  */
-export function createEventEmitter<TEvents>(): EventEmitter<TEvents> {
-    type Callback = EventEmitterCallback<TEvents, keyof TEvents>;
-    const listeners = new Map<keyof TEvents, Callback[]>();
+export function createEventEmitter<TEvent = void>() {
+    type Callback = EventCallback<TEvent>;
+    const listeners: Callback[] = [];
 
-    return {
-        on,
-        off,
-        emit,
-        emitAsync,
-        public: {
-            on,
-            off,
-        },
+    const event = ((callback: EventCallback<TEvent>) => void listeners.push(callback)) as EventEmitter<TEvent>;
+
+    event.off = (callback: EventCallback<TEvent>) => {
+        arrayRemove(listeners, callback);
     };
 
-    function on<E extends keyof TEvents>(event: E, callback: EventEmitterCallback<TEvents, E>) {
-        let callbacks = listeners.get(event);
-        if (!callbacks) {
-            callbacks = [];
-            listeners.set(event, callbacks);
+    const emit = ((event: TEvent) => {
+        for (const callback of listeners) {
+            void callback(event);
         }
+    }) as EventEmit<TEvent>;
 
-        callbacks.push(callback as Callback);
-    }
-
-    function off<E extends keyof TEvents>(event: E, callback: EventEmitterCallback<TEvents, E>) {
-        const callbacks = listeners.get(event);
-        if (callbacks) {
-            arrayRemove(callbacks, callback as Callback);
+    emit.async = (async (event: TEvent) => {
+        for (const callback of listeners) {
+            await callback(event);
         }
-    }
+    }) as EventEmitAsync<TEvent>;
 
-    function emit<E extends keyof TEvents>(event: E, value?: TEvents[E]): void {
-        const callbacks = listeners.get(event);
-        if (!callbacks) {
-            return;
-        }
-
-        for (const callback of callbacks) {
-            void callback(value as TEvents[E]);
-        }
-    }
-
-    async function emitAsync<E extends keyof TEvents>(event: E, value?: TEvents[E]): Promise<void> {
-        const callbacks = listeners.get(event);
-        if (!callbacks) {
-            return;
-        }
-
-        for (const callback of callbacks) {
-            await callback(value as TEvents[E]);
-        }
-    }
+    return {
+        event,
+        emit,
+    };
 }

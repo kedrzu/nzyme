@@ -101,27 +101,58 @@ export function useStickyElement(options: StickyElementOptions) {
             return unwrapElement(container);
         }
 
-        let el = element.value || null;
+        let el: Element | null | undefined = element.value;
         if (!(el instanceof HTMLElement)) {
-            return null;
+            return window;
         }
 
+        // Start from the element's parent
+        el = el.parentElement;
+
         while (el) {
-            if (el == null) {
-                return window;
+            if (isElementScrollable(el)) {
+                return el;
             }
 
-            if (el.scrollHeight > el.clientHeight) {
-                const styles = getComputedStyle(el);
-                if (styles.overflowY === 'scroll' || styles.overflowY === 'auto') {
-                    return el as HTMLElement;
-                }
+            // Check if we've reached the document element
+            if (el === document.documentElement) {
+                break;
             }
 
             el = el.parentElement;
         }
 
+        // Check if document.documentElement is scrollable
+        if (isElementScrollable(document.documentElement)) {
+            return document.documentElement;
+        }
+
+        // Check if document.body is scrollable
+        if (document.body && isElementScrollable(document.body)) {
+            return document.body;
+        }
+
+        // Default to window if no scrollable container found
         return window;
+    }
+
+    function isElementScrollable(element: Element): boolean {
+        if (!(element instanceof HTMLElement)) {
+            return false;
+        }
+
+        const styles = getComputedStyle(element);
+        const hasVerticalScrollbar = element.scrollHeight > element.clientHeight;
+
+        // Check if overflow allows scrolling
+        const overflowY = styles.overflowY;
+        const overflow = styles.overflow;
+
+        const canScrollVertically =
+            (overflowY === 'scroll' || overflowY === 'auto' || overflow === 'scroll' || overflow === 'auto') &&
+            hasVerticalScrollbar;
+
+        return canScrollVertically;
     }
 
     function updateScroll() {

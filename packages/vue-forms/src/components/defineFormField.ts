@@ -1,9 +1,9 @@
 import type { MaybeOutput, RegleFieldStatus, RegleStatus } from '@regle/core';
-import { computed, onBeforeUnmount, reactive, ref, useModel } from 'vue';
+import { computed, reactive, ref, useModel } from 'vue';
 import type { ExtractPropTypes, PropType, Ref, UnwrapNestedRefs } from 'vue';
 
 import { scrollToTopElement } from '@nzyme/dom-utils';
-import { defineProp, injectContext, useInstanceProxy } from '@nzyme/vue-utils';
+import { defineProp, injectContext, onEventEmitter, useInstanceProxy } from '@nzyme/vue-utils';
 
 import { FormContext } from '../FormContext.js';
 
@@ -97,8 +97,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
     });
 
     if (formCtx) {
-        formCtx.on('submitComplete', scrollToError);
-        onBeforeUnmount(() => formCtx.off('submitComplete', scrollToError));
+        onEventEmitter(formCtx.events.submitComplete, scrollToError);
     }
 
     return reactive({

@@ -42,7 +42,6 @@ export * from './createMemo.js';
 export * from './createNamedFunction.js';
 export * from './createParalellRunner.js';
 export * from './createPromise.js';
-export * from './createSingleEventEmitter.js';
 export * from './createStopwatch.js';
 export * from './debounceAsyncFunction.js';
 export * from './deepCopy.js';

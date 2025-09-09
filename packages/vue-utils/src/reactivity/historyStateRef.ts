@@ -1,6 +1,8 @@
 import debounce from 'lodash.debounce';
-import { onBeforeUnmount, type Ref, ref, toRaw, watch } from 'vue';
+import { ref, toRaw, watch } from 'vue';
+import type { Ref } from 'vue';
 
+import { onEventEmitter } from '../onEventEmitter.js';
 import { useHistory } from '../useHistory.js';
 
 /**
@@ -36,14 +38,14 @@ export function historyStateRef<T>(options: HistoryStateRefDefault<T> & HistoryS
  */
 export function historyStateRef<T>(
     options: HistoryStateRefNoDefault & HistoryStateRefOptions,
-): HistoryStateRef<null | T>;
+): HistoryStateRef<T | null>;
 
 /**
  *
  */
 export function historyStateRef<T>(
     options: HistoryStateRefOptions & Partial<HistoryStateRefDefault<T>>,
-): HistoryStateRef<null | T> {
+): HistoryStateRef<T | null> {
     const history = useHistory();
     const key = options.key;
 
@@ -51,9 +53,7 @@ export function historyStateRef<T>(
     historyRef.save = save;
 
     watch(historyRef, options.debounce ? debounce(write, options.debounce) : write);
-
-    history.on('popState', update);
-    onBeforeUnmount(() => history.off('popState', update));
+    onEventEmitter(history.onPopState, update);
 
     return historyRef;
 
@@ -71,7 +71,7 @@ export function historyStateRef<T>(
         return (state[key] as T | undefined) ?? getDefault();
     }
 
-    function write(value: null | T) {
+    function write(value: T | null) {
         if (!history) {
             return;
         }

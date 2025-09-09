@@ -1,16 +1,11 @@
 import { onScopeDispose } from 'vue';
 
-import type { EventEmitterCallback, EventEmitterEvents, EventEmitterPublic } from '@nzyme/utils';
+import type { EventCallback, EventEmitter } from '@nzyme/utils';
 
-export function onEventEmitter<
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    TEmitter extends EventEmitterPublic<any>,
-    TEvent extends keyof EventEmitterEvents<TEmitter>,
->(
-    emitter: TEmitter,
-    event: TEvent,
-    callback: EventEmitterCallback<EventEmitterEvents<TEmitter>, TEvent>,
-) {
-    emitter.on(event, callback);
-    onScopeDispose(() => emitter.off(event, callback));
+/**
+ *
+ */
+export function onEventEmitter<TEvent>(emitter: EventEmitter<TEvent>, callback: EventCallback<TEvent>) {
+    emitter(callback);
+    onScopeDispose(() => emitter.off(callback));
 }

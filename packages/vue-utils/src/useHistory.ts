@@ -2,11 +2,6 @@ import { createEventEmitter } from '@nzyme/utils';
 
 type HistoryState = Record<string, unknown>;
 
-type HistoryEvents = {
-    popState: { state: HistoryState | null };
-    pushState: { state: HistoryState | null };
-    replaceState: { state: HistoryState | null };
-};
 let history: ReturnType<typeof initializeHistory> | null = null;
 
 /**
@@ -21,7 +16,9 @@ export function useHistory() {
 }
 
 function initializeHistory() {
-    const emitter = createEventEmitter<HistoryEvents>();
+    const onPopState = createEventEmitter<{ state: HistoryState | null }>();
+    const onPushState = createEventEmitter<{ state: HistoryState | null }>();
+    const onReplaceState = createEventEmitter<{ state: HistoryState | null }>();
 
     let pushState: History['pushState'];
     let replaceState: History['replaceState'];
@@ -31,27 +28,28 @@ function initializeHistory() {
         history = window.history;
 
         window.addEventListener('popstate', event => {
-            emitter.emit('popState', { state: normalizeState(event.state) });
+            onPopState.emit({ state: normalizeState(event.state) });
         });
 
         // eslint-disable-next-line @typescript-eslint/unbound-method
         pushState = history.pushState;
         history.pushState = (state, title, url) => {
             pushState.call(history, state, title, url);
-            emitter.emit('pushState', { state: normalizeState(state) });
+            onPushState.emit({ state: normalizeState(state) });
         };
 
         // eslint-disable-next-line @typescript-eslint/unbound-method
         replaceState = window.history.replaceState;
         history.replaceState = (state, title, url) => {
             replaceState.call(history, state, title, url);
-            emitter.emit('replaceState', { state: normalizeState(state) });
+            onReplaceState.emit({ state: normalizeState(state) });
         };
     }
 
     return {
-        on: emitter.on,
-        off: emitter.off,
+        onPopState: onPopState.event,
+        onPushState: onPushState.event,
+        onReplaceState: onReplaceState.event,
         getState() {
             if (!history) {
                 return null;

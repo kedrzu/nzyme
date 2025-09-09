@@ -26,24 +26,6 @@ export interface DevServerOptions {
 /**
  *
  */
-export interface DevServerEvents {
-    /**
-     *
-     */
-    started: void;
-    /**
-     *
-     */
-    stopped: void;
-    /**
-     *
-     */
-    error: unknown;
-}
-
-/**
- *
- */
 export type DevServer = ReturnType<typeof createDevServer>;
 
 /**
@@ -56,7 +38,9 @@ export function createDevServer(options: DevServerOptions) {
     let worker: Worker | undefined;
     let status: 'idle' | 'running' | 'stopped' = 'idle';
     const proxyPromise = createPromise<NextHandleFunction>();
-    const events = createEventEmitter<DevServerEvents>();
+    const onStarted = createEventEmitter<void>();
+    const onStopped = createEventEmitter<void>();
+    const onError = createEventEmitter<unknown>();
 
     const middleware: NextHandleFunction = (req, res, next) => {
         void proxyPromise.promise.then(p => p(req, res, next));
@@ -66,7 +50,9 @@ export function createDevServer(options: DevServerOptions) {
         middleware,
         start,
         stop,
-        ...events.public,
+        onStarted: onStarted.event,
+        onStopped: onStopped.event,
+        onError: onError.event,
     };
 
     /**
@@ -104,7 +90,7 @@ export function createDevServer(options: DevServerOptions) {
 
         worker.on('error', err => {
             console.error(err);
-            events.emit('error', err);
+            onError.emit(err);
         });
 
         worker.on('exit', () => {
@@ -114,7 +100,7 @@ export function createDevServer(options: DevServerOptions) {
                 retries++;
                 void start();
             } else {
-                events.emit('stopped');
+                onStopped.emit();
             }
         });
 
@@ -126,7 +112,7 @@ export function createDevServer(options: DevServerOptions) {
             if (e === 'START') {
                 console.info(`Server started in ${chalk.green(formatElapsedMs(timestamp))}`);
                 proxyPromise.resolve(proxy as NextHandleFunction);
-                events.emit('started');
+                onStarted.emit();
             }
         });
     }

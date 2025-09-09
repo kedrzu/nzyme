@@ -4,26 +4,23 @@ import { createEventEmitter } from '@nzyme/utils';
 import { defineContext } from '@nzyme/vue-utils';
 import { useEmitAsync } from '@nzyme/vue-utils';
 
-interface FormContextEvents {
-    /** Form submit failed. */
-    submitFailed: unknown;
-    /** Form submit was successful. */
-    submitSucceed: void;
-    /** Form submit was complete, no matter the result. */
-    submitComplete: void;
-}
-
 export const FormContext = defineContext('FormContext', () => {
     const emitAsync = useEmitAsync();
-    const events = createEventEmitter<FormContextEvents>();
+
+    const submitFailed = createEventEmitter<unknown>();
+    const submitSucceed = createEventEmitter<void>();
+    const submitComplete = createEventEmitter<void>();
 
     const pending = ref(false);
 
     return reactive({
         pending,
         submit,
-        on: events.on,
-        off: events.off,
+        events: {
+            submitFailed: submitFailed.event,
+            submitSucceed: submitSucceed.event,
+            submitComplete: submitComplete.event,
+        },
     });
 
     async function submit() {
@@ -41,12 +38,12 @@ export const FormContext = defineContext('FormContext', () => {
 
             pending.value = true;
             await emitAsync('submit');
-            events.emit('submitSucceed');
+            submitSucceed.emit();
         } catch (e) {
-            events.emit('submitFailed', e);
+            submitFailed.emit(e);
             throw e;
         } finally {
-            events.emit('submitComplete');
+            submitComplete.emit();
             pending.value = false;
         }
     }

@@ -10,16 +10,31 @@ export async function checkoutBranch(branchName: string): Promise<void> {
         // First, fetch the latest changes
         await git.fetch('origin');
 
-        // Try to checkout the branch locally first
-        try {
+        // Check if the branch exists locally
+        const localBranches = await git.branchLocal();
+        const branchExists = localBranches.all.includes(branchName);
+
+        if (branchExists) {
+            // Branch exists locally, just checkout
             await git.checkout(branchName);
-        } catch {
-            // If local checkout fails, try to checkout from origin
-            await git.checkoutBranch(branchName, `origin/${branchName}`);
+        } else {
+            // Branch doesn't exist locally, check if it exists on origin
+            try {
+                // Try to checkout from origin
+                await git.checkoutBranch(branchName, `origin/${branchName}`);
+            } catch {
+                // If checkout from origin fails, try a simple checkout (branch might not exist on origin)
+                await git.checkout(branchName);
+            }
         }
 
-        // Pull the latest changes
-        await git.pull('origin', branchName);
+        // Pull the latest changes (only if the branch exists on origin)
+        try {
+            await git.pull('origin', branchName);
+        } catch {
+            // If pull fails, the branch might not exist on origin yet, which is fine
+            // This can happen with newly created local branches
+        }
     } catch (error) {
         throw new Error(`Failed to checkout branch ${branchName}: ${(error as Error).message}`);
     }

@@ -3,15 +3,18 @@ import { UsageError } from '@nzyme/cli';
 /**
  * Extract Sentry issue ID from a branch name.
  * Supports various branch naming conventions like:
- * - MYPROJECT-123-feature-name
- * - feature/MYPROJECT-123-something
+ * - MYPROJECT-123--feature-name
+ * - feature/MYPROJECT-123--something
+ * - feature/my-project-123--something
  * - MYPROJECT-123
  * - fix/MYPROJECT-123
  * @__NO_SIDE_EFFECTS__
  */
 export function extractIssueIdFromBranch(branchName: string): string {
-    // Pattern to match Sentry issue IDs (PROJECT-NUMBER format, case insensitive)
-    const issueIdPattern = /\b([A-Z\d-]+)\b/;
+    // Pattern to match Sentry issue IDs (PROJECT-ID format)
+    // Requires all uppercase letters (with digits allowed)
+    // Stops at: -- (double dash), lowercase letters, non-alphanumeric-hyphen characters, or end of string
+    const issueIdPattern = /\b([A-Z][A-Z\d]*(?:-[A-Z\d]+)*-[A-Z\d]+)(?=--|[a-z]|[^A-Za-z\d-]|$)/;
     const match = branchName.match(issueIdPattern);
 
     if (!match) {

@@ -121,11 +121,13 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
         // Handle branch selection and stashing if needed
         const branchResult = await handleBranchSelection(currentBranch, baseBranch, issueData.shortId, logger);
 
-        const branchName = `${branchPrefix}/${issueData.shortId}-${issueData.title
+        const title = issueData.title
             .toLowerCase()
-            .replace(/[^a-z0-9]/g, '-')
+            .replace(/[^a-zA-Z0-9]/g, '-')
             .replace(/-+/g, '-')
-            .slice(0, 50)}`;
+            .slice(0, 50);
+
+        const branchName = `${branchPrefix}/${issueData.shortId}--${title}`;
 
         // Build PR title with project context
         const prTitle = `[${issueData.shortId}][${issueData.project.name}] ${issueData.title}`;

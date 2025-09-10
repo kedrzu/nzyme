@@ -75,7 +75,7 @@ export function useBrowserTabStatus(options: BrowserTabStatusOptions = {}) {
 
     async function healthCheck(): Promise<boolean> {
         if (!pingUrl) {
-            return navigator.onLine; // fallback only
+            return navigator.onLine !== false; // fallback only
         }
 
         try {

@@ -15,6 +15,7 @@ import type { GitHubConfig } from '@nzyme/github-cli';
 import type { Logger } from '@nzyme/logging';
 
 import { handleTaskAssignment } from './handleTaskAssignment.js';
+import { handleTerminalState } from './handleTerminalState.js';
 
 /**
  * Parameters for switching to a task.
@@ -68,6 +69,9 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
     }
 
     logger.info(`📝 Found task: ${chalk.green(issueData.title)}`);
+
+    // Check if task is in terminal state and handle accordingly
+    await handleTerminalState(issueData, logger);
 
     // Handle task assignment and search for existing PR in parallel
     logger.info(`🔍 Searching for existing GitHub PR...`);

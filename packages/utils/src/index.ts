@@ -1,4 +1,5 @@
 export * from './array/arrayRemove.js';
+export * from './array/arrayRemoveDuplicates.js';
 export * from './array/arrayRemoveFirst.js';
 export * from './array/arrayRemoveWhere.js';
 export * from './array/arrayReverse.js';

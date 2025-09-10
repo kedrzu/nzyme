@@ -43,6 +43,12 @@ export interface SentryConfig {
      * Default project prefix for issue IDs (e.g., 'MYPROJECT' for MYPROJECT-123).
      */
     defaultPrefix?: string;
+
+    /**
+     * Default branch prefix for issue IDs.
+     * @default 'bug'
+     */
+    branchPrefix?: string;
 }
 
 /**
@@ -213,6 +219,7 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
                     githubConfig,
                     logger: this.logger,
                     baseBranch,
+                    branchPrefix: sentryConfig.branchPrefix,
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';

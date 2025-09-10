@@ -11,7 +11,7 @@ import { UsageError } from '@nzyme/cli';
  */
 export function extractIssueIdFromBranch(branchName: string): string {
     // Pattern to match Sentry issue IDs (PROJECT-NUMBER format, case insensitive)
-    const issueIdPattern = /\b([a-zA-Z]+-\d+)\b/;
+    const issueIdPattern = /\b([A-Z\d-]+)\b/;
     const match = branchName.match(issueIdPattern);
 
     if (!match) {

@@ -54,6 +54,12 @@ export interface SwitchToSentryIssueParams {
      * Base branch to use when creating new branches.
      */
     baseBranch?: string;
+
+    /**
+     * Branch prefix to use when creating new branches.
+     * @default 'bug'
+     */
+    branchPrefix?: string;
 }
 
 /**
@@ -61,7 +67,16 @@ export interface SwitchToSentryIssueParams {
  * This contains the common logic used by both "issue start" and similar commands.
  */
 export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Promise<void> {
-    const { issueId, organizationSlug, sentryClient, octokit, githubConfig, logger, baseBranch } = params;
+    const {
+        issueId,
+        organizationSlug,
+        sentryClient,
+        octokit,
+        githubConfig,
+        logger,
+        baseBranch,
+        branchPrefix = 'bug',
+    } = params;
 
     logger.info(`🔍 Looking for Sentry issue: ${chalk.bold(issueId)}`);
 
@@ -106,7 +121,7 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
         // Handle branch selection and stashing if needed
         const branchResult = await handleBranchSelection(currentBranch, baseBranch, issueData.shortId, logger);
 
-        const branchName = `${issueData.shortId.toLowerCase()}-${issueData.title
+        const branchName = `${branchPrefix}/${issueData.shortId}-${issueData.title
             .toLowerCase()
             .replace(/[^a-z0-9]/g, '-')
             .replace(/-+/g, '-')

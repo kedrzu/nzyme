@@ -88,7 +88,7 @@ export function defineLinearCommands(options: LinearCommandsOptions): CommandCla
 
 function defineTaskInfoCommand(options: LinearCommandsOptions) {
     return class TaskInfoCommand extends Command {
-        static override paths = getCommandPaths(options, 'task');
+        static override paths = getCommandPaths(options);
         static override usage = Command.Usage({
             category: 'Linear',
             description: 'Display information about the current task',
@@ -161,7 +161,7 @@ function defineTaskInfoCommand(options: LinearCommandsOptions) {
 
 function defineTaskStartCommand(options: LinearCommandsOptions) {
     return class TaskCommand extends Command {
-        static override paths = getCommandPaths(options, 'task');
+        static override paths = getCommandPaths(options);
         static override usage = Command.Usage({
             category: 'Linear',
             description: 'Start working on a Linear task',
@@ -217,7 +217,7 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
 
 function defineTaskNewCommand(options: LinearCommandsOptions) {
     return class TaskNewCommand extends Command {
-        static override paths = getCommandPaths(options, 'task', 'new');
+        static override paths = getCommandPaths(options, 'new');
         static override usage = Command.Usage({
             category: 'Linear',
             description: 'Create a new Linear task and start working on it',
@@ -323,7 +323,7 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
 
 function defineTaskReadyCommand(options: LinearCommandsOptions) {
     return class ReadyCommand extends Command {
-        static override paths = getCommandPaths(options, 'task', 'ready');
+        static override paths = getCommandPaths(options, 'ready');
         static override usage = Command.Usage({
             category: 'Linear',
             description: 'Convert current task from draft to ready for review',
@@ -394,7 +394,7 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
 
 function defineTaskRefreshCommand(options: LinearCommandsOptions) {
     return class TaskRefreshCommand extends Command {
-        static override paths = getCommandPaths(options, 'task', 'refresh');
+        static override paths = getCommandPaths(options, 'refresh');
         static override usage = Command.Usage({
             category: 'Linear',
             description: 'Refresh current task branch with latest base branch changes',
@@ -448,7 +448,7 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
 
 function defineTaskListCommand(options: LinearCommandsOptions) {
     return class TaskListCommand extends Command {
-        static override paths = getCommandPaths(options, 'task', 'list');
+        static override paths = getCommandPaths(options, 'list');
         static override usage = Command.Usage({
             category: 'Linear',
             description: 'List and select from tasks in progress and in review assigned to you',

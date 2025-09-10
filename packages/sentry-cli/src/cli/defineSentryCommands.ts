@@ -93,7 +93,7 @@ export function defineSentryCommands(options: SentryCommandsOptions): CommandCla
 
 function defineIssueInfoCommand(options: SentryCommandsOptions) {
     return class IssueInfoCommand extends Command {
-        static override paths = getCommandPaths(options, 'issue');
+        static override paths = getCommandPaths(options);
         static override usage = Command.Usage({
             category: 'Sentry',
             description: 'Display information about the current Sentry issue',
@@ -170,7 +170,7 @@ function defineIssueInfoCommand(options: SentryCommandsOptions) {
 
 function defineIssueStartCommand(options: SentryCommandsOptions) {
     return class IssueStartCommand extends Command {
-        static override paths = getCommandPaths(options, 'issue');
+        static override paths = getCommandPaths(options);
         static override usage = Command.Usage({
             category: 'Sentry',
             description: 'Start working on a Sentry issue',
@@ -225,7 +225,7 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
 
 function defineIssueReadyCommand(options: SentryCommandsOptions) {
     return class IssueReadyCommand extends Command {
-        static override paths = getCommandPaths(options, 'issue', 'ready');
+        static override paths = getCommandPaths(options, 'ready');
         static override usage = Command.Usage({
             category: 'Sentry',
             description: 'Convert current issue from draft to ready for review',
@@ -296,7 +296,7 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
 
 function defineIssueRefreshCommand(options: SentryCommandsOptions) {
     return class IssueRefreshCommand extends Command {
-        static override paths = getCommandPaths(options, 'issue', 'refresh');
+        static override paths = getCommandPaths(options, 'refresh');
         static override usage = Command.Usage({
             category: 'Sentry',
             description: 'Refresh current issue branch with latest base branch changes',

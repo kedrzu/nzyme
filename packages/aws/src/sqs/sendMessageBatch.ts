@@ -31,6 +31,10 @@ export interface SendMessageBatchOptions {
          * Message group ID.
          */
         groupId?: string;
+        /**
+         * Message delay in seconds.
+         */
+        delaySeconds?: number;
     }[];
 }
 
@@ -52,6 +56,7 @@ export async function sendMessageBatch(options: SendMessageBatchOptions) {
             MessageGroupId: message.groupId,
             MessageBody: message.body,
             MessageDeduplicationId: message.deduplicationId,
+            DelaySeconds: message.delaySeconds,
         });
 
         await client.send(command);
@@ -72,6 +77,7 @@ export async function sendMessageBatch(options: SendMessageBatchOptions) {
                             MessageGroupId: message.groupId,
                             MessageBody: message.body,
                             MessageDeduplicationId: message.deduplicationId,
+                            DelaySeconds: message.delaySeconds,
                         };
                     }),
                 });

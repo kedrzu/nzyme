@@ -42,6 +42,6 @@ interface Reactive {
 }
 
 /**
- *
+ * Re-export of vue reactive funtion with option to define the output type.
  */
 export const reactive = reactiveVue as Reactive;

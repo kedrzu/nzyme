@@ -7,6 +7,37 @@ interface VVisibleElement extends HTMLElement {
     _vov: string;
 }
 
+/**
+ * Vue directive that conditionally shows/hides elements by toggling their visibility style.
+ * Similar to v-show but uses CSS visibility instead of display, maintaining element layout space.
+ *
+ * Unlike v-show which removes elements from layout (display: none), v-visible keeps
+ * the element's space in the layout while making it invisible (visibility: hidden).
+ * Supports Vue transitions for smooth show/hide animations.
+ *
+ * @example
+ * ```vue
+ * <template>
+ *   <!-- Element keeps its space even when hidden -->
+ *   <div v-visible="isVisible">Content that can be hidden</div>
+ *
+ *   <!-- With transition -->
+ *   <transition name="fade">
+ *     <div v-visible="isVisible">Content with transition</div>
+ *   </transition>
+ *
+ *   <!-- Compare with v-show -->
+ *   <div v-show="isVisible">Removes from layout when hidden</div>
+ *   <div v-visible="isVisible">Keeps layout space when hidden</div>
+ * </template>
+ *
+ * <script setup>
+ * import { ref } from 'vue';
+ *
+ * const isVisible = ref(true);
+ * </script>
+ * ```
+ */
 export const vVisible: ObjectDirective<VVisibleElement> = {
     beforeMount(el, { value }, { transition }) {
         el._vov = el.style.visibility === 'hidden' ? '' : el.style.visibility;

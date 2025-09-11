@@ -24,9 +24,7 @@ export type ContextParams<T> = T extends ContextDefinition<infer TParams, any> ?
  *
  * @__NO_SIDE_EFFECTS__
  */
-export function defineContext<TContext>(
-    name: string,
-): ContextDefinition<[context: TContext], TContext>;
+export function defineContext<TContext>(name: string): ContextDefinition<[context: TContext], TContext>;
 /**
  *
  * @__NO_SIDE_EFFECTS__

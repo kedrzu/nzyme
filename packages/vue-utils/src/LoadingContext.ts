@@ -1,4 +1,4 @@
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 
 import { defineContext, injectContext, provideContext } from './context.js';
 import { reactive } from './reactivity/reactive.js';
@@ -93,8 +93,6 @@ const dummyContext: LoadingContext = {
 export function useLoadingContext(): LoadingContext {
     return injectContext(LoadingContext, { optional: true }) ?? dummyContext;
 }
-
-let i = 0;
 
 /**
  * Provides a loading context for child components to communicate their loading states.

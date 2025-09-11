@@ -8,7 +8,28 @@ interface VShowElement extends HTMLElement {
 }
 
 /**
- * Show directive.
+ * Vue directive implementation that conditionally shows/hides elements by toggling their display style.
+ * This is a custom implementation of Vue's built-in v-show directive with transition support.
+ *
+ * Preserves the original display value and restores it when showing the element.
+ * Supports Vue transitions for smooth show/hide animations.
+ *
+ * @example
+ * ```vue
+ * <template>
+ *   <div v-show="isVisible">Content that can be hidden</div>
+ *
+ *   <transition name="fade">
+ *     <div v-show="isVisible">Content with transition</div>
+ *   </transition>
+ * </template>
+ *
+ * <script setup>
+ * import { ref } from 'vue';
+ *
+ * const isVisible = ref(true);
+ * </script>
+ * ```
  */
 export const vShow: ObjectDirective<VShowElement> = {
     beforeMount(el, { value }, { transition }) {

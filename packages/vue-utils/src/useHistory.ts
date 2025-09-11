@@ -5,7 +5,34 @@ type HistoryState = Record<string, unknown>;
 let history: ReturnType<typeof initializeHistory> | null = null;
 
 /**
+ * Composable that provides enhanced browser history management with event listeners.
+ * Returns a singleton history manager with events for state changes and state management utilities.
  *
+ * @returns History manager with event listeners and state management methods
+ *
+ * @example
+ * ```vue
+ * <script setup>
+ * import { useHistory } from '@nzyme/vue-utils';
+ *
+ * const history = useHistory();
+ *
+ * // Listen to history changes
+ * history.onPopState(({ state }) => {
+ *   console.log('Back/forward navigation:', state);
+ * });
+ *
+ * history.onPushState(({ state }) => {
+ *   console.log('New page pushed:', state);
+ * });
+ *
+ * // Get current state
+ * const currentState = history.getState();
+ *
+ * // Set state without navigation
+ * history.setState({ userId: 123, tab: 'profile' });
+ * </script>
+ * ```
  */
 export function useHistory() {
     if (!history) {

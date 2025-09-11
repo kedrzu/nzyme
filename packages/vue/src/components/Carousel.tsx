@@ -67,8 +67,9 @@ export const Carousel = defineComponent({
 
         const updateSizeDebounced = debounce(() => void updateSize(), 100);
 
-        useIntersectionObserver(carouselRef, {
-            onVisible: updateSize,
+        useIntersectionObserver({
+            element: carouselRef,
+            onVisible: () => updateSize(),
         });
 
         let mutationObserver: MutationObserver | undefined;

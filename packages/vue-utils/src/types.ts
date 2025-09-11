@@ -1,7 +1,8 @@
 import type { AllowedComponentProps, ComponentPublicInstance, VNodeProps } from 'vue';
 
 /**
- *
+ * Union type representing elements that can be used with Vue utilities.
+ * Includes DOM elements, Vue component instances, and global objects.
  */
 export type ElementOrVue = ComponentPublicInstance | Document | Element | HTMLElement | SVGElement | Window;
 

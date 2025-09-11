@@ -1,14 +1,8 @@
-import type {
-    ComponentCustomProps,
-    VNodeProps,
-    EmitsOptions,
-    AllowedComponentProps,
-    ObjectEmitsOptions,
-} from 'vue';
+import type { AllowedComponentProps, ComponentCustomProps, EmitsOptions, ObjectEmitsOptions, VNodeProps } from 'vue';
 
-import type { UnionToIntersection } from '@nzyme/types';
+import type { SomeObject, UnionToIntersection } from '@nzyme/types';
 
-declare type PublicProps = VNodeProps & AllowedComponentProps & ComponentCustomProps;
+declare type PublicProps = AllowedComponentProps & ComponentCustomProps & VNodeProps;
 
 declare type EmitFn<Options = ObjectEmitsOptions, Event extends keyof Options = keyof Options> =
     Options extends Array<infer V>
@@ -28,13 +22,40 @@ declare type EmitFn<Options = ObjectEmitsOptions, Event extends keyof Options = 
                 }[Event]
             >;
 
+/**
+ * Type definition for Vue component with typed props, slots, and emits.
+ * Provides strong typing for component instances including their public API.
+ *
+ * @template Props - The component's props interface
+ * @template Slots - The component's slots interface
+ * @template Emits - The component's emits options
+ *
+ * @example
+ * ```typescript
+ * interface MyComponentProps {
+ *   title: string;
+ *   count?: number;
+ * }
+ *
+ * interface MyComponentSlots {
+ *   default: () => VNode[];
+ *   header: (props: { title: string }) => VNode[];
+ * }
+ *
+ * interface MyComponentEmits {
+ *   click: (id: number) => void;
+ *   change: (value: string) => void;
+ * }
+ *
+ * type MyComponent = Component<MyComponentProps, MyComponentSlots, MyComponentEmits>;
+ * ```
+ */
+export type Component<Props = SomeObject, Slots = SomeObject, Emits extends EmitsOptions = SomeObject> = {
+    new (): ClassComponent<Props, Slots, Emits>;
+};
+
 interface ClassComponent<Props, Slots, Emits extends EmitsOptions> {
     $props: Props & PublicProps;
     $slots: Slots;
     $emit: EmitFn<Emits>;
 }
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export type Component<Props = {}, Slots = {}, Emits extends EmitsOptions = {}> = {
-    new (): ClassComponent<Props, Slots, Emits>;
-};

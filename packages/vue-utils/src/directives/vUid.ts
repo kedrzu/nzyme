@@ -39,17 +39,6 @@ export const vUid: ObjectDirective<Element> = {
     },
 };
 
-/**
- * Generates a random unique identifier by combining current timestamp and random string.
- *
- * @example
- * ```ts
- * const id = randomId(); // "1a2b3c4d5e"
- * ```
- *
- * @returns A unique string identifier
- * @__NO_SIDE_EFFECTS__
- */
 function randomId() {
     return Date.now().toString(36) + Math.random().toString(36).substring(2);
 }

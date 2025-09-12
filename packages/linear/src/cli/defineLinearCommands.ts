@@ -63,11 +63,18 @@ export interface LinearCommandsOptions {
     beforeEach?: () => Promise<void>;
 
     /**
-     * The base branch to use when creating new branches.
-     * Can be a string (e.g., 'main', 'develop') or a function that returns the base branch name.
+     * The base branch(es) to use when creating new branches.
+     * Can be a string (e.g., 'main'), an array of strings (e.g., ['main', 'develop']),
+     * or a function that returns the base branch name(s).
      * If not provided, defaults to the current branch.
      */
-    baseBranch?: (() => Promise<string>) | (() => string) | string;
+    baseBranch?:
+        | (() => string)
+        | (() => Promise<string>)
+        | (() => string[])
+        | (() => Promise<string[]>)
+        | string
+        | string[];
 }
 
 /**
@@ -191,10 +198,10 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                 // Get Linear issue details with team information
                 const linearClient = createLinearClient(linearConfig);
 
-                // Create GitHub client and get base branch
-                const [octokit, baseBranch] = await Promise.all([
+                // Create GitHub client and get base branches
+                const [octokit, baseBranches] = await Promise.all([
                     Promise.resolve(createOctokitClient(githubConfig)),
-                    getBaseBranch(options),
+                    getBaseBranches(options),
                 ]);
 
                 // Use the common switch to task utility
@@ -204,7 +211,7 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                     octokit,
                     githubConfig,
                     logger: this.logger,
-                    baseBranch,
+                    baseBranches,
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -297,10 +304,10 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
 
                 this.logger.info(`✅ Created Linear task: ${chalk.bold(issueId)}`);
 
-                // Create GitHub client and get base branch
-                const [octokit, baseBranch] = await Promise.all([
+                // Create GitHub client and get base branches
+                const [octokit, baseBranches] = await Promise.all([
                     Promise.resolve(createOctokitClient(githubConfig)),
-                    getBaseBranch(options),
+                    getBaseBranches(options),
                 ]);
 
                 // Switch to the newly created task
@@ -310,7 +317,7 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
                     octokit,
                     githubConfig,
                     logger: this.logger,
-                    baseBranch,
+                    baseBranches,
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -415,12 +422,14 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                 const taskId = extractTaskIdFromBranch(currentBranch);
                 this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
 
-                // Get base branch
-                const baseBranch = await getBaseBranch(options);
-                if (!baseBranch) {
-                    throw new UsageError('Base branch is not configured');
+                // Get base branches
+                const baseBranches = await getBaseBranches(options);
+                if (baseBranches.length === 0) {
+                    throw new UsageError('No base branches configured');
                 }
 
+                // For refresh, use the first base branch as default (backward compatibility)
+                const baseBranch = baseBranches[0]!;
                 this.logger.info(`🔄 Refreshing task ${chalk.bold(taskId)} with base branch ${chalk.cyan(baseBranch)}`);
 
                 // Sync with base branch - automatically merge without prompting
@@ -572,8 +581,8 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
 
                 this.logger.info(`🎯 Switching to task: ${chalk.bold(selectedTaskId)}`);
 
-                // Get base branch
-                const baseBranch = await getBaseBranch(options);
+                // Get base branches
+                const baseBranches = await getBaseBranches(options);
 
                 // Use the common switch to task utility
                 await switchToTask({
@@ -582,7 +591,7 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                     octokit,
                     githubConfig,
                     logger: this.logger,
-                    baseBranch,
+                    baseBranches,
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -617,10 +626,15 @@ async function getGitHubConfig(options: LinearCommandsOptions): Promise<GitHubCo
     return options.github;
 }
 
-async function getBaseBranch(options: LinearCommandsOptions): Promise<string | undefined> {
+async function getBaseBranches(options: LinearCommandsOptions): Promise<string[]> {
     if (typeof options.baseBranch === 'function') {
-        return await options.baseBranch();
+        const result = await options.baseBranch();
+        return Array.isArray(result) ? result : [result];
     }
 
-    return options.baseBranch;
+    if (Array.isArray(options.baseBranch)) {
+        return options.baseBranch;
+    }
+
+    return options.baseBranch ? [options.baseBranch] : [];
 }

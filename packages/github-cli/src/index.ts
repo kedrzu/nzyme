@@ -11,7 +11,7 @@ export { getCurrentBranch } from './utils/getCurrentBranch.js';
 export { getGitStatusInfo } from './utils/getGitStatusInfo.js';
 export type { GitStatusInfo } from './utils/getGitStatusInfo.js';
 export { applyStashedChanges, handleBranchSelection } from './utils/handleBranchSelection.js';
-export type { BranchSelectionResult } from './utils/handleBranchSelection.js';
+export type { BranchSelectionParams, BranchSelectionResult } from './utils/handleBranchSelection.js';
 export { handleReadyPreparation } from './utils/handleReadyPreparation.js';
 export { syncBaseBranch } from './utils/syncBaseBranch.js';
 export type { SyncBaseBranchResult } from './utils/syncBaseBranch.js';

@@ -76,11 +76,18 @@ export interface SentryCommandsOptions {
     beforeEach?: () => Promise<void>;
 
     /**
-     * The base branch to use when creating new branches.
-     * Can be a string (e.g., 'main', 'develop') or a function that returns the base branch name.
+     * The base branch(es) to use when creating new branches.
+     * Can be a string (e.g., 'main'), an array of strings (e.g., ['main', 'develop']),
+     * or a function that returns the base branch name(s).
      * If not provided, defaults to the current branch.
      */
-    baseBranch?: (() => Promise<string>) | (() => string) | string;
+    baseBranch?:
+        | (() => string)
+        | (() => Promise<string>)
+        | (() => string[])
+        | (() => Promise<string[]>)
+        | string
+        | string[];
 }
 
 /**
@@ -203,11 +210,11 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
                 // Parse issue identifier to get the issue ID
                 const issueId = parseIssueIdentifier(this.issueIdentifier, sentryConfig.defaultPrefix);
 
-                // Create GitHub client and get base branch
-                const [sentryClient, octokit, baseBranch] = await Promise.all([
+                // Create GitHub client and get base branches
+                const [sentryClient, octokit, baseBranches] = await Promise.all([
                     Promise.resolve(createSentryClient(sentryConfig)),
                     Promise.resolve(createOctokitClient(githubConfig)),
-                    getBaseBranch(options),
+                    getBaseBranches(options),
                 ]);
 
                 // Use the common switch to issue utility
@@ -218,7 +225,7 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
                     octokit,
                     githubConfig,
                     logger: this.logger,
-                    baseBranch,
+                    baseBranches,
                     branchPrefix: sentryConfig.branchPrefix,
                 });
             } catch (error) {
@@ -324,12 +331,14 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                 const issueId = extractIssueIdFromBranch(currentBranch);
                 this.logger.info(`🎯 Found issue ID: ${chalk.bold(issueId)}`);
 
-                // Get base branch
-                const baseBranch = await getBaseBranch(options);
-                if (!baseBranch) {
-                    throw new UsageError('Base branch is not configured');
+                // Get base branches
+                const baseBranches = await getBaseBranches(options);
+                if (baseBranches.length === 0) {
+                    throw new UsageError('No base branches configured');
                 }
 
+                // For refresh, use the first base branch as default (backward compatibility)
+                const baseBranch = baseBranches[0]!;
                 this.logger.info(
                     `🔄 Refreshing issue ${chalk.bold(issueId)} with base branch ${chalk.cyan(baseBranch)}`,
                 );
@@ -381,10 +390,15 @@ async function getGitHubConfig(options: SentryCommandsOptions): Promise<GitHubCo
     return options.github;
 }
 
-async function getBaseBranch(options: SentryCommandsOptions): Promise<string | undefined> {
+async function getBaseBranches(options: SentryCommandsOptions): Promise<string[]> {
     if (typeof options.baseBranch === 'function') {
-        return await options.baseBranch();
+        const result = await options.baseBranch();
+        return Array.isArray(result) ? result : [result];
     }
 
-    return options.baseBranch;
+    if (Array.isArray(options.baseBranch)) {
+        return options.baseBranch;
+    }
+
+    return options.baseBranch ? [options.baseBranch] : [];
 }

@@ -7,10 +7,10 @@ import {
     checkoutExistingBranch,
     createBranchAndPr,
     findMatchingPr,
-    getCurrentBranch,
     handleBranchSelection,
     syncBaseBranch,
 } from '@nzyme/github-cli';
+import type { BranchSelectionResult } from '@nzyme/github-cli';
 import type { GitHubConfig } from '@nzyme/github-cli';
 import type { Logger } from '@nzyme/logging';
 
@@ -47,9 +47,9 @@ export interface SwitchToTaskParams {
     logger: Logger;
 
     /**
-     * Base branch to use when creating new branches.
+     * Base branches to use when creating new branches.
      */
-    baseBranch?: string;
+    baseBranches: string[];
 }
 
 /**
@@ -57,7 +57,7 @@ export interface SwitchToTaskParams {
  * This contains the common logic used by both "task start" and "task new" commands.
  */
 export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
-    const { issueId, linearClient, octokit, githubConfig, logger, baseBranch } = params;
+    const { issueId, linearClient, octokit, githubConfig, logger, baseBranches } = params;
 
     logger.info(`🔍 Looking for Linear task: ${chalk.bold(issueId)}`);
 
@@ -87,26 +87,26 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
 
         await checkoutExistingBranch(existingPr.head.ref, issueId, logger);
 
-        // Sync with base branch after checkout
-        if (baseBranch) {
-            logger.info(`🔄 Synchronizing with base branch ${chalk.cyan(baseBranch)}`);
-            await syncBaseBranch(baseBranch, logger);
-        }
+        // Sync with PR's base branch after checkout
+        const prBaseBranch = existingPr.base.ref;
+        logger.info(`🔄 Synchronizing with PR base branch ${chalk.cyan(prBaseBranch)}`);
+        await syncBaseBranch(prBaseBranch, logger);
 
         logger.info(`🎉 Successfully checked out existing branch for ${chalk.bold(issueId)}`);
     } else {
         // Create new branch and PR
         logger.info(`📝 No existing PR found. Creating new branch and draft PR...`);
 
-        // Get current branch
-        const currentBranch = await getCurrentBranch();
-
-        if (!baseBranch) {
-            throw new Error('Base branch is not configured');
+        if (baseBranches.length === 0) {
+            throw new Error('No base branches configured');
         }
 
         // Handle branch selection and stashing if needed
-        const branchResult = await handleBranchSelection(currentBranch, baseBranch, issueId, logger);
+        const branchResult: BranchSelectionResult = await handleBranchSelection({
+            baseBranches,
+            taskId: issueId,
+            logger,
+        });
 
         const branchName =
             issueData.branchName ||
@@ -125,7 +125,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
 
         logger.info(`🌿 Creating branch: ${chalk.cyan(branchName)}`);
 
-        const selectedBaseBranch = branchResult.useBaseBranch ? baseBranch : currentBranch;
+        const selectedBaseBranch = branchResult.selectedBaseBranch;
 
         const result = await createBranchAndPr({
             octokit,

@@ -6,10 +6,10 @@ import {
     checkoutExistingBranch,
     createBranchAndPr,
     findMatchingPr,
-    getCurrentBranch,
     handleBranchSelection,
     syncBaseBranch,
 } from '@nzyme/github-cli';
+import type { BranchSelectionResult } from '@nzyme/github-cli';
 import type { GitHubConfig } from '@nzyme/github-cli';
 import type { Logger } from '@nzyme/logging';
 
@@ -51,9 +51,9 @@ export interface SwitchToSentryIssueParams {
     logger: Logger;
 
     /**
-     * Base branch to use when creating new branches.
+     * Base branches to use when creating new branches.
      */
-    baseBranch?: string;
+    baseBranches: string[];
 
     /**
      * Branch prefix to use when creating new branches.
@@ -74,7 +74,7 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
         octokit,
         githubConfig,
         logger,
-        baseBranch,
+        baseBranches,
         branchPrefix = 'bug',
     } = params;
 
@@ -100,26 +100,26 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
 
         await checkoutExistingBranch(existingPr.head.ref, issueData.shortId, logger);
 
-        // Sync with base branch after checkout
-        if (baseBranch) {
-            logger.info(`🔄 Synchronizing with base branch ${chalk.cyan(baseBranch)}`);
-            await syncBaseBranch(baseBranch, logger);
-        }
+        // Sync with PR's base branch after checkout
+        const prBaseBranch = existingPr.base.ref;
+        logger.info(`🔄 Synchronizing with PR base branch ${chalk.cyan(prBaseBranch)}`);
+        await syncBaseBranch(prBaseBranch, logger);
 
         logger.info(`🎉 Successfully checked out existing branch for ${chalk.bold(issueData.shortId)}`);
     } else {
         // Create new branch and PR
         logger.info(`📝 No existing PR found. Creating new branch and draft PR...`);
 
-        // Get current branch
-        const currentBranch = await getCurrentBranch();
-
-        if (!baseBranch) {
-            throw new Error('Base branch is not configured');
+        if (baseBranches.length === 0) {
+            throw new Error('No base branches configured');
         }
 
         // Handle branch selection and stashing if needed
-        const branchResult = await handleBranchSelection(currentBranch, baseBranch, issueData.shortId, logger);
+        const branchResult: BranchSelectionResult = await handleBranchSelection({
+            baseBranches,
+            taskId: issueData.shortId,
+            logger,
+        });
 
         const title = issueData.title
             .toLowerCase()
@@ -134,7 +134,7 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
 
         logger.info(`🌿 Creating branch: ${chalk.cyan(branchName)}`);
 
-        const selectedBaseBranch = branchResult.useBaseBranch ? baseBranch : currentBranch;
+        const selectedBaseBranch = branchResult.selectedBaseBranch;
 
         const result = await createBranchAndPr({
             octokit,

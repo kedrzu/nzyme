@@ -69,10 +69,10 @@ export interface LinearCommandsOptions {
      * If not provided, defaults to the current branch.
      */
     baseBranch?:
-        | (() => string)
         | (() => Promise<string>)
-        | (() => string[])
         | (() => Promise<string[]>)
+        | (() => string)
+        | (() => string[])
         | string
         | string[];
 }

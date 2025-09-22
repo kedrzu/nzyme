@@ -38,7 +38,7 @@
         "@nzyme/vue-utils": "^0.14.0",
         "@regle/core": "^1.7.2",
         "@regle/rules": "^1.7.2",
-        "libphonenumber-js": "^1.12.17",
+        "libphonenumber-js": "^1.12.18",
         "lodash.debounce": "^4.0.8",
         "postal-codes-js": "^2.5.2",
         "vue": "^3.5.21",

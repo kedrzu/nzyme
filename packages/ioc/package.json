@@ -28,7 +28,7 @@
     "dependencies": {
         "@nzyme/types": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
-        "type-fest": "^4.41.0"
+        "type-fest": "^5.0.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",

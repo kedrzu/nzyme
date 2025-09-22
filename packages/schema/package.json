@@ -39,7 +39,7 @@
         "chokidar": "^4.0.3",
         "clipanion": "^4.0.0-rc.4",
         "fast-glob": "^3.3.3",
-        "fs-extra": "^11.3.1",
+        "fs-extra": "^11.3.2",
         "sury": "^11.0.0-alpha.3",
         "typescript": "^5.9.2"
     },

@@ -14,6 +14,7 @@ export * from './array/findMax.js';
 export * from './array/findMin.js';
 export * from './array/forEachParalell.js';
 export * from './array/getLastItem.js';
+export * from './array/getLastItemOrThrow.js';
 export * from './array/getSingleItem.js';
 export * from './array/groupBy.js';
 export * from './array/groupByToMap.js';

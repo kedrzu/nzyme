@@ -1,8 +1,9 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import type { MaybeRefOrGetter } from 'vue';
 
 import { isBrowser } from '@nzyme/dom-utils';
-import type { ElementOrVue, RefParam } from '@nzyme/vue-utils';
-import { makeRef, onElementScroll, onWindowResize, unwrapElement } from '@nzyme/vue-utils';
+import type { ElementOrVue } from '@nzyme/vue-utils';
+import { makeRef, onElementScroll, onWindowResize, unwrapElement, useElement } from '@nzyme/vue-utils';
 
 /**
  * Position of the sticky element.
@@ -21,15 +22,15 @@ export interface StickyElementOptions {
     /**
      * Element to make sticky.
      */
-    element: RefParam<Element | undefined>;
+    element?: MaybeRefOrGetter<Element | undefined>;
     /**
      * Element to use as a container for the sticky element.
      */
-    container?: RefParam<StickyElementContainer>;
+    container?: MaybeRefOrGetter<StickyElementContainer>;
     /**
      * Position of the sticky element.
      */
-    position: RefParam<StickyElementPosition>;
+    position: MaybeRefOrGetter<StickyElementPosition>;
 }
 
 /**
@@ -39,7 +40,7 @@ export interface StickyElementOptions {
  * @returns A ref to the sticky state.
  */
 export function useStickyElement(options: StickyElementOptions) {
-    const element = makeRef(options.element);
+    const element = options.element ? makeRef(options.element) : useElement();
     const sticky = ref(false);
     const position = makeRef(options.position);
 

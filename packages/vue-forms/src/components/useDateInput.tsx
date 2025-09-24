@@ -7,7 +7,7 @@ import { defineProps, useProps } from '@nzyme/vue-utils';
 import { defineFormField } from './defineFormField.js';
 import * as l from './useDateInput.loc.js';
 
-const DATE_FIELD = defineFormField<Date>(Date);
+const DATE_FIELD = defineFormField<Date | null>(Date);
 const DATE_PROPS = defineProps({
     ...DATE_FIELD.props,
     label: String,

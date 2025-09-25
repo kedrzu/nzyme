@@ -1,7 +1,5 @@
 import type * as aws from '@pulumi/aws';
 
-import type { Defined } from '@nzyme/types';
-
 import type { UnwrapShallow } from '../types.js';
 
 /**
@@ -12,13 +10,13 @@ export type CloudfrontOriginProps = UnwrapShallow<UnwrapShallow<aws.cloudfront.D
 /**
  * The properties of a Cloudfront ordered behavior.
  */
-export type CloudfrontOrderedBehaviorProps = Defined<
+export type CloudfrontOrderedBehaviorProps = NonNullable<
     UnwrapShallow<aws.cloudfront.DistributionArgs['orderedCacheBehaviors']>
 >[number];
 
 /**
  * The properties of a Cloudfront default behavior.
  */
-export type CloudfrontDefaultBehaviorProps = Defined<
+export type CloudfrontDefaultBehaviorProps = NonNullable<
     UnwrapShallow<aws.cloudfront.DistributionArgs['defaultCacheBehavior']>
 >;

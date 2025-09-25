@@ -18,7 +18,7 @@ Use simple for...of loops instead of forEach(), reduce().
 When generating functions place them in the file in order from high to low abstraction.
 Also if function A uses B, A should be above B if possible.
 
-For pure functions (only functions, not variables, services, commands) like those which start with get.. or define.. add a following comment as the last line of the jsdoc: @**NO_SIDE_EFFECTS**
+For pure functions (only functions, not variables, services, commands) like those which start with get.. or define.. add a following comment as the last line of the jsdoc: `@__NO_SIDE_EFFECTS__`
 
 When more than 3 parameters always use single-argument object wrapper. Create a dedicated exported interface called `[FuncName]Params` or `[FuncName]Options`.
 Do it also for less than 3 params if it would improve readability.

@@ -1,17 +1,3 @@
-interface SingleValue {
-    value: string;
-}
-
-interface Cookie extends SingleValue {
-    attributes?: string;
-}
-
-interface MultiValue<T> {
-    multivalue?: T[];
-}
-
-type MultiValueDictionary<T> = Record<string, (T & MultiValue<T>) | undefined>;
-
 /**
  * Represents CloudFront HTTP headers as a dictionary of single or multiple values
  */
@@ -116,3 +102,38 @@ export interface CloudFrontRequestHandler {
 export interface CloudFrontResponseHandler {
     (event: CloudFrontResponseEvent): CloudFrontResponse;
 }
+
+/**
+ * Represents a single value
+ */
+export interface SingleValue {
+    /**
+     * The value of the single value
+     */
+    value: string;
+}
+
+/**
+ * Represents a cookie
+ */
+export interface Cookie extends SingleValue {
+    /**
+     * The attributes of the cookie
+     */
+    attributes?: string;
+}
+
+/**
+ * Represents a multivalue
+ */
+export interface MultiValue<T> {
+    /**
+     * The multivalue of the multivalue
+     */
+    multivalue?: T[];
+}
+
+/**
+ * Represents a multivalue dictionary
+ */
+export type MultiValueDictionary<T> = Record<string, (MultiValue<T> & T) | undefined>;

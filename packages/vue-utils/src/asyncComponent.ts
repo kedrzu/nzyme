@@ -1,3 +1,10 @@
+import type { Component } from './component.js';
+
+/**
+ * Async component import.
+ */
+export type AsyncComponent<T extends Component = Component> = () => Promise<{ default: T }>;
+
 /**
  * Async component import.
  *

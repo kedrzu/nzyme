@@ -1,5 +1,7 @@
 export * from './clearFocus.js';
+export * from './getBrowserLanguage.js';
 export * from './getChildrenHeight.js';
+export * from './getCookie.js';
 export * from './getOs.js';
 export * from './getOuterHeight.js';
 export * from './getScrollBarWidth.js';
@@ -13,4 +15,5 @@ export * from './lockBodyScroll.js';
 export * from './navigateToUrl.js';
 export * from './requestIdleCallback.js';
 export * from './scrollToTopElement.js';
+export * from './setCookie.js';
 export * from './virtualHistory.js';

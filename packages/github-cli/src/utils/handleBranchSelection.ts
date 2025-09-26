@@ -71,15 +71,6 @@ export async function handleBranchSelection(params: BranchSelectionParams): Prom
     // Build list of branch options
     const branchOptions: Array<{ message: string; name: string; value: string }> = [];
 
-    // Add current branch if it's not one of the base branches
-    if (!baseBranches.includes(currentBranch)) {
-        branchOptions.push({
-            message: `${chalk.yellow(currentBranch)} (current branch)`,
-            name: 'current',
-            value: currentBranch,
-        });
-    }
-
     // Add all base branches
     for (const baseBranch of baseBranches) {
         const isCurrent = currentBranch === baseBranch;
@@ -90,6 +81,15 @@ export async function handleBranchSelection(params: BranchSelectionParams): Prom
             message: color(label),
             name: baseBranch,
             value: baseBranch,
+        });
+    }
+
+    // Add current branch if it's not one of the base branches
+    if (!baseBranches.includes(currentBranch)) {
+        branchOptions.push({
+            message: `${chalk.yellow(currentBranch)} (current branch)`,
+            name: 'current',
+            value: currentBranch,
         });
     }
 

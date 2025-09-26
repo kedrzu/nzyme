@@ -1,7 +1,14 @@
+import type { Logger } from './Logger.js';
+
 /**
  *
  */
-export interface ApplicationErrorOptions extends ErrorOptions {
+export interface ApplicationErrorData extends ErrorOptions {
+    /**
+     * A logger instance.
+     */
+    logger?: Logger;
+
     [key: string]: unknown;
 }
 
@@ -9,15 +16,15 @@ export interface ApplicationErrorOptions extends ErrorOptions {
  *
  */
 export class ApplicationError extends Error {
-    public readonly data: Record<string, unknown>;
+    public readonly data: ApplicationErrorData;
 
     /**
      *
      */
-    constructor(message: string, options: ApplicationErrorOptions) {
-        super(message, options);
+    constructor(message: string, data: ApplicationErrorData) {
+        super(message, data);
 
-        this.data = options;
+        this.data = data;
         this.name = 'ApplicationError';
     }
 }

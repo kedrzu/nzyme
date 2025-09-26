@@ -7,6 +7,10 @@ import { LoggerTransport } from './LoggerTransport.js';
  */
 export interface Logger {
     /**
+     * The name of the logger.
+     */
+    name: string | undefined;
+    /**
      * Log an error.
      */
     error: LoggerLogFunction;
@@ -72,6 +76,7 @@ export const Logger = defineService({
     },
     setup: ({ name, transport }) => {
         const logger: Logger = {
+            name,
             error: (msg, obj) => transport.log(name, 'error', msg, obj),
             warn: (msg, obj) => transport.log(name, 'warn', msg, obj),
             info: (msg, obj) => transport.log(name, 'info', msg, obj),

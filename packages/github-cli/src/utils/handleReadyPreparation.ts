@@ -74,7 +74,7 @@ export async function handleReadyPreparation(
             }: ${chalk.yellow(statusInfo.changeDescription)}`,
         );
 
-        const { shouldCommit } = await enquirer.prompt<{ shouldCommit: boolean }>({
+        const { shouldCommit } = await enquirer.prompt<{ shouldCommit: 'yes' | 'no' }>({
             type: 'select',
             name: 'shouldCommit',
             message: `Do you want to commit these ${statusInfo.totalChanges} change${
@@ -84,17 +84,15 @@ export async function handleReadyPreparation(
                 {
                     name: 'yes',
                     message: `Yes, commit ${statusInfo.totalChanges} change${statusInfo.totalChanges === 1 ? '' : 's'}`,
-                    value: true,
                 },
                 {
                     name: 'no',
                     message: 'No, skip committing',
-                    value: false,
                 },
             ],
         });
 
-        if (shouldCommit) {
+        if (shouldCommit === 'yes') {
             // Add all changes to staging
             logger.info(`📦 Adding all changes to staging...`);
             await git.add('.');

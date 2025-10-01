@@ -21,7 +21,7 @@ export interface ValidationErrors {
 /**
  * Possible return types from a validator function
  */
-export type ValidationResult = null | string | string[] | undefined | ValidationErrors | void;
+export type ValidationResult = string | string[] | ValidationErrors | null | undefined | void;
 
 /**
  * Function type for validators

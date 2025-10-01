@@ -1,48 +1,44 @@
 import type { ValidationContext, Validator } from '../Validator.js';
 
 /**
- *
+ * Context object passed to minLength validator
  */
-export interface MinLengthValidatorOptions<
-    T extends {
-        /**
-         *
-         */
-        length: number;
-    },
-> {
+export interface MinLengthValidatorContext<T extends WithLength> extends ValidationContext {
     /**
-     *
+     * Minimum length
      */
     minLength: number;
     /**
-     *
+     * Value to validate
      */
-    message?: (
-        params: ValidationContext & {
-            /**
-             *
-             */
-            minLength: number /**
-             *
-             */;
-            value: T;
-        },
-    ) => string;
+    value: T;
 }
 
 /**
- *
+ * Options for minLength validator
  */
-export function minLength<
-    T extends {
-        /**
-         *
-         */
-        length: number;
-    },
->(options: MinLengthValidatorOptions<T>): Validator<null | T | undefined> {
-    const { minLength: minLength, message } = options;
+export interface MinLengthValidatorOptions<T extends WithLength> {
+    /**
+     * Message to return if validation fails
+     */
+    message?: (ctx: MinLengthValidatorContext<T>) => string;
+}
+
+type WithLength = {
+    length: number;
+};
+
+/**
+ * Validator that checks if the value has at least the specified length
+ * @param minLength - The minimum length to check against.
+ * @param options - Options for the validator.
+ * @returns A validator function.
+ */
+export function minLength<T extends WithLength>(
+    minLength: number,
+    options?: MinLengthValidatorOptions<T>,
+): Validator<T | null | undefined> {
+    const message = options?.message;
 
     return (value, ctx) => {
         if (value == null) {

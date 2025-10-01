@@ -1,23 +1,19 @@
-import {
-    type Schema,
-    type SchemaProto,
-    type Infer,
-    type InferNonNull,
-    DEFAULT_SCHEMA_CONTEXT,
-} from '../Schema.js';
-import { lazyResolve } from '../schemas/lazy.js';
+import { DEFAULT_SCHEMA_CONTEXT } from '../Schema.js';
+import type { Infer, InferNonNull, Schema, SchemaProto } from '../Schema.js';
 import type { SchemaContext } from '../Schema.js';
+import { lazyResolve } from '../schemas/lazy.js';
 
-export function coerce<S extends Schema>(
-    schema: S,
-    value: Partial<Infer<S>>,
-    context?: SchemaContext,
-): Infer<S>;
-export function coerce<S extends Schema>(
-    schema: S,
-    value?: unknown,
-    context?: SchemaContext,
-): Infer<S>;
+/**
+ *
+ */
+export function coerce<S extends Schema>(schema: S, value: Partial<Infer<S>>, context?: SchemaContext): Infer<S>;
+/**
+ *
+ */
+export function coerce<S extends Schema>(schema: S, value?: unknown, context?: SchemaContext): Infer<S>;
+/**
+ *
+ */
 export function coerce<S extends Schema>(
     schema: S,
     value?: unknown,

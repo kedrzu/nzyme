@@ -4,10 +4,10 @@ import { defineSchema } from '../defineSchema.js';
 import type {
     Infer,
     Schema,
-    SchemaOptionsBase,
-    SchemaOptionsSimplify,
     SchemaMeta,
     SchemaOptions,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
     SchemaProto,
 } from '../Schema.js';
 import { isSchema } from '../utils/isSchema.js';
@@ -21,9 +21,7 @@ import type { ObjectSchema } from './object.js';
  */
 export type ObjectUnionOptions<T extends ObjectSchema[] = ObjectSchema[]> = {
     /** Discriminator key */
-    discriminator: ObjectSchema[] extends T
-        ? string
-        : keyof ObjectDiscriminatorProps<T[number]> & string;
+    discriminator: ObjectSchema[] extends T ? string : keyof ObjectDiscriminatorProps<T[number]> & string;
     /** Array of schemas that form the union */
     of: T;
 };
@@ -32,18 +30,17 @@ export type ObjectUnionOptions<T extends ObjectSchema[] = ObjectSchema[]> = {
  * Schema type for union values.
  * @template O - ObjectUnion schema options type
  */
-export type ObjectUnionSchema<
-    O extends SchemaOptionsBase<ObjectUnionOptions> = SchemaOptionsBase<ObjectUnionOptions>,
-> = Schema<ObjectUnionValue<O>, O> & {
-    /**
-     *
-     */
-    discriminator: O['discriminator'];
-    /**
-     *
-     */
-    of: O['of'];
-};
+export type ObjectUnionSchema<O extends SchemaOptionsBase<ObjectUnionOptions> = SchemaOptionsBase<ObjectUnionOptions>> =
+    Schema<ObjectUnionValue<O>, O> & {
+        /**
+         *
+         */
+        discriminator: O['discriminator'];
+        /**
+         *
+         */
+        of: O['of'];
+    };
 
 /**
  *
@@ -65,23 +62,14 @@ type ObjectUnionSchemaConstructor = {
         TOptional extends boolean | undefined = undefined,
         TMeta extends SchemaMeta | undefined = undefined,
     >(
-        options: SchemaOptions<
-            Infer<S[number]>,
-            TNullable,
-            TOptional,
-            TMeta,
-            ObjectUnionOptions<S>
-        >,
+        options: SchemaOptions<Infer<S[number]>, TNullable, TOptional, TMeta, ObjectUnionOptions<S>>,
     ): ObjectUnionSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, ObjectUnionOptions<S>>>;
 };
 
-export /**
+/**
  *
  */
-const objectUnion = defineSchema<
-    ObjectUnionSchemaConstructor,
-    SchemaOptionsBase<ObjectUnionOptions>
->({
+export const objectUnion = defineSchema<ObjectUnionSchemaConstructor, SchemaOptionsBase<ObjectUnionOptions>>({
     name: 'union',
     proto: options => {
         const schemas = options.of;
@@ -103,8 +91,9 @@ const objectUnion = defineSchema<
 
         const proto: SchemaProto<unknown> = {
             coerce(value, ctx) {
+                console.warn('coerce', { value, ctx });
                 const discriminatorValue = (value as Record<string, unknown>)[discriminator];
-                const schema = schemasPerDiscriminator.get(discriminatorValue);
+                const schema = schemasPerDiscriminator.get(discriminatorValue) ?? schemas[0];
 
                 return schema?.proto.coerce(value, ctx);
             },
@@ -124,10 +113,12 @@ const objectUnion = defineSchema<
 
                 return schema !== undefined;
             },
-            default: () => [],
+            default: function () {
+                return this.coerce({}, {});
+            },
             visit(value, visitor, ctx) {
                 const discriminatorValue = (value as Record<string, unknown>)[discriminator];
-                const schema = schemasPerDiscriminator.get(discriminatorValue);
+                const schema = schemasPerDiscriminator.get(discriminatorValue) ?? schemas[0];
 
                 if (schema === undefined) {
                     // TODO: Return error

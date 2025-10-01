@@ -6,6 +6,7 @@ export * from './Validator.js';
 export * from './validators/defineValidator.js';
 export * from './validators/email.js';
 export * from './validators/filename.js';
+export * from './validators/maxLength.js';
 export * from './validators/maxValue.js';
 export * from './validators/minLength.js';
 export * from './validators/minValue.js';

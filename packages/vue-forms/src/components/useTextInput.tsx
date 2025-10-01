@@ -2,7 +2,7 @@ import { h } from 'vue';
 import type { InputHTMLAttributes } from 'vue';
 
 import { assignProps } from '@nzyme/utils';
-import { defineProps, useProps } from '@nzyme/vue-utils';
+import { defineProps, useProps, useInstanceProxy, useEmit } from '@nzyme/vue-utils';
 
 import { defineFormField } from './defineFormField.js';
 
@@ -16,12 +16,18 @@ const TEXT_INPUT_PROPS = defineProps({
     tabindex: Number,
 });
 
+const TEXT_INPUT_EMITS = {
+    ...TEXT_INPUT_FIELD.emits,
+    input: undefined as unknown as (event: Event) => boolean,
+    keydown: undefined as unknown as (event: KeyboardEvent) => boolean,
+};
+
 /**
  *
  */
 export const useTextInput = assignProps(setupTextInput, {
     props: TEXT_INPUT_PROPS,
-    emits: TEXT_INPUT_FIELD.emits,
+    emits: TEXT_INPUT_EMITS,
 });
 
 /**
@@ -31,6 +37,7 @@ export const useTextInput = assignProps(setupTextInput, {
 function setupTextInput() {
     const props = useProps(TEXT_INPUT_PROPS);
     const field = TEXT_INPUT_FIELD.create({ props });
+    const emit = useEmit(TEXT_INPUT_EMITS);
 
     return {
         field,
@@ -50,6 +57,7 @@ function setupTextInput() {
                 onBlur={field.inputAttrs.onBlur}
                 onFocus={field.inputAttrs.onFocus}
                 onInput={onInput}
+                onKeydown={onKeydown}
                 placeholder={props.placeholder}
                 readonly={props.readonly}
                 tabindex={props.tabindex}
@@ -63,5 +71,10 @@ function setupTextInput() {
     function onInput(event: Event) {
         const target = event.target as HTMLInputElement;
         field.value = target.value;
+        emit('input', event);
+    }
+
+    function onKeydown(event: KeyboardEvent) {
+        emit('keydown', event);
     }
 }

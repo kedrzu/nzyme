@@ -59,6 +59,7 @@ export * from './getMailToUrl.js';
 export * from './getTopLevelDomain.js';
 export * from './isFunction.js';
 export * from './isPlainObject.js';
+export * from './map.js';
 export * from './mapObject.js';
 export * from './Nullable.js';
 export * from './objectKeys.js';

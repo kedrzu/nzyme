@@ -10,7 +10,7 @@ export interface AsyncCacheOptions<TArg, TValue, TKey = TArg> {
     /** Function that generates a cache key from an argument */
     cacheKey?: (arg: TArg) => TKey;
     /** Function that computes a value asynchronously if it's not in the cache */
-    getValue: (arg: TArg) => Promise<TValue>;
+    getValue: (arg: TArg) => Promise<TValue> | TValue;
     /** Optional error handler for promise rejections */
     onError?: (error: unknown, arg: TArg) => void;
 }
@@ -49,10 +49,12 @@ export function createAsyncCache<TArg, TValue, TKey = TArg>(options: AsyncCacheO
 
     return {
         get,
+        getCached,
         set,
         clear,
         has,
         delete: deleteKey,
+        values: () => cache.values(),
     };
 
     /**
@@ -78,7 +80,7 @@ export function createAsyncCache<TArg, TValue, TKey = TArg>(options: AsyncCacheO
         }
 
         // Create new request
-        const request = getValue(arg);
+        const request = Promise.resolve(getValue(arg));
         pendingRequests.set(key, request);
 
         try {
@@ -98,6 +100,11 @@ export function createAsyncCache<TArg, TValue, TKey = TArg>(options: AsyncCacheO
             // Clean up pending request
             pendingRequests.delete(key);
         }
+    }
+
+    function getCached(arg: TArg): TValue | undefined {
+        const key = cacheKey(arg);
+        return cache.get(key);
     }
 
     /**

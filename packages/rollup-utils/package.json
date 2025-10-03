@@ -42,7 +42,7 @@
         "rollup": "^4.46.2",
         "type-fest": "^5.0.1",
         "vite": "^7.1.7",
-        "vite-plugin-checker": "^0.10.3",
+        "vite-plugin-checker": "^0.11.0",
         "vite-plugin-dts": "^4.5.4",
         "vite-plugin-lib-inject-css": "^2.2.2",
         "vite-tsconfig-paths": "^5.1.4"
@@ -52,7 +52,7 @@
         "@nzyme/tsconfig": "^0.14.0",
         "@types/connect": "^3.4.38",
         "eslint": "^9.36.0",
-        "typescript": "^5.9.2"
+        "typescript": "^5.9.3"
     },
     "publishConfig": {
         "access": "public"

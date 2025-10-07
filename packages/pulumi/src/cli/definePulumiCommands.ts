@@ -513,6 +513,7 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                 ['Destroy all stacks', 'destroy'],
                 ['Destroy single stack', 'destroy core'],
                 ['Destroy multiple stacks', 'destroy core api'],
+                ['Cancel previous and destroy', 'destroy --cancel core'],
                 ['Preview destruction plan', 'destroy --preview'],
                 ['Preview specific stacks', 'destroy --preview core api'],
             ],
@@ -532,6 +533,10 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
 
         preview = Option.Boolean('--preview,-p', {
             description: 'Show which stacks would be destroyed without actually destroying them',
+        });
+
+        cancel = Option.Boolean('--cancel,-c', {
+            description: 'Cancel previous deployment before destroying each stack',
         });
 
         stacks = Option.Rest();
@@ -558,10 +563,15 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                         },
                     });
 
-                    const stackResolved = stackDefinition.create();
+                    const stackResolved = this.container.resolve(stackDefinition);
                     const stackName = chalk.bold(chalk.red(stack));
 
                     try {
+                        if (this.cancel) {
+                            stackResolved.logger.info(`🚫 Cancelling previous deployment for stack ${stackName}...`);
+                            await cancelStack(stackResolved, { config: pulumiConfig });
+                        }
+
                         stackResolved.logger.info(`🗑️  Force destroying stack ${stackName}...`);
 
                         await destroyStack(stackResolved, {
@@ -654,6 +664,11 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                 const stackName = chalk.bold(chalk.red(stack.stackName));
 
                 try {
+                    if (this.cancel) {
+                        stackResolved.logger.info(`🚫 Cancelling previous deployment for stack ${stackName}...`);
+                        await cancelStack(stackResolved, { config: pulumiConfig });
+                    }
+
                     stackResolved.logger.info(`🗑️  Destroying stack ${stackName}...`);
 
                     await destroyStack(stackResolved, {

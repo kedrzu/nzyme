@@ -11,7 +11,7 @@ import { assertValue } from '@nzyme/utils';
 /**
  * Options for uploading files to an S3 bucket.
  */
-export type UploadFilesOptions = {
+export interface UploadFilesOptions {
     /**
      * The cache control header to set for the files.
      */
@@ -41,6 +41,11 @@ export type UploadFilesOptions = {
      */
     rename?: (key: string) => string;
     /**
+     * A function to set the content type for the files.
+     * Should return `null` or `undefined` to fall back to the default content type.
+     */
+    contentType?: (key: string) => string | null | undefined;
+    /**
      * The path to the source files.
      */
     sourcePath: string;
@@ -48,7 +53,7 @@ export type UploadFilesOptions = {
      * The tags to set for the files.
      E*/
     tags?: ((key: string) => Record<string, string>) | Record<string, string>;
-};
+}
 
 type Filter = (key: string) => boolean;
 
@@ -87,7 +92,7 @@ export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
                 const tags = tagsFunction(key);
 
                 return {
-                    ContentType: mimeLookup(key) || 'text/html',
+                    ContentType: getContentType(options, key),
                     CacheControl: cacheControlFunction(key),
                     Tagging: tags ? stringifyQuery(tags) : undefined,
                 };
@@ -120,4 +125,15 @@ function createFilter(filter: Filter | RegExp | null | undefined): Filter | unde
     }
 
     return filter;
+}
+
+function getContentType(options: UploadFilesOptions, key: string): string {
+    if (options.contentType) {
+        const contentType = options.contentType(key);
+        if (contentType) {
+            return contentType;
+        }
+    }
+
+    return mimeLookup(key) || 'text/html';
 }

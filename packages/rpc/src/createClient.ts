@@ -1,5 +1,3 @@
-import { joinURL } from 'ufo';
-
 import { FetchError } from '@nzyme/fetch-utils';
 import type { HttpRequestHeaders } from '@nzyme/fetch-utils';
 import type { UnionToIntersection } from '@nzyme/types';
@@ -24,16 +22,25 @@ export type RpcClientGetter<T, O> = (endpoint: string, input: unknown, options?:
 /**
  *
  */
+export interface RpcClientRequest {
+    /**
+     * The URL of the request
+     */
+    url: string;
+    /**
+     * The headers of the request
+     */
+    headers?: HttpRequestHeaders;
+}
+
+/**
+ *
+ */
 export interface CreateClientOptions<O> {
     /**
-     * The base URL of the API server.
+     * The function to get the request configuration.
      */
-    url: string | RpcClientGetter<string, O>;
-
-    /**
-     *
-     */
-    headers?: RpcClientGetter<HttpRequestHeaders, O>;
+    request: RpcClientGetter<RpcClientRequest, O>;
 }
 
 /**
@@ -56,24 +63,19 @@ export type RpcResult<T> = T extends (...args: any[]) => Promise<infer U> ? U : 
 /**
  *
  */
-export function createClient<E extends Endpoint, O = void>(options: CreateClientOptions<O>): RpcClient<E, O> {
-    const urlGetter = createUrlGetter(options.url);
-    const headersGetter = options.headers as RpcClientGetter<HttpRequestHeaders, O>;
+export function createClient<E extends Endpoint, O = void>(clientOptions: CreateClientOptions<O>): RpcClient<E, O> {
     const client: Record<string, (input: unknown, ...rest: unknown[]) => Promise<unknown>> = {};
 
     const execute = async (endpoint: string, input: unknown, options?: O): Promise<unknown> => {
-        const url = await urlGetter(endpoint, input, options);
+        const request = await clientOptions.request(endpoint, input, options);
         const headers: HttpRequestHeaders = {
             'Content-Type': 'application/json',
+            ...request.headers,
         };
-
-        if (headersGetter) {
-            Object.assign(headers, await headersGetter(endpoint, input, options));
-        }
 
         const body = toJsonString(input);
 
-        const response = await fetch(url, {
+        const response = await fetch(request.url, {
             method: 'POST',
             body,
             headers: headers as RequestInit['headers'],
@@ -100,12 +102,4 @@ export function createClient<E extends Endpoint, O = void>(options: CreateClient
     }) as RpcClient<E, O>;
 
     return proxy;
-}
-
-function createUrlGetter<O>(url: string | RpcClientGetter<string, O>): RpcClientGetter<string, O> {
-    if (typeof url === 'function') {
-        return url;
-    }
-
-    return endpoint => joinURL(url, endpoint);
 }

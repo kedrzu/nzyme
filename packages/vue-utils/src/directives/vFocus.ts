@@ -1,5 +1,7 @@
 import type { ComponentPublicInstance, ObjectDirective } from 'vue';
 
+import { unwrapElement } from '../unwrapElement.js';
+
 /**
  * Directive that focuses an element when trigger is true.
  *
@@ -17,8 +19,8 @@ function focusIf(el: ComponentPublicInstance | Element | undefined, value: boole
         return;
     }
 
-    const element = el instanceof Element ? el : (el.$el as Element | undefined);
-    if (element instanceof HTMLElement) {
+    const element = unwrapElement(el);
+    if (element && 'focus' in element) {
         setTimeout(() => element.focus(), 50);
     }
 }

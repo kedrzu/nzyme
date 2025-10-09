@@ -25,7 +25,7 @@
         "lint": "eslint . --fix --cache"
     },
     "dependencies": {
-        "@nzyme/crypto-utils": "^0.14.0",
+        "@nzyme/crypto": "^0.14.0",
         "@nzyme/fetch-utils": "^0.14.0",
         "@nzyme/ioc": "^0.14.0",
         "@nzyme/logging": "^0.14.0",

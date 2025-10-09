@@ -1,4 +1,4 @@
-import { randomString } from '@nzyme/crypto-utils';
+import { randomString } from '@nzyme/crypto';
 
 /**
  * Handle object returned when registering a back navigation callback

@@ -38,7 +38,7 @@
         "@babel/plugin-syntax-import-attributes": "^7.27.1",
         "@babel/preset-env": "^7.28.3",
         "@nzyme/cli": "^0.14.0",
-        "@nzyme/crypto-utils": "^0.14.0",
+        "@nzyme/crypto": "^0.14.0",
         "@nzyme/esm": "0.14.0",
         "@nzyme/ioc": "^0.14.0",
         "@nzyme/logging": "^0.14.0",

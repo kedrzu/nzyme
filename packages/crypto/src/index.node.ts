@@ -5,7 +5,7 @@
  * implementations for functions that require Node.js crypto module or
  * need different handling in server environments.
  *
- * @module crypto-utils/node
+ * @module crypto/node
  */
 
 export * from './getMd5Hash.node.js';

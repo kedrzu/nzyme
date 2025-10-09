@@ -1,4 +1,4 @@
-import { getMd5Hash } from '@nzyme/crypto-utils';
+import { getMd5Hash } from '@nzyme/crypto';
 import type { HttpResponseHeaders } from '@nzyme/fetch-utils';
 import { toJsonString } from '@nzyme/utils';
 

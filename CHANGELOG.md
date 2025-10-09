@@ -545,7 +545,7 @@
 - feat(dom): added loadStyles helper ([@kedrzu](https://github.com/kedrzu))
 - feat(dom): added loadScript helper ([@kedrzu](https://github.com/kedrzu))
 - feat(dom): added scrollToTopElement helper ([@kedrzu](https://github.com/kedrzu))
-- `@nzyme/aws-cdk@0.2.0`, `@nzyme/cli@0.2.0`, `@nzyme/crypto-utils@0.2.0`, `@nzyme/dom-utils@0.2.0`, `@nzyme/eslint@0.2.0`, `@nzyme/esm@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/i18n@0.2.0`, `@nzyme/ioc@0.2.0`, `@nzyme/logging@0.2.0`, `@nzyme/money@0.2.0`, `@nzyme/node-utils@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/slack@0.2.0`, `@nzyme/tsconfig@0.2.0`, `@nzyme/typography@0.2.0`, `@nzyme/utils@0.2.0`, `@nzyme/validation@0.2.0`, `@nzyme/vitest@0.2.0`, `@nzyme/vue-ioc@0.2.0`, `@nzyme/vue-transitions@0.2.0`, `@nzyme/vue-utils@0.2.0`, `@nzyme/vue@0.2.0`, `@nzyme/xml-utils@0.2.0`, `@nzyme/zchema@0.2.0`
+- `@nzyme/aws-cdk@0.2.0`, `@nzyme/cli@0.2.0`, `@nzyme/crypto@0.2.0`, `@nzyme/dom-utils@0.2.0`, `@nzyme/eslint@0.2.0`, `@nzyme/esm@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/i18n@0.2.0`, `@nzyme/ioc@0.2.0`, `@nzyme/logging@0.2.0`, `@nzyme/money@0.2.0`, `@nzyme/node-utils@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/slack@0.2.0`, `@nzyme/tsconfig@0.2.0`, `@nzyme/typography@0.2.0`, `@nzyme/utils@0.2.0`, `@nzyme/validation@0.2.0`, `@nzyme/vitest@0.2.0`, `@nzyme/vue-ioc@0.2.0`, `@nzyme/vue-transitions@0.2.0`, `@nzyme/vue-utils@0.2.0`, `@nzyme/vue@0.2.0`, `@nzyme/xml-utils@0.2.0`, `@nzyme/zchema@0.2.0`
     - feat(cli): added cli package ([@kedrzu](https://github.com/kedrzu))
 - `@nzyme/utils@0.2.0`, `@nzyme/zchema@0.2.0`
     - feat(utils): add toCamelCase and toPascalCase ([@kedrzu](https://github.com/kedrzu))
@@ -684,13 +684,13 @@
     - feat(zchema): rewritten schemas to a simpler form ([@kedrzu](https://github.com/kedrzu))
 - `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/zchema@0.2.0`
     - feat(rollup-utils): middlware mode for dev server ([@kedrzu](https://github.com/kedrzu))
-- `@nzyme/aws-cdk@0.2.0`, `@nzyme/crypto-utils@0.2.0`, `@nzyme/eslint@0.2.0`, `@nzyme/esm@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/logging@0.2.0`, `@nzyme/money@0.2.0`, `@nzyme/node-utils@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/utils@0.2.0`, `@nzyme/vue-utils@0.2.0`, `@nzyme/vue@0.2.0`
+- `@nzyme/aws-cdk@0.2.0`, `@nzyme/crypto@0.2.0`, `@nzyme/eslint@0.2.0`, `@nzyme/esm@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/logging@0.2.0`, `@nzyme/money@0.2.0`, `@nzyme/node-utils@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/utils@0.2.0`, `@nzyme/vue-utils@0.2.0`, `@nzyme/vue@0.2.0`
     - feat: moved some functions from vue to vue-utils ([@kedrzu](https://github.com/kedrzu))
 - `@nzyme/fetch-utils@0.2.0`, `@nzyme/money@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/utils@0.2.0`, `@nzyme/vue-utils@0.2.0`
     - feat(project-utils): changes in script generator ([@kedrzu](https://github.com/kedrzu))
 - `@nzyme/dom-utils@0.2.0`, `@nzyme/node-utils@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/vue-transitions@0.2.0`, `@nzyme/vue-utils@0.2.0`, `@nzyme/vue@0.2.0`
     - feat: added multiple packages ([@kedrzu](https://github.com/kedrzu))
-- `@nzyme/crypto-utils@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/xml-utils@0.2.0`
+- `@nzyme/crypto@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/xml-utils@0.2.0`
     - feat: added multiple new packages ([@kedrzu](https://github.com/kedrzu))
 - `@nzyme/rollup-utils@0.2.0`
     - feat(rollup-utils): default rollup config for a dev server ([@kedrzu](https://github.com/kedrzu))
@@ -810,7 +810,7 @@
 - fix(dom): small typing improvement in virtualHistory ([@kedrzu](https://github.com/kedrzu))
 - fix(dom): ssr fallback for local storage utils ([@kedrzu](https://github.com/kedrzu))
 - fix: fixed compilation errors in vite ([@kedrzu](https://github.com/kedrzu))
-- `@nzyme/aws-cdk@0.2.0`, `@nzyme/cli@0.2.0`, `@nzyme/crypto-utils@0.2.0`, `@nzyme/dom-utils@0.2.0`, `@nzyme/eslint@0.2.0`, `@nzyme/esm@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/i18n@0.2.0`, `@nzyme/ioc@0.2.0`, `@nzyme/logging@0.2.0`, `@nzyme/money@0.2.0`, `@nzyme/node-utils@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/slack@0.2.0`, `@nzyme/tsconfig@0.2.0`, `@nzyme/types@0.2.0`, `@nzyme/typography@0.2.0`, `@nzyme/utils@0.2.0`, `@nzyme/validation@0.2.0`, `@nzyme/vitest@0.2.0`, `@nzyme/vue-ioc@0.2.0`, `@nzyme/vue-transitions@0.2.0`, `@nzyme/vue-utils@0.2.0`, `@nzyme/vue@0.2.0`, `@nzyme/xml-utils@0.2.0`, `@nzyme/zchema@0.2.0`
+- `@nzyme/aws-cdk@0.2.0`, `@nzyme/cli@0.2.0`, `@nzyme/crypto@0.2.0`, `@nzyme/dom-utils@0.2.0`, `@nzyme/eslint@0.2.0`, `@nzyme/esm@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/i18n@0.2.0`, `@nzyme/ioc@0.2.0`, `@nzyme/logging@0.2.0`, `@nzyme/money@0.2.0`, `@nzyme/node-utils@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/slack@0.2.0`, `@nzyme/tsconfig@0.2.0`, `@nzyme/types@0.2.0`, `@nzyme/typography@0.2.0`, `@nzyme/utils@0.2.0`, `@nzyme/validation@0.2.0`, `@nzyme/vitest@0.2.0`, `@nzyme/vue-ioc@0.2.0`, `@nzyme/vue-transitions@0.2.0`, `@nzyme/vue-utils@0.2.0`, `@nzyme/vue@0.2.0`, `@nzyme/xml-utils@0.2.0`, `@nzyme/zchema@0.2.0`
     - fix: publish config ([@kedrzu](https://github.com/kedrzu))
 - `@nzyme/dom-utils@0.2.0`, `@nzyme/esm@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/i18n@0.2.0`, `@nzyme/ioc@0.2.0`, `@nzyme/logging@0.2.0`, `@nzyme/money@0.2.0`, `@nzyme/node-utils@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/slack@0.2.0`, `@nzyme/types@0.2.0`, `@nzyme/typography@0.2.0`, `@nzyme/utils@0.2.0`, `@nzyme/validation@0.2.0`, `@nzyme/vitest@0.2.0`, `@nzyme/vue-ioc@0.2.0`, `@nzyme/vue-transitions@0.2.0`, `@nzyme/vue-utils@0.2.0`, `@nzyme/vue@0.2.0`, `@nzyme/xml-utils@0.2.0`, `@nzyme/zchema@0.2.0`
     - fix: fixed npmignore ([@kedrzu](https://github.com/kedrzu))
@@ -932,12 +932,12 @@
 - chore: removed barebones package ([@kedrzu](https://github.com/kedrzu))
 - chore: removed yarn-error.log file ([@kedrzu](https://github.com/kedrzu))
 - Initial commit ([@kedrzu](https://github.com/kedrzu))
-- `@nzyme/aws-cdk@0.2.0`, `@nzyme/crypto-utils@0.2.0`, `@nzyme/dom-utils@0.2.0`, `@nzyme/eslint@0.2.0`, `@nzyme/esm@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/i18n@0.2.0`, `@nzyme/ioc@0.2.0`, `@nzyme/logging@0.2.0`, `@nzyme/money@0.2.0`, `@nzyme/node-utils@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/slack@0.2.0`, `@nzyme/tsconfig@0.2.0`, `@nzyme/types@0.2.0`, `@nzyme/typography@0.2.0`, `@nzyme/utils@0.2.0`, `@nzyme/validation@0.2.0`, `@nzyme/vitest@0.2.0`, `@nzyme/vue-ioc@0.2.0`, `@nzyme/vue-transitions@0.2.0`, `@nzyme/vue-utils@0.2.0`, `@nzyme/vue@0.2.0`, `@nzyme/xml-utils@0.2.0`, `@nzyme/zchema@0.2.0`
+- `@nzyme/aws-cdk@0.2.0`, `@nzyme/crypto@0.2.0`, `@nzyme/dom-utils@0.2.0`, `@nzyme/eslint@0.2.0`, `@nzyme/esm@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/i18n@0.2.0`, `@nzyme/ioc@0.2.0`, `@nzyme/logging@0.2.0`, `@nzyme/money@0.2.0`, `@nzyme/node-utils@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/slack@0.2.0`, `@nzyme/tsconfig@0.2.0`, `@nzyme/types@0.2.0`, `@nzyme/typography@0.2.0`, `@nzyme/utils@0.2.0`, `@nzyme/validation@0.2.0`, `@nzyme/vitest@0.2.0`, `@nzyme/vue-ioc@0.2.0`, `@nzyme/vue-transitions@0.2.0`, `@nzyme/vue-utils@0.2.0`, `@nzyme/vue@0.2.0`, `@nzyme/xml-utils@0.2.0`, `@nzyme/zchema@0.2.0`
     - chore: fixed publish config ([@kedrzu](https://github.com/kedrzu))
     - chore: change package names and cleanup ([@kedrzu](https://github.com/kedrzu))
-- `@nzyme/crypto-utils@0.2.0`, `@nzyme/dom-utils@0.2.0`, `@nzyme/esm@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/ioc@0.2.0`, `@nzyme/node-utils@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/slack@0.2.0`, `@nzyme/utils@0.2.0`, `@nzyme/validation@0.2.0`, `@nzyme/vitest@0.2.0`, `@nzyme/vue-ioc@0.2.0`, `@nzyme/vue-transitions@0.2.0`, `@nzyme/vue-utils@0.2.0`, `@nzyme/vue@0.2.0`, `@nzyme/xml-utils@0.2.0`, `@nzyme/zchema@0.2.0`
+- `@nzyme/crypto@0.2.0`, `@nzyme/dom-utils@0.2.0`, `@nzyme/esm@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/ioc@0.2.0`, `@nzyme/node-utils@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/slack@0.2.0`, `@nzyme/utils@0.2.0`, `@nzyme/validation@0.2.0`, `@nzyme/vitest@0.2.0`, `@nzyme/vue-ioc@0.2.0`, `@nzyme/vue-transitions@0.2.0`, `@nzyme/vue-utils@0.2.0`, `@nzyme/vue@0.2.0`, `@nzyme/xml-utils@0.2.0`, `@nzyme/zchema@0.2.0`
     - Publish ([@kedrzu](https://github.com/kedrzu))
-- `@nzyme/aws-cdk@0.2.0`, `@nzyme/crypto-utils@0.2.0`, `@nzyme/eslint@0.2.0`, `@nzyme/esm@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/ioc@0.2.0`, `@nzyme/logging@0.2.0`, `@nzyme/money@0.2.0`, `@nzyme/node-utils@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/slack@0.2.0`, `@nzyme/tsconfig@0.2.0`, `@nzyme/types@0.2.0`, `@nzyme/utils@0.2.0`, `@nzyme/vitest@0.2.0`, `@nzyme/vue-ioc@0.2.0`, `@nzyme/vue-transitions@0.2.0`, `@nzyme/vue-utils@0.2.0`, `@nzyme/vue@0.2.0`, `@nzyme/xml-utils@0.2.0`, `@nzyme/zchema@0.2.0`
+- `@nzyme/aws-cdk@0.2.0`, `@nzyme/crypto@0.2.0`, `@nzyme/eslint@0.2.0`, `@nzyme/esm@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/ioc@0.2.0`, `@nzyme/logging@0.2.0`, `@nzyme/money@0.2.0`, `@nzyme/node-utils@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/slack@0.2.0`, `@nzyme/tsconfig@0.2.0`, `@nzyme/types@0.2.0`, `@nzyme/utils@0.2.0`, `@nzyme/vitest@0.2.0`, `@nzyme/vue-ioc@0.2.0`, `@nzyme/vue-transitions@0.2.0`, `@nzyme/vue-utils@0.2.0`, `@nzyme/vue@0.2.0`, `@nzyme/xml-utils@0.2.0`, `@nzyme/zchema@0.2.0`
     - chore: update dependencies and add upgrade script ([@kedrzu](https://github.com/kedrzu))
 - `@nzyme/vue@0.2.0`
     - chore: prepare for publishing ([@kedrzu](https://github.com/kedrzu))
@@ -955,7 +955,7 @@
     - chore: downgrade back rollup commonjs plugin ([@kedrzu](https://github.com/kedrzu))
 - `@nzyme/vue-transitions@0.2.0`, `@nzyme/vue-utils@0.2.0`, `@nzyme/vue@0.2.0`
     - chore: package update ([@kedrzu](https://github.com/kedrzu))
-- `@nzyme/aws-cdk@0.2.0`, `@nzyme/crypto-utils@0.2.0`, `@nzyme/eslint@0.2.0`, `@nzyme/esm@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/ioc@0.2.0`, `@nzyme/logging@0.2.0`, `@nzyme/money@0.2.0`, `@nzyme/node-utils@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/types@0.2.0`, `@nzyme/utils@0.2.0`, `@nzyme/vitest@0.2.0`, `@nzyme/xml-utils@0.2.0`, `@nzyme/zchema@0.2.0`
+- `@nzyme/aws-cdk@0.2.0`, `@nzyme/crypto@0.2.0`, `@nzyme/eslint@0.2.0`, `@nzyme/esm@0.2.0`, `@nzyme/fetch-utils@0.2.0`, `@nzyme/ioc@0.2.0`, `@nzyme/logging@0.2.0`, `@nzyme/money@0.2.0`, `@nzyme/node-utils@0.2.0`, `@nzyme/project-utils@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/types@0.2.0`, `@nzyme/utils@0.2.0`, `@nzyme/vitest@0.2.0`, `@nzyme/xml-utils@0.2.0`, `@nzyme/zchema@0.2.0`
     - chore: package updates ([@kedrzu](https://github.com/kedrzu))
 - `@nzyme/aws-cdk@0.2.0`, `@nzyme/esm@0.2.0`, `@nzyme/logging@0.2.0`, `@nzyme/money@0.2.0`, `@nzyme/rollup-utils@0.2.0`, `@nzyme/utils@0.2.0`
     - chore: package update ([@kedrzu](https://github.com/kedrzu))

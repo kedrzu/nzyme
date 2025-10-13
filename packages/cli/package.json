@@ -34,7 +34,7 @@
         "chalk": "^5.6.2",
         "chokidar": "^4.0.3",
         "clipanion": "^4.0.0-rc.4",
-        "comment-json": "^4.2.5",
+        "comment-json": "^4.4.1",
         "compare-versions": "^6.1.1",
         "depcheck": "^1.4.7",
         "enquirer": "^2.4.1",

@@ -6,14 +6,14 @@ import { Command, Option, UsageError } from '@nzyme/cli';
 import {
     checkUnpushedCommits,
     convertPrToReady,
-    createOctokitClient,
+    createGithubClient,
     findMatchingPr,
     getCurrentBranch,
     getGitStatusInfo,
     handleReadyPreparation,
     syncBaseBranch,
 } from '@nzyme/github-cli';
-import type { GitHubConfig } from '@nzyme/github-cli';
+import type { GithubConfig } from '@nzyme/github-cli';
 
 import { createLinearClient } from '../utils/createLinearClient.js';
 import { createLinearIssue } from '../utils/createLinearIssue.js';
@@ -50,7 +50,7 @@ export interface LinearCommandsOptions {
     /**
      * GitHub configuration.
      */
-    github: (() => GitHubConfig) | (() => Promise<GitHubConfig>) | GitHubConfig;
+    github: (() => GithubConfig) | (() => Promise<GithubConfig>) | GithubConfig;
 
     /**
      * The prefix to use for commands.
@@ -110,7 +110,7 @@ function defineTaskInfoCommand(options: LinearCommandsOptions) {
             // Load both configs in parallel
             const [linearConfig, githubConfig] = await Promise.all([
                 getLinearConfig(options),
-                getGitHubConfig(options),
+                getGithubConfig(options),
             ]);
 
             try {
@@ -123,16 +123,16 @@ function defineTaskInfoCommand(options: LinearCommandsOptions) {
                 this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
 
                 // Create clients in parallel
-                const [linearClient, octokit] = await Promise.all([
+                const [linearClient, githubClient] = await Promise.all([
                     Promise.resolve(createLinearClient(linearConfig)),
-                    Promise.resolve(createOctokitClient(githubConfig)),
+                    Promise.resolve(createGithubClient(githubConfig)),
                 ]);
 
                 // Get task details and search for PR in parallel
                 this.logger.info('🔍 Fetching task details and searching for associated PR...');
                 const [issueData, pr] = await Promise.all([
                     linearClient.issue(taskId),
-                    findMatchingPr(octokit, githubConfig, taskId),
+                    findMatchingPr(githubClient, githubConfig, taskId),
                 ]);
 
                 if (!issueData) {
@@ -188,7 +188,7 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
             // Load both configs in parallel
             const [linearConfig, githubConfig] = await Promise.all([
                 getLinearConfig(options),
-                getGitHubConfig(options),
+                getGithubConfig(options),
             ]);
 
             try {
@@ -199,8 +199,8 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                 const linearClient = createLinearClient(linearConfig);
 
                 // Create GitHub client and get base branches
-                const [octokit, baseBranches] = await Promise.all([
-                    Promise.resolve(createOctokitClient(githubConfig)),
+                const [githubClient, baseBranches] = await Promise.all([
+                    Promise.resolve(createGithubClient(githubConfig)),
                     getBaseBranches(options),
                 ]);
 
@@ -208,7 +208,7 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                 await switchToTask({
                     issueId,
                     linearClient,
-                    octokit,
+                    githubClient: githubClient,
                     githubConfig,
                     logger: this.logger,
                     baseBranches,
@@ -246,7 +246,7 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
             // Load both configs in parallel
             const [linearConfig, githubConfig] = await Promise.all([
                 getLinearConfig(options),
-                getGitHubConfig(options),
+                getGithubConfig(options),
             ]);
 
             try {
@@ -305,8 +305,8 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
                 this.logger.info(`✅ Created Linear task: ${chalk.bold(issueId)}`);
 
                 // Create GitHub client and get base branches
-                const [octokit, baseBranches] = await Promise.all([
-                    Promise.resolve(createOctokitClient(githubConfig)),
+                const [githubClient, baseBranches] = await Promise.all([
+                    Promise.resolve(createGithubClient(githubConfig)),
                     getBaseBranches(options),
                 ]);
 
@@ -314,7 +314,7 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
                 await switchToTask({
                     issueId,
                     linearClient,
-                    octokit,
+                    githubClient: githubClient,
                     githubConfig,
                     logger: this.logger,
                     baseBranches,
@@ -342,7 +342,7 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
         override async run() {
             await options.beforeEach?.();
 
-            const githubConfig = await getGitHubConfig(options);
+            const githubConfig = await getGithubConfig(options);
 
             try {
                 // Get current branch
@@ -361,11 +361,11 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                 await handleReadyPreparation(unpushedCommits, statusInfo, this.logger);
 
                 // Create GitHub client
-                const octokit = createOctokitClient(githubConfig);
+                const githubClient = createGithubClient(githubConfig);
 
                 // Find the PR for this task
                 this.logger.info('🔍 Looking for associated GitHub PR...');
-                const pr = await findMatchingPr(octokit, githubConfig, taskId);
+                const pr = await findMatchingPr(githubClient, githubConfig, taskId);
 
                 if (!pr) {
                     throw new UsageError(
@@ -386,7 +386,7 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
 
                 // Convert PR from draft to ready
                 this.logger.info('🚀 Converting PR from draft to ready for review...');
-                await convertPrToReady(octokit, githubConfig, pr.number);
+                await convertPrToReady(githubClient, githubConfig, pr.number);
 
                 this.logger.info(`🎉 Successfully converted PR #${pr.number} to ready for review!`);
                 this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
@@ -472,14 +472,14 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
             // Load both configs in parallel
             const [linearConfig, githubConfig] = await Promise.all([
                 getLinearConfig(options),
-                getGitHubConfig(options),
+                getGithubConfig(options),
             ]);
 
             try {
                 // Create clients in parallel
-                const [linearClient, octokit] = await Promise.all([
+                const [linearClient, githubClient] = await Promise.all([
                     Promise.resolve(createLinearClient(linearConfig)),
-                    Promise.resolve(createOctokitClient(githubConfig)),
+                    Promise.resolve(createGithubClient(githubConfig)),
                 ]);
 
                 this.logger.info('🔍 Fetching your active tasks...');
@@ -527,7 +527,7 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                 this.logger.info('🔍 Looking for associated GitHub PRs...');
                 const tasksWithPrInfo = await Promise.all(
                     sortedIssues.map(async issue => {
-                        const pr = await findMatchingPr(octokit, githubConfig, issue.identifier);
+                        const pr = await findMatchingPr(githubClient, githubConfig, issue.identifier);
                         return {
                             issue,
                             pr,
@@ -588,7 +588,7 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                 await switchToTask({
                     issueId: selectedTaskId,
                     linearClient,
-                    octokit,
+                    githubClient: githubClient,
                     githubConfig,
                     logger: this.logger,
                     baseBranches,
@@ -618,7 +618,7 @@ async function getLinearConfig(options: LinearCommandsOptions): Promise<LinearCo
     return options.linear;
 }
 
-async function getGitHubConfig(options: LinearCommandsOptions): Promise<GitHubConfig> {
+async function getGithubConfig(options: LinearCommandsOptions): Promise<GithubConfig> {
     if (typeof options.github === 'function') {
         return await options.github();
     }

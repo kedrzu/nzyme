@@ -177,7 +177,7 @@ interface LinearConfig {
 ### GitHub Configuration
 
 ```typescript
-interface GitHubConfig {
+interface GithubConfig {
     token: string; // GitHub personal access token
     owner: string; // Repository owner
     repo: string; // Repository name

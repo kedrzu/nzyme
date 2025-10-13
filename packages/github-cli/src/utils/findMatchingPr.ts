@@ -1,6 +1,5 @@
-import type { Octokit } from '@octokit/rest';
-
-import type { GitHubConfig } from '../index.js';
+import type { GithubConfig } from '../GithubConfig.js';
+import type { GithubClient } from './createGithubClient.js';
 
 /**
  * Find a matching open GitHub PR for an issue.
@@ -8,13 +7,13 @@ import type { GitHubConfig } from '../index.js';
  * @__NO_SIDE_EFFECTS__
  */
 export async function findMatchingPr(
-    octokit: Octokit,
-    config: GitHubConfig,
+    client: GithubClient,
+    config: GithubConfig,
     issueId: string,
-): Promise<Awaited<ReturnType<typeof octokit.rest.pulls.list>>['data'][0] | null> {
+): Promise<Awaited<ReturnType<typeof client.rest.pulls.list>>['data'][0] | null> {
     try {
         // Get all open PRs
-        const { data: prs } = await octokit.rest.pulls.list({
+        const { data: prs } = await client.rest.pulls.list({
             owner: config.owner,
             repo: config.repo,
             state: 'open',

@@ -9,5 +9,5 @@ export { switchToTask } from './utils/switchToTask.js';
 export type { SwitchToTaskParams } from './utils/switchToTask.js';
 
 // Re-export GitHub utilities from the shared package
-export type { GitHubConfig } from '@nzyme/github-cli';
+export type { GithubConfig } from '@nzyme/github-cli';
 export { createIssueIdRegex, getCurrentBranch } from '@nzyme/github-cli';

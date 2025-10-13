@@ -1,7 +1,7 @@
 import type { LinearClient } from '@linear/sdk';
-import type { Octokit } from '@octokit/rest';
 import chalk from 'chalk';
 
+import type { GithubClient } from '@nzyme/github-cli';
 import {
     applyStashedChanges,
     checkoutExistingBranch,
@@ -11,7 +11,7 @@ import {
     syncBaseBranch,
 } from '@nzyme/github-cli';
 import type { BranchSelectionResult } from '@nzyme/github-cli';
-import type { GitHubConfig } from '@nzyme/github-cli';
+import type { GithubConfig } from '@nzyme/github-cli';
 import type { Logger } from '@nzyme/logging';
 
 import { handleTaskAssignment } from './handleTaskAssignment.js';
@@ -32,14 +32,14 @@ export interface SwitchToTaskParams {
     linearClient: LinearClient;
 
     /**
-     * GitHub Octokit client instance.
+     * GitHub client instance.
      */
-    octokit: Octokit;
+    githubClient: GithubClient;
 
     /**
      * GitHub configuration.
      */
-    githubConfig: GitHubConfig;
+    githubConfig: GithubConfig;
 
     /**
      * Logger instance.
@@ -57,7 +57,7 @@ export interface SwitchToTaskParams {
  * This contains the common logic used by both "task start" and "task new" commands.
  */
 export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
-    const { issueId, linearClient, octokit, githubConfig, logger, baseBranches } = params;
+    const { issueId, linearClient, githubClient, githubConfig, logger, baseBranches } = params;
 
     logger.info(`🔍 Looking for Linear task: ${chalk.bold(issueId)}`);
 
@@ -77,7 +77,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
     logger.info(`🔍 Searching for existing GitHub PR...`);
     const [, existingPr] = await Promise.all([
         handleTaskAssignment(linearClient, issueData, logger),
-        findMatchingPr(octokit, githubConfig, issueId),
+        findMatchingPr(githubClient, githubConfig, issueId),
     ]);
 
     if (existingPr) {
@@ -128,7 +128,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
         const selectedBaseBranch = branchResult.selectedBaseBranch;
 
         const result = await createBranchAndPr({
-            octokit,
+            client: githubClient,
             config: githubConfig,
             branchName,
             prTitle,

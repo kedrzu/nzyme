@@ -1,6 +1,6 @@
-import type { Octokit } from '@octokit/rest';
 import chalk from 'chalk';
 
+import type { GithubClient } from '@nzyme/github-cli';
 import {
     applyStashedChanges,
     checkoutExistingBranch,
@@ -10,7 +10,7 @@ import {
     syncBaseBranch,
 } from '@nzyme/github-cli';
 import type { BranchSelectionResult } from '@nzyme/github-cli';
-import type { GitHubConfig } from '@nzyme/github-cli';
+import type { GithubConfig } from '@nzyme/github-cli';
 import type { Logger } from '@nzyme/logging';
 
 import type { SentryApiClient } from './createSentryClient.js';
@@ -36,14 +36,14 @@ export interface SwitchToSentryIssueParams {
     sentryClient: SentryApiClient;
 
     /**
-     * GitHub Octokit client instance.
+     * GitHub client instance.
      */
-    octokit: Octokit;
+    githubClient: GithubClient;
 
     /**
      * GitHub configuration.
      */
-    githubConfig: GitHubConfig;
+    githubConfig: GithubConfig;
 
     /**
      * Logger instance.
@@ -71,7 +71,7 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
         issueId,
         organizationSlug,
         sentryClient,
-        octokit,
+        githubClient,
         githubConfig,
         logger,
         baseBranches,
@@ -91,7 +91,7 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
 
     // Search for existing PR
     logger.info(`🔍 Searching for existing GitHub PR...`);
-    const existingPr = await findMatchingPr(octokit, githubConfig, issueData.shortId);
+    const existingPr = await findMatchingPr(githubClient, githubConfig, issueData.shortId);
 
     if (existingPr) {
         // Checkout existing PR branch
@@ -137,7 +137,7 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
         const selectedBaseBranch = branchResult.selectedBaseBranch;
 
         const result = await createBranchAndPr({
-            octokit,
+            client: githubClient,
             config: githubConfig,
             branchName,
             prTitle,

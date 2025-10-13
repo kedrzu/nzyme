@@ -39,7 +39,7 @@ export class DepcheckCommand extends Command {
     });
 
     /**
-     *
+     * Executes the depcheck command to analyze and manage package dependencies
      */
     override async run() {
         const cwd = process.cwd();
@@ -127,6 +127,10 @@ export class DepcheckCommand extends Command {
                         delete dependencies[dep];
                         toWrite.push(`  ${chalk.green('✅ ' + dep)} (removed)`);
                         hasChanges = true;
+                    } else if (action === 'ignore') {
+                        this.addToIgnoreList(pkg, dep);
+                        toWrite.push(`  ${chalk.blue('🔕 ' + dep)} (added to ignore list)`);
+                        hasChanges = true;
                     } else {
                         toWrite.push(`  ${chalk.yellow('⏭️  ' + dep)} (skipped)`);
                     }
@@ -148,6 +152,10 @@ export class DepcheckCommand extends Command {
                     if (action === 'remove') {
                         delete devDependencies[dep];
                         toWrite.push(`  ${chalk.green('✅ ' + dep)} (removed)`);
+                        hasChanges = true;
+                    } else if (action === 'ignore') {
+                        this.addToIgnoreList(pkg, dep);
+                        toWrite.push(`  ${chalk.blue('🔕 ' + dep)} (added to ignore list)`);
                         hasChanges = true;
                     } else {
                         toWrite.push(`  ${chalk.yellow('⏭️  ' + dep)} (skipped)`);
@@ -271,7 +279,7 @@ export class DepcheckCommand extends Command {
 
     /**
      * Prompts user for action on a dependency
-     * @returns 'remove' | 'skip' for unused deps, 'add-dep' | 'add-dev' | 'skip' for missing deps
+     * @returns 'remove' | 'skip' | 'ignore' for unused deps, 'add-dep' | 'add-dev' | 'skip' for missing deps
      */
     private async promptAction(
         dep: string,
@@ -293,10 +301,19 @@ export class DepcheckCommand extends Command {
                 ? [
                       {
                           name: 'remove',
-                          message: `${chalk.red('Remove')}`,
+                          message: `${chalk.red('Remove from dependencies')}`,
                           value: 'remove',
                       },
-                      { name: 'skip', message: `${chalk.yellow('Skip')}`, value: 'skip' },
+                      {
+                          name: 'ignore',
+                          message: `${chalk.blue('Add to ignore list')}`,
+                          value: 'ignore',
+                      },
+                      {
+                          name: 'skip',
+                          message: `${chalk.yellow('Skip for now')}`,
+                          value: 'skip',
+                      },
                   ]
                 : [
                       { name: 'add-dep', message: `${chalk.green('Add as dependency')}`, value: 'add-dep' },
@@ -311,6 +328,26 @@ export class DepcheckCommand extends Command {
             choices,
         });
         return action;
+    }
+
+    /**
+     * Adds a dependency to the depcheck ignore list in package.json
+     */
+    private addToIgnoreList(pkg: Package, dep: string): void {
+        const pkgJsonWithConfig = pkg.packageJson as { depcheck?: DepcheckConfig };
+
+        if (!pkgJsonWithConfig.depcheck) {
+            pkgJsonWithConfig.depcheck = {};
+        }
+
+        if (!pkgJsonWithConfig.depcheck.ignoreDeps) {
+            pkgJsonWithConfig.depcheck.ignoreDeps = [];
+        }
+
+        if (!pkgJsonWithConfig.depcheck.ignoreDeps.includes(dep)) {
+            pkgJsonWithConfig.depcheck.ignoreDeps.push(dep);
+            pkgJsonWithConfig.depcheck.ignoreDeps.sort();
+        }
     }
 
     private getOptions(pkg: Package): depcheckImport.Options {

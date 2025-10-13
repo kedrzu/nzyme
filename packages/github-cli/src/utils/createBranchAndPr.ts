@@ -1,7 +1,7 @@
-import type { Octokit } from '@octokit/rest';
 import { simpleGit } from 'simple-git';
 
-import type { GitHubConfig } from '../index.js';
+import type { GithubConfig } from '../GithubConfig.js';
+import type { GithubClient } from './createGithubClient.js';
 
 /**
  * Result of creating a branch and PR.
@@ -28,14 +28,14 @@ export interface CreateBranchAndPrResult {
  */
 export interface CreateBranchAndPrParams {
     /**
-     * GitHub Octokit client instance.
+     * GitHub client instance.
      */
-    octokit: Octokit;
+    client: GithubClient;
 
     /**
      * GitHub configuration.
      */
-    config: GitHubConfig;
+    config: GithubConfig;
 
     /**
      * Name of the branch to create.
@@ -77,7 +77,7 @@ export interface CreateBranchAndPrParams {
  * Create a new git branch and GitHub PR for an issue.
  */
 export async function createBranchAndPr(params: CreateBranchAndPrParams): Promise<CreateBranchAndPrResult> {
-    const { octokit, config, branchName, prTitle, description, issueId, taskUrl, issueTitle, baseBranch } = params;
+    const { client, config, branchName, prTitle, description, issueId, taskUrl, issueTitle, baseBranch } = params;
     const git = simpleGit();
 
     try {
@@ -116,7 +116,7 @@ export async function createBranchAndPr(params: CreateBranchAndPrParams): Promis
         // Create draft PR
         const prBody = buildPrBody(description, issueId, taskUrl, issueTitle);
 
-        const { data: pr } = await octokit.rest.pulls.create({
+        const { data: pr } = await client.rest.pulls.create({
             owner: config.owner,
             repo: config.repo,
             title: prTitle,

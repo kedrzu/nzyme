@@ -1,16 +1,15 @@
-import type { Octokit } from '@octokit/rest';
-
 import { UsageError } from '@nzyme/cli';
 
-import type { GitHubConfig } from '../index.js';
+import type { GithubConfig } from '../GithubConfig.js';
+import type { GithubClient } from './createGithubClient.js';
 
 /**
  * Convert a GitHub PR from draft to ready for review.
  */
-export async function convertPrToReady(octokit: Octokit, config: GitHubConfig, prNumber: number): Promise<void> {
+export async function convertPrToReady(client: GithubClient, config: GithubConfig, prNumber: number): Promise<void> {
     try {
         // Get current PR details to check if it's already ready
-        const { data: pr } = await octokit.rest.pulls.get({
+        const { data: pr } = await client.rest.pulls.get({
             owner: config.owner,
             repo: config.repo,
             pull_number: prNumber,
@@ -33,7 +32,7 @@ export async function convertPrToReady(octokit: Octokit, config: GitHubConfig, p
             }
         `;
 
-        const response = await octokit.graphql(mutation, {
+        const response = await client.graphql(mutation, {
             pullRequestId: pr.node_id,
         });
 

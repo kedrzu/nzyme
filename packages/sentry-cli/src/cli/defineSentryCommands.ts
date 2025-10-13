@@ -5,14 +5,14 @@ import { Command, Option, UsageError } from '@nzyme/cli';
 import {
     checkUnpushedCommits,
     convertPrToReady,
-    createOctokitClient,
+    createGithubClient,
     findMatchingPr,
     getCurrentBranch,
     getGitStatusInfo,
     handleReadyPreparation,
     syncBaseBranch,
 } from '@nzyme/github-cli';
-import type { GitHubConfig } from '@nzyme/github-cli';
+import type { GithubConfig } from '@nzyme/github-cli';
 
 import { createSentryClient } from '../utils/createSentryClient.js';
 import { extractIssueIdFromBranch } from '../utils/extractIssueIdFromBranch.js';
@@ -63,7 +63,7 @@ export interface SentryCommandsOptions {
     /**
      * GitHub configuration.
      */
-    github: (() => GitHubConfig) | (() => Promise<GitHubConfig>) | GitHubConfig;
+    github: (() => GithubConfig) | (() => Promise<GithubConfig>) | GithubConfig;
 
     /**
      * The prefix to use for commands.
@@ -82,10 +82,10 @@ export interface SentryCommandsOptions {
      * If not provided, defaults to the current branch.
      */
     baseBranch?:
-        | (() => string)
         | (() => Promise<string>)
-        | (() => string[])
         | (() => Promise<string[]>)
+        | (() => string)
+        | (() => string[])
         | string
         | string[];
 }
@@ -121,7 +121,7 @@ function defineIssueInfoCommand(options: SentryCommandsOptions) {
             // Load both configs in parallel
             const [sentryConfig, githubConfig] = await Promise.all([
                 getSentryConfig(options),
-                getGitHubConfig(options),
+                getGithubConfig(options),
             ]);
 
             try {
@@ -134,16 +134,16 @@ function defineIssueInfoCommand(options: SentryCommandsOptions) {
                 this.logger.info(`🎯 Found issue ID: ${chalk.bold(issueId)}`);
 
                 // Create clients in parallel
-                const [sentryClient, octokit] = await Promise.all([
+                const [sentryClient, githubClient] = await Promise.all([
                     Promise.resolve(createSentryClient(sentryConfig)),
-                    Promise.resolve(createOctokitClient(githubConfig)),
+                    Promise.resolve(createGithubClient(githubConfig)),
                 ]);
 
                 // Get issue details and search for PR in parallel
                 this.logger.info('🔍 Fetching issue details and searching for associated PR...');
                 const [issueData, pr] = await Promise.all([
                     getSentryIssue(sentryClient, sentryConfig.organizationSlug, issueId),
-                    findMatchingPr(octokit, githubConfig, issueId),
+                    findMatchingPr(githubClient, githubConfig, issueId),
                 ]);
 
                 if (!issueData) {
@@ -203,7 +203,7 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
             // Load both configs in parallel
             const [sentryConfig, githubConfig] = await Promise.all([
                 getSentryConfig(options),
-                getGitHubConfig(options),
+                getGithubConfig(options),
             ]);
 
             try {
@@ -211,9 +211,9 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
                 const issueId = parseIssueIdentifier(this.issueIdentifier, sentryConfig.defaultPrefix);
 
                 // Create GitHub client and get base branches
-                const [sentryClient, octokit, baseBranches] = await Promise.all([
+                const [sentryClient, githubClient, baseBranches] = await Promise.all([
                     Promise.resolve(createSentryClient(sentryConfig)),
-                    Promise.resolve(createOctokitClient(githubConfig)),
+                    Promise.resolve(createGithubClient(githubConfig)),
                     getBaseBranches(options),
                 ]);
 
@@ -222,7 +222,7 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
                     issueId,
                     organizationSlug: sentryConfig.organizationSlug,
                     sentryClient,
-                    octokit,
+                    githubClient,
                     githubConfig,
                     logger: this.logger,
                     baseBranches,
@@ -251,7 +251,7 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
         override async run() {
             await options.beforeEach?.();
 
-            const githubConfig = await getGitHubConfig(options);
+            const githubConfig = await getGithubConfig(options);
 
             try {
                 // Get current branch
@@ -270,11 +270,11 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                 await handleReadyPreparation(unpushedCommits, statusInfo, this.logger);
 
                 // Create GitHub client
-                const octokit = createOctokitClient(githubConfig);
+                const githubClient = createGithubClient(githubConfig);
 
                 // Find the PR for this issue
                 this.logger.info('🔍 Looking for associated GitHub PR...');
-                const pr = await findMatchingPr(octokit, githubConfig, issueId);
+                const pr = await findMatchingPr(githubClient, githubConfig, issueId);
 
                 if (!pr) {
                     throw new UsageError(
@@ -295,7 +295,7 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
 
                 // Convert PR from draft to ready
                 this.logger.info('🚀 Converting PR from draft to ready for review...');
-                await convertPrToReady(octokit, githubConfig, pr.number);
+                await convertPrToReady(githubClient, githubConfig, pr.number);
 
                 this.logger.info(`🎉 Successfully converted PR #${pr.number} to ready for review!`);
                 this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
@@ -382,7 +382,7 @@ async function getSentryConfig(options: SentryCommandsOptions): Promise<SentryCo
     return options.sentry;
 }
 
-async function getGitHubConfig(options: SentryCommandsOptions): Promise<GitHubConfig> {
+async function getGithubConfig(options: SentryCommandsOptions): Promise<GithubConfig> {
     if (typeof options.github === 'function') {
         return await options.github();
     }

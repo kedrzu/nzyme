@@ -15,7 +15,7 @@ export type ModalProps<C> = Omit<ComponentProps<C>, 'modal'>;
 /**
  * Result of a modal.
  */
-export type ModalResult<C> = ComponentProps<C> extends ModalPropsBase<infer T> ? T : void;
+export type ModalResult<C> = ComponentProps<C> extends Partial<ModalPropsBase<infer T>> ? T : void;
 
 /**
  * Modal controller.

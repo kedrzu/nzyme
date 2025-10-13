@@ -1,3 +1,6 @@
+$transition-slide-distance-full: var(--transition-slide-distance, 100%);
+$transition-slide-distance-fade: var(--transition-slide-distance, 30%);
+
 .slideActive {
     transition-property: transform !important;
     transition-duration: 0.1s;
@@ -12,40 +15,40 @@
 
 .slideInactive {
     &_up {
-        transform: translateY(100%);
+        transform: translateY($transition-slide-distance-full);
     }
 
     &_down {
-        transform: translateY(-100%);
+        transform: translateY(calc(-1 * $transition-slide-distance-full));
     }
 
     &_left {
-        transform: translateX(-100%);
+        transform: translateX(calc(-1 * $transition-slide-distance-full));
     }
 
     &_right {
-        transform: translateX(100%);
+        transform: translateX($transition-slide-distance-full);
     }
 }
 
 .fadeInactive {
     &_up {
-        transform: translateY(30%);
+        transform: translateY($transition-slide-distance-fade);
         opacity: 0;
     }
 
     &_down {
-        transform: translateY(-30%);
+        transform: translateY(calc(-1 * $transition-slide-distance-fade));
         opacity: 0;
     }
 
     &_left {
-        transform: translateX(-30%);
+        transform: translateX(calc(-1 * $transition-slide-distance-fade));
         opacity: 0;
     }
 
     &_right {
-        transform: translateX(30%);
+        transform: translateX($transition-slide-distance-fade);
         opacity: 0;
     }
 }

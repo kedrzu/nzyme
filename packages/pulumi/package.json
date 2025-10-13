@@ -69,7 +69,7 @@
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
         "@types/decompress": "^4.2.7",
-        "@types/node": "^24.6.2",
+        "@types/node": "^24.7.2",
         "@types/semver": "^7.7.1",
         "typescript": "^5.9.3"
     },

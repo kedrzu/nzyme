@@ -8,11 +8,28 @@ import type { PackageJson } from 'type-fest';
 
 import { concatIterable } from '@nzyme/utils';
 
+/**
+ * Configuration options for the package.json plugin.
+ */
 export type PackageJsonPluginOptions = {
+    /**
+     * The import.meta object for resolving module paths
+     */
     importMeta?: ImportMeta;
+    /**
+     * Base package.json object to extend with dependencies
+     */
     packageJson?: PackageJson;
 };
 
+/**
+ * Creates a Rollup plugin that generates a package.json file with dependencies
+ * from the bundle and local package.json. This plugin is useful for creating
+ * self-contained bundles that include their dependencies.
+ *
+ * @param options - Configuration options for the plugin
+ * @returns A Rollup plugin that generates package.json and yarn.lock files
+ */
 export function packageJsonPlugin(options: PackageJsonPluginOptions = {}): Plugin {
     const importMeta = options.importMeta ?? import.meta;
     const packageJson = options.packageJson ?? {};
@@ -50,6 +67,11 @@ export function packageJsonPlugin(options: PackageJsonPluginOptions = {}): Plugi
         },
     };
 
+    /**
+     * Extracts package names from the Rollup bundle
+     * @param bundle - The Rollup output bundle
+     * @yields Package names found in the bundle
+     */
     function* getPackagesFromBundle(bundle: OutputBundle) {
         for (const chunkName in bundle) {
             const chunk = bundle[chunkName];
@@ -66,6 +88,11 @@ export function packageJsonPlugin(options: PackageJsonPluginOptions = {}): Plugi
         }
     }
 
+    /**
+     * Extracts the package name from a dependency path
+     * @param dep - The dependency path
+     * @returns The package name or null if not a valid package path
+     */
     function getPackageNameFromDependency(dep: string) {
         const regex = /^(@[^/]+\/)?([^/]+)(\/.*)?$/;
         const match = dep.match(regex);
@@ -77,6 +104,11 @@ export function packageJsonPlugin(options: PackageJsonPluginOptions = {}): Plugi
         return match[1] ? `${match[1]}${match[2]}` : match[2];
     }
 
+    /**
+     * Gets the version for each package in the set
+     * @param packages - Set of package names
+     * @returns A record mapping package names to their versions
+     */
     async function getPackagesWithVersions(packages: Iterable<string>) {
         const dependencies: Record<string, string> = {};
 
@@ -90,6 +122,11 @@ export function packageJsonPlugin(options: PackageJsonPluginOptions = {}): Plugi
         return dependencies;
     }
 
+    /**
+     * Gets the version of a specific dependency
+     * @param depName - The name of the dependency
+     * @returns The version string or null if not found
+     */
     async function getDependencyVersion(depName: string) {
         const modulePath = resolveModulePath(depName);
         if (!modulePath) {
@@ -117,6 +154,11 @@ export function packageJsonPlugin(options: PackageJsonPluginOptions = {}): Plugi
         return null;
     }
 
+    /**
+     * Resolves the path to a module
+     * @param moduleName - The name of the module to resolve
+     * @returns The resolved path or null if not found
+     */
     function resolveModulePath(moduleName: string) {
         try {
             const url = importMeta.resolve(moduleName);
@@ -130,6 +172,11 @@ export function packageJsonPlugin(options: PackageJsonPluginOptions = {}): Plugi
         }
     }
 
+    /**
+     * Reads and parses a package.json file
+     * @param packageJsonPath - Path to the package.json file
+     * @returns The parsed package.json object or null if not found
+     */
     async function readPackageJson(packageJsonPath: string) {
         const fileExists = await exists(packageJsonPath);
         if (!fileExists) {

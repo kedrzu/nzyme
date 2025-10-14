@@ -11,12 +11,12 @@
 }
 
 .slideInactive {
-    &_top {
-        transform: translateY(-100%);
+    &_up {
+        transform: translateY(100%);
     }
 
-    &_bottom {
-        transform: translateY(100%);
+    &_down {
+        transform: translateY(-100%);
     }
 
     &_left {
@@ -29,13 +29,13 @@
 }
 
 .fadeInactive {
-    &_top {
-        transform: translateY(-30%);
+    &_up {
+        transform: translateY(30%);
         opacity: 0;
     }
 
-    &_bottom {
-        transform: translateY(30%);
+    &_down {
+        transform: translateY(-30%);
         opacity: 0;
     }
 

@@ -1,8 +1,20 @@
 import type { DefinedProperties } from '@nzyme/types';
 
 /**
- * Removes props that are undefined.
- * @deprecated use @see skipUndefinedProps
+ * Removes properties that are undefined from an object.
+ * Modifies the input object in place.
+ *
+ * @deprecated Use {@link skipUndefinedProps} instead
+ * @template T - The type of the object
+ * @param obj - The object to remove undefined properties from
+ * @returns The same object with undefined properties removed
+ *
+ * @example
+ * ```typescript
+ * const obj = { a: 1, b: undefined, c: 3 };
+ * removeUndefinedProps(obj);
+ * // obj = { a: 1, c: 3 }
+ * ```
  */
 export function removeUndefinedProps<T extends object>(obj: T): T {
     for (const prop in obj) {
@@ -15,7 +27,20 @@ export function removeUndefinedProps<T extends object>(obj: T): T {
 }
 
 /**
- * Returns only props that are defined.
+ * Creates a new object containing only the defined properties of the input object.
+ * Does not modify the input object.
+ *
+ * @template T - The type of the object
+ * @param obj - The object to filter
+ * @returns A new object containing only defined properties
+ *
+ * @example
+ * ```typescript
+ * const obj = { a: 1, b: undefined, c: 3 };
+ * const filtered = skipUndefinedProps(obj);
+ * // filtered = { a: 1, c: 3 }
+ * // obj remains unchanged
+ * ```
  */
 export function skipUndefinedProps<T extends object>(obj: T): DefinedProperties<T> {
     const result = {} as Record<string, unknown>;

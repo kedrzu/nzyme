@@ -1,6 +1,9 @@
 /**
- * Returns height of element's children.
- * Even if element itself overflows.
+ * Returns the total height of an element's children.
+ * Calculates the maximum bottom position of all children, even if the parent element has overflow.
+ *
+ * @param element The parent HTML element whose children's height to measure
+ * @returns The maximum height in pixels needed to contain all children
  */
 export function getChildrenHeight(element: HTMLElement) {
     let height = 0;

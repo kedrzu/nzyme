@@ -2,19 +2,21 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import type { Package } from '@lerna/package';
-import { getPackages } from '@lerna/project';
+import chalk from 'chalk';
+import { watch } from 'chokidar';
+import { Option } from 'clipanion';
 import * as json from 'comment-json';
-import { consola } from 'consola';
 import fsExtra from 'fs-extra/esm';
 import merge from 'lodash.merge';
-import { format as prettierFormat, resolveConfig as prettierResolveConfig } from 'prettier';
 import type { TsConfigJson } from 'type-fest';
 
-import { asArray } from '@nzyme/utils';
+import type { Package } from '@nzyme/project-utils';
+import { getPackages, getProjectRoot } from '@nzyme/project-utils';
+import { saveFile } from '@nzyme/project-utils';
+import { asArray, debounceAsyncFunction, waitForever } from '@nzyme/utils';
 
-import type { NzymePackageConfig } from '../NzymePackageConfig.js';
 import { Command } from '../Command.js';
+import type { NzymePackageConfig } from '../NzymePackageConfig.js';
 
 interface TsConfig {
     path: string;
@@ -27,8 +29,7 @@ interface PackageCache {
     cjs: string | null;
 }
 
-const tsConfigsCache = new Map<string, TsConfig | null>();
-const packageCache = new Map<string, Promise<PackageCache>>();
+const PACKAGE_JSON_REGEX = /\/?package\.json$/;
 
 /**
  * Command to process the monorepo and generate tsconfig.json files for each package
@@ -41,148 +42,271 @@ export class MonorepoCommand extends Command {
         description: 'Process the monorepo and generate tsconfig.json files for each package',
     });
 
+    watch = Option.Boolean('--watch,-w', {
+        description: 'Watch for changes',
+    });
+
+    cwd = process.cwd();
+
+    private tsConfigsCache = new Map<string, TsConfig | null>();
+    private packageCache = new Map<string, Promise<PackageCache>>();
+    private projectRoot = getProjectRoot();
+
     /**
      * Execute the command.
      */
     override async run() {
-        await processProject();
-    }
-}
+        await this.processProject(true);
 
-async function processProject() {
-    const cwd = process.cwd();
-    const packages = await getPackages(cwd);
-
-    const tsconfigPath = path.join(cwd, './tsconfig.esm.json');
-
-    const esmReferences: string[] = [];
-    const cjsReferences: string[] = [];
-
-    for (const pkg of packages) {
-        const result = await processPackage(pkg, packages);
-        if (result.esm) {
-            esmReferences.push(result.esm);
-        }
-
-        if (result.cjs) {
-            cjsReferences.push(result.cjs);
+        if (this.watch) {
+            await this.startWatcher();
         }
     }
 
-    await saveTsReferences({
-        cwd,
-        fileName: 'tsconfig.json',
-        extends: tsconfigPath,
-        references: esmReferences,
-        config: {
-            include: [],
-        },
-    });
+    private async startWatcher() {
+        const watcher = watch('.', {
+            cwd: this.cwd,
+            ignored: ['node_modules', 'dist'],
+            ignoreInitial: true,
+        });
 
-    await saveTsReferences({
-        cwd,
-        fileName: 'tsconfig.cjs.json',
-        extends: tsconfigPath,
-        references: cjsReferences,
-        config: {
-            include: [],
-        },
-    });
-}
+        this.logger.info('Watching for changes...');
 
-async function processPackage(pkg: Package, packages: Package[]): Promise<PackageCache> {
-    const existing = packageCache.get(pkg.name);
-    if (existing) {
-        return await existing;
+        const onFileChange = debounceAsyncFunction(this.onFileChange.bind(this), {
+            trailing: true,
+        });
+
+        watcher.on('add', file => void onFileChange(file));
+        watcher.on('change', file => void onFileChange(file));
+        watcher.on('unlink', file => void onFileChange(file));
+
+        await waitForever();
     }
 
-    const result = processPackageCore(pkg, packages);
-    packageCache.set(pkg.name, result);
-
-    return await result;
-}
-
-async function processPackageCore(pkg: Package, packages: Package[]): Promise<PackageCache> {
-    const dependencyNames = [
-        ...Object.keys(pkg.dependencies || {}),
-        ...Object.keys(pkg.devDependencies || {}),
-    ];
-
-    const dependencies = dependencyNames
-        .map(d => packages.find(p => p.name === d)!)
-        .filter(Boolean);
-
-    const esmReferences: string[] = [];
-    const cjsReferences: string[] = [];
-
-    for (const dep of dependencies) {
-        const depResult = await processPackage(dep, packages);
-        if (depResult.esm) {
-            esmReferences.push(depResult.esm);
+    private async onFileChange(file: string) {
+        if (!PACKAGE_JSON_REGEX.test(file)) {
+            return;
         }
 
-        if (depResult.cjs) {
-            cjsReferences.push(depResult.cjs);
+        // Invalidate cache for the package whose package.json was changed
+        await this.invalidateCacheForChangedPackage(file);
+
+        await this.processProject(false);
+    }
+
+    private async invalidateCacheForChangedPackage(packageJsonPath: string) {
+        try {
+            const packages = await getPackages(this.cwd);
+            const packageDir = path.dirname(path.resolve(this.cwd, packageJsonPath));
+
+            // Find the package that corresponds to the changed package.json
+            const changedPackage = packages.find(pkg => path.resolve(pkg.path) === packageDir);
+
+            if (changedPackage?.packageJson.name) {
+                // Clear the package cache for this specific package
+                this.packageCache.delete(changedPackage.packageJson.name);
+
+                // Also clear any tsconfig cache for this package directory
+                const tsconfigPath = path.join(changedPackage.path, 'tsconfig.esm.json');
+                this.tsConfigsCache.delete(tsconfigPath);
+            }
+        } catch (error) {
+            this.logger.error('Failed to invalidate cache for changed package', { error });
         }
     }
 
-    let esmResult: string | null = null;
-    let cjsResult: string | null = null;
+    private async processProject(throwOnError: boolean) {
+        try {
+            const cwd = process.cwd();
+            const packages = await getPackages(cwd);
 
-    const tsconfig = await loadTsConfigForPackage(pkg);
-    if (!tsconfig) {
-        return {
-            esm: null,
-            cjs: null,
-        };
+            const tsconfigPath = path.join(cwd, './tsconfig.esm.json');
+
+            const esmReferences: string[] = [];
+            const cjsReferences: string[] = [];
+
+            for (const pkg of packages) {
+                const result = await this.processPackage(pkg, packages, throwOnError);
+                if (result.esm) {
+                    esmReferences.push(result.esm);
+                }
+
+                if (result.cjs) {
+                    cjsReferences.push(result.cjs);
+                }
+            }
+
+            await this.saveTsReferences({
+                cwd,
+                fileName: 'tsconfig.json',
+                extends: tsconfigPath,
+                references: esmReferences,
+                config: {
+                    include: [],
+                },
+            });
+
+            await this.saveTsReferences({
+                cwd,
+                fileName: 'tsconfig.cjs.json',
+                extends: tsconfigPath,
+                references: cjsReferences,
+                config: {
+                    include: [],
+                },
+            });
+        } catch (error: unknown) {
+            if (throwOnError) {
+                throw error;
+            }
+
+            this.logger.error(`Failed to process project`, { error });
+        }
     }
 
-    const isComposite = isCompositePackage(tsconfig);
-
-    esmResult = await saveTsReferences({
-        cwd: pkg.location,
-        fileName: 'tsconfig.json',
-        extends: tsconfig.path,
-        references: esmReferences,
-        config: {
-            compilerOptions: {
-                tsBuildInfoFile:
-                    tsconfig.config.compilerOptions?.tsBuildInfoFile ?? 'tsconfig.esm.tsbuildinfo',
-            },
-        },
-    });
-
-    const config = getNzymeConfig(pkg);
-    if (config?.cjs) {
-        let dist = tsconfig.config.compilerOptions?.outDir ?? './dist';
-        if (dist.endsWith('/')) {
-            dist = dist.slice(0, -1);
+    private async processPackage(pkg: Package, packages: Package[], throwOnError: boolean): Promise<PackageCache> {
+        if (!pkg.packageJson.name) {
+            const relativePath = path.relative(this.projectRoot, pkg.path);
+            this.logger.error(`Package is missing a name: ${relativePath}`);
+            return { esm: null, cjs: null };
+        }
+        const existing = this.packageCache.get(pkg.packageJson.name);
+        if (existing) {
+            return await existing;
         }
 
-        cjsResult = await saveTsReferences({
-            cwd: pkg.location,
-            fileName: 'tsconfig.cjs.json',
+        try {
+            const result = this.processPackageCore(pkg, packages, throwOnError);
+            this.packageCache.set(pkg.packageJson.name, result);
+
+            return await result;
+        } catch (error: unknown) {
+            if (throwOnError) {
+                throw error;
+            }
+
+            this.logger.error(`Failed to process package ${pkg.packageJson.name}`, { error });
+            this.packageCache.set(pkg.packageJson.name, Promise.resolve({ esm: null, cjs: null }));
+            return { esm: null, cjs: null };
+        }
+    }
+
+    private async processPackageCore(pkg: Package, packages: Package[], throwOnError: boolean): Promise<PackageCache> {
+        const dependencyNames = [
+            ...Object.keys(pkg.packageJson.dependencies || {}),
+            ...Object.keys(pkg.packageJson.devDependencies || {}),
+        ];
+        const dependencies = dependencyNames.map(d => packages.find(p => p.packageJson.name === d)!).filter(Boolean);
+
+        const esmReferences: string[] = [];
+        const cjsReferences: string[] = [];
+
+        for (const dep of dependencies) {
+            const depResult = await this.processPackage(dep, packages, throwOnError);
+            if (depResult.esm) {
+                esmReferences.push(depResult.esm);
+            }
+
+            if (depResult.cjs) {
+                cjsReferences.push(depResult.cjs);
+            }
+        }
+
+        let esmResult: string | null = null;
+        let cjsResult: string | null = null;
+
+        const tsconfig = await this.loadTsConfigForPackage(pkg);
+        if (!tsconfig) {
+            return {
+                esm: null,
+                cjs: null,
+            };
+        }
+
+        const isComposite = isCompositePackage(tsconfig);
+
+        esmResult = await this.saveTsReferences({
+            cwd: pkg.path,
+            fileName: 'tsconfig.json',
             extends: tsconfig.path,
-            references: cjsReferences,
+            references: esmReferences,
             config: {
                 compilerOptions: {
-                    module: 'CommonJS',
-                    moduleResolution: 'Node',
-                    outDir: `${dist}-cjs`,
-                    tsBuildInfoFile: 'tsconfig.cjs.tsbuildinfo',
+                    tsBuildInfoFile: tsconfig.config.compilerOptions?.tsBuildInfoFile ?? 'tsconfig.esm.tsbuildinfo',
                 },
             },
         });
+
+        const config = getNzymeConfig(pkg);
+        if (config?.cjs) {
+            let dist = tsconfig.config.compilerOptions?.outDir ?? './dist';
+            if (dist.endsWith('/')) {
+                dist = dist.slice(0, -1);
+            }
+
+            cjsResult = await this.saveTsReferences({
+                cwd: pkg.path,
+                fileName: 'tsconfig.cjs.json',
+                extends: tsconfig.path,
+                references: cjsReferences,
+                config: {
+                    compilerOptions: {
+                        module: 'CommonJS',
+                        moduleResolution: 'Node',
+                        outDir: `${dist}-cjs`,
+                        tsBuildInfoFile: 'tsconfig.cjs.tsbuildinfo',
+                    },
+                },
+            });
+        }
+
+        return {
+            esm: isComposite ? esmResult : null,
+            cjs: isComposite ? cjsResult : null,
+        };
     }
 
-    return {
-        esm: isComposite ? esmResult : null,
-        cjs: isComposite ? cjsResult : null,
-    };
-}
+    private async loadTsConfigForPackage(pkg: Package) {
+        return await this.loadTsConfig(path.join(pkg.path, 'tsconfig.esm.json'));
+    }
 
-async function loadTsConfigForPackage(pkg: Package) {
-    return await loadTsConfig(path.join(pkg.location, 'tsconfig.esm.json'));
+    private async loadTsConfig(filePath: string) {
+        let tsConfig = this.tsConfigsCache.get(filePath);
+        if (!tsConfig) {
+            tsConfig = await loadTsConfigCore(filePath);
+            this.tsConfigsCache.set(filePath, tsConfig);
+        }
+
+        return tsConfig;
+    }
+
+    private async saveTsReferences(params: {
+        config?: TsConfigJson;
+        cwd: string;
+        extends: string;
+        fileName: string;
+        references: string[];
+    }) {
+        const outputPath = path.join(params.cwd, params.fileName);
+        const extendsPath = getRelativePath(outputPath, params.extends);
+        const tsconfig = {
+            ...params.config,
+            extends: extendsPath,
+            references: params.references.map(r => {
+                return {
+                    path: getRelativePath(outputPath, r),
+                };
+            }),
+        };
+
+        const configJson = json.stringify(tsconfig, undefined, 2);
+        await saveFile(outputPath, configJson);
+
+        const relativePath = path.relative(this.projectRoot, outputPath);
+        this.logger.info(`Generated ${chalk.green(relativePath)}`);
+
+        return outputPath;
+    }
 }
 
 function isCompositePackage(tsconfig: TsConfig | null): tsconfig is TsConfig {
@@ -205,16 +329,6 @@ function getRelativePath(fromPath: string, toPath: string) {
     }
 
     return relativePath;
-}
-
-async function loadTsConfig(filePath: string) {
-    let tsConfig = tsConfigsCache.get(filePath);
-    if (!tsConfig) {
-        tsConfig = await loadTsConfigCore(filePath);
-        tsConfigsCache.set(filePath, tsConfig);
-    }
-
-    return tsConfig;
 }
 
 async function loadTsConfigCore(filePath: string) {
@@ -243,14 +357,16 @@ async function loadTsConfigCore(filePath: string) {
                 break;
             }
 
+            if (!(await fsExtra.pathExists(extendsPath))) {
+                break;
+            }
+
             configFile = await fs.readFile(extendsPath, { encoding: 'utf8' });
 
             const extendedConfig = json.parse(configFile) as TsConfigJson;
             if (extendedConfig.extends) {
                 const cwd = path.dirname(extendsPath);
-                const extendsPaths = asArray(extendedConfig.extends).map(p =>
-                    resolveTsConfigPath(cwd, p),
-                );
+                const extendsPaths = asArray(extendedConfig.extends).map(p => resolveTsConfigPath(cwd, p));
                 extend.push(...extendsPaths);
             }
 
@@ -283,38 +399,6 @@ function resolveTsConfigPath(cwd: string, filePath: string) {
     return fileURLToPath(import.meta.resolve(filePath));
 }
 
-async function saveTsReferences(params: {
-    cwd: string;
-    fileName: string;
-    extends: string;
-    references: string[];
-    config?: TsConfigJson;
-}) {
-    const prettierConfig = await prettierResolveConfig(params.cwd);
-    const outputPath = path.join(params.cwd, params.fileName);
-    const extendsPath = getRelativePath(outputPath, params.extends);
-    const tsconfig = {
-        ...params.config,
-        extends: extendsPath,
-        references: params.references.map(r => {
-            return {
-                path: getRelativePath(outputPath, r),
-            };
-        }),
-    };
-
-    let configJson = json.stringify(tsconfig, undefined, 2);
-    configJson = await prettierFormat(configJson, {
-        ...prettierConfig,
-        parser: 'json',
-    });
-
-    await fsExtra.outputFile(outputPath, configJson, { encoding: 'utf8' });
-    consola.success(outputPath);
-
-    return outputPath;
-}
-
 function getNzymeConfig(pkg: Package) {
-    return pkg.get('nzyme') as NzymePackageConfig | undefined | null;
+    return pkg.packageJson['nzyme'] as NzymePackageConfig | null | undefined;
 }

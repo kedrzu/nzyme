@@ -1,5 +1,11 @@
 import type { QueryParams } from './queryTypes.js';
 
+/**
+ * Converts a query parameters object into a URL query string.
+ *
+ * @param params - The query parameters to convert
+ * @returns A URL query string (with leading '?' if not empty)
+ */
 export function stringifyQuery(params: QueryParams) {
     let qs = '';
 
@@ -21,6 +27,14 @@ export function stringifyQuery(params: QueryParams) {
     return qs;
 }
 
+/**
+ * Appends a key-value pair to a query string, handling URL encoding.
+ *
+ * @param qs - The current query string
+ * @param key - The parameter key
+ * @param value - The parameter value
+ * @returns The updated query string
+ */
 function appendQueryString(qs: string, key: string, value: string | null | undefined) {
     if (value == null) {
         return qs;

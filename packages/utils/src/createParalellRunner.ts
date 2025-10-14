@@ -1,10 +1,43 @@
 import { createPromise } from './createPromise.js';
 
+/**
+ * Options for creating a parallel runner.
+ */
 type ParalelllRunnerOptions = {
+    /** Maximum number of concurrent threads to run */
     concurrency: number;
-    handler: () => Promise<void | false>;
+    /** Function to execute in each thread */
+    handler: () => Promise<false | void>;
 };
 
+/**
+ * Creates a parallel runner that executes a handler function in multiple concurrent threads.
+ * The runner can be started, stopped, and waited for completion.
+ *
+ * @param options - Configuration for the parallel runner
+ * @returns An object with `start`, `stop`, and `wait` methods
+ *
+ * @example
+ * ```typescript
+ * const runner = createParalellRunner({
+ *     concurrency: 3,
+ *     handler: async () => {
+ *         await processItem();
+ *         // Return false to stop this thread
+ *         return false;
+ *     }
+ * });
+ *
+ * // Start processing
+ * await runner.start();
+ *
+ * // Stop all threads
+ * await runner.stop();
+ *
+ * // Wait for all threads to complete
+ * await runner.wait();
+ * ```
+ */
 export function createParalellRunner(options: ParalelllRunnerOptions) {
     const { handler, concurrency } = options;
 

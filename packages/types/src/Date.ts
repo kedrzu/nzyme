@@ -17,12 +17,31 @@ export type DateISO = `${number}-${number}-${number}`;
 /**
  * Represent a string like `14:42:34.678`
  */
-export type TimeISO = `${number}:${number}:${number}` | `${number}:${number}:${number}.${number}`;
+export type TimeISO = `${number}:${number}:${number}.${number}` | `${number}:${number}:${number}`;
 
 /**
  * Represent a string like `2021-01-08T14:42:34.678Z` (format: ISO 8601).
  */
 export type DateTimeISO =
+    | `${DateISO}T${TimeISO}+${number}:${number}`
     | `${DateISO}T${TimeISO}`
-    | `${DateISO}T${TimeISO}Z`
-    | `${DateISO}T${TimeISO}+${number}:${number}`;
+    | `${DateISO}T${TimeISO}Z`;
+
+/**
+ * Represent a date input.
+ */
+export type DateInput = number | Date | DateISO | DateTimeISO;
+
+/**
+ *
+ */
+export type DurationISO = `${DurationP}${DurationT}`;
+
+type DurationY = `${number}Y` | ``;
+type DurationM = `${number}M` | ``;
+type DurationD = `${number}D` | ``;
+type DurationH = `${number}H` | ``;
+
+type DurationS = `${number}S` | ``;
+type DurationP = `P${DurationY}${DurationM}${DurationD}`;
+type DurationT = `` | `T${DurationH}${DurationM}${DurationS}`;

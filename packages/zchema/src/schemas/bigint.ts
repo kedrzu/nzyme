@@ -1,8 +1,22 @@
-import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
 import { defineSchema } from '../defineSchema.js';
+import type {
+    Schema,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
+    SchemaOptions,
+    SchemaProto,
+} from '../Schema.js';
 
-export type BigintSchema<O extends SchemaOptions<bigint>> = Schema<bigint, O>;
+/**
+ * Schema type for bigint values.
+ * @template O - Schema options type
+ */
+export type BigintSchema<O extends SchemaOptionsBase = SchemaOptionsBase> = Schema<bigint, O>;
 
+/**
+ * Prototype implementation for bigint schema.
+ */
 const proto: SchemaProto<bigint> = {
     coerce: BigInt as (value: unknown) => bigint,
     serialize: String,
@@ -10,13 +24,33 @@ const proto: SchemaProto<bigint> = {
     default: () => 0n,
 };
 
-type BigintSchemaBase = {
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+/**
+ * Base type for bigint schema definition.
+ */
+export type BigintSchemaConstructor = {
+    /** Creates a bigint schema with default options */
     (): BigintSchema<{}>;
-    <O extends object>(options: O & SchemaOptions<bigint>): BigintSchema<SchemaOptionsSimlify<O>>;
+    /** Creates a bigint schema with custom options */
+    <
+        TNullable extends boolean | undefined = undefined,
+        TOptional extends boolean | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
+    >(
+        options: SchemaOptions<bigint, TNullable, TOptional, TMeta>,
+    ): BigintSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta>>;
 };
 
-export const bigint = defineSchema<BigintSchemaBase>({
+/**
+ * Creates a schema for bigint values.
+ *
+ * @example
+ * ```ts
+ * const id = bigint();
+ * const requiredId = bigint({ required: true });
+ * const defaultId = bigint({ default: () => 0n });
+ * ```
+ */
+export const bigint = defineSchema<BigintSchemaConstructor>({
     name: 'bigint',
     proto: () => proto,
 });

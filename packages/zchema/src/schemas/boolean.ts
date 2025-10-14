@@ -1,16 +1,23 @@
 import { identity } from '@nzyme/utils';
 
-import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
 import { defineSchema } from '../defineSchema.js';
+import type {
+    Schema,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
+    SchemaOptions,
+    SchemaProto,
+} from '../Schema.js';
 
 /**
  * Schema type for boolean values.
  * @template O - Schema options type
  */
-export type BooleanSchema<O extends SchemaOptions<boolean>> = Schema<boolean, O>;
+export type BooleanSchema<O extends SchemaOptionsBase = SchemaOptionsBase> = Schema<boolean, O>;
 
 /**
- * Protocol implementation for boolean schema.
+ * Prototype implementation for boolean schema.
  */
 const proto: SchemaProto<boolean> = {
     coerce: Boolean,
@@ -22,11 +29,17 @@ const proto: SchemaProto<boolean> = {
 /**
  * Base type for boolean schema definition.
  */
-type BooleanSchemaBase = {
+export type BooleanSchemaBase = {
     /** Creates a boolean schema with default options */
     (): BooleanSchema<{}>;
     /** Creates a boolean schema with custom options */
-    <O extends object>(options: O & SchemaOptions<boolean>): BooleanSchema<SchemaOptionsSimlify<O>>;
+    <
+        TNullable extends boolean | undefined = undefined,
+        TOptional extends boolean | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
+    >(
+        options: SchemaOptions<boolean, TNullable, TOptional, TMeta>,
+    ): BooleanSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta>>;
 };
 
 /**

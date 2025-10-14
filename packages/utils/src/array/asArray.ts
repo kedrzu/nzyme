@@ -1,9 +1,13 @@
 /**
- * Converts parameter to an array
- * @param o an object, array, null or undefined
- * @return an array of 0, 1 or more elements
+ * Converts a value to an array. If the value is already an array, it is returned as is.
+ * If the value is null or undefined, an empty array is returned. Otherwise, the value
+ * is wrapped in a single-element array.
+ *
+ * @template T - The type of elements in the array
+ * @param o - The value to convert to an array
+ * @returns An array containing the value(s)
  */
-export function asArray<T>(o: T | readonly T[] | undefined | null): readonly T[] {
+export function asArray<T>(o: T | readonly T[] | null | undefined): readonly T[] {
     if (o === null || o === undefined) {
         return [];
     }

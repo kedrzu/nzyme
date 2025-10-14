@@ -1,20 +1,29 @@
-import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
 import { defineSchema } from '../defineSchema.js';
+import type {
+    Schema,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
+    SchemaOptions,
+    SchemaProto,
+} from '../Schema.js';
 
 /**
  * Schema type for void values.
  * @template O - Schema options type
  */
-export type VoidSchema<O extends SchemaOptions<void> = SchemaOptions<void>> = ForceName<
-    Schema<void, O>
->;
-
-// Helper type to force type name preservation
-declare class FF {}
-type ForceName<T> = T & FF;
+export type VoidSchema<O extends SchemaOptionsBase = SchemaOptionsBase> = ForceName &
+    Schema<void, O>;
 
 /**
- * Protocol implementation for void schema.
+ * Internal class used to force type names in TypeScript.
+ * @internal
+ */
+declare class ForceName {}
+
+/**
+ * Prototype implementation for void schema.
+ * This prototype only accepts undefined values and always returns undefined.
  */
 const proto: SchemaProto<void> = {
     coerce: () => undefined,
@@ -27,12 +36,19 @@ const proto: SchemaProto<void> = {
 
 /**
  * Base type for void schema definition.
+ * Provides overloads for creating void schemas with different options.
  */
-type VoidSchemaBase = {
+export type VoidSchemaConstructor = {
+    /** Creates a void schema with default options */
+    (): VoidSchema<{}>;
     /** Creates a void schema with custom options */
-    <O extends SchemaOptions<void> = {}>(
-        options?: O & SchemaOptions<void>,
-    ): VoidSchema<SchemaOptionsSimlify<O>>;
+    <
+        TNullable extends boolean = false,
+        TOptional extends boolean = true,
+        TMeta extends SchemaMeta | undefined = undefined,
+    >(
+        options?: SchemaOptions<void, TNullable, TOptional, TMeta>,
+    ): VoidSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta>>;
 };
 
 /**
@@ -46,7 +62,7 @@ type VoidSchemaBase = {
  * const requiredVoid = voidSchema({ required: true });
  * ```
  */
-export const voidSchema = defineSchema<VoidSchemaBase>({
+export const voidSchema = defineSchema<VoidSchemaConstructor>({
     name: 'void',
     options: (options?: SchemaOptions<void>) => ({
         ...options,

@@ -1,14 +1,14 @@
 {
     "tabWidth": 4,
     "singleQuote": true,
-    "printWidth": 100,
+    "printWidth": 120,
     "arrowParens": "avoid",
     "trailingComma": "all",
     "endOfLine": "lf",
     "singleAttributePerLine": true,
     "overrides": [
         {
-            "files": ["*.yml", "*.yaml"],
+            "files": ["*.yml", "*.yaml", "*.html", "*.vue"],
             "options": {
                 "tabWidth": 2
             }

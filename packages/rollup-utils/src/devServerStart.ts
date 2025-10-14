@@ -1,14 +1,13 @@
 import chalk from 'chalk';
 import connect from 'connect';
-import { consola } from 'consola';
-import type { RollupWatchOptions } from 'rollup';
 
+import type { DevServerMiddlewareOptions } from './devServerMiddleware.js';
 import { devServerMiddleware } from './devServerMiddleware.js';
 
 /**
  * Options for the dev server.
  */
-export type DevServerOptions = RollupWatchOptions & {
+export type DevServerOptions = DevServerMiddlewareOptions & {
     /**
      * The port to listen on.
      */
@@ -19,11 +18,17 @@ export type DevServerOptions = RollupWatchOptions & {
  * Starts the dev server with auto-reload.
  */
 export function devServerStart(options: DevServerOptions) {
-    const app = connect();
-    const middleware = devServerMiddleware(options);
+    const server = connect();
+    const { port: _, ...rest } = options;
+    const { middleware, restart } = devServerMiddleware(rest);
 
-    app.use(middleware);
-    app.listen(options.port, () => {
-        consola.info(`Server listening on ${chalk.green(`http://localhost:${options.port}`)}`);
+    server.use(middleware);
+    server.listen(options.port, () => {
+        console.info(`Server listening on ${chalk.green(`http://localhost:${options.port}`)}`);
     });
+
+    return {
+        server,
+        restart,
+    };
 }

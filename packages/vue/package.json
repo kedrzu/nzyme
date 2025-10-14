@@ -34,17 +34,13 @@
         "@nzyme/utils": "^0.14.0",
         "@nzyme/vue-ioc": "^0.14.0",
         "@nzyme/vue-utils": "^0.14.0",
-        "lodash.debounce": "^4.0.8",
-        "tslib": "^2.8.1",
-        "vue": "^3.5.13"
+        "type-fest": "^5.0.1",
+        "vue": "^3.5.22"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
-        "@types/lodash.debounce": "^4.0.9",
-        "eslint": "^9.24.0",
-        "sass": "1.86.3",
-        "typescript": "^5.8.3"
+        "typescript": "^5.9.3"
     },
     "publishConfig": {
         "access": "public"

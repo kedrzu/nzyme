@@ -1,15 +1,17 @@
-import {
-    mergeErrors,
-    normalizeErrors,
-    ValidationError,
-    type ValidationContext,
-    type ValidationErrors,
-    type ValidationResult,
-} from '@nzyme/validation';
+import { mergeErrors, normalizeErrors, ValidationError } from '@nzyme/validation';
+import type { ValidationContext, ValidationErrors, ValidationResult } from '@nzyme/validation';
 
-import type { SchemaAny, Infer } from '../Schema.js';
+import type { Infer, SchemaAny, SchemaVisitor } from '../Schema.js';
 import { lazyResolve } from '../schemas/lazy.js';
 
+/**
+ * Validates a value against a schema and returns any validation errors.
+ * @template S - The schema type
+ * @param schema - The schema to validate against
+ * @param value - The value to validate
+ * @param ctx - Optional validation context
+ * @returns Normalized validation errors, or undefined if the value is valid
+ */
 export function validate<S extends SchemaAny>(
     schema: S,
     value: Infer<S>,
@@ -19,6 +21,14 @@ export function validate<S extends SchemaAny>(
     return normalizeErrors(errors);
 }
 
+/**
+ * Validates a value against a schema and throws a ValidationError if invalid.
+ * @template S - The schema type
+ * @param schema - The schema to validate against
+ * @param value - The value to validate
+ * @param ctx - Optional validation context
+ * @throws {ValidationError} If the value is invalid
+ */
 export function validateOrThrow<S extends SchemaAny>(
     schema: S,
     value: Infer<S>,
@@ -30,11 +40,19 @@ export function validateOrThrow<S extends SchemaAny>(
     }
 }
 
+/**
+ * Internal function that performs the actual validation logic.
+ * @template S - The schema type
+ * @param schema - The schema to validate against
+ * @param value - The value to validate
+ * @param ctx - Validation context
+ * @returns Raw validation errors, or undefined if the value is valid
+ */
 function validateInner<S extends SchemaAny>(
     schema: S,
     value: Infer<S>,
     ctx: ValidationContext,
-): ValidationResult {
+): ValidationResult | undefined {
     lazyResolve(schema);
 
     const proto = schema.proto;
@@ -47,14 +65,14 @@ function validateInner<S extends SchemaAny>(
         if (!schema.optional) {
             return ['Invalid value'];
         }
-    } else if (!proto.check(value)) {
+    } else if (!proto.check(value, ctx)) {
         return ['Invalid value'];
     }
 
     let errors: ValidationErrors | undefined;
 
     if (value != null && proto.visit != null) {
-        proto.visit(value, (schema, value, key) => {
+        const visitor: SchemaVisitor = (schema, value, key) => {
             const result = validateInner(schema, value, ctx);
 
             if (!result) {
@@ -66,10 +84,12 @@ function validateInner<S extends SchemaAny>(
             }
 
             mergeErrors(errors, result, key);
-        });
+        };
+
+        proto.visit(value, visitor, ctx);
     }
 
-    for (const validator of schema.validators) {
+    for (const validator of schema.validate) {
         const result = validator(value, ctx);
         if (result != null) {
             if (errors === undefined) {

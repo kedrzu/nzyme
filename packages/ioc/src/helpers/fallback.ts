@@ -6,7 +6,7 @@ import { defineInjectable } from '../Injectable.js';
  * @param value - Value to define.
  * @returns Fallback injectable.
  */
-export function fallback<T>(...injectables: Injectable<T | undefined | null>[]) {
+export function fallback<T>(...injectables: Injectable<T | null | undefined>[]) {
     return defineInjectable({
         resolve: (container, caller) => {
             for (const injectable of injectables) {

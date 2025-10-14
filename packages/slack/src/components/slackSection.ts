@@ -5,11 +5,26 @@ import { mapNotNull } from '@nzyme/utils';
 import type { SlackText } from '../types.js';
 import { joinLines } from '../utils/joinLines.js';
 
+/**
+ * Configuration options for creating a Slack section block
+ */
 export type SlackSection = {
+    /**
+     *
+     */
+    fields?: (string | false | null | undefined)[];
+    /**
+     *
+     */
     text?: SlackText;
-    fields?: (string | undefined | null | false)[];
 };
 
+/**
+ * Creates a section block for Slack messages
+ *
+ * @param options Configuration options for the section
+ * @returns Slack section block
+ */
 export function slackSection(options: SlackSection): SectionBlock {
     return {
         type: 'section',

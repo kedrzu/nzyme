@@ -1,13 +1,13 @@
 import { expect, test } from 'vitest';
 
-import { minValidator, regexValidator } from '@nzyme/validation';
+import * as v from '@nzyme/validation';
 
+import { coerce } from '../utils/coerce.js';
+import { validate } from '../utils/validate.js';
 import { array } from './array.js';
 import { number } from './number.js';
 import { object } from './object.js';
 import { string } from './string.js';
-import { coerce } from '../utils/coerce.js';
-import { validate } from '../utils/validate.js';
 
 test('array of numbers', () => {
     const schema = array({
@@ -22,13 +22,19 @@ test('array of numbers', () => {
 test('validate array of strings', () => {
     const schema = array({
         of: string({
-            validators: [
-                regexValidator({
-                    regex: /^[a-z]+$/,
-                    message: () => 'Must be lowercase letters',
-                }),
-            ],
+            validate: v.regex({
+                regex: /^[a-z]+$/,
+                message: () => 'Must be lowercase letters',
+            }),
         }),
+        nullable: false,
+        validate: [
+            value => {
+                if (value.length > 2) {
+                    return 'Must have at most 2 elements';
+                }
+            },
+        ],
     });
 
     const validResult = validate(schema, ['foo', 'bar']);
@@ -47,25 +53,21 @@ test('validate array of objects', () => {
             props: {
                 number: number({
                     nullable: true,
-                    validators: [minValidator({ minValue: 10 })],
+                    validate: v.minValue({ minValue: 10 }),
                 }),
                 string: string({
-                    validators: [
-                        regexValidator({
-                            regex: /^[a-z]+$/,
-                            message: () => 'Must be lowercase letters',
-                        }),
-                    ],
+                    validate: v.regex({
+                        regex: /^[a-z]+$/,
+                        message: () => 'Must be lowercase letters',
+                    }),
                 }),
             },
         }),
-        validators: [
-            value => {
-                if (value.length > 2) {
-                    return 'Must have at most 2 elements';
-                }
-            },
-        ],
+        validate: value => {
+            if (value.length > 2) {
+                return 'Must have at most 2 elements';
+            }
+        },
     });
 
     const validResult = validate(schema, [

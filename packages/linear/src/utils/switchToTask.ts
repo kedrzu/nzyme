@@ -1,0 +1,154 @@
+import type { LinearClient } from '@linear/sdk';
+import type { Octokit } from '@octokit/rest';
+import chalk from 'chalk';
+
+import {
+    applyStashedChanges,
+    checkoutExistingBranch,
+    createBranchAndPr,
+    findMatchingPr,
+    handleBranchSelection,
+    syncBaseBranch,
+} from '@nzyme/github-cli';
+import type { BranchSelectionResult } from '@nzyme/github-cli';
+import type { GitHubConfig } from '@nzyme/github-cli';
+import type { Logger } from '@nzyme/logging';
+
+import { handleTaskAssignment } from './handleTaskAssignment.js';
+import { handleTerminalState } from './handleTerminalState.js';
+
+/**
+ * Parameters for switching to a task.
+ */
+export interface SwitchToTaskParams {
+    /**
+     * The Linear issue ID (e.g., "SIG-123").
+     */
+    issueId: string;
+
+    /**
+     * Linear client instance.
+     */
+    linearClient: LinearClient;
+
+    /**
+     * GitHub Octokit client instance.
+     */
+    octokit: Octokit;
+
+    /**
+     * GitHub configuration.
+     */
+    githubConfig: GitHubConfig;
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+
+    /**
+     * Base branches to use when creating new branches.
+     */
+    baseBranches: string[];
+}
+
+/**
+ * Switch to a task by checking out existing branch or creating new branch with PR.
+ * This contains the common logic used by both "task start" and "task new" commands.
+ */
+export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
+    const { issueId, linearClient, octokit, githubConfig, logger, baseBranches } = params;
+
+    logger.info(`🔍 Looking for Linear task: ${chalk.bold(issueId)}`);
+
+    // Get Linear issue details
+    const issueData = await linearClient.issue(issueId);
+
+    if (!issueData) {
+        throw new Error(`Linear task ${issueId} not found`);
+    }
+
+    logger.info(`📝 Found task: ${chalk.green(issueData.title)}`);
+
+    // Check if task is in terminal state and handle accordingly
+    await handleTerminalState(issueData, logger);
+
+    // Handle task assignment and search for existing PR in parallel
+    logger.info(`🔍 Searching for existing GitHub PR...`);
+    const [, existingPr] = await Promise.all([
+        handleTaskAssignment(linearClient, issueData, logger),
+        findMatchingPr(octokit, githubConfig, issueId),
+    ]);
+
+    if (existingPr) {
+        // Checkout existing PR branch
+        logger.info(`✅ Found existing PR: ${chalk.blue(existingPr.title)} (#${existingPr.number})`);
+        logger.info(`🔄 Checking out branch: ${chalk.cyan(existingPr.head.ref)}`);
+
+        await checkoutExistingBranch(existingPr.head.ref, issueId, logger);
+
+        // Sync with PR's base branch after checkout
+        const prBaseBranch = existingPr.base.ref;
+        logger.info(`🔄 Synchronizing with PR base branch ${chalk.cyan(prBaseBranch)}`);
+        await syncBaseBranch(prBaseBranch, logger);
+
+        logger.info(`🎉 Successfully checked out existing branch for ${chalk.bold(issueId)}`);
+    } else {
+        // Create new branch and PR
+        logger.info(`📝 No existing PR found. Creating new branch and draft PR...`);
+
+        if (baseBranches.length === 0) {
+            throw new Error('No base branches configured');
+        }
+
+        // Handle branch selection and stashing if needed
+        const branchResult: BranchSelectionResult = await handleBranchSelection({
+            baseBranches,
+            taskId: issueId,
+            logger,
+        });
+
+        const branchName =
+            issueData.branchName ||
+            `${issueId.toLowerCase()}-${issueData.title
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, '-')
+                .replace(/-+/g, '-')
+                .slice(0, 50)}`;
+
+        // Get project information for PR title
+        const project = await issueData.project;
+        const projectName = project?.name || '';
+        const prTitle = projectName
+            ? `[${issueId}][${projectName}] ${issueData.title}`
+            : `[${issueId}] ${issueData.title}`;
+
+        logger.info(`🌿 Creating branch: ${chalk.cyan(branchName)}`);
+
+        const selectedBaseBranch = branchResult.selectedBaseBranch;
+
+        const result = await createBranchAndPr({
+            octokit,
+            config: githubConfig,
+            branchName,
+            prTitle,
+            description: issueData.description || '',
+            issueId,
+            taskUrl: issueData.url,
+            issueTitle: issueData.title,
+            baseBranch: selectedBaseBranch,
+        });
+
+        // Apply stashed changes if any
+        if (branchResult.stashName) {
+            await applyStashedChanges(branchResult.stashName, logger);
+        }
+
+        logger.info(`✅ Created draft PR: ${chalk.blue(result.pr.title)} (#${result.pr.number})`);
+        logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(result.pr.html_url))}`);
+        logger.info(`🎉 Successfully created and checked out new branch for ${chalk.bold(issueId)}`);
+    }
+
+    // Show task URL for reference
+    logger.info(`🔗 Linear task: ${chalk.underline(issueData.url)}`);
+}

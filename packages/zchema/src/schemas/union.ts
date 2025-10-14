@@ -1,34 +1,79 @@
-import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto, Infer } from '../Schema.js';
 import { defineSchema } from '../defineSchema.js';
+import type {
+    Infer,
+    Schema,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
+    SchemaOptions,
+    SchemaProto,
+} from '../Schema.js';
 import { serialize } from '../utils/serialize.js';
 
-export type UnionSchemaOptions<T extends Schema[] = Schema[]> = SchemaOptions<Infer<T[number]>> & {
+/**
+ * Options for defining a union schema.
+ * @template T - Array of schemas that form the union
+ */
+export type UnionOptions<T extends Schema[] = Schema[]> = {
+    /** Array of schemas that form the union */
     of: T;
-    default?: () => Infer<T[number]>;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type UnionSchema<O extends UnionSchemaOptions = UnionSchemaOptions> = ForceName<
-    O extends UnionSchemaOptions<infer T extends Schema[]> ? Schema<Infer<T[number]>, O> : never
->;
+/**
+ * Schema type for union values.
+ * @template O - Union schema options type
+ */
+export type UnionSchema<
+    O extends SchemaOptionsBase<UnionOptions> = SchemaOptionsBase<UnionOptions>,
+> = Schema<UnionValue<O>, O> & {
+    /**
+     *
+     */
+    of: O['of'];
+};
 
-declare class FF {}
-type ForceName<T> = T & FF;
+/**
+ *
+ */
+export type UnionValue<O extends UnionOptions> = Infer<O['of'][number]>;
 
-export type UnionSchemaValue<O extends UnionSchemaOptions> = Infer<O['of'][number]>;
-
-type UnionSchemaBase = {
+/**
+ * Base type for union schema definition.
+ */
+type UnionSchemaConstructor = {
+    /** Creates a union schema with an array of schemas */
     <S extends Schema[]>(of: S): UnionSchema<{ of: S }>;
-    <O extends UnionSchemaOptions>(
-        options: O & UnionSchemaOptions<O['of']>,
-    ): UnionSchema<SchemaOptionsSimlify<O>>;
+
+    /** Creates a union schema with custom options */
+    <
+        S extends Schema[],
+        TNullable extends boolean | undefined = undefined,
+        TOptional extends boolean | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
+    >(
+        options: SchemaOptions<Infer<S[number]>, TNullable, TOptional, TMeta, UnionOptions<S>>,
+    ): UnionSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, UnionOptions<S>>>;
 };
 
-export const union = defineSchema<UnionSchemaBase, UnionSchemaOptions>({
+/**
+ * Creates a schema for union values.
+ * This schema validates that a value conforms to at least one of the provided schemas.
+ *
+ * @example
+ * ```ts
+ * const stringOrNumber = union([string(), number()]);
+ * const booleanOrNull = union([boolean(), null()]);
+ * const complexUnion = union({
+ *   of: [string(), number(), boolean()],
+ *   default: () => 'default'
+ * });
+ * ```
+ */
+export const union = defineSchema<UnionSchemaConstructor, SchemaOptionsBase<UnionOptions>>({
     name: 'union',
-    options: (optionsOrSchema: Schema[] | UnionSchemaOptions) => {
+    options: (optionsOrSchema: Schema[] | UnionOptions) => {
         // TODO: check if there are no multi objects or arrays
-        const options: UnionSchemaOptions = Array.isArray(optionsOrSchema)
+        const options: SchemaOptionsBase<UnionOptions> = Array.isArray(optionsOrSchema)
             ? { of: optionsOrSchema }
             : optionsOrSchema;
 
@@ -38,26 +83,26 @@ export const union = defineSchema<UnionSchemaBase, UnionSchemaOptions>({
         const schemas = options.of;
 
         const proto: SchemaProto<unknown> = {
-            coerce(value) {
+            coerce(value, ctx) {
                 for (const schema of schemas) {
-                    const result = schema.proto.coerce(value);
+                    const result = schema.proto.coerce(value, ctx);
                     if (result !== undefined) {
                         return result;
                     }
                 }
             },
-            serialize(value) {
+            serialize(value, ctx) {
                 for (const schema of schemas) {
-                    if (!schema.proto.check(value)) {
+                    if (!schema.proto.check(value, ctx)) {
                         continue;
                     }
 
-                    return serialize(schema, value);
+                    return serialize(schema, value, ctx);
                 }
             },
-            check(value): value is unknown[] {
+            check(value, ctx): value is unknown {
                 for (const schema of schemas) {
-                    if (schema.proto.check(value)) {
+                    if (schema.proto.check(value, ctx)) {
                         return true;
                     }
                 }
@@ -65,13 +110,13 @@ export const union = defineSchema<UnionSchemaBase, UnionSchemaOptions>({
                 return false;
             },
             default: () => [],
-            visit(value, visitor) {
+            visit(value, visitor, ctx) {
                 for (const schema of schemas) {
-                    if (!schema.proto.check(value)) {
+                    if (!schema.proto.check(value, ctx)) {
                         continue;
                     }
 
-                    schema.proto.visit?.(value, visitor);
+                    schema.proto.visit?.(value, visitor, ctx);
                 }
             },
         };

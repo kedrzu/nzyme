@@ -1,135 +1,194 @@
-import type { EmptyObject, IfLiteral, IfUnknown, PartialOnUndefined, Writable } from '@nzyme/types';
+import type { RequiredKeysOf } from 'type-fest';
+
+import type { IfAny, IfLiteral, PartialOnUndefined, SomeObject } from '@nzyme/types';
 
 import type { ContainerScope } from './ContainerScope.js';
-import { INJECTABLE_SYMBOL, type Injectable } from './Injectable.js';
+import { INJECTABLE_SYMBOL } from './Injectable.js';
+import type { Injectable } from './Injectable.js';
 import type { Interface } from './Interface.js';
-import {
-    type ServiceResolutionStrategy,
-    type ServiceResolutionType,
-    getResolutionStrategy,
-} from './serviceResolve.js';
+import { getResolutionStrategy } from './serviceResolve.js';
+import type { ServiceResolutionStrategy, ServiceResolutionType } from './serviceResolve.js';
+
+/**
+ * Symbol used to identify service instances.
+ * @internal
+ */
 const SERVICE_SYMBOL = Symbol('service');
 
 /**
+ * Transforms service dependencies into their resolved types.
+ * For each dependency, extracts the type that its injectable resolves to.
  *
+ * @template D - The service dependencies type
+ * @returns A type with all dependencies resolved to their concrete types
  */
-export type ServiceDependencies = {
+export type ResolveDeps<D extends Dependencies> = IfLiteral<
+    keyof D,
+    ResolveDepsBase<D>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    D[keyof D] extends never ? void : any
+>;
+
+/**
+ * Type that represents a service constructor.
+ *
+ * @template T - The type that the service will resolve to
+ * @template TDeps - The type of the service's dependencies
+ */
+export type ServiceConstructor<T = unknown, TDeps extends Dependencies = Dependencies> =
+    RequiredKeysOf<ResolveDepsBase<TDeps>> extends never
+        ? (deps?: ResolveDeps<TDeps>) => T
+        : (deps: ResolveDeps<TDeps>) => T;
+
+/**
+ * Represents a service in the dependency injection container.
+ * A service is an injectable that:
+ * - Can have dependencies
+ * - Can implement interfaces
+ * - Can have a specific scope
+ * - Can use different resolution strategies
+ *
+ * @template T - The type that the service will resolve to
+ * @template TDeps - The type of the service's dependencies
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface Service<T = unknown, TDeps extends Dependencies = any> extends Injectable<T> {
+    /**
+     * Name of the service for debugging and identification.
+     */
+    readonly name: string;
+
+    /**
+     * Optional interface that this service implements.
+     */
+    readonly implements?: Interface;
+
+    /**
+     * Optional scope that controls the service's lifecycle and visibility.
+     */
+    readonly scope?: ContainerScope;
+
+    /**
+     * Dependencies required by this service.
+     */
+    readonly deps: IfAny<TDeps, Dependencies, TDeps>;
+
+    /**
+     * Function that creates a new service instance with resolved dependencies.
+     * @param deps - The resolved dependencies for the service
+     * @returns The initialized service instance
+     */
+    readonly create: ServiceConstructor<T, TDeps>;
+}
+
+/**
+ * Represents a mapping of service dependencies.
+ * Each key is a dependency name and its value is an injectable that provides the dependency.
+ */
+export type Dependencies = {
     [key: string]: Injectable;
 };
 
 /**
+ * Configuration options for defining a service.
  *
+ * @template T - The type that the service will resolve to
+ * @template TExtend - The extended type that the service will resolve to (for inheritance)
+ * @template TDeps - The type of the service's dependencies
  */
-export type ResolveDependencies<D extends ServiceDependencies> = IfLiteral<
-    keyof D,
-    PartialOnUndefined<{
-        readonly [K in keyof D]: D[K] extends Injectable<infer T> ? T : unknown;
-    }>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    keyof D extends never ? void : any
->;
-
-/**
- *
- */
-export interface ServiceOptions<
-    T = unknown,
-    TExtend extends T = T,
-    TDeps extends ServiceDependencies = ServiceDependencies,
-> {
+export interface ServiceOptions<T = unknown, TExtend extends T = T, TDeps extends Dependencies = Dependencies> {
     /**
-     * Name of the service.
+     * Optional name of the service for debugging and identification.
      */
     readonly name?: string;
     /**
-     * Interface implemented by the service.
+     * Optional interface that this service implements.
      */
     readonly implements?: Interface<T>;
     /**
-     * Dependencies of the service.
+     * Optional dependencies required by this service.
      */
     readonly deps?: TDeps;
     /**
-     * Resolution strategy of the service.
+     * Optional resolution strategy for the service.
+     * Controls how the service instance is created and cached.
      */
-    readonly resolution?: ServiceResolutionType | ServiceResolutionStrategy;
+    readonly resolution?: ServiceResolutionStrategy | ServiceResolutionType;
     /**
-     * Scope of the service.
+     * Optional scope that controls the service's lifecycle and visibility.
      */
     readonly scope?: ContainerScope;
     /**
-     * Setup function of the service.
+     * Function that initializes the service with its dependencies.
      */
-    readonly setup: (deps: ResolveDependencies<TDeps>) => TExtend;
+    readonly setup: ServiceSetup<TDeps, TExtend>;
 }
 
 /**
+ * Function that initializes a service with its resolved dependencies.
  *
+ * @template TService - The type that the service will resolve to
+ * @template TDeps - The type of the service's dependencies
  */
-export type ServiceConstructor<
-    T = unknown,
-    TDeps extends ServiceDependencies = ServiceDependencies,
-> =
-    EmptyObject extends ResolveDependencies<TDeps>
-        ? (deps?: ResolveDependencies<TDeps>) => T
-        : (deps: ResolveDependencies<TDeps>) => T;
+export interface ServiceSetup<TDeps extends Dependencies, TService> {
+    /**
+     * Creates a new service instance with the provided dependencies.
+     * @param deps - The resolved dependencies for the service
+     * @returns The initialized service instance
+     */
+    (deps: ResolveDeps<TDeps>): TService;
+}
 
-export type Service<
-    T = unknown,
-    TDeps extends ServiceDependencies = ServiceDependencies,
-> = ServiceConstructor<T, TDeps> &
-    Injectable<T> & {
-        readonly implements?: Interface;
-        readonly scope?: ContainerScope;
-        readonly deps: TDeps;
-    };
+type ResolveDepsBase<D extends Dependencies> = PartialOnUndefined<{
+    readonly [K in keyof D]: D[K] extends Injectable<infer T> ? T : unknown;
+}>;
 
 /**
- * Define a service.
- * #__NO_SIDE_EFFECTS__
+ * Creates a new service with the specified options.
+ *
+ * @template T - The type that the service will resolve to
+ * @template TExtend - The extended type that the service will resolve to (for inheritance)
+ * @template TDeps - The type of the service's dependencies
+ * @param options - Configuration options for the service
+ * @returns A new service instance
+ * @__NO_SIDE_EFFECTS__
  */
-export function defineService<
-    T,
-    TExtend extends T = T,
-    TDeps extends ServiceDependencies = EmptyObject,
->(options: ServiceOptions<T, TExtend, TDeps>): Service<TExtend, TDeps> {
+export function defineService<T, TExtend extends T = T, TDeps extends Dependencies = SomeObject>(
+    options: ServiceOptions<T, TExtend, TDeps>,
+): Service<TExtend, TDeps> {
     const name = options.name ?? options.implements?.name ?? 'UnnamedService';
     const resolution = getResolutionStrategy(options.resolution ?? 'singleton');
 
-    const wrapper: { [key: string]: ServiceConstructor } = {
-        [name](deps: object | undefined) {
-            return options.setup((deps ?? {}) as ResolveDependencies<TDeps>);
-        },
+    const service: Service = {
+        [INJECTABLE_SYMBOL]: SERVICE_SYMBOL,
+        name,
+        implements: options.implements as Interface,
+        scope: options.scope,
+        deps: options.deps ?? {},
+        resolve: (container, caller) => resolution(service, container, caller),
+        create: options.setup,
     };
 
-    const service = wrapper[name] as unknown as Writable<Service>;
-
-    service[INJECTABLE_SYMBOL] = SERVICE_SYMBOL;
-    service.implements = options.implements as Interface;
-    service.scope = options.scope;
-    service.deps = options.deps ?? ({} as TDeps);
-    service.resolve = (container, caller) =>
-        resolution({
-            service: service as unknown as Service,
-            options: options as unknown as ServiceOptions,
-            container,
-            caller,
-        }) as TExtend;
-
-    return service as unknown as Service<TExtend, TDeps>;
+    return service as Service<TExtend, TDeps>;
 }
 
 /**
- * Check if a value is a service.
- * #__NO_SIDE_EFFECTS__
+ * Type guard to check if a value is a Service instance.
+ * @template T - The type that the service resolves to
+ * @param value - The value to check
+ * @returns True if the value is a Service, false otherwise
  */
 export function isService<T>(value: Injectable<T>): value is Service<T>;
 /**
- * Check if a value is a service.
+ * Type guard to check if a value is a Service instance.
+ * @param value - The value to check
+ * @returns True if the value is a Service, false otherwise
  */
 export function isService(value: unknown): value is Service;
 /**
- * Check if a value is a service.
+ * Type guard to check if a value is a Service instance.
+ * @param value - The value to check
+ * @returns True if the value is a Service, false otherwise
  */
 export function isService(value: unknown) {
     return value != null && (value as Injectable)[INJECTABLE_SYMBOL] === SERVICE_SYMBOL;

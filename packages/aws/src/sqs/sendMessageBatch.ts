@@ -1,26 +1,62 @@
-import type { SQSClient, SendMessageBatchCommandInput } from '@aws-sdk/client-sqs';
+import type { SQSClient } from '@aws-sdk/client-sqs';
 import { SendMessageBatchCommand, SendMessageCommand } from '@aws-sdk/client-sqs';
 
 import { splitIntoChunks } from '@nzyme/utils';
 
 /**
+ * Options for sending a batch of messages to an SQS queue.
+ */
+export interface SendMessageBatchOptions {
+    /**
+     * SQS client.
+     */
+    client: SQSClient;
+    /**
+     * URL of the queue.
+     */
+    queueUrl: string;
+    /**
+     * Messages to send.
+     */
+    messages: {
+        /**
+         * Message body.
+         */
+        body: string;
+        /**
+         * Message deduplication ID.
+         */
+        deduplicationId?: string;
+        /**
+         * Message group ID.
+         */
+        groupId?: string;
+        /**
+         * Message delay in seconds.
+         */
+        delaySeconds?: number;
+    }[];
+}
+
+/**
  * Sends a batch of messages to an SQS queue.
  */
-export async function sendMessageBatch(client: SQSClient, input: SendMessageBatchCommandInput) {
-    const { QueueUrl: queueUrl, Entries: entries } = input;
+export async function sendMessageBatch(options: SendMessageBatchOptions) {
+    const { client, queueUrl, messages } = options;
 
-    if (!entries?.length) {
+    if (messages.length === 0) {
         return;
     }
 
     // Publish a single event
-    if (entries.length === 1) {
-        const message = entries[0]!;
+    if (messages.length === 1) {
+        const message = messages[0]!;
         const command = new SendMessageCommand({
             QueueUrl: queueUrl,
-            MessageGroupId: message.MessageGroupId,
-            MessageBody: message.MessageBody,
-            MessageDeduplicationId: message.MessageDeduplicationId,
+            MessageGroupId: message.groupId,
+            MessageBody: message.body,
+            MessageDeduplicationId: message.deduplicationId,
+            DelaySeconds: message.delaySeconds,
         });
 
         await client.send(command);
@@ -28,7 +64,7 @@ export async function sendMessageBatch(client: SQSClient, input: SendMessageBatc
 
     // Publish multiple events in a batch
     else {
-        const batches = splitIntoChunks(entries, 10);
+        const batches = splitIntoChunks(messages, 10);
         let id = 0;
 
         await Promise.all(
@@ -38,9 +74,10 @@ export async function sendMessageBatch(client: SQSClient, input: SendMessageBatc
                     Entries: batch.map(message => {
                         return {
                             Id: (id++).toString(),
-                            MessageGroupId: message.MessageGroupId,
-                            MessageBody: message.MessageBody,
-                            MessageDeduplicationId: message.MessageDeduplicationId,
+                            MessageGroupId: message.groupId,
+                            MessageBody: message.body,
+                            MessageDeduplicationId: message.deduplicationId,
+                            DelaySeconds: message.delaySeconds,
                         };
                     }),
                 });

@@ -1,7 +1,11 @@
 import { assertResponse } from './assertResponse.js';
 
 /**
- * Parse a JSON response.
+ * Parses a Response object as JSON and validates the response status.
+ *
+ * @param response - The fetch Response object to parse
+ * @returns A promise that resolves to the parsed JSON data
+ * @throws If the response status is not ok or if JSON parsing fails
  */
 export async function jsonResponse<T>(response: Response) {
     await assertResponse(response);

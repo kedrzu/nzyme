@@ -1,12 +1,14 @@
-import { defineComponent, type VNodeChild } from 'vue';
+import { defineComponent } from 'vue';
+import type { VNodeChild } from 'vue';
 
-import { prop } from './prop.js';
+const FORMAT_REGEX = /\{\s*(\w*)\s*\}/gm;
 
-const regex = /\{\s*(\w*)\s*\}/gm;
-
+/**
+ *
+ */
 export const Format = defineComponent({
     props: {
-        format: prop(String).required(),
+        format: { type: String, required: true },
     },
     setup(props, ctx) {
         return () => {
@@ -17,10 +19,9 @@ export const Format = defineComponent({
 
             const vnodes: VNodeChild[] = [];
             let index = 0;
-
             let match: RegExpExecArray | null;
 
-            while ((match = regex.exec(format))) {
+            while ((match = FORMAT_REGEX.exec(format))) {
                 if (match.index && match.index > index) {
                     // handle a piece of text
                     const text = format.substring(index, match.index);

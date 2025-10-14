@@ -1,23 +1,27 @@
-import { isBrowser } from '@nzyme/dom-utils';
 import { defineComponent, getCurrentInstance, h, Transition, withDirectives } from 'vue';
+import type { PropType } from 'vue';
+
+import { isBrowser } from '@nzyme/dom-utils';
+import { vShow } from '@nzyme/vue-utils';
 
 import css from './Collapse.module.scss';
 import { LazyHydrate } from './LazyHydrate.js';
-import { vShow } from '../directives/vShow.js';
-import { prop } from '../prop.js';
 
 // Used to easily debug complex transition problems.
 const DEBUG = false;
 
+/**
+ *
+ */
 export const Collapse = defineComponent({
     name: 'Collapse',
     props: {
-        render: prop<'always' | 'lazy'>().optional(),
-        show: prop(Boolean).optional(),
-        fade: prop(Boolean).optional(),
+        render: { type: String as PropType<'always' | 'lazy'>, default: 'lazy' },
+        show: Boolean,
+        fade: Boolean,
     },
     emits: {
-        heightChange: (height: number) => true,
+        heightChange: (_height: number) => true,
         afterEnter: () => true,
         afterLeave: () => true,
     },
@@ -49,16 +53,16 @@ export const Collapse = defineComponent({
             const activeClass = fade ? `${css.active} ${css.fadeIn}` : css.active;
             const collapse = (
                 <Transition
-                    enterFromClass={fade ? css.fadeOut : undefined}
+                    appear={lazyHydrate}
                     enterActiveClass={activeClass}
-                    leaveFromClass={fade ? css.fadeOut : undefined}
+                    enterFromClass={fade ? css.fadeOut : undefined}
                     leaveActiveClass={activeClass}
+                    leaveFromClass={fade ? css.fadeOut : undefined}
+                    onAfterEnter={afterEnter}
+                    onAfterLeave={afterLeave}
                     onBeforeEnter={beforeEnter}
                     onEnter={enter}
-                    onAfterEnter={afterEnter}
                     onLeave={leave}
-                    onAfterLeave={afterLeave}
-                    appear={lazyHydrate}
                 >
                     <Inner />
                 </Transition>
@@ -145,7 +149,7 @@ export const Collapse = defineComponent({
         function forceRepaint(el: Element) {
             // Force repaint to make sure the
             // animation is triggered correctly.
-            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+
             const height = getComputedStyle(el).height;
             if (DEBUG) {
                 console.warn('forceRepaint', el, height);

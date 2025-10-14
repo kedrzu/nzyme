@@ -1,21 +1,58 @@
-import { onBeforeUnmount, reactive, ref, computed, watch } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 
 import { isAncestorOf } from '@nzyme/dom-utils';
 import { readonly } from '@nzyme/utils';
 
-import { makeRef, type RefParam } from './reactivity/makeRef.js';
+import { makeRef } from './reactivity/makeRef.js';
+import type { RefParam } from './reactivity/makeRef.js';
 import { useElement } from './useElement.js';
 
-type SwipeOptions = {
+/**
+ *
+ */
+export interface UseSwipeOptions {
+    /**
+     * Target element for swipe detection
+     * @default currentElement
+     */
     element?: RefParam<HTMLElement | undefined>;
+    /**
+     * Whether swipe detection is enabled (reactive)
+     * @default true
+     */
     enabled?: RefParam<boolean>;
-    onSwipe?(distance: number): void;
+    /**
+     * Enable mouse event support
+     * @default true
+     */
+    mouse?: boolean;
+    /**
+     * Enable touch event support
+     * @default true
+     */
+    touch?: boolean;
+    /**
+     * Callback for pan gestures (slower movements)
+     */
     onPan?(distance: number): void;
-};
+    /**
+     * Callback for swipe gestures (quick movements)
+     */
+    onSwipe?(distance: number): void;
+}
 
-export function useSwipeHorizontal(options: SwipeOptions) {
+/**
+ * Composable for handling horizontal swipe gestures on an element.
+ * Supports both mouse and touch events with configurable options.
+ *
+ * @param options - Configuration options for swipe behavior
+ * @returns Readonly reactive state with diffX, isMoving, and isPressing properties
+ */
+export function useSwipeHorizontal(options: UseSwipeOptions) {
     const element = options.element ? makeRef(options.element) : useElement<HTMLElement>();
     const enabled = options.enabled ? makeRef(options.enabled) : ref(true);
+    const touchEnabled = options.touch ?? true;
+    const mouseEnabled = options.mouse ?? true;
 
     const position = reactive({
         startX: undefined as number | undefined,
@@ -25,7 +62,7 @@ export function useSwipeHorizontal(options: SwipeOptions) {
     });
 
     const isMoving = ref(false);
-    const isMouseDown = ref(false);
+    const isPressing = ref(false);
 
     const diffX = computed(() => {
         if (!isMoving.value) {
@@ -39,19 +76,27 @@ export function useSwipeHorizontal(options: SwipeOptions) {
         reactive({
             diffX,
             isMoving,
-            isMouseDown,
+            isPressing,
         }),
     );
 
     watch(element, (newEl, oldEl) => {
         if (oldEl) {
-            oldEl.removeEventListener('mousedown', onMouseDown);
-            oldEl.removeEventListener('touchstart', onTouchStart);
+            if (mouseEnabled) {
+                oldEl.removeEventListener('mousedown', onMouseDown);
+            }
+            if (touchEnabled) {
+                oldEl.removeEventListener('touchstart', onTouchStart);
+            }
         }
 
         if (newEl) {
-            newEl.addEventListener('mousedown', onMouseDown, { passive: true });
-            newEl.addEventListener('touchstart', onTouchStart, { passive: true });
+            if (mouseEnabled) {
+                newEl.addEventListener('mousedown', onMouseDown, { passive: true });
+            }
+            if (touchEnabled) {
+                newEl.addEventListener('touchstart', onTouchStart, { passive: true });
+            }
         }
     });
 
@@ -86,7 +131,7 @@ export function useSwipeHorizontal(options: SwipeOptions) {
     }
 
     function onMouseDown(event: MouseEvent) {
-        if (isInvalidEvent(event)) {
+        if (!mouseEnabled || isInvalidEvent(event)) {
             return;
         }
 
@@ -105,6 +150,10 @@ export function useSwipeHorizontal(options: SwipeOptions) {
     }
 
     function onTouchStart(event: TouchEvent) {
+        if (!touchEnabled) {
+            return;
+        }
+
         const touch = event.touches[0];
         if (!touch) {
             return;
@@ -147,11 +196,11 @@ export function useSwipeHorizontal(options: SwipeOptions) {
         position.startY = y;
         position.startTimestamp = new Date().valueOf();
 
-        isMouseDown.value = true;
+        isPressing.value = true;
     }
 
     function swipeMove(x: number, y: number) {
-        if (!isMouseDown.value) {
+        if (!isPressing.value) {
             return;
         }
 
@@ -160,7 +209,7 @@ export function useSwipeHorizontal(options: SwipeOptions) {
             const deltaY = Math.abs(y - (position.startY ?? 0));
 
             if (deltaY > deltaX) {
-                isMouseDown.value = false;
+                isPressing.value = false;
                 return;
             }
 
@@ -171,11 +220,11 @@ export function useSwipeHorizontal(options: SwipeOptions) {
     }
 
     function swipeEnd(x: number) {
-        if (!isMouseDown.value && !isMoving.value) {
+        if (!isPressing.value && !isMoving.value) {
             return;
         }
 
-        isMouseDown.value = false;
+        isPressing.value = false;
 
         const deltaX = x - (position.startX ?? 0);
         const deltaTime = new Date().valueOf() - (position.startTimestamp ?? 0);

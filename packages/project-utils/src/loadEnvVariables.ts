@@ -1,26 +1,37 @@
+import { existsSync } from 'fs';
 import * as path from 'node:path';
 
 import chalk from 'chalk';
-import { consola } from 'consola';
 import { config as configDotenv } from 'dotenv';
 
 import { asArray } from '@nzyme/utils';
 
-import { getProject } from './getProject.js';
+import { getProjectRoot } from './getProjectRoot.js';
 
 /**
  * Options for loading environment variables.
  */
 export type EnvVariablesOptions = {
     /**
+     * The working directory to load the environment file from.
+     */
+    cwd?: string;
+    /**
      * The environment to load files for.
      * When provided, it will load files with the `.env.<env>` format.
      */
     env?: string | string[];
     /**
-     * The working directory to load the environment file from.
+     * The output object to assign the environment variables to.
+     * @default process.env
      */
-    cwd?: string;
+    output?: Record<string, string>;
+
+    /**
+     * If true, it will load environment variables from the project root.
+     * @default true
+     */
+    root?: boolean;
 };
 
 /**
@@ -28,26 +39,24 @@ export type EnvVariablesOptions = {
  */
 export function loadEnvVariables(options: EnvVariablesOptions = {}) {
     const cwd = options.cwd ?? process.cwd();
-    const project = getProject({ cwd });
+    const root = getProjectRoot(cwd);
+    const output: Record<string, string> = options.output ?? (process.env as Record<string, string>);
 
-    const envVariables: Record<string, string> = {};
-
-    // Load environment variables from the project root.
-    loadEnvFilesInDir(project.rootPath, options.env, envVariables);
-
-    if (cwd !== project.rootPath) {
-        // Load environment variables from the current working directory.
-        loadEnvFilesInDir(cwd, options.env, envVariables);
+    if (!options.root) {
+        loadEnvFilesInDir(cwd, options.env, output);
+        return;
     }
 
-    return envVariables;
+    // Load environment variables from the project root.
+    loadEnvFilesInDir(root, options.env, output);
+
+    if (cwd !== root) {
+        // Load environment variables from the current working directory.
+        loadEnvFilesInDir(cwd, options.env, output);
+    }
 }
 
-function loadEnvFilesInDir(
-    dir: string,
-    env: string | string[] | undefined,
-    output: Record<string, string>,
-) {
+function loadEnvFilesInDir(dir: string, env: string | string[] | undefined, output: Record<string, string>) {
     const envFile = path.join(dir, '.env');
 
     loadEnvFile(envFile, output);
@@ -60,9 +69,12 @@ function loadEnvFilesInDir(
 }
 
 function loadEnvFile(file: string, output: Record<string, string>) {
-    const result = configDotenv({ path: file, override: true });
+    if (!existsSync(file)) {
+        return;
+    }
+
+    const result = configDotenv({ path: file, override: true, processEnv: output, quiet: true });
     if (result.parsed) {
-        consola.info(`Loaded environment variables from ${chalk.green(file)}`);
-        Object.assign(output, result.parsed);
+        console.info(`🛠️ Loaded environment variables from ${chalk.green(file)}`);
     }
 }

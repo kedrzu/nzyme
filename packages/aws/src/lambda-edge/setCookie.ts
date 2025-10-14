@@ -1,5 +1,4 @@
-import type { CloudFrontResponse } from 'aws-lambda';
-
+import type { types } from '../lambda/types.js';
 import { setHeader } from './setHeader.js';
 
 /**
@@ -23,7 +22,7 @@ export interface SetCookieParams {
 /**
  * Sets a cookie on the response.
  */
-export function setCookie(response: CloudFrontResponse, cookie: SetCookieParams) {
+export function setCookie(response: types.CloudFrontResponse, cookie: SetCookieParams) {
     let cookieString = `${cookie.name}=${cookie.value}; Secure; Path=/;`;
     if (cookie.maxAge) {
         cookieString += ` Max-Age=${cookie.maxAge};`;

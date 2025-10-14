@@ -1,10 +1,46 @@
-export type SortOrder = 'asc' | 'desc';
-
+/**
+ * Options for customizing the sort behavior.
+ */
 export interface SortOptions {
-    order?: SortOrder | null;
+    /** The order to sort in (ascending or descending) */
+    order?: null | SortOrder;
+    /** Whether to ignore case when comparing strings */
     ignoreCase?: boolean;
 }
 
+/**
+ * The order in which to sort items.
+ */
+export type SortOrder = 'asc' | 'desc';
+
+/**
+ * Sorts an array based on a value extracted from each item.
+ * Supports sorting by strings (with case sensitivity options) and numbers.
+ * Null/undefined values are sorted to the beginning.
+ *
+ * @template T - The type of items in the array
+ * @param array - The array to sort
+ * @param value - Function that extracts the value to sort by from each item
+ * @param options - Optional sorting configuration
+ * @returns The sorted array (mutates the input array)
+ *
+ * @example
+ * ```typescript
+ * const items = [
+ *     { name: 'Bob', age: 30 },
+ *     { name: 'Alice', age: 25 },
+ *     { name: 'Charlie', age: 35 }
+ * ];
+ *
+ * // Sort by name (case-insensitive)
+ * sortBy(items, item => item.name, { ignoreCase: true });
+ * // Result: [{ name: 'Alice'... }, { name: 'Bob'... }, { name: 'Charlie'... }]
+ *
+ * // Sort by age in descending order
+ * sortBy(items, item => item.age, { order: 'desc' });
+ * // Result: [{ name: 'Charlie'... }, { name: 'Bob'... }, { name: 'Alice'... }]
+ * ```
+ */
 export function sortBy<T>(array: T[], value: (item: T) => unknown, options?: SortOptions) {
     const orderDesc = options?.order === 'desc';
     const ignoreCase = options?.ignoreCase || false;

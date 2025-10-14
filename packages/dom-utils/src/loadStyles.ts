@@ -11,7 +11,13 @@ export interface LoadStylesOptions {
 }
 
 /**
- * Loads a stylesheet from a URL.
+ * Loads a CSS stylesheet from a URL into the document head.
+ * If the stylesheet has already been loaded, returns the existing Promise.
+ * Provides cross-browser compatibility for stylesheet loading events.
+ *
+ * @param url The URL of the stylesheet to load
+ * @param options Additional options for loading the stylesheet
+ * @returns A Promise that resolves when the stylesheet has been loaded, or rejects on error
  */
 export function loadStyles(url: string, options?: LoadStylesOptions) {
     if (styles[url]) {

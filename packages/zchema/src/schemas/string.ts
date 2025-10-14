@@ -1,19 +1,23 @@
 import { identity } from '@nzyme/utils';
 
-import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
 import { defineSchema } from '../defineSchema.js';
+import type {
+    Schema,
+    SchemaMeta,
+    SchemaOptions,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaProto,
+} from '../Schema.js';
 
 /**
  * Schema type for string values.
  * @template O - Schema options type
  */
-export type StringSchema<O extends SchemaOptions<string> = SchemaOptions<string>> = Schema<
-    string,
-    O
->;
+export type StringSchema<O extends SchemaOptionsBase = SchemaOptionsBase> = Schema<string, O>;
 
 /**
- * Protocol implementation for string schema.
+ * Prototype implementation for string schema.
  */
 const proto: SchemaProto<string> = {
     coerce: String,
@@ -29,7 +33,13 @@ type StringSchemaBase = {
     /** Creates a string schema with default options */
     (): StringSchema<{}>;
     /** Creates a string schema with custom options */
-    <O extends object>(options: O & SchemaOptions<string>): StringSchema<SchemaOptionsSimlify<O>>;
+    <
+        TNullable extends boolean | undefined = undefined,
+        TOptional extends boolean | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
+    >(
+        options: SchemaOptions<string, TNullable, TOptional, TMeta>,
+    ): StringSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta>>;
 };
 
 /**
@@ -39,7 +49,7 @@ type StringSchemaBase = {
  * ```ts
  * const name = string();
  * const requiredName = string({ required: true });
- * const defaultName = string({ default: () => 'Anonymous' });
+ * const defaultName = string({ default: () => 'John' });
  * ```
  */
 export const string = defineSchema<StringSchemaBase>({

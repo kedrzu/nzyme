@@ -1,16 +1,19 @@
 import type { ExtractPropTypes, PropType } from 'vue';
 
-import css from './TransitionSlide.module.scss';
 import { defineTransition } from './defineTransition.js';
+import css from './TransitionSlide.module.scss';
 
 const transitionProps = {
     direction: {
-        type: String as PropType<'top' | 'bottom' | 'left' | 'right'>,
-        default: 'bottom',
+        type: String as PropType<'down' | 'left' | 'right' | 'up'>,
+        default: 'down',
     },
     fade: Boolean,
 };
 
+/**
+ *
+ */
 export const TransitionSlide = defineTransition({
     name: 'TransitionSlide',
     props: transitionProps,
@@ -21,9 +24,7 @@ export const TransitionSlide = defineTransition({
 });
 
 function inactiveClass(props: ExtractPropTypes<typeof transitionProps>) {
-    return props.fade
-        ? css[`fadeInactive_${props.direction}`]
-        : css[`slideInactive_${props.direction}`];
+    return props.fade ? css[`fadeInactive_${props.direction}`] : css[`slideInactive_${props.direction}`];
 }
 
 function activeClass(props: ExtractPropTypes<typeof transitionProps>) {

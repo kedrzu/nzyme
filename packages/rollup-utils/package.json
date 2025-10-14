@@ -11,58 +11,48 @@
     "type": "module",
     "exports": {
         ".": {
-            "import": {
-                "types": "./dist/index.d.ts",
-                "default": "./dist/index.js"
-            },
-            "require": {
-                "types": "./dist/index.d.ts",
-                "default": "./dist/index.cjs"
-            },
-            "default": {
-                "types": "./dist/index.d.ts",
-                "default": "./dist/index.js"
-            }
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
         }
     },
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "files": [
         "dist"
     ],
     "scripts": {
         "build:esm": "tsc --build ./tsconfig.esm.json",
-        "lint": "eslint . --fix --cache",
-        "smoke:mjs": "node tests/smoke.test.mjs"
+        "lint": "eslint . --fix --cache"
     },
     "dependencies": {
         "@nzyme/esm": "^0.14.0",
-        "@nzyme/logging": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
-        "@rollup/plugin-commonjs": "^28.0.3",
+        "@rollup/plugin-commonjs": "^28.0.6",
         "@rollup/plugin-json": "^6.1.0",
         "@rollup/plugin-node-resolve": "^16.0.1",
-        "@rollup/plugin-typescript": "^12.1.2",
+        "@rollup/plugin-typescript": "^12.1.4",
         "@types/fs-extra": "^11.0.4",
-        "chalk": "^5.4.1",
+        "@vitejs/plugin-vue": "^6.0.1",
+        "@vitejs/plugin-vue-jsx": "^5.1.1",
+        "chalk": "^5.6.2",
         "connect": "^3.7.0",
-        "consola": "^3.4.2",
-        "fs-extra": "^11.3.0",
+        "fs-extra": "^11.3.2",
         "get-port": "^7.1.0",
         "http-proxy-middleware": "^3.0.5",
-        "rollup": "^4.39.0",
-        "source-map-support": "^0.5.21",
-        "tslib": "^2.8.1",
-        "type-fest": "^4.39.1"
+        "rollup": "^4.46.2",
+        "type-fest": "^5.0.1",
+        "vite": "^7.1.9",
+        "vite-plugin-checker": "^0.11.0",
+        "vite-plugin-dts": "^4.5.4",
+        "vite-plugin-lib-inject-css": "^2.2.2",
+        "vite-tsconfig-paths": "^5.1.4"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
         "@types/connect": "^3.4.38",
-        "@types/express": "^5.0.1",
-        "@types/koa": "^2.15.0",
-        "@types/node": "^22.14.0",
-        "@types/source-map-support": "^0.5.10",
-        "eslint": "^9.24.0",
-        "typescript": "^5.8.3"
+        "eslint": "^9.37.0",
+        "typescript": "^5.9.3"
     },
     "publishConfig": {
         "access": "public"

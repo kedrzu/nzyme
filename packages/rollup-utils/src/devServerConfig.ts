@@ -6,12 +6,36 @@ import type { RollupOptions } from 'rollup';
 
 import { unwrapCjsDefaultImport } from '@nzyme/esm';
 
+/**
+ * Configuration options for setting up a development server with Rollup.
+ */
 export type DevServerConfigOptions = {
+    /**
+     * The entry point file for the application
+     */
     input: string;
+    /**
+     * The directory where compiled files will be output
+     */
     outputDir: string;
+    /**
+     * Whether to use TypeScript
+     *
+     * @default true
+     */
+    typescript?: boolean;
 };
 
+/**
+ * Creates a Rollup configuration optimized for development server usage.
+ * This configuration includes common plugins and settings for ESM output.
+ *
+ * @param options - Configuration options for the development server
+ * @returns A Rollup configuration object with development-optimized settings
+ */
 export function devServerConfig(options: DevServerConfigOptions): RollupOptions {
+    const ts = options.typescript ?? true;
+
     return {
         input: options.input,
         output: {
@@ -27,7 +51,7 @@ export function devServerConfig(options: DevServerConfigOptions): RollupOptions 
             }),
             unwrapCjsDefaultImport(commonjs)(),
             unwrapCjsDefaultImport(json)(),
-            unwrapCjsDefaultImport(typescript)(),
+            ts && unwrapCjsDefaultImport(typescript)(),
         ],
         external: source => {
             if (/^node:/.test(source) || /^[\w_-]+$/.test(source)) {

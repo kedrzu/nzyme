@@ -1,3 +1,7 @@
 import type { Currency } from './Currency.js';
 
-export type Money = [number, Currency];
+/**
+ * Money value
+ * @example [100, 'USD']
+ */
+export type Money = [amount: number, currency: Currency];

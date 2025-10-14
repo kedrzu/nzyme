@@ -1,5 +1,8 @@
 import { defineContext } from '@nzyme/vue-utils';
 
-import type { ModalHandler } from './ModalTypes.js';
+import type { ModalController } from './ModalTypes.js';
 
-export const ModalContext = defineContext<ModalHandler>('Modal');
+/**
+ * Context for the modal.
+ */
+export const ModalContext = defineContext<ModalController>('Modal');

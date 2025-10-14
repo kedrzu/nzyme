@@ -2,6 +2,8 @@ import workspaces from 'eslint-plugin-workspaces';
 import monorepo from 'eslint-plugin-monorepo';
 import globals from 'globals';
 import js from '@eslint/js';
+import importPlugin from 'eslint-plugin-import';
+import perfectionist from 'eslint-plugin-perfectionist';
 
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
@@ -12,19 +14,22 @@ export type Target = 'node' | 'browser';
 export interface TypescriptOptions {
     target?: Target[] | Target;
     project?: string | string[];
+    internalImports?: string[];
 }
 
-export function typescript(options: TypescriptOptions = {}) {
+export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
     const config: Linter.Config = {
-        ignores: ['dist/**/*', 'dist-*/**/*', 'node_modules/**/*', 'eslint.config.js'],
-        files: ['**/*.{ts,tsx}'],
+        ignores: ['dist/**/*', 'dist-*/**/*', 'node_modules/**/*', 'eslint.config.js', 'package.json'],
         plugins: {
             workspaces,
             monorepo,
+            import: importPlugin,
         },
         languageOptions: {
             parserOptions: {
                 project: options.project || './tsconfig.json',
+                tsconfigRootDir: process.cwd(),
+                extraFileExtensions: ['.vue'],
             },
         },
         rules: {
@@ -43,20 +48,81 @@ export function typescript(options: TypescriptOptions = {}) {
             ],
             '@typescript-eslint/consistent-type-imports': 'error',
             '@typescript-eslint/no-import-type-side-effects': 'error',
+            // '@typescript-eslint/explicit-member-accessibility': 'warn',
             'workspaces/no-relative-imports': 'error',
             'workspaces/no-absolute-imports': 'error',
             'workspaces/require-dependency': 'error',
             'monorepo/no-relative-import': 'error',
+            'import/consistent-type-specifier-style': ['warn', 'prefer-top-level'],
+            'perfectionist/sort-imports': [
+                'warn',
+                {
+                    internalPattern: options.internalImports,
+                    groups: [
+                        ['builtin-type', 'builtin'],
+                        ['external-type', 'external'],
+                        ['internal-type', 'internal'],
+                        ['parent-type', 'parent', 'sibling-type', 'sibling', 'index-type', 'index'],
+                        'object',
+                        'unknown',
+                    ],
+                },
+            ],
+            // often we want a custom prop order for better readability
+            'perfectionist/sort-interfaces': ['warn', { type: 'unsorted' }],
+            // this is super risky, as key order is preserved in js
+            'perfectionist/sort-objects': 'off',
+            'perfectionist/sort-modules': ['warn', { type: 'unsorted' }],
+            'perfectionist/sort-union-types': [
+                'warn',
+                {
+                    type: 'natural',
+                    groups: [
+                        'conditional',
+                        'function',
+                        'import',
+                        'intersection',
+                        'keyword',
+                        'named',
+                        'object',
+                        'operator',
+                        'tuple',
+                        'union',
+                        'literal',
+                        'nullish',
+                    ],
+                },
+            ],
+            'perfectionist/sort-classes': [
+                'warn',
+                {
+                    type: 'unsorted',
+                    groups: [
+                        'index-signature',
+                        'static-property',
+                        'static-block',
+                        ['public-property', 'public-accessor-property'],
+                        ['public-get-method', 'public-set-method'],
+                        ['protected-property', 'protected-accessor-property'],
+                        ['protected-get-method', 'protected-set-method'],
+                        ['private-property', 'private-accessor-property'],
+                        ['private-get-method', 'private-set-method'],
+                        'constructor',
+                        'static-method',
+                        'public-method',
+                        'protected-method',
+                        'private-method',
+                        'unknown',
+                    ],
+                },
+            ],
         },
     };
 
     if (Array.isArray(options.target)) {
         config.languageOptions = {
             ...config.languageOptions,
-            globals: options.target.reduce(
-                (acc, target) => ({ ...acc, ...getTargetGlobals(target) }),
-                {},
-            ),
+            globals: options.target.reduce((acc, target) => ({ ...acc, ...getTargetGlobals(target) }), {}),
         };
     } else if (options.target) {
         config.languageOptions = {
@@ -66,9 +132,15 @@ export function typescript(options: TypescriptOptions = {}) {
     }
 
     return tseslint.config({
-        extends: [js.configs.recommended, ...tseslint.configs.recommendedTypeChecked, prettier],
+        extends: [
+            js.configs.recommended,
+            ...tseslint.configs.recommendedTypeChecked,
+            prettier,
+            perfectionist.configs['recommended-natural'],
+        ],
+
         ...config,
-    });
+    }) as Linter.Config[];
 }
 
 function getTargetGlobals(target: Target) {

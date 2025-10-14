@@ -1,16 +1,24 @@
 import type { QueryParams, QueryParamsSimple } from './queryTypes.js';
 
-export function parseQuery(querystring: string | null | undefined): QueryParamsSimple;
+/**
+ * Parses a URL query string into an object.
+ *
+ * @param querystring - The query string to parse (with or without leading '?')
+ * @param options - Configuration options for parsing
+ * @param options.multiple - Whether to allow multiple values for the same key
+ * @returns An object containing the parsed query parameters
+ */
+export function parseQuery(querystring: null | string | undefined): QueryParamsSimple;
 export function parseQuery(
-    querystring: string | null | undefined,
+    querystring: null | string | undefined,
     options: { multiple: false },
 ): QueryParamsSimple;
 export function parseQuery(
-    querystring: string | null | undefined,
+    querystring: null | string | undefined,
     options: { multiple: true },
 ): QueryParams;
 export function parseQuery(
-    querystring: string | null | undefined,
+    querystring: null | string | undefined,
     options?: { multiple: boolean },
 ): QueryParams {
     const query: QueryParams = {};

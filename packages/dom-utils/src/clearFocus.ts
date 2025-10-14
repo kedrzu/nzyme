@@ -1,5 +1,6 @@
 /**
- * Clear the focus from the current element.
+ * Clears the focus from the currently focused element in the document.
+ * This is useful to hide focus rings or blur input elements programmatically.
  */
 export function clearFocus() {
     const active = document.activeElement;

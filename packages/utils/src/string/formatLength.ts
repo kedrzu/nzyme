@@ -1,5 +1,5 @@
 /**
- * Length unit
+ * Length unit for formatting measurements
  */
 export type LengthUnit = 'mm' | 'cm' | 'm' | 'km';
 
@@ -13,15 +13,26 @@ const METER = 1000;
 const KILOMETER = 1000 * 1000;
 
 /**
- * Format length
+ * Formats a length value in meters to a human-readable string with appropriate unit.
+ *
+ * @param meters - The length value in meters
+ * @returns A formatted string with the length and appropriate unit
  */
 export function formatLength(meters: number | null | undefined): string;
 /**
- * Format length
+ * Formats a length value in the specified unit to a human-readable string.
+ *
+ * @param value - The length value
+ * @param unit - The unit of the input value
+ * @returns A formatted string with the length and appropriate unit
  */
 export function formatLength(value: number | null | undefined, unit: LengthUnit): string;
 /**
- * Format length
+ * Formats a length value to a human-readable string, automatically choosing the most appropriate unit.
+ *
+ * @param value - The length value
+ * @param unit - Optional unit of the input value (defaults to meters)
+ * @returns A formatted string with the length and appropriate unit
  */
 export function formatLength(value: number | null | undefined, unit?: LengthUnit): string {
     if (value == null) {
@@ -49,6 +60,13 @@ export function formatLength(value: number | null | undefined, unit?: LengthUnit
     return `${lengthFormat.format(value / KILOMETER)}\u202fkm`;
 }
 
+/**
+ * Normalizes a length value to millimeters based on the input unit.
+ *
+ * @param value - The length value to normalize
+ * @param unit - The unit of the input value
+ * @returns The length value in millimeters
+ */
 function normalizeLength(value: number, unit: LengthUnit) {
     switch (unit) {
         case 'mm':

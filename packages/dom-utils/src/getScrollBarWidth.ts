@@ -1,7 +1,11 @@
 let scrollBarWidth: number;
 
 /**
- * Get the width of the scrollbar.
+ * Gets the width of the browser's scrollbar in pixels.
+ * This is useful for calculating layout adjustments when scrollbars appear or disappear.
+ * The result is cached for subsequent calls.
+ *
+ * @returns The width of the scrollbar in pixels
  */
 export function getScrollBarWidth() {
     if (scrollBarWidth != null) {
@@ -11,6 +15,12 @@ export function getScrollBarWidth() {
     return (scrollBarWidth = getScrollbarWidthCore());
 }
 
+/**
+ * Internal implementation that measures the scrollbar width by creating temporary DOM elements.
+ * Creates a container with scrollbar and measures the difference between outer and inner widths.
+ *
+ * @returns The measured scrollbar width in pixels
+ */
 function getScrollbarWidthCore() {
     // Creating invisible container
     const outer = document.createElement('div');

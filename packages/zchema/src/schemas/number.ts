@@ -1,16 +1,23 @@
 import { identity } from '@nzyme/utils';
 
-import type { Schema, SchemaOptions, SchemaOptionsSimlify, SchemaProto } from '../Schema.js';
 import { defineSchema } from '../defineSchema.js';
+import type {
+    Schema,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
+    SchemaOptions,
+    SchemaProto,
+} from '../Schema.js';
 
 /**
  * Schema type for number values.
  * @template O - Schema options type
  */
-export type NumberSchema<O extends SchemaOptions<number>> = Schema<number, O>;
+export type NumberSchema<O extends SchemaOptionsBase = SchemaOptionsBase> = Schema<number, O>;
 
 /**
- * Protocol implementation for number schema.
+ * Prototype implementation for number schema.
  */
 const proto: SchemaProto<number> = {
     coerce: Number,
@@ -22,11 +29,17 @@ const proto: SchemaProto<number> = {
 /**
  * Base type for number schema definition.
  */
-type NumberSchemaBase = {
+export type NumberSchemaConstructor = {
     /** Creates a number schema with default options */
     (): NumberSchema<{}>;
     /** Creates a number schema with custom options */
-    <O extends object>(options: O & SchemaOptions<number>): NumberSchema<SchemaOptionsSimlify<O>>;
+    <
+        TNullable extends boolean | undefined = undefined,
+        TOptional extends boolean | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
+    >(
+        options: SchemaOptions<number, TNullable, TOptional, TMeta>,
+    ): NumberSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta>>;
 };
 
 /**
@@ -39,7 +52,7 @@ type NumberSchemaBase = {
  * const defaultPrice = number({ default: () => 99.99 });
  * ```
  */
-export const number = defineSchema<NumberSchemaBase>({
+export const number = defineSchema<NumberSchemaConstructor>({
     name: 'number',
     proto: () => proto,
 });

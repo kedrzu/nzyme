@@ -1,3 +1,6 @@
+/**
+ *
+ */
 export const Currencies = [
     /** UAE dirham */ 'AED',
     /** Afghan afghani */ 'AFN',
@@ -157,43 +160,89 @@ export const Currencies = [
     /** Zimbabwean dollar */ 'ZWR',
 ] as const;
 
+/**
+ *
+ */
 export type Currency = keyof typeof CURRENCIES;
 
-export type CurrencyConfig = {
-    locale: string;
-    fractionSymbol: '.' | ',';
+/**
+ *
+ */
+export type CurrencyConfig<C extends string> = {
+    /**
+     * Currency code
+     */
+    code: C;
+    /**
+     * Number of fraction digits
+     */
     fractionDigits: number;
+    /**
+     * Symbol for formatting the money
+     */
+    fractionSymbol: ',' | '.';
+    /**
+     * Locale for formatting the money
+     */
+    locale: string;
+    /**
+     * Symbol for the currency
+     */
     symbol: string;
+    /**
+     * Whether the symbol should be before the amount
+     */
     symbolBefore: boolean;
 };
 
+/**
+ * Polish zloty currency config
+ */
+export const PLN = defineCurrency({
+    code: 'PLN',
+    locale: 'pl-PL',
+    fractionSymbol: ',',
+    fractionDigits: 2,
+    symbol: 'zł',
+    symbolBefore: false,
+});
+
+/**
+ * Euro currency config
+ */
+export const EUR = defineCurrency({
+    code: 'EUR',
+    locale: 'en-US',
+    fractionSymbol: '.',
+    fractionDigits: 2,
+    symbol: '€',
+    symbolBefore: true,
+});
+
+/**
+ * US dollar currency config
+ */
+export const USD = defineCurrency({
+    code: 'USD',
+    locale: 'en-US',
+    fractionSymbol: '.',
+    fractionDigits: 2,
+    symbol: '$',
+    symbolBefore: true,
+});
+
+/**
+ * Currencies map
+ */
 export const CURRENCIES = {
     /** Polish zloty */
-    PLN: defineCurrency({
-        locale: 'pl-PL',
-        fractionSymbol: ',',
-        fractionDigits: 2,
-        symbol: 'zł',
-        symbolBefore: false,
-    }),
+    PLN,
     /** Euro */
-    EUR: defineCurrency({
-        locale: 'en-US',
-        fractionSymbol: '.',
-        fractionDigits: 2,
-        symbol: '€',
-        symbolBefore: true,
-    }),
+    EUR,
     /** United States dollar */
-    USD: defineCurrency({
-        locale: 'en-US',
-        fractionSymbol: '.',
-        fractionDigits: 2,
-        symbol: '$',
-        symbolBefore: true,
-    }),
+    USD,
 };
 
-function defineCurrency(currency: CurrencyConfig) {
+function defineCurrency<C extends string>(currency: CurrencyConfig<C>) {
     return currency;
 }

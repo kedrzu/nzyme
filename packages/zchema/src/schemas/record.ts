@@ -1,47 +1,88 @@
+import { defineSchema } from '../defineSchema.js';
 import type {
+    Infer,
     Schema,
     SchemaAny,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
     SchemaOptions,
-    SchemaOptionsSimlify,
     SchemaProto,
-    Infer,
 } from '../Schema.js';
-import { defineSchema } from '../defineSchema.js';
 import { coerce } from '../utils/coerce.js';
 import { isSchema } from '../utils/isSchema.js';
 import { serialize } from '../utils/serialize.js';
 
-export type RecordSchemaOptions<T extends SchemaAny = SchemaAny> = SchemaOptions<
-    RecordValue<Infer<T>>
-> & {
+/**
+ * Options for defining a record schema.
+ * @template T - The type of schema for record values
+ */
+export type RecordOptions<T extends SchemaAny = SchemaAny> = {
+    /** Schema that defines the type of record values */
     of: T;
-    default?: () => RecordValue<Infer<T>>;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type RecordSchema<O extends RecordSchemaOptions = RecordSchemaOptions> = ForceName<
-    O extends RecordSchemaOptions<infer T extends SchemaAny>
-        ? Schema<RecordValue<Infer<T>>, O>
-        : never
->;
+/**
+ * Schema type for records.
+ * @template O - Record schema options type
+ */
+export type RecordSchema<
+    O extends SchemaOptionsBase<RecordOptions> = SchemaOptionsBase<RecordOptions>,
+> = Schema<RecordValue<Infer<O['of']>>, O> & {
+    /**
+     *
+     */
+    of: O['of'];
+};
 
-declare class FF {}
-type ForceName<T> = T & FF;
-
+/**
+ * Value type for records (string-keyed object).
+ * @template T - The type of values in the record
+ */
 export type RecordValue<T = unknown> = Record<string, T | undefined>;
-export type RecordSchemaValue<O extends RecordSchemaOptions> = RecordValue<Infer<O['of']>>;
 
-type RecordSchemaBase = {
+/**
+ * Base type for record schema definition.
+ */
+type RecordSchemaConstructor = {
+    /** Creates a record schema with a schema for values */
     <S extends SchemaAny>(of: S): RecordSchema<{ of: S }>;
-    <O extends RecordSchemaOptions>(
-        options: O & RecordSchemaOptions<O['of']>,
-    ): RecordSchema<SchemaOptionsSimlify<O>>;
+
+    /** Creates a record schema with custom options */
+    <
+        S extends SchemaAny,
+        TNullable extends boolean | undefined = undefined,
+        TOptional extends boolean | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
+    >(
+        options: SchemaOptions<
+            RecordValue<Infer<S>>,
+            TNullable,
+            TOptional,
+            TMeta,
+            RecordOptions<S>
+        >,
+    ): RecordSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, RecordOptions<S>>>;
 };
 
-export const record = defineSchema<RecordSchemaBase, RecordSchemaOptions>({
+/**
+ * Creates a schema for record objects (string-keyed dictionaries).
+ * This schema validates that a value is an object where all values conform to the specified schema.
+ *
+ * @example
+ * ```ts
+ * const stringRecord = record(string());
+ * const numberRecord = record(number());
+ * const customRecord = record({
+ *   of: boolean(),
+ *   default: () => ({ active: true, visible: false })
+ * });
+ * ```
+ */
+export const record = defineSchema<RecordSchemaConstructor, SchemaOptionsBase<RecordOptions>>({
     name: 'record',
-    options: (optionsOrSchema: SchemaAny | RecordSchemaOptions) => {
-        const options: RecordSchemaOptions = isSchema(optionsOrSchema)
+    options: (optionsOrSchema: RecordOptions | SchemaAny) => {
+        const options: SchemaOptionsBase<RecordOptions> = isSchema(optionsOrSchema)
             ? { of: optionsOrSchema }
             : optionsOrSchema;
 

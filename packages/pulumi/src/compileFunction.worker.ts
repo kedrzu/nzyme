@@ -8,13 +8,14 @@ import json from '@rollup/plugin-json';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import chalk from 'chalk';
-import { consola } from 'consola';
 import { emptyDir } from 'fs-extra/esm';
 import { rollup } from 'rollup';
+import { bundleStats } from 'rollup-plugin-bundle-stats';
 import sourcemaps from 'rollup-plugin-sourcemaps';
 import { terser } from 'rollup-plugin-terser';
 
 import { unwrapCjsDefaultImport } from '@nzyme/esm';
+import { normalizeBuiltinsPlugin } from '@nzyme/rollup-utils';
 import { formatElapsedMs, sortBy } from '@nzyme/utils';
 
 import type { CompileFunctionOptions, CompileFunctionResult } from './compileFunction.js';
@@ -27,13 +28,12 @@ const fileName = 'index';
 const outputFile = path.join(outputDir, options.esm ? `${fileName}.mjs` : `${fileName}.js`);
 const outputHash = createHash('md5');
 
-consola.wrapConsole();
-
 await emptyDir(outputDir);
 
 const rollupResult = await rollup({
     input: options.inputFile,
     plugins: [
+        normalizeBuiltinsPlugin(),
         nodeResolve({
             preferBuiltins: true,
             exportConditions: ['module', 'import', 'node', 'require'],
@@ -63,6 +63,7 @@ const rollupResult = await rollup({
             sourceMap: true,
             preventAssignment: true,
         }),
+        bundleStats({}),
         options.sourcemaps &&
             sourcemaps({
                 // Sentry has some broken sourcemaps
@@ -96,10 +97,7 @@ const rollupResult = await rollup({
             return;
         }
 
-        if (
-            warning.code === 'CIRCULAR_DEPENDENCY' &&
-            warning.ids?.find(id => id.includes('node_modules/'))
-        ) {
+        if (warning.code === 'CIRCULAR_DEPENDENCY' && warning.ids?.find(id => id.includes('node_modules/'))) {
             return;
         }
 
@@ -109,12 +107,12 @@ const rollupResult = await rollup({
 });
 
 const rollupOutput = await rollupResult.write({
-    file: outputFile,
-    inlineDynamicImports: true,
+    dir: outputDir,
     format: options.esm ? 'esm' : 'cjs',
     exports: 'named',
     sourcemap: options.sourcemaps,
-    // entryFileNames: options.esm ? `${fileName}.mjs` : `${fileName}.js`,
+    entryFileNames: options.esm ? `${fileName}.mjs` : `${fileName}.js`,
+    chunkFileNames: options.esm ? `[name].[hash].mjs` : `[name].[hash].js`,
     hoistTransitiveImports: true,
 });
 
@@ -130,9 +128,7 @@ for (const file of outputFiles) {
 
 await rollupResult.close();
 
-consola.success(
-    `Compiled ${chalk.green(options.inputFile)} in ${chalk.green(formatElapsedMs(start))}`,
-);
+console.info(`Compiled ${chalk.green(options.inputFile)} in ${chalk.green(formatElapsedMs(start))}`);
 
 const output: CompileFunctionResult = {
     dirPath: outputDir,

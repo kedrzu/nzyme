@@ -3,10 +3,11 @@
     "extends": "./esm.json",
     "compilerOptions": {
         "useDefineForClassFields": true,
-        "lib": ["DOM", "DOM.Iterable", "ESNext"],
+        "lib": ["ESNext", "dom", "dom.iterable", "webworker"],
         "allowJs": false,
-        "esModuleInterop": false,
+        "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,
+        "allowArbitraryExtensions": true,
         "jsx": "react",
         "jsxFactory": "h",
         "jsxFragmentFactory": "h",

@@ -1,24 +1,16 @@
-.bumpActive {
-    animation: bump 0.2s ease-out;
+.bumpEnterActive {
+    animation: bump 0.1s ease-out reverse;
 }
 
-.bumpInactive {
-    animation: bump 0.2s ease-out reverse;
+.bumpLeaveActive {
+    animation: bump 0.1s ease-out;
 }
 
 @keyframes bump {
-    0% {
-        transform: scale(0.6);
-        opacity: 0;
+    from {
+        transform: none;
     }
-
-    70% {
-        transform: scale(1.2);
-        opacity: 1;
-    }
-
-    100% {
-        transform: scale(1);
-        opacity: 1;
+    to {
+        transform: scale(1.3);
     }
 }

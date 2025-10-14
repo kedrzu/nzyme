@@ -1,68 +1,78 @@
-import type { GetObjectCommandInput } from '@aws-sdk/client-s3';
+import type { GetObjectCommandInput, PutObjectCommandInput } from '@aws-sdk/client-s3';
 import { S3Client } from '@aws-sdk/client-s3';
 import chalk from 'chalk';
 import { lookup as mimeLookup } from 'mime-types';
 import { S3SyncClient } from 's3-sync-client';
+import { stringifyQuery } from 'ufo';
 
-import { type Logger, PrettyLogger } from '@nzyme/logging';
+import type { Logger } from '@nzyme/logging';
 import { assertValue } from '@nzyme/utils';
-
-type Filter = (key: string) => boolean;
 
 /**
  * Options for uploading files to an S3 bucket.
  */
-export type UploadFilesOptions = {
-    /**
-     * The path to the source files.
-     */
-    sourcePath: string;
-    /**
-     * The path to the destination files.
-     */
-    destinationPath: string;
-    /**
-     * A filter for the files to include.
-     */
-    include?: RegExp | Filter;
-    /**
-     * A filter for the files to exclude.
-     */
-    exclude?: RegExp | Filter;
-    /**
-     * A function to rename the files.
-     */
-    rename?: (key: string) => string;
+export interface UploadFilesOptions {
     /**
      * The cache control header to set for the files.
      */
-    cacheControl?: string | ((key: string) => string);
+    cacheControl?: ((key: string) => string) | string;
     /**
      * Whether to delete missing files.
      */
     deleteMissing?: boolean;
     /**
+     * The path to the destination files.
+     */
+    destinationPath: string;
+    /**
+     * A filter for the files to exclude.
+     */
+    exclude?: Filter | RegExp;
+    /**
+     * A filter for the files to include.
+     */
+    include?: Filter | RegExp;
+    /**
      * A logger to use for logging.
      */
     logger?: Logger;
-};
+    /**
+     * A function to rename the files.
+     */
+    rename?: (key: string) => string;
+    /**
+     * A function to set the content type for the files.
+     * Should return `null` or `undefined` to fall back to the default content type.
+     */
+    contentType?: (key: string) => string | null | undefined;
+    /**
+     * The path to the source files.
+     */
+    sourcePath: string;
+    /**
+     * The tags to set for the files.
+     E*/
+    tags?: ((key: string) => Record<string, string>) | Record<string, string>;
+}
+
+type Filter = (key: string) => boolean;
 
 /**
  * Uploads files to an S3 bucket.
  */
 export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
-    const logger = options.logger ?? PrettyLogger({ name: undefined });
+    const logger = options.logger;
     const s3Client = new S3Client();
     const client = new S3SyncClient({
         client: s3Client,
     });
 
     try {
-        const { sourcePath, destinationPath, cacheControl } = options;
-        const cacheControlFunction =
-            typeof cacheControl === 'function' ? cacheControl : () => cacheControl;
+        const { sourcePath, destinationPath, cacheControl, tags } = options;
+        const cacheControlFunction = typeof cacheControl === 'function' ? cacheControl : () => cacheControl;
+        const tagsFunction = typeof tags === 'function' ? tags : () => tags;
 
-        logger.info(`Uploading ${chalk.green(sourcePath)} to ${chalk.green(destinationPath)}`);
+        logger?.info(`Uploading ${chalk.green(sourcePath)} to ${chalk.green(destinationPath)}`);
         const output = await client.sync(sourcePath, destinationPath, {
             del: !!options.deleteMissing,
             filters:
@@ -77,41 +87,35 @@ export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
             // Make all the files lowercase.
             // This way we can use case-insensitive routing in Cloudfront.
             relocations: options.rename ? [options.rename] : undefined,
-            commandInput: (input: Partial<GetObjectCommandInput>) => {
+            commandInput: (input: Partial<GetObjectCommandInput>): Partial<PutObjectCommandInput> => {
                 const key = assertValue(input.Key);
+                const tags = tagsFunction(key);
 
                 return {
-                    ContentType: mimeLookup(key) || 'text/html',
+                    ContentType: getContentType(options, key),
                     CacheControl: cacheControlFunction(key),
+                    Tagging: tags ? stringifyQuery(tags) : undefined,
                 };
             },
         });
 
-        logger.info(
-            `Finished uploading ${chalk.green(sourcePath)} to ${chalk.green(destinationPath)}`,
-        );
+        logger?.info(`Finished uploading ${chalk.green(sourcePath)} to ${chalk.green(destinationPath)}`);
 
         if (output.created.length) {
-            logger.info(
-                `Created ${chalk.green(output.created.length)} files in ${chalk.green(destinationPath)}`,
-            );
+            logger?.info(`Created ${chalk.green(output.created.length)} files in ${chalk.green(destinationPath)}`);
         }
         if (output.updated.length) {
-            logger.info(
-                `Updated ${chalk.green(output.updated.length)} files in ${chalk.green(destinationPath)}`,
-            );
+            logger?.info(`Updated ${chalk.green(output.updated.length)} files in ${chalk.green(destinationPath)}`);
         }
         if (output.deleted.length) {
-            logger.info(
-                `Deleted ${chalk.green(output.deleted.length)} files in ${chalk.green(destinationPath)}`,
-            );
+            logger?.info(`Deleted ${chalk.green(output.deleted.length)} files in ${chalk.green(destinationPath)}`);
         }
     } finally {
         s3Client.destroy();
     }
 }
 
-function createFilter(filter: RegExp | Filter | undefined | null): Filter | undefined {
+function createFilter(filter: Filter | RegExp | null | undefined): Filter | undefined {
     if (!filter) {
         return undefined;
     }
@@ -121,4 +125,15 @@ function createFilter(filter: RegExp | Filter | undefined | null): Filter | unde
     }
 
     return filter;
+}
+
+function getContentType(options: UploadFilesOptions, key: string): string {
+    if (options.contentType) {
+        const contentType = options.contentType(key);
+        if (contentType) {
+            return contentType;
+        }
+    }
+
+    return mimeLookup(key) || 'text/html';
 }

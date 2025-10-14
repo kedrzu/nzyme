@@ -8,7 +8,10 @@ export type Slots<T> = {
 };
 
 /** Allows to define slots in @see defineComponent function. */
-/*#__NO_SIDE_EFFECTS__*/
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
 export function defineSlots<T>() {
     return undefined as unknown as SlotsType<Slots<T>>;
 }

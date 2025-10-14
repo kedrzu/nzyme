@@ -1,14 +1,14 @@
 import {
-    getCurrentInstance,
-    defineComponent,
-    Transition,
-    h,
-    type ComponentPublicInstance,
-    withCtx,
-    renderSlot,
-    openBlock,
     createElementBlock,
+    defineComponent,
+    getCurrentInstance,
+    h,
+    openBlock,
+    renderSlot,
+    Transition,
+    withCtx,
 } from 'vue';
+import type { ComponentPublicInstance } from 'vue';
 
 import { getOuterHeight } from '@nzyme/dom-utils';
 import { useElement } from '@nzyme/vue-utils';
@@ -49,16 +49,16 @@ export const Reveal = defineComponent({
                 <div class={css.reveal}>
                     <div class={css.reveal_inner}>
                         <Transition
-                            enterFromClass={css.enterFrom}
                             enterActiveClass={css.enterActive}
-                            leaveFromClass={css.leaveFrom}
+                            enterFromClass={css.enterFrom}
                             leaveActiveClass={css.leaveActive}
-                            onBeforeEnter={beforeEnter}
-                            onEnter={enter}
+                            leaveFromClass={css.leaveFrom}
                             onAfterEnter={afterEnter}
-                            onBeforeLeave={beforeLeave}
-                            onLeave={leave}
                             onAfterLeave={afterLeave}
+                            onBeforeEnter={beforeEnter}
+                            onBeforeLeave={beforeLeave}
+                            onEnter={enter}
+                            onLeave={leave}
                         >
                             {Inner}
                         </Transition>

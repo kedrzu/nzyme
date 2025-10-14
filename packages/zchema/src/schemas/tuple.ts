@@ -1,47 +1,90 @@
+import { defineSchema } from '../defineSchema.js';
 import type {
+    Infer,
     Schema,
     SchemaAny,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
     SchemaOptions,
-    SchemaOptionsSimlify,
     SchemaProto,
-    Infer,
 } from '../Schema.js';
-import { defineSchema } from '../defineSchema.js';
 import { coerce } from '../utils/coerce.js';
 import { serialize } from '../utils/serialize.js';
 
-export type TupleSchemaOptions<T extends SchemaAny[] = SchemaAny[]> = SchemaOptions<
-    TupleSchemaValue<T>
-> & {
+/**
+ *
+ */
+export type TupleOptions<T extends Schema[] = Schema[]> = {
+    /**
+     *
+     */
     of: T;
-    default?: () => TupleSchemaValue<T>;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type TupleSchema<O extends TupleSchemaOptions = TupleSchemaOptions> = ForceName<
-    O extends TupleSchemaOptions<infer T extends SchemaAny[]>
-        ? Schema<TupleSchemaValue<T>, O>
-        : never
->;
+/**
+ * Schema type for tuple values.
+ * @template T - Array of schema types
+ * @template O - Schema options type
+ */
+export type TupleSchema<
+    O extends SchemaOptionsBase<TupleOptions> = SchemaOptionsBase<TupleOptions>,
+> = ForceName &
+    Schema<TupleValue<O['of']>, O> & {
+        /**
+         *
+         */
+        of: O['of'];
+    };
 
-declare class FF {}
-type ForceName<T> = T & FF;
-
-export type TupleSchemaValue<TTuple extends [...SchemaAny[]]> = {
+/**
+ * Value type for tuple schemas.
+ * @template TTuple - Tuple of schema types
+ */
+export type TupleValue<TTuple extends [...SchemaAny[]]> = {
     [K in keyof TTuple]: Infer<TTuple[K]>;
 } & { length: TTuple['length'] };
 
+/**
+ * Base type for tuple schema definition.
+ */
 type TupleSchemaBase = {
-    <S extends SchemaAny[]>(of: S): TupleSchema<{ of: S }>;
-    <O extends TupleSchemaOptions>(
-        options: O & TupleSchemaOptions<O['of']>,
-    ): TupleSchema<SchemaOptionsSimlify<O>>;
+    /** Creates a tuple schema with custom options */
+    <
+        const S extends Schema[],
+        TNullable extends boolean | undefined = undefined,
+        TOptional extends boolean | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
+    >(
+        options: SchemaOptionsBase &
+            SchemaOptions<TupleValue<S>, TNullable, TOptional, TMeta, TupleOptions<S>>,
+    ): TupleSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, TupleOptions<S>>>;
+
+    /** Creates a tuple schema with schemas for elements */
+    <const S extends Schema[]>(of: S): TupleSchema<{ of: S }>;
 };
 
-export const tuple = defineSchema<TupleSchemaBase, TupleSchemaOptions>({
+/**
+ * Internal class used to force type names in TypeScript.
+ * @internal
+ */
+declare class ForceName {}
+
+/**
+ * Creates a schema for tuple values.
+ * This schema validates arrays with a fixed size and types.
+ *
+ * @example
+ * ```ts
+ * const point = tuple([number(), number()]);
+ * const rgb = tuple([number(), number(), number()]);
+ * const userTuple = tuple([string(), number(), boolean()]);
+ * ```
+ */
+export const tuple = defineSchema<TupleSchemaBase, SchemaOptionsBase<TupleOptions>>({
     name: 'tuple',
-    options: (optionsOrSchema: SchemaAny[] | TupleSchemaOptions) => {
-        const options: TupleSchemaOptions = Array.isArray(optionsOrSchema)
+    options: (optionsOrSchema: SchemaAny[] | TupleOptions) => {
+        const options: SchemaOptionsBase<TupleOptions> = Array.isArray(optionsOrSchema)
             ? { of: optionsOrSchema }
             : optionsOrSchema;
 

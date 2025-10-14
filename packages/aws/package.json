@@ -19,7 +19,6 @@
             "default": "./dist/*.js"
         }
     },
-    "main": "./dist/index.cjs",
     "module": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "files": [
@@ -29,30 +28,32 @@
         "lint": "eslint . --fix --cache"
     },
     "dependencies": {
-        "@aws-sdk/client-cloudfront": "^3.782.0",
-        "@aws-sdk/client-dynamodb": "^3.786.0",
-        "@aws-sdk/client-s3": "^3.782.0",
-        "@aws-sdk/client-sqs": "^3.782.0",
+        "@aws-sdk/client-cloudfront": "^3.893.0",
+        "@aws-sdk/client-dynamodb": "^3.893.0",
+        "@aws-sdk/client-s3": "^3.893.0",
+        "@aws-sdk/client-sqs": "^3.893.0",
+        "@nzyme/fetch-utils": "^0.14.0",
         "@nzyme/ioc": "^0.14.0",
         "@nzyme/logging": "^0.14.0",
-        "@nzyme/types": "^0.14.0",
+        "@nzyme/rpc": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
-        "@types/aws-lambda": "^8.10.149",
-        "@types/mime-types": "^2.1.4",
+        "@types/aws-lambda": "^8.10.153",
+        "@types/mime-types": "^3.0.1",
+        "chalk": "^5.6.2",
         "mime-types": "^3.0.1",
-        "pino-lambda": "^4.4.1",
         "s3-sync-client": "^4.3.1",
-        "tslib": "^2.8.1"
+        "ufo": "^1.6.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
-        "@nzyme/tsconfig": "^0.14.0",
-        "@nzyme/vitest": "^0.14.0",
-        "@types/node": "^22.14.0",
-        "eslint": "^9.24.0",
-        "typescript": "^5.8.3"
+        "@nzyme/tsconfig": "^0.14.0"
     },
     "publishConfig": {
         "access": "public"
+    },
+    "depcheck": {
+        "ignoreDeps": [
+            "aws-lambda"
+        ]
     }
 }

@@ -1,4 +1,4 @@
-import { SQSClient, SendMessageBatchCommand, SendMessageCommand } from '@aws-sdk/client-sqs';
+import { SendMessageBatchCommand, SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
 
 import { asArray, splitIntoChunks } from '@nzyme/utils';
 
@@ -22,7 +22,7 @@ export interface SqsClientOptions {
 /**
  * Creates a new SQS client.
  */
-export function createSqsClient<T>({ queueUrl, region }: SqsClientOptions): Queue<T> {
+export function createSqsClient({ queueUrl, region }: SqsClientOptions): Queue {
     const client = new SQSClient({
         region,
     });
@@ -31,7 +31,7 @@ export function createSqsClient<T>({ queueUrl, region }: SqsClientOptions): Queu
         send,
     };
 
-    async function send(messages: QueueMessage<T> | readonly QueueMessage<T>[]) {
+    async function send(messages: QueueMessage | readonly QueueMessage[]) {
         messages = asArray(messages);
 
         // Publish a single event
@@ -40,7 +40,7 @@ export function createSqsClient<T>({ queueUrl, region }: SqsClientOptions): Queu
             const command = new SendMessageCommand({
                 QueueUrl: queueUrl,
                 MessageGroupId: message.messageGroupId,
-                MessageBody: JSON.stringify(message.body),
+                MessageBody: message.body,
                 MessageDeduplicationId: message.deduplicationId,
             });
 
@@ -59,7 +59,7 @@ export function createSqsClient<T>({ queueUrl, region }: SqsClientOptions): Queu
                             return {
                                 Id: index.toString(),
                                 MessageGroupId: message.messageGroupId,
-                                MessageBody: JSON.stringify(message.body),
+                                MessageBody: message.body,
                                 MessageDeduplicationId: message.deduplicationId,
                             };
                         }),

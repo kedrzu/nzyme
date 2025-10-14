@@ -1,61 +1,112 @@
 import type { Container } from './Container.js';
+import type { Dependencies } from './Service.js';
 
+/**
+ * Symbol for identifying injectables.
+ * @internal
+ */
 export const INJECTABLE_SYMBOL = Symbol('injectable');
 
 /**
- * Infers the type of the injectable.
+ * Represents a type that can be injected into other types through the dependency injection container.
+ * @template T - The type that this injectable will resolve to
  */
-export type Injected<T> = T extends Injectable ? ReturnType<T['resolve']> : never;
-
-/**
- * Options for the injectable.
- */
-export type InjectableOptions<T> = {
-    /**
-     * Name of the injectable.
-     */
-    readonly name?: string;
-    /**
-     * Resolve function.
-     */
-    readonly resolve: (container: Container, caller?: Injectable) => T;
-};
-
-/**
- * Injectable is a type that can be injected into other types.
- */
-export type Injectable<T = unknown> = {
+export interface Injectable<T = unknown> extends InjectableOptions<T> {
     /**
      * Symbol that indicates that the type is an injectable.
      * @internal
      */
-    readonly [INJECTABLE_SYMBOL]: true | symbol;
+    readonly [INJECTABLE_SYMBOL]: symbol | true;
+}
+
+/**
+ * Options for configuring an injectable.
+ * @template T - The type that the injectable will resolve to
+ */
+export interface InjectableOptions<T> {
     /**
-     * Name of the injectable.
+     * Optional name of the injectable for debugging and identification purposes.
      */
     readonly name?: string;
     /**
-     * Resolve function.
+     * Injectable dependencies for static dependency resolution.
      */
-    readonly resolve: (container: Container, caller?: Injectable) => T;
-};
+    readonly deps?: Dependencies;
+    /**
+     * Function that resolves the injectable to its concrete instance.
+     * @param container - The container used for dependency resolution
+     * @param caller - Optional injectable that requested this resolution
+     * @returns The resolved instance of type T
+     */
+    readonly resolve: InjectableResolve<T>;
+}
 
 /**
- * Define an injectable.
- * @param options - Options for the injectable.
- * @returns Injectable.
+ * Represents a function that resolves an injectable to its concrete instance.
  */
-export function defineInjectable<T>(options: InjectableOptions<T>): Injectable<T> {
+export interface InjectableResolve<T = unknown> {
+    (container: Container, caller?: Injectable): T;
+}
+
+/**
+ * Infers the type of the injectable by extracting the return type of its resolve function.
+ * @template T - The type of the injectable
+ */
+export type Resolved<T> = T extends Injectable ? ReturnType<T['resolve']> : never;
+
+/**
+ * Creates a new injectable with the specified options.
+ * @template T - The type that the injectable will resolve to
+ * @param options - Configuration options for the injectable
+ * @returns A new injectable instance
+ */
+export function defineInjectable<T>(options: InjectableOptions<T>): Injectable<T>;
+/**
+ * Creates a new injectable with the specified options.
+ * @template T - The type that the injectable will resolve to
+ * @param options - Configuration options for the injectable
+ * @returns A new injectable instance
+ */
+export function defineInjectable<T, TOpts extends InjectableOptions<T>>(options: TOpts): Injectable<T> & TOpts;
+/**
+ * Creates a new injectable with the specified resolve function.
+ * @template T - The type that the injectable will resolve to
+ * @param resolve - Function that resolves the injectable to its concrete instance
+ * @returns A new injectable instance
+ */
+export function defineInjectable<T>(resolve: InjectableResolve<T>): Injectable<T>;
+/**
+ * Creates a new injectable with the specified options.
+ * @template T - The type that the injectable will resolve to
+ * @param options - Configuration options for the injectable
+ * @returns A new injectable instance
+ */
+export function defineInjectable<T extends Injectable>(
+    options: InjectableOptions<unknown> & Omit<T, typeof INJECTABLE_SYMBOL>,
+): T;
+/**
+ * @__NO_SIDE_EFFECTS__
+ */
+export function defineInjectable(
+    optionsOrResolve: InjectableOptions<unknown> | InjectableResolve<unknown>,
+): Injectable<unknown> {
+    if (typeof optionsOrResolve === 'function') {
+        return {
+            resolve: optionsOrResolve,
+            [INJECTABLE_SYMBOL]: true,
+        };
+    }
+
     return {
-        ...options,
+        ...optionsOrResolve,
         [INJECTABLE_SYMBOL]: true,
     };
 }
 
 /**
- * Check if the value is an injectable.
- * @param value - Value to check.
- * @returns Whether the value is an injectable.
+ * Type guard to check if a value is an injectable.
+ * @param value - The value to check
+ * @returns True if the value is an injectable, false otherwise
  */
 export function isInjectable(value: unknown): value is Injectable {
     if (value == null) {

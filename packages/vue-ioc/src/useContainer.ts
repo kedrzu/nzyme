@@ -13,7 +13,7 @@ export function useContainer() {
 
     container = inject(injectionKey);
     if (!container) {
-        throw new Error('Container not registered. Register CommonPlugin first');
+        throw new Error('Container not registered. Register IocPlugin first');
     }
 
     return container;

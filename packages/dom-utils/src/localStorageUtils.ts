@@ -1,5 +1,10 @@
+/**
+ * Sets a JSON-serializable value in localStorage.
+ * @param key The localStorage key to store the value under
+ * @param value The value to store (will be JSON-serialized)
+ */
 export function localStorageSetJson<T>(key: string, value: T) {
-    if(typeof localStorage === 'undefined') {
+    if (typeof localStorage === 'undefined') {
         return;
     }
 
@@ -7,8 +12,13 @@ export function localStorageSetJson<T>(key: string, value: T) {
     localStorage.setItem(key, json);
 }
 
+/**
+ * Retrieves and parses a JSON value from localStorage.
+ * @param key The localStorage key to retrieve
+ * @returns The parsed value, or null if the key doesn't exist or localStorage is unavailable
+ */
 export function localStorageGetJson<T>(key: string): T | null {
-    if(typeof localStorage === 'undefined') {
+    if (typeof localStorage === 'undefined') {
         return null;
     }
 

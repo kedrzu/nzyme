@@ -1,14 +1,16 @@
 import { isIterable } from '@nzyme/utils';
 
+import { defineSchema } from '../defineSchema.js';
 import type {
     Infer,
     Schema,
     SchemaAny,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
+    SchemaMeta,
     SchemaOptions,
-    SchemaOptionsSimlify,
     SchemaProto,
 } from '../Schema.js';
-import { defineSchema } from '../defineSchema.js';
 import { coerce } from '../utils/coerce.js';
 import { isSchema } from '../utils/isSchema.js';
 import { serialize } from '../utils/serialize.js';
@@ -17,39 +19,40 @@ import { serialize } from '../utils/serialize.js';
  * Options for defining an array schema.
  * @template T - The type of schema for array elements
  */
-export type ArraySchemaOptions<T extends SchemaAny = SchemaAny> = SchemaOptions<Infer<T>[]> & {
+export type ArrayOptions<T extends SchemaAny = SchemaAny> = {
     /** Schema that defines the type of array elements */
     of: T;
-    /** Optional function that returns default array value */
-    default?: () => Infer<T>[];
 };
 
 /**
  * Schema type for arrays.
  * @template O - Array schema options type
  */
-export type ArraySchema<O extends ArraySchemaOptions = ArraySchemaOptions> = ForceName<
-    O extends ArraySchemaOptions<infer T extends SchemaAny> ? Schema<Infer<T>[], O> : never
->;
-
-// Helper type to force type name preservation
-declare class FF {}
-type ForceName<T> = T & FF;
-
-/**
- * Value type for array schema.
- * @template O - Array schema options type
- */
-export type ArraySchemaValue<O extends ArraySchemaOptions> = Infer<O['of']>[];
+export type ArraySchema<
+    O extends SchemaOptionsBase<ArrayOptions> = SchemaOptionsBase<ArrayOptions>,
+> = Schema<Infer<O['of']>[], O> & {
+    /**
+     *
+     */
+    of: O['of'];
+};
 
 /**
  * Base type for array schema definition.
  */
-type ArraySchemaBase = {
+type ArraySchemaConstructor = {
+    /** Creates an array schema with a schema for items */
     <S extends SchemaAny>(of: S): ArraySchema<{ of: S }>;
-    <O extends ArraySchemaOptions>(
-        options: O & ArraySchemaOptions<O['of']>,
-    ): ArraySchema<SchemaOptionsSimlify<O>>;
+
+    /** Creates an array schema with custom options */
+    <
+        S extends SchemaAny,
+        TNullable extends boolean | undefined = undefined,
+        TOptional extends boolean | undefined = undefined,
+        TMeta extends SchemaMeta | undefined = undefined,
+    >(
+        options: SchemaOptions<Infer<S>[], TNullable, TOptional, TMeta, ArrayOptions<S>>,
+    ): ArraySchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, ArrayOptions<S>>>;
 };
 
 /**
@@ -65,10 +68,10 @@ type ArraySchemaBase = {
  * });
  * ```
  */
-export const array = defineSchema<ArraySchemaBase, ArraySchemaOptions>({
+export const array = defineSchema<ArraySchemaConstructor, SchemaOptionsBase<ArrayOptions>>({
     name: 'array',
-    options: (optionsOrSchema: SchemaAny | ArraySchemaOptions) => {
-        const options: ArraySchemaOptions = isSchema(optionsOrSchema)
+    options: (optionsOrSchema: ArrayOptions | SchemaAny) => {
+        const options: SchemaOptionsBase<ArrayOptions> = isSchema(optionsOrSchema)
             ? { of: optionsOrSchema }
             : optionsOrSchema;
 

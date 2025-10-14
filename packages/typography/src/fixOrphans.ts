@@ -12,13 +12,13 @@ export function fixOrphans(text: string) {
     // use [^\s] to match anything but whitespace characters
     return (
         text
-            .replace(spaceAfterShortWordRegex, (search, whitespace: string, word: string) => {
+            .replace(spaceAfterShortWordRegex, (_search, whitespace: string, word: string) => {
                 // replace spaces between short words with a non-breakable space
                 // do not swap it with any other character!
                 return whitespace + word + '\xa0';
             })
             // roll back the operation if following word has 12 or more letters
-            .replace(longWordRegex, (search, group: string) => {
+            .replace(longWordRegex, (_search, group: string) => {
                 return ' ' + group;
             })
     );

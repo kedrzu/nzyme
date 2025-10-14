@@ -1,6 +1,10 @@
-import { Container, createContainer } from '@nzyme/ioc';
 import { Builtins, Cli } from 'clipanion';
-import { CommandClass, CommandContext } from './Command.js';
+
+import type { Container } from '@nzyme/ioc';
+import { createContainer } from '@nzyme/ioc';
+import { PrettyLoggerTransport } from '@nzyme/logging';
+
+import type { CommandClass, CommandContext } from './Command.js';
 
 /**
  * Options for creating a CLI program
@@ -27,6 +31,8 @@ export async function execute(options: ExecuteOptions): Promise<void> {
     });
 
     const container = options.container ?? createContainer();
+
+    container.register(PrettyLoggerTransport);
 
     for (const command of options.commands) {
         cli.register(command);

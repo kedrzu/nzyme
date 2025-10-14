@@ -1,4 +1,4 @@
-import type { CloudFrontResponse } from 'aws-lambda';
+import type { types } from '../lambda/types.js';
 
 /**
  * Parameters for the redirect response.
@@ -21,7 +21,7 @@ export interface RedirectParams {
 /**
  * Redirects the response to a new URL.
  */
-export function redirectResponse(params: RedirectParams): CloudFrontResponse {
+export function redirectResponse(params: RedirectParams): types.CloudFrontResponse {
     return {
         status: params.status?.toString() || '302',
         statusDescription: params.status === 301 ? 'Moved Permanently' : 'Found',

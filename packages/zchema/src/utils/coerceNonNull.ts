@@ -1,7 +1,12 @@
-import type { Schema, SchemaProto, InferNonNull } from '../Schema.js';
+import type { Schema, SchemaProto, InferNonNull, SchemaContext } from '../Schema.js';
 import { lazyResolve } from '../schemas/lazy.js';
+import { DEFAULT_SCHEMA_CONTEXT } from '../Schema.js';
 
-export function coerceNonNull<S extends Schema>(schema: S, value?: unknown): InferNonNull<S> {
+export function coerceNonNull<S extends Schema>(
+    schema: S,
+    value?: unknown,
+    context: SchemaContext = DEFAULT_SCHEMA_CONTEXT,
+): InferNonNull<S> {
     lazyResolve(schema);
 
     const proto = schema.proto as SchemaProto<InferNonNull<S>>;
@@ -11,7 +16,7 @@ export function coerceNonNull<S extends Schema>(schema: S, value?: unknown): Inf
             return schema.default() as InferNonNull<S>;
         }
 
-        return proto.default();
+        return proto.default(context);
     }
 
     if (value === undefined) {
@@ -19,10 +24,10 @@ export function coerceNonNull<S extends Schema>(schema: S, value?: unknown): Inf
             return schema.default() as InferNonNull<S>;
         }
 
-        return proto.default();
+        return proto.default(context);
     }
 
-    const result = proto.coerce(value);
+    const result = proto.coerce(value, context);
     if (result === undefined) {
         throw new Error('Invalid value');
     }

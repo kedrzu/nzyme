@@ -17,9 +17,9 @@ type MarkdownOptions = {
  */
 export function parseMarkdown(markdown: string, options: MarkdownOptions = {}) {
     const parser = createParser(options);
-    const ast = parser.parse(markdown).children;
+    const root = parser.parse(markdown);
 
-    for (const node of ast) {
+    for (const node of root.children) {
         newlineToBreak(node);
         visit(node, node => {
             delete node.position;
@@ -27,25 +27,12 @@ export function parseMarkdown(markdown: string, options: MarkdownOptions = {}) {
             if (node.type === 'text') {
                 node.value = sanitizeText(node.value);
             } else if ('children' in node) {
-                node.children = unwrapRedundantParagraphs(
-                    node.children as Content[],
-                ) as typeof node.children;
+                node.children = unwrapRedundantParagraphs(node.children as Content[]) as typeof node.children;
             }
         });
     }
 
-    if (ast.length === 0) {
-        return null;
-    }
-
-    if (ast.length === 1) {
-        const first = ast[0]!;
-        if (first.type === 'text') {
-            return first.value;
-        }
-    }
-
-    return ast;
+    return root;
 }
 
 function createParser(options: MarkdownOptions) {

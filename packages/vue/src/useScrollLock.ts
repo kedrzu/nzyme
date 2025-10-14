@@ -32,11 +32,9 @@ export function useScrollLock(options: ScrollLockOptions = {}) {
 
     onMounted(() => {
         if (options.condition) {
-            watch(
-                makeRef(options.condition),
-                condition => (condition ? lockScroll() : unlockScroll()),
-                { immediate: true },
-            );
+            watch(makeRef(options.condition), condition => (condition ? lockScroll() : unlockScroll()), {
+                immediate: true,
+            });
         } else {
             // no condition - add class immadietely
             lockScroll();
@@ -54,7 +52,7 @@ export function useScrollLock(options: ScrollLockOptions = {}) {
         lockLocal = true;
         lockCount++;
 
-        document.body.classList.add(scrollLockClass);
+        document.documentElement.classList.add(scrollLockClass);
         // When we disable body scroll padding is added to body
         // to ensure document content will not jump.
         // However, elements that have fixed position, ignores body paddings.
@@ -71,7 +69,7 @@ export function useScrollLock(options: ScrollLockOptions = {}) {
         lockLocal = false;
         lockCount--;
         if (!lockCount) {
-            document.body.classList.remove(scrollLockClass);
+            document.documentElement.classList.remove(scrollLockClass);
             document.documentElement.style.setProperty('--body-padding-right', null);
         }
     }

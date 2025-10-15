@@ -46,5 +46,7 @@ export async function getNonCompleteProjects(linearClient: LinearClient): Promis
         }
     }
 
+    projectInfos.sort((a, b) => a.name.localeCompare(b.name));
+
     return projectInfos;
 }

@@ -1,5 +1,5 @@
 import type { Ref } from 'vue';
-import { computed, onScopeDispose, ref } from 'vue';
+import { computed, onScopeDispose, ref, watch, watchEffect } from 'vue';
 
 import { arrayRemove } from '@nzyme/utils';
 import { computedAsync, reactive } from '@nzyme/vue-utils';
@@ -11,6 +11,7 @@ import type {
     FormValidationResult,
     FormValidator,
     FormValidatorAsync,
+    FormValidatorBehaviorContext,
     FormValidatorState,
     FormValidatorSync,
 } from './types.js';
@@ -35,13 +36,16 @@ export interface FormFieldParams<T> {
  */
 export function useFormField<T>(form: FormModel, params: FormFieldParams<T>): FormField<T> {
     const focused = ref(false);
-    const validators = reactive<FormValidatorState[]>(
-        params.validators?.map(validator => createValidatorState(params.value, validator, form)) || [],
-    );
+    const value = params.value;
+    const validators = params.validators?.map(validator => createValidatorState(validator, value, focused, form)) || [];
 
     const errors = computed(() => {
         const errors: string[] = [];
         for (const validator of validators) {
+            if (!validator.show) {
+                continue;
+            }
+
             const error = validator.error;
             if (error) {
                 errors.push(error);
@@ -51,11 +55,19 @@ export function useFormField<T>(form: FormModel, params: FormFieldParams<T>): Fo
         return errors;
     });
 
-    const valid = computed(() => errors.value.length === 0);
+    const valid = computed(() => {
+        for (const validator of validators) {
+            if (validator.error) {
+                return false;
+            }
+        }
+
+        return true;
+    });
 
     const field = reactive<FormField<T>>({
         form,
-        value: params.value,
+        value,
         valid,
         errors,
         focused,
@@ -114,49 +126,117 @@ export function useFormField<T>(form: FormModel, params: FormFieldParams<T>): Fo
 
     function reset() {
         for (const validator of validators) {
-            validator.reset();
+            validator.show = false;
         }
     }
 }
 
-function createValidatorState<T>(value: Readonly<Ref<T>>, validator: FormValidator<T>, ctx: FormValidationContext) {
+function createValidatorState<T>(
+    validator: FormValidator<T>,
+    value: Readonly<Ref<T>>,
+    focused: Readonly<Ref<boolean>>,
+    ctx: FormValidationContext,
+) {
     if (validator.async) {
-        return createValidatorStateAsync(value, validator, ctx);
+        return createValidatorStateAsync(validator, value, focused, ctx);
     } else {
-        return createValidatorStateSync(value, validator, ctx);
+        return createValidatorStateSync(validator, value, focused, ctx);
     }
 }
 
 function createValidatorStateSync<T>(
-    value: Readonly<Ref<T>>,
     validator: FormValidatorSync<T>,
+    value: Readonly<Ref<T>>,
+    focused: Readonly<Ref<boolean>>,
     ctx: FormValidationContext,
 ) {
-    const error = computed(() => normalizeErrors(validator.validate(value.value, ctx)));
+    const error = ref<string | null>(null);
+    const show = ref(false);
+
+    watchEffect(refresh);
+    createValidatorBehavior(validator, value, focused, show);
 
     return reactive<FormValidatorState>({
         error,
-        reset: () => void 0,
-        validate: () => !!error.value,
+        show,
+        validate: () => {
+            refresh();
+            show.value = true;
+            return !error.value;
+        },
     });
+
+    function refresh() {
+        error.value = normalizeErrors(validator.validate(value.value, ctx));
+    }
 }
 
 function createValidatorStateAsync<T>(
-    value: Readonly<Ref<T>>,
     validator: FormValidatorAsync<T>,
+    value: Readonly<Ref<T>>,
+    focused: Readonly<Ref<boolean>>,
     ctx: FormValidationContext,
 ) {
-    const error = computedAsync(async () => normalizeErrors(await validator.validate(value.value, ctx)), {
-        initialValue: null,
-    });
+    const error = computedAsync(
+        async () => {
+            const result = await validator.validate(value.value, ctx);
+            return normalizeErrors(result);
+        },
+        { initialValue: null },
+    );
+
+    const show = ref(false);
+
+    createValidatorBehavior(validator, value, focused, show);
 
     return reactive<FormValidatorState>({
         error,
-        reset: () => void 0,
+        show,
         validate: async () => {
-            await error.get();
-            return !!error.value;
+            await error.refresh();
+            show.value = true;
+            return !error.value;
         },
+    });
+}
+
+function createValidatorBehavior<T>(
+    validator: FormValidator<T>,
+    value: Readonly<Ref<T>>,
+    focused: Readonly<Ref<boolean>>,
+    show: Ref<boolean>,
+) {
+    if (validator.behavior) {
+        const ctx = reactive<FormValidatorBehaviorContext<T>>({
+            value,
+            focused,
+            show,
+        });
+
+        validator.behavior(ctx);
+        return;
+    }
+
+    // Default validator behavior
+
+    let valueChanged = false;
+
+    watch(value, () => {
+        valueChanged = true;
+        if (focused.value) {
+            show.value = false;
+        }
+    });
+
+    watch(focused, focusedValue => {
+        if (!focusedValue && valueChanged) {
+            show.value = true;
+            valueChanged = false;
+        }
+    });
+
+    watch(show, () => {
+        valueChanged = false;
     });
 }
 

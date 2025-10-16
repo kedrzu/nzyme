@@ -1,17 +1,10 @@
-export { defineFormField } from './components/defineFormField.js';
-export type {
-    FormFieldController as FormField,
-    FormFieldDefinition,
-    FormFieldProps,
-    FormFieldPropsDefinition,
-    FormFieldValue,
-} from './components/defineFormField.js';
+export * from './components/defineFormField.js';
 export * from './components/Form.js';
 export * from './components/TextArea.js';
 export * from './components/useButton.js';
 export * from './components/useCheckbox.js';
 export * from './components/useDateInput.js';
-export * from './components/useMaskedInput.jsx';
+export * from './components/useMaskedInput.js';
 export * from './components/useMoneyInput.js';
 export * from './components/useNumberInput.js';
 export * from './components/usePasswordInput.js';

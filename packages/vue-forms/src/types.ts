@@ -96,20 +96,35 @@ export interface FormValidatorState {
     readonly error: string | null;
 
     /**
+     * Whether to show the validation errors
+     */
+    show: boolean;
+
+    /**
      *
      */
     readonly validate: () => boolean | Promise<boolean>;
-
-    /**
-     * Reset validation state
-     */
-    readonly reset: () => void;
 }
 
 /**
  *
  */
-export type FormValidator<T> = FormValidatorAsync<T> | FormValidatorSync<T>;
+export interface FormValidatorBehaviorContext<T> {
+    /**
+     * Current field value
+     */
+    readonly value: T | null | undefined;
+
+    /**
+     * Whether the field is focused
+     */
+    readonly focused: boolean;
+
+    /**
+     * Whether to show the validation errors
+     */
+    show: boolean;
+}
 
 /**
  * Form validator
@@ -136,6 +151,11 @@ export interface FormValidatorBase<T = unknown, TAsync extends boolean = boolean
         : TAsync extends true
           ? Promise<FormValidationResult>
           : FormValidationResult | Promise<FormValidationResult>;
+
+    /**
+     * Form validator behavior
+     */
+    readonly behavior?: (ctx: FormValidatorBehaviorContext<T>) => void;
 }
 
 /**
@@ -147,3 +167,8 @@ export type FormValidatorAsync<T> = FormValidatorBase<T, true>;
  *
  */
 export type FormValidatorSync<T> = FormValidatorBase<T, false>;
+
+/**
+ *
+ */
+export type FormValidator<T> = FormValidatorAsync<T> | FormValidatorSync<T>;

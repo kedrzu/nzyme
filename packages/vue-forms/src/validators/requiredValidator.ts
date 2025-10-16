@@ -1,3 +1,4 @@
+import { watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 
 import { makeRef } from '@nzyme/vue-utils';
@@ -9,7 +10,7 @@ import * as l from './validators.loc.js';
 /**
  * Required validator options
  */
-export interface RequiredValidatorOptions {
+export interface RequiredValidatorOptions<T> {
     /**
      * Condition to enable the required rule
      * @default true
@@ -17,10 +18,10 @@ export interface RequiredValidatorOptions {
     condition?: MaybeRefOrGetter<boolean>;
 
     /**
-     * Whether to use `condition` as an only validation condition.
-     * @default false
+     * Custom validation logic.
+     * Should return true if the value is valid, false otherwise.
      */
-    custom?: boolean;
+    custom?: (value: T | null | undefined) => boolean;
 
     /**
      * Custom error message function
@@ -32,18 +33,26 @@ export interface RequiredValidatorOptions {
  * Required validator that checks if the value is not empty
  * @param options - Validator options
  */
-export function requiredValidator(options: RequiredValidatorOptions = {}) {
-    const condition = options.custom ? undefined : makeRef(options.condition);
+export function requiredValidator<T>(options: RequiredValidatorOptions<T> = {}) {
+    const condition = options.condition ? undefined : makeRef(options.condition);
+    const validate = options.custom ?? isFilled;
 
-    return defineValidator<unknown>({
+    return defineValidator<T>({
         async: false,
         validate: (value, ctx) => {
-            const isRequired = condition?.value ?? true;
-            if (!isRequired) {
+            console.warn('validate required', {
+                value,
+                condition: condition?.value,
+                isFilled: isFilled(value),
+                custom: options.custom,
+            });
+
+            const required = condition?.value ?? true;
+            if (!required) {
                 return;
             }
 
-            if (options.custom || isFilled(value)) {
+            if (validate(value)) {
                 return;
             }
 
@@ -52,6 +61,25 @@ export function requiredValidator(options: RequiredValidatorOptions = {}) {
             }
 
             return l.required(ctx.lang);
+        },
+        behavior: ctx => {
+            watch(
+                () => ctx.value,
+                () => {
+                    if (ctx.focused) {
+                        ctx.show = true;
+                    }
+                },
+            );
+
+            watch(
+                () => ctx.focused,
+                focusedValue => {
+                    if (!focusedValue) {
+                        ctx.show = true;
+                    }
+                },
+            );
         },
     });
 }

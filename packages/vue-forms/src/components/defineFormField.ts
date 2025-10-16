@@ -50,24 +50,41 @@ export type FormFieldValue<T> = T | null | undefined;
  */
 export function defineFormField<T>(type?: PropType<T | null | undefined>) {
     return {
-        props: {
-            modelValue: { type: type as PropType<T | null | undefined> },
-            field: defineProp<FormFieldModel<T>>(),
-            errors: defineProp<string | string[]>(),
-            required: Boolean,
-            disabled: Boolean,
-            readonly: Boolean,
-        },
-        emits: {
-            'update:modelValue': undefined as unknown as (value: T) => boolean,
-            focus: undefined as unknown as (event: FocusEvent) => boolean,
-            blur: undefined as unknown as (event: FocusEvent) => boolean,
-        },
+        props: formFieldProps<T>(type),
+        emits: formFieldEmits<T>(),
         create: createFormField<T>,
     };
 }
 
-function createFormField<T>(options: FormFieldOptions<T>) {
+/**
+ *
+ */
+export function formFieldProps<T>(type?: PropType<T | null | undefined>) {
+    return {
+        modelValue: { type: type as PropType<T | null | undefined> },
+        field: defineProp<FormFieldModel<T>>(),
+        errors: defineProp<string | string[]>(),
+        required: Boolean,
+        disabled: Boolean,
+        readonly: Boolean,
+    };
+}
+
+/**
+ *
+ */
+export function formFieldEmits<T>() {
+    return {
+        'update:modelValue': undefined as unknown as (value: T) => boolean,
+        focus: undefined as unknown as (event: FocusEvent) => boolean,
+        blur: undefined as unknown as (event: FocusEvent) => boolean,
+    };
+}
+
+/**
+ *
+ */
+export function createFormField<T>(options: FormFieldOptions<T>) {
     const props = options.props;
     const vm = useInstanceProxy();
     const formCtx = injectContext(FormContext, { optional: true });
@@ -80,13 +97,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
     const model = useModel(props, 'modelValue') as Ref<FormFieldValue<T>>;
     const focused = ref(false);
 
-
-
     const errors = computed(() => {
-        if (focused.value) {
-            return [];
-        }
-
         const errors = Array.isArray(props.errors) ? props.errors.slice() : props.errors ? [props.errors] : [];
 
         const field = props.field;
@@ -143,11 +154,9 @@ function createFormField<T>(options: FormFieldOptions<T>) {
         vm.$emit('update:modelValue', value);
     }
 
- 
-
     function scrollToError() {
         if (errors.value.length && vm.$el) {
-            scrollToTopElement(vm.$el as Element);
+            scrollToTopElement(vm.$el as Element, { block: 'center' });
         }
     }
 

@@ -2,26 +2,29 @@ import debounce from 'lodash.debounce';
 
 import { mapNotNull } from '@nzyme/utils';
 
-const queue: Element[] = [];
+const queue: { el: Element; options?: ScrollIntoViewOptions }[] = [];
 
 /**
  * Debounced function that finds the topmost element in the queue and scrolls to it.
  * Elements are sorted by their vertical position, and the highest (smallest top value) is selected.
  */
 const scrollToElement = debounce(() => {
-    const topElement = mapNotNull(queue, el => {
+    const top = mapNotNull(queue, ({ el, options }) => {
         if (el.getBoundingClientRect) {
             return {
                 el: el,
                 top: el.getBoundingClientRect().top,
+                options: options,
             };
         }
-    }).sort((e1, e2) => e1.top - e2.top)[0]?.el;
+    }).sort((e1, e2) => e1.top - e2.top)[0];
 
-    topElement?.scrollIntoView({
+    top?.el?.scrollIntoView({
         behavior: 'smooth',
         block: 'nearest',
+        ...top.options,
     });
+
     queue.length = 0;
 }, 100);
 
@@ -32,7 +35,7 @@ const scrollToElement = debounce(() => {
  *
  * @param el The element to scroll into view
  */
-export function scrollToTopElement(el: Element) {
-    queue.push(el);
+export function scrollToTopElement(el: Element, options?: ScrollIntoViewOptions) {
+    queue.push({ el, options });
     scrollToElement();
 }

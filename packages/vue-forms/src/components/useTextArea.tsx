@@ -6,7 +6,7 @@ import { defineProps, useProps } from '@nzyme/vue-utils';
 
 import { defineFormField } from './defineFormField.js';
 
-const TEXT_AREA_FIELD = defineFormField(String);
+const TEXT_AREA_FIELD = defineFormField<string | null | undefined>(String);
 const TEXT_AREA_PROPS = defineProps({
     ...TEXT_AREA_FIELD.props,
     label: String,

@@ -4,6 +4,9 @@ import { createEventEmitter } from '@nzyme/utils';
 import { defineContext } from '@nzyme/vue-utils';
 import { useEmitAsync } from '@nzyme/vue-utils';
 
+/**
+ * Form context
+ */
 export const FormContext = defineContext('FormContext', () => {
     const emitAsync = useEmitAsync();
 

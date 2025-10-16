@@ -6,9 +6,17 @@ minLengthNotMet:
   pl: Minimalna długość to {minLength}_znaków
   en: Minimum length is {minLength}_characters
 
+maxLengthExceeded:
+  pl: Maksymalna długość to {maxLength}_znaków
+  en: Maximum length is {maxLength}_characters
+
 minValueNotMet:
   pl: Minimalna wartość to {minValue}
   en: Minimum value is {minValue}
+
+maxValueExceeded:
+  pl: Maksymalna wartość to {maxValue}
+  en: Maximum value is {maxValue}
 
 maxDateExceeded:
   pl: Data nie może być późniejsza niż {maxDate}

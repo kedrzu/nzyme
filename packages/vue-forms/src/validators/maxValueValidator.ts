@@ -7,18 +7,18 @@ import type { FormValidationContext, FormValidationResult } from '../types.js';
 import * as l from './validators.loc.js';
 
 /**
- * Minimum value validator options
+ * Maximum value validator options
  */
-export interface MinValueValidatorOptions {
+export interface MaxValueValidatorOptions {
     /**
-     * Minimum required value
+     * Maximum allowed value
      */
-    minValue: MaybeRefOrGetter<bigint | number>;
+    maxValue: MaybeRefOrGetter<bigint | number>;
 
     /**
-     * Whether to check if the value is strictly less than the minimum value.
-     * If true, the value must be greater than minValue (exclusive).
-     * If false, the value must be greater than or equal to minValue (inclusive).
+     * Whether to check if the value is strictly greater than the maximum value.
+     * If true, the value must be less than maxValue (exclusive).
+     * If false, the value must be less than or equal to maxValue (inclusive).
      * @default false
      */
     exclusive?: MaybeRefOrGetter<boolean>;
@@ -30,11 +30,11 @@ export interface MinValueValidatorOptions {
 }
 
 /**
- * Minimum value validator that checks if the value is at least the specified minimum
+ * Maximum value validator that checks if the value is at most the specified maximum
  * @param options - Validator options
  */
-export function minValueValidator(options: MinValueValidatorOptions) {
-    const minValue = makeRef(options.minValue);
+export function maxValueValidator(options: MaxValueValidatorOptions) {
+    const maxValue = makeRef(options.maxValue);
     const exclusive = makeRef(options.exclusive);
 
     return defineValidator<bigint | number>({
@@ -44,9 +44,8 @@ export function minValueValidator(options: MinValueValidatorOptions) {
                 return;
             }
 
-            const min = minValue.value;
-            const valid = exclusive.value ? value > min : value >= min;
-
+            const max = maxValue.value;
+            const valid = exclusive.value ? value < max : value <= max;
             if (valid) {
                 return;
             }
@@ -55,8 +54,8 @@ export function minValueValidator(options: MinValueValidatorOptions) {
                 return options.message(value, ctx);
             }
 
-            return l.minValueNotMet(ctx.lang, {
-                minValue: min.toString(),
+            return l.maxValueExceeded(ctx.lang, {
+                maxValue: max.toString(),
             });
         },
     });

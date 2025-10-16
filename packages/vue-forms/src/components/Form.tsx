@@ -3,7 +3,7 @@ import { computed, defineComponent, h } from 'vue';
 import { classProp, defineSlots, provideContext } from '@nzyme/vue-utils';
 
 import { FormContext } from '../FormContext.js';
-import css from './Form.module.css';
+import css from '#css/form.module.css';
 
 export const Form = defineComponent({
     // eslint-disable-next-line vue/no-reserved-component-names

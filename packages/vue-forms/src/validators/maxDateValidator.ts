@@ -1,40 +1,64 @@
-import { createRule } from '@regle/core';
+import type { MaybeRefOrGetter } from 'vue';
 
-import { translateToString } from '@nzyme/i18n';
-import type { Language } from '@nzyme/i18n';
+import { makeRef } from '@nzyme/vue-utils';
 
+import { defineValidator } from '../defineValidator.js';
+import type { FormValidationContext, FormValidationResult } from '../types.js';
 import * as l from './validators.loc.js';
 
 /**
- * Maximum date validator that checks if the value is at most the specified maximum date
- * @param params - Parameters including maximum date and language
- * @returns Regle validation rule
+ * Maximum date validator options
  */
-export const maxDateValidator = createRule({
-    type: 'maxDate',
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    validator: (value: unknown, maxDate: Date, lang: Language) => validateMaxDate(value, maxDate),
-    message: ({ $params: [maxDate, lang] }) =>
-        translateToString(l.maxDateExceeded, lang, {
-            maxDate: maxDate.toLocaleDateString(),
-        }),
-});
+export interface MaxDateValidatorOptions {
+    /**
+     * Maximum allowed date
+     */
+    maxDate: MaybeRefOrGetter<Date>;
+
+    /**
+     * Whether to check if the value is strictly greater than the maximum date.
+     * If true, the value must be less than maxDate (exclusive).
+     * If false, the value must be less than or equal to maxDate (inclusive).
+     * @default false
+     */
+    exclusive?: MaybeRefOrGetter<boolean>;
+
+    /**
+     * Custom error message function
+     */
+    message?: (value: Date, ctx: FormValidationContext) => FormValidationResult;
+}
 
 /**
- * Validates if the value is at most the maximum date
- * @param value - The value to validate
- * @param max - The maximum allowed date
- * @returns True if valid date or empty, false otherwise
- * @__NO_SIDE_EFFECTS__
+ * Maximum date validator that checks if the value is at most the specified maximum date
+ * @param options - Validator options
  */
-function validateMaxDate(value: unknown, max: Date) {
-    if (value == null) {
-        return true;
-    }
+export function maxDateValidator(options: MaxDateValidatorOptions) {
+    const maxDate = makeRef(options.maxDate);
+    const exclusive = makeRef(options.exclusive);
 
-    if (value instanceof Date) {
-        return value <= max;
-    }
+    return defineValidator<Date>({
+        async: false,
+        validate: (value, ctx) => {
+            if (!(value instanceof Date)) {
+                return;
+            }
 
-    return false;
+            const max = maxDate.value;
+
+            const valid = exclusive.value ? value < max : value <= max;
+
+            if (valid) {
+                return;
+            }
+
+            if (options.message) {
+                return options.message(value, ctx);
+            }
+
+            return l.maxDateExceeded(ctx.lang, {
+                maxDate: max.toLocaleDateString(),
+            });
+        },
+    });
 }

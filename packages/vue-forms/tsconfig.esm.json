@@ -2,8 +2,7 @@
     "extends": "@nzyme/tsconfig/vue.json",
     "compilerOptions": {
         "outDir": "./dist",
-        "rootDir": "./src",
-        "emitDeclarationOnly": true
+        "rootDir": "./src"
     },
-    "include": ["./src/**/*.ts", "./src/**/*.tsx", "./src/**/*.json", "./src/**/*.module.scss"]
+    "include": ["./src/**/*.ts", "./src/**/*.tsx", "./src/**/*.json"]
 }

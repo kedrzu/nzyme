@@ -1,6 +1,9 @@
 import type { ComputedRef } from 'vue';
 import { computed, nextTick, shallowRef, watchEffect } from 'vue';
 
+/**
+ *
+ */
 export interface ComputedAsyncOptions {
     /**
      * Should value be evaluated lazily
@@ -15,7 +18,33 @@ export interface ComputedAsyncOptions {
     onError?: (e: unknown) => void;
 }
 
-export type ComputedAsync<T> = ComputedRef<T> & {
+/**
+ *
+ */
+export interface ComputedAsyncOptionsWithInit<T> extends ComputedAsyncOptions {
+    /**
+     * Initial value
+     */
+    initialValue: T;
+}
+
+/**
+ *
+ */
+export interface ComputedAsyncOptionsWithoutInit extends ComputedAsyncOptions {
+    /**
+     * Initial value
+     */
+    initialValue?: undefined;
+}
+
+/**
+ *
+ */
+export interface ComputedAsync<T> extends ComputedRef<T> {
+    /**
+     * Get the current promise value
+     */
     get: () => Promise<T>;
 
     /**
@@ -27,7 +56,7 @@ export type ComputedAsync<T> = ComputedRef<T> & {
      * Manually invalidate computed value
      */
     invalidate: () => void;
-};
+}
 
 /**
  * Create an asynchronous computed dependency.
@@ -35,13 +64,33 @@ export type ComputedAsync<T> = ComputedRef<T> & {
  * @param evaluation     The promise-returning callback which generates the computed value
  */
 export function computedAsync<T>(
-    evaluation: () => T | Promise<T>,
-    options: ComputedAsyncOptions = {},
-): ComputedAsync<T> {
-    const { lazy = false, onError } = options;
+    evaluation: () => Promise<T> | T,
+    options?: ComputedAsyncOptionsWithoutInit,
+): ComputedAsync<T | undefined>;
+
+/**
+ * Create an asynchronous computed dependency.
+ * Based on @see https://vueuse.org/computedAsync
+ * @param evaluation     The promise-returning callback which generates the computed value
+ */
+export function computedAsync<T>(
+    evaluation: () => Promise<T> | T,
+    options?: ComputedAsyncOptionsWithInit<T>,
+): ComputedAsync<T>;
+
+/**
+ * Create an asynchronous computed dependency.
+ * Based on @see https://vueuse.org/computedAsync
+ * @param evaluation     The promise-returning callback which generates the computed value
+ */
+export function computedAsync<T>(
+    evaluation: () => Promise<T> | T,
+    options: ComputedAsyncOptionsWithInit<T> | ComputedAsyncOptionsWithoutInit = {},
+): ComputedAsync<T | undefined> {
+    const { lazy = false, onError, initialValue } = options;
 
     const started = shallowRef(!lazy);
-    const currentRef = shallowRef<T>();
+    const currentRef = shallowRef<T | undefined>(initialValue);
     let pending: Promise<T> | undefined;
 
     watchEffect(() => {
@@ -63,7 +112,7 @@ export function computedAsync<T>(
                   return currentRef.value;
               })
             : currentRef
-    ) as ComputedAsync<T>;
+    ) as ComputedAsync<T | undefined>;
 
     valueRef.get = get;
     valueRef.invalidate = invalidate;

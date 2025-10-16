@@ -6,10 +6,12 @@ export interface Pluralization<TPlural extends string = string> {
      * Plural types
      */
     plurals: TPlural[];
+
     /**
      * Optional plural types
      */
     optionalPlurals?: TPlural[];
+
     /**
      * @param count {number} a choice index given by the input to $tc.
      * @param optionsCount {number} an overall amount of available choices

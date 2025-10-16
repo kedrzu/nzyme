@@ -2,7 +2,7 @@ import { h } from 'vue';
 import type { InputHTMLAttributes } from 'vue';
 
 import { assignProps } from '@nzyme/utils';
-import { defineProps, useProps, useInstanceProxy, useEmit } from '@nzyme/vue-utils';
+import { defineProps, useProps, useEmit } from '@nzyme/vue-utils';
 
 import { defineFormField } from './defineFormField.js';
 

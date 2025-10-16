@@ -1,32 +1,51 @@
-import type { MaybeOutput, RegleFieldStatus, RegleStatus } from '@regle/core';
 import { computed, reactive, ref, useModel } from 'vue';
-import type { ExtractPropTypes, PropType, Ref, UnwrapNestedRefs } from 'vue';
+import type { ExtractPropTypes, PropType, Ref } from 'vue';
 
 import { scrollToTopElement } from '@nzyme/dom-utils';
 import { defineProp, injectContext, onEventEmitter, useInstanceProxy } from '@nzyme/vue-utils';
 
 import { FormContext } from '../FormContext.js';
-
-export type FormField<T> = ReturnType<typeof createFormField<T>>;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type FormFieldModel<T> = RegleFieldStatus<T, any, any>;
-
-export type FormFieldDefinition<T> = ReturnType<typeof defineFormField<T>>;
-
-export interface FormFieldOptions<T> {
-    props: FormFieldProps<T>;
-}
-export type FormFieldProps<T> = ExtractPropTypes<FormFieldPropsDefinition<T>>;
-
-export type FormFieldPropsDefinition<T> = FormFieldDefinition<T>['props'];
-
-export type FormFieldValue<T> = MaybeOutput<UnwrapNestedRefs<T> | null>;
-
-type RegleField = Partial<RegleFieldStatus<unknown>> | Partial<RegleStatus<Record<string, unknown>>>;
+import type { FormField as FormFieldModel } from '../types.js';
 
 /**
- *
+ * Form field instance type
+ */
+export type FormFieldController<T> = ReturnType<typeof createFormField<T>>;
+
+/**
+ * Form field definition type
+ */
+export type FormFieldDefinition<T> = ReturnType<typeof defineFormField<T>>;
+
+/**
+ * Form field options
+ */
+export interface FormFieldOptions<T> {
+    /**
+     * Form field props
+     */
+    props: FormFieldProps<T>;
+}
+
+/**
+ * Form field props type
+ */
+export type FormFieldProps<T> = ExtractPropTypes<FormFieldPropsDefinition<T>>;
+
+/**
+ * Form field props definition type
+ */
+export type FormFieldPropsDefinition<T> = FormFieldDefinition<T>['props'];
+
+/**
+ * Form field value type
+ */
+export type FormFieldValue<T> = T | null | undefined;
+
+/**
+ * Define a form field component with props and emits
+ * @param type - Optional prop type for the field value
+ * @returns Form field definition with props, emits, and create function
  * @__NO_SIDE_EFFECTS__
  */
 export function defineFormField<T>(type?: PropType<T | null | undefined>) {
@@ -61,9 +80,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
     const model = useModel(props, 'modelValue') as Ref<FormFieldValue<T>>;
     const focused = ref(false);
 
-    const pending = computed(() => {
-        return !!(props.field as RegleField)?.$pending;
-    });
+
 
     const errors = computed(() => {
         if (focused.value) {
@@ -72,27 +89,21 @@ function createFormField<T>(options: FormFieldOptions<T>) {
 
         const errors = Array.isArray(props.errors) ? props.errors.slice() : props.errors ? [props.errors] : [];
 
-        const fieldErrors = (props.field as RegleField)?.$errors;
-
-        if (Array.isArray(fieldErrors)) {
-            for (const error of fieldErrors) {
-                errors.push(error);
-            }
-        } else if (fieldErrors?.$self) {
-            errors.push(...(fieldErrors.$self as string[]));
+        const field = props.field;
+        if (field?.errors) {
+            errors.push(...field.errors);
         }
 
         return errors;
     });
 
     const ok = computed(() => {
-        const field = props.field;
-        const value = (field as RegleField)?.$value;
+        const currentValue = getValue();
 
         return (
-            value != null &&
+            currentValue != null &&
             // should not be empty string
-            !(typeof value === 'string' && value === '') &&
+            !(typeof currentValue === 'string' && currentValue.trim() === '') &&
             !errors.value.length
         );
     });
@@ -104,10 +115,8 @@ function createFormField<T>(options: FormFieldOptions<T>) {
     return reactive({
         value,
         errors,
-        pending,
         focused,
         ok,
-        touch,
         inputAttrs: {
             onFocus,
             onBlur,
@@ -115,8 +124,8 @@ function createFormField<T>(options: FormFieldOptions<T>) {
     });
 
     function getValue(): FormFieldValue<T> {
-        const field = props.field as RegleField;
-        return (field ? field.$value : model.value) as FormFieldValue<T>;
+        const field = props.field;
+        return field ? field.value : model.value;
     }
 
     function setValue(value: FormFieldValue<T>) {
@@ -126,7 +135,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
         }
 
         if (props.field) {
-            (props.field as RegleField).$value = value;
+            props.field.value = value as T;
         }
 
         model.value = value;
@@ -134,9 +143,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
         vm.$emit('update:modelValue', value);
     }
 
-    function touch() {
-        (props.field as RegleField)?.$touch?.();
-    }
+ 
 
     function scrollToError() {
         if (errors.value.length && vm.$el) {
@@ -146,6 +153,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
 
     function onFocus(event: FocusEvent) {
         focused.value = true;
+        props.field?.focus();
 
         // TODO przywrócić mechanizm scrollowania
         // // sometimes on mobile input may be covered by a keyboard
@@ -164,6 +172,7 @@ function createFormField<T>(options: FormFieldOptions<T>) {
 
     function onBlur(event: FocusEvent) {
         focused.value = false;
+        props.field?.blur();
         vm.$emit('blur', event);
     }
 }

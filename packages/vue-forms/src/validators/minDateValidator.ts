@@ -1,39 +1,68 @@
-import { createRule } from '@regle/core';
+import type { MaybeRefOrGetter } from 'vue';
 
-import { translateToString } from '@nzyme/i18n';
-import type { Language } from '@nzyme/i18n';
+import { makeRef } from '@nzyme/vue-utils';
 
+import { defineValidator } from '../defineValidator.js';
+import type { FormValidationContext, FormValidationResult } from '../types.js';
 import * as l from './validators.loc.js';
 
 /**
- * Minimum date validator that checks if the value is at least the specified minimum date
- * @returns Regle validation rule
+ * Minimum date validator options
  */
-export const minDateValidator = createRule({
-    type: 'minDate',
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    validator: (value: unknown, minDate: Date, lang: Language) => validateMinDate(value, minDate),
-    message: ({ $params: [minDate, lang] }) =>
-        translateToString(l.minDateNotMet, lang, {
-            minDate: minDate.toLocaleDateString(),
-        }),
-});
+export interface MinDateValidatorOptions {
+    /**
+     * Minimum required date
+     */
+    minDate: MaybeRefOrGetter<Date>;
+
+    /**
+     * Whether to check if the value is strictly less than the minimum date.
+     * If true, the value must be greater than minDate (exclusive).
+     * If false, the value must be greater than or equal to minDate (inclusive).
+     * @default false
+     */
+    exclusive?: MaybeRefOrGetter<boolean>;
+
+    /**
+     * Custom error message function
+     */
+    message?: (value: Date, ctx: FormValidationContext) => FormValidationResult;
+}
 
 /**
- * Validates if the value is at least the minimum date
- * @param value - The value to validate
- * @param min - The minimum required date
- * @returns True if valid date or empty, false otherwise
- * @__NO_SIDE_EFFECTS__
+ * Minimum date validator that checks if the value is at least the specified minimum date
+ * @param options - Validator options
  */
-function validateMinDate(value: unknown, min: Date) {
-    if (value == null) {
-        return true;
-    }
+export function minDateValidator(options: MinDateValidatorOptions) {
+    const minDate = makeRef(options.minDate);
+    const exclusive = makeRef(options.exclusive);
 
-    if (value instanceof Date) {
-        return value >= min;
-    }
+    return defineValidator<Date>({
+        async: false,
+        validate: (value, ctx) => {
+            if (value == null) {
+                return;
+            }
 
-    return false;
+            if (!(value instanceof Date)) {
+                return;
+            }
+
+            const min = minDate.value;
+
+            const valid = exclusive.value ? value > min : value >= min;
+
+            if (valid) {
+                return;
+            }
+
+            if (options.message) {
+                return options.message(value, ctx);
+            }
+
+            return l.minDateNotMet(ctx.lang, {
+                minDate: min.toLocaleDateString(),
+            });
+        },
+    });
 }

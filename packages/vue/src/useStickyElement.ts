@@ -49,17 +49,6 @@ export function useStickyElement(options: StickyElementOptions) {
     const containerRef = options.container ? makeRef(options.container) : null;
     const containerElement = computed(getScrollableContainer);
 
-    watch(
-        containerElement,
-        container => {
-            console.warn('container changed', {
-                container,
-                element: element.value,
-            });
-        },
-        { immediate: true },
-    );
-
     let mutationObserver: MutationObserver | null = null;
 
     onElementScroll(containerElement, updateScroll);
@@ -201,15 +190,6 @@ export function useStickyElement(options: StickyElementOptions) {
 
                 const stickyOffset = parseInt(styles.bottom);
                 const currentOffset = containerRect.bottom - elementRect.bottom;
-
-                console.log('bottom', {
-                    containerRect,
-                    container: containerElement.value,
-                    elementRect,
-                    element: element.value,
-                    stickyOffset,
-                    currentOffset,
-                });
 
                 return currentOffset <= stickyOffset;
             }

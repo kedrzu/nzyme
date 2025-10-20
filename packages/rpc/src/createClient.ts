@@ -5,6 +5,8 @@ import { toJsonString } from '@nzyme/utils';
 
 import type { Endpoint } from './defineEndpoint.js';
 import type { Serialized } from './Serialized.js';
+import { RpcError } from './types/RpcError.js';
+import type { RpcErrorData } from './types/RpcError.js';
 
 /**
  *
@@ -82,6 +84,11 @@ export function createClient<E extends Endpoint, O = void>(clientOptions: Create
         });
 
         if (!response.ok) {
+            if (response.headers.get('content-type')?.includes('application/json')) {
+                const data = (await response.json()) as RpcErrorData;
+                throw new RpcError(data);
+            }
+
             const message = await response.text();
             throw new FetchError(response, message);
         }

@@ -1,9 +1,11 @@
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 
 import { isBrowser } from '@nzyme/dom-utils';
 import type { ElementOrVue } from '@nzyme/vue-utils';
 import { makeRef, onElementScroll, onWindowResize, unwrapElement, useElement } from '@nzyme/vue-utils';
+import { useIntervalFn } from '@vueuse/core';
+import { waitFor } from '@nzyme/utils';
 
 /**
  * Position of the sticky element.
@@ -47,14 +49,30 @@ export function useStickyElement(options: StickyElementOptions) {
     const containerRef = options.container ? makeRef(options.container) : null;
     const containerElement = computed(getScrollableContainer);
 
+    watch(
+        containerElement,
+        container => {
+            console.warn('container changed', {
+                container,
+                element: element.value,
+            });
+        },
+        { immediate: true },
+    );
+
     let mutationObserver: MutationObserver | null = null;
 
     onElementScroll(containerElement, updateScroll);
     onWindowResize(updateScroll);
     // for the first time
-    onMounted(updateScroll);
+    onMounted(async () => {
+        updateScroll();
+        await waitFor(300);
+        updateScroll();
+    });
+    useIntervalFn(updateScroll, 1000);
     // container may change due to some logic races
-    watch(containerElement, updateScroll);
+    watch(containerElement, () => nextTick(updateScroll));
     // watch for changes in container element and setup mutation observer
     watch(containerElement, setupMutationObserver, { immediate: true });
     onBeforeUnmount(cleanupMutationObserver);
@@ -70,7 +88,7 @@ export function useStickyElement(options: StickyElementOptions) {
         }
 
         mutationObserver = new MutationObserver(() => {
-            updateScroll();
+            void nextTick(updateScroll);
         });
 
         mutationObserver.observe(container, {
@@ -111,13 +129,13 @@ export function useStickyElement(options: StickyElementOptions) {
         el = el.parentElement;
 
         while (el) {
-            if (isElementScrollable(el)) {
-                return el;
-            }
-
             // Check if we've reached the document element
             if (el === document.documentElement) {
                 break;
+            }
+
+            if (isElementScrollable(el)) {
+                return el;
             }
 
             el = el.parentElement;
@@ -125,7 +143,7 @@ export function useStickyElement(options: StickyElementOptions) {
 
         // Check if document.documentElement is scrollable
         if (isElementScrollable(document.documentElement)) {
-            return document.documentElement;
+            return window;
         }
 
         // Check if document.body is scrollable
@@ -183,6 +201,15 @@ export function useStickyElement(options: StickyElementOptions) {
 
                 const stickyOffset = parseInt(styles.bottom);
                 const currentOffset = containerRect.bottom - elementRect.bottom;
+
+                console.log('bottom', {
+                    containerRect,
+                    container: containerElement.value,
+                    elementRect,
+                    element: element.value,
+                    stickyOffset,
+                    currentOffset,
+                });
 
                 return currentOffset <= stickyOffset;
             }

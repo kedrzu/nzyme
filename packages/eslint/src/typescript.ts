@@ -70,6 +70,7 @@ export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
             ],
             // often we want a custom prop order for better readability
             'perfectionist/sort-interfaces': ['warn', { type: 'unsorted' }],
+            'perfectionist/sort-object-types': ['warn', { type: 'unsorted' }],
             // this is super risky, as key order is preserved in js
             'perfectionist/sort-objects': 'off',
             'perfectionist/sort-modules': ['warn', { type: 'unsorted' }],

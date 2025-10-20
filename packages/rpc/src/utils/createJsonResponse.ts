@@ -8,11 +8,11 @@ import { CACHE_CONTROL_DISABLED } from './cacheControl.js';
 /**
  *
  */
-export type JsonResponse = {
+export type JsonResponse<T> = {
     /**
      *
      */
-    body: unknown;
+    body: T;
     /**
      *
      */
@@ -30,7 +30,7 @@ export type JsonResponse = {
 /**
  *
  */
-export function createJsonResponse(response: JsonResponse): HttpResponse {
+export function createJsonResponse<T = unknown>(response: JsonResponse<T>): HttpResponse {
     const body = toJsonString(response.body);
 
     const headers = {

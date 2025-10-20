@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import connect from 'connect';
+import { install } from 'source-map-support';
 
 import type { DevServerMiddlewareOptions } from './devServerMiddleware.js';
 import { devServerMiddleware } from './devServerMiddleware.js';
@@ -18,6 +19,8 @@ export type DevServerOptions = DevServerMiddlewareOptions & {
  * Starts the dev server with auto-reload.
  */
 export function devServerStart(options: DevServerOptions) {
+    install();
+
     const server = connect();
     const { port: _, ...rest } = options;
     const { middleware, restart } = devServerMiddleware(rest);

@@ -40,13 +40,6 @@ export function requiredValidator<T>(options: RequiredValidatorOptions<T> = {}) 
     return defineValidator<T>({
         async: false,
         validate: (value, ctx) => {
-            console.warn('validate required', {
-                value,
-                condition: condition?.value,
-                isFilled: isFilled(value),
-                custom: options.custom,
-            });
-
             const required = condition?.value ?? true;
             if (!required) {
                 return;

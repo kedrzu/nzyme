@@ -7,6 +7,7 @@ import type { Endpoint } from './defineEndpoint.js';
 import { HttpContextProvider } from './services/HttpContextProvider.js';
 import type { HttpRequest } from './types/HttpRequest.js';
 import type { HttpResponse } from './types/HttpResponse.js';
+import type { RpcErrorData } from './types/RpcError.js';
 import { createJsonResponse } from './utils/createJsonResponse.js';
 
 /**
@@ -129,7 +130,7 @@ export function createRouter(options: RouterOptions): Router {
             });
         } catch (error) {
             if (error instanceof HttpError) {
-                return createJsonResponse({
+                return createJsonResponse<RpcErrorData>({
                     body: {
                         error: error.name,
                         stack: stackTraces ? error.stack : undefined,
@@ -142,7 +143,7 @@ export function createRouter(options: RouterOptions): Router {
             logger.error('Unhandled error', { error });
 
             if (error instanceof Error) {
-                return createJsonResponse({
+                return createJsonResponse<RpcErrorData>({
                     body: {
                         error: error.name,
                         message: error.message,
@@ -152,7 +153,7 @@ export function createRouter(options: RouterOptions): Router {
                 });
             }
 
-            return createJsonResponse({
+            return createJsonResponse<RpcErrorData>({
                 body: {
                     error: 'UnknownError',
                     message: 'Unknown error',
@@ -173,6 +174,7 @@ export function createRouter(options: RouterOptions): Router {
         return input;
     }
 }
+
 /**
  *
  */

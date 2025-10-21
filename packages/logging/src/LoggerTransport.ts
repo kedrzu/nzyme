@@ -1,5 +1,4 @@
 import { defineInterface, defineService } from '@nzyme/ioc';
-import { noop } from '@nzyme/utils';
 
 import type { LoggerObject } from './Logger.js';
 import type { LoggerLevel } from './LoggerLevel.js';
@@ -11,26 +10,27 @@ export interface LoggerTransport {
     /**
      *
      */
-    log(logger: string | undefined, level: LoggerLevel, message: string, obj?: LoggerObject): void;
-    /**
-     *
-     */
-    ctx(logger: string | undefined, name: string, ctx: object | null | undefined): void;
+    (logger: string | undefined, level: LoggerLevel, message: string, obj?: LoggerObject | null): void;
 }
 
-const consoleLoggerTransport: LoggerTransport = {
-    log: (logger, level, message, obj) => {
-        if (logger) {
-            message = `[${logger}] ${message}`;
-        }
+/**
+ * Log a message to the console.
+ */
+export const consoleLog: LoggerTransport = (
+    logger: string | undefined,
+    level: LoggerLevel,
+    message: string,
+    obj?: LoggerObject | null,
+) => {
+    if (logger) {
+        message = `[${logger}] ${message}`;
+    }
 
-        if (obj) {
-            console[level](message, obj);
-        } else {
-            console[level](message);
-        }
-    },
-    ctx: noop,
+    if (obj) {
+        console[level](message, obj);
+    } else {
+        console[level](message);
+    }
 };
 
 /**
@@ -38,7 +38,7 @@ const consoleLoggerTransport: LoggerTransport = {
  */
 export const LoggerTransport = defineInterface<LoggerTransport>({
     name: 'LoggerTransport',
-    default: () => consoleLoggerTransport,
+    default: () => consoleLog,
 });
 
 /**
@@ -47,5 +47,5 @@ export const LoggerTransport = defineInterface<LoggerTransport>({
 export const ConsoleLoggerTransport = defineService({
     name: 'ConsoleLoggerTransport',
     implements: LoggerTransport,
-    setup: () => consoleLoggerTransport,
+    setup: () => consoleLog,
 });

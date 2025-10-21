@@ -54,7 +54,7 @@ export function createMiddleware(options: CreateMiddlewareOptions): RequestListe
         await beforeRequest?.(req, res);
 
         const url = parsePath(req.url || '/');
-        const response = await router({
+        const response = await router.execute({
             method: (req.method || 'GET') as HttpMethod,
             path: url.pathname,
             query: parseQuery(url.search),

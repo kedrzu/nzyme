@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 
 import { defineService } from '@nzyme/ioc';
-import { noop } from '@nzyme/utils';
 
 import { LoggerTransport } from './LoggerTransport.js';
 
@@ -27,35 +26,32 @@ export const PrettyLoggerTransport = defineService({
     name: 'PrettyLoggerTransport',
     implements: LoggerTransport,
     setup: () => {
-        return {
-            log: (logger, level, message, obj) => {
-                const prefix = getPrefix(logger);
-                const lines = message.split('\n');
-                if (lines.length > 1) {
-                    message = '';
+        return (logger, level, message, obj) => {
+            const prefix = getPrefix(logger);
+            const lines = message.split('\n');
+            if (lines.length > 1) {
+                message = '';
 
-                    for (const line of lines) {
-                        if (message.length > 0) {
-                            message += '\n';
-                        }
-
-                        message += `${prefix}${line}`;
+                for (const line of lines) {
+                    if (message.length > 0) {
+                        message += '\n';
                     }
 
-                    if (obj) {
-                        console[level](message, obj);
-                    }
-                } else {
-                    message = `${prefix}${message}`;
+                    message += `${prefix}${line}`;
                 }
 
                 if (obj) {
                     console[level](message, obj);
-                } else {
-                    console[level](message);
                 }
-            },
-            ctx: noop,
+            } else {
+                message = `${prefix}${message}`;
+            }
+
+            if (obj) {
+                console[level](message, obj);
+            } else {
+                console[level](message);
+            }
         };
     },
 });

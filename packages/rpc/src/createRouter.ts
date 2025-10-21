@@ -1,7 +1,8 @@
 import type { HttpResponseHeaders } from '@nzyme/fetch-utils';
 import { HttpError } from '@nzyme/fetch-utils';
 import type { Container } from '@nzyme/ioc';
-import { Logger } from '@nzyme/logging';
+import { createEventEmitter } from '@nzyme/utils';
+import type { EventEmitter } from '@nzyme/utils';
 
 import type { Endpoint } from './defineEndpoint.js';
 import { HttpContextProvider } from './services/HttpContextProvider.js';
@@ -22,7 +23,15 @@ export interface Router {
      * @param request - The HTTP request to process
      * @returns A promise that resolves to an HTTP response
      */
-    (request: HttpRequest): Promise<HttpResponse>;
+    execute(request: HttpRequest): Promise<HttpResponse>;
+
+    /**
+     * An event emitter for errors.
+     * @event onError
+     * @type {EventEmitter<unknown>}
+     * @param {unknown} error - The error that occurred
+     */
+    onError: EventEmitter<unknown>;
 }
 
 /**
@@ -56,7 +65,7 @@ export interface RouterOptions {
  */
 export function createRouter(options: RouterOptions): Router {
     const endpoints = new Map<string, Endpoint>();
-    const logger = options.container.resolve(Logger);
+    const onError = createEventEmitter<unknown>();
     const httpContextProvider = options.container.resolve(HttpContextProvider);
     const basePath = options.basePath ?? '/';
     const container = options.container;
@@ -66,11 +75,12 @@ export function createRouter(options: RouterOptions): Router {
         endpoints.set(endpoint.name, endpoint);
     }
 
-    return execute;
+    return {
+        execute,
+        onError: onError.event,
+    };
 
     async function execute(request: HttpRequest): Promise<HttpResponse> {
-        logger.context('request', request);
-
         try {
             const endpointName = request.path.startsWith(basePath) ? request.path.slice(basePath.length) : request.path;
             const endpoint = endpoints.get(endpointName);
@@ -87,9 +97,6 @@ export function createRouter(options: RouterOptions): Router {
             }
 
             const input = await parseInput(endpoint, request);
-            if (input) {
-                logger.context('input', input);
-            }
 
             if (input?.issues) {
                 return createJsonResponse({
@@ -140,7 +147,7 @@ export function createRouter(options: RouterOptions): Router {
                 });
             }
 
-            logger.error('Unhandled error', { error });
+            onError.emit(error);
 
             if (error instanceof Error) {
                 return createJsonResponse<RpcErrorData>({

@@ -30,10 +30,6 @@ export interface Logger {
      * Log a trace message.
      */
     trace: LoggerLogFunction;
-    /**
-     * Log context.
-     */
-    context: LoggerContextFunction;
 }
 
 /**
@@ -77,12 +73,11 @@ export const Logger = defineService({
     setup: ({ name, transport }) => {
         const logger: Logger = {
             name,
-            error: (msg, obj) => transport.log(name, 'error', msg, obj),
-            warn: (msg, obj) => transport.log(name, 'warn', msg, obj),
-            info: (msg, obj) => transport.log(name, 'info', msg, obj),
-            debug: (msg, obj) => transport.log(name, 'debug', msg, obj),
-            trace: (msg, obj) => transport.log(name, 'trace', msg, obj),
-            context: (ctxName, ctx) => transport.ctx(name, ctxName, ctx),
+            error: (msg, obj) => transport(name, 'error', msg, obj),
+            warn: (msg, obj) => transport(name, 'warn', msg, obj),
+            info: (msg, obj) => transport(name, 'info', msg, obj),
+            debug: (msg, obj) => transport(name, 'debug', msg, obj),
+            trace: (msg, obj) => transport(name, 'trace', msg, obj),
         };
 
         return logger;

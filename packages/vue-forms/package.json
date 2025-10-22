@@ -38,8 +38,8 @@
         "@nzyme/validation": "^0.14.0",
         "@nzyme/vue-i18n": "^0.14.0",
         "@nzyme/vue-utils": "^0.14.0",
-        "@vueuse/core": "^13.9.0",
-        "libphonenumber-js": "^1.12.23",
+        "@vueuse/core": "^14.0.0",
+        "libphonenumber-js": "^1.12.24",
         "postal-codes-js": "^2.5.2",
         "vue": "^3.5.22",
         "vue-imask": "^7.6.1"

@@ -49,6 +49,7 @@ export interface PulumiCommandsOptions {
 interface ResolveStacksOptions extends PulumiCommandsOptions {
     stackNames: string[];
     recursive?: boolean;
+    skip?: string[];
 }
 
 /**
@@ -249,12 +250,16 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
             description: 'Enable debug mode',
         });
 
-        skipBuild = Option.Boolean('--skip-build,-s', {
+        skipBuild = Option.Boolean('--skip-build,-sb', {
             description: 'Skip the build step',
         });
 
         cancel = Option.Boolean('--cancel,-c', {
             description: 'Cancel previous deployment before deploying each stack',
+        });
+
+        skip = Option.Array('--skip,-s', [], {
+            description: 'Skip specific stacks from being deployed (can be used multiple times)',
         });
 
         override async run() {
@@ -264,6 +269,7 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                 ...options,
                 stackNames: this.stacks,
                 recursive: this.recursive,
+                skip: this.skip,
             });
 
             if (stacks.length === 0) {
@@ -373,6 +379,10 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
 
         stacks = Option.Rest();
 
+        skip = Option.Array('--skip,-s', [], {
+            description: 'Skip specific stacks from being canceled (can be used multiple times)',
+        });
+
         override async run() {
             await options.beforeEach?.();
 
@@ -381,6 +391,7 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
             const stacks = resolveStacks({
                 ...options,
                 stackNames: this.stacks,
+                skip: this.skip,
             });
 
             if (stacks.length === 0) {
@@ -426,8 +437,12 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
             description: 'The verbosity of the logs',
         });
 
-        skipBuild = Option.Boolean('--skip-build,-s', {
+        skipBuild = Option.Boolean('--skip-build,-sb', {
             description: 'Skip the build step',
+        });
+
+        skip = Option.Array('--skip,-s', [], {
+            description: 'Skip specific stacks from being previewed (can be used multiple times)',
         });
 
         override async run() {
@@ -438,6 +453,7 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
             const stacks = resolveStacks({
                 ...options,
                 stackNames: this.stacks,
+                skip: this.skip,
             });
 
             if (stacks.length === 0) {
@@ -473,6 +489,10 @@ function defineRefreshCommand(options: PulumiCommandsOptions) {
 
         stacks = Option.Rest();
 
+        skip = Option.Array('--skip,-s', [], {
+            description: 'Skip specific stacks from being refreshed (can be used multiple times)',
+        });
+
         override async run() {
             await options.beforeEach?.();
 
@@ -481,6 +501,7 @@ function defineRefreshCommand(options: PulumiCommandsOptions) {
             const stacks = resolveStacks({
                 ...options,
                 stackNames: this.stacks,
+                skip: this.skip,
             });
 
             if (stacks.length === 0) {
@@ -539,6 +560,10 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
             description: 'Cancel previous deployment before destroying each stack',
         });
 
+        skip = Option.Array('--skip,-s', [], {
+            description: 'Skip specific stacks from being destroyed (can be used multiple times)',
+        });
+
         stacks = Option.Rest();
 
         override async run() {
@@ -555,7 +580,9 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                     throw new UsageError('When using --force, you must specify stacks to destroy.');
                 }
 
-                for (const stack of this.stacks) {
+                const stacksToForceDestroy = this.stacks.filter(stack => !this.skip.includes(stack));
+
+                for (const stack of stacksToForceDestroy) {
                     const stackDefinition = defineStack({
                         name: stack,
                         resources() {
@@ -599,6 +626,7 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
             const stacks = resolveStacks({
                 ...options,
                 stackNames: this.stacks,
+                skip: this.skip,
             });
 
             if (stacks.length === 0) {
@@ -749,7 +777,13 @@ function resolveStacks(options: ResolveStacksOptions) {
         }
     }
 
-    return sortByDependency([...stacksSet]);
+    const stacks = sortByDependency([...stacksSet]);
+
+    if (options.skip && options.skip.length > 0) {
+        return stacks.filter(stack => !options.skip!.includes(stack.stackName));
+    }
+
+    return stacks;
 }
 
 function filterStacks(options: ResolveStacksOptions): Set<StackDefinition> {

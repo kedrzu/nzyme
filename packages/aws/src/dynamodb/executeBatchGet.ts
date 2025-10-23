@@ -1,4 +1,5 @@
-import { BatchGetItemCommand, type DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { BatchGetItemCommand } from '@aws-sdk/client-dynamodb';
+import type { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 
 import type { DynamoItem } from './types.js';
 

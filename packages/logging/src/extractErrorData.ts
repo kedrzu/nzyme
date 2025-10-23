@@ -8,6 +8,9 @@ import { ApplicationError } from './ApplicationError.js';
  */
 export function extractErrorData(error: unknown) {
     if (error instanceof ApplicationError) {
-        return error.data;
+        const { logger, ...data } = error.data;
+        data.logger = logger?.name;
+
+        return data;
     }
 }

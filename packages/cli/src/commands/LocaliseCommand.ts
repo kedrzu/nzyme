@@ -2,12 +2,12 @@ import * as path from 'path';
 
 import chalk from 'chalk';
 import { watch } from 'chokidar';
+import type { FSWatcher } from 'chokidar';
 import { Option } from 'clipanion';
 import glob from 'fast-glob';
 import * as fsExtra from 'fs-extra';
 
 import { compileTranslationFile } from '@nzyme/i18n-compiler';
-import { waitForever } from '@nzyme/utils';
 
 import { Command } from '../Command.js';
 
@@ -42,7 +42,7 @@ export class LocaliseCommand extends Command {
         const results = await Promise.all(files.map(file => this.compileFile(file)));
 
         if (this.watch) {
-            await this.startWatcher();
+            this.startWatcher();
         }
 
         if (results.some(result => !result)) {
@@ -53,11 +53,18 @@ export class LocaliseCommand extends Command {
         return 0;
     }
 
-    private async startWatcher() {
+    private startWatcher() {
         const watcher = watch('.', {
             cwd: this.cwd,
-            ignored: ['node_modules', 'dist'],
+            ignored: path => {
+                if (path.includes('/node_modules/')) {
+                    return true;
+                }
+
+                return !I18N_REGEX.test(path);
+            },
             ignoreInitial: true,
+            persistent: true,
         });
 
         this.logger.info('Watching for changes...');
@@ -65,8 +72,6 @@ export class LocaliseCommand extends Command {
         watcher.on('add', file => void this.onAddFile(file));
         watcher.on('change', file => void this.onAddFile(file));
         watcher.on('unlink', file => void this.onDeleteFile(file));
-
-        await waitForever();
     }
 
     private async onAddFile(file: string) {

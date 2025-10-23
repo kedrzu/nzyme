@@ -59,15 +59,22 @@ export class MonorepoCommand extends Command {
         await this.processProject(true);
 
         if (this.watch) {
-            await this.startWatcher();
+            this.startWatcher();
         }
     }
 
-    private async startWatcher() {
+    private startWatcher() {
         const watcher = watch('.', {
             cwd: this.cwd,
-            ignored: ['node_modules', 'dist'],
+            ignored: path => {
+                if (path.includes('/node_modules/')) {
+                    return true;
+                }
+
+                return !PACKAGE_JSON_REGEX.test(path);
+            },
             ignoreInitial: true,
+            persistent: true,
         });
 
         this.logger.info('Watching for changes...');
@@ -79,8 +86,6 @@ export class MonorepoCommand extends Command {
         watcher.on('add', file => void onFileChange(file));
         watcher.on('change', file => void onFileChange(file));
         watcher.on('unlink', file => void onFileChange(file));
-
-        await waitForever();
     }
 
     private async onFileChange(file: string) {
@@ -90,7 +95,6 @@ export class MonorepoCommand extends Command {
 
         // Invalidate cache for the package whose package.json was changed
         await this.invalidateCacheForChangedPackage(file);
-
         await this.processProject(false);
     }
 

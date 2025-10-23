@@ -3,12 +3,12 @@ import * as path from 'path';
 
 import chalk from 'chalk';
 import { watch } from 'chokidar';
+import type { FSWatcher } from 'chokidar';
 import glob from 'fast-glob';
 import * as fsExtra from 'fs-extra';
 
 import { Option } from '@nzyme/cli';
 import { Command } from '@nzyme/cli';
-import { waitForever } from '@nzyme/utils';
 
 import { generateSchemaFromFile } from '../../generateSchema.js';
 import { getSchemaOutputPath } from '../../output/generateSchemaFile.js';
@@ -51,7 +51,7 @@ export class ZchemaCommand extends Command {
         const results = await Promise.all(files.map(file => this.generateSchemaFile(file)));
 
         if (this.watch) {
-            await this.startWatcher();
+            this.startWatcher();
         }
 
         const failedCount = results.filter(result => !result).length;
@@ -64,11 +64,18 @@ export class ZchemaCommand extends Command {
         return 0;
     }
 
-    private async startWatcher() {
+    private startWatcher() {
         const watcher = watch('.', {
             cwd: this.cwd,
-            ignored: ['node_modules', 'dist', 'build'],
+            ignored: path => {
+                if (path.includes('/node_modules/')) {
+                    return true;
+                }
+
+                return !TYPE_REGEX.test(path);
+            },
             ignoreInitial: true,
+            persistent: true,
         });
 
         this.logger.info('👀 Watching for changes...');
@@ -76,8 +83,6 @@ export class ZchemaCommand extends Command {
         watcher.on('add', file => void this.onAddFile(file));
         watcher.on('change', file => void this.onAddFile(file));
         watcher.on('unlink', file => void this.onDeleteFile(file));
-
-        await waitForever();
     }
 
     private async onAddFile(file: string) {

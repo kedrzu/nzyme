@@ -34,7 +34,7 @@ export interface RequiredValidatorOptions<T> {
  * @param options - Validator options
  */
 export function requiredValidator<T>(options: RequiredValidatorOptions<T> = {}) {
-    const condition = options.condition ? undefined : makeRef(options.condition);
+    const condition = options.condition ? makeRef(options.condition) : undefined;
     const validate = options.custom ?? isFilled;
 
     return defineValidator<T>({

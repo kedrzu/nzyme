@@ -66,12 +66,17 @@ export class MonorepoCommand extends Command {
     private startWatcher() {
         const watcher = watch('.', {
             cwd: this.cwd,
-            ignored: path => {
-                if (path.includes('/node_modules/')) {
+            ignored: file => {
+                if (file.includes('/node_modules/')) {
                     return true;
                 }
 
-                return !PACKAGE_JSON_REGEX.test(path);
+                // Do not ignore directories
+                if (!path.extname(file)) {
+                    return false;
+                }
+
+                return !PACKAGE_JSON_REGEX.test(file);
             },
             ignoreInitial: true,
             persistent: true,

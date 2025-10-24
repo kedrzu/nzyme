@@ -55,12 +55,17 @@ export class LocaliseCommand extends Command {
     private startWatcher() {
         const watcher = watch('.', {
             cwd: this.cwd,
-            ignored: path => {
-                if (path.includes('/node_modules/')) {
+            ignored: file => {
+                if (file.includes('/node_modules/')) {
                     return true;
                 }
 
-                return !I18N_REGEX.test(path);
+                // Do not ignore directories
+                if (!path.extname(file)) {
+                    return false;
+                }
+
+                return !I18N_REGEX.test(file);
             },
             ignoreInitial: true,
             persistent: true,

@@ -86,7 +86,7 @@ export function createClient<E extends Endpoint, O = void>(clientOptions: Create
         if (!response.ok) {
             if (response.headers.get('content-type')?.includes('application/json')) {
                 const data = (await response.json()) as RpcErrorData;
-                throw new RpcError(data);
+                throw new RpcError(response, data);
             }
 
             const message = await response.text();

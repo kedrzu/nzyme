@@ -2,7 +2,6 @@ import * as path from 'path';
 
 import chalk from 'chalk';
 import { watch } from 'chokidar';
-import type { FSWatcher } from 'chokidar';
 import { Option } from 'clipanion';
 import glob from 'fast-glob';
 import * as fsExtra from 'fs-extra';

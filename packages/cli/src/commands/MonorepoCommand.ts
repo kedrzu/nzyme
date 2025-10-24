@@ -13,7 +13,7 @@ import type { TsConfigJson } from 'type-fest';
 import type { Package } from '@nzyme/project-utils';
 import { getPackages, getProjectRoot } from '@nzyme/project-utils';
 import { saveFile } from '@nzyme/project-utils';
-import { asArray, debounceAsyncFunction, waitForever } from '@nzyme/utils';
+import { asArray, debounceAsyncFunction } from '@nzyme/utils';
 
 import { Command } from '../Command.js';
 import type { NzymePackageConfig } from '../NzymePackageConfig.js';

@@ -68,13 +68,16 @@ export async function handleReadyPreparation(
 
     // Step 2: Handle uncommitted changes
     if (statusInfo.hasUncommittedChanges) {
+        const hasStagedFiles = statusInfo.changes.staged > 0;
+        const hasUnstagedFiles = statusInfo.totalChanges > statusInfo.changes.staged;
+
         logger.info(
             `⚠️  You have ${chalk.yellow(statusInfo.totalChanges.toString())} uncommitted change${
                 statusInfo.totalChanges === 1 ? '' : 's'
             }: ${chalk.yellow(statusInfo.changeDescription)}`,
         );
 
-        const { shouldCommit } = await enquirer.prompt<{ shouldCommit: 'yes' | 'no' }>({
+        const { shouldCommit } = await enquirer.prompt<{ shouldCommit: 'no' | 'yes' }>({
             type: 'select',
             name: 'shouldCommit',
             message: `Do you want to commit these ${statusInfo.totalChanges} change${
@@ -93,9 +96,13 @@ export async function handleReadyPreparation(
         });
 
         if (shouldCommit === 'yes') {
-            // Add all changes to staging
-            logger.info(`📦 Adding all changes to staging...`);
-            await git.add('.');
+            // Add unstaged changes to staging if there are any
+            if (hasUnstagedFiles) {
+                logger.info(`📦 Adding all changes to staging...`);
+                await git.add('.');
+            } else if (hasStagedFiles) {
+                logger.info(`📦 Using already staged files...`);
+            }
 
             // Prompt for commit message
             const { commitMessage } = await enquirer.prompt<{ commitMessage: string }>({

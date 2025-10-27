@@ -27,6 +27,7 @@ export const Form = defineComponent({
                 class={pending.value && props.pendingClass}
                 novalidate
                 onSubmit={onSubmit}
+                inert={pending.value}
             >
                 {/* This fake input allows to natively handle submit-on-enter */}
                 <input

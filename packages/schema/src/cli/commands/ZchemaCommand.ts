@@ -6,7 +6,7 @@ import { watch } from 'chokidar';
 import glob from 'fast-glob';
 import * as fsExtra from 'fs-extra';
 
-import { Option } from '@nzyme/cli';
+import { isFileIgnored, Option } from '@nzyme/cli';
 import { Command } from '@nzyme/cli';
 
 import { generateSchemaFromFile } from '../../generateSchema.js';
@@ -67,16 +67,12 @@ export class ZchemaCommand extends Command {
         const watcher = watch('.', {
             cwd: this.cwd,
             ignored: file => {
-                if (file.includes('/node_modules/')) {
-                    return true;
+                const ignored = isFileIgnored(file);
+                if (ignored === undefined) {
+                    return !TYPE_REGEX.test(file);
                 }
 
-                // Do not ignore directories
-                if (!path.extname(file)) {
-                    return false;
-                }
-
-                return !TYPE_REGEX.test(file);
+                return ignored;
             },
             ignoreInitial: true,
             persistent: true,

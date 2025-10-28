@@ -9,6 +9,7 @@ import * as fsExtra from 'fs-extra';
 import { compileTranslationFile } from '@nzyme/i18n-compiler';
 
 import { Command } from '../Command.js';
+import { isFileIgnored } from '../utils/isFileIgnored.js';
 
 const I18N_REGEX = /\.loc\.ya?ml$/;
 
@@ -56,16 +57,12 @@ export class LocaliseCommand extends Command {
         const watcher = watch('.', {
             cwd: this.cwd,
             ignored: file => {
-                if (file.includes('/node_modules/')) {
-                    return true;
+                const ignored = isFileIgnored(file);
+                if (ignored === undefined) {
+                    return !I18N_REGEX.test(file);
                 }
 
-                // Do not ignore directories
-                if (!path.extname(file)) {
-                    return false;
-                }
-
-                return !I18N_REGEX.test(file);
+                return ignored;
             },
             ignoreInitial: true,
             persistent: true,

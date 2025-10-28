@@ -17,6 +17,7 @@ import { asArray, debounceAsyncFunction } from '@nzyme/utils';
 
 import { Command } from '../Command.js';
 import type { NzymePackageConfig } from '../NzymePackageConfig.js';
+import { isFileIgnored } from '../utils/isFileIgnored.js';
 
 interface TsConfig {
     path: string;
@@ -67,16 +68,12 @@ export class MonorepoCommand extends Command {
         const watcher = watch('.', {
             cwd: this.cwd,
             ignored: file => {
-                if (file.includes('/node_modules/')) {
-                    return true;
+                const ignored = isFileIgnored(file);
+                if (ignored === undefined) {
+                    return !PACKAGE_JSON_REGEX.test(file);
                 }
 
-                // Do not ignore directories
-                if (!path.extname(file)) {
-                    return false;
-                }
-
-                return !PACKAGE_JSON_REGEX.test(file);
+                return ignored;
             },
             ignoreInitial: true,
             persistent: true,

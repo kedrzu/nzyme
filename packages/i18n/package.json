@@ -22,12 +22,13 @@
         "dist"
     ],
     "scripts": {
-        "build:cjs": "tsc --build ./tsconfig.cjs.json",
         "build:esm": "tsc --build ./tsconfig.esm.json",
         "lint": "eslint . --fix --cache"
     },
     "dependencies": {
-        "@nzyme/ioc": "^0.14.0"
+        "@nzyme/i18n-core": "^0.14.0",
+        "@nzyme/ioc": "^0.14.0",
+        "@nzyme/utils": "^0.14.0"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",

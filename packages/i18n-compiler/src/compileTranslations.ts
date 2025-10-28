@@ -110,8 +110,8 @@ export function compileTranslations(yaml: string): TranslationResult {
 
         const importStatement =
             imports.length > 0
-                ? `import { ${imports.join(', ')}, type ${typeImports.join(', type ')} } from '@nzyme/i18n';`
-                : `import type { ${typeImports.join(', ')} } from '@nzyme/i18n';`;
+                ? `import { ${imports.join(', ')}, type ${typeImports.join(', type ')} } from '@nzyme/i18n-core';`
+                : `import type { ${typeImports.join(', ')} } from '@nzyme/i18n-core';`;
 
         result.code = `${importStatement}\n\n${result.code}\n`;
     }

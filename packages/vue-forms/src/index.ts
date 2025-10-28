@@ -9,6 +9,7 @@ export * from './components/useMoneyInput.js';
 export * from './components/useNumberInput.js';
 export * from './components/usePasswordInput.js';
 export * from './components/usePhoneInput.js';
+export * from './components/usePostCodeInput.js';
 export * from './components/useRadio.js';
 export * from './components/useSelectInput.js';
 export * from './components/useTextArea.js';

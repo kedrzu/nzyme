@@ -41,6 +41,7 @@ export * from './useDataSource.js';
 export * from './useElement.js';
 export * from './useElementClass.js';
 export * from './useEmit.js';
+export * from './useEmitAsProps.js';
 export * from './useEmitAsync.js';
 export * from './useHistory.js';
 export * from './useInstance.js';

@@ -1,43 +1,54 @@
 invalidEmail:
   pl: Adres e-mail jest nieprawidłowy
   en: Email address is invalid
+  de[auto]: E-Mail-Adresse ist ungültig
 
 minLengthNotMet:
   pl: Minimalna długość to {minLength}_znaków
   en: Minimum length is {minLength}_characters
+  de[auto]: Mindestlänge beträgt {minLength}_Zeichen
 
 maxLengthExceeded:
   pl: Maksymalna długość to {maxLength}_znaków
   en: Maximum length is {maxLength}_characters
+  de[auto]: Maximale Länge beträgt {maxLength}_Zeichen
 
 minValueNotMet:
   pl: Minimalna wartość to {minValue}
   en: Minimum value is {minValue}
+  de[auto]: Mindestwert beträgt {minValue}
 
 maxValueExceeded:
   pl: Maksymalna wartość to {maxValue}
   en: Maximum value is {maxValue}
+  de[auto]: Maximalwert beträgt {maxValue}
 
 maxDateExceeded:
   pl: Data nie może być późniejsza niż {maxDate}
   en: Date cannot be later than {maxDate}
+  de[auto]: Datum darf nicht später als {maxDate} sein
 
 minDateNotMet:
   pl: Data nie może być wcześniejsza niż {minDate}
   en: Date cannot be earlier than {minDate}
+  de[auto]: Datum darf nicht früher als {minDate} sein
 
 invalidPhoneNumber:
   pl: Numer telefonu jest niepoprawny
   en: Phone number is invalid
+  de[auto]: Telefonnummer ist ungültig
 
 invalidPostCode:
   pl: Kod pocztowy jest niepoprawny
   en: Postal code is invalid
+  de[auto]: Postleitzahl ist ungültig
 
 invalidFormat:
   pl: Nieprawidłowy format
   en: Invalid format
+  de[auto]: Ungültiges Format
 
 required:
   pl: Pole jest wymagane
   en: Field is required
+  de[auto]: Feld ist erforderlich

@@ -1,8 +1,11 @@
 import type { Currency } from './Currency.js';
 import { CURRENCIES } from './Currency.js';
-import { normalizeMoney } from './normalizeMoney.js';
+import { moneyNormalize } from './moneyNormalize.js';
 
-export function parseMoney(value: string, currency: Currency) {
+/**
+ *
+ */
+export function moneyParse(value: string, currency: Currency) {
     const { fractionSymbol } = CURRENCIES[currency];
 
     if (fractionSymbol !== '.') {
@@ -16,5 +19,5 @@ export function parseMoney(value: string, currency: Currency) {
         return null;
     }
 
-    return normalizeMoney(parsed, currency);
+    return moneyNormalize(parsed, currency);
 }

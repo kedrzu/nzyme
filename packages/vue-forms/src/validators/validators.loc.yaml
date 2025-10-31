@@ -1,7 +1,7 @@
 invalidEmail:
   pl: Adres e-mail jest nieprawidłowy
   en: Email address is invalid
-  de[auto]: E-Mail-Adresse ist ungültig
+  de[auto]: 'E-Mail-Adresse ist ungültig'
 
 minLengthNotMet:
   pl: Minimalna długość to {minLength}_znaków

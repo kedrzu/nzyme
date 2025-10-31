@@ -60,7 +60,11 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
      */
     override async execute() {
         await this.setup();
-        return await this.run();
+        try {
+            return await this.run();
+        } finally {
+            await this.cleanup();
+        }
     }
 
     protected setup(): Promise<void> {
@@ -73,4 +77,8 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
     }
 
     protected abstract run(): number | Promise<number | void> | void;
+
+    protected cleanup(): Promise<void> {
+        return Promise.resolve();
+    }
 }

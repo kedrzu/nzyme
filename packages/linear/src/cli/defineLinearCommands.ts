@@ -460,9 +460,9 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
         static override paths = getCommandPaths(options, 'list');
         static override usage = Command.Usage({
             category: 'Linear',
-            description: 'List and select from tasks in progress and in review assigned to you',
+            description: 'List and select from tasks in todo, in progress, and in review assigned to you',
             details:
-                'Shows all currently active tasks (In Progress and In Review) assigned to you, along with their associated GitHub PRs, in an interactive selection menu',
+                'Shows all currently active tasks (Todo, In Progress and In Review) assigned to you, along with their associated GitHub PRs, in an interactive selection menu',
             examples: [['Show task list and switch to selected task', 'task list']],
         });
 
@@ -484,13 +484,13 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
 
                 this.logger.info('🔍 Fetching your active tasks...');
 
-                // Get current user and their assigned issues in progress and review
+                // Get current user and their assigned issues in todo, progress and review
                 const currentUser = await linearClient.viewer;
                 const assignedIssues = await currentUser.assignedIssues({
                     filter: {
                         state: {
                             name: {
-                                in: ['In Progress', 'In Review'],
+                                in: ['Todo', 'In Progress', 'In Review'],
                             },
                         },
                     },
@@ -499,7 +499,7 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                 const issues = assignedIssues.nodes;
 
                 if (issues.length === 0) {
-                    this.logger.info('📝 No active tasks found (In Progress or In Review)');
+                    this.logger.info('📝 No active tasks found (Todo, In Progress or In Review)');
                     return;
                 }
 
@@ -540,7 +540,19 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                     tasksWithPrInfo.map(async ({ issue, pr }) => {
                         const state = await issue.state;
                         const stateName = state?.name || 'Unknown';
-                        const stateColor = stateName === 'In Progress' ? chalk.yellow : chalk.green;
+
+                        // Determine color based on state
+                        let stateColor: typeof chalk.blue;
+                        if (stateName === 'Todo') {
+                            stateColor = chalk.blue;
+                        } else if (stateName === 'In Progress') {
+                            stateColor = chalk.yellow;
+                        } else if (stateName === 'In Review') {
+                            stateColor = chalk.green;
+                        } else {
+                            stateColor = chalk.gray;
+                        }
+
                         const prInfo = pr ? chalk.green(`#${pr.number}`) : chalk.gray('No PR');
                         const isCurrentTask = currentTaskId === issue.identifier;
                         const currentIndicator = isCurrentTask ? chalk.cyan('[Current]') : '';

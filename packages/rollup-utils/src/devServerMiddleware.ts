@@ -61,6 +61,7 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions) {
         const watcher = watch({
             watch: {
                 clearScreen: false,
+                buildDelay: 300,
             },
             onwarn: onRollupWarning,
             ...omitProps(options, ['env']),

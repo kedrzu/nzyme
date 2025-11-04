@@ -19,6 +19,11 @@ export interface LoadingContextHandler {
  */
 export interface LoadingContext {
     /**
+     * The id of the context.
+     */
+    id: number;
+
+    /**
      * The parent loading context, if any.
      */
     parent?: LoadingContext;
@@ -89,6 +94,8 @@ interface InternalLoadingContext extends LoadingContext {
  */
 const LoadingContextSymbol = defineContext<InternalLoadingContext>('LoadingContext');
 
+let counter = 0;
+
 /**
  * Creates and provides a loading context for child components to communicate their loading states.
  * This function injects any parent context and creates a new context that tracks loading operations
@@ -130,12 +137,17 @@ export function useLoadingContext(opts: LoadingContextOptions = {}): LoadingCont
     const counterChild = ref(0);
     const loadedOnceRef = ref(false);
 
+    const id = counter++;
+
     const incrementChild = () => {
         counterChild.value++;
+        parent?.incrementChild();
     };
 
     const decrementChild = () => {
         counterChild.value--;
+        checkLoadedOnce();
+        parent?.decrementChild();
     };
 
     const start = () => {
@@ -153,10 +165,7 @@ export function useLoadingContext(opts: LoadingContextOptions = {}): LoadingCont
             setTimeout(() => {
                 counterSelf.value--;
                 parent?.decrementChild();
-
-                if (counterSelf.value === 0 && counterChild.value === 0 && !loadedOnceRef.value) {
-                    loadedOnceRef.value = true;
-                }
+                checkLoadedOnce();
             }, opts.delay);
         };
     };
@@ -167,6 +176,12 @@ export function useLoadingContext(opts: LoadingContextOptions = {}): LoadingCont
             return await fn();
         } finally {
             finalize();
+        }
+    };
+
+    const checkLoadedOnce = () => {
+        if (counterSelf.value === 0 && counterChild.value === 0 && !loadedOnceRef.value) {
+            loadedOnceRef.value = true;
         }
     };
 
@@ -181,6 +196,7 @@ export function useLoadingContext(opts: LoadingContextOptions = {}): LoadingCont
         loadingSelf: computed(() => counterSelf.value > 0),
         loading: computed(() => counterSelf.value > 0 || counterChild.value > 0),
         loadedOnce: computed(() => loadedOnceRef.value),
+        id,
         start,
         run,
         incrementChild,

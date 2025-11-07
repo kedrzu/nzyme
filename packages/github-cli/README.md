@@ -8,6 +8,7 @@ Common GitHub utilities for CLI tools that integrate with GitHub repositories.
 - **Pull Request Operations**: Create draft PRs, convert to ready for review
 - **Git Status Utilities**: Check for uncommitted changes, unpushed commits
 - **Branch Synchronization**: Sync with base branches, handle merging
+- **Submodule Support**: Handle submodule changes with automatic branch creation and PR management
 - **Interactive Workflows**: Handle stashing, branch selection with user prompts
 
 ## Installation
@@ -92,6 +93,11 @@ await syncBaseBranch('main', logger);
 - `getGitStatusInfo()` - Get detailed git status information
 - `checkUnpushedCommits()` - Check for unpushed commits
 - `handleReadyPreparation(unpushed, status, logger)` - Interactive preparation for PR review
+
+### Submodule Operations
+
+- `getSubmoduleInfo()` - Get information about all submodules with changes
+- `handleSubmoduleReadyPreparation(params)` - Handle submodule changes before marking PR as ready
 
 ### Interactive Workflows
 

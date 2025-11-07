@@ -6,9 +6,17 @@ export type TranslationResult = string | unknown[] | undefined;
 /**
  *
  */
-export type Translation<T = void> = T extends void
-    ? (lang: string) => TranslationResult
-    : (lang: string, params: T) => TranslationResult;
+export type Translation<T = void> = T extends void ? TranslationSimple : TranslationWithParams<T>;
+
+/**
+ *
+ */
+export type TranslationSimple = (lang: string) => TranslationResult;
+
+/**
+ *
+ */
+export type TranslationWithParams<T> = (lang: string, params: T) => TranslationResult;
 
 /**
  *

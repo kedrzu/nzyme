@@ -11,6 +11,7 @@ export * from './components/usePasswordInput.js';
 export * from './components/usePhoneInput.js';
 export * from './components/usePostCodeInput.js';
 export * from './components/useRadio.js';
+export * from './components/useRadioGroup.js';
 export * from './components/useSelectInput.js';
 export * from './components/useTextArea.js';
 export * from './components/useTextInput.js';

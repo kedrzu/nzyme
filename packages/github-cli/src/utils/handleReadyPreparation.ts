@@ -9,7 +9,7 @@ import type { GitStatusInfo } from './getGitStatusInfo.js';
 
 /**
  * Handle the preparation phase before marking a PR as ready for review.
- * This includes prompting for pushing unpushed commits and committing uncommitted changes.
+ * This includes committing uncommitted changes and pushing all commits.
  */
 export async function handleReadyPreparation(
     unpushedCommits: UnpushedCommitsResult,
@@ -17,8 +17,9 @@ export async function handleReadyPreparation(
     logger: Logger,
 ): Promise<void> {
     const git = simpleGit();
+    let newCommitCreated = false;
 
-    // Step 1: Handle unpushed commits
+    // Step 1: Show unpushed commits if any
     if (unpushedCommits.hasUnpushedCommits) {
         logger.info(
             `⚠️  You have ${chalk.yellow(unpushedCommits.commitsCount.toString())} unpushed commit${
@@ -33,36 +34,6 @@ export async function handleReadyPreparation(
 
         if (unpushedCommits.commitMessages.length > 5) {
             logger.info(`   ... and ${unpushedCommits.commitMessages.length - 5} more`);
-        }
-
-        const { shouldPush } = await enquirer.prompt<{ shouldPush: boolean }>({
-            type: 'select',
-            name: 'shouldPush',
-            message: 'Do you want to push these commits?',
-            choices: [
-                {
-                    name: 'yes',
-                    message: `Yes, push ${unpushedCommits.commitsCount} commit${
-                        unpushedCommits.commitsCount === 1 ? '' : 's'
-                    }`,
-                    value: true,
-                },
-                {
-                    name: 'no',
-                    message: 'No, skip pushing',
-                    value: false,
-                },
-            ],
-        });
-
-        if (shouldPush) {
-            logger.info(
-                `🚀 Pushing ${unpushedCommits.commitsCount} commit${unpushedCommits.commitsCount === 1 ? '' : 's'}...`,
-            );
-            await git.push();
-            logger.info(`✅ Successfully pushed commits`);
-        } else {
-            logger.info(`⏭️  Skipping push - continuing with uncommitted changes check`);
         }
     }
 
@@ -121,17 +92,21 @@ export async function handleReadyPreparation(
             // Commit the changes
             logger.info(`💾 Committing changes with message: "${chalk.cyan(commitMessage)}"`);
             await git.commit(commitMessage.trim());
-
-            // Push the commit
-            logger.info(`🚀 Pushing commit...`);
-            await git.push();
-            logger.info(`✅ Successfully committed and pushed changes`);
+            newCommitCreated = true;
         } else {
-            logger.info(`⏭️  Skipping commit - continuing with PR update`);
+            logger.info(`⏭️  Skipping commit`);
         }
     }
 
-    if (!unpushedCommits.hasUnpushedCommits && !statusInfo.hasUncommittedChanges) {
+    // Step 3: Push all commits if there are any unpushed commits (existing or newly created)
+    if (unpushedCommits.hasUnpushedCommits || newCommitCreated) {
+        const totalCommitsToPush = unpushedCommits.commitsCount + (newCommitCreated ? 1 : 0);
+        logger.info(
+            `🚀 Pushing ${chalk.yellow(totalCommitsToPush.toString())} commit${totalCommitsToPush === 1 ? '' : 's'}...`,
+        );
+        await git.push();
+        logger.info(`✅ Successfully pushed all commits`);
+    } else if (!statusInfo.hasUncommittedChanges) {
         logger.info(`✅ Repository is clean - no commits to push or changes to commit`);
     }
 }

@@ -70,7 +70,7 @@ export interface EnsureRepositoryReadyParams {
 /**
  * Ensure a repository is ready for review by:
  * 1. Committing any uncommitted changes (if user confirms)
- * 2. Pushing any unpushed commits (if user confirms)
+ * 2. Pushing all commits
  * 3. Ensuring a PR exists (creates if missing)
  *
  * This function provides a unified flow for both main repositories and submodules.
@@ -98,7 +98,9 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
         getGitStatusInfo(git),
     ]);
 
-    // Step 2: Handle unpushed commits
+    let newCommitCreated = false;
+
+    // Step 2: Show unpushed commits if any
     if (unpushedCommits.hasUnpushedCommits) {
         logger.info(
             `${prefix}⚠️  You have ${chalk.yellow(unpushedCommits.commitsCount.toString())} unpushed commit${
@@ -113,36 +115,6 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
 
         if (unpushedCommits.commitMessages.length > 5) {
             logger.info(`   ... and ${unpushedCommits.commitMessages.length - 5} more`);
-        }
-
-        const { shouldPush } = await enquirer.prompt<{ shouldPush: boolean }>({
-            type: 'select',
-            name: 'shouldPush',
-            message: `Do you want to push these commits in ${repoDisplayName}?`,
-            choices: [
-                {
-                    name: 'yes',
-                    message: `Yes, push ${unpushedCommits.commitsCount} commit${
-                        unpushedCommits.commitsCount === 1 ? '' : 's'
-                    }`,
-                    value: true,
-                },
-                {
-                    name: 'no',
-                    message: 'No, skip pushing',
-                    value: false,
-                },
-            ],
-        });
-
-        if (shouldPush) {
-            logger.info(
-                `${prefix}🚀 Pushing ${unpushedCommits.commitsCount} commit${unpushedCommits.commitsCount === 1 ? '' : 's'}...`,
-            );
-            await git.push();
-            logger.info(`${prefix}✅ Successfully pushed commits`);
-        } else {
-            logger.info(`${prefix}⏭️  Skipping push - continuing with uncommitted changes check`);
         }
     }
 
@@ -201,21 +173,25 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
             // Commit the changes
             logger.info(`${prefix}💾 Committing changes with message: "${chalk.cyan(commitMessage)}"`);
             await git.commit(commitMessage.trim());
-
-            // Push the commit
-            logger.info(`${prefix}🚀 Pushing commit...`);
-            await git.push();
-            logger.info(`${prefix}✅ Successfully committed and pushed changes`);
+            newCommitCreated = true;
         } else {
             logger.info(`${prefix}⏭️  Skipping commit - continuing with PR check`);
         }
     }
 
-    if (!unpushedCommits.hasUnpushedCommits && !statusInfo.hasUncommittedChanges) {
+    // Step 4: Push all commits if there are any unpushed commits (existing or newly created)
+    if (unpushedCommits.hasUnpushedCommits || newCommitCreated) {
+        const totalCommitsToPush = unpushedCommits.commitsCount + (newCommitCreated ? 1 : 0);
+        logger.info(
+            `${prefix}🚀 Pushing ${chalk.yellow(totalCommitsToPush.toString())} commit${totalCommitsToPush === 1 ? '' : 's'}...`,
+        );
+        await git.push();
+        logger.info(`${prefix}✅ Successfully pushed all commits`);
+    } else if (!statusInfo.hasUncommittedChanges) {
         logger.info(`${prefix}✅ Repository is clean - no commits to push or changes to commit`);
     }
 
-    // Step 4: Ensure PR exists (or create it)
+    // Step 5: Ensure PR exists (or create it)
     logger.info(`${prefix}🔍 Checking if PR exists...`);
     const existingPr = await findMatchingPr(githubClient, githubConfig, issueId);
 

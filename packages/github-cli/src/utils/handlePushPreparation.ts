@@ -60,4 +60,3 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
 
     await handleReadyPreparation(unpushedCommits, statusInfo, logger);
 }
-

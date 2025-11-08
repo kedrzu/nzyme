@@ -43,9 +43,9 @@ export function useHistory() {
 }
 
 function initializeHistory() {
-    const onPopState = createEventEmitter<{ state: HistoryState | null }>();
-    const onPushState = createEventEmitter<{ state: HistoryState | null }>();
-    const onReplaceState = createEventEmitter<{ state: HistoryState | null }>();
+    const eventPopState = createEventEmitter<{ state: HistoryState | null }>();
+    const eventPushState = createEventEmitter<{ state: HistoryState | null }>();
+    const eventReplaceState = createEventEmitter<{ state: HistoryState | null }>();
 
     let pushState: History['pushState'];
     let replaceState: History['replaceState'];
@@ -55,28 +55,30 @@ function initializeHistory() {
         history = window.history;
 
         window.addEventListener('popstate', event => {
-            onPopState.emit({ state: normalizeState(event.state) });
+            eventPopState.emit({ state: normalizeState(event.state) });
         });
 
         // eslint-disable-next-line @typescript-eslint/unbound-method
         pushState = history.pushState;
         history.pushState = (state, title, url) => {
             pushState.call(history, state, title, url);
-            onPushState.emit({ state: normalizeState(state) });
+            eventPushState.emit({ state: normalizeState(state) });
         };
 
         // eslint-disable-next-line @typescript-eslint/unbound-method
         replaceState = window.history.replaceState;
         history.replaceState = (state, title, url) => {
             replaceState.call(history, state, title, url);
-            onReplaceState.emit({ state: normalizeState(state) });
+            eventReplaceState.emit({ state: normalizeState(state) });
         };
     }
 
     return {
-        onPopState: onPopState.event,
-        onPushState: onPushState.event,
-        onReplaceState: onReplaceState.event,
+        events: {
+            popState: eventPopState.event,
+            pushState: eventPushState.event,
+            replaceState: eventReplaceState.event,
+        },
         getState() {
             if (!history) {
                 return null;

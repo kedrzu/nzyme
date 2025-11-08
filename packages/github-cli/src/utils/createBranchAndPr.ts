@@ -1,6 +1,7 @@
 import { simpleGit } from 'simple-git';
 
 import type { GithubConfig } from '../GithubConfig.js';
+import { buildPrBody, createDraftPr } from './createDraftPr.js';
 import type { GithubClient } from './createGithubClient.js';
 
 /**
@@ -116,37 +117,20 @@ export async function createBranchAndPr(params: CreateBranchAndPrParams): Promis
         // Create draft PR
         const prBody = buildPrBody(description, issueId, taskUrl, issueTitle);
 
-        const { data: pr } = await client.rest.pulls.create({
-            owner: config.owner,
-            repo: config.repo,
+        const pr = await createDraftPr({
+            client,
+            config,
             title: prTitle,
+            body: prBody,
             head: branchName,
             base: resolvedBaseBranch,
-            body: prBody,
-            draft: true,
         });
 
         return {
             branch: branchName,
-            pr: {
-                body: pr.body,
-                html_url: pr.html_url,
-                id: pr.id,
-                number: pr.number,
-                title: pr.title,
-            },
+            pr,
         };
     } catch (error) {
         throw new Error(`Failed to create branch and PR: ${(error as Error).message}`);
     }
-}
-
-function buildPrBody(description: string, issueId: string, taskUrl: string, issueTitle: string): string {
-    const lines = [`# [${issueId}](${taskUrl}) ${issueTitle}`, ''];
-
-    if (description) {
-        lines.push(description);
-    }
-
-    return lines.join('\n');
 }

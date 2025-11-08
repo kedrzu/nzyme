@@ -5,6 +5,7 @@ import { simpleGit } from 'simple-git';
 import type { Logger } from '@nzyme/logging';
 
 import type { GithubConfig } from '../GithubConfig.js';
+import { createDraftPr } from './createDraftPr.js';
 import type { GithubClient } from './createGithubClient.js';
 import { findMatchingPr } from './findMatchingPr.js';
 import { getCurrentBranch } from './getCurrentBranch.js';
@@ -348,14 +349,13 @@ async function createSubmodulePr(params: CreateSubmodulePrParams): Promise<void>
         const prTitle = `[${issueId}] Submodule changes for ${submodule.name}`;
         const prBody = `# [${issueId}] Submodule changes\n\nThis PR contains changes to the ${submodule.name} submodule.`;
 
-        const { data: pr } = await githubClient.rest.pulls.create({
-            owner: submoduleConfig.owner,
-            repo: submoduleConfig.repo,
+        const pr = await createDraftPr({
+            client: githubClient,
+            config: submoduleConfig,
             title: prTitle,
+            body: prBody,
             head: branchName,
             base: baseBranch,
-            body: prBody,
-            draft: true,
         });
 
         logger.info(`✅ Created draft PR: ${chalk.blue(pr.title)} (#${pr.number})`);

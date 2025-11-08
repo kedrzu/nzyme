@@ -80,7 +80,7 @@ function setupButton() {
         },
     });
 
-    function onClick(event: Event) {
+    async function onClick(event: Event) {
         event.stopPropagation();
         if (props.preventDefault) {
             event.preventDefault();
@@ -90,17 +90,14 @@ function setupButton() {
             return;
         }
 
-        if (props.type === 'submit') {
-            event.preventDefault();
-            void formCtx?.submit();
-        } else {
-            void onClickAsync(event);
-        }
-    }
-
-    async function onClickAsync(event: Event) {
         try {
             pending.value = true;
+
+            if (props.type === 'submit') {
+                event.preventDefault();
+                await formCtx?.submit();
+            }
+
             const result = emitAsync('click', event);
             if (result instanceof Promise) {
                 await result;

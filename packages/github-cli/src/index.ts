@@ -5,6 +5,8 @@ export * from './utils/checkUnpushedCommits.js';
 export * from './utils/convertPrToReady.js';
 export * from './utils/createBranchAndPr.js';
 export type { CreateBranchAndPrParams, CreateBranchAndPrResult } from './utils/createBranchAndPr.js';
+export * from './utils/createDraftPr.js';
+export type { CreateDraftPrParams, CreateDraftPrResult } from './utils/createDraftPr.js';
 export * from './utils/createGithubClient.js';
 export * from './utils/findMatchingPr.js';
 export * from './utils/findMatchingPr.js';

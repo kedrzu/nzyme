@@ -19,6 +19,11 @@ export type IfNullable<T, Y, N = T> = IfAny<T, T, T | null extends T ? Y : N>;
 export type IfUndefined<T, Y, N = T> = IfAny<T, T, T | undefined extends T ? Y : N>;
 
 /**
+ * If the type is nullish.
+ */
+export type IfNullish<T, Y, N = T> = IfAny<T, T, T | null | undefined extends T ? Y : N>;
+
+/**
  * If the type is unknown.
  */
 export type IfUnknown<T, Y, N = T> = IfAny<T, T, unknown extends T ? Y : N>;

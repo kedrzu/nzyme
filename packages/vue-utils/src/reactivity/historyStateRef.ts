@@ -103,7 +103,7 @@ export function historyStateRef<T>(
     historyRef.save = save;
 
     watch(historyRef, options.debounce ? debounce(write, options.debounce) : write);
-    onEventEmitter(history.onPopState, update);
+    onEventEmitter(history.events.popState, update);
 
     return historyRef;
 

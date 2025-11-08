@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import enquirer from 'enquirer';
 import { simpleGit } from 'simple-git';
 
 import type { Logger } from '@nzyme/logging';
@@ -39,6 +38,11 @@ export interface HandleSubmoduleReadyPreparationParams {
      * Base branch for creating PRs.
      */
     baseBranch: string;
+
+    /**
+     * Whether to skip submodule processing.
+     */
+    skipSubmodules?: boolean;
 }
 
 /**
@@ -87,7 +91,12 @@ interface HandleSingleSubmoduleParams {
  * Updates submodule references in the main repository (which should be committed separately).
  */
 export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleReadyPreparationParams): Promise<void> {
-    const { githubClient, githubConfig, issueId, logger, baseBranch } = params;
+    const { githubClient, githubConfig, issueId, logger, baseBranch, skipSubmodules } = params;
+
+    if (skipSubmodules) {
+        logger.info('⏭️  Skipping submodule processing (--skip-submodules flag)');
+        return;
+    }
 
     logger.info('🔍 Checking for submodule changes...');
     const submodules = await getSubmoduleInfo();
@@ -128,29 +137,6 @@ export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleRea
         if (!submodule.hasChanges && submodule.unpushedCommitsCount === 0 && isTaskBranch(submodule.currentBranch)) {
             logger.info(`     - On task branch ${chalk.cyan(submodule.currentBranch)} (checking PR status)`);
         }
-    }
-
-    const { shouldProceed } = await enquirer.prompt<{ shouldProceed: boolean }>({
-        type: 'select',
-        name: 'shouldProceed',
-        message: 'Do you want to handle these submodules now?',
-        choices: [
-            {
-                name: 'yes',
-                message: 'Yes, process submodules',
-                value: true,
-            },
-            {
-                name: 'no',
-                message: 'No, skip submodule handling',
-                value: false,
-            },
-        ],
-    });
-
-    if (!shouldProceed) {
-        logger.info('⏭️  Skipping submodule handling');
-        return;
     }
 
     // Get the current branch name from main repo to use as template

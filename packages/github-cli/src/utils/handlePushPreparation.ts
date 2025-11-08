@@ -35,6 +35,11 @@ export interface HandlePushPreparationParams {
      * Base branch for submodules.
      */
     baseBranch: string;
+
+    /**
+     * Whether to skip submodule processing.
+     */
+    skipSubmodules?: boolean;
 }
 
 /**
@@ -43,7 +48,7 @@ export interface HandlePushPreparationParams {
  * Does NOT convert PR to ready - only prepares changes.
  */
 export async function handlePushPreparation(params: HandlePushPreparationParams): Promise<void> {
-    const { githubClient, githubConfig, issueId, logger, baseBranch } = params;
+    const { githubClient, githubConfig, issueId, logger, baseBranch, skipSubmodules } = params;
 
     // FIRST: Handle submodule changes (submodules must be processed before main repo)
     await handleSubmoduleReadyPreparation({
@@ -52,6 +57,7 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
         issueId,
         logger,
         baseBranch,
+        skipSubmodules,
     });
 
     // SECOND: Handle main repository changes (including submodule reference updates)

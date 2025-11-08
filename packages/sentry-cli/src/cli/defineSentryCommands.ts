@@ -244,7 +244,14 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
             description: 'Push changes and handle submodules without marking PR as ready',
             details:
                 'Commits and pushes changes in both submodules and main repository. Useful when you want to push work in progress without marking the PR as ready for review.',
-            examples: [['Push current issue changes', 'issue push']],
+            examples: [
+                ['Push current issue changes', 'issue push'],
+                ['Push without processing submodules', 'issue push --skip-submodules'],
+            ],
+        });
+
+        skipSubmodules = Option.Boolean('--skip-submodules', false, {
+            description: 'Skip processing submodules',
         });
 
         override async run() {
@@ -275,6 +282,7 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
                     issueId,
                     logger: this.logger,
                     baseBranch,
+                    skipSubmodules: this.skipSubmodules,
                 });
 
                 this.logger.info('');
@@ -296,7 +304,14 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
             description: 'Convert current issue from draft to ready for review',
             details:
                 'Detects the issue from the current branch and converts the associated PR from draft to ready for review',
-            examples: [['Convert current issue to ready for review', 'issue ready']],
+            examples: [
+                ['Convert current issue to ready for review', 'issue ready'],
+                ['Convert to ready without processing submodules', 'issue ready --skip-submodules'],
+            ],
+        });
+
+        skipSubmodules = Option.Boolean('--skip-submodules', false, {
+            description: 'Skip processing submodules',
         });
 
         override async run() {
@@ -341,6 +356,7 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                     issueId,
                     logger: this.logger,
                     baseBranch,
+                    skipSubmodules: this.skipSubmodules,
                 });
 
                 if (!pr.draft) {

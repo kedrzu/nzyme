@@ -335,7 +335,14 @@ function defineTaskPushCommand(options: LinearCommandsOptions) {
             description: 'Push changes and handle submodules without marking PR as ready',
             details:
                 'Commits and pushes changes in both submodules and main repository. Useful when you want to push work in progress without marking the PR as ready for review.',
-            examples: [['Push current task changes', 'task push']],
+            examples: [
+                ['Push current task changes', 'task push'],
+                ['Push without processing submodules', 'task push --skip-submodules'],
+            ],
+        });
+
+        skipSubmodules = Option.Boolean('--skip-submodules', false, {
+            description: 'Skip processing submodules',
         });
 
         override async run() {
@@ -366,6 +373,7 @@ function defineTaskPushCommand(options: LinearCommandsOptions) {
                     issueId: taskId,
                     logger: this.logger,
                     baseBranch,
+                    skipSubmodules: this.skipSubmodules,
                 });
 
                 this.logger.info('');
@@ -387,7 +395,14 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
             description: 'Convert current task from draft to ready for review',
             details:
                 'Detects the task from the current branch and converts the associated PR from draft to ready for review',
-            examples: [['Convert current task to ready for review', 'task ready']],
+            examples: [
+                ['Convert current task to ready for review', 'task ready'],
+                ['Convert to ready without processing submodules', 'task ready --skip-submodules'],
+            ],
+        });
+
+        skipSubmodules = Option.Boolean('--skip-submodules', false, {
+            description: 'Skip processing submodules',
         });
 
         override async run() {
@@ -432,6 +447,7 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                     issueId: taskId,
                     logger: this.logger,
                     baseBranch,
+                    skipSubmodules: this.skipSubmodules,
                 });
 
                 if (!pr.draft) {

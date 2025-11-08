@@ -8,6 +8,7 @@ import {
     createGithubClient,
     findMatchingPr,
     getCurrentBranch,
+    getSubmoduleInfo,
     handlePushPreparation,
     syncBaseBranch,
 } from '@nzyme/github-cli';
@@ -462,14 +463,80 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                     autoYes: this.yes,
                 });
 
+                // Convert submodule PRs to ready
+                if (!this.skipSubmodules) {
+                    const submodules = await getSubmoduleInfo();
+                    if (submodules.length > 0) {
+                        this.logger.info('');
+                        this.logger.info('🔍 Checking for submodule PRs to mark as ready...');
+
+                        for (const submodule of submodules) {
+                            // Parse the submodule URL to get owner and repo for GitHub config
+                            const urlMatch = submodule.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
+                            if (!urlMatch) {
+                                this.logger.warn(
+                                    `⚠️  Could not parse GitHub URL for submodule ${submodule.name}: ${submodule.url}`,
+                                );
+                                continue;
+                            }
+
+                            const [, owner, repo] = urlMatch;
+                            if (!owner || !repo) {
+                                this.logger.warn(
+                                    `⚠️  Could not extract owner/repo from URL for submodule ${submodule.name}`,
+                                );
+                                continue;
+                            }
+
+                            const submoduleConfig: GithubConfig = {
+                                owner,
+                                repo: repo.replace(/\.git$/, ''),
+                                token: githubConfig.token,
+                            };
+
+                            try {
+                                // Find PR for this submodule
+                                const submodulePr = await findMatchingPr(githubClient, submoduleConfig, taskId);
+
+                                if (submodulePr) {
+                                    if (submodulePr.draft) {
+                                        this.logger.info(
+                                            `🚀 Converting submodule ${chalk.cyan(submodule.name)} PR #${submodulePr.number} to ready...`,
+                                        );
+                                        await convertPrToReady(githubClient, submoduleConfig, submodulePr.number);
+                                        this.logger.info(
+                                            `✅ Submodule ${chalk.cyan(submodule.name)} PR #${submodulePr.number} is now ready for review`,
+                                        );
+                                    } else {
+                                        this.logger.info(
+                                            `✅ Submodule ${chalk.cyan(submodule.name)} PR #${submodulePr.number} is already ready`,
+                                        );
+                                    }
+                                } else {
+                                    this.logger.info(
+                                        `ℹ️  No PR found for submodule ${chalk.cyan(submodule.name)} - skipping`,
+                                    );
+                                }
+                            } catch (error: unknown) {
+                                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                                this.logger.warn(
+                                    `⚠️  Failed to convert submodule ${chalk.cyan(submodule.name)} PR to ready: ${errorMessage}`,
+                                );
+                            }
+                        }
+                    }
+                }
+
                 if (!pr.draft) {
+                    this.logger.info('');
                     this.logger.info(`🎉 PR #${pr.number} is already ready for review!`);
                     this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
                     return;
                 }
 
-                // Convert PR from draft to ready
-                this.logger.info('🚀 Converting PR from draft to ready for review...');
+                // Convert main PR from draft to ready
+                this.logger.info('');
+                this.logger.info('🚀 Converting main PR from draft to ready for review...');
                 await convertPrToReady(githubClient, githubConfig, pr.number);
 
                 this.logger.info(`🎉 Successfully converted PR #${pr.number} to ready for review!`);

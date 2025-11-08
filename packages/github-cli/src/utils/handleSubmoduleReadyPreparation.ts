@@ -281,17 +281,6 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
         // Push the branch
         await submoduleGit.push('origin', currentBranch, { '--set-upstream': null });
         logger.info(`✅ Pushed branch to origin`);
-
-        // Try to create a draft PR for the submodule
-        await createSubmodulePr({
-            githubClient,
-            githubConfig,
-            submodule,
-            branchName: currentBranch,
-            issueId,
-            baseBranch,
-            logger,
-        });
     } else if (submodule.unpushedCommitsCount > 0) {
         logger.info(
             `🚀 Pushing ${chalk.yellow(submodule.unpushedCommitsCount.toString())} unpushed commit${
@@ -301,6 +290,17 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
         await submoduleGit.push();
         logger.info(`✅ Successfully pushed commits`);
     }
+
+    // Always try to create a draft PR for the submodule (will skip if PR already exists)
+    await createSubmodulePr({
+        githubClient,
+        githubConfig,
+        submodule,
+        branchName: currentBranch,
+        issueId,
+        baseBranch,
+        logger,
+    });
 
     // Update the submodule reference in the main repository
     logger.info(`🔄 Updating submodule reference in main repository...`);

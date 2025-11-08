@@ -1,4 +1,6 @@
 export * from './GithubConfig.js';
+export * from './utils/branchVersionHelpers.js';
+export * from './utils/checkCurrentPrMerged.js';
 export * from './utils/checkoutBranch.js';
 export * from './utils/checkoutExistingBranch.js';
 export * from './utils/checkUnpushedCommits.js';
@@ -8,7 +10,8 @@ export type { CreateBranchAndPrParams, CreateBranchAndPrResult } from './utils/c
 export * from './utils/createDraftPr.js';
 export type { CreateDraftPrParams, CreateDraftPrResult } from './utils/createDraftPr.js';
 export * from './utils/createGithubClient.js';
-export * from './utils/findMatchingPr.js';
+export * from './utils/ensureRepositoryReady.js';
+export type { EnsureRepositoryReadyParams } from './utils/ensureRepositoryReady.js';
 export * from './utils/findMatchingPr.js';
 export * from './utils/getCurrentBranch.js';
 export * from './utils/getGitStatusInfo.js';
@@ -17,6 +20,8 @@ export * from './utils/getSubmoduleInfo.js';
 export type { SubmoduleInfo } from './utils/getSubmoduleInfo.js';
 export * from './utils/handleBranchSelection.js';
 export type { BranchSelectionParams, BranchSelectionResult } from './utils/handleBranchSelection.js';
+export * from './utils/handleMergedPrReopen.js';
+export type { HandleMergedPrReopenParams, HandleMergedPrReopenResult } from './utils/handleMergedPrReopen.js';
 export * from './utils/handlePushPreparation.js';
 export type { HandlePushPreparationParams } from './utils/handlePushPreparation.js';
 export * from './utils/handleReadyPreparation.js';

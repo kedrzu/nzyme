@@ -1,5 +1,7 @@
 import { simpleGit } from 'simple-git';
 
+import { UsageError } from '@nzyme/cli';
+
 import type { GithubConfig } from '../GithubConfig.js';
 import { buildPrBody, createDraftPr } from './createDraftPr.js';
 import type { GithubClient } from './createGithubClient.js';
@@ -91,7 +93,7 @@ export async function createBranchAndPr(params: CreateBranchAndPrParams): Promis
         }
 
         if (!resolvedBaseBranch) {
-            throw new Error('Could not determine base branch');
+            throw new UsageError('Could not determine base branch');
         }
 
         // Check if branch exists, create and checkout if not, otherwise just checkout
@@ -131,6 +133,6 @@ export async function createBranchAndPr(params: CreateBranchAndPrParams): Promis
             pr,
         };
     } catch (error) {
-        throw new Error(`Failed to create branch and PR: ${(error as Error).message}`);
+        throw new UsageError(`Failed to create branch and PR: ${(error as Error).message}`);
     }
 }

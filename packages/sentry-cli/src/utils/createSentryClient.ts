@@ -1,5 +1,7 @@
 import fetch from 'node-fetch';
 
+import { UsageError } from '@nzyme/cli';
+
 import type { SentryConfig } from '../cli/defineSentryCommands.js';
 
 /**
@@ -33,7 +35,7 @@ export class SentryApiClient {
         });
 
         if (!response.ok) {
-            throw new Error(`Sentry API error: ${response.status} ${response.statusText}`);
+            throw new UsageError(`Sentry API error: ${response.status} ${response.statusText}`);
         }
 
         return response.json() as Promise<T>;
@@ -56,7 +58,7 @@ export class SentryApiClient {
         });
 
         if (!response.ok) {
-            throw new Error(`Sentry API error: ${response.status} ${response.statusText}`);
+            throw new UsageError(`Sentry API error: ${response.status} ${response.statusText}`);
         }
 
         return response.json() as Promise<T>;

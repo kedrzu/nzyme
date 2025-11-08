@@ -1,6 +1,8 @@
 import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
+import { UsageError } from '@nzyme/cli';
+
 /**
  * Information about git status.
  */
@@ -121,6 +123,6 @@ export async function getGitStatusInfo(git: SimpleGit = simpleGit()): Promise<Gi
             changes,
         };
     } catch (error) {
-        throw new Error(`Failed to get git status: ${(error as Error).message}`);
+        throw new UsageError(`Failed to get git status: ${(error as Error).message}`);
     }
 }

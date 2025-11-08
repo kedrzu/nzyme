@@ -739,7 +739,7 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                 const selectedTaskData = tasksWithPrInfo.find(({ issue }) => issue.identifier === selectedTaskId);
 
                 if (!selectedTaskData) {
-                    throw new Error(`Task ${selectedTaskId} not found`);
+                    throw new UsageError(`Task ${selectedTaskId} not found`);
                 }
 
                 this.logger.info(`🎯 Switching to task: ${chalk.bold(selectedTaskId)}`);

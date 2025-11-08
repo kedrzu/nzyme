@@ -48,12 +48,12 @@ export async function convertPrToReady(client: GithubClient, config: GithubConfi
         };
 
         if (result.markPullRequestReadyForReview.pullRequest.isDraft) {
-            throw new Error(`Failed to mark PR #${prNumber} as ready for review - it's still in draft state`);
+            throw new UsageError(`Failed to mark PR #${prNumber} as ready for review - it's still in draft state`);
         }
     } catch (error) {
         if (error instanceof UsageError) {
             throw error;
         }
-        throw new Error(`Failed to convert PR #${prNumber} to ready: ${(error as Error).message}`);
+        throw new UsageError(`Failed to convert PR #${prNumber} to ready: ${(error as Error).message}`);
     }
 }

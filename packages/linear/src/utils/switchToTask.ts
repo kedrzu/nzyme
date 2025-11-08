@@ -1,6 +1,7 @@
 import type { LinearClient } from '@linear/sdk';
 import chalk from 'chalk';
 
+import { UsageError } from '@nzyme/cli';
 import type { GithubClient } from '@nzyme/github-cli';
 import {
     applyStashedChanges,
@@ -67,7 +68,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
     const issueData = await linearClient.issue(issueId);
 
     if (!issueData) {
-        throw new Error(`Linear task ${issueId} not found`);
+        throw new UsageError(`Linear task ${issueId} not found`);
     }
 
     logger.info(`📝 Found task: ${chalk.green(issueData.title)}`);
@@ -100,7 +101,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
         logger.info(`📝 No open PR found. Checking for merged PRs...`);
 
         if (baseBranches.length === 0) {
-            throw new Error('No base branches configured');
+            throw new UsageError('No base branches configured');
         }
 
         const selectedBaseBranch = baseBranches[0]!;

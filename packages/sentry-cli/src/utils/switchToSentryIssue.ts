@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 
+import { UsageError } from '@nzyme/cli';
 import type { GithubClient } from '@nzyme/github-cli';
 import {
     applyStashedChanges,
@@ -85,7 +86,7 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
     const issueData = await getSentryIssue(sentryClient, organizationSlug, issueId);
 
     if (!issueData) {
-        throw new Error(`Sentry issue ${issueId} not found`);
+        throw new UsageError(`Sentry issue ${issueId} not found`);
     }
 
     logger.info(`📝 Found issue: ${chalk.green(issueData.title)}`);
@@ -112,7 +113,7 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
         logger.info(`📝 No open PR found. Checking for merged PRs...`);
 
         if (baseBranches.length === 0) {
-            throw new Error('No base branches configured');
+            throw new UsageError('No base branches configured');
         }
 
         const selectedBaseBranch = baseBranches[0]!;

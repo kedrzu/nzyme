@@ -1,6 +1,7 @@
 import type { LinearClient } from '@linear/sdk';
 import chalk from 'chalk';
 
+import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging';
 
 /**
@@ -12,14 +13,14 @@ export async function reopenLinearTask(linearClient: LinearClient, issueId: stri
     const issueData = await linearClient.issue(issueId);
 
     if (!issueData) {
-        throw new Error(`Linear task ${issueId} not found`);
+        throw new UsageError(`Linear task ${issueId} not found`);
     }
 
     // Get the team to find the "In Progress" state
     const team = await issueData.team;
 
     if (!team) {
-        throw new Error('Could not find team for this issue');
+        throw new UsageError('Could not find team for this issue');
     }
 
     const workflowStates = await team.states();
@@ -33,7 +34,7 @@ export async function reopenLinearTask(linearClient: LinearClient, issueId: stri
     );
 
     if (!inProgressState) {
-        throw new Error('Could not find "In Progress" state in the team workflow');
+        throw new UsageError('Could not find "In Progress" state in the team workflow');
     }
 
     // Update the issue state

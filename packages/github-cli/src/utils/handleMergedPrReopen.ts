@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import enquirer from 'enquirer';
 
+import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging';
 
 import type { GithubConfig } from '../GithubConfig.js';
@@ -140,7 +141,7 @@ export async function handleMergedPrReopen(params: HandleMergedPrReopenParams): 
     });
 
     if (action === 'cancel') {
-        throw new Error('Task switching cancelled by user');
+        throw new UsageError('Task switching cancelled by user');
     }
 
     // Reopen the task

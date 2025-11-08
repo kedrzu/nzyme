@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 
+import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging';
 
 import type { GithubConfig } from '../GithubConfig.js';
@@ -31,7 +32,7 @@ export async function checkCurrentPrMerged(
         logger.error('🔧 To fix this:');
         logger.error(`   1. Use "${chalk.cyan('task ready')}" to automatically create a new version of this task`);
         logger.error(`   2. Or manually switch to a different task with "${chalk.cyan(`task ${issueId}`)}"`);
-        throw new Error(
+        throw new UsageError(
             `Cannot push to branch ${currentBranch} - PR #${currentBranchPr.number} is already merged. ` +
                 `Please create a new branch version or switch tasks.`,
         );

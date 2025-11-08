@@ -3,6 +3,7 @@ import enquirer from 'enquirer';
 import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
+import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging';
 
 import type { GithubConfig } from '../GithubConfig.js';
@@ -221,7 +222,7 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
     const currentStatus = await git.status();
     const currentBranch = currentStatus.current;
     if (!currentBranch) {
-        throw new Error('Could not determine current branch name');
+        throw new UsageError('Could not determine current branch name');
     }
 
     const prTitle = generatePrTitle(issueId);
@@ -245,6 +246,6 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
         logger.error(
             `${prefix}📋 Details: owner=${githubConfig.owner}, repo=${githubConfig.repo}, branch=${currentBranch}, base=${baseBranch}`,
         );
-        throw new Error(`Failed to create PR for ${repoDisplayName}: ${errorMessage}`);
+        throw new UsageError(`Failed to create PR for ${repoDisplayName}: ${errorMessage}`);
     }
 }

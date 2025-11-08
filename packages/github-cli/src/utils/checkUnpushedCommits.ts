@@ -1,6 +1,8 @@
 import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
+import { UsageError } from '@nzyme/cli';
+
 /**
  * Result of checking for unpushed commits.
  */
@@ -32,7 +34,7 @@ export async function checkUnpushedCommits(git: SimpleGit = simpleGit()): Promis
         const currentBranch = status.current;
 
         if (!currentBranch) {
-            throw new Error('Could not determine current branch');
+            throw new UsageError('Could not determine current branch');
         }
 
         // Check if remote tracking branch exists
@@ -75,6 +77,6 @@ export async function checkUnpushedCommits(git: SimpleGit = simpleGit()): Promis
             commitMessages: log.all.map(commit => commit.message),
         };
     } catch (error) {
-        throw new Error(`Failed to check unpushed commits: ${(error as Error).message}`);
+        throw new UsageError(`Failed to check unpushed commits: ${(error as Error).message}`);
     }
 }

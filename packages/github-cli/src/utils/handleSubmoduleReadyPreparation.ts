@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { simpleGit } from 'simple-git';
 
+import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging';
 
 import type { GithubConfig } from '../GithubConfig.js';
@@ -204,14 +205,14 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
     if (!urlMatch) {
         const errorMessage = `Could not parse GitHub URL for submodule: ${submodule.url}`;
         logger.error(`❌ ${errorMessage}`);
-        throw new Error(errorMessage);
+        throw new UsageError(errorMessage);
     }
 
     const [, owner, repo] = urlMatch;
     if (!owner || !repo) {
         const errorMessage = `Could not extract owner/repo from URL: ${submodule.url}`;
         logger.error(`❌ ${errorMessage}`);
-        throw new Error(errorMessage);
+        throw new UsageError(errorMessage);
     }
 
     const submoduleConfig: GithubConfig = {
@@ -244,7 +245,7 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
             logger.error(`   1. Review the uncommitted changes in ${submodule.path}`);
             logger.error(`   2. Either commit them to a new branch or discard them`);
             logger.error(`   3. Then run this command again`);
-            throw new Error(
+            throw new UsageError(
                 `Submodule ${submodule.name} has uncommitted changes but PR #${mergedPr.number} is already merged. Please resolve manually.`,
             );
         }
@@ -313,10 +314,10 @@ function isTaskBranch(branchName: string | undefined): boolean {
     }
 
     // Check for common task branch patterns:
-    // - feature/SIG-123-...
-    // - bug/SIG-123-...
-    // - SIG-123-...
-    // - Any branch containing task IDs like SIG-123, PROJ-456, etc.
-    const taskIdPattern = /[A-Z]+-\d+/;
+    // - feature/SIG-123-... or feature/sig-123-...
+    // - bug/SIG-123-... or bug/sig-123-...
+    // - SIG-123-... or sig-123-...
+    // - Any branch containing task IDs like SIG-123, PROJ-456, etc. (case-insensitive)
+    const taskIdPattern = /[A-Z]+-\d+/i;
     return taskIdPattern.test(branchName);
 }

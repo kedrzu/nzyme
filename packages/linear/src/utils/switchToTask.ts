@@ -8,6 +8,7 @@ import {
     createBranchAndPr,
     findMatchingPr,
     handleBranchSelection,
+    handleMergedPrReopen,
     syncBaseBranch,
 } from '@nzyme/github-cli';
 import type { BranchSelectionResult } from '@nzyme/github-cli';
@@ -16,6 +17,7 @@ import type { Logger } from '@nzyme/logging';
 
 import { handleTaskAssignment } from './handleTaskAssignment.js';
 import { handleTerminalState } from './handleTerminalState.js';
+import { reopenLinearTask } from './reopenLinearTask.js';
 
 /**
  * Parameters for switching to a task.
@@ -94,12 +96,43 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
 
         logger.info(`🎉 Successfully checked out existing branch for ${chalk.bold(issueId)}`);
     } else {
-        // Create new branch and PR
-        logger.info(`📝 No existing PR found. Creating new branch and draft PR...`);
+        // No open PR found - check if there's a merged PR and handle reopen flow
+        logger.info(`📝 No open PR found. Checking for merged PRs...`);
 
         if (baseBranches.length === 0) {
             throw new Error('No base branches configured');
         }
+
+        const selectedBaseBranch = baseBranches[0]!;
+
+        // Get project information for PR title
+        const project = await issueData.project;
+        const projectName = project?.name || '';
+
+        // Check for merged PRs and handle reopen flow
+        const reopenResult = await handleMergedPrReopen({
+            githubClient,
+            githubConfig,
+            issueId,
+            logger,
+            issueTitle: issueData.title,
+            issueDescription: issueData.description || '',
+            issueUrl: issueData.url,
+            baseBranch: selectedBaseBranch,
+            projectName,
+            onReopenTask: async () => {
+                await reopenLinearTask(linearClient, issueId, logger);
+            },
+        });
+
+        if (reopenResult.reopened) {
+            // Task was reopened with new version - we're done
+            logger.info(`🔗 Linear task: ${chalk.underline(issueData.url)}`);
+            return;
+        }
+
+        // No merged PR found - create new branch and PR
+        logger.info(`📝 Creating new branch and draft PR...`);
 
         // Handle branch selection and stashing if needed
         const branchResult: BranchSelectionResult = await handleBranchSelection({
@@ -116,16 +149,11 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
                 .replace(/-+/g, '-')
                 .slice(0, 50)}`;
 
-        // Get project information for PR title
-        const project = await issueData.project;
-        const projectName = project?.name || '';
         const prTitle = projectName
             ? `[${issueId}][${projectName}] ${issueData.title}`
             : `[${issueId}] ${issueData.title}`;
 
         logger.info(`🌿 Creating branch: ${chalk.cyan(branchName)}`);
-
-        const selectedBaseBranch = branchResult.selectedBaseBranch;
 
         const result = await createBranchAndPr({
             client: githubClient,
@@ -136,7 +164,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
             issueId,
             taskUrl: issueData.url,
             issueTitle: issueData.title,
-            baseBranch: selectedBaseBranch,
+            baseBranch: branchResult.selectedBaseBranch,
         });
 
         // Apply stashed changes if any

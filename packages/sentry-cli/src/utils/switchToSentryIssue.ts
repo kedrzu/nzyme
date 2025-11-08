@@ -7,6 +7,7 @@ import {
     createBranchAndPr,
     findMatchingPr,
     handleBranchSelection,
+    handleMergedPrReopen,
     syncBaseBranch,
 } from '@nzyme/github-cli';
 import type { BranchSelectionResult } from '@nzyme/github-cli';
@@ -107,12 +108,38 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
 
         logger.info(`🎉 Successfully checked out existing branch for ${chalk.bold(issueData.shortId)}`);
     } else {
-        // Create new branch and PR
-        logger.info(`📝 No existing PR found. Creating new branch and draft PR...`);
+        // No open PR found - check if there's a merged PR and handle reopen flow
+        logger.info(`📝 No open PR found. Checking for merged PRs...`);
 
         if (baseBranches.length === 0) {
             throw new Error('No base branches configured');
         }
+
+        const selectedBaseBranch = baseBranches[0]!;
+
+        // Check for merged PRs and handle reopen flow (for Sentry, we don't reopen the issue)
+        const reopenResult = await handleMergedPrReopen({
+            githubClient,
+            githubConfig,
+            issueId: issueData.shortId,
+            logger,
+            issueTitle: issueData.title,
+            issueDescription: `Sentry Issue: ${issueData.title}\n\nType: ${issueData.type}\nLevel: ${issueData.level}\nCount: ${issueData.count}`,
+            issueUrl: issueData.permalink,
+            baseBranch: selectedBaseBranch,
+            projectName: issueData.project.name,
+            // Sentry issues don't need to be reopened in Sentry itself
+            onReopenTask: undefined,
+        });
+
+        if (reopenResult.reopened) {
+            // Issue was reopened with new version - we're done
+            logger.info(`🔗 Sentry issue: ${chalk.underline(issueData.permalink)}`);
+            return;
+        }
+
+        // No merged PR found - create new branch and PR
+        logger.info(`📝 Creating new branch and draft PR...`);
 
         // Handle branch selection and stashing if needed
         const branchResult: BranchSelectionResult = await handleBranchSelection({
@@ -134,8 +161,6 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
 
         logger.info(`🌿 Creating branch: ${chalk.cyan(branchName)}`);
 
-        const selectedBaseBranch = branchResult.selectedBaseBranch;
-
         const result = await createBranchAndPr({
             client: githubClient,
             config: githubConfig,
@@ -145,7 +170,7 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
             issueId: issueData.shortId,
             taskUrl: issueData.permalink,
             issueTitle: issueData.title,
-            baseBranch: selectedBaseBranch,
+            baseBranch: branchResult.selectedBaseBranch,
         });
 
         // Apply stashed changes if any

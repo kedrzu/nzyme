@@ -43,6 +43,11 @@ export interface HandleSubmoduleReadyPreparationParams {
      * Whether to skip submodule processing.
      */
     skipSubmodules?: boolean;
+
+    /**
+     * Whether to skip prompts and automatically commit with default message.
+     */
+    autoYes?: boolean;
 }
 
 /**
@@ -83,6 +88,11 @@ interface HandleSingleSubmoduleParams {
      * Current branch name from main repository.
      */
     mainRepoBranch: string;
+
+    /**
+     * Whether to skip prompts and automatically commit with default message.
+     */
+    autoYes?: boolean;
 }
 
 /**
@@ -91,7 +101,7 @@ interface HandleSingleSubmoduleParams {
  * Updates submodule references in the main repository (which should be committed separately).
  */
 export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleReadyPreparationParams): Promise<void> {
-    const { githubClient, githubConfig, issueId, logger, baseBranch, skipSubmodules } = params;
+    const { githubClient, githubConfig, issueId, logger, baseBranch, skipSubmodules, autoYes } = params;
 
     if (skipSubmodules) {
         logger.info('⏭️  Skipping submodule processing (--skip-submodules flag)');
@@ -155,6 +165,7 @@ export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleRea
             logger,
             baseBranch,
             mainRepoBranch,
+            autoYes,
         });
     }
 
@@ -164,7 +175,7 @@ export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleRea
 }
 
 async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promise<void> {
-    const { submodule, githubClient, githubConfig, issueId, logger, baseBranch, mainRepoBranch } = params;
+    const { submodule, githubClient, githubConfig, issueId, logger, baseBranch, mainRepoBranch, autoYes } = params;
 
     const submoduleGit = simpleGit({ baseDir: submodule.path });
 
@@ -221,6 +232,7 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
         generatePrBody: (id: string) =>
             `# [${id}] Submodule changes\n\nThis PR contains changes to the ${submodule.name} submodule.`,
         defaultCommitMessage: `[${issueId}] Submodule changes`,
+        autoYes,
     });
 
     // Update the submodule reference in the main repository

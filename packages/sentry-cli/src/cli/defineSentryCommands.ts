@@ -247,11 +247,16 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
             examples: [
                 ['Push current issue changes', 'issue push'],
                 ['Push without processing submodules', 'issue push --skip-submodules'],
+                ['Push with auto-commit (skip prompts)', 'issue push --yes'],
             ],
         });
 
         skipSubmodules = Option.Boolean('--skip-submodules', false, {
             description: 'Skip processing submodules',
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip prompts and automatically commit with default message',
         });
 
         override async run() {
@@ -283,6 +288,7 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
                     logger: this.logger,
                     baseBranch,
                     skipSubmodules: this.skipSubmodules,
+                    autoYes: this.yes,
                 });
 
                 this.logger.info('');
@@ -307,11 +313,16 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
             examples: [
                 ['Convert current issue to ready for review', 'issue ready'],
                 ['Convert to ready without processing submodules', 'issue ready --skip-submodules'],
+                ['Convert to ready with auto-commit (skip prompts)', 'issue ready --yes'],
             ],
         });
 
         skipSubmodules = Option.Boolean('--skip-submodules', false, {
             description: 'Skip processing submodules',
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip prompts and automatically commit with default message',
         });
 
         override async run() {
@@ -357,6 +368,7 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                     logger: this.logger,
                     baseBranch,
                     skipSubmodules: this.skipSubmodules,
+                    autoYes: this.yes,
                 });
 
                 if (!pr.draft) {

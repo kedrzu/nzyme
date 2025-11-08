@@ -15,6 +15,7 @@ export async function handleReadyPreparation(
     unpushedCommits: UnpushedCommitsResult,
     statusInfo: GitStatusInfo,
     logger: Logger,
+    autoYes: boolean = false,
 ): Promise<void> {
     const git = simpleGit();
     let newCommitCreated = false;
@@ -48,23 +49,31 @@ export async function handleReadyPreparation(
             }: ${chalk.yellow(statusInfo.changeDescription)}`,
         );
 
-        const { shouldCommit } = await enquirer.prompt<{ shouldCommit: 'no' | 'yes' }>({
-            type: 'select',
-            name: 'shouldCommit',
-            message: `Do you want to commit these ${statusInfo.totalChanges} change${
-                statusInfo.totalChanges === 1 ? '' : 's'
-            }?`,
-            choices: [
-                {
-                    name: 'yes',
-                    message: `Yes, commit ${statusInfo.totalChanges} change${statusInfo.totalChanges === 1 ? '' : 's'}`,
-                },
-                {
-                    name: 'no',
-                    message: 'No, skip committing',
-                },
-            ],
-        });
+        let shouldCommit: 'no' | 'yes' = 'yes';
+        let commitMessage = 'Ready for review';
+
+        if (!autoYes) {
+            const response = await enquirer.prompt<{ shouldCommit: 'no' | 'yes' }>({
+                type: 'select',
+                name: 'shouldCommit',
+                message: `Do you want to commit these ${statusInfo.totalChanges} change${
+                    statusInfo.totalChanges === 1 ? '' : 's'
+                }?`,
+                choices: [
+                    {
+                        name: 'yes',
+                        message: `Yes, commit ${statusInfo.totalChanges} change${statusInfo.totalChanges === 1 ? '' : 's'}`,
+                    },
+                    {
+                        name: 'no',
+                        message: 'No, skip committing',
+                    },
+                ],
+            });
+            shouldCommit = response.shouldCommit;
+        } else {
+            logger.info(`✅ Auto-committing changes (--yes flag)`);
+        }
 
         if (shouldCommit === 'yes') {
             // Add unstaged changes to staging if there are any
@@ -75,19 +84,22 @@ export async function handleReadyPreparation(
                 logger.info(`📦 Using already staged files...`);
             }
 
-            // Prompt for commit message
-            const { commitMessage } = await enquirer.prompt<{ commitMessage: string }>({
-                type: 'input',
-                name: 'commitMessage',
-                message: 'Enter commit message:',
-                initial: 'Ready for review',
-                validate: (input: string) => {
-                    if (!input.trim()) {
-                        return 'Commit message cannot be empty';
-                    }
-                    return true;
-                },
-            });
+            // Prompt for commit message if not in auto-yes mode
+            if (!autoYes) {
+                const response = await enquirer.prompt<{ commitMessage: string }>({
+                    type: 'input',
+                    name: 'commitMessage',
+                    message: 'Enter commit message:',
+                    initial: 'Ready for review',
+                    validate: (input: string) => {
+                        if (!input.trim()) {
+                            return 'Commit message cannot be empty';
+                        }
+                        return true;
+                    },
+                });
+                commitMessage = response.commitMessage;
+            }
 
             // Commit the changes
             logger.info(`💾 Committing changes with message: "${chalk.cyan(commitMessage)}"`);

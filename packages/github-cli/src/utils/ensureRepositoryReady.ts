@@ -65,6 +65,11 @@ export interface EnsureRepositoryReadyParams {
      * Optional default commit message.
      */
     defaultCommitMessage?: string;
+
+    /**
+     * Whether to skip prompts and automatically commit with default message.
+     */
+    autoYes?: boolean;
 }
 
 /**
@@ -87,6 +92,7 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
         generatePrTitle = (id: string) => `[${id}] Changes`,
         generatePrBody = (id: string) => `# [${id}] Changes\n\nThis PR contains changes for task ${id}.`,
         defaultCommitMessage = 'Ready for review',
+        autoYes = false,
     } = params;
 
     const prefix = repoDisplayName !== 'repository' ? `[${repoDisplayName}] ` : '';
@@ -129,23 +135,31 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
             }: ${chalk.yellow(statusInfo.changeDescription)}`,
         );
 
-        const { shouldCommit } = await enquirer.prompt<{ shouldCommit: 'no' | 'yes' }>({
-            type: 'select',
-            name: 'shouldCommit',
-            message: `Do you want to commit these ${statusInfo.totalChanges} change${
-                statusInfo.totalChanges === 1 ? '' : 's'
-            } in ${repoDisplayName}?`,
-            choices: [
-                {
-                    name: 'yes',
-                    message: `Yes, commit ${statusInfo.totalChanges} change${statusInfo.totalChanges === 1 ? '' : 's'}`,
-                },
-                {
-                    name: 'no',
-                    message: 'No, skip committing',
-                },
-            ],
-        });
+        let shouldCommit: 'no' | 'yes' = 'yes';
+        let commitMessage = defaultCommitMessage;
+
+        if (!autoYes) {
+            const response = await enquirer.prompt<{ shouldCommit: 'no' | 'yes' }>({
+                type: 'select',
+                name: 'shouldCommit',
+                message: `Do you want to commit these ${statusInfo.totalChanges} change${
+                    statusInfo.totalChanges === 1 ? '' : 's'
+                } in ${repoDisplayName}?`,
+                choices: [
+                    {
+                        name: 'yes',
+                        message: `Yes, commit ${statusInfo.totalChanges} change${statusInfo.totalChanges === 1 ? '' : 's'}`,
+                    },
+                    {
+                        name: 'no',
+                        message: 'No, skip committing',
+                    },
+                ],
+            });
+            shouldCommit = response.shouldCommit;
+        } else {
+            logger.info(`${prefix}✅ Auto-committing changes (--yes flag)`);
+        }
 
         if (shouldCommit === 'yes') {
             // Add unstaged changes to staging if there are any
@@ -156,19 +170,22 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
                 logger.info(`${prefix}📦 Using already staged files...`);
             }
 
-            // Prompt for commit message
-            const { commitMessage } = await enquirer.prompt<{ commitMessage: string }>({
-                type: 'input',
-                name: 'commitMessage',
-                message: `Enter commit message for ${repoDisplayName}:`,
-                initial: defaultCommitMessage,
-                validate: (input: string) => {
-                    if (!input.trim()) {
-                        return 'Commit message cannot be empty';
-                    }
-                    return true;
-                },
-            });
+            // Prompt for commit message if not in auto-yes mode
+            if (!autoYes) {
+                const response = await enquirer.prompt<{ commitMessage: string }>({
+                    type: 'input',
+                    name: 'commitMessage',
+                    message: `Enter commit message for ${repoDisplayName}:`,
+                    initial: defaultCommitMessage,
+                    validate: (input: string) => {
+                        if (!input.trim()) {
+                            return 'Commit message cannot be empty';
+                        }
+                        return true;
+                    },
+                });
+                commitMessage = response.commitMessage;
+            }
 
             // Commit the changes
             logger.info(`${prefix}💾 Committing changes with message: "${chalk.cyan(commitMessage)}"`);

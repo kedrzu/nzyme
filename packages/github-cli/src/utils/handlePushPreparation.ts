@@ -40,6 +40,11 @@ export interface HandlePushPreparationParams {
      * Whether to skip submodule processing.
      */
     skipSubmodules?: boolean;
+
+    /**
+     * Whether to skip prompts and automatically commit with default message.
+     */
+    autoYes?: boolean;
 }
 
 /**
@@ -48,7 +53,7 @@ export interface HandlePushPreparationParams {
  * Does NOT convert PR to ready - only prepares changes.
  */
 export async function handlePushPreparation(params: HandlePushPreparationParams): Promise<void> {
-    const { githubClient, githubConfig, issueId, logger, baseBranch, skipSubmodules } = params;
+    const { githubClient, githubConfig, issueId, logger, baseBranch, skipSubmodules, autoYes } = params;
 
     // FIRST: Handle submodule changes (submodules must be processed before main repo)
     await handleSubmoduleReadyPreparation({
@@ -58,11 +63,12 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
         logger,
         baseBranch,
         skipSubmodules,
+        autoYes,
     });
 
     // SECOND: Handle main repository changes (including submodule reference updates)
     logger.info('🔍 Checking main repository status...');
     const [unpushedCommits, statusInfo] = await Promise.all([checkUnpushedCommits(), getGitStatusInfo()]);
 
-    await handleReadyPreparation(unpushedCommits, statusInfo, logger);
+    await handleReadyPreparation(unpushedCommits, statusInfo, logger, autoYes);
 }

@@ -338,11 +338,16 @@ function defineTaskPushCommand(options: LinearCommandsOptions) {
             examples: [
                 ['Push current task changes', 'task push'],
                 ['Push without processing submodules', 'task push --skip-submodules'],
+                ['Push with auto-commit (skip prompts)', 'task push --yes'],
             ],
         });
 
         skipSubmodules = Option.Boolean('--skip-submodules', false, {
             description: 'Skip processing submodules',
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip prompts and automatically commit with default message',
         });
 
         override async run() {
@@ -374,6 +379,7 @@ function defineTaskPushCommand(options: LinearCommandsOptions) {
                     logger: this.logger,
                     baseBranch,
                     skipSubmodules: this.skipSubmodules,
+                    autoYes: this.yes,
                 });
 
                 this.logger.info('');
@@ -398,11 +404,16 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
             examples: [
                 ['Convert current task to ready for review', 'task ready'],
                 ['Convert to ready without processing submodules', 'task ready --skip-submodules'],
+                ['Convert to ready with auto-commit (skip prompts)', 'task ready --yes'],
             ],
         });
 
         skipSubmodules = Option.Boolean('--skip-submodules', false, {
             description: 'Skip processing submodules',
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip prompts and automatically commit with default message',
         });
 
         override async run() {
@@ -448,6 +459,7 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                     logger: this.logger,
                     baseBranch,
                     skipSubmodules: this.skipSubmodules,
+                    autoYes: this.yes,
                 });
 
                 if (!pr.draft) {

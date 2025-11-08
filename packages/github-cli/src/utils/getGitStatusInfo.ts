@@ -1,3 +1,4 @@
+import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
 /**
@@ -58,8 +59,7 @@ export interface GitStatusInfo {
  * Get structured information about git status.
  * @__NO_SIDE_EFFECTS__
  */
-export async function getGitStatusInfo(): Promise<GitStatusInfo> {
-    const git = simpleGit();
+export async function getGitStatusInfo(git: SimpleGit = simpleGit()): Promise<GitStatusInfo> {
 
     try {
         const status = await git.status();

@@ -1,0 +1,261 @@
+import chalk from 'chalk';
+import enquirer from 'enquirer';
+import type { SimpleGit } from 'simple-git';
+import { simpleGit } from 'simple-git';
+
+import type { Logger } from '@nzyme/logging';
+
+import type { GithubConfig } from '../GithubConfig.js';
+import { checkUnpushedCommits } from './checkUnpushedCommits.js';
+import { createDraftPr } from './createDraftPr.js';
+import type { GithubClient } from './createGithubClient.js';
+import { findMatchingPr } from './findMatchingPr.js';
+import { getGitStatusInfo } from './getGitStatusInfo.js';
+
+/**
+ * Parameters for ensuring a repository is ready.
+ */
+export interface EnsureRepositoryReadyParams {
+    /**
+     * GitHub client instance.
+     */
+    githubClient: GithubClient;
+
+    /**
+     * GitHub configuration (owner, repo, token).
+     */
+    githubConfig: GithubConfig;
+
+    /**
+     * Issue/task ID for PR creation.
+     */
+    issueId: string;
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+
+    /**
+     * Base branch for PR creation.
+     */
+    baseBranch: string;
+
+    /**
+     * Optional SimpleGit instance (uses current directory if not provided).
+     */
+    git?: SimpleGit;
+
+    /**
+     * Optional repository display name (for logging, e.g., "submodule nzyme").
+     */
+    repoDisplayName?: string;
+
+    /**
+     * Optional PR title generator function.
+     */
+    generatePrTitle?: (issueId: string) => string;
+
+    /**
+     * Optional PR body generator function.
+     */
+    generatePrBody?: (issueId: string) => string;
+
+    /**
+     * Optional default commit message.
+     */
+    defaultCommitMessage?: string;
+}
+
+/**
+ * Ensure a repository is ready for review by:
+ * 1. Committing any uncommitted changes (if user confirms)
+ * 2. Pushing any unpushed commits (if user confirms)
+ * 3. Ensuring a PR exists (creates if missing)
+ *
+ * This function provides a unified flow for both main repositories and submodules.
+ */
+export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams): Promise<void> {
+    const {
+        githubClient,
+        githubConfig,
+        issueId,
+        logger,
+        baseBranch,
+        git = simpleGit(),
+        repoDisplayName = 'repository',
+        generatePrTitle = (id: string) => `[${id}] Changes`,
+        generatePrBody = (id: string) => `# [${id}] Changes\n\nThis PR contains changes for task ${id}.`,
+        defaultCommitMessage = 'Ready for review',
+    } = params;
+
+    const prefix = repoDisplayName !== 'repository' ? `[${repoDisplayName}] ` : '';
+
+    // Step 1: Check for uncommitted changes and unpushed commits
+    logger.info(`${prefix}🔍 Checking ${repoDisplayName} status...`);
+    const [unpushedCommits, statusInfo] = await Promise.all([
+        checkUnpushedCommits(git),
+        getGitStatusInfo(git),
+    ]);
+
+    // Step 2: Handle unpushed commits
+    if (unpushedCommits.hasUnpushedCommits) {
+        logger.info(
+            `${prefix}⚠️  You have ${chalk.yellow(unpushedCommits.commitsCount.toString())} unpushed commit${
+                unpushedCommits.commitsCount === 1 ? '' : 's'
+            }:`,
+        );
+
+        // Show the commit messages
+        for (const message of unpushedCommits.commitMessages.slice(0, 5)) {
+            logger.info(`   • ${chalk.gray(message)}`);
+        }
+
+        if (unpushedCommits.commitMessages.length > 5) {
+            logger.info(`   ... and ${unpushedCommits.commitMessages.length - 5} more`);
+        }
+
+        const { shouldPush } = await enquirer.prompt<{ shouldPush: boolean }>({
+            type: 'select',
+            name: 'shouldPush',
+            message: `Do you want to push these commits in ${repoDisplayName}?`,
+            choices: [
+                {
+                    name: 'yes',
+                    message: `Yes, push ${unpushedCommits.commitsCount} commit${
+                        unpushedCommits.commitsCount === 1 ? '' : 's'
+                    }`,
+                    value: true,
+                },
+                {
+                    name: 'no',
+                    message: 'No, skip pushing',
+                    value: false,
+                },
+            ],
+        });
+
+        if (shouldPush) {
+            logger.info(
+                `${prefix}🚀 Pushing ${unpushedCommits.commitsCount} commit${unpushedCommits.commitsCount === 1 ? '' : 's'}...`,
+            );
+            await git.push();
+            logger.info(`${prefix}✅ Successfully pushed commits`);
+        } else {
+            logger.info(`${prefix}⏭️  Skipping push - continuing with uncommitted changes check`);
+        }
+    }
+
+    // Step 3: Handle uncommitted changes
+    if (statusInfo.hasUncommittedChanges) {
+        const hasStagedFiles = statusInfo.changes.staged > 0;
+        const hasUnstagedFiles = statusInfo.totalChanges > statusInfo.changes.staged;
+
+        logger.info(
+            `${prefix}⚠️  You have ${chalk.yellow(statusInfo.totalChanges.toString())} uncommitted change${
+                statusInfo.totalChanges === 1 ? '' : 's'
+            }: ${chalk.yellow(statusInfo.changeDescription)}`,
+        );
+
+        const { shouldCommit } = await enquirer.prompt<{ shouldCommit: 'no' | 'yes' }>({
+            type: 'select',
+            name: 'shouldCommit',
+            message: `Do you want to commit these ${statusInfo.totalChanges} change${
+                statusInfo.totalChanges === 1 ? '' : 's'
+            } in ${repoDisplayName}?`,
+            choices: [
+                {
+                    name: 'yes',
+                    message: `Yes, commit ${statusInfo.totalChanges} change${statusInfo.totalChanges === 1 ? '' : 's'}`,
+                },
+                {
+                    name: 'no',
+                    message: 'No, skip committing',
+                },
+            ],
+        });
+
+        if (shouldCommit === 'yes') {
+            // Add unstaged changes to staging if there are any
+            if (hasUnstagedFiles) {
+                logger.info(`${prefix}📦 Adding all changes to staging...`);
+                await git.add('.');
+            } else if (hasStagedFiles) {
+                logger.info(`${prefix}📦 Using already staged files...`);
+            }
+
+            // Prompt for commit message
+            const { commitMessage } = await enquirer.prompt<{ commitMessage: string }>({
+                type: 'input',
+                name: 'commitMessage',
+                message: `Enter commit message for ${repoDisplayName}:`,
+                initial: defaultCommitMessage,
+                validate: (input: string) => {
+                    if (!input.trim()) {
+                        return 'Commit message cannot be empty';
+                    }
+                    return true;
+                },
+            });
+
+            // Commit the changes
+            logger.info(`${prefix}💾 Committing changes with message: "${chalk.cyan(commitMessage)}"`);
+            await git.commit(commitMessage.trim());
+
+            // Push the commit
+            logger.info(`${prefix}🚀 Pushing commit...`);
+            await git.push();
+            logger.info(`${prefix}✅ Successfully committed and pushed changes`);
+        } else {
+            logger.info(`${prefix}⏭️  Skipping commit - continuing with PR check`);
+        }
+    }
+
+    if (!unpushedCommits.hasUnpushedCommits && !statusInfo.hasUncommittedChanges) {
+        logger.info(`${prefix}✅ Repository is clean - no commits to push or changes to commit`);
+    }
+
+    // Step 4: Ensure PR exists (or create it)
+    logger.info(`${prefix}🔍 Checking if PR exists...`);
+    const existingPr = await findMatchingPr(githubClient, githubConfig, issueId);
+
+    if (existingPr) {
+        logger.info(`${prefix}✅ PR already exists: ${chalk.blue(existingPr.title)} (#${existingPr.number})`);
+        logger.info(`${prefix}🔗 PR URL: ${chalk.blueBright(chalk.underline(existingPr.html_url))}`);
+        return;
+    }
+
+    // No PR exists, create one
+    logger.info(`${prefix}📝 Creating draft PR...`);
+
+    const currentStatus = await git.status();
+    const currentBranch = currentStatus.current;
+    if (!currentBranch) {
+        throw new Error('Could not determine current branch name');
+    }
+
+    const prTitle = generatePrTitle(issueId);
+    const prBody = generatePrBody(issueId);
+
+    try {
+        const pr = await createDraftPr({
+            client: githubClient,
+            config: githubConfig,
+            title: prTitle,
+            body: prBody,
+            head: currentBranch,
+            base: baseBranch,
+        });
+
+        logger.info(`${prefix}✅ Created draft PR: ${chalk.blue(pr.title)} (#${pr.number})`);
+        logger.info(`${prefix}🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error(`${prefix}❌ Failed to create PR: ${errorMessage}`);
+        logger.error(
+            `${prefix}📋 Details: owner=${githubConfig.owner}, repo=${githubConfig.repo}, branch=${currentBranch}, base=${baseBranch}`,
+        );
+        throw new Error(`Failed to create PR for ${repoDisplayName}: ${errorMessage}`);
+    }
+}
+

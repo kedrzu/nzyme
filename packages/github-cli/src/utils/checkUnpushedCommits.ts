@@ -1,3 +1,4 @@
+import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
 /**
@@ -23,8 +24,7 @@ export interface UnpushedCommitsResult {
 /**
  * Check if there are unpushed commits in the current branch.
  */
-export async function checkUnpushedCommits(): Promise<UnpushedCommitsResult> {
-    const git = simpleGit();
+export async function checkUnpushedCommits(git: SimpleGit = simpleGit()): Promise<UnpushedCommitsResult> {
 
     try {
         // Get current branch

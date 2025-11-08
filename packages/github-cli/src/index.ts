@@ -8,6 +8,8 @@ export type { CreateBranchAndPrParams, CreateBranchAndPrResult } from './utils/c
 export * from './utils/createDraftPr.js';
 export type { CreateDraftPrParams, CreateDraftPrResult } from './utils/createDraftPr.js';
 export * from './utils/createGithubClient.js';
+export * from './utils/ensureRepositoryReady.js';
+export type { EnsureRepositoryReadyParams } from './utils/ensureRepositoryReady.js';
 export * from './utils/findMatchingPr.js';
 export * from './utils/findMatchingPr.js';
 export * from './utils/getCurrentBranch.js';

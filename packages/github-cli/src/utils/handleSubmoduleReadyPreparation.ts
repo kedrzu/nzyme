@@ -5,9 +5,8 @@ import { simpleGit } from 'simple-git';
 import type { Logger } from '@nzyme/logging';
 
 import type { GithubConfig } from '../GithubConfig.js';
-import { createDraftPr } from './createDraftPr.js';
 import type { GithubClient } from './createGithubClient.js';
-import { findMatchingPr } from './findMatchingPr.js';
+import { ensureRepositoryReady } from './ensureRepositoryReady.js';
 import { getCurrentBranch } from './getCurrentBranch.js';
 import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
@@ -80,46 +79,6 @@ interface HandleSingleSubmoduleParams {
      * Current branch name from main repository.
      */
     mainRepoBranch: string;
-}
-
-/**
- * Parameters for creating a submodule PR.
- */
-interface CreateSubmodulePrParams {
-    /**
-     * GitHub client instance.
-     */
-    githubClient: GithubClient;
-
-    /**
-     * GitHub configuration.
-     */
-    githubConfig: GithubConfig;
-
-    /**
-     * Submodule information.
-     */
-    submodule: SubmoduleInfo;
-
-    /**
-     * Branch name in the submodule.
-     */
-    branchName: string;
-
-    /**
-     * Issue/task ID.
-     */
-    issueId: string;
-
-    /**
-     * Base branch.
-     */
-    baseBranch: string;
-
-    /**
-     * Logger instance.
-     */
-    logger: Logger;
 }
 
 /**
@@ -235,84 +194,7 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
         }
     }
 
-    const currentBranch = (await submoduleGit.status()).current || mainRepoBranch;
-
-    // Handle uncommitted changes
-    if (submodule.hasChanges) {
-        logger.info(`📝 Submodule has uncommitted changes`);
-
-        const status = await submoduleGit.status();
-        const hasStagedFiles = status.staged.length > 0;
-        const hasUnstagedFiles = status.files.length > status.staged.length;
-
-        // Add unstaged changes to staging if there are any
-        if (hasUnstagedFiles) {
-            logger.info(`📦 Adding all changes to staging...`);
-            await submoduleGit.add('.');
-        } else if (hasStagedFiles) {
-            logger.info(`📦 Using already staged files...`);
-        }
-
-        // Prompt for commit message
-        const { commitMessage } = await enquirer.prompt<{ commitMessage: string }>({
-            type: 'input',
-            name: 'commitMessage',
-            message: `Enter commit message for ${chalk.cyan(submodule.name)}:`,
-            initial: `[${issueId}] Submodule changes`,
-            validate: (input: string) => {
-                if (!input.trim()) {
-                    return 'Commit message cannot be empty';
-                }
-                return true;
-            },
-        });
-
-        // Commit the changes
-        logger.info(`💾 Committing changes with message: "${chalk.cyan(commitMessage)}"`);
-        await submoduleGit.commit(commitMessage.trim());
-        logger.info(`✅ Changes committed`);
-    }
-
-    // Handle unpushed commits and branch creation
-    if (!submodule.hasRemoteBranch) {
-        logger.info(`🌿 Branch ${chalk.cyan(currentBranch)} doesn't exist on remote`);
-        logger.info(`🚀 Creating remote branch and pushing...`);
-
-        // Push the branch
-        await submoduleGit.push('origin', currentBranch, { '--set-upstream': null });
-        logger.info(`✅ Pushed branch to origin`);
-    } else if (submodule.unpushedCommitsCount > 0) {
-        logger.info(
-            `🚀 Pushing ${chalk.yellow(submodule.unpushedCommitsCount.toString())} unpushed commit${
-                submodule.unpushedCommitsCount === 1 ? '' : 's'
-            }...`,
-        );
-        await submoduleGit.push();
-        logger.info(`✅ Successfully pushed commits`);
-    }
-
-    // Always try to create a draft PR for the submodule (will skip if PR already exists)
-    await createSubmodulePr({
-        githubClient,
-        githubConfig,
-        submodule,
-        branchName: currentBranch,
-        issueId,
-        baseBranch,
-        logger,
-    });
-
-    // Update the submodule reference in the main repository
-    logger.info(`🔄 Updating submodule reference in main repository...`);
-    const mainGit = simpleGit();
-    await mainGit.add(submodule.path);
-    logger.info(`✅ Submodule reference updated`);
-}
-
-async function createSubmodulePr(params: CreateSubmodulePrParams): Promise<void> {
-    const { githubClient, submodule, branchName, issueId, baseBranch, logger } = params;
-
-    // Parse the submodule URL to get owner and repo
+    // Parse the submodule URL to get owner and repo for GitHub config
     const urlMatch = submodule.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
     if (!urlMatch) {
         const errorMessage = `Could not parse GitHub URL for submodule: ${submodule.url}`;
@@ -330,41 +212,27 @@ async function createSubmodulePr(params: CreateSubmodulePrParams): Promise<void>
     const submoduleConfig: GithubConfig = {
         owner,
         repo: repo.replace(/\.git$/, ''),
-        token: params.githubConfig.token,
+        token: githubConfig.token,
     };
 
-    // Check if PR already exists
-    logger.info(`🔍 Checking if PR already exists for ${chalk.cyan(submodule.name)}...`);
-    const existingPr = await findMatchingPr(githubClient, submoduleConfig, issueId);
+    // Use the unified ensureRepositoryReady function to handle commits, push, and PR creation
+    await ensureRepositoryReady({
+        githubClient,
+        githubConfig: submoduleConfig,
+        issueId,
+        logger,
+        baseBranch,
+        git: submoduleGit,
+        repoDisplayName: `submodule ${submodule.name}`,
+        generatePrTitle: (id: string) => `[${id}] Submodule changes for ${submodule.name}`,
+        generatePrBody: (id: string) =>
+            `# [${id}] Submodule changes\n\nThis PR contains changes to the ${submodule.name} submodule.`,
+        defaultCommitMessage: `[${issueId}] Submodule changes`,
+    });
 
-    if (existingPr) {
-        logger.info(`✅ PR already exists: ${chalk.blue(existingPr.title)} (#${existingPr.number})`);
-        logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(existingPr.html_url))}`);
-        return;
-    }
-
-    // Create PR
-    logger.info(`📝 Creating draft PR for submodule ${chalk.cyan(submodule.name)}...`);
-
-    const prTitle = `[${issueId}] Submodule changes for ${submodule.name}`;
-    const prBody = `# [${issueId}] Submodule changes\n\nThis PR contains changes to the ${submodule.name} submodule.`;
-
-    try {
-        const pr = await createDraftPr({
-            client: githubClient,
-            config: submoduleConfig,
-            title: prTitle,
-            body: prBody,
-            head: branchName,
-            base: baseBranch,
-        });
-
-        logger.info(`✅ Created draft PR: ${chalk.blue(pr.title)} (#${pr.number})`);
-        logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        logger.error(`❌ Failed to create PR for submodule ${chalk.cyan(submodule.name)}: ${errorMessage}`);
-        logger.error(`📋 Details: owner=${owner}, repo=${repo}, branch=${branchName}, base=${baseBranch}`);
-        throw new Error(`Failed to create PR for submodule ${submodule.name}: ${errorMessage}`);
-    }
+    // Update the submodule reference in the main repository
+    logger.info(`🔄 Updating submodule reference in main repository...`);
+    const mainGit = simpleGit();
+    await mainGit.add(submodule.path);
+    logger.info(`✅ Submodule reference updated`);
 }

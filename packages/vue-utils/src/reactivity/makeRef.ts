@@ -51,7 +51,7 @@ export function makeRef<T>(param: RefParam<T>): Readonly<Ref<T>> {
         return param;
     }
 
-    if (param instanceof Function || typeof param === 'function') {
+    if (typeof param === 'function') {
         return computed(param as (this: void) => T);
     }
 

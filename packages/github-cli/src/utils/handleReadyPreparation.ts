@@ -38,7 +38,7 @@ export async function handleReadyPreparation(
         const { shouldPush } = await enquirer.prompt<{ shouldPush: boolean }>({
             type: 'select',
             name: 'shouldPush',
-            message: 'Do you want to push these commits before marking the PR as ready?',
+            message: 'Do you want to push these commits?',
             choices: [
                 {
                     name: 'yes',
@@ -82,7 +82,7 @@ export async function handleReadyPreparation(
             name: 'shouldCommit',
             message: `Do you want to commit these ${statusInfo.totalChanges} change${
                 statusInfo.totalChanges === 1 ? '' : 's'
-            } before marking the PR as ready?`,
+            }?`,
             choices: [
                 {
                     name: 'yes',

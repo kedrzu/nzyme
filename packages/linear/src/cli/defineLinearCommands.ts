@@ -4,13 +4,11 @@ import enquirer from 'enquirer';
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
 import {
-    checkUnpushedCommits,
     convertPrToReady,
     createGithubClient,
     findMatchingPr,
     getCurrentBranch,
-    getGitStatusInfo,
-    handleReadyPreparation,
+    handlePushPreparation,
     syncBaseBranch,
 } from '@nzyme/github-cli';
 import type { GithubConfig } from '@nzyme/github-cli';
@@ -87,6 +85,7 @@ export function defineLinearCommands(options: LinearCommandsOptions): CommandCla
         defineTaskInfoCommand(options),
         defineTaskStartCommand(options),
         defineTaskNewCommand(options),
+        defineTaskPushCommand(options),
         defineTaskReadyCommand(options),
         defineTaskRefreshCommand(options),
         defineTaskListCommand(options),
@@ -328,6 +327,58 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
     };
 }
 
+function defineTaskPushCommand(options: LinearCommandsOptions) {
+    return class TaskPushCommand extends Command {
+        static override paths = getCommandPaths(options, 'push');
+        static override usage = Command.Usage({
+            category: 'Linear',
+            description: 'Push changes and handle submodules without marking PR as ready',
+            details:
+                'Commits and pushes changes in both submodules and main repository. Useful when you want to push work in progress without marking the PR as ready for review.',
+            examples: [['Push current task changes', 'task push']],
+        });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            const githubConfig = await getGithubConfig(options);
+
+            try {
+                // Get current branch
+                const currentBranch = await getCurrentBranch();
+                this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
+
+                // Extract task ID from branch name
+                const taskId = extractTaskIdFromBranch(currentBranch);
+                this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
+
+                // Create GitHub client
+                const githubClient = createGithubClient(githubConfig);
+
+                // Get base branches
+                const baseBranches = await getBaseBranches(options);
+                const baseBranch = baseBranches[0] ?? 'main';
+
+                // Handle preparation (submodules and main repo)
+                await handlePushPreparation({
+                    githubClient,
+                    githubConfig,
+                    issueId: taskId,
+                    logger: this.logger,
+                    baseBranch,
+                });
+
+                this.logger.info('');
+                this.logger.info(`🎉 Successfully pushed all changes for task ${chalk.bold(taskId)}!`);
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to push task changes: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
+}
+
 function defineTaskReadyCommand(options: LinearCommandsOptions) {
     return class ReadyCommand extends Command {
         static override paths = getCommandPaths(options, 'ready');
@@ -353,13 +404,6 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                 const taskId = extractTaskIdFromBranch(currentBranch);
                 this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
 
-                // Check for unpushed commits and uncommitted changes in parallel
-                this.logger.info('🔍 Checking repository status...');
-                const [unpushedCommits, statusInfo] = await Promise.all([checkUnpushedCommits(), getGitStatusInfo()]);
-
-                // Handle preparation (push commits, commit changes) with user interaction
-                await handleReadyPreparation(unpushedCommits, statusInfo, this.logger);
-
                 // Create GitHub client
                 const githubClient = createGithubClient(githubConfig);
 
@@ -378,6 +422,18 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
 
                 this.logger.info(`✅ Found PR: ${chalk.blue(pr.title)} (#${pr.number})`);
 
+                // Handle preparation (submodules and main repo)
+                const baseBranches = await getBaseBranches(options);
+                const baseBranch = baseBranches.length > 0 ? baseBranches[0]! : pr.base.ref;
+
+                await handlePushPreparation({
+                    githubClient,
+                    githubConfig,
+                    issueId: taskId,
+                    logger: this.logger,
+                    baseBranch,
+                });
+
                 if (!pr.draft) {
                     this.logger.info(`🎉 PR #${pr.number} is already ready for review!`);
                     this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
@@ -390,7 +446,7 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
 
                 this.logger.info(`🎉 Successfully converted PR #${pr.number} to ready for review!`);
                 this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
-            } catch (error) {
+            } catch (error: unknown) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to push task to review: ${errorMessage}`);
                 throw error;

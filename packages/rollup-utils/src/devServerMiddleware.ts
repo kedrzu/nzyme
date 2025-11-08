@@ -97,7 +97,7 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions) {
         const newServer = createDevServer({ file: outputFile });
         server = newServer;
 
-        newServer.onStopped(() => {
+        newServer.events.stopped.on(() => {
             if (server === newServer) {
                 server = undefined;
             }

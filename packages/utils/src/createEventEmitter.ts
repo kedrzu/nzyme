@@ -38,7 +38,7 @@ export interface EventEmitter<TEvent = unknown> {
      * Subscribe to events by adding a callback function.
      * @param callback - The function to call when an event is emitted
      */
-    (this: void, callback: EventCallback<TEvent>): void;
+    on: (callback: EventCallback<TEvent>) => void;
     /**
      * Unsubscribe from events by removing a previously added callback function.
      * @param callback - The callback function to remove
@@ -73,10 +73,13 @@ export function createEventEmitter<TEvent = void>() {
     type Callback = EventCallback<TEvent>;
     const listeners: Callback[] = [];
 
-    const event = ((callback: EventCallback<TEvent>) => void listeners.push(callback)) as EventEmitter<TEvent>;
-
-    event.off = (callback: EventCallback<TEvent>) => {
-        arrayRemove(listeners, callback);
+    const event: EventEmitter<TEvent> = {
+        on: (callback: EventCallback<TEvent>) => {
+            listeners.push(callback);
+        },
+        off: (callback: EventCallback<TEvent>) => {
+            arrayRemove(listeners, callback);
+        },
     };
 
     const emit = ((event: TEvent) => {

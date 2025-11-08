@@ -11,7 +11,7 @@ import { createEventEmitter } from '@nzyme/utils';
 export function devServerRuntime() {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const port = workerData?.port as number;
-    const onExit = createEventEmitter<void>();
+    const eventExit = createEventEmitter<void>();
 
     parentPort?.on('message', message => {
         if (message === 'STOP') {
@@ -22,7 +22,9 @@ export function devServerRuntime() {
     return {
         port,
         start,
-        onExit: onExit.event,
+        events: {
+            exit: eventExit.event,
+        },
     };
 
     /**
@@ -35,7 +37,7 @@ export function devServerRuntime() {
     }
 
     async function onStop() {
-        await onExit.emit.async();
+        await eventExit.emit.async();
         parentPort?.close();
         process.exit();
     }

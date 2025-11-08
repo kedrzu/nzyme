@@ -312,43 +312,44 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
 async function createSubmodulePr(params: CreateSubmodulePrParams): Promise<void> {
     const { githubClient, submodule, branchName, issueId, baseBranch, logger } = params;
 
+    // Parse the submodule URL to get owner and repo
+    const urlMatch = submodule.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
+    if (!urlMatch) {
+        const errorMessage = `Could not parse GitHub URL for submodule: ${submodule.url}`;
+        logger.error(`❌ ${errorMessage}`);
+        throw new Error(errorMessage);
+    }
+
+    const [, owner, repo] = urlMatch;
+    if (!owner || !repo) {
+        const errorMessage = `Could not extract owner/repo from URL: ${submodule.url}`;
+        logger.error(`❌ ${errorMessage}`);
+        throw new Error(errorMessage);
+    }
+
+    const submoduleConfig: GithubConfig = {
+        owner,
+        repo: repo.replace(/\.git$/, ''),
+        token: params.githubConfig.token,
+    };
+
+    // Check if PR already exists
+    logger.info(`🔍 Checking if PR already exists for ${chalk.cyan(submodule.name)}...`);
+    const existingPr = await findMatchingPr(githubClient, submoduleConfig, issueId);
+
+    if (existingPr) {
+        logger.info(`✅ PR already exists: ${chalk.blue(existingPr.title)} (#${existingPr.number})`);
+        logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(existingPr.html_url))}`);
+        return;
+    }
+
+    // Create PR
+    logger.info(`📝 Creating draft PR for submodule ${chalk.cyan(submodule.name)}...`);
+
+    const prTitle = `[${issueId}] Submodule changes for ${submodule.name}`;
+    const prBody = `# [${issueId}] Submodule changes\n\nThis PR contains changes to the ${submodule.name} submodule.`;
+
     try {
-        // Parse the submodule URL to get owner and repo
-        const urlMatch = submodule.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
-        if (!urlMatch) {
-            logger.warn(`⚠️  Could not parse GitHub URL for submodule: ${submodule.url}`);
-            logger.info(`ℹ️  Skipping PR creation for ${chalk.cyan(submodule.name)}`);
-            return;
-        }
-
-        const [, owner, repo] = urlMatch;
-        if (!owner || !repo) {
-            logger.warn(`⚠️  Could not extract owner/repo from URL: ${submodule.url}`);
-            return;
-        }
-
-        const submoduleConfig: GithubConfig = {
-            owner,
-            repo: repo.replace(/\.git$/, ''),
-            token: params.githubConfig.token,
-        };
-
-        // Check if PR already exists
-        logger.info(`🔍 Checking if PR already exists for ${chalk.cyan(submodule.name)}...`);
-        const existingPr = await findMatchingPr(githubClient, submoduleConfig, issueId);
-
-        if (existingPr) {
-            logger.info(`✅ PR already exists: ${chalk.blue(existingPr.title)} (#${existingPr.number})`);
-            logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(existingPr.html_url))}`);
-            return;
-        }
-
-        // Create PR
-        logger.info(`📝 Creating draft PR for submodule ${chalk.cyan(submodule.name)}...`);
-
-        const prTitle = `[${issueId}] Submodule changes for ${submodule.name}`;
-        const prBody = `# [${issueId}] Submodule changes\n\nThis PR contains changes to the ${submodule.name} submodule.`;
-
         const pr = await createDraftPr({
             client: githubClient,
             config: submoduleConfig,
@@ -361,7 +362,9 @@ async function createSubmodulePr(params: CreateSubmodulePrParams): Promise<void>
         logger.info(`✅ Created draft PR: ${chalk.blue(pr.title)} (#${pr.number})`);
         logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
     } catch (error) {
-        logger.warn(`⚠️  Could not create PR for submodule ${chalk.cyan(submodule.name)}: ${(error as Error).message}`);
-        logger.info(`ℹ️  You may need to create the PR manually`);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error(`❌ Failed to create PR for submodule ${chalk.cyan(submodule.name)}: ${errorMessage}`);
+        logger.error(`📋 Details: owner=${owner}, repo=${repo}, branch=${branchName}, base=${baseBranch}`);
+        throw new Error(`Failed to create PR for submodule ${submodule.name}: ${errorMessage}`);
     }
 }

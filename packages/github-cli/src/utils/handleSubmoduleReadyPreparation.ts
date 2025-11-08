@@ -6,6 +6,7 @@ import type { Logger } from '@nzyme/logging';
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
 import { ensureRepositoryReady } from './ensureRepositoryReady.js';
+import { findMergedPr } from './findMatchingPr.js';
 import { getCurrentBranch } from './getCurrentBranch.js';
 import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
@@ -219,21 +220,82 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
         token: githubConfig.token,
     };
 
-    // Use the unified ensureRepositoryReady function to handle commits, push, and PR creation
-    await ensureRepositoryReady({
-        githubClient,
-        githubConfig: submoduleConfig,
-        issueId,
-        logger,
-        baseBranch,
-        git: submoduleGit,
-        repoDisplayName: `submodule ${submodule.name}`,
-        generatePrTitle: (id: string) => `[${id}] Submodule changes for ${submodule.name}`,
-        generatePrBody: (id: string) =>
-            `# [${id}] Submodule changes\n\nThis PR contains changes to the ${submodule.name} submodule.`,
-        defaultCommitMessage: `[${issueId}] Submodule changes`,
-        autoYes,
-    });
+    // Check if the submodule PR was already merged
+    logger.info(`🔍 Checking if submodule PR was already merged...`);
+    const mergedPr = await findMergedPr(githubClient, submoduleConfig, issueId);
+
+    if (mergedPr && mergedPr.base && mergedPr.base.ref) {
+        logger.info(`✅ Found merged PR: ${chalk.blue(mergedPr.title)} (#${mergedPr.number})`);
+        logger.info(`🎯 PR was merged to: ${chalk.cyan(mergedPr.base.ref)}`);
+
+        // Check for uncommitted or unpushed changes before switching
+        const status = await submoduleGit.status();
+        const hasChanges = !status.isClean();
+        const currentBranch = status.current;
+
+        if (hasChanges) {
+            logger.error(
+                `❌ Submodule ${chalk.cyan(submodule.name)} has uncommitted changes but PR is already merged!`,
+            );
+            logger.error(`   PR #${mergedPr.number} was merged to ${chalk.cyan(mergedPr.base.ref)}`);
+            logger.error(`   Current branch: ${chalk.cyan(currentBranch || 'unknown')}`);
+            logger.error('');
+            logger.error('🔧 To fix this:');
+            logger.error(`   1. Review the uncommitted changes in ${submodule.path}`);
+            logger.error(`   2. Either commit them to a new branch or discard them`);
+            logger.error(`   3. Then run this command again`);
+            throw new Error(
+                `Submodule ${submodule.name} has uncommitted changes but PR #${mergedPr.number} is already merged. Please resolve manually.`,
+            );
+        }
+
+        // No uncommitted changes and PR is merged - switch to target branch
+        const targetBranch = mergedPr.base.ref;
+        logger.info(`🔄 Switching submodule to target branch: ${chalk.cyan(targetBranch)}`);
+
+        try {
+            // Fetch latest changes
+            await submoduleGit.fetch('origin');
+
+            // Check if we're already on the target branch
+            if (currentBranch !== targetBranch) {
+                // Switch to target branch
+                const branches = await submoduleGit.branchLocal();
+                if (branches.all.includes(targetBranch)) {
+                    await submoduleGit.checkout(targetBranch);
+                } else {
+                    // Branch doesn't exist locally, create it from origin
+                    await submoduleGit.checkout(['-b', targetBranch, `origin/${targetBranch}`]);
+                }
+            }
+
+            // Pull latest changes
+            await submoduleGit.pull('origin', targetBranch);
+            logger.info(`✅ Switched to ${chalk.cyan(targetBranch)} and pulled latest changes`);
+        } catch (error) {
+            logger.error(`❌ Failed to switch to target branch: ${(error as Error).message}`);
+            throw error;
+        }
+    } else {
+        // No merged PR found - continue with normal flow
+        logger.info(`📝 No merged PR found, continuing with normal workflow...`);
+
+        // Use the unified ensureRepositoryReady function to handle commits, push, and PR creation
+        await ensureRepositoryReady({
+            githubClient,
+            githubConfig: submoduleConfig,
+            issueId,
+            logger,
+            baseBranch,
+            git: submoduleGit,
+            repoDisplayName: `submodule ${submodule.name}`,
+            generatePrTitle: (id: string) => `[${id}] Submodule changes for ${submodule.name}`,
+            generatePrBody: (id: string) =>
+                `# [${id}] Submodule changes\n\nThis PR contains changes to the ${submodule.name} submodule.`,
+            defaultCommitMessage: `[${issueId}] Submodule changes`,
+            autoYes,
+        });
+    }
 
     // Update the submodule reference in the main repository
     logger.info(`🔄 Updating submodule reference in main repository...`);

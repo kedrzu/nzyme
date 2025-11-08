@@ -11,7 +11,6 @@ export * from './utils/createGithubClient.js';
 export * from './utils/ensureRepositoryReady.js';
 export type { EnsureRepositoryReadyParams } from './utils/ensureRepositoryReady.js';
 export * from './utils/findMatchingPr.js';
-export * from './utils/findMatchingPr.js';
 export * from './utils/getCurrentBranch.js';
 export * from './utils/getGitStatusInfo.js';
 export type { GitStatusInfo } from './utils/getGitStatusInfo.js';

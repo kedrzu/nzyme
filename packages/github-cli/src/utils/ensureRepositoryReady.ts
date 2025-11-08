@@ -99,10 +99,7 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
 
     // Step 1: Check for uncommitted changes and unpushed commits
     logger.info(`${prefix}🔍 Checking ${repoDisplayName} status...`);
-    const [unpushedCommits, statusInfo] = await Promise.all([
-        checkUnpushedCommits(git),
-        getGitStatusInfo(git),
-    ]);
+    const [unpushedCommits, statusInfo] = await Promise.all([checkUnpushedCommits(git), getGitStatusInfo(git)]);
 
     let newCommitCreated = false;
 
@@ -251,4 +248,3 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
         throw new Error(`Failed to create PR for ${repoDisplayName}: ${errorMessage}`);
     }
 }
-

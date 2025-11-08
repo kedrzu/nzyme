@@ -97,21 +97,25 @@ export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleRea
         return;
     }
 
-    // Filter submodules that have changes or unpushed commits
-    const submodulesWithChanges = submodules.filter(sub => sub.hasChanges || sub.unpushedCommitsCount > 0);
+    // Filter submodules that:
+    // 1. Have changes or unpushed commits, OR
+    // 2. Are on a task branch (to ensure PR exists even if previous creation failed)
+    const submodulesToProcess = submodules.filter(
+        sub => sub.hasChanges || sub.unpushedCommitsCount > 0 || isTaskBranch(sub.currentBranch),
+    );
 
-    if (submodulesWithChanges.length === 0) {
-        logger.info('✅ No changes found in submodules');
+    if (submodulesToProcess.length === 0) {
+        logger.info('✅ No submodules to process');
         return;
     }
 
     logger.info(
-        `⚠️  Found ${chalk.yellow(submodulesWithChanges.length.toString())} submodule${
-            submodulesWithChanges.length === 1 ? '' : 's'
-        } with changes:`,
+        `⚠️  Found ${chalk.yellow(submodulesToProcess.length.toString())} submodule${
+            submodulesToProcess.length === 1 ? '' : 's'
+        } to process:`,
     );
 
-    for (const submodule of submodulesWithChanges) {
+    for (const submodule of submodulesToProcess) {
         logger.info(`   • ${chalk.cyan(submodule.name)} (${submodule.path})`);
         if (submodule.hasChanges) {
             logger.info(`     - Uncommitted changes`);
@@ -121,16 +125,19 @@ export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleRea
                 `     - ${submodule.unpushedCommitsCount} unpushed commit${submodule.unpushedCommitsCount === 1 ? '' : 's'}`,
             );
         }
+        if (!submodule.hasChanges && submodule.unpushedCommitsCount === 0 && isTaskBranch(submodule.currentBranch)) {
+            logger.info(`     - On task branch ${chalk.cyan(submodule.currentBranch)} (checking PR status)`);
+        }
     }
 
     const { shouldProceed } = await enquirer.prompt<{ shouldProceed: boolean }>({
         type: 'select',
         name: 'shouldProceed',
-        message: 'Do you want to handle these submodule changes now?',
+        message: 'Do you want to handle these submodules now?',
         choices: [
             {
                 name: 'yes',
-                message: 'Yes, process submodule changes',
+                message: 'Yes, process submodules',
                 value: true,
             },
             {
@@ -150,7 +157,7 @@ export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleRea
     const mainRepoBranch = await getCurrentBranch();
 
     // Process each submodule
-    for (const submodule of submodulesWithChanges) {
+    for (const submodule of submodulesToProcess) {
         logger.info('');
         logger.info(chalk.bold.blue(`📦 Processing submodule: ${chalk.cyan(submodule.name)}`));
 
@@ -166,7 +173,7 @@ export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleRea
     }
 
     logger.info('');
-    logger.info('✅ All submodule changes processed');
+    logger.info('✅ All submodules processed');
     logger.info('ℹ️  Submodule references have been updated in the main repository');
 }
 
@@ -235,4 +242,21 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
     const mainGit = simpleGit();
     await mainGit.add(submodule.path);
     logger.info(`✅ Submodule reference updated`);
+}
+
+/**
+ * Check if a branch name appears to be a task/issue branch.
+ */
+function isTaskBranch(branchName: string | undefined): boolean {
+    if (!branchName) {
+        return false;
+    }
+
+    // Check for common task branch patterns:
+    // - feature/SIG-123-...
+    // - bug/SIG-123-...
+    // - SIG-123-...
+    // - Any branch containing task IDs like SIG-123, PROJ-456, etc.
+    const taskIdPattern = /[A-Z]+-\d+/;
+    return taskIdPattern.test(branchName);
 }

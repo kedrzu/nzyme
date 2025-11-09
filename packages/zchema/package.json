@@ -35,7 +35,7 @@
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
-        "vitest": "^3.2.4"
+        "vitest": "^4.0.8"
     },
     "publishConfig": {
         "access": "public"

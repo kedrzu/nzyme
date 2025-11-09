@@ -5,7 +5,7 @@ import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging';
 
 import type { GithubConfig } from '../GithubConfig.js';
-import { incrementBranchVersion } from './branchVersionHelpers.js';
+import { determineNextVersion, extractBranchVersion } from './branchVersionHelpers.js';
 import { createBranchAndPr } from './createBranchAndPr.js';
 import type { GithubClient } from './createGithubClient.js';
 import { findAllMatchingPrs } from './findMatchingPr.js';
@@ -81,7 +81,7 @@ export interface HandleMergedPrReopenResult {
 }
 
 /**
- * Check if a task PR was merged and handle the reopen flow.
+ * Check if a task PR was merged or canceled and handle the reopen flow.
  * Prompts the user to reopen the task and creates a new versioned branch if they confirm.
  * Returns information about whether the task was reopened.
  */
@@ -99,35 +99,52 @@ export async function handleMergedPrReopen(params: HandleMergedPrReopenParams): 
         onReopenTask,
     } = params;
 
-    // Check if any PR for this task was merged
+    // Check if any PR for this task was merged or closed
     const allMatchingPrs = await findAllMatchingPrs(githubClient, githubConfig, issueId);
     const mergedPrs = allMatchingPrs.filter(pr => pr.merged_at);
+    const closedPrs = allMatchingPrs.filter(pr => pr.state === 'closed' && !pr.merged_at);
 
-    if (mergedPrs.length === 0) {
-        // No merged PRs, proceed normally
+    if (mergedPrs.length === 0 && closedPrs.length === 0) {
+        // No merged or closed PRs, proceed normally
         return { reopened: false };
     }
 
-    // Found merged PR(s) - determine the next branch name
-    const mostRecentMergedPr = mergedPrs.sort((a, b) => {
-        const dateA = a.merged_at ? new Date(a.merged_at) : new Date(0);
-        const dateB = b.merged_at ? new Date(b.merged_at) : new Date(0);
-        return dateB.getTime() - dateA.getTime();
+    // Found merged or closed PR(s) - determine the next branch name
+    const allClosedPrs = [...mergedPrs, ...closedPrs];
+    const mostRecentClosedPr = allClosedPrs.sort((a, b) => {
+        const dateA = a.merged_at || a.closed_at || '1970-01-01';
+        const dateB = b.merged_at || b.closed_at || '1970-01-01';
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
     })[0]!;
 
+    // Determine the status message
+    const isMerged = !!mostRecentClosedPr.merged_at;
+    const statusMessage = isMerged ? 'Merged' : 'Closed';
+    const statusDate = mostRecentClosedPr.merged_at || mostRecentClosedPr.closed_at;
+
     logger.info('');
-    logger.info(chalk.bold.yellow('⚠️  Task PR Already Merged'));
+    logger.info(chalk.bold.yellow(`⚠️  Task PR Already ${statusMessage}`));
     logger.info('═'.repeat(50));
     logger.info(`📝 Task: ${chalk.bold(issueId)} - ${issueTitle}`);
-    logger.info(`✅ PR #${mostRecentMergedPr.number} was merged at ${mostRecentMergedPr.merged_at}`);
-    logger.info(`🌿 Branch: ${chalk.cyan(mostRecentMergedPr.head.ref)}`);
+    logger.info(`${isMerged ? '✅' : '❌'} PR #${mostRecentClosedPr.number} was ${statusMessage.toLowerCase()} at ${statusDate}`);
+    logger.info(`🌿 Branch: ${chalk.cyan(mostRecentClosedPr.head.ref)}`);
+    
+    // Show summary of all closed PRs if there are multiple
+    if (allClosedPrs.length > 1) {
+        logger.info('');
+        logger.info(`📊 Found ${allClosedPrs.length} closed PR(s) for this task:`);
+        for (const pr of allClosedPrs) {
+            const prStatus = pr.merged_at ? chalk.green('merged') : chalk.red('closed');
+            logger.info(`   • PR #${pr.number} (${chalk.cyan(pr.head.ref)}): ${prStatus}`);
+        }
+    }
     logger.info('');
 
     // Ask user if they want to reopen
     const { action } = await enquirer.prompt<{ action: string }>({
         type: 'select',
         name: 'action',
-        message: `Task ${chalk.bold(issueId)} PR has been merged. What would you like to do?`,
+        message: `Task ${chalk.bold(issueId)} PR has been ${statusMessage.toLowerCase()}. What would you like to do?`,
         choices: [
             {
                 name: 'reopen',
@@ -153,13 +170,21 @@ export async function handleMergedPrReopen(params: HandleMergedPrReopenParams): 
     }
 
     // Determine the new branch name with incremented version
-    const latestBranchName = mostRecentMergedPr.head.ref;
-    const newBranchName = incrementBranchVersion(latestBranchName);
+    // Use all closed PR branches to determine the next version
+    const allClosedBranches = allClosedPrs.map(pr => pr.head.ref);
+    const latestBranchName = mostRecentClosedPr.head.ref;
+    const newBranchName = determineNextVersion(latestBranchName, allClosedBranches);
 
     logger.info(`🌿 Creating new versioned branch: ${chalk.cyan(newBranchName)}`);
 
-    // Create PR title
-    const prTitle = projectName ? `[${issueId}][${projectName}] ${issueTitle}` : `[${issueId}] ${issueTitle}`;
+    // Extract version for PR title
+    const versionNumber = extractBranchVersion(newBranchName);
+    const versionSuffix = versionNumber > 1 ? ` (v${versionNumber})` : '';
+    
+    // Create PR title with version number
+    const prTitle = projectName 
+        ? `[${issueId}][${projectName}] ${issueTitle}${versionSuffix}` 
+        : `[${issueId}] ${issueTitle}${versionSuffix}`;
 
     // Create new branch and PR
     const result = await createBranchAndPr({

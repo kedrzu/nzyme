@@ -24,16 +24,16 @@
     "dependencies": {
         "@nzyme/cli": "^0.14.0",
         "@nzyme/logging": "^0.14.0",
-        "@octokit/rest": "^22.0.0",
+        "@octokit/rest": "^22.0.1",
         "chalk": "^5.6.2",
         "enquirer": "^2.4.1",
-        "simple-git": "^3.28.0"
+        "simple-git": "^3.30.0"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
         "typescript": "^5.9.3",
-        "vitest": "^3.2.4"
+        "vitest": "^4.0.8"
     },
     "publishConfig": {
         "access": "public"

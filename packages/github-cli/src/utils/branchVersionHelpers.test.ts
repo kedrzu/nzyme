@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import {
     areSameBranchVersions,
+    determineNextVersion,
     extractBranchVersion,
     getBaseBranchName,
     incrementBranchVersion,
@@ -73,5 +74,54 @@ describe('areSameBranchVersions', () => {
 
     test('returns false for different branches with versions', () => {
         expect(areSameBranchVersions('sig-123-feature--v2', 'sig-456-feature--v2')).toBe(false);
+    });
+});
+
+describe('determineNextVersion', () => {
+    test('returns base name when no existing branches', () => {
+        expect(determineNextVersion('sig-123-feature', [])).toBe('sig-123-feature');
+    });
+
+    test('returns --v2 when only v1 exists', () => {
+        expect(determineNextVersion('sig-123-feature', ['sig-123-feature'])).toBe('sig-123-feature--v2');
+    });
+
+    test('returns --v3 when v1 and v2 exist', () => {
+        expect(determineNextVersion('sig-123-feature--v2', ['sig-123-feature', 'sig-123-feature--v2'])).toBe(
+            'sig-123-feature--v3',
+        );
+    });
+
+    test('returns --v4 when v1, v2, and v3 exist', () => {
+        expect(
+            determineNextVersion('sig-123-feature--v3', [
+                'sig-123-feature',
+                'sig-123-feature--v2',
+                'sig-123-feature--v3',
+            ]),
+        ).toBe('sig-123-feature--v4');
+    });
+
+    test('handles non-sequential versions correctly', () => {
+        // If v1 and v3 exist but v2 was never created, should create v4
+        expect(determineNextVersion('sig-123-feature--v3', ['sig-123-feature', 'sig-123-feature--v3'])).toBe(
+            'sig-123-feature--v4',
+        );
+    });
+
+    test('ignores branches with different base names', () => {
+        expect(
+            determineNextVersion('sig-123-feature', [
+                'sig-123-feature',
+                'sig-456-feature',
+                'sig-456-feature--v2',
+            ]),
+        ).toBe('sig-123-feature--v2');
+    });
+
+    test('handles case where base branch has no version suffix but highest version exists', () => {
+        expect(determineNextVersion('sig-123-feature', ['sig-123-feature', 'sig-123-feature--v2'])).toBe(
+            'sig-123-feature--v3',
+        );
     });
 });

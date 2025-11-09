@@ -43,3 +43,29 @@ export function areSameBranchVersions(branch1: string, branch2: string): boolean
     const base2 = getBaseBranchName(branch2);
     return base1 === base2;
 }
+
+/**
+ * Determine the next version number based on existing branches.
+ * Considers all provided branch names and returns the next version.
+ * Example: if branches are ["sig-123", "sig-123--v2", "sig-123--v3"], returns "sig-123--v4"
+ * @__NO_SIDE_EFFECTS__
+ */
+export function determineNextVersion(baseBranchName: string, existingBranches: string[]): string {
+    const baseName = getBaseBranchName(baseBranchName);
+    
+    // Find all versions of this branch
+    const versions = existingBranches
+        .filter(branch => getBaseBranchName(branch) === baseName)
+        .map(branch => extractBranchVersion(branch));
+    
+    if (versions.length === 0) {
+        // No existing versions, use the base name as v1
+        return baseName;
+    }
+    
+    // Get the highest version and increment
+    const maxVersion = Math.max(...versions);
+    const nextVersion = maxVersion + 1;
+    
+    return `${baseName}--v${nextVersion}`;
+}

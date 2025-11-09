@@ -32,11 +32,11 @@
         "lint": "eslint . --fix --cache"
     },
     "dependencies": {
-        "@aws-sdk/client-s3": "^3.916.0",
-        "@aws-sdk/credential-provider-node": "^3.916.0",
-        "@babel/core": "^7.28.4",
+        "@aws-sdk/client-s3": "^3.927.0",
+        "@aws-sdk/credential-provider-node": "^3.927.0",
+        "@babel/core": "^7.28.5",
         "@babel/plugin-syntax-import-attributes": "^7.27.1",
-        "@babel/preset-env": "^7.28.3",
+        "@babel/preset-env": "^7.28.5",
         "@nzyme/cli": "^0.14.0",
         "@nzyme/esm": "0.14.0",
         "@nzyme/ioc": "^0.14.0",
@@ -44,9 +44,9 @@
         "@nzyme/rollup-utils": "0.14.0",
         "@nzyme/types": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
-        "@pulumi/aws": "^7.8.0",
-        "@pulumi/pulumi": "^3.202.0",
-        "@pulumi/random": "^4.18.3",
+        "@pulumi/aws": "^7.11.0",
+        "@pulumi/pulumi": "^3.206.0",
+        "@pulumi/random": "^4.18.4",
         "@rollup/plugin-babel": "^6.0.4",
         "@rollup/plugin-commonjs": "^28.0.6",
         "@rollup/plugin-json": "^6.1.0",
@@ -60,12 +60,12 @@
         "rollup-plugin-bundle-stats": "^4.21.1",
         "rollup-plugin-sourcemaps": "^0.6.3",
         "rollup-plugin-terser": "^7.0.2",
-        "terser": "^5.44.0"
+        "terser": "^5.44.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
-        "@types/node": "^24.9.1",
+        "@types/node": "^24.10.0",
         "typescript": "^5.9.3"
     },
     "publishConfig": {

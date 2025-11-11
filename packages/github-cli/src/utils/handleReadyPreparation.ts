@@ -16,6 +16,7 @@ export async function handleReadyPreparation(
     statusInfo: GitStatusInfo,
     logger: Logger,
     autoYes: boolean = false,
+    defaultCommitMessage: string = 'Ready for review',
 ): Promise<void> {
     const git = simpleGit();
     let newCommitCreated = false;
@@ -50,7 +51,7 @@ export async function handleReadyPreparation(
         );
 
         let shouldCommit: 'no' | 'yes' = 'yes';
-        let commitMessage = 'Ready for review';
+        let commitMessage = defaultCommitMessage;
 
         if (!autoYes) {
             const response = await enquirer.prompt<{ shouldCommit: 'no' | 'yes' }>({
@@ -90,7 +91,7 @@ export async function handleReadyPreparation(
                     type: 'input',
                     name: 'commitMessage',
                     message: 'Enter commit message:',
-                    initial: 'Ready for review',
+                    initial: defaultCommitMessage,
                     validate: (input: string) => {
                         if (!input.trim()) {
                             return 'Commit message cannot be empty';

@@ -46,6 +46,11 @@ export interface HandlePushPreparationParams {
      * Whether to skip prompts and automatically commit with default message.
      */
     autoYes?: boolean;
+
+    /**
+     * Default commit message to use when committing changes.
+     */
+    defaultCommitMessage?: string;
 }
 
 /**
@@ -54,7 +59,8 @@ export interface HandlePushPreparationParams {
  * Does NOT convert PR to ready - only prepares changes.
  */
 export async function handlePushPreparation(params: HandlePushPreparationParams): Promise<void> {
-    const { githubClient, githubConfig, issueId, logger, baseBranch, skipSubmodules, autoYes } = params;
+    const { githubClient, githubConfig, issueId, logger, baseBranch, skipSubmodules, autoYes, defaultCommitMessage } =
+        params;
 
     // FIRST: Check if the current branch's PR has been merged
     logger.info('🔍 Checking if current PR is merged...');
@@ -75,5 +81,5 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
     logger.info('🔍 Checking main repository status...');
     const [unpushedCommits, statusInfo] = await Promise.all([checkUnpushedCommits(), getGitStatusInfo()]);
 
-    await handleReadyPreparation(unpushedCommits, statusInfo, logger, autoYes);
+    await handleReadyPreparation(unpushedCommits, statusInfo, logger, autoYes, defaultCommitMessage);
 }

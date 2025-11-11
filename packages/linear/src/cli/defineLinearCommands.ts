@@ -381,6 +381,7 @@ function defineTaskPushCommand(options: LinearCommandsOptions) {
                     baseBranch,
                     skipSubmodules: this.skipSubmodules,
                     autoYes: this.yes,
+                    defaultCommitMessage: 'Work in progress',
                 });
 
                 this.logger.info('');

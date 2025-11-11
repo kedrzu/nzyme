@@ -54,28 +54,39 @@ export async function checkUnpushedCommits(git: SimpleGit = simpleGit()): Promis
         }
 
         // Get commits that are in current branch but not in remote branch
-        const result = await git.raw(['rev-list', '--count', `${remoteRef}..${currentBranch}`]);
-        const commitsCount = parseInt(result.trim(), 10);
+        try {
+            const result = await git.raw(['rev-list', '--count', `${remoteRef}..${currentBranch}`]);
+            const commitsCount = parseInt(result.trim(), 10);
 
-        if (commitsCount === 0) {
+            if (commitsCount === 0) {
+                return {
+                    hasUnpushedCommits: false,
+                    commitsCount: 0,
+                    commitMessages: [],
+                };
+            }
+
+            // Get the actual commit messages
+            const log = await git.log({
+                from: remoteRef,
+                to: currentBranch,
+            });
+
             return {
-                hasUnpushedCommits: false,
-                commitsCount: 0,
-                commitMessages: [],
+                hasUnpushedCommits: true,
+                commitsCount,
+                commitMessages: log.all.map(commit => commit.message),
+            };
+        } catch {
+            // Remote branch reference exists but is invalid/ambiguous
+            // Treat it as if remote branch doesn't exist - all commits are unpushed
+            const log = await git.log(['--oneline']);
+            return {
+                hasUnpushedCommits: log.all.length > 0,
+                commitsCount: log.all.length,
+                commitMessages: log.all.map(commit => commit.message),
             };
         }
-
-        // Get the actual commit messages
-        const log = await git.log({
-            from: remoteRef,
-            to: currentBranch,
-        });
-
-        return {
-            hasUnpushedCommits: true,
-            commitsCount,
-            commitMessages: log.all.map(commit => commit.message),
-        };
     } catch (error) {
         throw new UsageError(`Failed to check unpushed commits: ${(error as Error).message}`);
     }

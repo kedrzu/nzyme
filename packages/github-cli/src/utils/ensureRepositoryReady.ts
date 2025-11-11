@@ -200,25 +200,25 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
         logger.info(
             `${prefix}🚀 Pushing ${chalk.yellow(totalCommitsToPush.toString())} commit${totalCommitsToPush === 1 ? '' : 's'}...`,
         );
-        
+
         // Check if branch has an upstream set
         const currentStatus = await git.status();
         const currentBranch = currentStatus.current;
-        
+
         if (!currentBranch) {
             throw new UsageError('Could not determine current branch name');
         }
-        
+
         // Check if tracking branch exists
         const hasUpstream = currentStatus.tracking !== null;
-        
+
         if (hasUpstream) {
             await git.push();
         } else {
             // No upstream set, use --set-upstream
             await git.push('origin', currentBranch, { '--set-upstream': null });
         }
-        
+
         logger.info(`${prefix}✅ Successfully pushed all commits`);
     } else if (!statusInfo.hasUncommittedChanges) {
         logger.info(`${prefix}✅ Repository is clean - no commits to push or changes to commit`);

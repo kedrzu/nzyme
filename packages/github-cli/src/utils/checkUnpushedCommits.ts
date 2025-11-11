@@ -27,7 +27,6 @@ export interface UnpushedCommitsResult {
  * Check if there are unpushed commits in the current branch.
  */
 export async function checkUnpushedCommits(git: SimpleGit = simpleGit()): Promise<UnpushedCommitsResult> {
-
     try {
         // Get current branch
         const status = await git.status();

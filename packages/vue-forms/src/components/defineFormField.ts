@@ -62,7 +62,14 @@ export function defineFormField<T>(type?: PropType<T | null | undefined>) {
 export function formFieldProps<T>(type?: PropType<T | null | undefined>) {
     return {
         modelValue: { type: type as PropType<T | null | undefined> },
-        field: defineProp<FormFieldModel<T>>(),
+        field: defineProp<
+            | FormFieldModel<T>
+            | FormFieldModel<T | null>
+            | FormFieldModel<T | null | undefined>
+            | FormFieldModel<T | undefined>
+            | null
+            | undefined
+        >(),
         errors: defineProp<string | string[]>(),
         required: Boolean,
         disabled: Boolean,

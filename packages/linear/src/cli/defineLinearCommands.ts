@@ -136,24 +136,26 @@ function defineTaskInfoCommand(options: LinearCommandsOptions) {
                 ]);
 
                 if (!issueData) {
-                    throw new UsageError(`Linear task ${taskId} not found`);
+                    throw new UsageError(`Linear task ${chalk.bold(taskId)} not found`);
                 }
 
                 // Display task information
                 this.logger.info('');
                 this.logger.info(chalk.bold.blue('📋 Task Information'));
                 this.logger.info('═'.repeat(50));
+                this.logger.info(`📝 Task ID: ${chalk.bold(taskId)}`);
                 this.logger.info(`📝 Task Name: ${chalk.green(issueData.title)}`);
                 this.logger.info(`🔗 Task URL: ${chalk.underline(issueData.url)}`);
                 this.logger.info(`🌿 Branch Name: ${chalk.cyan(currentBranch)}`);
 
                 if (pr) {
+                    this.logger.info(`📎 PR: ${chalk.blue(pr.title)} ${chalk.gray(`(#${pr.number})`)}`);
                     this.logger.info(`📎 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
                     this.logger.info(
                         `📊 PR Status: ${pr.draft ? chalk.yellow('Draft') : chalk.green('Ready for review')}`,
                     );
                 } else {
-                    this.logger.info(`📎 PR URL: ${chalk.gray('No PR found for this task')}`);
+                    this.logger.info(`📎 PR: ${chalk.gray('No PR found for this task')}`);
                 }
 
                 this.logger.info('');
@@ -215,7 +217,7 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                this.logger.error(`❌ Failed to start work on task ${this.taskIdentifier}: ${errorMessage}`);
+                this.logger.error(`❌ Failed to start work on task ${chalk.bold(this.taskIdentifier)}: ${errorMessage}`);
                 throw error;
             }
         }
@@ -302,7 +304,7 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
                     projectId: selectedProjectId,
                 });
 
-                this.logger.info(`✅ Created Linear task: ${chalk.bold(issueId)}`);
+                this.logger.info(`✅ Created Linear task: ${chalk.bold.green(issueId)}`);
 
                 // Create GitHub client and get base branches
                 const [githubClient, baseBranches] = await Promise.all([
@@ -441,14 +443,12 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
 
                 if (!pr) {
                     throw new UsageError(
-                        `No GitHub PR found for task ${taskId}. ` +
-                            'Make sure you have created a PR for this task first using "task ' +
-                            taskId +
-                            '".',
+                        `No GitHub PR found for task ${chalk.bold(taskId)}. ` +
+                            `Make sure you have created a PR for this task first using "task ${chalk.bold(taskId)}".`,
                     );
                 }
 
-                this.logger.info(`✅ Found PR: ${chalk.blue(pr.title)} (#${pr.number})`);
+                this.logger.info(`✅ Found PR: ${chalk.blue(pr.title)} ${chalk.gray(`(#${pr.number})`)}`);
 
                 // Handle preparation (submodules and main repo)
                 const baseBranches = await getBaseBranches(options);
@@ -476,7 +476,7 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                             const urlMatch = submodule.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
                             if (!urlMatch) {
                                 this.logger.warn(
-                                    `⚠️  Could not parse GitHub URL for submodule ${submodule.name}: ${submodule.url}`,
+                                    `⚠️  Could not parse GitHub URL for submodule ${chalk.magenta(submodule.name)}: ${chalk.yellow(submodule.url)}`,
                                 );
                                 continue;
                             }
@@ -484,7 +484,7 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                             const [, owner, repo] = urlMatch;
                             if (!owner || !repo) {
                                 this.logger.warn(
-                                    `⚠️  Could not extract owner/repo from URL for submodule ${submodule.name}`,
+                                    `⚠️  Could not extract owner/repo from URL for submodule ${chalk.magenta(submodule.name)}`,
                                 );
                                 continue;
                             }
@@ -502,26 +502,32 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                                 if (submodulePr) {
                                     if (submodulePr.draft) {
                                         this.logger.info(
-                                            `🚀 Converting submodule ${chalk.cyan(submodule.name)} PR #${submodulePr.number} to ready...`,
+                                            `🚀 Converting submodule ${chalk.magenta(submodule.name)} PR ${chalk.gray(`#${submodulePr.number}`)} to ready...`,
                                         );
                                         await convertPrToReady(githubClient, submoduleConfig, submodulePr.number);
                                         this.logger.info(
-                                            `✅ Submodule ${chalk.cyan(submodule.name)} PR #${submodulePr.number} is now ready for review`,
+                                            `✅ Submodule ${chalk.magenta(submodule.name)} PR ${chalk.gray(`#${submodulePr.number}`)} is now ready for review`,
+                                        );
+                                        this.logger.info(
+                                            `🔗 PR URL: ${chalk.blueBright(chalk.underline(submodulePr.html_url))}`,
                                         );
                                     } else {
                                         this.logger.info(
-                                            `✅ Submodule ${chalk.cyan(submodule.name)} PR #${submodulePr.number} is already ready`,
+                                            `✅ Submodule ${chalk.magenta(submodule.name)} PR ${chalk.gray(`#${submodulePr.number}`)} is already ready`,
+                                        );
+                                        this.logger.info(
+                                            `🔗 PR URL: ${chalk.blueBright(chalk.underline(submodulePr.html_url))}`,
                                         );
                                     }
                                 } else {
                                     this.logger.info(
-                                        `ℹ️  No PR found for submodule ${chalk.cyan(submodule.name)} - skipping`,
+                                        `ℹ️  No PR found for submodule ${chalk.magenta(submodule.name)} - skipping`,
                                     );
                                 }
                             } catch (error: unknown) {
                                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                                 this.logger.warn(
-                                    `⚠️  Failed to convert submodule ${chalk.cyan(submodule.name)} PR to ready: ${errorMessage}`,
+                                    `⚠️  Failed to convert submodule ${chalk.magenta(submodule.name)} PR to ready: ${errorMessage}`,
                                 );
                             }
                         }
@@ -530,7 +536,7 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
 
                 if (!pr.draft) {
                     this.logger.info('');
-                    this.logger.info(`🎉 PR #${pr.number} is already ready for review!`);
+                    this.logger.info(`🎉 PR ${chalk.gray(`#${pr.number}`)} is already ready for review!`);
                     this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
                     return;
                 }
@@ -540,7 +546,7 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                 this.logger.info('🚀 Converting main PR from draft to ready for review...');
                 await convertPrToReady(githubClient, githubConfig, pr.number);
 
-                this.logger.info(`🎉 Successfully converted PR #${pr.number} to ready for review!`);
+                this.logger.info(`🎉 Successfully converted PR ${chalk.gray(`#${pr.number}`)} to ready for review!`);
                 this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
             } catch (error: unknown) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -740,10 +746,10 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                 const selectedTaskData = tasksWithPrInfo.find(({ issue }) => issue.identifier === selectedTaskId);
 
                 if (!selectedTaskData) {
-                    throw new UsageError(`Task ${selectedTaskId} not found`);
+                    throw new UsageError(`Task ${chalk.bold(selectedTaskId)} not found`);
                 }
 
-                this.logger.info(`🎯 Switching to task: ${chalk.bold(selectedTaskId)}`);
+                this.logger.info(`🎯 Switching to task: ${chalk.bold.green(selectedTaskId)}`);
 
                 // Get base branches
                 const baseBranches = await getBaseBranches(options);

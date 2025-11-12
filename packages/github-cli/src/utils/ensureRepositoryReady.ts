@@ -71,6 +71,11 @@ export interface EnsureRepositoryReadyParams {
      * Whether to skip prompts and automatically commit with default message.
      */
     autoYes?: boolean;
+
+    /**
+     * Whether to prompt for PR title when creating PR.
+     */
+    promptForPrTitle?: boolean;
 }
 
 /**
@@ -94,6 +99,7 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
         generatePrBody = (id: string) => `# [${id}] Changes\n\nThis PR contains changes for task ${id}.`,
         defaultCommitMessage = 'Ready for review',
         autoYes = false,
+        promptForPrTitle = false,
     } = params;
 
     const prefix = repoDisplayName !== 'repository' ? `[${repoDisplayName}] ` : '';
@@ -244,8 +250,26 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
         throw new UsageError('Could not determine current branch name');
     }
 
-    const prTitle = generatePrTitle(issueId);
+    let prTitle = generatePrTitle(issueId);
     const prBody = generatePrBody(issueId);
+
+    // Prompt for PR title if requested (always prompt, even with --yes flag)
+    if (promptForPrTitle) {
+        const response = await enquirer.prompt<{ prTitle: string }>({
+            type: 'input',
+            name: 'prTitle',
+            message: `Enter PR title for ${repoDisplayName}:`,
+            initial: prTitle.replace(`[${issueId}] `, '').replace(` [${issueId}]`, ''),
+            validate: (input: string) => {
+                if (!input.trim()) {
+                    return 'PR title cannot be empty';
+                }
+                return true;
+            },
+        });
+        // Add task ID suffix to the user-provided title
+        prTitle = `${response.prTitle.trim()} [${issueId}]`;
+    }
 
     try {
         const pr = await createDraftPr({
@@ -257,13 +281,13 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
             base: baseBranch,
         });
 
-        logger.info(`${prefix}✅ Created draft PR: ${chalk.blue(pr.title)} (#${pr.number})`);
+        logger.info(`${prefix}✅ Created draft PR: ${chalk.blue(pr.title)} ${chalk.gray(`(#${pr.number})`)}`);
         logger.info(`${prefix}🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         logger.error(`${prefix}❌ Failed to create PR: ${errorMessage}`);
         logger.error(
-            `${prefix}📋 Details: owner=${githubConfig.owner}, repo=${githubConfig.repo}, branch=${currentBranch}, base=${baseBranch}`,
+            `${prefix}📋 Details: owner=${chalk.yellow(githubConfig.owner)}, repo=${chalk.yellow(githubConfig.repo)}, branch=${chalk.cyan(currentBranch)}, base=${chalk.cyan(baseBranch)}`,
         );
         throw new UsageError(`Failed to create PR for ${repoDisplayName}: ${errorMessage}`);
     }

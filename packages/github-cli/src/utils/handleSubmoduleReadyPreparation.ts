@@ -157,7 +157,7 @@ export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleRea
     // Process each submodule
     for (const submodule of submodulesToProcess) {
         logger.info('');
-        logger.info(chalk.bold.blue(`📦 Processing submodule: ${chalk.cyan(submodule.name)}`));
+        logger.info(`📦 ${chalk.bold('Processing submodule:')} ${chalk.bold.magenta(submodule.name)}`);
 
         await handleSingleSubmodule({
             submodule,
@@ -184,7 +184,9 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
     // Ensure we're on the correct branch (same as main repo if possible)
     if (submodule.currentBranch !== mainRepoBranch) {
         try {
-            logger.info(`🌿 Checking out branch ${chalk.cyan(mainRepoBranch)} in submodule...`);
+            logger.info(
+                `🌿 Checking out branch ${chalk.cyan(mainRepoBranch)} in submodule ${chalk.magenta(submodule.name)}...`,
+            );
             const branches = await submoduleGit.branchLocal();
 
             if (branches.all.includes(mainRepoBranch)) {
@@ -193,10 +195,14 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
                 // Branch doesn't exist, create it from current branch
                 await submoduleGit.checkoutLocalBranch(mainRepoBranch);
             }
-            logger.info(`✅ Checked out branch ${chalk.cyan(mainRepoBranch)}`);
+            logger.info(`✅ Checked out branch ${chalk.cyan(mainRepoBranch)} in ${chalk.magenta(submodule.name)}`);
         } catch (error) {
-            logger.warn(`⚠️  Could not checkout branch ${chalk.cyan(mainRepoBranch)}: ${(error as Error).message}`);
-            logger.info(`ℹ️  Continuing with current branch: ${chalk.cyan(submodule.currentBranch || 'unknown')}`);
+            logger.warn(
+                `⚠️  Could not checkout branch ${chalk.cyan(mainRepoBranch)} in ${chalk.magenta(submodule.name)}: ${(error as Error).message}`,
+            );
+            logger.info(
+                `ℹ️  Continuing with current branch: ${chalk.cyan(submodule.currentBranch || 'unknown')} in ${chalk.magenta(submodule.name)}`,
+            );
         }
     }
 
@@ -222,11 +228,11 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
     };
 
     // Check if the submodule PR was already merged
-    logger.info(`🔍 Checking if submodule PR was already merged...`);
+    logger.info(`🔍 Checking if submodule ${chalk.magenta(submodule.name)} PR was already merged...`);
     const mergedPr = await findMergedPr(githubClient, submoduleConfig, issueId);
 
     if (mergedPr && mergedPr.base && mergedPr.base.ref) {
-        logger.info(`✅ Found merged PR: ${chalk.blue(mergedPr.title)} (#${mergedPr.number})`);
+        logger.info(`✅ Found merged PR: ${chalk.blue(mergedPr.title)} ${chalk.gray(`(#${mergedPr.number})`)}`);
         logger.info(`🎯 PR was merged to: ${chalk.cyan(mergedPr.base.ref)}`);
 
         // Check for uncommitted or unpushed changes before switching
@@ -236,13 +242,13 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
 
         if (hasChanges) {
             logger.error(
-                `❌ Submodule ${chalk.cyan(submodule.name)} has uncommitted changes but PR is already merged!`,
+                `❌ Submodule ${chalk.magenta(submodule.name)} has uncommitted changes but PR is already merged!`,
             );
-            logger.error(`   PR #${mergedPr.number} was merged to ${chalk.cyan(mergedPr.base.ref)}`);
+            logger.error(`   PR ${chalk.gray(`#${mergedPr.number}`)} was merged to ${chalk.cyan(mergedPr.base.ref)}`);
             logger.error(`   Current branch: ${chalk.cyan(currentBranch || 'unknown')}`);
             logger.error('');
             logger.error('🔧 To fix this:');
-            logger.error(`   1. Review the uncommitted changes in ${submodule.path}`);
+            logger.error(`   1. Review the uncommitted changes in ${chalk.yellow(submodule.path)}`);
             logger.error(`   2. Either commit them to a new branch or discard them`);
             logger.error(`   3. Then run this command again`);
             throw new UsageError(
@@ -252,7 +258,9 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
 
         // No uncommitted changes and PR is merged - switch to target branch
         const targetBranch = mergedPr.base.ref;
-        logger.info(`🔄 Switching submodule to target branch: ${chalk.cyan(targetBranch)}`);
+        logger.info(
+            `🔄 Switching submodule ${chalk.magenta(submodule.name)} to target branch: ${chalk.cyan(targetBranch)}`,
+        );
 
         try {
             // Fetch latest changes
@@ -272,14 +280,18 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
 
             // Pull latest changes
             await submoduleGit.pull('origin', targetBranch);
-            logger.info(`✅ Switched to ${chalk.cyan(targetBranch)} and pulled latest changes`);
+            logger.info(
+                `✅ Switched ${chalk.magenta(submodule.name)} to ${chalk.cyan(targetBranch)} and pulled latest changes`,
+            );
         } catch (error) {
-            logger.error(`❌ Failed to switch to target branch: ${(error as Error).message}`);
+            logger.error(
+                `❌ Failed to switch ${chalk.magenta(submodule.name)} to target branch: ${(error as Error).message}`,
+            );
             throw error;
         }
     } else {
         // No merged PR found - continue with normal flow
-        logger.info(`📝 No merged PR found, continuing with normal workflow...`);
+        logger.info(`📝 No merged PR found for ${chalk.magenta(submodule.name)}, continuing with normal workflow...`);
 
         // Use the unified ensureRepositoryReady function to handle commits, push, and PR creation
         await ensureRepositoryReady({
@@ -289,20 +301,21 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
             logger,
             baseBranch,
             git: submoduleGit,
-            repoDisplayName: `submodule ${submodule.name}`,
-            generatePrTitle: (id: string) => `[${id}] Submodule changes for ${submodule.name}`,
+            repoDisplayName: chalk.magenta(submodule.name),
+            generatePrTitle: () => `Submodule changes for ${submodule.name}`,
             generatePrBody: (id: string) =>
                 `# [${id}] Submodule changes\n\nThis PR contains changes to the ${submodule.name} submodule.`,
             defaultCommitMessage: `[${issueId}] Submodule changes`,
             autoYes,
+            promptForPrTitle: true,
         });
     }
 
     // Update the submodule reference in the main repository
-    logger.info(`🔄 Updating submodule reference in main repository...`);
+    logger.info(`🔄 Updating ${chalk.magenta(submodule.name)} reference in main repository...`);
     const mainGit = simpleGit();
     await mainGit.add(submodule.path);
-    logger.info(`✅ Submodule reference updated`);
+    logger.info(`✅ Submodule ${chalk.magenta(submodule.name)} reference updated`);
 }
 
 /**

@@ -71,6 +71,11 @@ export interface EnsureRepositoryReadyParams {
      * Whether to skip prompts and automatically commit with default message.
      */
     autoYes?: boolean;
+
+    /**
+     * Whether to prompt for PR title when creating PR.
+     */
+    promptForPrTitle?: boolean;
 }
 
 /**
@@ -94,12 +99,11 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
         generatePrBody = (id: string) => `# [${id}] Changes\n\nThis PR contains changes for task ${id}.`,
         defaultCommitMessage = 'Ready for review',
         autoYes = false,
+        promptForPrTitle = false,
     } = params;
 
-    const prefix = repoDisplayName !== 'repository' ? `[${repoDisplayName}] ` : '';
-
     // Step 1: Check for uncommitted changes and unpushed commits
-    logger.info(`${prefix}🔍 Checking ${repoDisplayName} status...`);
+    logger.info(`🔍 Checking ${repoDisplayName} status...`);
     const [unpushedCommits, statusInfo] = await Promise.all([checkUnpushedCommits(git), getGitStatusInfo(git)]);
 
     let newCommitCreated = false;
@@ -107,7 +111,7 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
     // Step 2: Show unpushed commits if any
     if (unpushedCommits.hasUnpushedCommits) {
         logger.info(
-            `${prefix}⚠️  You have ${chalk.yellow(unpushedCommits.commitsCount.toString())} unpushed commit${
+            `⚠️  You have ${chalk.yellow(unpushedCommits.commitsCount.toString())} unpushed commit${
                 unpushedCommits.commitsCount === 1 ? '' : 's'
             }:`,
         );
@@ -128,7 +132,7 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
         const hasUnstagedFiles = statusInfo.totalChanges > statusInfo.changes.staged;
 
         logger.info(
-            `${prefix}⚠️  You have ${chalk.yellow(statusInfo.totalChanges.toString())} uncommitted change${
+            `⚠️  You have ${chalk.yellow(statusInfo.totalChanges.toString())} uncommitted change${
                 statusInfo.totalChanges === 1 ? '' : 's'
             }: ${chalk.yellow(statusInfo.changeDescription)}`,
         );
@@ -156,16 +160,16 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
             });
             shouldCommit = response.shouldCommit;
         } else {
-            logger.info(`${prefix}✅ Auto-committing changes (--yes flag)`);
+            logger.info(`✅ Auto-committing changes (--yes flag)`);
         }
 
         if (shouldCommit === 'yes') {
             // Add unstaged changes to staging if there are any
             if (hasUnstagedFiles) {
-                logger.info(`${prefix}📦 Adding all changes to staging...`);
+                logger.info(`📦 Adding all changes to staging...`);
                 await git.add('.');
             } else if (hasStagedFiles) {
-                logger.info(`${prefix}📦 Using already staged files...`);
+                logger.info(`📦 Using already staged files...`);
             }
 
             // Prompt for commit message if not in auto-yes mode
@@ -186,11 +190,11 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
             }
 
             // Commit the changes
-            logger.info(`${prefix}💾 Committing changes with message: "${chalk.cyan(commitMessage)}"`);
+            logger.info(`💾 Committing changes with message: "${chalk.cyan(commitMessage)}"`);
             await git.commit(commitMessage.trim());
             newCommitCreated = true;
         } else {
-            logger.info(`${prefix}⏭️  Skipping commit - continuing with PR check`);
+            logger.info(`⏭️  Skipping commit - continuing with PR check`);
         }
     }
 
@@ -198,35 +202,72 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
     if (unpushedCommits.hasUnpushedCommits || newCommitCreated) {
         const totalCommitsToPush = unpushedCommits.commitsCount + (newCommitCreated ? 1 : 0);
         logger.info(
-            `${prefix}🚀 Pushing ${chalk.yellow(totalCommitsToPush.toString())} commit${totalCommitsToPush === 1 ? '' : 's'}...`,
+            `🚀 Pushing ${chalk.yellow(totalCommitsToPush.toString())} commit${totalCommitsToPush === 1 ? '' : 's'}...`,
         );
-        await git.push();
-        logger.info(`${prefix}✅ Successfully pushed all commits`);
+
+        // Check if branch has an upstream set
+        const currentStatus = await git.status();
+        const currentBranch = currentStatus.current;
+
+        if (!currentBranch) {
+            throw new UsageError('Could not determine current branch name');
+        }
+
+        // Check if tracking branch exists
+        const hasUpstream = currentStatus.tracking !== null;
+
+        if (hasUpstream) {
+            await git.push();
+        } else {
+            // No upstream set, use --set-upstream
+            await git.push('origin', currentBranch, { '--set-upstream': null });
+        }
+
+        logger.info(`✅ Successfully pushed all commits`);
     } else if (!statusInfo.hasUncommittedChanges) {
-        logger.info(`${prefix}✅ Repository is clean - no commits to push or changes to commit`);
+        logger.info(`✅ Repository is clean - no commits to push or changes to commit`);
     }
 
     // Step 5: Ensure PR exists (or create it)
-    logger.info(`${prefix}🔍 Checking if PR exists...`);
+    logger.info(`🔍 Checking if PR exists...`);
     const existingPr = await findMatchingPr(githubClient, githubConfig, issueId);
 
     if (existingPr) {
-        logger.info(`${prefix}✅ PR already exists: ${chalk.blue(existingPr.title)} (#${existingPr.number})`);
-        logger.info(`${prefix}🔗 PR URL: ${chalk.blueBright(chalk.underline(existingPr.html_url))}`);
+        logger.info(`✅ PR already exists: ${chalk.blue(existingPr.title)} (#${existingPr.number})`);
+        logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(existingPr.html_url))}`);
         return;
     }
 
     // No PR exists, create one
-    logger.info(`${prefix}📝 Creating draft PR...`);
+    logger.info(`📝 Creating draft PR...`);
 
+    // Get current branch (we may not have it yet if no commits were pushed)
     const currentStatus = await git.status();
     const currentBranch = currentStatus.current;
     if (!currentBranch) {
         throw new UsageError('Could not determine current branch name');
     }
 
-    const prTitle = generatePrTitle(issueId);
+    let prTitle = generatePrTitle(issueId);
     const prBody = generatePrBody(issueId);
+
+    // Prompt for PR title if requested (always prompt, even with --yes flag)
+    if (promptForPrTitle) {
+        const response = await enquirer.prompt<{ prTitle: string }>({
+            type: 'input',
+            name: 'prTitle',
+            message: `Enter PR title for ${repoDisplayName}:`,
+            initial: prTitle.replace(`[${issueId}] `, '').replace(` [${issueId}]`, ''),
+            validate: (input: string) => {
+                if (!input.trim()) {
+                    return 'PR title cannot be empty';
+                }
+                return true;
+            },
+        });
+        // Add task ID suffix to the user-provided title
+        prTitle = `${response.prTitle.trim()} [${issueId}]`;
+    }
 
     try {
         const pr = await createDraftPr({
@@ -238,13 +279,13 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
             base: baseBranch,
         });
 
-        logger.info(`${prefix}✅ Created draft PR: ${chalk.blue(pr.title)} (#${pr.number})`);
-        logger.info(`${prefix}🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
+        logger.info(`✅ Created draft PR: ${chalk.blue(pr.title)} ${chalk.gray(`(#${pr.number})`)}`);
+        logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        logger.error(`${prefix}❌ Failed to create PR: ${errorMessage}`);
+        logger.error(`❌ Failed to create PR: ${errorMessage}`);
         logger.error(
-            `${prefix}📋 Details: owner=${githubConfig.owner}, repo=${githubConfig.repo}, branch=${currentBranch}, base=${baseBranch}`,
+            `📋 Details: owner=${chalk.yellow(githubConfig.owner)}, repo=${chalk.yellow(githubConfig.repo)}, branch=${chalk.cyan(currentBranch)}, base=${chalk.cyan(baseBranch)}`,
         );
         throw new UsageError(`Failed to create PR for ${repoDisplayName}: ${errorMessage}`);
     }

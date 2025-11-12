@@ -1,15 +1,16 @@
 import chalk from 'chalk';
 import enquirer from 'enquirer';
+import open from 'open';
 
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
 import {
-    convertPrToReady,
+    convertAllPrsToReady,
     createGithubClient,
     findMatchingPr,
     getCurrentBranch,
-    getSubmoduleInfo,
     handlePushPreparation,
+    openPrInBrowser,
     syncBaseBranch,
 } from '@nzyme/github-cli';
 import type { GithubConfig } from '@nzyme/github-cli';
@@ -90,6 +91,8 @@ export function defineLinearCommands(options: LinearCommandsOptions): CommandCla
         defineTaskReadyCommand(options),
         defineTaskRefreshCommand(options),
         defineTaskListCommand(options),
+        defineTaskOpenCommand(options),
+        defineTaskPrCommand(options),
     ];
 }
 
@@ -217,7 +220,9 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                this.logger.error(`❌ Failed to start work on task ${chalk.bold(this.taskIdentifier)}: ${errorMessage}`);
+                this.logger.error(
+                    `❌ Failed to start work on task ${chalk.bold(this.taskIdentifier)}: ${errorMessage}`,
+                );
                 throw error;
             }
         }
@@ -464,90 +469,17 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                     autoYes: this.yes,
                 });
 
-                // Convert submodule PRs to ready
-                if (!this.skipSubmodules) {
-                    const submodules = await getSubmoduleInfo();
-                    if (submodules.length > 0) {
-                        this.logger.info('');
-                        this.logger.info('🔍 Checking for submodule PRs to mark as ready...');
-
-                        for (const submodule of submodules) {
-                            // Parse the submodule URL to get owner and repo for GitHub config
-                            const urlMatch = submodule.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
-                            if (!urlMatch) {
-                                this.logger.warn(
-                                    `⚠️  Could not parse GitHub URL for submodule ${chalk.magenta(submodule.name)}: ${chalk.yellow(submodule.url)}`,
-                                );
-                                continue;
-                            }
-
-                            const [, owner, repo] = urlMatch;
-                            if (!owner || !repo) {
-                                this.logger.warn(
-                                    `⚠️  Could not extract owner/repo from URL for submodule ${chalk.magenta(submodule.name)}`,
-                                );
-                                continue;
-                            }
-
-                            const submoduleConfig: GithubConfig = {
-                                owner,
-                                repo: repo.replace(/\.git$/, ''),
-                                token: githubConfig.token,
-                            };
-
-                            try {
-                                // Find PR for this submodule
-                                const submodulePr = await findMatchingPr(githubClient, submoduleConfig, taskId);
-
-                                if (submodulePr) {
-                                    if (submodulePr.draft) {
-                                        this.logger.info(
-                                            `🚀 Converting submodule ${chalk.magenta(submodule.name)} PR ${chalk.gray(`#${submodulePr.number}`)} to ready...`,
-                                        );
-                                        await convertPrToReady(githubClient, submoduleConfig, submodulePr.number);
-                                        this.logger.info(
-                                            `✅ Submodule ${chalk.magenta(submodule.name)} PR ${chalk.gray(`#${submodulePr.number}`)} is now ready for review`,
-                                        );
-                                        this.logger.info(
-                                            `🔗 PR URL: ${chalk.blueBright(chalk.underline(submodulePr.html_url))}`,
-                                        );
-                                    } else {
-                                        this.logger.info(
-                                            `✅ Submodule ${chalk.magenta(submodule.name)} PR ${chalk.gray(`#${submodulePr.number}`)} is already ready`,
-                                        );
-                                        this.logger.info(
-                                            `🔗 PR URL: ${chalk.blueBright(chalk.underline(submodulePr.html_url))}`,
-                                        );
-                                    }
-                                } else {
-                                    this.logger.info(
-                                        `ℹ️  No PR found for submodule ${chalk.magenta(submodule.name)} - skipping`,
-                                    );
-                                }
-                            } catch (error: unknown) {
-                                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                                this.logger.warn(
-                                    `⚠️  Failed to convert submodule ${chalk.magenta(submodule.name)} PR to ready: ${errorMessage}`,
-                                );
-                            }
-                        }
-                    }
-                }
-
-                if (!pr.draft) {
-                    this.logger.info('');
-                    this.logger.info(`🎉 PR ${chalk.gray(`#${pr.number}`)} is already ready for review!`);
-                    this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
-                    return;
-                }
-
-                // Convert main PR from draft to ready
-                this.logger.info('');
-                this.logger.info('🚀 Converting main PR from draft to ready for review...');
-                await convertPrToReady(githubClient, githubConfig, pr.number);
-
-                this.logger.info(`🎉 Successfully converted PR ${chalk.gray(`#${pr.number}`)} to ready for review!`);
-                this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
+                // Convert all PRs (main and submodules) to ready
+                await convertAllPrsToReady({
+                    githubClient,
+                    githubConfig,
+                    issueId: taskId,
+                    logger: this.logger,
+                    mainPrNumber: pr.number,
+                    mainPrIsDraft: pr.draft,
+                    mainPrUrl: pr.html_url,
+                    skipSubmodules: this.skipSubmodules,
+                });
             } catch (error: unknown) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to push task to review: ${errorMessage}`);
@@ -766,6 +698,101 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to list tasks: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
+}
+
+function defineTaskOpenCommand(options: LinearCommandsOptions) {
+    return class TaskOpenCommand extends Command {
+        static override paths = getCommandPaths(options, 'open');
+        static override usage = Command.Usage({
+            category: 'Linear',
+            description: 'Open the current Linear task in the browser',
+            details: 'Detects the task from the current branch and opens the Linear task URL in your default browser',
+            examples: [['Open current task in browser', 'task open']],
+        });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            const linearConfig = await getLinearConfig(options);
+
+            try {
+                // Get current branch
+                const currentBranch = await getCurrentBranch();
+                this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
+
+                // Extract task ID from branch name
+                const taskId = extractTaskIdFromBranch(currentBranch);
+                this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
+
+                // Create Linear client
+                const linearClient = createLinearClient(linearConfig);
+
+                // Get task details
+                this.logger.info('🔍 Fetching task details...');
+                const issueData = await linearClient.issue(taskId);
+
+                if (!issueData) {
+                    throw new UsageError(`Linear task ${chalk.bold(taskId)} not found`);
+                }
+
+                this.logger.info(`🚀 Opening task ${chalk.bold(taskId)} in browser...`);
+                this.logger.info(`🔗 URL: ${chalk.underline(issueData.url)}`);
+
+                await open(issueData.url);
+
+                this.logger.info(`✅ Task opened successfully!`);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to open task: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
+}
+
+function defineTaskPrCommand(options: LinearCommandsOptions) {
+    return class TaskPrCommand extends Command {
+        static override paths = getCommandPaths(options, 'pr');
+        static override usage = Command.Usage({
+            category: 'Linear',
+            description: 'Open the current task PR in the browser',
+            details:
+                'Detects the task from the current branch, finds the associated GitHub PR, and opens it in your default browser. If multiple PRs exist (main repo + submodules), lets you choose which one to open.',
+            examples: [['Open current task PR in browser', 'task pr']],
+        });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            const githubConfig = await getGithubConfig(options);
+
+            try {
+                // Get current branch
+                const currentBranch = await getCurrentBranch();
+                this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
+
+                // Extract task ID from branch name
+                const taskId = extractTaskIdFromBranch(currentBranch);
+                this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
+
+                // Create GitHub client
+                const githubClient = createGithubClient(githubConfig);
+
+                // Find, select, and open PR in browser
+                this.logger.info('🔍 Looking for associated GitHub PRs...');
+                await openPrInBrowser({
+                    githubClient,
+                    githubConfig,
+                    issueId: taskId,
+                    logger: this.logger,
+                });
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to open PR: ${errorMessage}`);
                 throw error;
             }
         }

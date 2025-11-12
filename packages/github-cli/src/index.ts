@@ -4,6 +4,8 @@ export * from './utils/checkCurrentPrMerged.js';
 export * from './utils/checkoutBranch.js';
 export * from './utils/checkoutExistingBranch.js';
 export * from './utils/checkUnpushedCommits.js';
+export * from './utils/convertAllPrsToReady.js';
+export type { ConvertAllPrsToReadyParams } from './utils/convertAllPrsToReady.js';
 export * from './utils/convertPrToReady.js';
 export * from './utils/createBranchAndPr.js';
 export type { CreateBranchAndPrParams, CreateBranchAndPrResult } from './utils/createBranchAndPr.js';
@@ -27,5 +29,7 @@ export type { HandlePushPreparationParams } from './utils/handlePushPreparation.
 export * from './utils/handleReadyPreparation.js';
 export * from './utils/handleSubmoduleReadyPreparation.js';
 export type { HandleSubmoduleReadyPreparationParams } from './utils/handleSubmoduleReadyPreparation.js';
+export * from './utils/selectPrToOpen.js';
+export type { OpenPrInBrowserParams, PrInfo, SelectPrToOpenParams } from './utils/selectPrToOpen.js';
 export * from './utils/syncBaseBranch.js';
 export type { SyncBaseBranchResult } from './utils/syncBaseBranch.js';

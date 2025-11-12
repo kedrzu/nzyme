@@ -1,13 +1,15 @@
 import chalk from 'chalk';
+import open from 'open';
 
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
 import {
-    convertPrToReady,
+    convertAllPrsToReady,
     createGithubClient,
     findMatchingPr,
     getCurrentBranch,
     handlePushPreparation,
+    openPrInBrowser,
     syncBaseBranch,
 } from '@nzyme/github-cli';
 import type { GithubConfig } from '@nzyme/github-cli';
@@ -100,6 +102,8 @@ export function defineSentryCommands(options: SentryCommandsOptions): CommandCla
         defineIssuePushCommand(options),
         defineIssueReadyCommand(options),
         defineIssueRefreshCommand(options),
+        defineIssueOpenCommand(options),
+        defineIssuePrCommand(options),
     ];
 }
 
@@ -371,18 +375,17 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                     autoYes: this.yes,
                 });
 
-                if (!pr.draft) {
-                    this.logger.info(`🎉 PR #${pr.number} is already ready for review!`);
-                    this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
-                    return;
-                }
-
-                // Convert PR from draft to ready
-                this.logger.info('🚀 Converting PR from draft to ready for review...');
-                await convertPrToReady(githubClient, githubConfig, pr.number);
-
-                this.logger.info(`🎉 Successfully converted PR #${pr.number} to ready for review!`);
-                this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
+                // Convert all PRs (main and submodules) to ready
+                await convertAllPrsToReady({
+                    githubClient,
+                    githubConfig,
+                    issueId,
+                    logger: this.logger,
+                    mainPrNumber: pr.number,
+                    mainPrIsDraft: pr.draft,
+                    mainPrUrl: pr.html_url,
+                    skipSubmodules: this.skipSubmodules,
+                });
             } catch (error: unknown) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to push issue to review: ${errorMessage}`);
@@ -444,6 +447,101 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to refresh issue: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
+}
+
+function defineIssueOpenCommand(options: SentryCommandsOptions) {
+    return class IssueOpenCommand extends Command {
+        static override paths = getCommandPaths(options, 'open');
+        static override usage = Command.Usage({
+            category: 'Sentry',
+            description: 'Open the current Sentry issue in the browser',
+            details: 'Detects the issue from the current branch and opens the Sentry issue URL in your default browser',
+            examples: [['Open current issue in browser', 'issue open']],
+        });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            const sentryConfig = await getSentryConfig(options);
+
+            try {
+                // Get current branch
+                const currentBranch = await getCurrentBranch();
+                this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
+
+                // Extract issue ID from branch name
+                const issueId = extractIssueIdFromBranch(currentBranch);
+                this.logger.info(`🎯 Found issue ID: ${chalk.bold(issueId)}`);
+
+                // Create Sentry client
+                const sentryClient = createSentryClient(sentryConfig);
+
+                // Get issue details
+                this.logger.info('🔍 Fetching issue details...');
+                const issueData = await getSentryIssue(sentryClient, sentryConfig.organizationSlug, issueId);
+
+                if (!issueData) {
+                    throw new UsageError(`Sentry issue ${issueId} not found`);
+                }
+
+                this.logger.info(`🚀 Opening issue ${chalk.bold(issueId)} in browser...`);
+                this.logger.info(`🔗 URL: ${chalk.underline(issueData.permalink)}`);
+
+                await open(issueData.permalink);
+
+                this.logger.info(`✅ Issue opened successfully!`);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to open issue: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
+}
+
+function defineIssuePrCommand(options: SentryCommandsOptions) {
+    return class IssuePrCommand extends Command {
+        static override paths = getCommandPaths(options, 'pr');
+        static override usage = Command.Usage({
+            category: 'Sentry',
+            description: 'Open the current issue PR in the browser',
+            details:
+                'Detects the issue from the current branch, finds the associated GitHub PR, and opens it in your default browser. If multiple PRs exist (main repo + submodules), lets you choose which one to open.',
+            examples: [['Open current issue PR in browser', 'issue pr']],
+        });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            const githubConfig = await getGithubConfig(options);
+
+            try {
+                // Get current branch
+                const currentBranch = await getCurrentBranch();
+                this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
+
+                // Extract issue ID from branch name
+                const issueId = extractIssueIdFromBranch(currentBranch);
+                this.logger.info(`🎯 Found issue ID: ${chalk.bold(issueId)}`);
+
+                // Create GitHub client
+                const githubClient = createGithubClient(githubConfig);
+
+                // Find, select, and open PR in browser
+                this.logger.info('🔍 Looking for associated GitHub PRs...');
+                await openPrInBrowser({
+                    githubClient,
+                    githubConfig,
+                    issueId,
+                    logger: this.logger,
+                });
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to open PR: ${errorMessage}`);
                 throw error;
             }
         }

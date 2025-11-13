@@ -8,7 +8,7 @@ import type { GithubConfig } from '../GithubConfig.js';
 import { determineNextVersion } from './branchVersionHelpers.js';
 import type { GithubClient } from './createGithubClient.js';
 import { ensureRepositoryReady } from './ensureRepositoryReady.js';
-import { findAllMatchingPrs, findMergedPr } from './findMatchingPr.js';
+import { findAllMatchingPrs } from './findMatchingPr.js';
 import { getCurrentBranch } from './getCurrentBranch.js';
 import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
@@ -183,6 +183,9 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
     const submoduleGit = simpleGit({ baseDir: submodule.path });
 
     // Ensure we're on the correct branch (same as main repo if possible)
+    let targetBranch = mainRepoBranch;
+    let branchSwitchFailed = false;
+
     if (submodule.currentBranch !== mainRepoBranch) {
         try {
             logger.info(
@@ -204,6 +207,9 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
             logger.info(
                 `ℹ️  Continuing with current branch: ${chalk.cyan(submodule.currentBranch || 'unknown')} in ${chalk.magenta(submodule.name)}`,
             );
+            branchSwitchFailed = true;
+            // Fallback to main repo branch if submodule current branch is undefined
+            targetBranch = submodule.currentBranch || mainRepoBranch;
         }
     }
 
@@ -229,10 +235,54 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
     };
 
     // Check if the submodule PR was already merged
+    // BUT: only check for the TARGET BRANCH that matches the main repo's branch
+    // This prevents incorrectly switching to main when working on a versioned branch (e.g., --v2)
     logger.info(`🔍 Checking if submodule ${chalk.magenta(submodule.name)} PR was already merged...`);
-    const mergedPr = await findMergedPr(githubClient, submoduleConfig, issueId);
 
-    if (mergedPr && mergedPr.base && mergedPr.base.ref) {
+    // Use the target branch (which should match main repo's branch) for the check
+    // This ensures we only consider PRs merged for the EXACT version we're working on
+    const currentSubmoduleBranch = targetBranch;
+
+    // Find all PRs matching the issue ID and check if the TARGET branch has a merged PR
+    const allMatchingPrs = await findAllMatchingPrs(githubClient, submoduleConfig, issueId);
+    const currentBranchMergedPr = allMatchingPrs.find(pr => pr.head.ref === currentSubmoduleBranch && pr.merged_at);
+
+    // If branch switch failed and we're on a different branch, we should NOT proceed with
+    // the merged PR logic even if we find one, because we're not on the expected branch
+    if (branchSwitchFailed && currentBranchMergedPr) {
+        logger.info(
+            `⚠️  Found merged PR for branch ${chalk.cyan(currentSubmoduleBranch)}, but submodule is on different branch`,
+        );
+        logger.info(`   Skipping merged PR handling and proceeding with normal workflow...`);
+
+        // Use the unified ensureRepositoryReady function to handle commits, push, and PR creation
+        await ensureRepositoryReady({
+            githubClient,
+            githubConfig: submoduleConfig,
+            issueId,
+            logger,
+            baseBranch,
+            git: submoduleGit,
+            repoDisplayName: chalk.magenta(submodule.name),
+            generatePrTitle: () => `Submodule changes for ${submodule.name}`,
+            generatePrBody: (id: string) =>
+                `# [${id}] Submodule changes\n\nThis PR contains changes to the ${submodule.name} submodule.`,
+            defaultCommitMessage: `[${issueId}] Submodule changes`,
+            autoYes,
+            promptForPrTitle: true,
+        });
+
+        // Update the submodule reference in the main repository
+        logger.info(`🔄 Updating ${chalk.magenta(submodule.name)} reference in main repository...`);
+        const mainGit = simpleGit();
+        await mainGit.add(submodule.path);
+        logger.info(`✅ Submodule ${chalk.magenta(submodule.name)} reference updated`);
+        return;
+    }
+
+    if (currentBranchMergedPr && currentBranchMergedPr.base && currentBranchMergedPr.base.ref) {
+        // The CURRENT BRANCH's PR is merged - proceed with version handling
+        const mergedPr = currentBranchMergedPr;
         logger.info(`✅ Found merged PR: ${chalk.blue(mergedPr.title)} ${chalk.gray(`(#${mergedPr.number})`)}`);
         logger.info(`🎯 PR was merged to: ${chalk.cyan(mergedPr.base.ref)}`);
 
@@ -373,8 +423,18 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
             }
         }
     } else {
-        // No merged PR found - continue with normal flow
-        logger.info(`📝 No merged PR found for ${chalk.magenta(submodule.name)}, continuing with normal workflow...`);
+        // No merged PR found for the CURRENT BRANCH - continue with normal flow
+        // (Note: there may be merged PRs for other versions, but not for this branch)
+        if (allMatchingPrs.some(pr => pr.merged_at)) {
+            logger.info(
+                `📝 No merged PR found for current branch ${chalk.cyan(currentSubmoduleBranch || 'unknown')} in ${chalk.magenta(submodule.name)}`,
+            );
+            logger.info(`   (Found merged PRs for other versions, but continuing with current branch)`);
+        } else {
+            logger.info(
+                `📝 No merged PR found for ${chalk.magenta(submodule.name)}, continuing with normal workflow...`,
+            );
+        }
 
         // Use the unified ensureRepositoryReady function to handle commits, push, and PR creation
         await ensureRepositoryReady({

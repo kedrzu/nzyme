@@ -5,9 +5,10 @@ import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging';
 
 import type { GithubConfig } from '../GithubConfig.js';
+import { determineNextVersion } from './branchVersionHelpers.js';
 import type { GithubClient } from './createGithubClient.js';
 import { ensureRepositoryReady } from './ensureRepositoryReady.js';
-import { findMergedPr } from './findMatchingPr.js';
+import { findAllMatchingPrs, findMergedPr } from './findMatchingPr.js';
 import { getCurrentBranch } from './getCurrentBranch.js';
 import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
@@ -241,53 +242,135 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
         const currentBranch = status.current;
 
         if (hasChanges) {
-            logger.error(
-                `❌ Submodule ${chalk.magenta(submodule.name)} has uncommitted changes but PR is already merged!`,
+            // Submodule has uncommitted changes and PR is already merged - create a new versioned branch
+            logger.info(
+                `📝 Submodule ${chalk.magenta(submodule.name)} has uncommitted changes and PR is already merged`,
             );
-            logger.error(`   PR ${chalk.gray(`#${mergedPr.number}`)} was merged to ${chalk.cyan(mergedPr.base.ref)}`);
-            logger.error(`   Current branch: ${chalk.cyan(currentBranch || 'unknown')}`);
-            logger.error('');
-            logger.error('🔧 To fix this:');
-            logger.error(`   1. Review the uncommitted changes in ${chalk.yellow(submodule.path)}`);
-            logger.error(`   2. Either commit them to a new branch or discard them`);
-            logger.error(`   3. Then run this command again`);
-            throw new UsageError(
-                `Submodule ${submodule.name} has uncommitted changes but PR #${mergedPr.number} is already merged. Please resolve manually.`,
-            );
-        }
+            logger.info(`   PR ${chalk.gray(`#${mergedPr.number}`)} was merged to ${chalk.cyan(mergedPr.base.ref)}`);
+            logger.info(`   Current branch: ${chalk.cyan(currentBranch || 'unknown')}`);
+            logger.info('');
+            logger.info(`🔄 Automatically creating new versioned branch for ${chalk.magenta(submodule.name)}...`);
 
-        // No uncommitted changes and PR is merged - switch to target branch
-        const targetBranch = mergedPr.base.ref;
-        logger.info(
-            `🔄 Switching submodule ${chalk.magenta(submodule.name)} to target branch: ${chalk.cyan(targetBranch)}`,
-        );
+            // Get all matching PRs to determine the next version
+            const allMatchingPrs = await findAllMatchingPrs(githubClient, submoduleConfig, issueId);
+            const allClosedPrs = allMatchingPrs.filter(pr => pr.merged_at || pr.state === 'closed');
 
-        try {
-            // Fetch latest changes
+            if (allClosedPrs.length === 0) {
+                throw new UsageError(
+                    `No closed PRs found for ${submodule.name} despite finding a merged PR. This should not happen.`,
+                );
+            }
+
+            // Determine the new branch name with incremented version
+            const allClosedBranches = allClosedPrs.map(pr => pr.head.ref);
+            const latestBranchName = mergedPr.head.ref;
+            const newBranchName = determineNextVersion(latestBranchName, allClosedBranches);
+
+            logger.info(`🌿 Creating new versioned branch in submodule: ${chalk.cyan(newBranchName)}`);
+
+            // Fetch latest changes first
             await submoduleGit.fetch('origin');
 
-            // Check if we're already on the target branch
-            if (currentBranch !== targetBranch) {
-                // Switch to target branch
-                const branches = await submoduleGit.branchLocal();
-                if (branches.all.includes(targetBranch)) {
-                    await submoduleGit.checkout(targetBranch);
+            // Check if the new branch already exists (for idempotency)
+            const branches = await submoduleGit.branchLocal();
+            const branchExists = branches.all.includes(newBranchName);
+
+            if (branchExists) {
+                // Branch already exists - check it out if not already on it
+                if (currentBranch !== newBranchName) {
+                    logger.info(`ℹ️  Branch ${chalk.cyan(newBranchName)} already exists, checking it out...`);
+                    await submoduleGit.checkout(newBranchName);
+                    logger.info(
+                        `✅ Checked out existing branch ${chalk.cyan(newBranchName)} in ${chalk.magenta(submodule.name)}`,
+                    );
                 } else {
-                    // Branch doesn't exist locally, create it from origin
-                    await submoduleGit.checkout(['-b', targetBranch, `origin/${targetBranch}`]);
+                    logger.info(
+                        `ℹ️  Already on branch ${chalk.cyan(newBranchName)} in ${chalk.magenta(submodule.name)}`,
+                    );
+                }
+            } else {
+                // Create new branch from base branch and preserve uncommitted changes
+                try {
+                    // Stash uncommitted changes before switching branches
+                    logger.info(`📦 Stashing uncommitted changes in ${chalk.magenta(submodule.name)}...`);
+                    await submoduleGit.stash(['push', '-u', '-m', 'Temporary stash for branch version creation']);
+
+                    // Create new branch from base
+                    await submoduleGit.checkout(['-b', newBranchName, `origin/${mergedPr.base.ref}`]);
+                    logger.info(`✅ Created branch ${chalk.cyan(newBranchName)} in ${chalk.magenta(submodule.name)}`);
+
+                    // Apply stashed changes to the new branch
+                    logger.info(`📦 Applying stashed changes to new branch...`);
+                    try {
+                        await submoduleGit.stash(['pop']);
+                        logger.info(`✅ Applied stashed changes in ${chalk.magenta(submodule.name)}`);
+                    } catch (stashError) {
+                        logger.error(
+                            `❌ Failed to apply stashed changes in ${chalk.magenta(submodule.name)}: ${(stashError as Error).message}`,
+                        );
+                        logger.error(
+                            `   You may need to manually resolve conflicts in ${chalk.yellow(submodule.path)}`,
+                        );
+                        throw stashError;
+                    }
+                } catch (error) {
+                    logger.error(
+                        `❌ Failed to create new branch in ${chalk.magenta(submodule.name)}: ${(error as Error).message}`,
+                    );
+                    throw error;
                 }
             }
 
-            // Pull latest changes
-            await submoduleGit.pull('origin', targetBranch);
+            // Now continue with the normal flow to commit, push, and create PR
+            await ensureRepositoryReady({
+                githubClient,
+                githubConfig: submoduleConfig,
+                issueId,
+                logger,
+                baseBranch: mergedPr.base.ref,
+                git: submoduleGit,
+                repoDisplayName: chalk.magenta(submodule.name),
+                generatePrTitle: () => `Submodule changes for ${submodule.name}`,
+                generatePrBody: (id: string) =>
+                    `# [${id}] Submodule changes\n\nThis PR contains changes to the ${submodule.name} submodule.`,
+                defaultCommitMessage: `[${issueId}] Submodule changes`,
+                autoYes,
+                promptForPrTitle: true,
+            });
+        } else {
+            // No uncommitted changes and PR is merged - switch to target branch
+            const targetBranch = mergedPr.base.ref;
             logger.info(
-                `✅ Switched ${chalk.magenta(submodule.name)} to ${chalk.cyan(targetBranch)} and pulled latest changes`,
+                `🔄 Switching submodule ${chalk.magenta(submodule.name)} to target branch: ${chalk.cyan(targetBranch)}`,
             );
-        } catch (error) {
-            logger.error(
-                `❌ Failed to switch ${chalk.magenta(submodule.name)} to target branch: ${(error as Error).message}`,
-            );
-            throw error;
+
+            try {
+                // Fetch latest changes
+                await submoduleGit.fetch('origin');
+
+                // Check if we're already on the target branch
+                if (currentBranch !== targetBranch) {
+                    // Switch to target branch
+                    const branches = await submoduleGit.branchLocal();
+                    if (branches.all.includes(targetBranch)) {
+                        await submoduleGit.checkout(targetBranch);
+                    } else {
+                        // Branch doesn't exist locally, create it from origin
+                        await submoduleGit.checkout(['-b', targetBranch, `origin/${targetBranch}`]);
+                    }
+                }
+
+                // Pull latest changes
+                await submoduleGit.pull('origin', targetBranch);
+                logger.info(
+                    `✅ Switched ${chalk.magenta(submodule.name)} to ${chalk.cyan(targetBranch)} and pulled latest changes`,
+                );
+            } catch (error) {
+                logger.error(
+                    `❌ Failed to switch ${chalk.magenta(submodule.name)} to target branch: ${(error as Error).message}`,
+                );
+                throw error;
+            }
         }
     } else {
         // No merged PR found - continue with normal flow

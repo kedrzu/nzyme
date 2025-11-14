@@ -19,6 +19,11 @@ const projectRoot = getProjectRoot();
  * @param file - The file path to check (absolute path)
  */
 export function isFileIgnored(file: string): boolean | undefined {
+    // Always ignore .git directories
+    if (file.includes('/.git/') || file.endsWith('/.git')) {
+        return true;
+    }
+
     const fileDir = path.dirname(file);
 
     // Find git root for this file (handles submodules)

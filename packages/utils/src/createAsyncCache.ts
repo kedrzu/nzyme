@@ -7,6 +7,8 @@ import { identity } from './functions/identity.js';
  * @template TKey - The type of the cache key
  */
 export interface AsyncCacheOptions<TArg, TValue, TKey = TArg> {
+    /** Optional map to use as cache */
+    cache?: Map<TKey, TValue>;
     /** Function that generates a cache key from an argument */
     cacheKey?: (arg: TArg) => TKey;
     /** Function that computes a value asynchronously if it's not in the cache */
@@ -43,7 +45,7 @@ export interface AsyncCacheOptions<TArg, TValue, TKey = TArg> {
  * ```
  */
 export function createAsyncCache<TArg, TValue, TKey = TArg>(options: AsyncCacheOptions<TArg, TValue, TKey>) {
-    const cache = new Map<TKey, TValue>();
+    const cache = options.cache ?? new Map<TKey, TValue>();
     const pendingRequests = new Map<TKey, Promise<TValue>>();
     const { cacheKey = identity, getValue, onError } = options;
 

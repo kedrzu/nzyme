@@ -52,6 +52,7 @@ export function createAsyncCache<TArg, TValue, TKey = TArg>(options: AsyncCacheO
     return {
         get,
         getCached,
+        getNew,
         set,
         clear,
         has,
@@ -82,6 +83,21 @@ export function createAsyncCache<TArg, TValue, TKey = TArg>(options: AsyncCacheO
         }
 
         // Create new request
+        return await getNewForKey(arg, key);
+    }
+
+    function getCached(arg: TArg): TValue | undefined {
+        const key = cacheKey(arg);
+        return cache.get(key);
+    }
+
+    function getNew(arg: TArg): Promise<TValue> {
+        const key = cacheKey(arg);
+        return getNewForKey(arg, key);
+    }
+
+    async function getNewForKey(arg: TArg, key: TKey): Promise<TValue> {
+        // Create new request
         const request = Promise.resolve(getValue(arg));
         pendingRequests.set(key, request);
 
@@ -100,13 +116,11 @@ export function createAsyncCache<TArg, TValue, TKey = TArg>(options: AsyncCacheO
             throw error;
         } finally {
             // Clean up pending request
-            pendingRequests.delete(key);
+            const currentRequest = pendingRequests.get(key);
+            if (currentRequest === request) {
+                pendingRequests.delete(key);
+            }
         }
-    }
-
-    function getCached(arg: TArg): TValue | undefined {
-        const key = cacheKey(arg);
-        return cache.get(key);
     }
 
     /**

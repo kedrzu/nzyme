@@ -58,11 +58,12 @@ export class LocaliseCommand extends Command {
             cwd: this.cwd,
             ignored: file => {
                 const ignored = isFileIgnored(file);
-                if (ignored === undefined) {
+                if (ignored === false) {
+                    // It is a non-ignored file, so we need to check if it matches the I18N regex
                     return !I18N_REGEX.test(file);
                 }
 
-                return ignored;
+                return !!ignored;
             },
             ignoreInitial: true,
             persistent: true,

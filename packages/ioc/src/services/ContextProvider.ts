@@ -7,10 +7,14 @@ export const ContextProvider = defineService({
     name: 'ContextProvider',
     setup() {
         let ctx = new Map<symbol, unknown>();
+        let ctxId = '';
 
         return {
             get,
             getOrCreate,
+            get id() {
+                return ctxId;
+            },
             newContext,
             remove,
             set,
@@ -39,8 +43,9 @@ export const ContextProvider = defineService({
             ctx.delete(key);
         }
 
-        function newContext() {
+        function newContext(id: string) {
             ctx = new Map();
+            ctxId = id;
         }
     },
 });

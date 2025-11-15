@@ -68,11 +68,12 @@ export class ZchemaCommand extends Command {
             cwd: this.cwd,
             ignored: file => {
                 const ignored = isFileIgnored(file);
-                if (ignored === undefined) {
+                if (ignored === false) {
+                    // It is a non-ignored file, so we need to check if it matches the TYPE_REGEX
                     return !TYPE_REGEX.test(file);
                 }
 
-                return ignored;
+                return !!ignored;
             },
             ignoreInitial: true,
             persistent: true,

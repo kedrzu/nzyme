@@ -36,7 +36,6 @@ export async function destroyStack<TOut extends StackOutput>(stack: Stack<TOut>,
 
     await stackInstance.destroy({
         color: 'always',
-
         onOutput: console.log,
         remove: options.remove,
         refresh: options.refresh,

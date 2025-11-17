@@ -6,11 +6,13 @@ import { getAllDeps, isDependentOn, sortByDependency } from '@nzyme/ioc';
 import { forEachParalell } from '@nzyme/utils';
 
 import { cancelStack } from '../cancelStack.js';
+import { createOrSelectStack } from '../createOrSelectStack.js';
 import { defineStack, isStackDefinition } from '../defineStack.js';
 import type { StackDefinition } from '../defineStack.js';
 import { deployStack } from '../deployStack.js';
 import { destroyStack } from '../destroyStack.js';
 import { getStackOutputs } from '../getStackOutputs.js';
+import { installStack } from '../installStack.js';
 import { previewStack } from '../previewStack.js';
 import type { PulumiConfig } from '../PulumiConfig.js';
 import { refreshStack } from '../refreshStack.js';
@@ -65,6 +67,7 @@ export function definePulumiCommands(options: PulumiCommandsOptions): CommandCla
         defineRefreshCommand(options),
         defineDestroyCommand(options),
         defineOutputCommand(options),
+        defineInstallCommand(options),
     ];
 }
 
@@ -758,6 +761,56 @@ function defineOutputCommand(options: PulumiCommandsOptions) {
 
                 console.log(`Outputs for stack ${chalk.green(stack.name)}:`);
                 console.log(chalk.gray(JSON.stringify(outputs, null, 2)));
+            }
+        }
+    };
+}
+
+function defineInstallCommand(options: PulumiCommandsOptions) {
+    return class InstallCommand extends Command {
+        static override paths = getCommandPaths(options, 'install');
+        static override usage = Command.Usage({
+            category: 'Pulumi',
+            description: 'Install dependencies for stacks',
+            details: 'Install dependencies for the selected stacks',
+            examples: [
+                ['Install all stacks', 'install'],
+                ['Install single stack', 'install core'],
+                ['Install multiple stacks', 'install core api'],
+            ],
+        });
+
+        stacks = Option.Rest();
+
+        skip = Option.Array('--skip,-s', [], {
+            description: 'Skip specific stacks from being installed (can be used multiple times)',
+        });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            const pulumiConfig = await getPulumiConfig(options);
+
+            const stacks = resolveStacks({
+                ...options,
+                stackNames: this.stacks,
+                skip: this.skip,
+            });
+
+            if (stacks.length === 0) {
+                throw new UsageError('No stacks to install.');
+            }
+
+            for (const stack of stacks) {
+                const stackResolved = this.container.resolve(stack);
+                const stackName = chalk.bold(chalk.green(stack.stackName));
+
+                stackResolved.logger.info(`📦 Installing dependencies for stack ${stackName}...`);
+
+                const stackInstance = await createOrSelectStack(stackResolved, pulumiConfig);
+                await installStack(stackInstance);
+
+                stackResolved.logger.info(`✅ Installed dependencies for stack ${stackName}`);
             }
         }
     };

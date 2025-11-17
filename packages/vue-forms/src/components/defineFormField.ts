@@ -35,7 +35,7 @@ export type FormFieldProps<T> = ExtractPropTypes<FormFieldPropsDefinition<T>>;
 /**
  * Form field props definition type
  */
-export type FormFieldPropsDefinition<T> = FormFieldDefinition<T>['props'];
+export type FormFieldPropsDefinition<T> = ReturnType<typeof formFieldProps<T>>;
 
 /**
  * Form field value type
@@ -71,9 +71,9 @@ export function formFieldProps<T>(type?: PropType<T | null | undefined>) {
             | undefined
         >(),
         errors: defineProp<string | string[]>(),
-        required: Boolean,
-        disabled: Boolean,
-        readonly: Boolean,
+        required: Boolean as PropType<boolean>,
+        disabled: Boolean as PropType<boolean>,
+        readonly: Boolean as PropType<boolean>,
     };
 }
 

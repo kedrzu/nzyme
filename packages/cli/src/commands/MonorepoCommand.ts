@@ -69,11 +69,12 @@ export class MonorepoCommand extends Command {
             cwd: this.cwd,
             ignored: file => {
                 const ignored = isFileIgnored(file);
-                if (ignored === undefined) {
+                if (ignored === false) {
+                    // It is a non-ignored file, so we need to check if it matches the PACKAGE_JSON_REGEX
                     return !PACKAGE_JSON_REGEX.test(file);
                 }
 
-                return ignored;
+                return !!ignored;
             },
             ignoreInitial: true,
             persistent: true,

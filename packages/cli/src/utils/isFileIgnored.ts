@@ -10,17 +10,38 @@ const directoryCache = new Map<string, RegExp[]>();
 
 // Cache of git roots per directory
 const gitRootCache = new Map<string, string>();
-
 const projectRoot = getProjectRoot();
+const commonIgnorePaths = ['.git', '.turbo', '.nx', '.yarn', 'node_modules'];
+
+const commonIgnoreSuffixes = commonIgnorePaths.map(path => `/${path}`);
+const commonIgnoreIncludes = commonIgnorePaths.map(path => `/.${path}/`);
 
 /**
- * Checks if a file is ignored by the file system watcher.
+ * Checks if a file or directory path should be ignored by the file system watcher.
  *
- * @param file - The file path to check (absolute path)
+ * This function evaluates paths against gitignore patterns and common ignore paths
+ * (like node_modules, .git, etc.) to determine if they should be watched by chokidar.
+ *
+ * The return value is intentionally tri-state to handle directories properly:
+ * - `true` means the path is explicitly ignored and should be skipped entirely
+ * - `false` means it's a file that should be watched
+ * - `undefined` means it's a directory that's not ignored - chokidar should traverse
+ *   into it to find watchable files, but the directory itself isn't explicitly watched
+ *
+ * Returning `undefined` for non-ignored directories is crucial because gitignore
+ * patterns work at the file level - a directory might not be ignored, but it could
+ * contain files that are. We need to let chokidar traverse into these directories
+ * to properly evaluate their contents.
+ *
+ * @param file - The file or directory path to check (absolute path)
+ * @returns `true` if explicitly ignored, `false` if file (not ignored), `undefined` if directory (not ignored)
  */
 export function isFileIgnored(file: string): boolean | undefined {
-    // Always ignore .git directories
-    if (file.includes('/.git/') || file.endsWith('/.git')) {
+    // Always ignore common ignore paths
+    if (
+        commonIgnoreSuffixes.some(suffix => file.endsWith(suffix)) ||
+        commonIgnoreIncludes.some(include => file.includes(include))
+    ) {
         return true;
     }
 
@@ -65,6 +86,19 @@ export function isFileIgnored(file: string): boolean | undefined {
         currentDir = parentDir;
     }
 
+    // Not explicitly ignored - check if it's a directory or file
+    try {
+        const stats = fs.statSync(file);
+        if (stats.isDirectory()) {
+            // Return undefined for directories so chokidar can traverse into them
+            return undefined;
+        }
+    } catch {
+        // If we can't stat it, assume it might be a directory (e.g., doesn't exist yet)
+        return undefined;
+    }
+
+    // It's a file and not ignored
     return false;
 }
 

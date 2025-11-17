@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import Table from 'cli-table3';
 
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
@@ -80,10 +81,6 @@ function defineListCommand(options: PulumiCommandsOptions) {
             details: 'List all stacks, including orphaned stacks from remote backend with deployment information',
         });
 
-        detailed = Option.Boolean('--detailed,-d', {
-            description: 'Show detailed stack information including deployment status and dates',
-        });
-
         override async run() {
             await options.beforeEach?.();
 
@@ -92,129 +89,106 @@ function defineListCommand(options: PulumiCommandsOptions) {
             // Get local stack names
             const localStackNames = new Set(options.stacks.map(stack => stack.stackName));
 
-            if (this.detailed) {
-                // Get detailed remote stacks from S3 backend
-                const remoteStacksDetailed = await listRemoteStacks(pulumiConfig);
-                const orphanedStacksDetailed = remoteStacksDetailed.filter(stack => !localStackNames.has(stack.name));
+            // Get detailed remote stacks from S3 backend
+            const remoteStacksDetailed = await listRemoteStacks(pulumiConfig);
+            const orphanedStacksDetailed = remoteStacksDetailed.filter(stack => !localStackNames.has(stack.name));
 
-                console.log(chalk.bold('All available stacks with deployment information:'));
+            console.log();
+            console.log(chalk.bold('All available stacks with deployment information:'));
+            console.log();
+
+            // Create table for local stacks
+            const localTable = new Table({
+                head: [
+                    chalk.bold('Stack Name'),
+                    chalk.bold('Status'),
+                    chalk.bold('Last Deployment'),
+                    chalk.bold('Resources'),
+                    chalk.bold('Last Update'),
+                ],
+                style: {
+                    head: [],
+                    border: [],
+                },
+            });
+
+            // Add local stacks to table
+            for (const stack of options.stacks) {
+                const stackResolved = this.container.resolve(stack);
+                const remoteInfo = remoteStacksDetailed.find(remote => remote.name === stack.stackName);
+
+                let stackName = stackResolved.name;
+                if (!stackResolved.enabled) {
+                    stackName += ` ${chalk.red('[disabled]')}`;
+                }
+
+                let status = chalk.yellow('Not deployed');
+                let lastDeployment = chalk.gray('—');
+                let resourceCount = chalk.gray('—');
+                let lastUpdate = chalk.gray('—');
+
+                if (remoteInfo) {
+                    status = remoteInfo.isDestroyed ? chalk.red('Destroyed') : chalk.green('Active');
+                    lastDeployment = remoteInfo.lastDeployment
+                        ? remoteInfo.lastDeployment.toLocaleString()
+                        : chalk.gray('Unknown');
+                    resourceCount = remoteInfo.resourceCount?.toString() ?? chalk.gray('Unknown');
+                    lastUpdate = `${remoteInfo.lastUpdateKind} (${remoteInfo.lastUpdateResult})`;
+                }
+
+                localTable.push([stackName, status, lastDeployment, resourceCount, lastUpdate]);
+            }
+
+            console.log(localTable.toString());
+
+            // List orphaned stacks with detailed info
+            if (orphanedStacksDetailed.length > 0) {
+                console.log();
+                console.log(chalk.bold.magenta('Orphaned stacks:'));
                 console.log();
 
-                // List local stacks with detailed info
-                for (const stack of options.stacks) {
-                    const stackResolved = this.container.resolve(stack);
-                    const disabled = !stackResolved.enabled ? chalk.red('[disabled]') : '';
-                    const remoteInfo = remoteStacksDetailed.find(remote => remote.name === stack.stackName);
+                const orphanedTable = new Table({
+                    head: [
+                        chalk.bold('Stack Name'),
+                        chalk.bold('Status'),
+                        chalk.bold('Last Deployment'),
+                        chalk.bold('Resources'),
+                        chalk.bold('Last Update'),
+                    ],
+                    style: {
+                        head: [],
+                        border: [],
+                    },
+                });
 
-                    console.log(chalk.bold(`${stackResolved.name} ${disabled}`));
-                    if (remoteInfo) {
-                        console.log(
-                            `  ${chalk.gray('Last deployment:')} ${remoteInfo.lastDeployment ? remoteInfo.lastDeployment.toLocaleString() : 'Unknown'}`,
-                        );
-                        console.log(`  ${chalk.gray('Resource count:')} ${remoteInfo.resourceCount ?? 'Unknown'}`);
-                        console.log(
-                            `  ${chalk.gray('Status:')} ${remoteInfo.isDestroyed ? chalk.red('Destroyed') : chalk.green('Active')}`,
-                        );
-                        console.log(
-                            `  ${chalk.gray('Last update:')} ${remoteInfo.lastUpdateKind} (${remoteInfo.lastUpdateResult})`,
-                        );
-                    } else {
-                        console.log(`  ${chalk.yellow('No deployment information available')}`);
-                    }
-                    console.log();
+                for (const stack of orphanedStacksDetailed) {
+                    const status = stack.isDestroyed ? chalk.red('Destroyed') : chalk.green('Active');
+                    const lastDeployment = stack.lastDeployment
+                        ? stack.lastDeployment.toLocaleString()
+                        : chalk.gray('Unknown');
+                    const resourceCount = stack.resourceCount?.toString() ?? chalk.gray('Unknown');
+                    const lastUpdate = `${stack.lastUpdateKind} (${stack.lastUpdateResult})`;
+
+                    orphanedTable.push([
+                        `${stack.name} ${chalk.magenta('[orphaned]')}`,
+                        status,
+                        lastDeployment,
+                        resourceCount,
+                        lastUpdate,
+                    ]);
                 }
 
-                // List orphaned stacks with detailed info
-                if (orphanedStacksDetailed.length > 0) {
-                    console.log(chalk.bold.magenta('Orphaned stacks:'));
-                    for (const stack of orphanedStacksDetailed) {
-                        console.log(chalk.bold(`${stack.name} ${chalk.magenta('[orphaned]')}`));
-                        console.log(
-                            `  ${chalk.gray('Last deployment:')} ${stack.lastDeployment ? stack.lastDeployment.toLocaleString() : 'Unknown'}`,
-                        );
-                        console.log(`  ${chalk.gray('Resource count:')} ${stack.resourceCount ?? 'Unknown'}`);
-                        console.log(
-                            `  ${chalk.gray('Status:')} ${stack.isDestroyed ? chalk.red('Destroyed') : chalk.green('Active')}`,
-                        );
-                        console.log(
-                            `  ${chalk.gray('Last update:')} ${stack.lastUpdateKind} (${stack.lastUpdateResult})`,
-                        );
-                        console.log();
-                    }
-
-                    console.log(
-                        chalk.yellow(
-                            `Found ${orphanedStacksDetailed.length} orphaned stack(s) in remote backend that are not defined locally.`,
-                        ),
-                    );
-                    console.log(
-                        chalk.gray('Orphaned stacks can be destroyed using: ') +
-                            chalk.cyan('stack destroy --force <stack-name>'),
-                    );
-                }
-            } else {
-                // Get detailed remote stacks from S3 backend for status information
-                const remoteStacksDetailed = await listRemoteStacks(pulumiConfig);
-                const orphanedStacksDetailed = remoteStacksDetailed.filter(stack => !localStackNames.has(stack.name));
-
-                console.log(chalk.bold('All available stacks:'));
-
-                // Calculate padding for alignment
-                const totalCount = options.stacks.length + orphanedStacksDetailed.length;
-                const padding = totalCount.toString().length + 1;
-
-                let i = 0;
-
-                // List local stacks with status tags
-                for (const stack of options.stacks) {
-                    const stackResolved = this.container.resolve(stack);
-                    const disabled = !stackResolved.enabled ? chalk.red('[disabled]') : '';
-                    const remoteInfo = remoteStacksDetailed.find(remote => remote.name === stack.stackName);
-
-                    // Determine status tag
-                    let statusTag = '';
-                    if (remoteInfo) {
-                        if (remoteInfo.isDestroyed) {
-                            statusTag = chalk.red('[destroyed]');
-                        } else {
-                            statusTag = chalk.green('[active]');
-                        }
-                    } else {
-                        statusTag = chalk.yellow('[not deployed]');
-                    }
-
-                    // Increment counter and format with right padding to align stack names
-                    const number = chalk.gray(`${++i}.`.padStart(padding));
-
-                    console.log(`${number}${stackResolved.name} ${disabled} ${statusTag}`);
-                }
-
-                // List orphaned stacks with status tags
-                for (const orphanedStack of orphanedStacksDetailed) {
-                    const number = chalk.gray(`${++i}.`.padStart(padding));
-                    const orphaned = chalk.magenta('[orphaned]');
-
-                    // Determine status tag for orphaned stack
-                    const statusTag = orphanedStack.isDestroyed ? chalk.red('[destroyed]') : chalk.green('[active]');
-
-                    console.log(`${number}${orphanedStack.name} ${orphaned} ${statusTag}`);
-                }
-
-                if (orphanedStacksDetailed.length > 0) {
-                    console.log();
-                    console.log(
-                        chalk.yellow(
-                            `Found ${orphanedStacksDetailed.length} orphaned stack(s) in remote backend that are not defined locally.`,
-                        ),
-                    );
-                    console.log(
-                        chalk.gray('Orphaned stacks can be destroyed using: ') +
-                            chalk.cyan('stack destroy --force <stack-name>'),
-                    );
-                }
-
+                console.log(orphanedTable.toString());
                 console.log();
-                console.log(chalk.gray('Tip: Use --detailed flag to see deployment information for each stack.'));
+                console.log(
+                    chalk.yellow(
+                        `Found ${orphanedStacksDetailed.length} orphaned stack(s) in remote backend that are not defined locally.`,
+                    ),
+                );
+                console.log(
+                    chalk.gray('Orphaned stacks can be destroyed using: ') +
+                        chalk.cyan('stack destroy --force <stack-name>'),
+                );
             }
         }
     };

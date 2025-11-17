@@ -4,7 +4,7 @@ import { Command as ClipanionCommand } from 'clipanion';
 import type { Container } from '@nzyme/ioc';
 import { defineScope } from '@nzyme/ioc';
 import { Logger, PrettyLoggerTransport } from '@nzyme/logging';
-import { getClassName } from '@nzyme/utils';
+import { createEventEmitter, getClassName } from '@nzyme/utils';
 
 /**
  *
@@ -31,6 +31,27 @@ export type CommandClass = ClipanionCommandClass<CommandContext>;
  */
 export abstract class Command extends ClipanionCommand<CommandContext> {
     /**
+     * Event emitter for the before run event
+     */
+    public get beforeRun() {
+        return this.beforeRunEvent.event;
+    }
+
+    /**
+     * Event emitter for the after run event
+     */
+    public get afterRun() {
+        return this.afterRunEvent.event;
+    }
+
+    /**
+     * Event emitter for the cleanup event
+     */
+    public get cleanup() {
+        return this.cleanupEvent.event;
+    }
+
+    /**
      *
      */
     public get container(): Container {
@@ -52,6 +73,10 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
         return this.#logger;
     }
 
+    private readonly beforeRunEvent = createEventEmitter();
+    private readonly afterRunEvent = createEventEmitter();
+    private readonly cleanupEvent = createEventEmitter();
+
     #container: Container | null = null;
     #logger: Logger | null = null;
 
@@ -61,9 +86,12 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
     override async execute() {
         await this.setup();
         try {
-            return await this.run();
+            await this.beforeRunEvent.emit.async();
+            const result = await this.run();
+            await this.afterRunEvent.emit.async();
+            return result;
         } finally {
-            await this.cleanup();
+            await this.cleanupEvent.emit.async();
         }
     }
 
@@ -77,8 +105,4 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
     }
 
     protected abstract run(): number | Promise<number | void> | void;
-
-    protected cleanup(): Promise<void> {
-        return Promise.resolve();
-    }
 }

@@ -395,13 +395,34 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
             );
 
             try {
-                // Fetch latest changes
-                await submoduleGit.fetch('origin');
+                // Fetch latest changes for the target branch
+                logger.info(
+                    `🔄 Fetching latest changes for ${chalk.cyan(targetBranch)} in ${chalk.magenta(submodule.name)}`,
+                );
+                await submoduleGit.fetch('origin', targetBranch);
+
+                // Fast-forward the local target branch to match origin (without checking out)
+                // This ensures the local branch points to the latest commit before we switch to it
+                const branches = await submoduleGit.branchLocal();
+                if (branches.all.includes(targetBranch)) {
+                    logger.info(`🔄 Fast-forwarding ${chalk.cyan(targetBranch)} to latest`);
+                    try {
+                        await submoduleGit.raw([
+                            'update-ref',
+                            `refs/heads/${targetBranch}`,
+                            `refs/remotes/origin/${targetBranch}`,
+                        ]);
+                        logger.info(`✅ Fast-forwarded ${chalk.cyan(targetBranch)} to latest`);
+                    } catch (updateRefError) {
+                        logger.warn(
+                            `⚠️  Could not fast-forward ${chalk.cyan(targetBranch)}: ${(updateRefError as Error).message}`,
+                        );
+                    }
+                }
 
                 // Check if we're already on the target branch
                 if (currentBranch !== targetBranch) {
                     // Switch to target branch
-                    const branches = await submoduleGit.branchLocal();
                     if (branches.all.includes(targetBranch)) {
                         await submoduleGit.checkout(targetBranch);
                     } else {
@@ -410,10 +431,8 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
                     }
                 }
 
-                // Pull latest changes
-                await submoduleGit.pull('origin', targetBranch);
                 logger.info(
-                    `✅ Switched ${chalk.magenta(submodule.name)} to ${chalk.cyan(targetBranch)} and pulled latest changes`,
+                    `✅ Switched ${chalk.magenta(submodule.name)} to ${chalk.cyan(targetBranch)} at latest commit`,
                 );
             } catch (error) {
                 logger.error(

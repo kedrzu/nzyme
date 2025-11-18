@@ -1,3 +1,5 @@
+import { UsageError } from '@nzyme/cli';
+
 import type { SentryApiClient } from './createSentryClient.js';
 
 /**
@@ -86,6 +88,6 @@ export async function getSentryIssue(
         const issue = await client.get<SentryIssue>(`/organizations/${organizationSlug}/issues/${issueId}/`);
         return issue;
     } catch (error) {
-        throw new Error(`Failed to fetch Sentry issue ${issueId}: ${(error as Error).message}`);
+        throw new UsageError(`Failed to fetch Sentry issue ${issueId}: ${(error as Error).message}`);
     }
 }

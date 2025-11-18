@@ -2,6 +2,7 @@ import type { LinearClient } from '@linear/sdk';
 import chalk from 'chalk';
 import enquirer from 'enquirer';
 
+import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging';
 
 /**
@@ -51,7 +52,7 @@ export async function handleTerminalState(
         });
 
         if (action === 'cancel') {
-            throw new Error('Task switching cancelled by user');
+            throw new UsageError('Task switching cancelled by user');
         }
 
         // Find the "In Progress" state for this team
@@ -59,7 +60,7 @@ export async function handleTerminalState(
         const team = await issueData.team;
 
         if (!team) {
-            throw new Error('Could not find team for this issue');
+            throw new UsageError('Could not find team for this issue');
         }
 
         const workflowStates = await team.states();
@@ -72,7 +73,7 @@ export async function handleTerminalState(
         );
 
         if (!inProgressState) {
-            throw new Error('Could not find "In Progress" state in the team workflow');
+            throw new UsageError('Could not find "In Progress" state in the team workflow');
         }
 
         logger.info(
@@ -86,7 +87,7 @@ export async function handleTerminalState(
 
         logger.info(`✅ Task state changed to "${chalk.green(inProgressState.name)}"`);
     } catch (error) {
-        if (error instanceof Error && error.message === 'Task switching cancelled by user') {
+        if (error instanceof UsageError) {
             throw error;
         }
 

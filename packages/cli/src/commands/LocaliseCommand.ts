@@ -7,9 +7,9 @@ import glob from 'fast-glob';
 import * as fsExtra from 'fs-extra';
 
 import { compileTranslationFile } from '@nzyme/i18n-compiler';
-import { waitForever } from '@nzyme/utils';
 
 import { Command } from '../Command.js';
+import { isFileIgnored } from '../utils/isFileIgnored.js';
 
 const I18N_REGEX = /\.loc\.ya?ml$/;
 
@@ -42,7 +42,7 @@ export class LocaliseCommand extends Command {
         const results = await Promise.all(files.map(file => this.compileFile(file)));
 
         if (this.watch) {
-            await this.startWatcher();
+            this.startWatcher();
         }
 
         if (results.some(result => !result)) {
@@ -53,11 +53,20 @@ export class LocaliseCommand extends Command {
         return 0;
     }
 
-    private async startWatcher() {
+    private startWatcher() {
         const watcher = watch('.', {
             cwd: this.cwd,
-            ignored: ['node_modules', 'dist'],
+            ignored: file => {
+                const ignored = isFileIgnored(file);
+                if (ignored === false) {
+                    // It is a non-ignored file, so we need to check if it matches the I18N regex
+                    return !I18N_REGEX.test(file);
+                }
+
+                return !!ignored;
+            },
             ignoreInitial: true,
+            persistent: true,
         });
 
         this.logger.info('Watching for changes...');
@@ -65,8 +74,6 @@ export class LocaliseCommand extends Command {
         watcher.on('add', file => void this.onAddFile(file));
         watcher.on('change', file => void this.onAddFile(file));
         watcher.on('unlink', file => void this.onDeleteFile(file));
-
-        await waitForever();
     }
 
     private async onAddFile(file: string) {

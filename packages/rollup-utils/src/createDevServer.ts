@@ -38,9 +38,9 @@ export function createDevServer(options: DevServerOptions) {
     let worker: Worker | undefined;
     let status: 'idle' | 'running' | 'stopped' = 'idle';
     const proxyPromise = createPromise<NextHandleFunction>();
-    const onStarted = createEventEmitter<void>();
-    const onStopped = createEventEmitter<void>();
-    const onError = createEventEmitter<unknown>();
+    const eventStarted = createEventEmitter<void>();
+    const eventStopped = createEventEmitter<void>();
+    const eventError = createEventEmitter<unknown>();
 
     const middleware: NextHandleFunction = (req, res, next) => {
         void proxyPromise.promise.then(p => p(req, res, next));
@@ -50,9 +50,11 @@ export function createDevServer(options: DevServerOptions) {
         middleware,
         start,
         stop,
-        onStarted: onStarted.event,
-        onStopped: onStopped.event,
-        onError: onError.event,
+        events: {
+            started: eventStarted.event,
+            stopped: eventStopped.event,
+            error: eventError.event,
+        },
     };
 
     /**
@@ -90,7 +92,7 @@ export function createDevServer(options: DevServerOptions) {
 
         worker.on('error', err => {
             console.error(err);
-            onError.emit(err);
+            eventError.emit(err);
         });
 
         worker.on('exit', () => {
@@ -100,7 +102,7 @@ export function createDevServer(options: DevServerOptions) {
                 retries++;
                 void start();
             } else {
-                onStopped.emit();
+                eventStopped.emit();
             }
         });
 
@@ -112,7 +114,7 @@ export function createDevServer(options: DevServerOptions) {
             if (e === 'START') {
                 console.info(`Server started in ${chalk.green(formatElapsedMs(timestamp))}`);
                 proxyPromise.resolve(proxy as NextHandleFunction);
-                onStarted.emit();
+                eventStarted.emit();
             }
         });
     }

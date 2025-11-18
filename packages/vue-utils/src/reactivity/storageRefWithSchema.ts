@@ -1,6 +1,6 @@
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
 import { toJsonString } from '@nzyme/utils';
-import type { Infer, Schema } from '@nzyme/zchema';
-import { coerce, parseJson } from '@nzyme/zchema';
 
 import { storageRef } from './storageRef.js';
 import type { StorageRefOptions } from './storageRef.js';
@@ -10,14 +10,18 @@ import type { StorageRefOptions } from './storageRef.js';
  *
  * @template T The type of value to be stored, inferred from the schema
  */
-export interface StorageRefWithSchemaOptions<S extends Schema>
-    extends Omit<StorageRefOptions, 'deserialize' | 'serialize'> {
+export interface StorageRefWithSchemaOptions<T> extends Omit<StorageRefOptions, 'deserialize' | 'serialize'> {
     /**
      * Schema used to validate and parse the stored data.
      * The schema ensures type safety and data integrity when reading from
      * and writing to storage.
      */
-    schema: S;
+    schema: StandardSchemaV1<unknown, T>;
+
+    /**
+     * Default value to use when no value is stored in storage.
+     */
+    default: () => T;
 }
 
 /**
@@ -53,11 +57,27 @@ export interface StorageRefWithSchemaOptions<S extends Schema>
  * };
  * ```
  */
-export function storageRefWithSchema<S extends Schema>(options: StorageRefWithSchemaOptions<S>) {
-    return storageRef<Infer<S>>({
+export function storageRefWithSchema<T>(options: StorageRefWithSchemaOptions<T>) {
+    return storageRef<T>({
         ...options,
         serialize: value => toJsonString(value),
-        deserialize: value => parseJson(options.schema, value),
-        default: () => coerce(options.schema, null),
+        deserialize: value => {
+            try {
+                const json = JSON.parse(value);
+                const result = options.schema['~standard'].validate(json);
+                if (result instanceof Promise) {
+                    return options.default();
+                }
+
+                if (result.issues) {
+                    return options.default();
+                }
+
+                return result.value;
+            } catch {
+                return options.default();
+            }
+        },
+        default: options.default,
     });
 }

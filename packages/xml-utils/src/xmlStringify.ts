@@ -5,10 +5,20 @@ import type { XmlElement } from './xmlTypes.js';
 const builder = new XMLBuilder({
     format: true,
     indentBy: '  ',
-    attributesGroupName: '_attributes',
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+    textNodeName: '#text',
+    suppressEmptyNode: true,
 });
 
+/**
+ * Converts a JavaScript object to an XML string.
+ *
+ * @param xml - The object to convert to XML
+ * @returns The XML string representation
+ * @__NO_SIDE_EFFECTS__
+ */
 export function xmlStringify<T = XmlElement>(xml: T) {
-    const xmlString = builder.build(xml) as string;
+    const xmlString = builder.build(xml);
     return '<?xml version="1.0" encoding="utf-8" ?>\n' + xmlString;
 }

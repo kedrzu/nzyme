@@ -1,6 +1,6 @@
 import { computed } from 'vue';
 
-import { CURRENCIES, denormalizeMoney, normalizeMoney } from '@nzyme/money';
+import { CURRENCIES, moneyDenormalize, moneyNormalize } from '@nzyme/money';
 import type { Currency } from '@nzyme/money';
 import { assignProps } from '@nzyme/utils';
 
@@ -48,13 +48,13 @@ function setupMoneyInput(options: MoneyInputOptions) {
         maskConfig: maskConfig.value,
         toModelValue: (typedValue: unknown) => {
             const value = typedValue as number | null;
-            return value != null ? normalizeMoney(value, options.currency) : null;
+            return value != null ? moneyNormalize(value, options.currency) : null;
         },
         toTypedValue: (modelValue: number | null | undefined) => {
             if (modelValue == null) {
                 return 0;
             }
-            return denormalizeMoney(modelValue, options.currency);
+            return moneyDenormalize(modelValue, options.currency);
         },
     });
 

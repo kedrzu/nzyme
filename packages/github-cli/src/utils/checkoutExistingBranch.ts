@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import enquirer from 'enquirer';
 import { simpleGit } from 'simple-git';
 
+import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging';
 
 import { checkoutBranch } from './checkoutBranch.js';
@@ -113,15 +114,15 @@ export async function checkoutExistingBranch(branchName: string, taskId: string,
             }
 
             case 'cancel': {
-                throw new Error('Operation canceled by user. Please handle your uncommitted changes and try again.');
+                throw new UsageError('Operation canceled by user. Please handle your uncommitted changes and try again.');
             }
 
             default: {
-                throw new Error(`Unknown action: ${action}`);
+                throw new UsageError(`Unknown action: ${action}`);
             }
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        throw new Error(`Failed to checkout branch ${branchName}: ${errorMessage}`);
+        throw new UsageError(`Failed to checkout branch ${branchName}: ${errorMessage}`);
     }
 }

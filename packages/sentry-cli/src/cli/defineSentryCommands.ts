@@ -1,18 +1,18 @@
 import chalk from 'chalk';
+import open from 'open';
 
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
 import {
-    checkUnpushedCommits,
-    convertPrToReady,
-    createOctokitClient,
+    convertAllPrsToReady,
+    createGithubClient,
     findMatchingPr,
     getCurrentBranch,
-    getGitStatusInfo,
-    handleReadyPreparation,
+    handlePushPreparation,
+    openPrInBrowser,
     syncBaseBranch,
 } from '@nzyme/github-cli';
-import type { GitHubConfig } from '@nzyme/github-cli';
+import type { GithubConfig } from '@nzyme/github-cli';
 
 import { createSentryClient } from '../utils/createSentryClient.js';
 import { extractIssueIdFromBranch } from '../utils/extractIssueIdFromBranch.js';
@@ -63,7 +63,7 @@ export interface SentryCommandsOptions {
     /**
      * GitHub configuration.
      */
-    github: (() => GitHubConfig) | (() => Promise<GitHubConfig>) | GitHubConfig;
+    github: (() => GithubConfig) | (() => Promise<GithubConfig>) | GithubConfig;
 
     /**
      * The prefix to use for commands.
@@ -82,10 +82,10 @@ export interface SentryCommandsOptions {
      * If not provided, defaults to the current branch.
      */
     baseBranch?:
-        | (() => string)
         | (() => Promise<string>)
-        | (() => string[])
         | (() => Promise<string[]>)
+        | (() => string)
+        | (() => string[])
         | string
         | string[];
 }
@@ -99,8 +99,11 @@ export function defineSentryCommands(options: SentryCommandsOptions): CommandCla
         //
         defineIssueInfoCommand(options),
         defineIssueStartCommand(options),
+        defineIssuePushCommand(options),
         defineIssueReadyCommand(options),
         defineIssueRefreshCommand(options),
+        defineIssueOpenCommand(options),
+        defineIssuePrCommand(options),
     ];
 }
 
@@ -121,7 +124,7 @@ function defineIssueInfoCommand(options: SentryCommandsOptions) {
             // Load both configs in parallel
             const [sentryConfig, githubConfig] = await Promise.all([
                 getSentryConfig(options),
-                getGitHubConfig(options),
+                getGithubConfig(options),
             ]);
 
             try {
@@ -134,16 +137,16 @@ function defineIssueInfoCommand(options: SentryCommandsOptions) {
                 this.logger.info(`🎯 Found issue ID: ${chalk.bold(issueId)}`);
 
                 // Create clients in parallel
-                const [sentryClient, octokit] = await Promise.all([
+                const [sentryClient, githubClient] = await Promise.all([
                     Promise.resolve(createSentryClient(sentryConfig)),
-                    Promise.resolve(createOctokitClient(githubConfig)),
+                    Promise.resolve(createGithubClient(githubConfig)),
                 ]);
 
                 // Get issue details and search for PR in parallel
                 this.logger.info('🔍 Fetching issue details and searching for associated PR...');
                 const [issueData, pr] = await Promise.all([
                     getSentryIssue(sentryClient, sentryConfig.organizationSlug, issueId),
-                    findMatchingPr(octokit, githubConfig, issueId),
+                    findMatchingPr(githubClient, githubConfig, issueId),
                 ]);
 
                 if (!issueData) {
@@ -203,7 +206,7 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
             // Load both configs in parallel
             const [sentryConfig, githubConfig] = await Promise.all([
                 getSentryConfig(options),
-                getGitHubConfig(options),
+                getGithubConfig(options),
             ]);
 
             try {
@@ -211,9 +214,9 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
                 const issueId = parseIssueIdentifier(this.issueIdentifier, sentryConfig.defaultPrefix);
 
                 // Create GitHub client and get base branches
-                const [sentryClient, octokit, baseBranches] = await Promise.all([
+                const [sentryClient, githubClient, baseBranches] = await Promise.all([
                     Promise.resolve(createSentryClient(sentryConfig)),
-                    Promise.resolve(createOctokitClient(githubConfig)),
+                    Promise.resolve(createGithubClient(githubConfig)),
                     getBaseBranches(options),
                 ]);
 
@@ -222,7 +225,7 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
                     issueId,
                     organizationSlug: sentryConfig.organizationSlug,
                     sentryClient,
-                    octokit,
+                    githubClient,
                     githubConfig,
                     logger: this.logger,
                     baseBranches,
@@ -237,21 +240,33 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
     };
 }
 
-function defineIssueReadyCommand(options: SentryCommandsOptions) {
-    return class IssueReadyCommand extends Command {
-        static override paths = getCommandPaths(options, 'ready');
+function defineIssuePushCommand(options: SentryCommandsOptions) {
+    return class IssuePushCommand extends Command {
+        static override paths = getCommandPaths(options, 'push');
         static override usage = Command.Usage({
             category: 'Sentry',
-            description: 'Convert current issue from draft to ready for review',
+            description: 'Push changes and handle submodules without marking PR as ready',
             details:
-                'Detects the issue from the current branch and converts the associated PR from draft to ready for review',
-            examples: [['Convert current issue to ready for review', 'issue ready']],
+                'Commits and pushes changes in both submodules and main repository. Useful when you want to push work in progress without marking the PR as ready for review.',
+            examples: [
+                ['Push current issue changes', 'issue push'],
+                ['Push without processing submodules', 'issue push --skip-submodules'],
+                ['Push with auto-commit (skip prompts)', 'issue push --yes'],
+            ],
+        });
+
+        skipSubmodules = Option.Boolean('--skip-submodules', false, {
+            description: 'Skip processing submodules',
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip prompts and automatically commit with default message',
         });
 
         override async run() {
             await options.beforeEach?.();
 
-            const githubConfig = await getGitHubConfig(options);
+            const githubConfig = await getGithubConfig(options);
 
             try {
                 // Get current branch
@@ -262,19 +277,78 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                 const issueId = extractIssueIdFromBranch(currentBranch);
                 this.logger.info(`🎯 Found issue ID: ${chalk.bold(issueId)}`);
 
-                // Check for unpushed commits and uncommitted changes in parallel
-                this.logger.info('🔍 Checking repository status...');
-                const [unpushedCommits, statusInfo] = await Promise.all([checkUnpushedCommits(), getGitStatusInfo()]);
+                // Create GitHub client
+                const githubClient = createGithubClient(githubConfig);
 
-                // Handle preparation (push commits, commit changes) with user interaction
-                await handleReadyPreparation(unpushedCommits, statusInfo, this.logger);
+                // Get base branches
+                const baseBranches = await getBaseBranches(options);
+                const baseBranch = baseBranches.length > 0 ? baseBranches[0]! : 'main';
+
+                // Handle preparation (submodules and main repo)
+                await handlePushPreparation({
+                    githubClient,
+                    githubConfig,
+                    issueId,
+                    logger: this.logger,
+                    baseBranch,
+                    skipSubmodules: this.skipSubmodules,
+                    autoYes: this.yes,
+                });
+
+                this.logger.info('');
+                this.logger.info(`🎉 Successfully pushed all changes for issue ${chalk.bold(issueId)}!`);
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to push issue changes: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
+}
+
+function defineIssueReadyCommand(options: SentryCommandsOptions) {
+    return class IssueReadyCommand extends Command {
+        static override paths = getCommandPaths(options, 'ready');
+        static override usage = Command.Usage({
+            category: 'Sentry',
+            description: 'Convert current issue from draft to ready for review',
+            details:
+                'Detects the issue from the current branch and converts the associated PR from draft to ready for review',
+            examples: [
+                ['Convert current issue to ready for review', 'issue ready'],
+                ['Convert to ready without processing submodules', 'issue ready --skip-submodules'],
+                ['Convert to ready with auto-commit (skip prompts)', 'issue ready --yes'],
+            ],
+        });
+
+        skipSubmodules = Option.Boolean('--skip-submodules', false, {
+            description: 'Skip processing submodules',
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip prompts and automatically commit with default message',
+        });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            const githubConfig = await getGithubConfig(options);
+
+            try {
+                // Get current branch
+                const currentBranch = await getCurrentBranch();
+                this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
+
+                // Extract issue ID from branch name
+                const issueId = extractIssueIdFromBranch(currentBranch);
+                this.logger.info(`🎯 Found issue ID: ${chalk.bold(issueId)}`);
 
                 // Create GitHub client
-                const octokit = createOctokitClient(githubConfig);
+                const githubClient = createGithubClient(githubConfig);
 
                 // Find the PR for this issue
                 this.logger.info('🔍 Looking for associated GitHub PR...');
-                const pr = await findMatchingPr(octokit, githubConfig, issueId);
+                const pr = await findMatchingPr(githubClient, githubConfig, issueId);
 
                 if (!pr) {
                     throw new UsageError(
@@ -287,19 +361,32 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
 
                 this.logger.info(`✅ Found PR: ${chalk.blue(pr.title)} (#${pr.number})`);
 
-                if (!pr.draft) {
-                    this.logger.info(`🎉 PR #${pr.number} is already ready for review!`);
-                    this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
-                    return;
-                }
+                // Handle preparation (submodules and main repo)
+                const baseBranches = await getBaseBranches(options);
+                const baseBranch = baseBranches.length > 0 ? baseBranches[0]! : pr.base.ref;
 
-                // Convert PR from draft to ready
-                this.logger.info('🚀 Converting PR from draft to ready for review...');
-                await convertPrToReady(octokit, githubConfig, pr.number);
+                await handlePushPreparation({
+                    githubClient,
+                    githubConfig,
+                    issueId,
+                    logger: this.logger,
+                    baseBranch,
+                    skipSubmodules: this.skipSubmodules,
+                    autoYes: this.yes,
+                });
 
-                this.logger.info(`🎉 Successfully converted PR #${pr.number} to ready for review!`);
-                this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
-            } catch (error) {
+                // Convert all PRs (main and submodules) to ready
+                await convertAllPrsToReady({
+                    githubClient,
+                    githubConfig,
+                    issueId,
+                    logger: this.logger,
+                    mainPrNumber: pr.number,
+                    mainPrIsDraft: pr.draft,
+                    mainPrUrl: pr.html_url,
+                    skipSubmodules: this.skipSubmodules,
+                });
+            } catch (error: unknown) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to push issue to review: ${errorMessage}`);
                 throw error;
@@ -366,6 +453,101 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
     };
 }
 
+function defineIssueOpenCommand(options: SentryCommandsOptions) {
+    return class IssueOpenCommand extends Command {
+        static override paths = getCommandPaths(options, 'open');
+        static override usage = Command.Usage({
+            category: 'Sentry',
+            description: 'Open the current Sentry issue in the browser',
+            details: 'Detects the issue from the current branch and opens the Sentry issue URL in your default browser',
+            examples: [['Open current issue in browser', 'issue open']],
+        });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            const sentryConfig = await getSentryConfig(options);
+
+            try {
+                // Get current branch
+                const currentBranch = await getCurrentBranch();
+                this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
+
+                // Extract issue ID from branch name
+                const issueId = extractIssueIdFromBranch(currentBranch);
+                this.logger.info(`🎯 Found issue ID: ${chalk.bold(issueId)}`);
+
+                // Create Sentry client
+                const sentryClient = createSentryClient(sentryConfig);
+
+                // Get issue details
+                this.logger.info('🔍 Fetching issue details...');
+                const issueData = await getSentryIssue(sentryClient, sentryConfig.organizationSlug, issueId);
+
+                if (!issueData) {
+                    throw new UsageError(`Sentry issue ${issueId} not found`);
+                }
+
+                this.logger.info(`🚀 Opening issue ${chalk.bold(issueId)} in browser...`);
+                this.logger.info(`🔗 URL: ${chalk.underline(issueData.permalink)}`);
+
+                await open(issueData.permalink);
+
+                this.logger.info(`✅ Issue opened successfully!`);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to open issue: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
+}
+
+function defineIssuePrCommand(options: SentryCommandsOptions) {
+    return class IssuePrCommand extends Command {
+        static override paths = getCommandPaths(options, 'pr');
+        static override usage = Command.Usage({
+            category: 'Sentry',
+            description: 'Open the current issue PR in the browser',
+            details:
+                'Detects the issue from the current branch, finds the associated GitHub PR, and opens it in your default browser. If multiple PRs exist (main repo + submodules), lets you choose which one to open.',
+            examples: [['Open current issue PR in browser', 'issue pr']],
+        });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            const githubConfig = await getGithubConfig(options);
+
+            try {
+                // Get current branch
+                const currentBranch = await getCurrentBranch();
+                this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
+
+                // Extract issue ID from branch name
+                const issueId = extractIssueIdFromBranch(currentBranch);
+                this.logger.info(`🎯 Found issue ID: ${chalk.bold(issueId)}`);
+
+                // Create GitHub client
+                const githubClient = createGithubClient(githubConfig);
+
+                // Find, select, and open PR in browser
+                this.logger.info('🔍 Looking for associated GitHub PRs...');
+                await openPrInBrowser({
+                    githubClient,
+                    githubConfig,
+                    issueId,
+                    logger: this.logger,
+                });
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to open PR: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
+}
+
 function getCommandPaths(options: SentryCommandsOptions, ...commands: string[]) {
     if (options.prefix) {
         return [[options.prefix, ...commands]];
@@ -382,7 +564,7 @@ async function getSentryConfig(options: SentryCommandsOptions): Promise<SentryCo
     return options.sentry;
 }
 
-async function getGitHubConfig(options: SentryCommandsOptions): Promise<GitHubConfig> {
+async function getGithubConfig(options: SentryCommandsOptions): Promise<GithubConfig> {
     if (typeof options.github === 'function') {
         return await options.github();
     }

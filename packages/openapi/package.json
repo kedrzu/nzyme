@@ -30,18 +30,25 @@
         "@nzyme/fetch-utils": "^0.14.0",
         "@nzyme/types": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
-        "openapi-typescript": "^7.9.1",
-        "ufo": "^1.6.1"
+        "ufo": "^1.6.1",
+        "undici-types": "7.16.0"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
-        "vitest": "^3.2.4"
+        "eslint": "^9.39.1",
+        "openapi-typescript": "^7.10.1",
+        "vitest": "^4.0.8"
     },
     "publishConfig": {
         "access": "public"
     },
     "nzyme": {
         "cjs": true
+    },
+    "depcheck": {
+        "ignoreDeps": [
+            "openapi-typescript"
+        ]
     }
 }

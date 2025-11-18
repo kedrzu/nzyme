@@ -7,6 +7,8 @@ import { identity } from './functions/identity.js';
  * @template TKey - The type of the cache key
  */
 export interface AsyncCacheOptions<TArg, TValue, TKey = TArg> {
+    /** Optional map to use as cache */
+    cache?: Map<TKey, TValue>;
     /** Function that generates a cache key from an argument */
     cacheKey?: (arg: TArg) => TKey;
     /** Function that computes a value asynchronously if it's not in the cache */
@@ -43,13 +45,14 @@ export interface AsyncCacheOptions<TArg, TValue, TKey = TArg> {
  * ```
  */
 export function createAsyncCache<TArg, TValue, TKey = TArg>(options: AsyncCacheOptions<TArg, TValue, TKey>) {
-    const cache = new Map<TKey, TValue>();
+    const cache = options.cache ?? new Map<TKey, TValue>();
     const pendingRequests = new Map<TKey, Promise<TValue>>();
     const { cacheKey = identity, getValue, onError } = options;
 
     return {
         get,
         getCached,
+        getNew,
         set,
         clear,
         has,
@@ -80,6 +83,21 @@ export function createAsyncCache<TArg, TValue, TKey = TArg>(options: AsyncCacheO
         }
 
         // Create new request
+        return await getNewForKey(arg, key);
+    }
+
+    function getCached(arg: TArg): TValue | undefined {
+        const key = cacheKey(arg);
+        return cache.get(key);
+    }
+
+    function getNew(arg: TArg): Promise<TValue> {
+        const key = cacheKey(arg);
+        return getNewForKey(arg, key);
+    }
+
+    async function getNewForKey(arg: TArg, key: TKey): Promise<TValue> {
+        // Create new request
         const request = Promise.resolve(getValue(arg));
         pendingRequests.set(key, request);
 
@@ -98,13 +116,11 @@ export function createAsyncCache<TArg, TValue, TKey = TArg>(options: AsyncCacheO
             throw error;
         } finally {
             // Clean up pending request
-            pendingRequests.delete(key);
+            const currentRequest = pendingRequests.get(key);
+            if (currentRequest === request) {
+                pendingRequests.delete(key);
+            }
         }
-    }
-
-    function getCached(arg: TArg): TValue | undefined {
-        const key = cacheKey(arg);
-        return cache.get(key);
     }
 
     /**

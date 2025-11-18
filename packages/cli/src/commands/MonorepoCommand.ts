@@ -13,10 +13,11 @@ import type { TsConfigJson } from 'type-fest';
 import type { Package } from '@nzyme/project-utils';
 import { getPackages, getProjectRoot } from '@nzyme/project-utils';
 import { saveFile } from '@nzyme/project-utils';
-import { asArray, debounceAsyncFunction, waitForever } from '@nzyme/utils';
+import { asArray, debounceAsyncFunction } from '@nzyme/utils';
 
 import { Command } from '../Command.js';
 import type { NzymePackageConfig } from '../NzymePackageConfig.js';
+import { isFileIgnored } from '../utils/isFileIgnored.js';
 
 interface TsConfig {
     path: string;
@@ -59,15 +60,24 @@ export class MonorepoCommand extends Command {
         await this.processProject(true);
 
         if (this.watch) {
-            await this.startWatcher();
+            this.startWatcher();
         }
     }
 
-    private async startWatcher() {
+    private startWatcher() {
         const watcher = watch('.', {
             cwd: this.cwd,
-            ignored: ['node_modules', 'dist'],
+            ignored: file => {
+                const ignored = isFileIgnored(file);
+                if (ignored === false) {
+                    // It is a non-ignored file, so we need to check if it matches the PACKAGE_JSON_REGEX
+                    return !PACKAGE_JSON_REGEX.test(file);
+                }
+
+                return !!ignored;
+            },
             ignoreInitial: true,
+            persistent: true,
         });
 
         this.logger.info('Watching for changes...');
@@ -79,8 +89,6 @@ export class MonorepoCommand extends Command {
         watcher.on('add', file => void onFileChange(file));
         watcher.on('change', file => void onFileChange(file));
         watcher.on('unlink', file => void onFileChange(file));
-
-        await waitForever();
     }
 
     private async onFileChange(file: string) {
@@ -90,7 +98,6 @@ export class MonorepoCommand extends Command {
 
         // Invalidate cache for the package whose package.json was changed
         await this.invalidateCacheForChangedPackage(file);
-
         await this.processProject(false);
     }
 

@@ -1,4 +1,4 @@
-import type { AllowedComponentProps, ComponentPublicInstance, VNodeProps } from 'vue';
+import type { AllowedComponentProps, ComponentPublicInstance, SlotsType, VNodeProps } from 'vue';
 
 /**
  * Union type representing elements that can be used with Vue utilities.
@@ -27,6 +27,15 @@ export type ComponentEmitProps<C> = FilterOnlyEmitProps<ComponentPropsWithEmits<
  * Component emits type.
  */
 export type ComponentEmits<C> = C extends new (...args: unknown[]) => { $emit: infer E } ? E : never;
+
+/**
+ *
+ */
+export type ComponentSlots<C> = C extends new (...args: unknown[]) => { $slots: infer S }
+    ? S extends SlotsType
+        ? S
+        : never
+    : never;
 
 type FlattenProps<T> = Exclude<
     {

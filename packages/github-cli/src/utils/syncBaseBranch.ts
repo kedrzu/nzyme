@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import enquirer from 'enquirer';
 import { simpleGit } from 'simple-git';
 
+import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging';
 
 /**
@@ -55,7 +56,7 @@ export async function checkBaseBranchAhead(baseBranch: string) {
         const currentBranch = status.current;
 
         if (!currentBranch) {
-            throw new Error('Could not determine current branch');
+            throw new UsageError('Could not determine current branch');
         }
 
         // Get commits that are in base branch but not in current branch

@@ -1,7 +1,10 @@
-import type { Octokit } from '@octokit/rest';
 import { simpleGit } from 'simple-git';
 
-import type { GitHubConfig } from '../index.js';
+import { UsageError } from '@nzyme/cli';
+
+import type { GithubConfig } from '../GithubConfig.js';
+import { buildPrBody, createDraftPr } from './createDraftPr.js';
+import type { GithubClient } from './createGithubClient.js';
 
 /**
  * Result of creating a branch and PR.
@@ -28,14 +31,14 @@ export interface CreateBranchAndPrResult {
  */
 export interface CreateBranchAndPrParams {
     /**
-     * GitHub Octokit client instance.
+     * GitHub client instance.
      */
-    octokit: Octokit;
+    client: GithubClient;
 
     /**
      * GitHub configuration.
      */
-    config: GitHubConfig;
+    config: GithubConfig;
 
     /**
      * Name of the branch to create.
@@ -77,7 +80,7 @@ export interface CreateBranchAndPrParams {
  * Create a new git branch and GitHub PR for an issue.
  */
 export async function createBranchAndPr(params: CreateBranchAndPrParams): Promise<CreateBranchAndPrResult> {
-    const { octokit, config, branchName, prTitle, description, issueId, taskUrl, issueTitle, baseBranch } = params;
+    const { client, config, branchName, prTitle, description, issueId, taskUrl, issueTitle, baseBranch } = params;
     const git = simpleGit();
 
     try {
@@ -90,7 +93,7 @@ export async function createBranchAndPr(params: CreateBranchAndPrParams): Promis
         }
 
         if (!resolvedBaseBranch) {
-            throw new Error('Could not determine base branch');
+            throw new UsageError('Could not determine base branch');
         }
 
         // Check if branch exists, create and checkout if not, otherwise just checkout
@@ -116,37 +119,20 @@ export async function createBranchAndPr(params: CreateBranchAndPrParams): Promis
         // Create draft PR
         const prBody = buildPrBody(description, issueId, taskUrl, issueTitle);
 
-        const { data: pr } = await octokit.rest.pulls.create({
-            owner: config.owner,
-            repo: config.repo,
+        const pr = await createDraftPr({
+            client,
+            config,
             title: prTitle,
+            body: prBody,
             head: branchName,
             base: resolvedBaseBranch,
-            body: prBody,
-            draft: true,
         });
 
         return {
             branch: branchName,
-            pr: {
-                body: pr.body,
-                html_url: pr.html_url,
-                id: pr.id,
-                number: pr.number,
-                title: pr.title,
-            },
+            pr,
         };
     } catch (error) {
-        throw new Error(`Failed to create branch and PR: ${(error as Error).message}`);
+        throw new UsageError(`Failed to create branch and PR: ${(error as Error).message}`);
     }
-}
-
-function buildPrBody(description: string, issueId: string, taskUrl: string, issueTitle: string): string {
-    const lines = [`# [${issueId}](${taskUrl}) ${issueTitle}`, ''];
-
-    if (description) {
-        lines.push(description);
-    }
-
-    return lines.join('\n');
 }

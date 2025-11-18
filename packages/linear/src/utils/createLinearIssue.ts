@@ -1,5 +1,7 @@
 import type { LinearClient } from '@linear/sdk';
 
+import { UsageError } from '@nzyme/cli';
+
 /**
  * Parameters for creating a Linear issue.
  */
@@ -37,7 +39,7 @@ export async function createLinearIssue(linearClient: LinearClient, params: Crea
         const firstTeam = teams.nodes[0];
 
         if (!firstTeam) {
-            throw new Error('No teams found in Linear workspace');
+            throw new UsageError('No teams found in Linear workspace');
         }
 
         teamId = firstTeam.id;
@@ -52,7 +54,7 @@ export async function createLinearIssue(linearClient: LinearClient, params: Crea
     });
 
     if (!issuePayload.success || !issuePayload.issue) {
-        throw new Error('Failed to create Linear issue');
+        throw new UsageError('Failed to create Linear issue');
     }
 
     // Return the issue identifier (e.g., "SIG-123")

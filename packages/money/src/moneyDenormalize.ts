@@ -4,7 +4,7 @@ import type { Currency } from './Currency.js';
 /**
  * Denormalize money
  */
-export function denormalizeMoney(value: number | null, currency: Currency) {
+export function moneyDenormalize(value: number | null, currency: Currency) {
     if (value == null) {
         return null;
     }

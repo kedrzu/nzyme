@@ -6,6 +6,7 @@ export * from './FetchError.js';
 export * from './fetchJson.js';
 export * from './fetchRequest.js';
 export * from './formUrlEncodedRequest.js';
+export * from './getResponseFileName.js';
 export * from './HttpError.js';
 export * from './HttpHeaders.js';
 export * from './HttpMethod.js';

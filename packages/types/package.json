@@ -26,7 +26,7 @@
         "lint": "eslint . --fix --cache"
     },
     "dependencies": {
-        "type-fest": "^5.0.1"
+        "type-fest": "^5.2.0"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",

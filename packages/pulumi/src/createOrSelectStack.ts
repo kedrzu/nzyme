@@ -2,9 +2,10 @@ import path from 'path';
 
 import { automation, runtime } from '@pulumi/pulumi';
 
+import { waitFor } from '@nzyme/utils';
+
 import type { Stack, StackOutput } from './defineStack.js';
 import type { PulumiConfig } from './PulumiConfig.js';
-import { waitFor } from '@nzyme/utils';
 
 /**
  * Creates or selects a stack.

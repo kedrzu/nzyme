@@ -100,3 +100,8 @@ export type Func<A extends any[] = any[], T = void> = (...args: A) => T;
  *
  */
 export type StringNonLiteral = string & {};
+
+/**
+ *
+ */
+export type UUID = `${string}-${string}-${string}-${string}-${string}`;

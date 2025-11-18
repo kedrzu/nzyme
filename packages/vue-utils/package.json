@@ -30,8 +30,9 @@
         "@nzyme/types": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
         "@nzyme/zchema": "^0.14.0",
+        "@standard-schema/spec": "^1.0.0",
         "lodash.debounce": "^4.0.8",
-        "vue": "^3.5.22"
+        "vue": "^3.5.24"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",

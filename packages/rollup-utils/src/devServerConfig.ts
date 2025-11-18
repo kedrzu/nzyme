@@ -3,8 +3,12 @@ import json from '@rollup/plugin-json';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import typescript from '@rollup/plugin-typescript';
 import type { RollupOptions } from 'rollup';
+import sourcemapsPlugin from 'rollup-plugin-sourcemaps';
 
 import { unwrapCjsDefaultImport } from '@nzyme/esm';
+
+import { isFileExternal } from './isFileExternal.js';
+import { watchFilesPlugin } from './plugins/watchFilesPlugin.js';
 
 /**
  * Configuration options for setting up a development server with Rollup.
@@ -49,21 +53,14 @@ export function devServerConfig(options: DevServerConfigOptions): RollupOptions 
                 extensions: ['.js', '.mjs', '.ts', '.tsx', '.json'],
                 exportConditions: ['node', 'module', 'import', 'require'],
             }),
+            sourcemapsPlugin(),
+            watchFilesPlugin(),
             unwrapCjsDefaultImport(commonjs)(),
             unwrapCjsDefaultImport(json)(),
             ts && unwrapCjsDefaultImport(typescript)(),
         ],
         external: source => {
-            if (/^node:/.test(source) || /^[\w_-]+$/.test(source)) {
-                // Node built-in modules and third party modules
-                return true;
-            }
-
-            if (/node_modules/.test(source)) {
-                return true;
-            }
-
-            return false;
+            return isFileExternal(source);
         },
     };
 }

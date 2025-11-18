@@ -1,22 +1,39 @@
-import workspaces from 'eslint-plugin-workspaces';
-import monorepo from 'eslint-plugin-monorepo';
-import globals from 'globals';
 import js from '@eslint/js';
-import importPlugin from 'eslint-plugin-import';
-import perfectionist from 'eslint-plugin-perfectionist';
-
-import tseslint from 'typescript-eslint';
+import type { Linter } from 'eslint';
 import prettier from 'eslint-config-prettier';
-import { Linter } from 'eslint';
+import importPlugin from 'eslint-plugin-import';
+import monorepo from 'eslint-plugin-monorepo';
+import perfectionist from 'eslint-plugin-perfectionist';
+import workspaces from 'eslint-plugin-workspaces';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
 
-export type Target = 'node' | 'browser';
+/**
+ *
+ */
+export type Target = 'browser' | 'node';
 
+/**
+ *
+ */
 export interface TypescriptOptions {
-    target?: Target[] | Target;
+    /**
+     *
+     */
+    target?: Target | Target[];
+    /**
+     *
+     */
     project?: string | string[];
+    /**
+     *
+     */
     internalImports?: string[];
 }
 
+/**
+ *
+ */
 export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
     const config: Linter.Config = {
         ignores: ['dist/**/*', 'dist-*/**/*', 'node_modules/**/*', 'eslint.config.js', 'package.json'],
@@ -70,6 +87,7 @@ export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
             ],
             // often we want a custom prop order for better readability
             'perfectionist/sort-interfaces': ['warn', { type: 'unsorted' }],
+            'perfectionist/sort-object-types': ['warn', { type: 'unsorted' }],
             // this is super risky, as key order is preserved in js
             'perfectionist/sort-objects': 'off',
             'perfectionist/sort-modules': ['warn', { type: 'unsorted' }],
@@ -145,9 +163,9 @@ export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
 
 function getTargetGlobals(target: Target) {
     switch (target) {
-        case 'node':
-            return globals.node;
         case 'browser':
             return globals.browser;
+        case 'node':
+            return globals.node;
     }
 }

@@ -29,25 +29,20 @@
     },
     "dependencies": {
         "@nzyme/cli": "^0.14.0",
-        "@nzyme/ioc": "^0.14.0",
-        "@nzyme/logging": "^0.14.0",
         "@nzyme/project-utils": "^0.14.0",
-        "@nzyme/types": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
-        "@types/json-schema": "^7.0.15",
         "chalk": "^5.6.2",
         "chokidar": "^4.0.3",
-        "clipanion": "^4.0.0-rc.4",
         "fast-glob": "^3.3.3",
         "fs-extra": "^11.3.2",
-        "sury": "^11.0.0-alpha.3",
+        "sury": "^11.0.0-alpha.4",
         "typescript": "^5.9.3"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
         "@types/fs-extra": "^11.0.4",
-        "vitest": "^3.2.4"
+        "vitest": "^4.0.8"
     },
     "publishConfig": {
         "access": "public"

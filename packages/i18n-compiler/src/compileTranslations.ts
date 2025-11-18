@@ -1,9 +1,10 @@
 import type { Pair, ParsedNode, Range } from 'yaml';
 import { isMap, isScalar, parseDocument } from 'yaml';
 
-import { czechPluralization, englishPluralization, polishPluralization } from '@nzyme/i18n';
+import { pluralization } from '@nzyme/i18n';
 import type { Pluralization } from '@nzyme/i18n';
 import { fixOrphans } from '@nzyme/typography';
+import { capitalizeFirstLetter } from '@nzyme/utils';
 
 import type { TranslationError } from './types.js';
 
@@ -12,29 +13,6 @@ const SLOT_REGEX = /\{\s*(\w*)\s*\}/gm;
 const ESCAPE_REGEX = /\\([{}])/gm;
 const LANG_TAG_REGEX = /^([a-zA-Z_][a-zA-Z0-9_-]*)\[([^\]]+)\]$/;
 const INDENT = '  ';
-
-interface PluralizationConfig {
-    functionName: string;
-    pluralization: Pluralization;
-}
-
-/**
- * Mapping of language codes to their pluralization functions
- */
-const LANGUAGE_PLURALIZATION_MAP: Record<string, PluralizationConfig | undefined> = {
-    en: {
-        functionName: 'englishPluralization',
-        pluralization: englishPluralization,
-    },
-    pl: {
-        functionName: 'polishPluralization',
-        pluralization: polishPluralization,
-    },
-    cs: {
-        functionName: 'czechPluralization',
-        pluralization: czechPluralization,
-    },
-};
 
 /**
  * Result of translation compilation
@@ -52,6 +30,11 @@ export type TranslationResult = {
      * Original YAML input
      */
     yaml: string;
+
+    /**
+     * Pluralizations used in the code
+     */
+    pluralizations: Set<string>;
 };
 
 /**
@@ -66,6 +49,7 @@ export function compileTranslations(yaml: string): TranslationResult {
         errors: [],
         code: '',
         yaml,
+        pluralizations: new Set(),
     };
 
     if (!root) {
@@ -95,23 +79,19 @@ export function compileTranslations(yaml: string): TranslationResult {
         const typeImports: string[] = ['Translation'];
 
         // Check if pluralization features are used
-        const needsPluralization = result.code.includes('PluralTranslation');
-
-        if (needsPluralization) {
+        if (result.pluralizations.size > 0) {
             typeImports.push('PluralTranslation');
 
             // Add specific pluralization function and type imports based on usage
-            for (const config of Object.values(LANGUAGE_PLURALIZATION_MAP)) {
-                if (config && result.code.includes(config.functionName)) {
-                    imports.push(config.functionName);
-                }
+            for (const pluralization of result.pluralizations) {
+                imports.push(pluralization);
             }
         }
 
         const importStatement =
             imports.length > 0
-                ? `import { ${imports.join(', ')}, type ${typeImports.join(', type ')} } from '@nzyme/i18n';`
-                : `import type { ${typeImports.join(', ')} } from '@nzyme/i18n';`;
+                ? `import { ${imports.join(', ')}, type ${typeImports.join(', type ')} } from '@nzyme/i18n-core';`
+                : `import type { ${typeImports.join(', ')} } from '@nzyme/i18n-core';`;
 
         result.code = `${importStatement}\n\n${result.code}\n`;
     }
@@ -124,6 +104,7 @@ function createEmptyResult(yaml: string): TranslationResult {
         code: `export {};\n`,
         errors: [],
         yaml,
+        pluralizations: new Set(),
     };
 }
 
@@ -229,8 +210,9 @@ function compileAsPluralization(key: string, value: ParsedNode, result: Translat
         }
 
         const { language: langKey } = parseLanguageKey(rawLangKey);
-        const pluralizationConfig = LANGUAGE_PLURALIZATION_MAP[langKey];
 
+        const pluralizationName = getPluralizationName(langKey);
+        const pluralizationConfig = (pluralization as Record<string, Pluralization | undefined>)[pluralizationName];
         if (!pluralizationConfig) {
             result.errors.push({
                 key,
@@ -254,6 +236,8 @@ function compileAsPluralization(key: string, value: ParsedNode, result: Translat
         const pluralFormsCode: string[] = [];
         const usedPlurals = new Set<string>();
 
+        result.pluralizations.add(pluralizationName);
+
         // Process each plural form
         for (const pluralForm of lang.value.items) {
             if (!pluralForm.value) {
@@ -264,11 +248,11 @@ function compileAsPluralization(key: string, value: ParsedNode, result: Translat
             usedPlurals.add(pluralKey);
 
             // Validate plural key against available plurals
-            if (!pluralizationConfig.pluralization.plurals.includes(pluralKey)) {
+            if (!pluralizationConfig.plurals.includes(pluralKey)) {
                 result.errors.push({
                     key,
                     lang: rawLangKey,
-                    message: `Unknown plural form '${pluralKey}' for language '${langKey}'. Available: ${pluralizationConfig.pluralization.plurals.join(', ')}`,
+                    message: `Unknown plural form '${pluralKey}' for language '${langKey}'. Available: ${pluralizationConfig.plurals.join(', ')}`,
                     ...rangeToLineColumn(pluralForm.key.range, result),
                 });
                 continue;
@@ -290,8 +274,8 @@ function compileAsPluralization(key: string, value: ParsedNode, result: Translat
         }
 
         // Check for missing required plurals
-        const requiredPlurals = pluralizationConfig.pluralization.plurals.filter(
-            plural => !pluralizationConfig.pluralization.optionalPlurals?.includes(plural),
+        const requiredPlurals = pluralizationConfig.plurals.filter(
+            plural => !pluralizationConfig.optionalPlurals?.includes(plural),
         );
         for (const requiredPlural of requiredPlurals) {
             if (!usedPlurals.has(requiredPlural)) {
@@ -305,7 +289,7 @@ function compileAsPluralization(key: string, value: ParsedNode, result: Translat
         }
 
         const constantName = `${key}_${langKey}`;
-        const langConstant = `const ${constantName}: PluralTranslation<typeof ${pluralizationConfig.functionName}, { ${Array.from(
+        const langConstant = `const ${constantName}: PluralTranslation<typeof ${pluralizationName}, { ${Array.from(
             allParams,
         )
             .map(p => `${p}: ${p === countParamName ? 'number' : 'unknown'}`)
@@ -322,8 +306,8 @@ function compileAsPluralization(key: string, value: ParsedNode, result: Translat
     // Generate the main translation function
     const switchCases = languageCodes
         .map(langKey => {
-            const pluralizationConfig = LANGUAGE_PLURALIZATION_MAP[langKey]!;
-            return `${INDENT}${INDENT}case '${langKey}':\n${INDENT}${INDENT}${INDENT}return ${pluralizationConfig.functionName}.pluralize(params.${countParamName}, ${key}_${langKey})?.(params);`;
+            const pluralizationName = getPluralizationName(langKey);
+            return `${INDENT}${INDENT}case '${langKey}':\n${INDENT}${INDENT}${INDENT}return ${pluralizationName}.pluralize(params.${countParamName}, ${key}_${langKey})?.(params);`;
         })
         .join('\n');
 
@@ -428,4 +412,8 @@ function rangeToLineColumn(range: Range, result: TranslationResult) {
         line,
         column,
     };
+}
+
+function getPluralizationName(lang: string) {
+    return `pluralization${capitalizeFirstLetter(lang)}`;
 }

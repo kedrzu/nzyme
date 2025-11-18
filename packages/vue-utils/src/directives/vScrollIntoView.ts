@@ -1,5 +1,8 @@
 import type { ObjectDirective } from 'vue';
 
+import type { ElementOrVue } from '../types.js';
+import { unwrapElement } from '../unwrapElement.js';
+
 /**
  * Configuration options for the v-scroll-into-view directive.
  */
@@ -41,14 +44,17 @@ export type ScrollIntoViewDirectiveOptions = {
  * </script>
  * ```
  */
-export const vScrollIntoView: ObjectDirective<Element, ScrollIntoViewDirectiveOptions | null | undefined> = {
-    mounted(el, binding) {
+export const vScrollIntoView: ObjectDirective<ElementOrVue, ScrollIntoViewDirectiveOptions | null | undefined> = {
+    mounted(instance, binding) {
+        const el = unwrapElement(instance);
+
         const enabled = isEnabled(binding.value?.trigger);
-        if (enabled) {
+        if (el && enabled && el instanceof HTMLElement) {
             setTimeout(() => el.scrollIntoView(binding.value?.options));
         }
     },
-    updated(el, binding) {
+    updated(instance, binding) {
+        const el = unwrapElement(instance);
         const oldTrigger = binding.oldValue?.trigger;
         const newTrigger = binding.value?.trigger;
 
@@ -57,7 +63,7 @@ export const vScrollIntoView: ObjectDirective<Element, ScrollIntoViewDirectiveOp
         }
 
         const enabled = isEnabled(newTrigger);
-        if (enabled) {
+        if (el && enabled && el instanceof HTMLElement) {
             setTimeout(() => el.scrollIntoView(binding.value?.options));
         }
     },

@@ -1,8 +1,0 @@
----
-description: 
-globs: **/*.ts,**/*.tsx,**/*.vue
-alwaysApply: false
----
-
-For schemas use sury package, not zod. Import it like this:
-`import * as s from 'sury';`

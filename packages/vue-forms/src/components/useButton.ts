@@ -1,8 +1,10 @@
-import { computed, reactive, ref } from 'vue';
-import type { PropType } from 'vue';
+import { computed, h, ref } from 'vue';
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, PropType, SetupContext } from 'vue';
+import { RouterLink } from 'vue-router';
+import type { RouteLocationRaw } from 'vue-router';
 
 import { assignProps, waitFor } from '@nzyme/utils';
-import { injectContext, useProps } from '@nzyme/vue-utils';
+import { defineProp, injectContext, useProps } from '@nzyme/vue-utils';
 import { defineProps, useEmitAsync } from '@nzyme/vue-utils';
 
 import { FormContext } from '../FormContext.js';
@@ -20,29 +22,48 @@ const BUTTON_PROPS = defineProps({
         type: Boolean,
         default: false,
     },
-    preventDefault: {
-        type: Boolean,
-        default: false,
-    },
+    link: defineProp<string | RouteLocationRaw | null>(),
 });
 
 const BUTTON_EMITS = {
     click: (event: Event) => !!event,
 };
 
+/**
+ * Button props
+ */
 export interface ButtonProps {
+    /**
+     * Button type
+     */
     type?: 'button' | 'submit';
+    /**
+     * Whether the button is busy
+     */
     busy?: boolean;
+    /**
+     * Whether the button is disabled
+     */
     disabled?: boolean;
-    preventDefault?: boolean;
-}
-
-export interface ButtonEmits {
-    click: Event;
+    /**
+     * Link to navigate to
+     */
+    link?: string | RouteLocationRaw | null;
 }
 
 /**
- *
+ * Button emits
+ */
+export interface ButtonEmits {
+    /**
+     * Click event
+     */
+    click: Event;
+}
+
+const urlRegex = /^\w+:\/\//;
+
+/**
  * @__NO_SIDE_EFFECTS__
  */
 export const useButton = assignProps(setupButton, {
@@ -70,42 +91,107 @@ function setupButton() {
 
     const disabled = computed(() => props.disabled);
 
-    return reactive({
+    return {
         busy,
         disabled,
-        attrs: {
-            disabled,
-            type: computed(() => props.type),
-            onClick,
-        },
-    });
+        click: (event: Event) => onClick(event),
+        Button,
+    };
 
-    function onClick(event: Event) {
-        event.stopPropagation();
-        if (props.preventDefault) {
-            event.preventDefault();
+    function Button(attrs: AnchorHTMLAttributes | ButtonHTMLAttributes, ctx: SetupContext) {
+        const link = props.link;
+
+        if (!link) {
+            return h(
+                'button',
+                {
+                    ...attrs,
+                    disabled: disabled.value || undefined,
+                    type: props.type,
+                    onClick,
+                },
+                ctx.slots,
+            );
         }
 
+        if (typeof link === 'string') {
+            if (urlRegex.test(link)) {
+                // External link
+                return h(
+                    'a',
+                    {
+                        ...attrs,
+                        href: link,
+                        rel: 'noopener noreferrer',
+                        onClick,
+                        disabled: disabled.value || undefined,
+                    },
+                    ctx.slots,
+                );
+            } else if (link.startsWith('#')) {
+                // Hash link
+                return h(
+                    'a',
+                    {
+                        ...attrs,
+                        href: link,
+                        onClick,
+                        disabled: disabled.value || undefined,
+                    },
+                    ctx.slots,
+                );
+            }
+        }
+
+        // Internal link - use RouterLink
+        return h(
+            RouterLink,
+            {
+                to: link,
+                custom: true,
+            },
+            {
+                default: ({ navigate, href }: { navigate: (e?: Event) => Promise<Error | void>; href: string }) => {
+                    return h(
+                        'a',
+                        {
+                            href,
+                            onClick: (event: Event) => onClick(event, navigate),
+                            disabled: disabled.value || undefined,
+                        },
+                        ctx.slots,
+                    );
+                },
+            },
+        );
+    }
+
+    async function onClick(event: Event, navigate?: (e?: Event) => Promise<unknown>) {
         if (props.disabled || pending.value) {
+            event.stopPropagation();
+            event.preventDefault();
             return;
         }
 
-        if (props.type === 'submit') {
-            event.preventDefault();
-            void formCtx?.submit();
-        } else {
-            void onClickAsync(event);
-        }
-    }
-
-    async function onClickAsync(event: Event) {
         try {
             pending.value = true;
+
+            if (navigate) {
+                await navigate(event);
+            } else {
+                event.stopPropagation();
+                event.preventDefault();
+
+                if (props.type === 'submit') {
+                    await formCtx?.submit();
+                }
+            }
+
             const result = emitAsync('click', event);
-            if (result instanceof Promise) {
+            if (result instanceof Promise || navigate) {
                 await result;
                 // Wait a little longer to allow for the click event to propagate.
-                await waitFor(50);
+                await waitFor(100);
             }
         } finally {
             pending.value = false;

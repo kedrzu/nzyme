@@ -1,0 +1,41 @@
+{
+    "name": "@nzyme/i18n-core",
+    "version": "0.14.0",
+    "private": true,
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/kedrzu/nzyme.git"
+    },
+    "license": "MIT",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "sideEffects": false,
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        }
+    },
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build:esm": "tsc --build ./tsconfig.esm.json",
+        "lint": "eslint . --fix --cache"
+    },
+    "dependencies": {
+        "@nzyme/ioc": "^0.14.0"
+    },
+    "devDependencies": {
+        "@nzyme/eslint": "^0.14.0",
+        "@nzyme/tsconfig": "^0.14.0"
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "nzyme": {
+        "cjs": true
+    }
+}

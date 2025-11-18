@@ -8,6 +8,7 @@ Common GitHub utilities for CLI tools that integrate with GitHub repositories.
 - **Pull Request Operations**: Create draft PRs, convert to ready for review
 - **Git Status Utilities**: Check for uncommitted changes, unpushed commits
 - **Branch Synchronization**: Sync with base branches, handle merging
+- **Submodule Support**: Handle submodule changes with automatic branch creation and PR management
 - **Interactive Workflows**: Handle stashing, branch selection with user prompts
 
 ## Installation
@@ -21,9 +22,9 @@ yarn add @nzyme/github-cli
 ### Basic GitHub Configuration
 
 ```typescript
-import type { GitHubConfig } from '@nzyme/github-cli';
+import type { GithubConfig } from '@nzyme/github-cli';
 
-const githubConfig: GitHubConfig = {
+const githubConfig: GithubConfig = {
     token: 'your-github-token',
     owner: 'repository-owner',
     repo: 'repository-name',
@@ -34,7 +35,7 @@ const githubConfig: GitHubConfig = {
 
 ```typescript
 import {
-    createOctokitClient,
+    createGithubClient,
     getCurrentBranch,
     findMatchingPr,
     createBranchAndPr,
@@ -43,17 +44,17 @@ import {
 } from '@nzyme/github-cli';
 
 // Create GitHub client
-const octokit = createOctokitClient(githubConfig);
+const client = createGithubClient(githubConfig);
 
 // Get current branch
 const branch = await getCurrentBranch();
 
 // Find PR for an issue
-const pr = await findMatchingPr(octokit, githubConfig, 'ISSUE-123');
+const pr = await findMatchingPr(client, githubConfig, 'ISSUE-123');
 
 // Create new branch and PR
 const result = await createBranchAndPr({
-    octokit,
+    client,
     config: githubConfig,
     branchName: 'feature-branch',
     prTitle: 'Feature: New functionality',
@@ -65,7 +66,7 @@ const result = await createBranchAndPr({
 });
 
 // Convert PR to ready for review
-await convertPrToReady(octokit, githubConfig, pr.number);
+await convertPrToReady(client, githubConfig, pr.number);
 
 // Sync with base branch
 await syncBaseBranch('main', logger);
@@ -75,11 +76,11 @@ await syncBaseBranch('main', logger);
 
 ### Core Functions
 
-- `createOctokitClient(config)` - Create authenticated GitHub API client
+- `createGithubClient(config)` - Create authenticated GitHub API client
 - `getCurrentBranch()` - Get current git branch name
-- `findMatchingPr(octokit, config, issueId)` - Find PR matching an issue ID
+- `findMatchingPr(client, config, issueId)` - Find PR matching an issue ID
 - `createBranchAndPr(params)` - Create new branch and draft PR
-- `convertPrToReady(octokit, config, prNumber)` - Convert draft PR to ready
+- `convertPrToReady(client, config, prNumber)` - Convert draft PR to ready
 
 ### Git Operations
 
@@ -92,6 +93,11 @@ await syncBaseBranch('main', logger);
 - `getGitStatusInfo()` - Get detailed git status information
 - `checkUnpushedCommits()` - Check for unpushed commits
 - `handleReadyPreparation(unpushed, status, logger)` - Interactive preparation for PR review
+
+### Submodule Operations
+
+- `getSubmoduleInfo()` - Get information about all submodules with changes
+- `handleSubmoduleReadyPreparation(params)` - Handle submodule changes before marking PR as ready
 
 ### Interactive Workflows
 

@@ -18,6 +18,13 @@ export interface RequiredValidatorOptions<T> {
     condition?: MaybeRefOrGetter<boolean>;
 
     /**
+     * Whether to validate the value lazily.
+     * If true, the value will be validated only when submitting the form.
+     * @default false
+     */
+    lazy?: boolean;
+
+    /**
      * Custom validation logic.
      * Should return true if the value is valid, false otherwise.
      */
@@ -34,19 +41,13 @@ export interface RequiredValidatorOptions<T> {
  * @param options - Validator options
  */
 export function requiredValidator<T>(options: RequiredValidatorOptions<T> = {}) {
-    const condition = options.condition ? undefined : makeRef(options.condition);
+    const condition = options.condition ? makeRef(options.condition) : undefined;
     const validate = options.custom ?? isFilled;
+    const lazy = options.lazy ?? false;
 
     return defineValidator<T>({
         async: false,
         validate: (value, ctx) => {
-            console.warn('validate required', {
-                value,
-                condition: condition?.value,
-                isFilled: isFilled(value),
-                custom: options.custom,
-            });
-
             const required = condition?.value ?? true;
             if (!required) {
                 return;
@@ -72,14 +73,16 @@ export function requiredValidator<T>(options: RequiredValidatorOptions<T> = {}) 
                 },
             );
 
-            watch(
-                () => ctx.focused,
-                focusedValue => {
-                    if (!focusedValue) {
-                        ctx.show = true;
-                    }
-                },
-            );
+            if (!lazy) {
+                watch(
+                    () => ctx.focused,
+                    focusedValue => {
+                        if (!focusedValue) {
+                            ctx.show = true;
+                        }
+                    },
+                );
+            }
         },
     });
 }

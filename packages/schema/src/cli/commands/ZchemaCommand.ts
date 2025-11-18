@@ -6,9 +6,8 @@ import { watch } from 'chokidar';
 import glob from 'fast-glob';
 import * as fsExtra from 'fs-extra';
 
-import { Option } from '@nzyme/cli';
+import { isFileIgnored, Option } from '@nzyme/cli';
 import { Command } from '@nzyme/cli';
-import { waitForever } from '@nzyme/utils';
 
 import { generateSchemaFromFile } from '../../generateSchema.js';
 import { getSchemaOutputPath } from '../../output/generateSchemaFile.js';
@@ -51,7 +50,7 @@ export class ZchemaCommand extends Command {
         const results = await Promise.all(files.map(file => this.generateSchemaFile(file)));
 
         if (this.watch) {
-            await this.startWatcher();
+            this.startWatcher();
         }
 
         const failedCount = results.filter(result => !result).length;
@@ -64,11 +63,20 @@ export class ZchemaCommand extends Command {
         return 0;
     }
 
-    private async startWatcher() {
+    private startWatcher() {
         const watcher = watch('.', {
             cwd: this.cwd,
-            ignored: ['node_modules', 'dist', 'build'],
+            ignored: file => {
+                const ignored = isFileIgnored(file);
+                if (ignored === false) {
+                    // It is a non-ignored file, so we need to check if it matches the TYPE_REGEX
+                    return !TYPE_REGEX.test(file);
+                }
+
+                return !!ignored;
+            },
             ignoreInitial: true,
+            persistent: true,
         });
 
         this.logger.info('👀 Watching for changes...');
@@ -76,8 +84,6 @@ export class ZchemaCommand extends Command {
         watcher.on('add', file => void this.onAddFile(file));
         watcher.on('change', file => void this.onAddFile(file));
         watcher.on('unlink', file => void this.onDeleteFile(file));
-
-        await waitForever();
     }
 
     private async onAddFile(file: string) {

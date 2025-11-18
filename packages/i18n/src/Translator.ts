@@ -1,8 +1,8 @@
+import type { Translation } from '@nzyme/i18n-core';
 import { defineService } from '@nzyme/ioc';
 
 import { LanguageContext } from './LanguageContext.js';
 import { translateToString } from './translateToString.js';
-import type { Translation } from './Translation.js';
 
 /**
  *

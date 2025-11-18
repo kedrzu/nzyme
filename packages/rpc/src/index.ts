@@ -6,3 +6,4 @@ export * from './Serialized.js';
 export * from './services/HttpContextProvider.js';
 export * from './types/HttpRequest.js';
 export * from './types/HttpResponse.js';
+export * from './types/RpcError.js';

@@ -1,25 +1,40 @@
-import { onMounted, onUnmounted } from 'vue';
+import { onScopeDispose } from 'vue';
 
+import { isBrowser } from '@nzyme/dom-utils';
+
+/**
+ *
+ */
 export function onWindowEvent<K extends keyof WindowEventMap>(
     type: K,
     listener: (this: Window, ev: WindowEventMap[K]) => unknown,
     options?: boolean | AddEventListenerOptions,
 ): void;
+
+/**
+ *
+ */
 export function onWindowEvent(
     type: string,
     listener: (this: Window, ev: Event) => unknown,
     options?: boolean | AddEventListenerOptions,
 ): void;
+
+/**
+ *
+ */
 export function onWindowEvent(
     type: string,
     listener: (this: Window, ev: Event) => unknown,
     options?: boolean | AddEventListenerOptions,
 ): void {
-    onMounted(() => {
-        window.addEventListener(type, listener, options);
-    });
+    if (!isBrowser()) {
+        return;
+    }
 
-    onUnmounted(() => {
+    window.addEventListener(type, listener, options);
+
+    onScopeDispose(() => {
         window.removeEventListener(type, listener, options);
     });
 }

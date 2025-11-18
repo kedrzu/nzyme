@@ -1,19 +1,19 @@
 import chalk from 'chalk';
 import enquirer from 'enquirer';
+import open from 'open';
 
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
 import {
-    checkUnpushedCommits,
-    convertPrToReady,
-    createOctokitClient,
+    convertAllPrsToReady,
+    createGithubClient,
     findMatchingPr,
     getCurrentBranch,
-    getGitStatusInfo,
-    handleReadyPreparation,
+    handlePushPreparation,
+    openPrInBrowser,
     syncBaseBranch,
 } from '@nzyme/github-cli';
-import type { GitHubConfig } from '@nzyme/github-cli';
+import type { GithubConfig } from '@nzyme/github-cli';
 
 import { createLinearClient } from '../utils/createLinearClient.js';
 import { createLinearIssue } from '../utils/createLinearIssue.js';
@@ -50,7 +50,7 @@ export interface LinearCommandsOptions {
     /**
      * GitHub configuration.
      */
-    github: (() => GitHubConfig) | (() => Promise<GitHubConfig>) | GitHubConfig;
+    github: (() => GithubConfig) | (() => Promise<GithubConfig>) | GithubConfig;
 
     /**
      * The prefix to use for commands.
@@ -87,9 +87,12 @@ export function defineLinearCommands(options: LinearCommandsOptions): CommandCla
         defineTaskInfoCommand(options),
         defineTaskStartCommand(options),
         defineTaskNewCommand(options),
+        defineTaskPushCommand(options),
         defineTaskReadyCommand(options),
         defineTaskRefreshCommand(options),
         defineTaskListCommand(options),
+        defineTaskOpenCommand(options),
+        defineTaskPrCommand(options),
     ];
 }
 
@@ -110,7 +113,7 @@ function defineTaskInfoCommand(options: LinearCommandsOptions) {
             // Load both configs in parallel
             const [linearConfig, githubConfig] = await Promise.all([
                 getLinearConfig(options),
-                getGitHubConfig(options),
+                getGithubConfig(options),
             ]);
 
             try {
@@ -123,37 +126,39 @@ function defineTaskInfoCommand(options: LinearCommandsOptions) {
                 this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
 
                 // Create clients in parallel
-                const [linearClient, octokit] = await Promise.all([
+                const [linearClient, githubClient] = await Promise.all([
                     Promise.resolve(createLinearClient(linearConfig)),
-                    Promise.resolve(createOctokitClient(githubConfig)),
+                    Promise.resolve(createGithubClient(githubConfig)),
                 ]);
 
                 // Get task details and search for PR in parallel
                 this.logger.info('🔍 Fetching task details and searching for associated PR...');
                 const [issueData, pr] = await Promise.all([
                     linearClient.issue(taskId),
-                    findMatchingPr(octokit, githubConfig, taskId),
+                    findMatchingPr(githubClient, githubConfig, taskId),
                 ]);
 
                 if (!issueData) {
-                    throw new UsageError(`Linear task ${taskId} not found`);
+                    throw new UsageError(`Linear task ${chalk.bold(taskId)} not found`);
                 }
 
                 // Display task information
                 this.logger.info('');
                 this.logger.info(chalk.bold.blue('📋 Task Information'));
                 this.logger.info('═'.repeat(50));
+                this.logger.info(`📝 Task ID: ${chalk.bold(taskId)}`);
                 this.logger.info(`📝 Task Name: ${chalk.green(issueData.title)}`);
                 this.logger.info(`🔗 Task URL: ${chalk.underline(issueData.url)}`);
                 this.logger.info(`🌿 Branch Name: ${chalk.cyan(currentBranch)}`);
 
                 if (pr) {
+                    this.logger.info(`📎 PR: ${chalk.blue(pr.title)} ${chalk.gray(`(#${pr.number})`)}`);
                     this.logger.info(`📎 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
                     this.logger.info(
                         `📊 PR Status: ${pr.draft ? chalk.yellow('Draft') : chalk.green('Ready for review')}`,
                     );
                 } else {
-                    this.logger.info(`📎 PR URL: ${chalk.gray('No PR found for this task')}`);
+                    this.logger.info(`📎 PR: ${chalk.gray('No PR found for this task')}`);
                 }
 
                 this.logger.info('');
@@ -188,7 +193,7 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
             // Load both configs in parallel
             const [linearConfig, githubConfig] = await Promise.all([
                 getLinearConfig(options),
-                getGitHubConfig(options),
+                getGithubConfig(options),
             ]);
 
             try {
@@ -199,8 +204,8 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                 const linearClient = createLinearClient(linearConfig);
 
                 // Create GitHub client and get base branches
-                const [octokit, baseBranches] = await Promise.all([
-                    Promise.resolve(createOctokitClient(githubConfig)),
+                const [githubClient, baseBranches] = await Promise.all([
+                    Promise.resolve(createGithubClient(githubConfig)),
                     getBaseBranches(options),
                 ]);
 
@@ -208,14 +213,16 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                 await switchToTask({
                     issueId,
                     linearClient,
-                    octokit,
+                    githubClient: githubClient,
                     githubConfig,
                     logger: this.logger,
                     baseBranches,
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                this.logger.error(`❌ Failed to start work on task ${this.taskIdentifier}: ${errorMessage}`);
+                this.logger.error(
+                    `❌ Failed to start work on task ${chalk.bold(this.taskIdentifier)}: ${errorMessage}`,
+                );
                 throw error;
             }
         }
@@ -246,7 +253,7 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
             // Load both configs in parallel
             const [linearConfig, githubConfig] = await Promise.all([
                 getLinearConfig(options),
-                getGitHubConfig(options),
+                getGithubConfig(options),
             ]);
 
             try {
@@ -302,11 +309,11 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
                     projectId: selectedProjectId,
                 });
 
-                this.logger.info(`✅ Created Linear task: ${chalk.bold(issueId)}`);
+                this.logger.info(`✅ Created Linear task: ${chalk.bold.green(issueId)}`);
 
                 // Create GitHub client and get base branches
-                const [octokit, baseBranches] = await Promise.all([
-                    Promise.resolve(createOctokitClient(githubConfig)),
+                const [githubClient, baseBranches] = await Promise.all([
+                    Promise.resolve(createGithubClient(githubConfig)),
                     getBaseBranches(options),
                 ]);
 
@@ -314,7 +321,7 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
                 await switchToTask({
                     issueId,
                     linearClient,
-                    octokit,
+                    githubClient: githubClient,
                     githubConfig,
                     logger: this.logger,
                     baseBranches,
@@ -322,6 +329,73 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to create new task: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
+}
+
+function defineTaskPushCommand(options: LinearCommandsOptions) {
+    return class TaskPushCommand extends Command {
+        static override paths = getCommandPaths(options, 'push');
+        static override usage = Command.Usage({
+            category: 'Linear',
+            description: 'Push changes and handle submodules without marking PR as ready',
+            details:
+                'Commits and pushes changes in both submodules and main repository. Useful when you want to push work in progress without marking the PR as ready for review.',
+            examples: [
+                ['Push current task changes', 'task push'],
+                ['Push without processing submodules', 'task push --skip-submodules'],
+                ['Push with auto-commit (skip prompts)', 'task push --yes'],
+            ],
+        });
+
+        skipSubmodules = Option.Boolean('--skip-submodules', false, {
+            description: 'Skip processing submodules',
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip prompts and automatically commit with default message',
+        });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            const githubConfig = await getGithubConfig(options);
+
+            try {
+                // Get current branch
+                const currentBranch = await getCurrentBranch();
+                this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
+
+                // Extract task ID from branch name
+                const taskId = extractTaskIdFromBranch(currentBranch);
+                this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
+
+                // Create GitHub client
+                const githubClient = createGithubClient(githubConfig);
+
+                // Get base branches
+                const baseBranches = await getBaseBranches(options);
+                const baseBranch = baseBranches[0] ?? 'main';
+
+                // Handle preparation (submodules and main repo)
+                await handlePushPreparation({
+                    githubClient,
+                    githubConfig,
+                    issueId: taskId,
+                    logger: this.logger,
+                    baseBranch,
+                    skipSubmodules: this.skipSubmodules,
+                    autoYes: this.yes,
+                    defaultCommitMessage: 'Work in progress',
+                });
+
+                this.logger.info('');
+                this.logger.info(`🎉 Successfully pushed all changes for task ${chalk.bold(taskId)}!`);
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to push task changes: ${errorMessage}`);
                 throw error;
             }
         }
@@ -336,13 +410,25 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
             description: 'Convert current task from draft to ready for review',
             details:
                 'Detects the task from the current branch and converts the associated PR from draft to ready for review',
-            examples: [['Convert current task to ready for review', 'task ready']],
+            examples: [
+                ['Convert current task to ready for review', 'task ready'],
+                ['Convert to ready without processing submodules', 'task ready --skip-submodules'],
+                ['Convert to ready with auto-commit (skip prompts)', 'task ready --yes'],
+            ],
+        });
+
+        skipSubmodules = Option.Boolean('--skip-submodules', false, {
+            description: 'Skip processing submodules',
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip prompts and automatically commit with default message',
         });
 
         override async run() {
             await options.beforeEach?.();
 
-            const githubConfig = await getGitHubConfig(options);
+            const githubConfig = await getGithubConfig(options);
 
             try {
                 // Get current branch
@@ -353,44 +439,48 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                 const taskId = extractTaskIdFromBranch(currentBranch);
                 this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
 
-                // Check for unpushed commits and uncommitted changes in parallel
-                this.logger.info('🔍 Checking repository status...');
-                const [unpushedCommits, statusInfo] = await Promise.all([checkUnpushedCommits(), getGitStatusInfo()]);
-
-                // Handle preparation (push commits, commit changes) with user interaction
-                await handleReadyPreparation(unpushedCommits, statusInfo, this.logger);
-
                 // Create GitHub client
-                const octokit = createOctokitClient(githubConfig);
+                const githubClient = createGithubClient(githubConfig);
 
                 // Find the PR for this task
                 this.logger.info('🔍 Looking for associated GitHub PR...');
-                const pr = await findMatchingPr(octokit, githubConfig, taskId);
+                const pr = await findMatchingPr(githubClient, githubConfig, taskId);
 
                 if (!pr) {
                     throw new UsageError(
-                        `No GitHub PR found for task ${taskId}. ` +
-                            'Make sure you have created a PR for this task first using "task ' +
-                            taskId +
-                            '".',
+                        `No GitHub PR found for task ${chalk.bold(taskId)}. ` +
+                            `Make sure you have created a PR for this task first using "task ${chalk.bold(taskId)}".`,
                     );
                 }
 
-                this.logger.info(`✅ Found PR: ${chalk.blue(pr.title)} (#${pr.number})`);
+                this.logger.info(`✅ Found PR: ${chalk.blue(pr.title)} ${chalk.gray(`(#${pr.number})`)}`);
 
-                if (!pr.draft) {
-                    this.logger.info(`🎉 PR #${pr.number} is already ready for review!`);
-                    this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
-                    return;
-                }
+                // Handle preparation (submodules and main repo)
+                const baseBranches = await getBaseBranches(options);
+                const baseBranch = baseBranches.length > 0 ? baseBranches[0]! : pr.base.ref;
 
-                // Convert PR from draft to ready
-                this.logger.info('🚀 Converting PR from draft to ready for review...');
-                await convertPrToReady(octokit, githubConfig, pr.number);
+                await handlePushPreparation({
+                    githubClient,
+                    githubConfig,
+                    issueId: taskId,
+                    logger: this.logger,
+                    baseBranch,
+                    skipSubmodules: this.skipSubmodules,
+                    autoYes: this.yes,
+                });
 
-                this.logger.info(`🎉 Successfully converted PR #${pr.number} to ready for review!`);
-                this.logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
-            } catch (error) {
+                // Convert all PRs (main and submodules) to ready
+                await convertAllPrsToReady({
+                    githubClient,
+                    githubConfig,
+                    issueId: taskId,
+                    logger: this.logger,
+                    mainPrNumber: pr.number,
+                    mainPrIsDraft: pr.draft,
+                    mainPrUrl: pr.html_url,
+                    skipSubmodules: this.skipSubmodules,
+                });
+            } catch (error: unknown) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to push task to review: ${errorMessage}`);
                 throw error;
@@ -460,9 +550,9 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
         static override paths = getCommandPaths(options, 'list');
         static override usage = Command.Usage({
             category: 'Linear',
-            description: 'List and select from tasks in progress and in review assigned to you',
+            description: 'List and select from tasks in todo, in progress, and in review assigned to you',
             details:
-                'Shows all currently active tasks (In Progress and In Review) assigned to you, along with their associated GitHub PRs, in an interactive selection menu',
+                'Shows all currently active tasks (Todo, In Progress and In Review) assigned to you, along with their associated GitHub PRs, in an interactive selection menu',
             examples: [['Show task list and switch to selected task', 'task list']],
         });
 
@@ -472,25 +562,25 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
             // Load both configs in parallel
             const [linearConfig, githubConfig] = await Promise.all([
                 getLinearConfig(options),
-                getGitHubConfig(options),
+                getGithubConfig(options),
             ]);
 
             try {
                 // Create clients in parallel
-                const [linearClient, octokit] = await Promise.all([
+                const [linearClient, githubClient] = await Promise.all([
                     Promise.resolve(createLinearClient(linearConfig)),
-                    Promise.resolve(createOctokitClient(githubConfig)),
+                    Promise.resolve(createGithubClient(githubConfig)),
                 ]);
 
                 this.logger.info('🔍 Fetching your active tasks...');
 
-                // Get current user and their assigned issues in progress and review
+                // Get current user and their assigned issues in todo, progress and review
                 const currentUser = await linearClient.viewer;
                 const assignedIssues = await currentUser.assignedIssues({
                     filter: {
                         state: {
                             name: {
-                                in: ['In Progress', 'In Review'],
+                                in: ['Todo', 'In Progress', 'In Review'],
                             },
                         },
                     },
@@ -499,7 +589,7 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                 const issues = assignedIssues.nodes;
 
                 if (issues.length === 0) {
-                    this.logger.info('📝 No active tasks found (In Progress or In Review)');
+                    this.logger.info('📝 No active tasks found (Todo, In Progress or In Review)');
                     return;
                 }
 
@@ -527,7 +617,7 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                 this.logger.info('🔍 Looking for associated GitHub PRs...');
                 const tasksWithPrInfo = await Promise.all(
                     sortedIssues.map(async issue => {
-                        const pr = await findMatchingPr(octokit, githubConfig, issue.identifier);
+                        const pr = await findMatchingPr(githubClient, githubConfig, issue.identifier);
                         return {
                             issue,
                             pr,
@@ -540,7 +630,19 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                     tasksWithPrInfo.map(async ({ issue, pr }) => {
                         const state = await issue.state;
                         const stateName = state?.name || 'Unknown';
-                        const stateColor = stateName === 'In Progress' ? chalk.yellow : chalk.green;
+
+                        // Determine color based on state
+                        let stateColor: typeof chalk.blue;
+                        if (stateName === 'Todo') {
+                            stateColor = chalk.blue;
+                        } else if (stateName === 'In Progress') {
+                            stateColor = chalk.yellow;
+                        } else if (stateName === 'In Review') {
+                            stateColor = chalk.green;
+                        } else {
+                            stateColor = chalk.gray;
+                        }
+
                         const prInfo = pr ? chalk.green(`#${pr.number}`) : chalk.gray('No PR');
                         const isCurrentTask = currentTaskId === issue.identifier;
                         const currentIndicator = isCurrentTask ? chalk.cyan('[Current]') : '';
@@ -576,10 +678,10 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                 const selectedTaskData = tasksWithPrInfo.find(({ issue }) => issue.identifier === selectedTaskId);
 
                 if (!selectedTaskData) {
-                    throw new Error(`Task ${selectedTaskId} not found`);
+                    throw new UsageError(`Task ${chalk.bold(selectedTaskId)} not found`);
                 }
 
-                this.logger.info(`🎯 Switching to task: ${chalk.bold(selectedTaskId)}`);
+                this.logger.info(`🎯 Switching to task: ${chalk.bold.green(selectedTaskId)}`);
 
                 // Get base branches
                 const baseBranches = await getBaseBranches(options);
@@ -588,7 +690,7 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                 await switchToTask({
                     issueId: selectedTaskId,
                     linearClient,
-                    octokit,
+                    githubClient: githubClient,
                     githubConfig,
                     logger: this.logger,
                     baseBranches,
@@ -596,6 +698,101 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to list tasks: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
+}
+
+function defineTaskOpenCommand(options: LinearCommandsOptions) {
+    return class TaskOpenCommand extends Command {
+        static override paths = getCommandPaths(options, 'open');
+        static override usage = Command.Usage({
+            category: 'Linear',
+            description: 'Open the current Linear task in the browser',
+            details: 'Detects the task from the current branch and opens the Linear task URL in your default browser',
+            examples: [['Open current task in browser', 'task open']],
+        });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            const linearConfig = await getLinearConfig(options);
+
+            try {
+                // Get current branch
+                const currentBranch = await getCurrentBranch();
+                this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
+
+                // Extract task ID from branch name
+                const taskId = extractTaskIdFromBranch(currentBranch);
+                this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
+
+                // Create Linear client
+                const linearClient = createLinearClient(linearConfig);
+
+                // Get task details
+                this.logger.info('🔍 Fetching task details...');
+                const issueData = await linearClient.issue(taskId);
+
+                if (!issueData) {
+                    throw new UsageError(`Linear task ${chalk.bold(taskId)} not found`);
+                }
+
+                this.logger.info(`🚀 Opening task ${chalk.bold(taskId)} in browser...`);
+                this.logger.info(`🔗 URL: ${chalk.underline(issueData.url)}`);
+
+                await open(issueData.url);
+
+                this.logger.info(`✅ Task opened successfully!`);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to open task: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
+}
+
+function defineTaskPrCommand(options: LinearCommandsOptions) {
+    return class TaskPrCommand extends Command {
+        static override paths = getCommandPaths(options, 'pr');
+        static override usage = Command.Usage({
+            category: 'Linear',
+            description: 'Open the current task PR in the browser',
+            details:
+                'Detects the task from the current branch, finds the associated GitHub PR, and opens it in your default browser. If multiple PRs exist (main repo + submodules), lets you choose which one to open.',
+            examples: [['Open current task PR in browser', 'task pr']],
+        });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            const githubConfig = await getGithubConfig(options);
+
+            try {
+                // Get current branch
+                const currentBranch = await getCurrentBranch();
+                this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
+
+                // Extract task ID from branch name
+                const taskId = extractTaskIdFromBranch(currentBranch);
+                this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
+
+                // Create GitHub client
+                const githubClient = createGithubClient(githubConfig);
+
+                // Find, select, and open PR in browser
+                this.logger.info('🔍 Looking for associated GitHub PRs...');
+                await openPrInBrowser({
+                    githubClient,
+                    githubConfig,
+                    issueId: taskId,
+                    logger: this.logger,
+                });
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to open PR: ${errorMessage}`);
                 throw error;
             }
         }
@@ -618,7 +815,7 @@ async function getLinearConfig(options: LinearCommandsOptions): Promise<LinearCo
     return options.linear;
 }
 
-async function getGitHubConfig(options: LinearCommandsOptions): Promise<GitHubConfig> {
+async function getGithubConfig(options: LinearCommandsOptions): Promise<GithubConfig> {
     if (typeof options.github === 'function') {
         return await options.github();
     }

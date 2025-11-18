@@ -1,5 +1,7 @@
 import { simpleGit } from 'simple-git';
 
+import { UsageError } from '@nzyme/cli';
+
 /**
  * Checkout a git branch, fetching it from origin if necessary.
  */
@@ -36,6 +38,6 @@ export async function checkoutBranch(branchName: string): Promise<void> {
             // This can happen with newly created local branches
         }
     } catch (error) {
-        throw new Error(`Failed to checkout branch ${branchName}: ${(error as Error).message}`);
+        throw new UsageError(`Failed to checkout branch ${branchName}: ${(error as Error).message}`);
     }
 }

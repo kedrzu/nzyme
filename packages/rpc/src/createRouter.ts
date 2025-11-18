@@ -8,7 +8,20 @@ import type { Endpoint } from './defineEndpoint.js';
 import { HttpContextProvider } from './services/HttpContextProvider.js';
 import type { HttpRequest } from './types/HttpRequest.js';
 import type { HttpResponse } from './types/HttpResponse.js';
+import type { RpcErrorData } from './types/RpcError.js';
 import { createJsonResponse } from './utils/createJsonResponse.js';
+
+/**
+ *
+ */
+export interface RouterEvents {
+    /**
+     * An event emitter for errors.
+     * @type {EventEmitter<unknown>}
+     * @param {unknown} error - The error that occurred
+     */
+    error: EventEmitter<unknown>;
+}
 
 /**
  * Interface for the API router responsible for registering endpoints and handling HTTP requests.
@@ -25,12 +38,9 @@ export interface Router {
     execute(request: HttpRequest): Promise<HttpResponse>;
 
     /**
-     * An event emitter for errors.
-     * @event onError
-     * @type {EventEmitter<unknown>}
-     * @param {unknown} error - The error that occurred
+     * Events emitted by the router.
      */
-    onError: EventEmitter<unknown>;
+    events: RouterEvents;
 }
 
 /**
@@ -64,7 +74,7 @@ export interface RouterOptions {
  */
 export function createRouter(options: RouterOptions): Router {
     const endpoints = new Map<string, Endpoint>();
-    const onError = createEventEmitter<unknown>();
+    const eventError = createEventEmitter<unknown>();
     const httpContextProvider = options.container.resolve(HttpContextProvider);
     const basePath = options.basePath ?? '/';
     const container = options.container;
@@ -76,7 +86,9 @@ export function createRouter(options: RouterOptions): Router {
 
     return {
         execute,
-        onError: onError.event,
+        events: {
+            error: eventError.event,
+        },
     };
 
     async function execute(request: HttpRequest): Promise<HttpResponse> {
@@ -136,7 +148,7 @@ export function createRouter(options: RouterOptions): Router {
             });
         } catch (error) {
             if (error instanceof HttpError) {
-                return createJsonResponse({
+                return createJsonResponse<RpcErrorData>({
                     body: {
                         error: error.name,
                         stack: stackTraces ? error.stack : undefined,
@@ -146,10 +158,10 @@ export function createRouter(options: RouterOptions): Router {
                 });
             }
 
-            onError.emit(error);
+            eventError.emit(error);
 
             if (error instanceof Error) {
-                return createJsonResponse({
+                return createJsonResponse<RpcErrorData>({
                     body: {
                         error: error.name,
                         message: error.message,
@@ -159,7 +171,7 @@ export function createRouter(options: RouterOptions): Router {
                 });
             }
 
-            return createJsonResponse({
+            return createJsonResponse<RpcErrorData>({
                 body: {
                     error: 'UnknownError',
                     message: 'Unknown error',
@@ -180,6 +192,7 @@ export function createRouter(options: RouterOptions): Router {
         return input;
     }
 }
+
 /**
  *
  */

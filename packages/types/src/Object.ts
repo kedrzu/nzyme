@@ -50,3 +50,10 @@ export type SomeObject = {};
 export type PartialNever<T> = {
     [P in keyof T]?: never;
 };
+
+/**
+ *
+ */
+export type PartialNullable<T> = {
+    [P in keyof T]?: T[P] | null;
+};

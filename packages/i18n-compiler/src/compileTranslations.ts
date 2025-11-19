@@ -1,8 +1,8 @@
 import type { Pair, ParsedNode, Range } from 'yaml';
 import { isMap, isScalar, parseDocument } from 'yaml';
 
-import { pluralization } from '@nzyme/i18n';
-import type { Pluralization } from '@nzyme/i18n';
+import { pluralization } from '@nzyme/i18n-core';
+import type { Pluralization } from '@nzyme/i18n-core';
 import { fixOrphans } from '@nzyme/typography';
 import { capitalizeFirstLetter } from '@nzyme/utils';
 

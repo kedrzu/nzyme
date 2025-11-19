@@ -5,12 +5,70 @@ import { simpleGit } from 'simple-git';
 import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging';
 
+import type { GithubConfig } from '../GithubConfig.js';
 import { checkoutBranch } from './checkoutBranch.js';
+import type { GithubClient } from './createGithubClient.js';
+import { findMatchingPr } from './findMatchingPr.js';
+import { getSubmoduleInfo } from './getSubmoduleInfo.js';
+
+/**
+ * Parameters for checking out an existing branch.
+ */
+export interface CheckoutExistingBranchParams {
+    /**
+     * The branch name to checkout.
+     */
+    branchName: string;
+
+    /**
+     * The task ID (e.g., "SIG-123").
+     */
+    taskId: string;
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+
+    /**
+     * GitHub client instance (optional, but recommended for submodule support).
+     */
+    githubClient?: GithubClient;
+
+    /**
+     * GitHub configuration (optional, but required if githubClient is provided).
+     */
+    githubConfig?: GithubConfig;
+}
+
+/**
+ * Parameters for checking out a submodule branch.
+ */
+interface CheckoutSubmoduleBranchParams {
+    submodule: Awaited<ReturnType<typeof getSubmoduleInfo>>[0];
+    taskId: string;
+    mainBranchName: string;
+    githubClient: GithubClient;
+    githubConfig: GithubConfig;
+    logger: Logger;
+}
 
 /**
  * Checkout an existing branch, handling uncommitted changes by prompting the user.
+ * Also handles checking out matching branches in submodules if GitHub client is provided.
  */
-export async function checkoutExistingBranch(branchName: string, taskId: string, logger: Logger): Promise<void> {
+export async function checkoutExistingBranch(
+    branchNameOrParams: string | CheckoutExistingBranchParams,
+    taskId?: string,
+    logger?: Logger,
+): Promise<void> {
+    // Support both old signature (for backward compatibility) and new params object
+    const params: CheckoutExistingBranchParams =
+        typeof branchNameOrParams === 'string'
+            ? { branchName: branchNameOrParams, taskId: taskId!, logger: logger! }
+            : branchNameOrParams;
+
+    const { branchName, logger: paramLogger } = params;
     const git = simpleGit();
 
     try {
@@ -21,6 +79,7 @@ export async function checkoutExistingBranch(branchName: string, taskId: string,
         if (!hasChanges) {
             // No uncommitted changes, checkout normally
             await checkoutBranch(branchName);
+            await checkoutSubmodules(params);
             return;
         }
 
@@ -45,7 +104,7 @@ export async function checkoutExistingBranch(branchName: string, taskId: string,
             changeTypes.push(`${status.renamed.length} renamed`);
         }
 
-        logger.info(`⚠️  You have uncommitted changes: ${chalk.yellow(changeTypes.join(', '))}`);
+        paramLogger.info(`⚠️  You have uncommitted changes: ${chalk.yellow(changeTypes.join(', '))}`);
 
         // Ask user what to do with uncommitted changes
         const { action } = await enquirer.prompt<{ action: string }>({
@@ -74,47 +133,57 @@ export async function checkoutExistingBranch(branchName: string, taskId: string,
         switch (action) {
             case 'checkout': {
                 // Try to checkout directly - git will handle conflicts
-                logger.info(`🔄 Attempting to checkout ${chalk.cyan(branchName)} with uncommitted changes...`);
+                paramLogger.info(`🔄 Attempting to checkout ${chalk.cyan(branchName)} with uncommitted changes...`);
                 await checkoutBranch(branchName);
-                logger.info(`✅ Successfully checked out ${chalk.cyan(branchName)} with uncommitted changes`);
+                paramLogger.info(`✅ Successfully checked out ${chalk.cyan(branchName)} with uncommitted changes`);
+                await checkoutSubmodules(params);
                 break;
             }
 
             case 'stash': {
                 // Stash changes, checkout, then reapply
-                const stashName = `task-${taskId}-existing-branch-stash`;
-                logger.info(`📦 Stashing uncommitted changes as: ${chalk.cyan(stashName)}`);
+                const stashName = `task-${params.taskId}-existing-branch-stash`;
+                paramLogger.info(`📦 Stashing uncommitted changes as: ${chalk.cyan(stashName)}`);
 
                 await git.stash(['push', '-u', '-m', stashName]);
-                logger.info(`✅ Changes stashed successfully`);
+                paramLogger.info(`✅ Changes stashed successfully`);
 
                 // Checkout the branch
                 await checkoutBranch(branchName);
 
+                // Checkout submodules before reapplying stash
+                await checkoutSubmodules(params);
+
                 // Try to reapply the stash
                 try {
-                    logger.info(`📦 Reapplying stashed changes: ${chalk.cyan(stashName)}`);
+                    paramLogger.info(`📦 Reapplying stashed changes: ${chalk.cyan(stashName)}`);
                     const stashes = await git.stashList();
                     const targetStashIndex = stashes.all.findIndex(stash => stash.message.includes(stashName));
 
                     if (targetStashIndex !== -1) {
                         await git.stash(['pop', `stash@{${targetStashIndex}}`]);
-                        logger.info(`✅ Stashed changes reapplied successfully`);
+                        paramLogger.info(`✅ Stashed changes reapplied successfully`);
                     } else {
-                        logger.warn(`⚠️  Could not find stash: ${chalk.cyan(stashName)}`);
-                        logger.info(
+                        paramLogger.warn(`⚠️  Could not find stash: ${chalk.cyan(stashName)}`);
+                        paramLogger.info(
                             `💡 You can manually apply it later with: git stash list && git stash apply stash@{N}`,
                         );
                     }
                 } catch (error) {
-                    logger.error(`❌ Failed to reapply stash ${chalk.cyan(stashName)}: ${(error as Error).message}`);
-                    logger.info(`💡 You can manually apply it later with: git stash list && git stash apply stash@{N}`);
+                    paramLogger.error(
+                        `❌ Failed to reapply stash ${chalk.cyan(stashName)}: ${(error as Error).message}`,
+                    );
+                    paramLogger.info(
+                        `💡 You can manually apply it later with: git stash list && git stash apply stash@{N}`,
+                    );
                 }
                 break;
             }
 
             case 'cancel': {
-                throw new UsageError('Operation canceled by user. Please handle your uncommitted changes and try again.');
+                throw new UsageError(
+                    'Operation canceled by user. Please handle your uncommitted changes and try again.',
+                );
             }
 
             default: {
@@ -124,5 +193,139 @@ export async function checkoutExistingBranch(branchName: string, taskId: string,
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         throw new UsageError(`Failed to checkout branch ${branchName}: ${errorMessage}`);
+    }
+}
+
+/**
+ * Checkout matching branches in submodules if they exist.
+ */
+async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise<void> {
+    const { branchName, taskId, logger, githubClient, githubConfig } = params;
+
+    // Only process submodules if GitHub client and config are provided
+    if (!githubClient || !githubConfig) {
+        return;
+    }
+
+    try {
+        logger.info('🔍 Checking for submodules...');
+        const submodules = await getSubmoduleInfo();
+
+        if (submodules.length === 0) {
+            logger.info('✅ No submodules found in repository');
+            return;
+        }
+
+        logger.info(
+            `📦 Found ${chalk.yellow(submodules.length.toString())} submodule${submodules.length === 1 ? '' : 's'}`,
+        );
+
+        // Process each submodule
+        for (const submodule of submodules) {
+            try {
+                await checkoutSubmoduleBranch({
+                    submodule,
+                    taskId,
+                    mainBranchName: branchName,
+                    githubClient,
+                    githubConfig,
+                    logger,
+                });
+            } catch (error) {
+                // Log warning but continue with other submodules
+                logger.warn(
+                    `⚠️  Failed to checkout branch in submodule ${chalk.magenta(submodule.name)}: ${(error as Error).message}`,
+                );
+                logger.info(`ℹ️  Continuing with remaining submodules...`);
+            }
+        }
+
+        logger.info('✅ Finished processing submodules');
+    } catch (error) {
+        // Log warning but don't fail the entire operation
+        logger.warn(`⚠️  Could not process submodules: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Checkout a matching branch in a specific submodule.
+ */
+async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): Promise<void> {
+    const { submodule, taskId, githubClient, githubConfig, logger } = params;
+
+    // Parse the submodule URL to get owner and repo
+    const urlMatch = submodule.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
+    if (!urlMatch) {
+        logger.info(
+            `⏭️  Skipping submodule ${chalk.magenta(submodule.name)}: not a GitHub repository or could not parse URL`,
+        );
+        return;
+    }
+
+    const submoduleOwner = urlMatch[1]!;
+    const submoduleRepo = urlMatch[2]!;
+
+    // Create a GitHub config for this submodule
+    const submoduleGithubConfig: GithubConfig = {
+        ...githubConfig,
+        owner: submoduleOwner,
+        repo: submoduleRepo,
+    };
+
+    // Find if there's a PR for this task in the submodule
+    logger.info(`🔍 Looking for PR in submodule ${chalk.magenta(submodule.name)}...`);
+    const pr = await findMatchingPr(githubClient, submoduleGithubConfig, taskId);
+
+    if (!pr) {
+        logger.info(`📝 No PR found for task ${chalk.bold(taskId)} in submodule ${chalk.magenta(submodule.name)}`);
+        return;
+    }
+
+    const targetBranch = pr.head.ref;
+
+    // Check if already on the target branch
+    if (submodule.currentBranch === targetBranch) {
+        logger.info(`✅ Submodule ${chalk.magenta(submodule.name)} is already on branch ${chalk.cyan(targetBranch)}`);
+        return;
+    }
+
+    // Checkout the branch in the submodule
+    logger.info(`🌿 Checking out branch ${chalk.cyan(targetBranch)} in submodule ${chalk.magenta(submodule.name)}...`);
+
+    const submoduleGit = simpleGit({ baseDir: submodule.path });
+
+    try {
+        // Fetch latest changes from origin
+        await submoduleGit.fetch('origin');
+
+        // Check if the branch exists locally
+        const branches = await submoduleGit.branchLocal();
+
+        if (branches.all.includes(targetBranch)) {
+            // Branch exists locally, just checkout
+            await submoduleGit.checkout(targetBranch);
+        } else {
+            // Branch doesn't exist locally, check if it exists on origin
+            try {
+                // Try to checkout from origin
+                await submoduleGit.checkoutBranch(targetBranch, `origin/${targetBranch}`);
+            } catch {
+                // If checkout from origin fails, try a simple checkout
+                await submoduleGit.checkout(targetBranch);
+            }
+        }
+
+        // Pull the latest changes
+        try {
+            await submoduleGit.pull('origin', targetBranch);
+        } catch {
+            // If pull fails, the branch might not exist on origin yet, which is fine
+        }
+
+        logger.info(`✅ Checked out branch ${chalk.cyan(targetBranch)} in ${chalk.magenta(submodule.name)}`);
+    } catch (error) {
+        throw new UsageError(
+            `Failed to checkout branch ${targetBranch} in submodule ${submodule.name}: ${(error as Error).message}`,
+        );
     }
 }

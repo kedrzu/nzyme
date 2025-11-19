@@ -88,7 +88,13 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
         logger.info(`✅ Found existing PR: ${chalk.blue(existingPr.title)} (#${existingPr.number})`);
         logger.info(`🔄 Checking out branch: ${chalk.cyan(existingPr.head.ref)}`);
 
-        await checkoutExistingBranch(existingPr.head.ref, issueId, logger);
+        await checkoutExistingBranch({
+            branchName: existingPr.head.ref,
+            taskId: issueId,
+            logger,
+            githubClient,
+            githubConfig,
+        });
 
         // Sync with PR's base branch after checkout
         const prBaseBranch = existingPr.base.ref;

@@ -100,7 +100,13 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
         logger.info(`✅ Found existing PR: ${chalk.blue(existingPr.title)} (#${existingPr.number})`);
         logger.info(`🔄 Checking out branch: ${chalk.cyan(existingPr.head.ref)}`);
 
-        await checkoutExistingBranch(existingPr.head.ref, issueData.shortId, logger);
+        await checkoutExistingBranch({
+            branchName: existingPr.head.ref,
+            taskId: issueData.shortId,
+            logger,
+            githubClient,
+            githubConfig,
+        });
 
         // Sync with PR's base branch after checkout
         const prBaseBranch = existingPr.base.ref;

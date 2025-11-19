@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import parseGitignore from 'parse-gitignore';
 
-import { getProjectRoot } from '@nzyme/project-utils';
+import { getProjectRoot } from './getProjectRoot.js';
 
 // Cache of gitignore patterns per directory
 const directoryCache = new Map<string, RegExp[]>();

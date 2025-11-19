@@ -31,7 +31,6 @@
         "@nzyme/project-utils": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
         "@types/fs-extra": "^11.0.4",
-        "@types/parse-gitignore": "^1.0.2",
         "chalk": "^5.6.2",
         "chokidar": "^4.0.3",
         "clipanion": "^4.0.0-rc.4",
@@ -44,7 +43,6 @@
         "fs-extra": "^11.3.2",
         "latest-version": "^9.0.0",
         "lodash.merge": "^4.6.2",
-        "parse-gitignore": "^2.0.0",
         "source-map-support": "^0.5.21",
         "type-fest": "^5.2.0"
     },

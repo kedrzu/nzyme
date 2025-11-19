@@ -3,6 +3,7 @@ export * from './createScript.js';
 export * from './getEnvFilePath.js';
 export * from './getPackages.js';
 export * from './getProjectRoot.js';
+export * from './isFileIgnored.js';
 export * from './loadEnvVariables.js';
 export * from './readEnvVariables.js';
 export * from './resolveLocalPath.js';

@@ -11,13 +11,11 @@ import merge from 'lodash.merge';
 import type { TsConfigJson } from 'type-fest';
 
 import type { Package } from '@nzyme/project-utils';
-import { getPackages, getProjectRoot } from '@nzyme/project-utils';
-import { saveFile } from '@nzyme/project-utils';
+import { getPackages, getProjectRoot, isFileIgnored, saveFile } from '@nzyme/project-utils';
 import { asArray, debounceAsyncFunction } from '@nzyme/utils';
 
 import { Command } from '../Command.js';
 import type { NzymePackageConfig } from '../NzymePackageConfig.js';
-import { isFileIgnored } from '../utils/isFileIgnored.js';
 
 interface TsConfig {
     path: string;

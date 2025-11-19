@@ -7,9 +7,9 @@ import glob from 'fast-glob';
 import * as fsExtra from 'fs-extra';
 
 import { compileTranslationFile } from '@nzyme/i18n-compiler';
+import { isFileIgnored } from '@nzyme/project-utils';
 
 import { Command } from '../Command.js';
-import { isFileIgnored } from '../utils/isFileIgnored.js';
 
 const I18N_REGEX = /\.loc\.ya?ml$/;
 

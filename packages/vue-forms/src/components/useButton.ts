@@ -23,6 +23,7 @@ const BUTTON_PROPS = defineProps({
         default: false,
     },
     link: defineProp<string | RouteLocationRaw | null>(),
+    noWait: Boolean,
 });
 
 const BUTTON_EMITS = {
@@ -49,6 +50,10 @@ export interface ButtonProps {
      * Link to navigate to
      */
     link?: string | RouteLocationRaw | null;
+    /**
+     * Whether the button should wait for the click event to complete
+     */
+    noWait?: boolean;
 }
 
 /**
@@ -174,7 +179,7 @@ function setupButton() {
         }
 
         try {
-            pending.value = true;
+            pending.value = !props.noWait;
 
             if (navigate) {
                 await navigate(event);

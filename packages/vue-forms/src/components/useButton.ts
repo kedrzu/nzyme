@@ -193,10 +193,12 @@ function setupButton() {
             }
 
             const result = emitAsync('click', event);
-            if (result instanceof Promise || navigate) {
+            if (result instanceof Promise) {
                 await result;
-                // Wait a little longer to allow for the click event to propagate.
-                await waitFor(100);
+            }
+
+            if (navigate) {
+                await waitFor(200);
             }
         } finally {
             pending.value = false;

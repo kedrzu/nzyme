@@ -43,6 +43,7 @@ export function phoneNumberValidator(options: PhoneNumberValidatorOptions = {}) 
  * Validates if the value is a valid phone number
  * @param value - The value to validate
  * @returns Promise that resolves to true if valid, false otherwise
+ * @__NO_SIDE_EFFECTS__
  */
 async function validatePhoneNumber(value: string) {
     const { parsePhoneNumberWithError } = await import('libphonenumber-js');

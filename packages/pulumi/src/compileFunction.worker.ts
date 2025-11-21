@@ -32,6 +32,7 @@ await emptyDir(outputDir);
 
 const rollupResult = await rollup({
     input: options.inputFile,
+    external: options.external,
     plugins: [
         normalizeBuiltinsPlugin(),
         nodeResolve({
@@ -88,7 +89,30 @@ const rollupResult = await rollup({
                 },
                 sourceMaps: options.sourcemaps,
             }),
-        options.terser && terser(options.terser),
+        options.minify &&
+            terser(
+                options.minify === true
+                    ? {
+                          toplevel: true,
+                          compress: {
+                              passes: 2,
+                              dead_code: true,
+                              drop_debugger: true,
+                              pure_getters: false, // leave off unless you're sure
+                              unsafe: false, // explicitly avoid unsafe transforms
+                              unsafe_comps: false,
+                              unused: true,
+                          },
+                          mangle: {
+                              toplevel: true, // only if names are not used globally or in logs
+                              properties: false,
+                          },
+                          format: {
+                              comments: false,
+                          },
+                      }
+                    : options.minify,
+            ),
     ],
     onwarn: warning => {
         // this warning we can safely ignore

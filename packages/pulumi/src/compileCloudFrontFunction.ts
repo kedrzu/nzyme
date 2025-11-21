@@ -28,7 +28,7 @@ export async function compileCloudFrontFunction(options: CloudfrontFunctionOptio
         ...options,
         esm: false,
         nodeVersion: 5,
-        terser: { mangle: true },
+        minify: true,
         sourcemaps: false,
     });
 

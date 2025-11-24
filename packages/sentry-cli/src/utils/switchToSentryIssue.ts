@@ -106,6 +106,7 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
             logger,
             githubClient,
             githubConfig,
+            baseBranch: existingPr.base.ref,
         });
 
         // Sync with PR's base branch after checkout

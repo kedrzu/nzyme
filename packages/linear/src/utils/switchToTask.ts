@@ -94,6 +94,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
             logger,
             githubClient,
             githubConfig,
+            baseBranch: existingPr.base.ref,
         });
 
         // Sync with PR's base branch after checkout

@@ -39,6 +39,12 @@ export interface CheckoutExistingBranchParams {
      * GitHub configuration (optional, but required if githubClient is provided).
      */
     githubConfig?: GithubConfig;
+
+    /**
+     * The base branch to use for submodules without PRs (optional).
+     * When a submodule doesn't have a PR for the task, it will be updated to the latest commit on this branch.
+     */
+    baseBranch?: string;
 }
 
 /**
@@ -51,6 +57,7 @@ interface CheckoutSubmoduleBranchParams {
     githubClient: GithubClient;
     githubConfig: GithubConfig;
     logger: Logger;
+    baseBranch?: string;
 }
 
 /**
@@ -200,7 +207,7 @@ export async function checkoutExistingBranch(
  * Checkout matching branches in submodules if they exist.
  */
 async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise<void> {
-    const { branchName, taskId, logger, githubClient, githubConfig } = params;
+    const { branchName, taskId, logger, githubClient, githubConfig, baseBranch } = params;
 
     // Only process submodules if GitHub client and config are provided
     if (!githubClient || !githubConfig) {
@@ -230,6 +237,7 @@ async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise
                     githubClient,
                     githubConfig,
                     logger,
+                    baseBranch,
                 });
             } catch (error) {
                 // Log warning but continue with other submodules
@@ -251,7 +259,7 @@ async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise
  * Checkout a matching branch in a specific submodule.
  */
 async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): Promise<void> {
-    const { submodule, taskId, githubClient, githubConfig, logger } = params;
+    const { submodule, taskId, githubClient, githubConfig, logger, baseBranch } = params;
 
     // Parse the submodule URL to get owner and repo
     const urlMatch = submodule.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
@@ -278,6 +286,15 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
 
     if (!pr) {
         logger.info(`📝 No PR found for task ${chalk.bold(taskId)} in submodule ${chalk.magenta(submodule.name)}`);
+
+        // If a base branch is provided, checkout the latest commit on that branch
+        if (baseBranch) {
+            logger.info(
+                `🔄 Updating submodule ${chalk.magenta(submodule.name)} to latest commit on ${chalk.cyan(baseBranch)}...`,
+            );
+            await checkoutSubmoduleBaseBranch(submodule, baseBranch, logger);
+        }
+
         return;
     }
 
@@ -326,6 +343,53 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
     } catch (error) {
         throw new UsageError(
             `Failed to checkout branch ${targetBranch} in submodule ${submodule.name}: ${(error as Error).message}`,
+        );
+    }
+}
+
+/**
+ * Checkout the base branch in a submodule and pull latest changes.
+ */
+async function checkoutSubmoduleBaseBranch(
+    submodule: Awaited<ReturnType<typeof getSubmoduleInfo>>[0],
+    baseBranch: string,
+    logger: Logger,
+): Promise<void> {
+    const submoduleGit = simpleGit({ baseDir: submodule.path });
+
+    try {
+        // Fetch latest changes from origin
+        await submoduleGit.fetch('origin');
+
+        // Check if the branch exists locally
+        const branches = await submoduleGit.branchLocal();
+
+        if (branches.all.includes(baseBranch)) {
+            // Branch exists locally, just checkout
+            await submoduleGit.checkout(baseBranch);
+        } else {
+            // Branch doesn't exist locally, checkout from origin
+            try {
+                await submoduleGit.checkoutBranch(baseBranch, `origin/${baseBranch}`);
+            } catch {
+                // If checkout from origin fails, try a simple checkout
+                await submoduleGit.checkout(baseBranch);
+            }
+        }
+
+        // Pull the latest changes
+        try {
+            await submoduleGit.pull('origin', baseBranch);
+        } catch {
+            // If pull fails, that's okay - we're at least on the right branch
+        }
+
+        logger.info(
+            `✅ Submodule ${chalk.magenta(submodule.name)} updated to latest commit on ${chalk.cyan(baseBranch)}`,
+        );
+    } catch (error) {
+        throw new UsageError(
+            `Failed to checkout base branch ${baseBranch} in submodule ${submodule.name}: ${(error as Error).message}`,
         );
     }
 }

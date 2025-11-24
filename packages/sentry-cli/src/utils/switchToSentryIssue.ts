@@ -178,6 +178,7 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
             taskUrl: issueData.permalink,
             issueTitle: issueData.title,
             baseBranch: branchResult.selectedBaseBranch,
+            startPoint: branchResult.startPoint,
         });
 
         // Apply stashed changes if any

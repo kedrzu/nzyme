@@ -74,13 +74,20 @@ export interface CreateBranchAndPrParams {
      * Base branch to create the PR against.
      */
     baseBranch?: string;
+
+    /**
+     * Optional point to start the new branch from (e.g. origin/main).
+     * If not provided, defaults to current HEAD.
+     */
+    startPoint?: string;
 }
 
 /**
  * Create a new git branch and GitHub PR for an issue.
  */
 export async function createBranchAndPr(params: CreateBranchAndPrParams): Promise<CreateBranchAndPrResult> {
-    const { client, config, branchName, prTitle, description, issueId, taskUrl, issueTitle, baseBranch } = params;
+    const { client, config, branchName, prTitle, description, issueId, taskUrl, issueTitle, baseBranch, startPoint } =
+        params;
     const git = simpleGit();
 
     try {
@@ -100,12 +107,16 @@ export async function createBranchAndPr(params: CreateBranchAndPrParams): Promis
         const branches = await git.branchLocal();
         if (branches.all.includes(branchName)) {
             await git.checkout(branchName);
+        } else if (startPoint) {
+            await git.checkout(['-b', branchName, startPoint]);
         } else {
             await git.checkoutLocalBranch(branchName);
         }
 
         // Check if the branch has any commits compared to base branch
-        const diffResult = await git.diff([`${resolvedBaseBranch}...${branchName}`, '--name-only']);
+        // If startPoint is provided, compare against it to check for new commits
+        const compareBase = startPoint || resolvedBaseBranch;
+        const diffResult = await git.diff([`${compareBase}...${branchName}`, '--name-only']);
         const hasCommits = diffResult.trim().length > 0;
 
         // If no commits, create an empty commit

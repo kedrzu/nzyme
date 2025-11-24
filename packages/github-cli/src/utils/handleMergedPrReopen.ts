@@ -126,9 +126,11 @@ export async function handleMergedPrReopen(params: HandleMergedPrReopenParams): 
     logger.info(chalk.bold.yellow(`⚠️  Task PR Already ${statusMessage}`));
     logger.info('═'.repeat(50));
     logger.info(`📝 Task: ${chalk.bold(issueId)} - ${issueTitle}`);
-    logger.info(`${isMerged ? '✅' : '❌'} PR #${mostRecentClosedPr.number} was ${statusMessage.toLowerCase()} at ${statusDate}`);
+    logger.info(
+        `${isMerged ? '✅' : '❌'} PR #${mostRecentClosedPr.number} was ${statusMessage.toLowerCase()} at ${statusDate}`,
+    );
     logger.info(`🌿 Branch: ${chalk.cyan(mostRecentClosedPr.head.ref)}`);
-    
+
     // Show summary of all closed PRs if there are multiple
     if (allClosedPrs.length > 1) {
         logger.info('');
@@ -180,10 +182,10 @@ export async function handleMergedPrReopen(params: HandleMergedPrReopenParams): 
     // Extract version for PR title
     const versionNumber = extractBranchVersion(newBranchName);
     const versionSuffix = versionNumber > 1 ? ` (v${versionNumber})` : '';
-    
+
     // Create PR title with version number
-    const prTitle = projectName 
-        ? `[${issueId}][${projectName}] ${issueTitle}${versionSuffix}` 
+    const prTitle = projectName
+        ? `[${issueId}][${projectName}] ${issueTitle}${versionSuffix}`
         : `[${issueId}] ${issueTitle}${versionSuffix}`;
 
     // Create new branch and PR
@@ -197,6 +199,7 @@ export async function handleMergedPrReopen(params: HandleMergedPrReopenParams): 
         taskUrl: issueUrl,
         issueTitle,
         baseBranch,
+        startPoint: `origin/${baseBranch}`,
     });
 
     logger.info(`✅ Created draft PR: ${chalk.blue(result.pr.title)} (#${result.pr.number})`);

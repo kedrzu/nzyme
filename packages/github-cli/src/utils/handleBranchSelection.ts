@@ -19,6 +19,11 @@ export interface BranchSelectionResult {
      * The stash name if changes were stashed.
      */
     stashName?: string;
+
+    /**
+     * The point to start the new branch from (e.g. origin/main).
+     */
+    startPoint?: string;
 }
 
 /**
@@ -142,21 +147,10 @@ export async function handleBranchSelection(params: BranchSelectionParams): Prom
     logger.info(`🔄 Fetching latest changes for ${chalk.cyan(selectedBranch)}`);
     await git.fetch('origin', selectedBranch);
 
-    // Checkout and fast-forward selected branch
-    logger.info(`🔄 Checking out and updating ${chalk.cyan(selectedBranch)}`);
-    await git.checkout(selectedBranch);
-
-    try {
-        await git.pull('origin', selectedBranch, { '--ff-only': null });
-        logger.info(`✅ Fast-forwarded ${chalk.cyan(selectedBranch)} to latest`);
-    } catch (error) {
-        logger.warn(`⚠️  Could not fast-forward ${chalk.cyan(selectedBranch)}: ${(error as Error).message}`);
-        logger.info(`ℹ️  Continuing with current state of ${chalk.cyan(selectedBranch)}`);
-    }
-
     return {
         selectedBaseBranch: selectedBranch,
         stashName,
+        startPoint: `origin/${selectedBranch}`,
     };
 }
 

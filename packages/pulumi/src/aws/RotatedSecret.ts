@@ -123,39 +123,41 @@ export class RotatedSecret extends pulumi.ComponentResource {
             { parent: this },
         );
 
-        const history = pulumi.all([secret.id, version.secretString]).apply(async ([secretId, secretString]) => {
-            const versionsOutput = await aws.secretsmanager.getSecretVersions({ secretId }, { parent: this });
-            const versions = versionsOutput.versions.sort(
-                (a, b) => new Date(a.createdTime).getTime() - new Date(b.createdTime).getTime(),
-            );
+        const history = pulumi.secret(
+            pulumi.all([secret.id, version.secretString]).apply(async ([secretId, secretString]) => {
+                const versionsOutput = await aws.secretsmanager.getSecretVersions({ secretId }, { parent: this });
+                const versions = versionsOutput.versions.sort(
+                    (a, b) => new Date(a.createdTime).getTime() - new Date(b.createdTime).getTime(),
+                );
 
-            const secrets = await Promise.all(
-                versions.slice(0, historySize).map(async version => {
-                    const result = await aws.secretsmanager.getSecretVersion(
-                        {
-                            secretId,
-                            versionId: version.versionId,
-                        },
-                        { parent: this },
-                    );
+                const secrets = await Promise.all(
+                    versions.slice(0, historySize).map(async version => {
+                        const result = await aws.secretsmanager.getSecretVersion(
+                            {
+                                secretId,
+                                versionId: version.versionId,
+                            },
+                            { parent: this },
+                        );
 
-                    return result.secretString;
-                }),
-            );
+                        return result.secretString;
+                    }),
+                );
 
-            if (!secrets.find(v => v === secretString) && secretString) {
-                secrets.unshift(secretString);
-            }
+                if (!secrets.find(v => v === secretString) && secretString) {
+                    secrets.unshift(secretString);
+                }
 
-            // Map to object with 8-char MD5 hash keys
-            const historyMap: Record<string, string> = {};
-            for (const secret of secrets) {
-                const hash = createHash('md5').update(secret).digest('hex').substring(0, 8);
-                historyMap[hash] = secret;
-            }
+                // Map to object with 8-char MD5 hash keys
+                const historyMap: Record<string, string> = {};
+                for (const secret of secrets) {
+                    const hash = createHash('md5').update(secret).digest('hex').substring(0, 8);
+                    historyMap[hash] = secret;
+                }
 
-            return historyMap;
-        });
+                return historyMap;
+            }),
+        );
 
         // Mark sensitive outputs as Pulumi secrets
         this.currentSecret = pulumi.secret(generated.result);

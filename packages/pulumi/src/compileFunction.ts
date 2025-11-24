@@ -6,7 +6,7 @@ import type { MinifyOptions } from 'terser';
 import { getDirname } from '@nzyme/esm';
 
 /**
- *
+ * Options for compiling a function.
  */
 export interface CompileFunctionOptions {
     /**
@@ -26,9 +26,9 @@ export interface CompileFunctionOptions {
      */
     nodeVersion?: number;
     /**
-     * Terser options.
+     * Whether to minify the output. Can be a boolean to use default safe options, or a MinifyOptions object for custom terser settings.
      */
-    terser?: MinifyOptions;
+    minify?: boolean | MinifyOptions;
     /**
      * Whether to generate sourcemaps.
      */
@@ -37,6 +37,10 @@ export interface CompileFunctionOptions {
      * Define variables.
      */
     define?: Record<string, string>;
+    /**
+     * External libraries to exclude from bundle and copy to node_modules.
+     */
+    external?: string[];
 }
 
 /**

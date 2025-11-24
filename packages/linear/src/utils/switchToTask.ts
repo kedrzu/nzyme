@@ -172,6 +172,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
             taskUrl: issueData.url,
             issueTitle: issueData.title,
             baseBranch: branchResult.selectedBaseBranch,
+            startPoint: branchResult.startPoint,
         });
 
         // Apply stashed changes if any

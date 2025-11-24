@@ -1,40 +1,48 @@
 import { computed, h, reactive } from 'vue';
-import type { FunctionalComponent } from 'vue';
+import type { ExtractPropTypes, FunctionalComponent, PropType } from 'vue';
 
-import { assignProps } from '@nzyme/utils';
-import { defineProp, defineProps, injectContext, useEmit, useProps } from '@nzyme/vue-utils';
+import type { Primitive } from '@nzyme/types';
+import { defineProps, injectContext, useEmit } from '@nzyme/vue-utils';
 
 import { RadioGroupContext } from './useRadioGroup.js';
-
-const RADIO_PROPS = defineProps({
-    value: defineProp<string>({ required: true }),
-    tabindex: Number,
-    name: String,
-    required: Boolean,
-    disabled: Boolean,
-    readonly: Boolean,
-});
-
-const RADIO_EMITS = {
-    selected: undefined as unknown as (value: string) => boolean,
-};
+import type { FormFieldValue } from './defineFormField.js';
 
 /**
  *
  */
-export const useRadio = assignProps(setupRadio, {
-    props: RADIO_PROPS,
-    emits: RADIO_EMITS,
-});
+export type RadioProps<T extends Primitive = Primitive> = ExtractPropTypes<ReturnType<typeof getRadioProps<T>>>;
 
 /**
  *
  * @__NO_SIDE_EFFECTS__
  */
-function setupRadio() {
-    const props = useProps(RADIO_PROPS);
+export function getRadioProps<T extends Primitive = Primitive>() {
+    return defineProps({
+        value: { type: null as unknown as PropType<T>, required: true },
+        tabindex: Number,
+        name: String,
+        required: Boolean,
+        disabled: Boolean,
+        readonly: Boolean,
+    });
+}
+
+/**
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
+export function getRadioEmits<T extends Primitive = Primitive>() {
+    return {
+        selected: undefined as unknown as (value: T) => boolean,
+    };
+}
+
+/**
+ *
+ */
+export function useRadio<T extends Primitive = Primitive>(props: RadioProps<T>) {
     const ctx = injectContext(RadioGroupContext);
-    const emit = useEmit(RADIO_EMITS);
+    const emit = useEmit(getRadioEmits<T>());
     const selected = computed(() => ctx.field.value === props.value);
     const readonly = computed(() => props.readonly || ctx.props.readonly);
     const disabled = computed(() => props.disabled || ctx.props.disabled);
@@ -76,7 +84,7 @@ function setupRadio() {
             return;
         }
 
-        ctx.field.value = props.value;
-        emit('selected', props.value);
+        ctx.field.value = props.value as FormFieldValue<Primitive>;
+        emit('selected', props.value as T);
     }
 }

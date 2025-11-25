@@ -13,3 +13,4 @@ export * from './previewStack.js';
 export * from './PulumiConfig.js';
 export * from './refreshStack.js';
 export * from './types.js';
+export * from './utils/filterPulumiInput.js';

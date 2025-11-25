@@ -6,5 +6,8 @@ import * as pulumi from '@pulumi/pulumi';
 export function filterPulumiInput<T>(input: pulumi.Input<T[]>): pulumi.Input<Exclude<T, false | null | undefined>[]> {
     return pulumi
         .all([input])
-        .apply(([input]) => (input?.filter((item): item is Exclude<T, false | null | undefined> => item !== false && item != null) ?? []) as Exclude<T, false | null | undefined>[]);
+        .apply(
+            ([input]) =>
+                (input?.filter(item => item !== false && item != null) ?? []) as Exclude<T, false | null | undefined>[],
+        );
 }

@@ -602,11 +602,13 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                     return;
                 }
 
-                // Sort tasks by created date (newest first)
+                // Sort tasks by priority (descending - higher priority first)
+                // Linear priority: 0 = No priority, 1 = Urgent, 2 = High, 3 = Medium, 4 = Low
                 const sortedIssues = issues.sort((a, b) => {
-                    const dateA = new Date(a.createdAt);
-                    const dateB = new Date(b.createdAt);
-                    return dateB.getTime() - dateA.getTime();
+                    // Treat 0 (no priority) as lowest priority
+                    const priorityA = a.priority === 0 ? 5 : a.priority;
+                    const priorityB = b.priority === 0 ? 5 : b.priority;
+                    return priorityA - priorityB;
                 });
 
                 this.logger.info(
@@ -634,11 +636,12 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                     }),
                 );
 
-                // Format choices for enquirer - get state information for each task
-                const choices = await Promise.all(
+                // First, collect all task data to calculate column widths
+                const taskData = await Promise.all(
                     tasksWithPrInfo.map(async ({ issue, pr }) => {
-                        const state = await issue.state;
+                        const [state, project] = await Promise.all([issue.state, issue.project]);
                         const stateName = state?.name || 'Unknown';
+                        const priority = issue.priority;
 
                         // Determine color based on state
                         let stateColor: typeof chalk.blue;
@@ -652,27 +655,87 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                             stateColor = chalk.gray;
                         }
 
-                        const prInfo = pr ? chalk.green(`#${pr.number}`) : chalk.gray('No PR');
-                        const isCurrentTask = currentTaskId === issue.identifier;
-                        const currentIndicator = isCurrentTask ? chalk.cyan('[Current]') : '';
-
-                        const messageParts = [
-                            chalk.bold(issue.identifier),
-                            stateColor(`[${stateName}]`),
-                            chalk.white(issue.title.slice(0, 60) + (issue.title.length > 60 ? '...' : '')),
-                            chalk.gray('PR:'),
-                            prInfo,
-                        ];
-
-                        if (currentIndicator) {
-                            messageParts.push(currentIndicator);
+                        // Format priority with color
+                        let priorityText: string;
+                        let priorityColor: typeof chalk.red;
+                        if (priority === 1) {
+                            priorityText = 'Urgent';
+                            priorityColor = chalk.red;
+                        } else if (priority === 2) {
+                            priorityText = 'High';
+                            priorityColor = chalk.magenta;
+                        } else if (priority === 3) {
+                            priorityText = 'Medium';
+                            priorityColor = chalk.yellow;
+                        } else if (priority === 4) {
+                            priorityText = 'Low';
+                            priorityColor = chalk.blue;
+                        } else {
+                            priorityText = 'None';
+                            priorityColor = chalk.gray;
                         }
+
+                        const isCurrentTask = currentTaskId === issue.identifier;
+                        const projectName = project ? project.name : 'No Project';
+                        const prText = pr ? `#${pr.number}` : 'No PR';
+
+                        return {
+                            issue,
+                            pr,
+                            stateName,
+                            stateColor,
+                            priorityText,
+                            priorityColor,
+                            isCurrentTask,
+                            projectName,
+                            prText,
+                        };
+                    }),
+                );
+
+                // Calculate maximum column widths
+                const maxTaskIdWidth = Math.max(...taskData.map(t => t.issue.identifier.length));
+                const maxProjectWidth = Math.max(...taskData.map(t => t.projectName.length));
+                const maxTitleWidth = Math.max(...taskData.map(t => t.issue.title.length), 40);
+                const maxPriorityWidth = Math.max(...taskData.map(t => t.priorityText.length));
+                const maxStatusWidth = Math.max(...taskData.map(t => t.stateName.length));
+                const maxPrWidth = Math.max(...taskData.map(t => t.prText.length));
+
+                // Format choices for enquirer
+                const choices = taskData.map(
+                    ({
+                        issue,
+                        isCurrentTask,
+                        projectName,
+                        stateName,
+                        stateColor,
+                        priorityText,
+                        priorityColor,
+                        prText,
+                    }) => {
+                        const currentIndicator = isCurrentTask ? chalk.cyan('★ ') : '  ';
+
+                        // Format with padding for table-like alignment
+                        const taskId = chalk.bold.white(issue.identifier.padEnd(maxTaskIdWidth));
+                        const projectDisplay =
+                            projectName === 'No Project'
+                                ? chalk.gray(projectName.padEnd(maxProjectWidth))
+                                : chalk.cyan(projectName.padEnd(maxProjectWidth));
+                        const taskTitle = chalk.white(issue.title.padEnd(maxTitleWidth).slice(0, maxTitleWidth));
+                        const priorityDisplay = priorityColor(priorityText.padEnd(maxPriorityWidth));
+                        const statusDisplay = stateColor(stateName.padEnd(maxStatusWidth));
+                        const prInfo =
+                            prText === 'No PR'
+                                ? chalk.gray(prText.padEnd(maxPrWidth))
+                                : chalk.green(prText.padEnd(maxPrWidth));
+
+                        const message = `${currentIndicator}${taskId} ${chalk.gray('│')} ${projectDisplay} ${chalk.gray('│')} ${taskTitle} ${chalk.gray('│')} ${priorityDisplay} ${chalk.gray('│')} ${statusDisplay} ${chalk.gray('│')} ${prInfo}`;
 
                         return {
                             name: issue.identifier,
-                            message: messageParts.join(' '),
+                            message,
                         };
-                    }),
+                    },
                 );
 
                 // Show selection prompt

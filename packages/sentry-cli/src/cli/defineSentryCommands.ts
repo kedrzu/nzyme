@@ -280,6 +280,10 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
                 // Create GitHub client
                 const githubClient = createGithubClient(githubConfig);
 
+                // Check if PR exists and is in review
+                const pr = await findMatchingPr(githubClient, githubConfig, issueId);
+                const prInReview = pr ? !pr.draft : false;
+
                 // Get base branches
                 const baseBranches = await getBaseBranches(options);
                 const baseBranch = baseBranches.length > 0 ? baseBranches[0]! : 'main';
@@ -293,6 +297,7 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
                     baseBranch,
                     skipSubmodules: this.skipSubmodules,
                     autoYes: this.yes,
+                    prInReview,
                 });
 
                 this.logger.info('');
@@ -361,6 +366,9 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
 
                 this.logger.info(`✅ Found PR: ${chalk.blue(pr.title)} (#${pr.number})`);
 
+                // Check if PR is already in review
+                const prInReview = !pr.draft;
+
                 // Handle preparation (submodules and main repo)
                 const baseBranches = await getBaseBranches(options);
                 const baseBranch = baseBranches.length > 0 ? baseBranches[0]! : pr.base.ref;
@@ -373,6 +381,8 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                     baseBranch,
                     skipSubmodules: this.skipSubmodules,
                     autoYes: this.yes,
+                    prInReview,
+                    defaultCommitMessage: 'Ready for review',
                 });
 
                 // Convert all PRs (main and submodules) to ready

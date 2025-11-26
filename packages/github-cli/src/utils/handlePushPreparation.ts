@@ -51,6 +51,12 @@ export interface HandlePushPreparationParams {
      * Default commit message to use when committing changes.
      */
     defaultCommitMessage?: string;
+
+    /**
+     * Whether the PR is in review (not draft).
+     * When true, uses "Fixes after review" as default commit message if defaultCommitMessage is not provided.
+     */
+    prInReview?: boolean;
 }
 
 /**
@@ -59,8 +65,17 @@ export interface HandlePushPreparationParams {
  * Does NOT convert PR to ready - only prepares changes.
  */
 export async function handlePushPreparation(params: HandlePushPreparationParams): Promise<void> {
-    const { githubClient, githubConfig, issueId, logger, baseBranch, skipSubmodules, autoYes, defaultCommitMessage } =
-        params;
+    const {
+        githubClient,
+        githubConfig,
+        issueId,
+        logger,
+        baseBranch,
+        skipSubmodules,
+        autoYes,
+        defaultCommitMessage,
+        prInReview,
+    } = params;
 
     // FIRST: Check if the current branch's PR has been merged
     logger.info('🔍 Checking if current PR is merged...');
@@ -81,5 +96,8 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
     logger.info('🔍 Checking main repository status...');
     const [unpushedCommits, statusInfo] = await Promise.all([checkUnpushedCommits(), getGitStatusInfo()]);
 
-    await handleReadyPreparation(unpushedCommits, statusInfo, logger, autoYes, defaultCommitMessage);
+    // Determine the actual default commit message based on PR review status
+    const actualDefaultMessage = defaultCommitMessage ?? (prInReview ? 'Fixes after review' : 'Work in progress');
+
+    await handleReadyPreparation(unpushedCommits, statusInfo, logger, autoYes, actualDefaultMessage);
 }

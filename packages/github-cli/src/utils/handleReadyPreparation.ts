@@ -45,70 +45,44 @@ export async function handleReadyPreparation(
         const hasUnstagedFiles = statusInfo.totalChanges > statusInfo.changes.staged;
 
         logger.info(
-            `⚠️  You have ${chalk.yellow(statusInfo.totalChanges.toString())} uncommitted change${
+            `📝 Found ${chalk.yellow(statusInfo.totalChanges.toString())} uncommitted change${
                 statusInfo.totalChanges === 1 ? '' : 's'
             }: ${chalk.yellow(statusInfo.changeDescription)}`,
         );
 
-        let shouldCommit: 'no' | 'yes' = 'yes';
         let commitMessage = defaultCommitMessage;
 
+        // Prompt for commit message if not in auto-yes mode
         if (!autoYes) {
-            const response = await enquirer.prompt<{ shouldCommit: 'no' | 'yes' }>({
-                type: 'select',
-                name: 'shouldCommit',
-                message: `Do you want to commit these ${statusInfo.totalChanges} change${
-                    statusInfo.totalChanges === 1 ? '' : 's'
-                }?`,
-                choices: [
-                    {
-                        name: 'yes',
-                        message: `Yes, commit ${statusInfo.totalChanges} change${statusInfo.totalChanges === 1 ? '' : 's'}`,
-                    },
-                    {
-                        name: 'no',
-                        message: 'No, skip committing',
-                    },
-                ],
+            const response = await enquirer.prompt<{ commitMessage: string }>({
+                type: 'input',
+                name: 'commitMessage',
+                message: 'Enter commit message:',
+                initial: defaultCommitMessage,
+                validate: (input: string) => {
+                    if (!input.trim()) {
+                        return 'Commit message cannot be empty';
+                    }
+                    return true;
+                },
             });
-            shouldCommit = response.shouldCommit;
+            commitMessage = response.commitMessage;
         } else {
-            logger.info(`✅ Auto-committing changes (--yes flag)`);
+            logger.info(`✅ Auto-committing changes with message: "${chalk.cyan(commitMessage)}" (--yes flag)`);
         }
 
-        if (shouldCommit === 'yes') {
-            // Add unstaged changes to staging if there are any
-            if (hasUnstagedFiles) {
-                logger.info(`📦 Adding all changes to staging...`);
-                await git.add('.');
-            } else if (hasStagedFiles) {
-                logger.info(`📦 Using already staged files...`);
-            }
-
-            // Prompt for commit message if not in auto-yes mode
-            if (!autoYes) {
-                const response = await enquirer.prompt<{ commitMessage: string }>({
-                    type: 'input',
-                    name: 'commitMessage',
-                    message: 'Enter commit message:',
-                    initial: defaultCommitMessage,
-                    validate: (input: string) => {
-                        if (!input.trim()) {
-                            return 'Commit message cannot be empty';
-                        }
-                        return true;
-                    },
-                });
-                commitMessage = response.commitMessage;
-            }
-
-            // Commit the changes
-            logger.info(`💾 Committing changes with message: "${chalk.cyan(commitMessage)}"`);
-            await git.commit(commitMessage.trim());
-            newCommitCreated = true;
-        } else {
-            logger.info(`⏭️  Skipping commit`);
+        // Add unstaged changes to staging if there are any
+        if (hasUnstagedFiles) {
+            logger.info(`📦 Adding all changes to staging...`);
+            await git.add('.');
+        } else if (hasStagedFiles) {
+            logger.info(`📦 Using already staged files...`);
         }
+
+        // Commit the changes
+        logger.info(`💾 Committing changes with message: "${chalk.cyan(commitMessage)}"`);
+        await git.commit(commitMessage.trim());
+        newCommitCreated = true;
     }
 
     // Step 3: Push all commits if there are any unpushed commits (existing or newly created)

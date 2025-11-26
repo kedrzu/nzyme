@@ -17,6 +17,12 @@ export interface PromiseRef<T, TValue extends T | undefined = T> extends Ref<TVa
     promise: Promise<T>;
 
     /**
+     * The current promise that is pending to be resolved.
+     * This is null when the promise already resolved.
+     */
+    readonly pending: Promise<TValue> | null;
+
+    /**
      * Updates the ref with a new promise. The ref's value will be updated
      * when the promise resolves.
      *
@@ -75,27 +81,27 @@ export function promiseRef<T>(value: T): PromiseRef<T>;
  * ```
  */
 export function promiseRef<T>(promiseOrValue?: Promise<T | undefined> | T) {
-    let promise: Promise<T | undefined>;
-    let value: T | undefined;
+    let promiseRef: Ref<Promise<T | undefined> | null>;
+    let valueRef: Ref<T | undefined>;
     if (promiseOrValue instanceof Promise) {
-        promise = promiseOrValue;
-        value = undefined;
+        promiseRef = ref(wrapPromise(promiseOrValue));
+        valueRef = ref(undefined);
     } else {
-        promise = Promise.resolve(promiseOrValue);
-        value = promiseOrValue;
+        promiseRef = ref(null);
+        valueRef = ref(promiseOrValue) as Ref<T | undefined>;
     }
-
-    const promiseRef = ref(wrapPromise(promise));
-    const valueRef = ref<T | undefined>(value) as Ref<T | undefined> as PromiseRef<T | undefined>;
 
     let runWatch = true;
 
     Object.defineProperties(valueRef, {
         promise: {
-            get: () => promiseRef.value,
+            get: () => promiseRef.value ?? Promise.resolve(valueRef.value),
             set: (value: Promise<T>) => {
                 promiseRef.value = wrapPromise(value);
             },
+        },
+        pending: {
+            get: () => promiseRef.value,
         },
         update: {
             value: update,

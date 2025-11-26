@@ -57,6 +57,7 @@ export function createAsyncCache<TArg, TValue, TKey = TArg>(options: AsyncCacheO
         clear,
         has,
         delete: deleteKey,
+        cache,
         values: () => cache.values(),
     };
 

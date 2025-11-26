@@ -108,9 +108,9 @@ export function promiseRef<T>(promiseOrValue?: Promise<T | undefined> | T) {
         },
     });
 
-    watch(valueRef, value => {
+    watch(valueRef, () => {
         if (runWatch) {
-            promiseRef.value = Promise.resolve(value);
+            promiseRef.value = null;
         }
     });
 
@@ -122,6 +122,7 @@ export function promiseRef<T>(promiseOrValue?: Promise<T | undefined> | T) {
                 try {
                     runWatch = false;
                     valueRef.value = result;
+                    promiseRef.value = null;
                 } finally {
                     runWatch = true;
                 }

@@ -1,41 +1,47 @@
+import type { Primitive } from '@nzyme/types';
 import { defineContext, provideContext } from '@nzyme/vue-utils';
 
 import { createFormField, formFieldEmits, formFieldProps } from './defineFormField.js';
 import type { FormFieldController, FormFieldProps } from './defineFormField.js';
 
 /**
- *
+ * Props for a radio group component.
  */
-export type RadioGroupProps<T extends string> = FormFieldProps<T>;
+export type RadioGroupProps<T extends Primitive> = FormFieldProps<T>;
 
 interface RadioGroupContext {
-    field: FormFieldController<string>;
-    props: RadioGroupProps<string>;
+    field: FormFieldController<Primitive>;
+    props: RadioGroupProps<Primitive>;
 }
 
 /**
- *
+ * Context for radio group that provides field controller and props to child radio components.
  */
 export const RadioGroupContext = defineContext<RadioGroupContext>('RadioGroup');
 
 /**
+ * Returns the props definition for a radio group component.
  *
+ * @__NO_SIDE_EFFECTS__
  */
-export function getRadioGroupProps<T extends string>() {
+export function getRadioGroupProps<T extends Primitive = Primitive>() {
     return formFieldProps<T>();
 }
 
 /**
+ * Returns the emits definition for a radio group component.
  *
+ * @__NO_SIDE_EFFECTS__
  */
-export function getRadioGroupEmits<T extends string>() {
+export function getRadioGroupEmits<T extends Primitive = Primitive>() {
     return formFieldEmits<T>();
 }
 
 /**
- *
+ * Composable for creating a radio group that manages a form field with primitive values.
+ * Provides context to child radio components for coordinated behavior.
  */
-export function useRadioGroup<T extends string>(props: RadioGroupProps<T>) {
+export function useRadioGroup<T extends Primitive = Primitive>(props: RadioGroupProps<T>) {
     const field = createFormField<T>({ props });
-    provideContext(RadioGroupContext, { field, props: props as RadioGroupProps<string> });
+    provideContext(RadioGroupContext, { field, props: props as RadioGroupProps<Primitive> });
 }

@@ -562,7 +562,14 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
             description: 'List and select from tasks in todo, in progress, and in review assigned to you',
             details:
                 'Shows all currently active tasks (Todo, In Progress and In Review) assigned to you, along with their associated GitHub PRs, in an interactive selection menu',
-            examples: [['Show task list and switch to selected task', 'task list']],
+            examples: [
+                ['Show task list and switch to selected task', 'task list'],
+                ['Show task list including unassigned tasks', 'task list --unassigned'],
+            ],
+        });
+
+        unassigned = Option.Boolean('--unassigned,-u', false, {
+            description: 'Include unassigned tasks',
         });
 
         override async run() {
@@ -583,19 +590,25 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
 
                 this.logger.info('🔍 Fetching your active tasks...');
 
-                // Get current user and their assigned issues in todo, progress and review
+                // Get current user
                 const currentUser = await linearClient.viewer;
-                const assignedIssues = await currentUser.assignedIssues({
-                    filter: {
-                        state: {
-                            name: {
-                                in: ['Todo', 'In Progress', 'In Review'],
-                            },
+
+                // Build filter based on whether we want unassigned tasks
+                const filter = {
+                    state: {
+                        name: {
+                            in: ['Todo', 'In Progress', 'In Review'],
                         },
                     },
-                });
+                    assignee: this.unassigned
+                        ? { or: [{ id: { eq: currentUser.id } }, { null: true }] }
+                        : { id: { eq: currentUser.id } },
+                };
 
-                const issues = assignedIssues.nodes;
+                // Get issues based on filter
+                const issuesQuery = await linearClient.issues({ filter });
+
+                const issues = issuesQuery.nodes;
 
                 if (issues.length === 0) {
                     this.logger.info('📝 No active tasks found (Todo, In Progress or In Review)');
@@ -639,7 +652,11 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                 // First, collect all task data to calculate column widths
                 const taskData = await Promise.all(
                     tasksWithPrInfo.map(async ({ issue, pr }) => {
-                        const [state, project] = await Promise.all([issue.state, issue.project]);
+                        const [state, project, assignee] = await Promise.all([
+                            issue.state,
+                            issue.project,
+                            issue.assignee,
+                        ]);
                         const stateName = state?.name || 'Unknown';
                         const priority = issue.priority;
 
@@ -678,6 +695,7 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                         const isCurrentTask = currentTaskId === issue.identifier;
                         const projectName = project ? project.name : 'No Project';
                         const prText = pr ? `#${pr.number}` : 'No PR';
+                        const assigneeName = assignee ? assignee.name : 'Unassigned';
 
                         return {
                             issue,
@@ -689,6 +707,7 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                             isCurrentTask,
                             projectName,
                             prText,
+                            assigneeName,
                         };
                     }),
                 );
@@ -700,6 +719,7 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                 const maxPriorityWidth = Math.max(...taskData.map(t => t.priorityText.length));
                 const maxStatusWidth = Math.max(...taskData.map(t => t.stateName.length));
                 const maxPrWidth = Math.max(...taskData.map(t => t.prText.length));
+                const maxAssigneeWidth = Math.max(...taskData.map(t => t.assigneeName.length));
 
                 // Format choices for enquirer
                 const choices = taskData.map(
@@ -712,6 +732,7 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                         priorityText,
                         priorityColor,
                         prText,
+                        assigneeName,
                     }) => {
                         const currentIndicator = isCurrentTask ? chalk.cyan('★ ') : '  ';
 
@@ -728,8 +749,12 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                             prText === 'No PR'
                                 ? chalk.gray(prText.padEnd(maxPrWidth))
                                 : chalk.green(prText.padEnd(maxPrWidth));
+                        const assigneeDisplay =
+                            assigneeName === 'Unassigned'
+                                ? chalk.gray(assigneeName.padEnd(maxAssigneeWidth))
+                                : chalk.blue(assigneeName.padEnd(maxAssigneeWidth));
 
-                        const message = `${currentIndicator}${taskId} ${chalk.gray('│')} ${projectDisplay} ${chalk.gray('│')} ${taskTitle} ${chalk.gray('│')} ${priorityDisplay} ${chalk.gray('│')} ${statusDisplay} ${chalk.gray('│')} ${prInfo}`;
+                        const message = `${currentIndicator}${taskId} ${chalk.gray('│')} ${projectDisplay} ${chalk.gray('│')} ${taskTitle} ${chalk.gray('│')} ${priorityDisplay} ${chalk.gray('│')} ${statusDisplay} ${chalk.gray('│')} ${assigneeDisplay} ${chalk.gray('│')} ${prInfo}`;
 
                         return {
                             name: issue.identifier,

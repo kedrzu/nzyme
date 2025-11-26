@@ -59,6 +59,7 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
         startY: undefined as number | undefined,
         startTimestamp: undefined as number | undefined,
         currentX: undefined as number | undefined,
+        startTarget: undefined as Element | undefined,
     });
 
     const isMoving = ref(false);
@@ -136,7 +137,7 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
         }
 
         addMouseListeners();
-        swipeStart(event.clientX, event.clientY);
+        swipeStart(event.clientX, event.clientY, event.target as Element);
     }
 
     function onMouseMove(event: MouseEvent) {
@@ -164,7 +165,7 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
         }
 
         addTouchListeners();
-        swipeStart(touch.clientX, touch.clientY);
+        swipeStart(touch.clientX, touch.clientY, event.target as Element);
     }
 
     function onTouchMove(event: TouchEvent) {
@@ -187,7 +188,7 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
         swipeEnd(touch.clientX);
     }
 
-    function swipeStart(x: number, y: number) {
+    function swipeStart(x: number, y: number, target: Element) {
         if (!enabled.value) {
             return;
         }
@@ -195,6 +196,7 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
         position.startX = x;
         position.startY = y;
         position.startTimestamp = new Date().valueOf();
+        position.startTarget = target;
 
         isPressing.value = true;
     }
@@ -209,6 +211,13 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
             const deltaY = Math.abs(y - (position.startY ?? 0));
 
             if (deltaY > deltaX) {
+                isPressing.value = false;
+                return;
+            }
+
+            // Check if we're swiping in a direction blocked by scrollable container
+            const swipeDirection = x - (position.startX ?? 0);
+            if (position.startTarget && isSwipeBlockedByScrollableContainer(position.startTarget, swipeDirection)) {
                 isPressing.value = false;
                 return;
             }
@@ -245,6 +254,7 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
             position.startX = undefined;
             position.startY = undefined;
             position.startTimestamp = undefined;
+            position.startTarget = undefined;
         });
     }
 
@@ -256,5 +266,34 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
             // event target is not within element
             !isAncestorOf(element.value, event.target as Element)
         );
+    }
+
+    function isSwipeBlockedByScrollableContainer(target: Element, swipeDirection: number): boolean {
+        let current: Element | null = target;
+
+        while (current && current !== element.value) {
+            if (current instanceof HTMLElement) {
+                const hasHorizontalScroll = current.scrollWidth > current.clientWidth;
+
+                if (hasHorizontalScroll) {
+                    const canScrollLeft = current.scrollLeft > 0;
+                    const canScrollRight = current.scrollLeft < current.scrollWidth - current.clientWidth;
+
+                    // Swiping right (positive direction) is blocked if container can scroll left
+                    if (swipeDirection > 0 && canScrollLeft) {
+                        return true;
+                    }
+
+                    // Swiping left (negative direction) is blocked if container can scroll right
+                    if (swipeDirection < 0 && canScrollRight) {
+                        return true;
+                    }
+                }
+            }
+
+            current = current.parentElement;
+        }
+
+        return false;
     }
 }

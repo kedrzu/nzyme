@@ -1,7 +1,9 @@
 import chalk from 'chalk';
 
 import { defineService } from '@nzyme/ioc';
+import { identity } from '@nzyme/utils';
 
+import type { LoggerLevel } from './LoggerLevel.js';
 import { LoggerTransport } from './LoggerTransport.js';
 
 let i = 0;
@@ -28,6 +30,7 @@ export const PrettyLoggerTransport = defineService({
     setup: () => {
         return (logger, level, message, obj) => {
             const prefix = getPrefix(logger);
+            const color = getColor(level);
             const lines = message.split('\n');
             if (lines.length > 1) {
                 message = '';
@@ -37,14 +40,14 @@ export const PrettyLoggerTransport = defineService({
                         message += '\n';
                     }
 
-                    message += `${prefix}${line}`;
+                    message += `${prefix}${color(line)}`;
                 }
 
                 if (obj) {
                     console[level](message, obj);
                 }
             } else {
-                message = `${prefix}${message}`;
+                message = `${prefix}${color(message)}`;
             }
 
             if (obj) {
@@ -69,4 +72,17 @@ function getPrefix(name: string | undefined) {
     const prefix = color(`[${name}] `);
     prefixCache.set(name, prefix);
     return prefix;
+}
+
+function getColor(level: LoggerLevel): (text: string) => string {
+    switch (level) {
+        case 'debug':
+            return chalk.gray;
+        case 'error':
+            return chalk.red;
+        case 'warn':
+            return chalk.yellow;
+        default:
+            return identity;
+    }
 }

@@ -10,10 +10,8 @@ import type {
     FormValidationContext,
     FormValidationResult,
     FormValidator,
-    FormValidatorAsync,
     FormValidatorBehaviorContext,
     FormValidatorState,
-    FormValidatorSync,
 } from './types.js';
 
 /**
@@ -145,7 +143,7 @@ function createValidatorState<T>(
 }
 
 function createValidatorStateSync<T>(
-    validator: FormValidatorSync<T>,
+    validator: FormValidator<T> & { async?: false },
     value: Readonly<Ref<T>>,
     focused: Readonly<Ref<boolean>>,
     ctx: FormValidationContext,
@@ -167,12 +165,12 @@ function createValidatorStateSync<T>(
     });
 
     function refresh() {
-        error.value = normalizeErrors(validator.validate(value.value, ctx));
+        error.value = normalizeErrors(validator.validate(value.value as NonNullable<T> | null | undefined, ctx));
     }
 }
 
 function createValidatorStateAsync<T>(
-    validator: FormValidatorAsync<T>,
+    validator: FormValidator<T> & { async: true },
     value: Readonly<Ref<T>>,
     focused: Readonly<Ref<boolean>>,
     ctx: FormValidationContext,
@@ -182,7 +180,7 @@ function createValidatorStateAsync<T>(
     const error = useDataSource({
         params: () => ({ value: value.value, watch: watch.value }),
         load: async params => {
-            const result = await validator.validate(params.value, {
+            const result = await validator.validate(params.value as NonNullable<T> | null | undefined, {
                 ...ctx,
                 watch: params.watch,
             });
@@ -221,7 +219,7 @@ function createValidatorBehavior<T>(
             show,
         });
 
-        validator.behavior(ctx);
+        validator.behavior(ctx as FormValidatorBehaviorContext<NonNullable<T>>);
         return;
     }
 

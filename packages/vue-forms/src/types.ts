@@ -112,7 +112,7 @@ export interface FormValidatorState {
 /**
  *
  */
-export interface FormValidatorBehaviorContext<T> {
+export type FormValidatorBehaviorContext<T> = {
     /**
      * Current field value
      */
@@ -127,45 +127,13 @@ export interface FormValidatorBehaviorContext<T> {
      * Whether to show the validation errors
      */
     show: boolean;
-}
-
-/**
- * Form validator
- * @template T - Type of the value being validated
- * @template TAsync - Whether the validator is async
- */
-export interface FormValidatorBase<T = unknown, TAsync extends boolean = boolean> {
-    /**
-     * Whether the validator is async
-     */
-    readonly async: TAsync;
-
-    /**
-     * Validate value
-     * @param value {T} Value to validate
-     * @param ctx {FormValidationContext} Validation context
-     * @returns Form validation result
-     */
-    readonly validate: (
-        value: T | null | undefined,
-        ctx: FormValidationContext,
-    ) => TAsync extends false
-        ? FormValidationResult
-        : TAsync extends true
-          ? Promise<FormValidationResult>
-          : FormValidationResult | Promise<FormValidationResult>;
-
-    /**
-     * Form validator behavior
-     */
-    readonly behavior?: (ctx: FormValidatorBehaviorContext<T>) => void;
-}
+};
 
 /**
  * Form validator sync
  * @template T - Type of the value being validated
  */
-export interface FormValidatorSync<T> {
+export type FormValidatorSync<T> = {
     /**
      * Whether the validator is async
      */
@@ -183,7 +151,7 @@ export interface FormValidatorSync<T> {
      * Form validator behavior
      */
     readonly behavior?: (ctx: FormValidatorBehaviorContext<T>) => void;
-}
+};
 
 /**
  * Form validation context async
@@ -200,7 +168,7 @@ export interface FormValidationContextAsync<W = unknown> extends FormValidationC
  * @template T - Type of the value being validated
  * @template W - Type of the additional watch value
  */
-export interface FormValidatorAsync<T, W = unknown> {
+export type FormValidatorAsync<T, W = unknown> = {
     /**
      * Whether the validator is async
      */
@@ -214,6 +182,14 @@ export interface FormValidatorAsync<T, W = unknown> {
     /**
      * Additional watch value.
      * If provided, the validator will be re-evaluated when the value changes.
+     * @example
+     * const validator = defineValidator<string>({
+     *   async: true,
+     *   watch: () => ({ foo: someRef.value }),
+     *   validate: (value, ctx) => {
+     *     return value.length > 0 && ctx.watch.foo ? undefined : 'Value is required';
+     *   },
+     * });
      */
     readonly watch?: MaybeRefOrGetter<W>;
 
@@ -232,9 +208,9 @@ export interface FormValidatorAsync<T, W = unknown> {
      * Form validator behavior
      */
     readonly behavior?: (ctx: FormValidatorBehaviorContext<T>) => void;
-}
+};
 
 /**
  *
  */
-export type FormValidator<T> = FormValidatorAsync<T> | FormValidatorSync<T>;
+export type FormValidator<T> = FormValidatorAsync<NonNullable<T>> | FormValidatorSync<NonNullable<T>>;

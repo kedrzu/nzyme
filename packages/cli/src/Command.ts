@@ -99,7 +99,12 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
      *
      */
     override async catch(error: unknown) {
-        this.logger.error('❌ Command execution failed', { error });
+        if (this.#logger) {
+            this.#logger.error('❌ Command execution failed', { error });
+        } else {
+            console.error('❌ Command execution failed', { error });
+        }
+
         await Promise.resolve();
         process.exit(1);
     }

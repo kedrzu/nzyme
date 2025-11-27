@@ -23,10 +23,6 @@ export const PrettyBrowserLoggerTransport = defineService({
 
                     message += `${prefix}${line}`;
                 }
-
-                if (obj) {
-                    console[level](message, obj);
-                }
             } else {
                 message = `${prefix}${message}`;
             }

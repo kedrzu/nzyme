@@ -1,4 +1,7 @@
+import type { MaybeRefOrGetter } from 'vue';
+
 import type { Language, TranslationResult } from '@nzyme/i18n';
+import type { DataSourceDebounceOptions } from '@nzyme/vue-utils';
 
 /**
  *
@@ -74,7 +77,7 @@ export interface FormField<T = unknown> extends FormBase<T> {
 /**
  * Form validation result
  */
-export type FormValidationResult = TranslationResult | false | null | undefined;
+export type FormValidationResult = TranslationResult | false | null;
 
 /**
  * Form validation context
@@ -159,14 +162,77 @@ export interface FormValidatorBase<T = unknown, TAsync extends boolean = boolean
 }
 
 /**
- *
+ * Form validator sync
+ * @template T - Type of the value being validated
  */
-export type FormValidatorAsync<T> = FormValidatorBase<T, true>;
+export interface FormValidatorSync<T> {
+    /**
+     * Whether the validator is async
+     */
+    readonly async?: false;
+
+    /**
+     * Validate value
+     * @param value Value to validate
+     * @param ctx Validation context
+     * @returns Form validation result
+     */
+    readonly validate: (value: T | null | undefined, ctx: FormValidationContext) => FormValidationResult;
+
+    /**
+     * Form validator behavior
+     */
+    readonly behavior?: (ctx: FormValidatorBehaviorContext<T>) => void;
+}
 
 /**
- *
+ * Form validation context async
  */
-export type FormValidatorSync<T> = FormValidatorBase<T, false>;
+export interface FormValidationContextAsync<W = unknown> extends FormValidationContext {
+    /**
+     * Additional watch value.
+     */
+    readonly watch: W;
+}
+
+/**
+ * Form validator async
+ * @template T - Type of the value being validated
+ * @template W - Type of the additional watch value
+ */
+export interface FormValidatorAsync<T, W = unknown> {
+    /**
+     * Whether the validator is async
+     */
+    readonly async: true;
+
+    /**
+     * Debounce time in milliseconds or debounce options
+     */
+    readonly debounce?: number | DataSourceDebounceOptions;
+
+    /**
+     * Additional watch value.
+     * If provided, the validator will be re-evaluated when the value changes.
+     */
+    readonly watch?: MaybeRefOrGetter<W>;
+
+    /**
+     * Validate value
+     * @param value Value to validate
+     * @param ctx Validation context
+     * @returns Form validation result
+     */
+    readonly validate: (
+        value: T | null | undefined,
+        ctx: FormValidationContextAsync<W>,
+    ) => Promise<FormValidationResult>;
+
+    /**
+     * Form validator behavior
+     */
+    readonly behavior?: (ctx: FormValidatorBehaviorContext<T>) => void;
+}
 
 /**
  *

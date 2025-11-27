@@ -2,7 +2,7 @@ import type { Ref } from 'vue';
 import { computed, onScopeDispose, ref, watch, watchEffect } from 'vue';
 
 import { arrayRemove } from '@nzyme/utils';
-import { computedAsync, reactive } from '@nzyme/vue-utils';
+import { makeRef, reactive, useDataSource } from '@nzyme/vue-utils';
 
 import type {
     FormField,
@@ -177,13 +177,21 @@ function createValidatorStateAsync<T>(
     focused: Readonly<Ref<boolean>>,
     ctx: FormValidationContext,
 ) {
-    const error = computedAsync(
-        async () => {
-            const result = await validator.validate(value.value, ctx);
+    const watch = makeRef(validator.watch);
+
+    const error = useDataSource({
+        params: () => ({ value: value.value, watch: watch.value }),
+        load: async params => {
+            const result = await validator.validate(params.value, {
+                ...ctx,
+                watch: params.watch,
+            });
             return normalizeErrors(result);
         },
-        { initialValue: null },
-    );
+        default: null,
+        debounce: validator.debounce,
+        behavior: 'eager',
+    });
 
     const show = ref(false);
 
@@ -193,7 +201,7 @@ function createValidatorStateAsync<T>(
         error,
         show,
         validate: async () => {
-            await error.refresh();
+            await error.reload();
             show.value = true;
             return !error.value;
         },

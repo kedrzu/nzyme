@@ -23,6 +23,20 @@ export interface DataSourceLoader<TParams, TResult> {
 export type DataSourceBehavior = 'eager' | 'lazy';
 
 /**
+ * Debounce options
+ */
+export interface DataSourceDebounceOptions {
+    /** Number of milliseconds to debounce api calls */
+    time: number;
+
+    /** Whether to trigger on the leading edge of the timeout */
+    leading?: boolean;
+
+    /** Whether to trigger on the trailing edge of the timeout */
+    trailing?: boolean;
+}
+
+/**
  * Configuration options for creating a data source
  */
 export interface DataSourceOptions<TParams, TResult, TDefault extends TResult | undefined = undefined> {
@@ -49,18 +63,9 @@ export interface DataSourceOptions<TParams, TResult, TDefault extends TResult | 
     readonly behavior?: DataSourceBehavior;
 
     /**
-     * Options for debouncing data loads
+     * Number of milliseconds to debounce api calls or options for debouncing data loads
      */
-    readonly debounce?: {
-        /** Whether to trigger on the leading edge of the timeout */
-        leading?: boolean;
-        /** Number of milliseconds to debounce api calls */
-        time?: number;
-        /**
-         * Whether to trigger on the trailing edge of the timeout
-         */
-        trailing?: boolean;
-    };
+    readonly debounce?: number | DataSourceDebounceOptions;
 
     /**
      * Data will be loaded into this ref. Optional.
@@ -126,13 +131,8 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
 
     const pendingRef = ref<Promise<TResult> | null>(null);
 
-    const debounceTime = opts.debounce?.time;
-    const debouncedLoad = debounceTime
-        ? debounce(loadData, debounceTime, {
-              leading: opts.debounce?.leading ?? true,
-              trailing: opts.debounce?.trailing ?? true,
-          })
-        : loadData;
+    const debounceOptions = getDebounceOptions(opts.debounce);
+    const debouncedLoad = debounceOptions ? debounce(loadData, debounceOptions.time, debounceOptions) : loadData;
 
     const dataSource = computed<TDefault | TResult>({
         get: () => {
@@ -263,4 +263,22 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
 
         return result;
     }
+}
+
+function getDebounceOptions(
+    debounce: number | DataSourceDebounceOptions | undefined,
+): Required<DataSourceDebounceOptions> | undefined {
+    if (!debounce) {
+        return undefined;
+    }
+
+    if (typeof debounce === 'number') {
+        return { time: debounce, leading: true, trailing: true } as Required<DataSourceDebounceOptions>;
+    }
+
+    return {
+        time: debounce.time,
+        leading: debounce.leading ?? true,
+        trailing: debounce.trailing ?? true,
+    };
 }

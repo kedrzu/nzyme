@@ -3,7 +3,7 @@ import { Command as ClipanionCommand } from 'clipanion';
 
 import type { Container } from '@nzyme/ioc';
 import { defineScope } from '@nzyme/ioc';
-import { Logger, PrettyLoggerTransport } from '@nzyme/logging';
+import { Logger, PrettyCliLoggerTransport } from '@nzyme/logging';
 import { createEventEmitter, getClassName } from '@nzyme/utils';
 
 /**
@@ -95,10 +95,24 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
         }
     }
 
+    /**
+     *
+     */
+    override async catch(error: unknown) {
+        if (this.#logger) {
+            this.#logger.error('❌ Command execution failed', { error });
+        } else {
+            console.error('❌ Command execution failed', { error });
+        }
+
+        await Promise.resolve();
+        process.exit(1);
+    }
+
     protected setup(): Promise<void> {
         this.#container = this.context.container.createChild(CommandScope);
-        this.#container.register(PrettyLoggerTransport);
-        const transport = this.#container.resolve(PrettyLoggerTransport);
+        this.#container.register(PrettyCliLoggerTransport);
+        const transport = this.#container.resolve(PrettyCliLoggerTransport);
         this.#logger = Logger.create({ name: getClassName(this), transport });
 
         return Promise.resolve();

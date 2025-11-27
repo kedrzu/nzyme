@@ -66,6 +66,7 @@ export * from './objectKeys.js';
 export * from './omitProps.js';
 export * from './parseBigint.js';
 export * from './parseDuration.js';
+export * from './parseStackTrace.js';
 export * from './phoneLink.js';
 export * from './promiseAll.js';
 export * from './readonly.js';

@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { highlight } from 'cli-highlight';
 
 import { defineService } from '@nzyme/ioc';
-import { identity, parseStackTrace } from '@nzyme/utils';
+import { identity, parseStackTrace, toJsonString } from '@nzyme/utils';
 
 import type { LoggerLevel } from './LoggerLevel.js';
 import { LoggerTransport } from './LoggerTransport.js';
@@ -133,7 +133,7 @@ function formatError(error: Error, prefix: string): string {
 
 function formatObjectProperties(obj: Record<string, unknown>, prefix: string): string {
     try {
-        const json = JSON.stringify(obj, null, 2);
+        const json = toJsonString(obj, 2);
         const highlighted = highlight(json, {
             language: 'json',
             ignoreIllegals: true,

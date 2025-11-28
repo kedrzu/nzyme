@@ -47,6 +47,41 @@ export interface PulumiCommandsOptions {
      * The function to call before each command.
      */
     beforeEach?: () => Promise<void>;
+
+    /**
+     * The function to call after each command.
+     */
+    afterEach?: () => Promise<void>;
+
+    /**
+     * The function to call before deploying the application.
+     */
+    beforeDeploy?: (stacks: StackDefinition[]) => Promise<void>;
+
+    /**
+     * The function to call after deploying the application.
+     */
+    afterDeploy?: (stacks: StackDefinition[]) => Promise<void>;
+
+    /**
+     * The function to call before deploying a stack.
+     */
+    beforeDeployStack?: (stack: StackDefinition) => Promise<void>;
+
+    /**
+     * The function to call after deploying a stack.
+     */
+    afterDeployStack?: (stack: StackDefinition) => Promise<void>;
+
+    /**
+     * The function to call before destroying a stack.
+     */
+    beforeDestroyStack?: (stack: StackDefinition) => Promise<void>;
+
+    /**
+     * The function to call after destroying a stack.
+     */
+    afterDestroyStack?: (stack: StackDefinition) => Promise<void>;
 }
 
 interface ResolveStacksOptions extends PulumiCommandsOptions {
@@ -257,6 +292,8 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                 throw new UsageError('No stacks to deploy.');
             }
 
+            await options.beforeDeploy?.(stacks);
+
             const pulumiConfig = await getPulumiConfig(options);
             const stacksLeft = new Set<StackDefinition>(stacks);
             const stacksDeploying = new Map<StackDefinition, Promise<void>>();
@@ -291,6 +328,8 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                             await cancelStack(stackResolved, { config: pulumiConfig });
                         }
 
+                        await options.beforeDeployStack?.(stack);
+
                         return deployStack(stackResolved, {
                             refresh: this.refresh,
                             build: !this.skipBuild,
@@ -300,11 +339,12 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                             skipResources: this.skipResources,
                         });
                     })()
-                        .then(() => {
+                        .then(async () => {
                             stacksDeploying.delete(stack);
                             stacksDeployed.add(stack);
                             stacksLeft.delete(stack);
                             stackResolved.logger.info(`🎉 Deployed stack ${stackName}`);
+                            await options.afterDeployStack?.(stack);
                         })
                         .catch(e => {
                             stacksDeploying.delete(stack);
@@ -341,6 +381,8 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                     `Failed to deploy stacks: ${[...stacksLeft.keys()].map(s => s.stackName).join(', ')}`,
                 );
             }
+
+            await options.afterDeploy?.(stacks);
         }
     };
 }
@@ -581,6 +623,8 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                             await cancelStack(stackResolved, { config: pulumiConfig });
                         }
 
+                        await options.beforeDestroyStack?.(stackDefinition);
+
                         stackResolved.logger.info(`🗑️  Force destroying stack ${stackName}...`);
 
                         await destroyStack(stackResolved, {
@@ -594,6 +638,8 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                         } else {
                             stackResolved.logger.info(`💥 Force destroyed stack ${stackName}`);
                         }
+
+                        await options.afterDestroyStack?.(stackDefinition);
                     } catch (error) {
                         stackResolved.logger.error(`❌ Failed to force destroy stack ${stackName}.`, {
                             error,
@@ -679,6 +725,8 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                         await cancelStack(stackResolved, { config: pulumiConfig });
                     }
 
+                    await options.beforeDestroyStack?.(stack);
+
                     stackResolved.logger.info(`🗑️  Destroying stack ${stackName}...`);
 
                     await destroyStack(stackResolved, {
@@ -692,6 +740,8 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                     } else {
                         stackResolved.logger.info(`💥 Destroyed stack ${stackName}`);
                     }
+
+                    await options.afterDestroyStack?.(stack);
                 } catch (error) {
                     stackResolved.logger.error(`❌ Failed to destroy stack ${stackName}.`, {
                         error,

@@ -2,7 +2,7 @@ import type { Ref } from 'vue';
 import { computed, onScopeDispose, ref, watch, watchEffect } from 'vue';
 
 import { arrayRemove } from '@nzyme/utils';
-import { computedAsync, reactive } from '@nzyme/vue-utils';
+import { makeRef, reactive, useDataSource } from '@nzyme/vue-utils';
 
 import type {
     FormField,
@@ -10,10 +10,8 @@ import type {
     FormValidationContext,
     FormValidationResult,
     FormValidator,
-    FormValidatorAsync,
     FormValidatorBehaviorContext,
     FormValidatorState,
-    FormValidatorSync,
 } from './types.js';
 
 /**
@@ -145,7 +143,7 @@ function createValidatorState<T>(
 }
 
 function createValidatorStateSync<T>(
-    validator: FormValidatorSync<T>,
+    validator: FormValidator<T> & { async?: false },
     value: Readonly<Ref<T>>,
     focused: Readonly<Ref<boolean>>,
     ctx: FormValidationContext,
@@ -167,23 +165,31 @@ function createValidatorStateSync<T>(
     });
 
     function refresh() {
-        error.value = normalizeErrors(validator.validate(value.value, ctx));
+        error.value = normalizeErrors(validator.validate(value.value as NonNullable<T> | null | undefined, ctx));
     }
 }
 
 function createValidatorStateAsync<T>(
-    validator: FormValidatorAsync<T>,
+    validator: FormValidator<T> & { async: true },
     value: Readonly<Ref<T>>,
     focused: Readonly<Ref<boolean>>,
     ctx: FormValidationContext,
 ) {
-    const error = computedAsync(
-        async () => {
-            const result = await validator.validate(value.value, ctx);
+    const watch = makeRef(validator.watch);
+
+    const error = useDataSource({
+        params: () => ({ value: value.value, watch: watch.value }),
+        load: async params => {
+            const result = await validator.validate(params.value as NonNullable<T> | null | undefined, {
+                ...ctx,
+                watch: params.watch,
+            });
             return normalizeErrors(result);
         },
-        { initialValue: null },
-    );
+        default: null,
+        debounce: validator.debounce,
+        behavior: 'eager',
+    });
 
     const show = ref(false);
 
@@ -193,7 +199,7 @@ function createValidatorStateAsync<T>(
         error,
         show,
         validate: async () => {
-            await error.refresh();
+            await error.reload();
             show.value = true;
             return !error.value;
         },
@@ -213,7 +219,7 @@ function createValidatorBehavior<T>(
             show,
         });
 
-        validator.behavior(ctx);
+        validator.behavior(ctx as FormValidatorBehaviorContext<NonNullable<T>>);
         return;
     }
 

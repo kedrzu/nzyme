@@ -1,4 +1,7 @@
+import type { MaybeRefOrGetter } from 'vue';
+
 import type { Language, TranslationResult } from '@nzyme/i18n';
+import type { DataSourceDebounceOptions } from '@nzyme/vue-utils';
 
 /**
  *
@@ -74,7 +77,7 @@ export interface FormField<T = unknown> extends FormBase<T> {
 /**
  * Form validation result
  */
-export type FormValidationResult = TranslationResult | false | null | undefined;
+export type FormValidationResult = TranslationResult | false | null;
 
 /**
  * Form validation context
@@ -109,7 +112,7 @@ export interface FormValidatorState {
 /**
  *
  */
-export interface FormValidatorBehaviorContext<T> {
+export type FormValidatorBehaviorContext<T> = {
     /**
      * Current field value
      */
@@ -124,51 +127,90 @@ export interface FormValidatorBehaviorContext<T> {
      * Whether to show the validation errors
      */
     show: boolean;
-}
+};
 
 /**
- * Form validator
+ * Form validator sync
  * @template T - Type of the value being validated
- * @template TAsync - Whether the validator is async
  */
-export interface FormValidatorBase<T = unknown, TAsync extends boolean = boolean> {
+export type FormValidatorSync<T> = {
     /**
      * Whether the validator is async
      */
-    readonly async: TAsync;
+    readonly async?: false;
 
     /**
      * Validate value
-     * @param value {T} Value to validate
-     * @param ctx {FormValidationContext} Validation context
+     * @param value Value to validate
+     * @param ctx Validation context
      * @returns Form validation result
      */
-    readonly validate: (
-        value: T | null | undefined,
-        ctx: FormValidationContext,
-    ) => TAsync extends false
-        ? FormValidationResult
-        : TAsync extends true
-          ? Promise<FormValidationResult>
-          : FormValidationResult | Promise<FormValidationResult>;
+    readonly validate: (value: T | null | undefined, ctx: FormValidationContext) => FormValidationResult;
 
     /**
      * Form validator behavior
      */
     readonly behavior?: (ctx: FormValidatorBehaviorContext<T>) => void;
+};
+
+/**
+ * Form validation context async
+ */
+export interface FormValidationContextAsync<W = unknown> extends FormValidationContext {
+    /**
+     * Additional watch value.
+     */
+    readonly watch: W;
 }
 
 /**
- *
+ * Form validator async
+ * @template T - Type of the value being validated
+ * @template W - Type of the additional watch value
  */
-export type FormValidatorAsync<T> = FormValidatorBase<T, true>;
+export type FormValidatorAsync<T, W = unknown> = {
+    /**
+     * Whether the validator is async
+     */
+    readonly async: true;
+
+    /**
+     * Debounce time in milliseconds or debounce options
+     */
+    readonly debounce?: number | DataSourceDebounceOptions;
+
+    /**
+     * Additional watch value.
+     * If provided, the validator will be re-evaluated when the value changes.
+     * @example
+     * const validator = defineValidator<string>({
+     *   async: true,
+     *   watch: () => ({ foo: someRef.value }),
+     *   validate: (value, ctx) => {
+     *     return value.length > 0 && ctx.watch.foo ? undefined : 'Value is required';
+     *   },
+     * });
+     */
+    readonly watch?: MaybeRefOrGetter<W>;
+
+    /**
+     * Validate value
+     * @param value Value to validate
+     * @param ctx Validation context
+     * @returns Form validation result
+     */
+    readonly validate: (
+        value: T | null | undefined,
+        ctx: FormValidationContextAsync<W>,
+    ) => Promise<FormValidationResult>;
+
+    /**
+     * Form validator behavior
+     */
+    readonly behavior?: (ctx: FormValidatorBehaviorContext<T>) => void;
+};
 
 /**
  *
  */
-export type FormValidatorSync<T> = FormValidatorBase<T, false>;
-
-/**
- *
- */
-export type FormValidator<T> = FormValidatorAsync<T> | FormValidatorSync<T>;
+export type FormValidator<T> = FormValidatorAsync<NonNullable<T>> | FormValidatorSync<NonNullable<T>>;

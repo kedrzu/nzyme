@@ -1,6 +1,9 @@
+import type { Unwrap } from '@pulumi/pulumi';
+
 import { assertStackEnabled } from './assertStackEnabled.js';
 import { createOrSelectStack } from './createOrSelectStack.js';
 import type { Stack, StackOutput } from './defineStack.js';
+import { getStackOutputs } from './getStackOutputs.js';
 import type { PulumiConfig } from './PulumiConfig.js';
 import { unwrapStackOutput } from './utils/unwrapStackOutput.js';
 
@@ -33,6 +36,12 @@ export interface DeployStackOptions {
     build?: boolean;
 
     /**
+     * Whether to skip resource deployment and only execute afterDeploy with previously deployed outputs.
+     * @default false
+     */
+    skipResources?: boolean;
+
+    /**
      * The Pulumi config to use for the stack.
      */
     config: PulumiConfig;
@@ -53,30 +62,36 @@ export async function deployStack<TOut extends StackOutput>(stack: Stack<TOut>, 
 
     await stack.beforeDeploy();
 
-    const output = await stackInstance.up({
-        color: 'always',
-        onOutput: stack.logger.info,
-        onError: stack.logger.error,
-        onEvent: event => {
-            if (!debug) {
-                return;
-            }
-
-            if (event.resourcePreEvent) {
-                stack.logger.debug('Resource pre event', { event: event.resourcePreEvent });
-
-                if (event.resourcePreEvent.metadata.op === 'update') {
-                    // eslint-disable-next-line no-debugger
-                    debugger;
+    let output: Unwrap<TOut>;
+    if (options.skipResources) {
+        // Skip resource deployment and fetch previously deployed outputs
+        output = await getStackOutputs(stack, { config: options.config });
+    } else {
+        const result = await stackInstance.up({
+            color: 'always',
+            onOutput: stack.logger.info,
+            onError: stack.logger.error,
+            onEvent: event => {
+                if (!debug) {
+                    return;
                 }
-            }
-        },
-        refresh: options.refresh,
-        logVerbosity: options.verbosity,
-        debug: options.debug,
-    });
 
-    const unwrapped = unwrapStackOutput<TOut>(output.outputs);
+                if (event.resourcePreEvent) {
+                    stack.logger.debug('Resource pre event', { event: event.resourcePreEvent });
 
-    await stack.afterDeploy(unwrapped);
+                    if (event.resourcePreEvent.metadata.op === 'update') {
+                        // eslint-disable-next-line no-debugger
+                        debugger;
+                    }
+                }
+            },
+            refresh: options.refresh,
+            logVerbosity: options.verbosity,
+            debug: options.debug,
+        });
+
+        output = unwrapStackOutput<TOut>(result.outputs);
+    }
+
+    await stack.afterDeploy(output);
 }

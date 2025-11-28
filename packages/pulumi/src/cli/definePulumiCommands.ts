@@ -227,16 +227,20 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
             description: 'Enable debug mode',
         });
 
+        skip = Option.Array('--skip,-s', [], {
+            description: 'Skip specific stacks from being deployed (can be used multiple times)',
+        });
+
         skipBuild = Option.Boolean('--skip-build,-sb', {
             description: 'Skip the build step',
         });
 
-        cancel = Option.Boolean('--cancel,-c', {
-            description: 'Cancel previous deployment before deploying each stack',
+        skipResources = Option.Boolean('--skip-resources,-sr', {
+            description: 'Skip resource deployment and only execute afterDeploy with previously deployed outputs',
         });
 
-        skip = Option.Array('--skip,-s', [], {
-            description: 'Skip specific stacks from being deployed (can be used multiple times)',
+        cancel = Option.Boolean('--cancel,-c', {
+            description: 'Cancel previous deployment before deploying each stack',
         });
 
         override async run() {
@@ -293,6 +297,7 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                             debug: this.debug,
                             config: pulumiConfig,
                             verbosity: this.verbosity,
+                            skipResources: this.skipResources,
                         });
                     })()
                         .then(() => {

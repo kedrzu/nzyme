@@ -93,11 +93,6 @@ export interface PulumiCommandsOptions {
     beforeEach?: (ctx: PulumiContext) => Promise<void>;
 
     /**
-     * The function to call after each command.
-     */
-    afterEach?: (ctx: PulumiContext) => Promise<void>;
-
-    /**
      * The function to call before deploying the application.
      */
     beforeDeploy?: (ctx: PulumiBeforeDeployContext) => Promise<void>;
@@ -385,13 +380,14 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                     })()
                         .then(async () => {
                             stacksDeploying.delete(stack);
-                            stacksDeployed.add(stack);
                             stacksLeft.delete(stack);
                             stackResolved.logger.info(`🎉 Deployed stack ${stackName}`);
                             await options.afterDeployStack?.({ command: this, stack });
+                            stacksDeployed.add(stack);
                         })
                         .catch(e => {
                             stacksDeploying.delete(stack);
+                            stacksDeployed.delete(stack);
                             stacksFailed.set(stack, e);
                             stackResolved.logger.error(`❌ Failed to deploy stack ${stackName}.`, {
                                 error: e,

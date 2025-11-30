@@ -41,6 +41,10 @@ export interface CompileFunctionOptions {
      * External libraries to exclude from bundle and copy to node_modules.
      */
     external?: string[];
+    /**
+     * Whether to generate bundle statistics.
+     */
+    stats?: boolean;
 }
 
 /**

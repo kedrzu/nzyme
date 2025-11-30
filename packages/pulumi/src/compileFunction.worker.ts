@@ -64,7 +64,7 @@ const rollupResult = await rollup({
             sourceMap: true,
             preventAssignment: true,
         }),
-        bundleStats({}),
+        options.stats && bundleStats({}),
         options.sourcemaps &&
             sourcemaps({
                 // Sentry has some broken sourcemaps

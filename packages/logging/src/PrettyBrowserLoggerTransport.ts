@@ -27,11 +27,15 @@ export const PrettyBrowserLoggerTransport = defineService({
                 message = `${prefix}${message}`;
             }
 
-            if (obj) {
-                console[level](message, obj);
-            } else {
-                console[level](message);
+            let err: Error | undefined;
+            if (obj?.error instanceof Error) {
+                const { error, ...rest } = obj;
+                obj = Object.keys(rest).length > 0 ? rest : undefined;
+                err = error;
             }
+
+            const args = [obj, err].filter(Boolean) as unknown[];
+            console[level](message, ...args);
         };
     },
 });

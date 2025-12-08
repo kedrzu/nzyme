@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import connect from 'connect';
 import { install } from 'source-map-support';
 
+import getPort from 'get-port';
 import type { DevServerMiddlewareOptions } from './devServerMiddleware.js';
 import { devServerMiddleware } from './devServerMiddleware.js';
 
@@ -12,7 +13,7 @@ export type DevServerOptions = DevServerMiddlewareOptions & {
     /**
      * The port to listen on.
      */
-    port: number;
+    port?: number;
 };
 
 /**
@@ -25,9 +26,14 @@ export function devServerStart(options: DevServerOptions) {
     const { port: _, ...rest } = options;
     const { middleware, restart } = devServerMiddleware(rest);
 
+    const port = Promise.resolve(options.port ?? getPort());
+
     server.use(middleware);
-    server.listen(options.port, () => {
-        console.info(`Server listening on ${chalk.green(`http://localhost:${options.port}`)}`);
+
+    port.then(port => {
+        server.listen(port, () => {
+            console.info(`Server listening on ${chalk.green(`http://localhost:${port}`)}`);
+        });
     });
 
     return {

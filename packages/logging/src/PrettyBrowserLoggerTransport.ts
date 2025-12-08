@@ -30,7 +30,7 @@ export const PrettyBrowserLoggerTransport = defineService({
             let err: Error | undefined;
             if (obj?.error instanceof Error) {
                 const { error, ...rest } = obj;
-                obj = rest;
+                obj = Object.keys(rest).length > 0 ? rest : undefined;
                 err = error;
             }
 

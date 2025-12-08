@@ -28,8 +28,9 @@ export function devServerStart(options: DevServerOptions) {
 
     const port = Promise.resolve(options.port ?? getPort());
 
+    server.use(middleware);
+
     port.then(port => {
-        server.use(middleware);
         server.listen(port, () => {
             console.info(`Server listening on ${chalk.green(`http://localhost:${port}`)}`);
         });

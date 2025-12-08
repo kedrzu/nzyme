@@ -46,7 +46,8 @@ export const PrettyCliLoggerTransport = defineService({
 
                 // Extract and merge ApplicationError data
                 if (error instanceof ApplicationError) {
-                    obj = { ...obj, ...error.data };
+                    const { logger: _, ...errorData } = error.data;
+                    obj = { ...obj, ...errorData };
                 }
             }
 

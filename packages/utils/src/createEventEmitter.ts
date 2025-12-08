@@ -10,24 +10,13 @@ export type EventCallback<TEvent = unknown> = EventFunction<TEvent, unknown>;
  * Type representing a function that emits an event.
  * @template TEvent - The type of the event data
  */
-export type EventEmitSync<TEvent = unknown> = EventFunction<TEvent, void>;
+export type EventEmit<TEvent = unknown> = EventFunction<TEvent, void>;
 
 /**
  * Type representing a function that emits an event asynchronously.
  * @template TEvent - The type of the event data
  */
 export type EventEmitAsync<TEvent = unknown> = EventFunction<TEvent, Promise<void>>;
-
-/**
- * Type representing a function that can emit events both synchronously and asynchronously.
- * @template TEvent - The type of the event data
- */
-export type EventEmit<TEvent = unknown> = EventEmitSync<TEvent> & {
-    /**
-     * Asynchronous version of the emit function that waits for all listeners to complete.
-     */
-    async: EventEmitAsync<TEvent>;
-};
 
 /**
  * Interface for an event emitter that allows subscribing and unsubscribing from events.
@@ -60,13 +49,11 @@ type EventFunction<TEvent, TResult> = ((event: TEvent) => TResult) &
  * @returns An object containing the event emitter and emit functions
  * @example
  * ```typescript
- * const { event, emit } = createEventEmitter<string>();
+ * const { event, emit, emitAsync } = createEventEmitter<string>();
  *
  * event.on((message) => console.log(message));
  * emit('Hello World'); // Logs: Hello World
- *
- * // Async emission
- * await emit.async('Async Hello');
+ * await emitAsync('Async Hello'); // Logs: Async Hello
  * ```
  */
 export function createEventEmitter<TEvent = void>() {
@@ -88,7 +75,7 @@ export function createEventEmitter<TEvent = void>() {
         }
     }) as EventEmit<TEvent>;
 
-    emit.async = (async (event: TEvent) => {
+    const emitAsync = (async (event: TEvent) => {
         for (const callback of listeners) {
             await callback(event);
         }
@@ -97,5 +84,6 @@ export function createEventEmitter<TEvent = void>() {
     return {
         event,
         emit,
+        emitAsync,
     };
 }

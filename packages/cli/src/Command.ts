@@ -86,12 +86,12 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
     override async execute() {
         await this.setup();
         try {
-            await this.beforeRunEvent.emit.async();
+            await this.beforeRunEvent.emitAsync();
             const result = await this.run();
-            await this.afterRunEvent.emit.async();
+            await this.afterRunEvent.emitAsync();
             return result;
         } finally {
-            await this.cleanupEvent.emit.async();
+            await this.cleanupEvent.emitAsync();
         }
     }
 

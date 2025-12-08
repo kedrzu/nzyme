@@ -37,7 +37,7 @@ export function devServerRuntime() {
     }
 
     async function onStop() {
-        await eventExit.emit.async();
+        await eventExit.emitAsync();
         parentPort?.close();
         process.exit();
     }

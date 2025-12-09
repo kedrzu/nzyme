@@ -27,14 +27,14 @@
         "@octokit/rest": "^22.0.1",
         "chalk": "^5.6.2",
         "enquirer": "^2.4.1",
-        "open": "^10.1.0",
+        "open": "^11.0.0",
         "simple-git": "^3.30.0"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
         "typescript": "^5.9.3",
-        "vitest": "^4.0.13"
+        "vitest": "^4.0.15"
     },
     "publishConfig": {
         "access": "public"

@@ -7,7 +7,7 @@
  * @returns The best matching language code
  * @__NO_SIDE_EFFECTS__
  */
-export function getBrowserLanguage<const L extends string[]>(availableLanguages: L): L[number] | undefined {
+export function getBrowserLanguage<const L extends readonly string[]>(availableLanguages: L): L[number] | undefined {
     if (typeof navigator === 'undefined') {
         return;
     }

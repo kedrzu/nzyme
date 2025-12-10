@@ -28,12 +28,12 @@
     "dependencies": {
         "@nzyme/types": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
-        "type-fest": "^5.2.0"
+        "type-fest": "^5.3.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
-        "vitest": "^4.0.13"
+        "vitest": "^4.0.15"
     },
     "publishConfig": {
         "access": "public"

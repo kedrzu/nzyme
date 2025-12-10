@@ -119,7 +119,7 @@ export function defineEnvVariable(
     });
 }
 
-function resolve(this: EnvVariable, container: Container) {
+function resolve(this: EnvVariable, container: Container, caller?: Injectable) {
     const name = this.name;
     const env = container.resolve(EnvVariables);
     const value = env[name];
@@ -130,7 +130,7 @@ function resolve(this: EnvVariable, container: Container) {
         }
 
         if (this.required) {
-            throw new Error(`Environment variable ${name} is not set`);
+            throw new Error(`Environment variable ${name} is not set. Caller: ${caller?.name}`);
         }
     }
 

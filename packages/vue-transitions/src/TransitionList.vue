@@ -17,7 +17,7 @@ interface TransitionListProps {
   horizontal?: boolean;
 }
 
-const props = withDefaults(defineProps<TransitionListProps>(), {
+withDefaults(defineProps<TransitionListProps>(), {
   tag: 'div',
   horizontal: false,
 });
@@ -40,7 +40,7 @@ const props = withDefaults(defineProps<TransitionListProps>(), {
 .move,
 .enterActive,
 .leaveActive {
-  transition: all 0.4s ease;
+  transition: all 0.4s ease !important;
 }
 
 .enterFrom,

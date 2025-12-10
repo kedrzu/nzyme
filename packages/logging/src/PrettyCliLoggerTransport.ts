@@ -4,6 +4,7 @@ import { highlight } from 'cli-highlight';
 import { defineService } from '@nzyme/ioc';
 import { identity, parseStackTrace, toJsonString } from '@nzyme/utils';
 
+import { ApplicationError } from './ApplicationError.js';
 import type { LoggerLevel } from './LoggerLevel.js';
 import { LoggerTransport } from './LoggerTransport.js';
 import { getPrettyPrefix } from './utils/getPrettyPrefix.js';
@@ -42,6 +43,12 @@ export const PrettyCliLoggerTransport = defineService({
 
                 const formattedError = formatError(error, prefix);
                 console[level](formattedError);
+
+                // Extract and merge ApplicationError data
+                if (error instanceof ApplicationError) {
+                    const { logger: _, ...errorData } = error.data;
+                    obj = { ...obj, ...errorData };
+                }
             }
 
             // Format and log other properties

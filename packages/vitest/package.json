@@ -27,9 +27,9 @@
         "lint": "eslint . --fix --cache"
     },
     "dependencies": {
-        "@vitest/expect": "4.0.13",
+        "@vitest/expect": "4.0.15",
         "date-fns": "^4.1.0",
-        "vitest": "^4.0.13"
+        "vitest": "^4.0.15"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",

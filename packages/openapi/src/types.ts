@@ -2,8 +2,6 @@
  * Core types for OpenAPI fetch client
  */
 
-import type { BodyInit } from 'undici-types';
-
 import type { HttpMethod } from '@nzyme/fetch-utils';
 import type { IfNever } from '@nzyme/types';
 

@@ -30,8 +30,7 @@
         "@nzyme/fetch-utils": "^0.14.0",
         "@nzyme/types": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
-        "ufo": "^1.6.1",
-        "undici-types": "7.16.0"
+        "ufo": "^1.6.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",

@@ -6,6 +6,7 @@ export * from './createOrSelectStack.js';
 export * from './defineStack.js';
 export * from './deployStack.js';
 export * from './destroyStack.js';
+export * from './GeneratedValue.js';
 export * from './getStackOutputs.js';
 export * from './installStack.js';
 export * from './login.js';

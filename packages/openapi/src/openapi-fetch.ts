@@ -1,5 +1,4 @@
 import { joinURL, withQuery } from 'ufo';
-import type { BodyInit } from 'undici-types';
 
 import type { HttpMethod } from '@nzyme/fetch-utils';
 import { isPlainObject } from '@nzyme/utils';

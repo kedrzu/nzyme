@@ -41,6 +41,7 @@ describe('openApiFetch', () => {
 
         expect(result.data).toEqual({ id: 123, name: 'Test Pet', status: 'available' });
         expect(result.status).toBe(200);
+        expect(result.contentType).toBe('application/json');
     });
 
     it('should make a GET request with query parameters', async () => {
@@ -73,6 +74,7 @@ describe('openApiFetch', () => {
 
         expect(result.data).toEqual([{ id: 1, name: 'Pet 1', status: 'available' }]);
         expect(result.status).toBe(200);
+        expect(result.contentType).toBe('application/json');
     });
 
     it('should make a POST request with JSON body', async () => {
@@ -119,6 +121,7 @@ describe('openApiFetch', () => {
 
         expect(result.data).toEqual({ id: 456, name: 'New Pet', status: 'available' });
         expect(result.status).toBe(200);
+        expect(result.contentType).toBe('application/json');
     });
 
     it('should handle error responses', async () => {
@@ -143,6 +146,7 @@ describe('openApiFetch', () => {
 
         expect(result.data).toEqual({ message: 'Pet not found' });
         expect(result.status).toBe(404);
+        expect(result.contentType).toBe('application/json');
     });
 
     it('should handle custom headers', async () => {
@@ -196,6 +200,7 @@ describe('openApiFetch', () => {
 
         expect(result.data).toBe('Success');
         expect(result.status).toBe(200);
+        expect(result.contentType).toBe('text/plain');
     });
 
     it('should handle FormData body', async () => {
@@ -225,6 +230,7 @@ describe('openApiFetch', () => {
         const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
         expect(options.body).toBe(body);
         expect(result.data).toEqual({ message: 'File uploaded' });
+        expect(result.contentType).toBe('application/json');
     });
 
     it('should handle different content types', async () => {
@@ -257,6 +263,66 @@ describe('openApiFetch', () => {
         const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
         const headers = options.headers as Headers;
         expect(headers.get('content-type')).toBe('application/xml');
+    });
+
+    it('should handle text/event-stream responses without consuming the stream', async () => {
+        const mockBody = {
+            getReader: vi.fn(),
+        };
+        const mockResponse = {
+            ok: true,
+            status: 200,
+            headers: new Headers({ 'content-type': 'text/event-stream' }),
+            body: mockBody,
+            json: vi.fn(),
+            text: vi.fn(),
+            blob: vi.fn(),
+        };
+        mockFetch.mockResolvedValue(mockResponse);
+
+        const client = createOpenApiFetch<paths>({
+            fetch: mockFetch,
+        });
+
+        const result = await client({
+            method: 'GET',
+            path: '/pet/{petId}',
+            baseUrl: 'https://api.example.com',
+            pathParams: { petId: 123 },
+        });
+
+        expect(result.status).toBe(200);
+        expect(result.contentType).toBe('text/event-stream');
+        expect(result.data).toBeUndefined();
+        expect(result.response.body).toBe(mockBody);
+        // Verify we didn't consume the stream
+        expect(mockResponse.json).not.toHaveBeenCalled();
+        expect(mockResponse.text).not.toHaveBeenCalled();
+        expect(mockResponse.blob).not.toHaveBeenCalled();
+    });
+
+    it('should strip charset from content-type header', async () => {
+        const mockResponse = {
+            ok: true,
+            status: 200,
+            headers: new Headers({ 'content-type': 'application/json; charset=utf-8' }),
+            json: () => Promise.resolve({ id: 123, name: 'Test Pet' }),
+        };
+        mockFetch.mockResolvedValue(mockResponse);
+
+        const client = createOpenApiFetch<paths>({
+            fetch: mockFetch,
+        });
+
+        const result = await client({
+            method: 'GET',
+            path: '/pet/{petId}',
+            baseUrl: 'https://api.example.com',
+            pathParams: { petId: 123 },
+        });
+
+        expect(result.contentType).toBe('application/json');
+        expect(result.data).toEqual({ id: 123, name: 'Test Pet' });
     });
 });
 

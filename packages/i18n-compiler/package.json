@@ -29,7 +29,7 @@
         "@nzyme/i18n-core": "^0.14.0",
         "@nzyme/project-utils": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
-        "vitest": "^4.0.15",
+        "vitest": "^4.0.16",
         "yaml": "^2.8.2"
     },
     "devDependencies": {

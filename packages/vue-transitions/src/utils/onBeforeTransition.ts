@@ -12,8 +12,6 @@ export function onBeforeTransition(
         return;
     }
 
-    console.log('onBeforeTransition', { el, duration: props.duration, delay: props.delay });
-
     if (props.duration) {
         el.style.transitionDuration = `${props.duration / 1000}s !important`;
     }

@@ -19,14 +19,8 @@ export const remarkSanitize: Plugin<[], Root> = () => {
             newlineToBreak(node);
         }
 
-        // Delete root position
-        delete tree.position;
-
         // Visit all nodes including the root's children
         visit(tree, node => {
-            // Delete position information
-            delete node.position;
-
             // Sanitize text content
             if (node.type === 'text') {
                 node.value = sanitizeText(node.value);

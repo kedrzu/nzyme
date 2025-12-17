@@ -2,6 +2,8 @@ import debounce from 'lodash.debounce';
 import { computed, defineComponent, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { JSX } from 'vue/jsx-runtime';
 
+import { useVModel } from '@vueuse/core';
+
 import { classProp, defineSlots, useElementClass, useIntersectionObserver, useSwipeHorizontal } from '@nzyme/vue-utils';
 
 import css from './Carousel.module.scss';
@@ -25,16 +27,22 @@ export type CarouselSlot = {
 export const Carousel = defineComponent({
     name: 'Carousel',
     props: {
+        page: { type: Number, default: 0 },
         class: classProp,
         alignLeft: Boolean,
         itemsClass: classProp,
         autoPlay: Number,
+        touch: { type: Boolean, default: true },
+        mouse: { type: Boolean, default: true },
     },
     slots: defineSlots<{
-        default: CarouselSlot & { component: () => JSX.Element };
-        items: CarouselSlot;
+        default: CarouselSlot;
+        wrappper: CarouselSlot & { CarouselInner: () => JSX.Element };
     }>(),
-    setup(props, { slots }) {
+    emits: {
+        'update:page': (page: number) => page >= 0,
+    },
+    setup(props, { slots, emit }) {
         const carouselRef = ref<HTMLDivElement>();
         const carouselItemsRef = ref<HTMLUListElement>();
 
@@ -43,6 +51,8 @@ export const Carousel = defineComponent({
             enabled: () => pages.value.length > 1,
             onPan: onPan,
             onSwipe: onSwipe,
+            touch: props.touch,
+            mouse: props.mouse,
         });
 
         const width = ref(1);
@@ -51,7 +61,7 @@ export const Carousel = defineComponent({
         // the length of this array is number of pages
         // and values are indexes of first elements on each page
         const pages = ref<CarouselPage[]>([]);
-        const pageCurrent = ref(0);
+        const pageCurrent = useVModel(props, 'page', emit);
 
         const deltaX = computed(() => {
             const pageOffset = pages.value[pageCurrent.value]?.offset ?? 0;
@@ -84,7 +94,15 @@ export const Carousel = defineComponent({
             // update the carousel also when something inside changes
             if (typeof MutationObserver !== 'undefined') {
                 mutationObserver = new MutationObserver(updateSizeDebounced);
-                mutationObserver.observe(carouselItemsRef.value!, {
+
+                const items = carouselItemsRef.value;
+                if (!items) {
+                    throw new Error(
+                        'Carousel inner element not found. If using wrapper slot, make sure to render CarouselInner component.',
+                    );
+                }
+
+                mutationObserver.observe(items, {
                     attributes: true,
                     childList: true,
                     subtree: true,
@@ -223,19 +241,19 @@ export const Carousel = defineComponent({
         watch(() => props.autoPlay, startAutoPlay);
 
         return () => {
-            const defaultSlot = slots.default;
-            if (!defaultSlot) {
+            const wrapperSlot = slots.wrappper;
+            if (!wrapperSlot) {
                 return <Carousel />;
             }
 
-            return defaultSlot({
+            return wrapperSlot({
                 pages: pages.value,
                 currentPage: pageCurrent.value,
                 goToPage: goToPage,
                 moveBy: moveBy,
                 hasNext: hasNext.value,
                 hasPrevious: hasPrevious.value,
-                component: Carousel,
+                CarouselInner: Items,
             });
         };
 
@@ -261,7 +279,7 @@ export const Carousel = defineComponent({
         function Items() {
             return (
                 <>
-                    {slots.items?.({
+                    {slots.default?.({
                         pages: pages.value,
                         currentPage: pageCurrent.value,
                         goToPage: goToPage,

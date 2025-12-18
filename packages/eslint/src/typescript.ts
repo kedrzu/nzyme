@@ -71,6 +71,8 @@ export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
             'workspaces/require-dependency': 'error',
             'monorepo/no-relative-import': 'error',
             'import/consistent-type-specifier-style': ['warn', 'prefer-top-level'],
+            'import/newline-after-import': 'warn',
+            'import/no-duplicates': ['warn', { considerQueryString: true }],
             'perfectionist/sort-imports': [
                 'warn',
                 {

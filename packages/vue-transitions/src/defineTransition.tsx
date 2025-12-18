@@ -6,6 +6,8 @@ import type {
     TransitionProps as TransitionPropsVue,
 } from 'vue';
 
+import { onBeforeTransition } from './utils/onBeforeTransition.js';
+import { onAfterTransition } from './utils/onAfterTransition.js';
 import type { SomeObject } from '@nzyme/types';
 import { defineProp } from '@nzyme/vue-utils';
 import type { ClassProp } from '@nzyme/vue-utils';
@@ -143,7 +145,7 @@ export function defineTransition<TProps extends ComponentObjectPropsOptions = So
             };
 
             function onBeforeEnter(el: Element) {
-                onBeforeTransition(el);
+                onBeforeTransition(el, props);
                 callHook(props.onBeforeEnter, el);
             }
 
@@ -153,34 +155,13 @@ export function defineTransition<TProps extends ComponentObjectPropsOptions = So
             }
 
             function onBeforeLeave(el: Element) {
-                onBeforeTransition(el);
+                onBeforeTransition(el, props);
                 callHook(props.onBeforeLeave, el);
             }
 
             function onAfterLeave(el: Element) {
                 onAfterTransition(el);
                 callHook(props.onAfterLeave, el);
-            }
-
-            function onBeforeTransition(el: Element) {
-                if (!(el instanceof HTMLElement)) {
-                    return;
-                }
-
-                if (props.duration) {
-                    el.style.transitionDuration = `${props.duration / 1000}s`;
-                }
-
-                if (props.delay) {
-                    el.style.transitionDelay = `${props.delay / 1000}s`;
-                }
-            }
-
-            function onAfterTransition(el: Element) {
-                if (el instanceof HTMLElement) {
-                    el.style.transitionDuration = '';
-                    el.style.transitionDelay = '';
-                }
             }
         },
     });

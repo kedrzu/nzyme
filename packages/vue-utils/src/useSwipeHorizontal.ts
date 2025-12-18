@@ -264,7 +264,7 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
             !event.target ||
             !element.value ||
             // event target is not within element
-            !isAncestorOf(element.value, event.target as Element)
+            !(isAncestorOf(element.value, event.target as Element) || element.value === event.target)
         );
     }
 

@@ -22,7 +22,7 @@ export type OperationOf<Paths, Path extends keyof Paths, Method extends HttpMeth
 export type ParametersOf<Operation> = Operation extends { parameters: infer P } ? P : never;
 
 /**
- *
+ * Extract content type from an operation's request body
  */
 export type ContentTypeOf<Operation> =
     Exclude<RequestBodyOf<Operation>, undefined> extends { content: infer C }
@@ -41,7 +41,7 @@ export type RequestBodyOf<Operation> = Operation extends { requestBody: infer R 
       : never;
 
 /**
- *
+ * Extract request body content for a specific content type
  */
 export type RequestBodyContentOf<Operation, ContentType> =
     RequestBodyOf<Operation> extends { content: infer C }
@@ -107,10 +107,18 @@ export type FirstContentType<Content> =
 export type BodyType<Content, ContentType extends keyof Content> = Content[ContentType];
 
 /**
- * Create discriminated union of all possible responses
+ * Create discriminated union of all possible responses by status and content type
  */
 export type OpenApiResponseUnion<Responses> = {
-    [K in keyof Responses]: ResponseForStatus<Responses, K>;
+    [Status in keyof Responses]: ResponseContentTypes<Responses[Status]> extends never
+        ? ResponseForStatusNoContent<Responses, Status>
+        : {
+              [ContentType in ResponseContentTypes<Responses[Status]>]: ResponseForStatusAndContentType<
+                  Responses,
+                  Status,
+                  ContentType
+              >;
+          }[ResponseContentTypes<Responses[Status]>];
 }[keyof Responses];
 
 /**
@@ -173,40 +181,60 @@ export type OpenApiFetchResponse<
 > = OpenApiResponseUnion<Responses>;
 
 /**
- * Extract response data for a specific status code
+ * Extract all content types from a response
  */
-type ResponseDataForStatus<Responses, Status extends keyof Responses> = Responses[Status] extends { content: infer C }
+type ResponseContentTypes<Response> = Response extends { content: infer C }
     ? C extends Record<string, unknown>
-        ? BodyType<C, FirstContentType<C>>
+        ? keyof C
+        : never
+    : never;
+
+/**
+ * Extract response data for a specific status code and content type
+ */
+type ResponseDataForStatusAndContentType<
+    Responses,
+    Status extends keyof Responses,
+    ContentType,
+> = Responses[Status] extends { content: infer C }
+    ? C extends Record<string, unknown>
+        ? ContentType extends keyof C
+            ? ContentType extends 'text/event-stream'
+                ? undefined
+                : C[ContentType]
+            : void
         : void
     : void;
 
-// &
-// (IsRequestBodyRequired<RequestBody> extends true
-//     ? {
-//           /** Request body (required) */
-//           body: BodyForContentType<RequestBody, ContentType>;
-//       }
-//     : ContentTypes<RequestBody> extends never
-//       ? Record<string, never>
-//       : {
-//             /** Request body (optional) */
-//             body?: BodyForContentType<RequestBody, ContentType>;
-//         });
+/**
+ * Normalize status code to number when possible
+ */
+type NormalizeStatus<Status> = Status extends string
+    ? Status extends `${infer N}`
+        ? N extends `${number}`
+            ? number
+            : Status
+        : Status
+    : Status;
 
 /**
- * Create a response object for a specific status
+ * Create a response object for a specific status and content type
  */
-type ResponseForStatus<Responses, Status extends keyof Responses> = {
-    data: ResponseDataForStatus<Responses, Status>;
+type ResponseForStatusAndContentType<Responses, Status extends keyof Responses, ContentType> = {
+    data: ResponseDataForStatusAndContentType<Responses, Status, ContentType>;
     response: Response;
-    status: Status extends string
-        ? Status extends `${infer N}`
-            ? N extends `${number}`
-                ? number
-                : Status
-            : Status
-        : Status;
+    status: NormalizeStatus<Status>;
+    contentType: ContentType;
+};
+
+/**
+ * Create a response object for a specific status with no content
+ */
+type ResponseForStatusNoContent<Responses, Status extends keyof Responses> = {
+    data: void;
+    response: Response;
+    status: NormalizeStatus<Status>;
+    contentType: undefined;
 };
 
 interface FetchOptionsBase<Paths, Path extends keyof Paths, Method extends HttpMethod> {
@@ -226,12 +254,8 @@ interface FetchOptionsBase<Paths, Path extends keyof Paths, Method extends HttpM
 
 type FetchOptionsPathParams<Paths, Path extends keyof Paths, Method extends HttpMethod> =
     ParametersOf<OperationOf<Paths, Path, Method>> extends { path: infer P }
-        ? {
-              pathParams: P;
-          }
-        : {
-              pathParams?: undefined;
-          };
+        ? { pathParams: P }
+        : { pathParams?: undefined };
 
 type FetchOptionsContentType<ContentType extends string> = IfNever<
     ContentType,

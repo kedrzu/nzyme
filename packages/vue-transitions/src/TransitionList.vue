@@ -38,7 +38,7 @@ const hiddenClass = computed(() => {
 });
 
 function durationStyle(duration: number | undefined) {
-  return duration ? `${duration / 1000}s` : undefined;
+  return duration == null ? `${duration / 1000}s` : undefined;
 }
 </script>
 

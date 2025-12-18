@@ -253,7 +253,7 @@ export const Carousel = defineComponent({
                 moveBy: moveBy,
                 hasNext: hasNext.value,
                 hasPrevious: hasPrevious.value,
-                CarouselInner: Items,
+                CarouselInner: Carousel,
             });
         };
 

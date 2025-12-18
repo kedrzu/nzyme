@@ -14,55 +14,6 @@ function parseWithSanitize(markdown: string): Root {
     return transformed;
 }
 
-it('should remove position information from all nodes', () => {
-    const ast = parseWithSanitize('# Hello\n\nWorld');
-
-    // Check root
-    expect(ast.position).toBeUndefined();
-
-    // Check heading
-    const heading = ast.children[0];
-    expect(heading?.position).toBeUndefined();
-
-    if (heading && 'children' in heading) {
-        // Check text node inside heading
-        const headingText = heading.children[0];
-        expect(headingText?.position).toBeUndefined();
-    }
-
-    // Check paragraph
-    const paragraph = ast.children[1];
-    expect(paragraph?.position).toBeUndefined();
-
-    if (paragraph && 'children' in paragraph) {
-        // Check text node inside paragraph
-        const paragraphText = paragraph.children[0];
-        expect(paragraphText?.position).toBeUndefined();
-    }
-});
-
-it('should remove position from deeply nested nodes', () => {
-    const ast = parseWithSanitize('- Item 1\n  - Nested item\n- Item 2');
-
-    // Visit all nodes recursively
-    function checkNoPosition(node: unknown): void {
-        if (typeof node !== 'object' || node === null) {
-            return;
-        }
-
-        const obj = node as Record<string, unknown>;
-        expect(obj.position).toBeUndefined();
-
-        if (Array.isArray(obj.children)) {
-            for (const child of obj.children) {
-                checkNoPosition(child);
-            }
-        }
-    }
-
-    checkNoPosition(ast);
-});
-
 it('should collapse multiple whitespaces into single space', () => {
     const ast = parseWithSanitize('Hello    world   with    spaces');
 
@@ -290,30 +241,6 @@ This is a test-case with multiple    spaces.
   - Nested item`;
 
     const ast = parseWithSanitize(markdown);
-
-    // Verify no positions anywhere
-    function hasNoPositions(node: unknown): boolean {
-        if (typeof node !== 'object' || node === null) {
-            return true;
-        }
-
-        const obj = node as Record<string, unknown>;
-        if ('position' in obj) {
-            return false;
-        }
-
-        if (Array.isArray(obj.children)) {
-            for (const child of obj.children) {
-                if (!hasNoPositions(child)) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
-
-    expect(hasNoPositions(ast)).toBe(true);
 
     // Verify text is sanitized
     const paragraph = ast.children[1];

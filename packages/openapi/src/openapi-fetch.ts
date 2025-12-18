@@ -172,12 +172,17 @@ export function createOpenApiFetch<Paths>(config: OpenApiFetchConfig = {}) {
         });
 
         // Parse response based on content type
-        const responseContentType = response.headers.get('content-type') || '';
+        const responseContentTypeHeader = response.headers.get('content-type') || '';
+        // Strip parameters (e.g., "application/json; charset=utf-8" → "application/json")
+        const responseContentType = responseContentTypeHeader.split(';')[0]?.trim() || undefined;
         let data: unknown;
 
-        if (responseContentType.includes('application/json')) {
+        if (responseContentType === 'text/event-stream') {
+            // Don't consume the stream - let the caller use response.body
+            data = undefined;
+        } else if (responseContentType?.includes('application/json') || responseContentType?.includes('+json')) {
             data = await response.json();
-        } else if (responseContentType.includes('text/')) {
+        } else if (responseContentType?.includes('text/')) {
             data = await response.text();
         } else if (response.status !== 204) {
             // For non-JSON, non-text responses that are not No Content
@@ -189,6 +194,7 @@ export function createOpenApiFetch<Paths>(config: OpenApiFetchConfig = {}) {
 
         return {
             status: response.status as OpenApiFetchResponse<Paths, Path, Method>['status'],
+            contentType: responseContentType as OpenApiFetchResponse<Paths, Path, Method>['contentType'],
             data: data as OpenApiFetchResponse<Paths, Path, Method>['data'],
             response,
         };

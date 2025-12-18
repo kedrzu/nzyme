@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { TransitionGroup } from 'vue';
+import { computed, useCssModule } from 'vue';
 
 /**
  * Props for TransitionList component
@@ -10,27 +10,50 @@ interface TransitionListProps {
    * @default 'div'
    */
   tag?: string;
+
   /**
-   * Whether the list is horizontal (items animate in Y axis when removed)
-   * @default false
+   * Transition duration in milliseconds.
+   * @default 400
    */
-  horizontal?: boolean;
+  duration?: number;
+
+  /**
+   * Transition delay in milliseconds.
+   * @default 0
+   */
+  delay?: number;
+
+  /**
+   * Animation to use when the item is removed
+   * @default 'fade'
+   */
+  animation?: 'fade' | 'slide-down' | 'slide-left' | 'slide-right' | 'slide-up';
 }
 
-withDefaults(defineProps<TransitionListProps>(), {
-  tag: 'div',
-  horizontal: false,
+const props = defineProps<TransitionListProps>();
+const css = useCssModule('css');
+
+const hiddenClass = computed(() => {
+  return props.animation ? css[`hidden-${props.animation}`] : css['hidden-fade'];
 });
+
+function durationStyle(duration: number | undefined) {
+  return duration == null ? `${duration / 1000}s` : undefined;
+}
 </script>
 
 <template>
   <TransitionGroup
-    :tag="tag"
+    :tag="tag || 'div'"
     :enter-active-class="css.enterActive"
-    :enter-from-class="horizontal ? css.enterFromHorizontal : css.enterFrom"
+    :enter-from-class="hiddenClass"
     :leave-active-class="css.leaveActive"
-    :leave-to-class="horizontal ? css.leaveToHorizontal : css.leaveTo"
+    :leave-to-class="hiddenClass"
     :move-class="css.move"
+    :style="{
+      '--transition-list-duration': durationStyle(duration),
+      '--transition-list-delay': durationStyle(delay),
+    }"
   >
     <slot />
   </TransitionGroup>
@@ -40,19 +63,33 @@ withDefaults(defineProps<TransitionListProps>(), {
 .move,
 .enterActive,
 .leaveActive {
-  transition: all 0.4s ease !important;
+  transition: all var(--transition-list-duration, 0.4s) var(--transition-list-delay, 0s) ease !important;
 }
 
-.enterFrom,
-.leaveTo {
-  opacity: 0;
-  transform: translateX(30px);
-}
+.hidden {
+  &-fade {
+    opacity: 0;
+  }
 
-.enterFromHorizontal,
-.leaveToHorizontal {
-  opacity: 0;
-  transform: translateY(30px);
+  &-slide-left {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+
+  &-slide-right {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+
+  &-slide-up {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+
+  &-slide-down {
+    opacity: 0;
+    transform: translateY(30px);
+  }
 }
 
 .leaveActive {

@@ -39,9 +39,10 @@ const result = await openApiFetch<{ paths: paths }, '/pet/{petId}', 'GET'>({
     pathParams: { petId: 123 }, // Required when path has parameters
 });
 
-// Response is a discriminated union by status code
+// Response is a discriminated union by status code and content type
 if (result.status === 200) {
     console.log('Pet data:', result.data); // Typed as Pet
+    console.log('Content type:', result.contentType); // e.g., 'application/json'
 } else if (result.status === 404) {
     console.error('Pet not found:', result.data); // Typed as error response
 } else {
@@ -190,33 +191,45 @@ Creates a configured client with default settings.
 
 #### Response format
 
-The response is a discriminated union by status code, providing perfect type safety:
+The response is a discriminated union by **status code and content type**, providing perfect type safety:
 
 ```typescript
-// Each possible status code has its own response type
+// Each possible (status, contentType) combination has its own response type
 {
-  status: 200;           // Literal status code
-  data: Pet;             // Typed response data for this status
-  response: Response;    // Original Response object
+  status: 200;                    // Literal status code
+  contentType: 'application/json'; // Literal content type
+  data: Pet;                      // Typed response data for this status + content type
+  response: Response;             // Original Response object
+} | {
+  status: 200;
+  contentType: 'text/event-stream';
+  data: undefined;                // Stream responses don't consume the body - use response.body
+  response: Response;
 } | {
   status: 404;
-  data: ErrorResponse;   // Different type for error responses
+  contentType: 'application/json';
+  data: ErrorResponse;            // Different type for error responses
   response: Response;
 } | {
   status: 422;
+  contentType: 'application/json';
   data: ValidationError;
   response: Response;
 }
 ```
 
-This allows for perfect type narrowing:
+This allows for perfect type narrowing based on status and content type:
 
 ```typescript
 const result = await apiClient({ method: 'GET', path: '/pet/{id}', pathParams: { id: 1 } });
 
-if (result.status === 200) {
+if (result.status === 200 && result.contentType === 'application/json') {
     // result.data is typed as Pet
     console.log(result.data.name);
+} else if (result.status === 200 && result.contentType === 'text/event-stream') {
+    // result.data is undefined - use the stream directly
+    const reader = result.response.body?.getReader();
+    // ... process stream
 } else if (result.status === 404) {
     // result.data is typed as NotFoundError
     console.log(result.data.message);

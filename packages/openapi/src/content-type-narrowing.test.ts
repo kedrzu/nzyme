@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createOpenApiFetch } from '../src/openapi-fetch.js';
+import { createOpenApiFetch } from './openapi-fetch.js';
 
 /**
  * Example schema with multiple content types for the same status
@@ -129,5 +129,3 @@ describe('Content-Type Narrowing', () => {
         }
     });
 });
-
-

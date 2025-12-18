@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createOpenApiFetch } from '../src/openapi-fetch.js';
-import type { paths } from './schema.js';
+import { createOpenApiFetch } from './openapi-fetch.js';
+import type { paths } from '../tests/schema.js';
 
 // Mock fetch function
 const mockFetch = vi.fn();

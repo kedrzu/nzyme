@@ -37,7 +37,7 @@ export const Carousel = defineComponent({
     },
     slots: defineSlots<{
         default: CarouselSlot;
-        wrappper: CarouselSlot & { CarouselInner: () => JSX.Element };
+        wrapper: CarouselSlot & { CarouselInner: () => JSX.Element };
     }>(),
     emits: {
         'update:page': (page: number) => page >= 0,
@@ -241,7 +241,7 @@ export const Carousel = defineComponent({
         watch(() => props.autoPlay, startAutoPlay);
 
         return () => {
-            const wrapperSlot = slots.wrappper;
+            const wrapperSlot = slots.wrapper;
             if (!wrapperSlot) {
                 return <Carousel />;
             }

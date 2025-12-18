@@ -8,7 +8,6 @@ import { fixOrphans } from './fixOrphans.js';
 /**
  * A unified plugin that postprocesses the markdown AST by:
  * - Converting newlines to break nodes
- * - Removing position information
  * - Sanitizing text content
  * - Unwrapping redundant paragraphs
  */

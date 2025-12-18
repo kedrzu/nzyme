@@ -1,8 +1,5 @@
 <script lang="ts" setup>
-import { computed } from 'vue';
-import { useCssModule } from 'vue';
-import { onAfterTransition } from './utils/onAfterTransition.js';
-import { onBeforeTransition } from './utils/onBeforeTransition.js';
+import { computed, useCssModule } from 'vue';
 
 /**
  * Props for TransitionList component
@@ -30,7 +27,7 @@ interface TransitionListProps {
    * Animation to use when the item is removed
    * @default 'fade'
    */
-  animation?: 'fade' | 'slide-down' | 'slide-up' | 'slide-left' | 'slide-right';
+  animation?: 'fade' | 'slide-down' | 'slide-left' | 'slide-right' | 'slide-up';
 }
 
 const props = defineProps<TransitionListProps>();

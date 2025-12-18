@@ -13,10 +13,10 @@ export function onBeforeTransition(
     }
 
     if (props.duration) {
-        el.style.transitionDuration = `${props.duration / 1000}s !important`;
+        el.style.setProperty('transition-duration', `${props.duration / 1000}s`, 'important');
     }
 
     if (props.delay) {
-        el.style.transitionDelay = `${props.delay / 1000}s !important`;
+        el.style.setProperty('transition-delay', `${props.delay / 1000}s`, 'important');
     }
 }

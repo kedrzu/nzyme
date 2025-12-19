@@ -74,7 +74,7 @@ export type Item<T> = T extends Iterable<infer U> ? U : T[keyof T];
 /**
  *
  */
-export type Writable<T> = { -readonly [P in keyof T]: T[P] };
+export type Writable<T> = T extends readonly (infer U)[] ? U[] : { -readonly [P in keyof T]: T[P] };
 
 /**
  *

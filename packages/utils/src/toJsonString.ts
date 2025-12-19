@@ -1,3 +1,25 @@
+import type { DateTimeISO } from '@nzyme/types';
+
+/**
+ *
+ */
+export type Json<T> = T extends Date
+    ? DateTimeISO
+    : T extends bigint
+      ? bigint | `${bigint}`
+      : T extends Set<infer U>
+        ? Array<Json<U>>
+        : T extends Map<infer K, infer V>
+          ? Array<[Json<K>, Json<V>]>
+          : T extends Array<infer U>
+            ? Array<Json<U>>
+            : T extends object
+              ? { [K in keyof T]: Json<T[K]> }
+              : // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+                T extends Function
+                ? never
+                : T;
+
 /**
  * Converts a value to a JSON string, with special handling for BigInt, Set, and Map types.
  * @template T - The type of the value to convert
@@ -17,13 +39,13 @@ export function toJsonString<T>(value: T, space?: number | string): string {
 /**
  *
  */
-export function toJson<T>(value: T): unknown {
+export function toJson<T>(value: T): Json<T> {
     if (value == null) {
-        return null;
+        return null as Json<T>;
     }
 
     if (Array.isArray(value)) {
-        return value.map(toJson);
+        return value.map(toJson) as Json<T>;
     }
 
     if (value instanceof Set) {
@@ -32,7 +54,7 @@ export function toJson<T>(value: T): unknown {
             result.push(toJson(val));
         }
 
-        return result;
+        return result as Json<T>;
     }
 
     if (value instanceof Map) {
@@ -41,25 +63,25 @@ export function toJson<T>(value: T): unknown {
             result.push([key, toJson(val)]);
         }
 
-        return result;
+        return result as Json<T>;
     }
 
     switch (typeof value) {
         case 'bigint':
-            return value.toString();
+            return value.toString() as Json<T>;
         case 'function':
-            return undefined;
+            return undefined as Json<T>;
         case 'object': {
             const result: Record<string, unknown> = {};
             for (const [key, val] of Object.entries(value)) {
                 result[key] = toJson(val);
             }
 
-            return result;
+            return result as Json<T>;
         }
     }
 
-    return value;
+    return value as Json<T>;
 }
 
 function serializeValue(_key: unknown, value: unknown) {

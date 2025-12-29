@@ -3,14 +3,14 @@ import { isRef, onScopeDispose, toValue, watch } from 'vue';
 
 import type { EventCallback, EventEmitter } from '@nzyme/utils';
 
-type EventEmitterParam<TEvent> = EventEmitter<TEvent> | null | undefined;
+type EventEmitterParam<E> = EventEmitter<E> | null | undefined;
 
 /**
  *
  */
-export function onEventEmitter<TEvent>(
-    emitter: (() => EventEmitterParam<TEvent>) | EventEmitter<TEvent> | Readonly<Ref<EventEmitterParam<TEvent>>>,
-    callback: EventCallback<TEvent>,
+export function onEventEmitter<E>(
+    emitter: (() => EventEmitterParam<E>) | EventEmitter<E> | Readonly<Ref<EventEmitterParam<E>>>,
+    callback: EventCallback<E>,
 ) {
     if (isRef(emitter) || typeof emitter === 'function') {
         // Emitter is wrapped in ref or getter

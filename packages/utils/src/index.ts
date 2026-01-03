@@ -78,6 +78,7 @@ export * from './string/formatLength.js';
 export * from './string/formatWith.js';
 export * from './string/isDigit.js';
 export * from './string/joinLines.js';
+export * from './string/withPrefix.js';
 export * from './stringifyDuration.js';
 export * from './toJsonString.js';
 export * from './trackObjectChanges.js';

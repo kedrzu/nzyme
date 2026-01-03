@@ -87,5 +87,7 @@ export * from './url/stringifyQuery.js';
 export * from './waitFor.js';
 export * from './waitForever.js';
 export * from './waitUntil.js';
+export * from './withDisposable.js';
+export * from './withDisposableAsync.js';
 export * from './withSingleExecution.js';
 export * from './writable.js';

@@ -19,6 +19,16 @@ export type EventEmit<E = unknown[]> = EventFunction<EventParams<E>, void>;
 export type EventEmitAsync<E = unknown[]> = EventFunction<EventParams<E>, Promise<void>>;
 
 /**
+ * Type representing a function that subscribes to an event.
+ */
+export type EventEmitterOn<E = unknown[]> = (callback: EventCallback<E>) => void;
+
+/**
+ * Type representing a function that unsubscribes from an event.
+ */
+export type EventEmitterOff<E = unknown[]> = (callback: EventCallback<E>) => void;
+
+/**
  * Interface for an event emitter that allows subscribing and unsubscribing from events.
  * @template TEvent - The type of the event data
  */
@@ -27,12 +37,12 @@ export interface EventEmitter<E = unknown[]> {
      * Subscribe to events by adding a callback function.
      * @param callback - The function to call when an event is emitted
      */
-    on: (callback: EventCallback<E>) => void;
+    on: EventEmitterOn<E>;
     /**
      * Unsubscribe from events by removing a previously added callback function.
      * @param callback - The callback function to remove
      */
-    off: (callback: EventCallback<E>) => void;
+    off: EventEmitterOff<E>;
 }
 
 /**

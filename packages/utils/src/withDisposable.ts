@@ -9,7 +9,7 @@ export function withDisposable<T extends object>(obj: T, dispose: () => void): D
     const currentDispose = (obj as Partial<Disposable>)[Symbol.dispose];
     if (currentDispose) {
         (obj as Disposable)[Symbol.dispose] = () => {
-            currentDispose();
+            currentDispose.call(obj);
             dispose();
         };
     } else {

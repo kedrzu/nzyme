@@ -92,6 +92,7 @@ export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
             'perfectionist/sort-object-types': ['warn', { type: 'unsorted' }],
             // this is super risky, as key order is preserved in js
             'perfectionist/sort-objects': 'off',
+            'perfectionist/sort-maps': 'off',
             'perfectionist/sort-modules': ['warn', { type: 'unsorted' }],
             'perfectionist/sort-union-types': [
                 'warn',

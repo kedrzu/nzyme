@@ -80,6 +80,7 @@ export * from './string/isDigit.js';
 export * from './string/joinLines.js';
 export * from './string/withPrefix.js';
 export * from './stringifyDuration.js';
+export * from './toJson.js';
 export * from './toJsonString.js';
 export * from './trackObjectChanges.js';
 export * from './url/parseQuery.js';

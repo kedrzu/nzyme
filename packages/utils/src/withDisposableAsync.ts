@@ -9,7 +9,7 @@ export function withDisposableAsync<T extends object>(obj: T, dispose: () => Pro
     const currentDispose = (obj as Partial<AsyncDisposable>)[Symbol.asyncDispose];
     if (currentDispose) {
         (obj as AsyncDisposable)[Symbol.asyncDispose] = async () => {
-            await currentDispose();
+            await currentDispose.call(obj);
             await dispose();
         };
     } else {

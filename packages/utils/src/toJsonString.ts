@@ -1,7 +1,21 @@
 import type { DateTimeISO } from '@nzyme/types';
 
 /**
+ * Represents a type that has been converted to a JSON-serializable form.
  *
+ * @template T - The original type
+ *
+ * Conversion rules:
+ * - Date -> ISO string (DateTimeISO)
+ * - bigint -> string representation
+ * - Set<T> -> Array<Json<T>>
+ * - Map<K, V> -> Array<[Json<K>, Json<V>]>
+ * - Array<T> -> Array<Json<T>>
+ * - object -> { [K in keyof T]: Json<T[K]> }
+ * - Function -> never (functions cannot be serialized)
+ * - primitives -> unchanged
+ *
+ * @__NO_SIDE_EFFECTS__
  */
 export type Json<T> = T extends Date
     ? DateTimeISO
@@ -34,54 +48,6 @@ export function toJsonString<T>(value: T, space?: number | string): string {
     }
 
     return JSON.stringify(value, serializeValue, space);
-}
-
-/**
- *
- */
-export function toJson<T>(value: T): Json<T> {
-    if (value == null) {
-        return null as Json<T>;
-    }
-
-    if (Array.isArray(value)) {
-        return value.map(toJson) as Json<T>;
-    }
-
-    if (value instanceof Set) {
-        const result: unknown[] = [];
-        for (const val of value) {
-            result.push(toJson(val));
-        }
-
-        return result as Json<T>;
-    }
-
-    if (value instanceof Map) {
-        const result: [unknown, unknown][] = [];
-        for (const [key, val] of value.entries()) {
-            result.push([key, toJson(val)]);
-        }
-
-        return result as Json<T>;
-    }
-
-    switch (typeof value) {
-        case 'bigint':
-            return value.toString() as Json<T>;
-        case 'function':
-            return undefined as Json<T>;
-        case 'object': {
-            const result: Record<string, unknown> = {};
-            for (const [key, val] of Object.entries(value)) {
-                result[key] = toJson(val);
-            }
-
-            return result as Json<T>;
-        }
-    }
-
-    return value as Json<T>;
 }
 
 function serializeValue(_key: unknown, value: unknown) {

@@ -34,6 +34,7 @@ export * from './reactivity/refAsync.js';
 export * from './reactivity/storageRef.js';
 export * from './reactivity/storageRefWithSchema.js';
 export * from './reactivity/triggerRef.js';
+export * from './RenderSlot.js';
 export * from './slots.js';
 export * from './types.js';
 export * from './unwrapElement.js';

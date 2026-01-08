@@ -1,4 +1,38 @@
-import type { Json } from './toJsonString.js';
+import type { DateTimeISO } from '@nzyme/types';
+
+/**
+ * Represents a type that has been converted to a JSON-serializable form.
+ *
+ * @template T - The original type
+ *
+ * Conversion rules:
+ * - Date -> ISO string (DateTimeISO)
+ * - bigint -> string representation
+ * - Set<T> -> Array<Json<T>>
+ * - Map<K, V> -> Array<[Json<K>, Json<V>]>
+ * - Array<T> -> Array<Json<T>>
+ * - Function -> never (functions cannot be serialized)
+ * - object -> { [K in keyof T]: Json<T[K]> }
+ * - primitives -> unchanged
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
+export type Json<T> = T extends Date
+    ? DateTimeISO
+    : T extends bigint
+      ? bigint | `${bigint}`
+      : T extends Set<infer U>
+        ? Array<Json<U>>
+        : T extends Map<infer K, infer V>
+          ? Array<[Json<K>, Json<V>]>
+          : T extends Array<infer U>
+            ? Array<Json<U>>
+            : // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+              T extends Function
+              ? never
+              : T extends object
+                ? { [K in keyof T]: Json<T[K]> }
+                : T;
 
 /**
  * Converts a value to its JSON-serializable form.
@@ -28,6 +62,9 @@ import type { Json } from './toJsonString.js';
  * @__NO_SIDE_EFFECTS__
  */
 
+/**
+ *
+ */
 export function toJson<T>(value: T): Json<T> {
     if (value == null) {
         return null as Json<T>;

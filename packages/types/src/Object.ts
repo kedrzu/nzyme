@@ -57,3 +57,14 @@ export type PartialNever<T> = {
 export type PartialNullable<T> = {
     [P in keyof T]?: T[P] | null;
 };
+
+/**
+ * Turns selected properties of an object to optional.
+ */
+export type PartialProps<T, K extends keyof T> = Flatten<
+    {
+        [P in keyof T as P extends K ? never : P]: T[P];
+    } & {
+        [P in keyof T as P extends K ? P : never]?: T[P];
+    }
+>;

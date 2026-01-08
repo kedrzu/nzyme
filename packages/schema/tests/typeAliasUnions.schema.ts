@@ -7,11 +7,7 @@ import type { Status, UserRole } from './typeAliasUnions.type.js';
 /**
  * Status enumeration for entities
  */
-export const StatusSchema: s.Schema<Status, s.UnknownToInput<Status>> = s
-    .union(['active', 'inactive', 'pending'])
-    .with(s.meta, {
-        description: 'Status enumeration for entities',
-    });
+export const StatusSchema: s.Schema<Status, s.UnknownToInput<Status>> = s.union(['active', 'inactive', 'pending']);
 
 /**
  * User role with permissions
@@ -25,13 +21,16 @@ export const UserRoleSchema: s.Schema<UserRole, s.UnknownToInput<UserRole>> = s
 /**
  * Nullable string type
  */
-export const NullableStringSchema = s.nullable(s.string).with(s.meta, {
-    description: 'Nullable string type',
-});
+export const NullableStringSchema = s.nullable(s.string);
 
 /**
  * Optional number type
  */
-export const OptionalNumberSchema = s.optional(s.number).with(s.meta, {
-    description: 'Optional number type',
+export const OptionalNumberSchema = s.optional(s.number);
+
+/**
+ * Nullish bigint type
+ */
+export const NullishBigIntSchema = s.nullable(s.bigint).with(s.meta, {
+    description: 'Nullish bigint type',
 });

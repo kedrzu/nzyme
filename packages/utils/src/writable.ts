@@ -1,5 +1,7 @@
 import type { Writable } from '@nzyme/types';
 
+import { identity } from './functions/identity.js';
+
 /**
  * Creates a writable version of a value.
  * This is a type-level operation that doesn't actually modify the value at runtime.
@@ -15,7 +17,6 @@ import type { Writable } from '@nzyme/types';
  * const writableObj = writable(readonlyObj);
  * // writableObj is typed as { a: number; b: number }
  * ```
+ * @__NO_SIDE_EFFECTS__
  */
-export function writable<T>(value: T) {
-    return value as Writable<T>;
-}
+export const writable = identity as <T>(value: T) => Writable<T>;

@@ -116,6 +116,11 @@ export interface Endpoint<
 export type EndpointName<E extends Endpoint> = E['name'];
 
 /**
+ * Filter out all the non-endpoint exports from an object.
+ */
+export type EndpointFromExports<T extends object> = EndpointGuard & T[keyof T];
+
+/**
  *
  */
 export interface EndpointGuard {

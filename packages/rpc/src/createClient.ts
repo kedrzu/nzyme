@@ -1,10 +1,10 @@
 import { FetchError } from '@nzyme/fetch-utils';
 import type { HttpRequestHeaders } from '@nzyme/fetch-utils';
 import type { UnionToIntersection } from '@nzyme/types';
+import type { Json } from '@nzyme/utils';
 import { toJsonString } from '@nzyme/utils';
 
 import type { Endpoint } from './defineEndpoint.js';
-import type { Serialized } from './Serialized.js';
 import { RpcError } from './types/RpcError.js';
 import type { RpcErrorData } from './types/RpcError.js';
 
@@ -51,8 +51,8 @@ export interface CreateClientOptions<O> {
 export type RpcClient<E extends Endpoint, O> = UnionToIntersection<
     E extends Endpoint<infer TName, infer TInput, infer TOutput>
         ? TInput extends void
-            ? { [K in TName]: (input?: void, options?: O) => Promise<Serialized<TOutput>> }
-            : { [K in TName]: (input: Serialized<TInput>, options?: O) => Promise<Serialized<TOutput>> }
+            ? { [K in TName]: (input?: void, options?: O) => Promise<Json<TOutput>> }
+            : { [K in TName]: (input: Json<TInput>, options?: O) => Promise<Json<TOutput>> }
         : never
 >;
 

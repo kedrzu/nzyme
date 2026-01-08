@@ -13,11 +13,7 @@ import { resolveDeps } from './utils/resolveDeps.js';
  * @param caller - Optional injectable that requested this resolution
  * @returns The resolved service instance
  */
-export type ServiceResolutionStrategy = (
-    service: Service,
-    container: Container,
-    caller?: Injectable,
-) => unknown;
+export type ServiceResolutionStrategy = (service: Service, container: Container, caller?: Injectable) => unknown;
 
 /**
  * Built-in service resolution strategies:
@@ -92,7 +88,7 @@ export const singletonStrategy = defineResolutionStrategy((service, container) =
         }
     }
 
-    const deps = resolveDeps(service.deps, container, service);
+    const deps: unknown = resolveDeps(service.deps, container, service);
 
     instance = service.create(deps);
     container.set(service, instance);
@@ -124,7 +120,7 @@ export const transientStrategy = defineResolutionStrategy((service, container, c
         }
     }
 
-    const deps = resolveDeps(service.deps, container, caller);
+    const deps: unknown = resolveDeps(service.deps, container, caller);
     return service.create(deps);
 });
 

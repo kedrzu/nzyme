@@ -11,17 +11,17 @@ export type IfLiteral<T, Y, N = T> = T | 'jy@##O8sjzv=(+mby#4T=3gLHwU+0Z' extend
 /**
  * If the type is nullable.
  */
-export type IfNullable<T, Y, N = T> = IfAny<T, T, T | null extends T ? Y : N>;
+export type IfNullable<T, Y, N = T> = IfAny<T, Y, [Extract<T, null>] extends [never] ? N : Y>;
 
 /**
  * If the type is undefined.
  */
-export type IfUndefined<T, Y, N = T> = IfAny<T, T, T | undefined extends T ? Y : N>;
+export type IfUndefined<T, Y, N = T> = IfAny<T, Y, [Extract<T, undefined | void>] extends [never] ? N : Y>;
 
 /**
  * If the type is nullish.
  */
-export type IfNullish<T, Y, N = T> = IfAny<T, T, T | null | undefined extends T ? Y : N>;
+export type IfNullish<T, Y, N = T> = IfUnknown<T, Y, [Extract<T, null | undefined | void>] extends [never] ? N : Y>;
 
 /**
  * If the type is unknown.

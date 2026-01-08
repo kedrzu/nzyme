@@ -15,10 +15,11 @@ export type * from './Literals.js';
 export type * from './Object.js';
 export type * from './PartialDeep.js';
 export type * from './PartialOnUndefined.js';
+export type * from './Promises.js';
 export type * from './Properties.js';
 export type * from './RouteParameters.js';
+export type * from './Schema.js';
 export type * from './TypeGuards.js';
 export type * from './Union.js';
 export type * from './VoidProps.js';
-
 export type { Class } from 'type-fest';

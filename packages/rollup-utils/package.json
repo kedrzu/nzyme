@@ -36,7 +36,7 @@
         "@vitejs/plugin-vue-jsx": "^5.1.2",
         "chalk": "^5.6.2",
         "connect": "^3.7.0",
-        "fs-extra": "^11.3.2",
+        "fs-extra": "^11.3.3",
         "get-port": "^7.1.0",
         "http-proxy-middleware": "^3.0.5",
         "rollup": "^4.53.3",
@@ -54,7 +54,7 @@
         "@nzyme/tsconfig": "^0.14.0",
         "@types/connect": "^3.4.38",
         "@types/source-map-support": "^0.5.10",
-        "eslint": "^9.39.1",
+        "eslint": "^9.39.2",
         "typescript": "^5.9.3"
     },
     "publishConfig": {

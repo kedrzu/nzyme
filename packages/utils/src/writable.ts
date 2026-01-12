@@ -17,6 +17,5 @@ import { identity } from './functions/identity.js';
  * const writableObj = writable(readonlyObj);
  * // writableObj is typed as { a: number; b: number }
  * ```
- * @__NO_SIDE_EFFECTS__
  */
 export const writable = identity as <T>(value: T) => Writable<T>;

@@ -29,7 +29,7 @@
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
         "@types/node": "^25.0.6",
-        "typecript": "^0.0.1-security"
+        "typescript": "^5.9.3"
     },
     "publishConfig": {
         "access": "public"

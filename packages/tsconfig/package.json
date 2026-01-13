@@ -30,6 +30,6 @@
         ]
     },
     "devDependencies": {
-        "typecript": "^0.0.1-security"
+        "typescript": "^5.9.3"
     }
 }

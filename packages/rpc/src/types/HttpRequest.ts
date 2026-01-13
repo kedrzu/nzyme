@@ -2,6 +2,10 @@ import type { QueryObject } from 'ufo';
 
 import type { HttpMethod, HttpRequestHeaders } from '@nzyme/fetch-utils';
 
+export interface HttpRequestQuery {
+    [key: string]: string | string[] | undefined;
+}
+
 /**
  *
  */
@@ -13,7 +17,7 @@ export interface HttpRequest {
     /**
      * The path of the request
      */
-    query?: QueryObject;
+    query?: HttpRequestQuery;
     /**
      * The query parameters of the request
      */

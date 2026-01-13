@@ -42,11 +42,12 @@
         "chalk": "^5.6.2",
         "mime-types": "^3.0.2",
         "s3-sync-client": "^4.3.1",
-        "ufo": "^1.6.1"
+        "ufo": "^1.6.2"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
-        "@nzyme/tsconfig": "^0.14.0"
+        "@nzyme/tsconfig": "^0.14.0",
+        "typescript": "^5.9.3"
     },
     "publishConfig": {
         "access": "public"

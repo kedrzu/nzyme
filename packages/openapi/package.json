@@ -30,13 +30,14 @@
         "@nzyme/fetch-utils": "^0.14.0",
         "@nzyme/types": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
-        "ufo": "^1.6.1"
+        "ufo": "^1.6.2"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
         "eslint": "^9.39.2",
         "openapi-typescript": "^7.10.1",
+        "typescript": "^5.9.3",
         "vitest": "^4.0.16"
     },
     "publishConfig": {

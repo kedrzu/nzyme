@@ -41,7 +41,8 @@
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
         "@types/node": "^25.0.6",
-        "@types/parse-gitignore": "^1.0.2"
+        "@types/parse-gitignore": "^1.0.2",
+        "typecript": "^0.0.1-security"
     },
     "publishConfig": {
         "access": "public"

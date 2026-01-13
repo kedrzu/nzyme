@@ -52,7 +52,8 @@
         "@nzyme/tsconfig": "^0.14.0",
         "@types/lodash.merge": "^4.6.9",
         "@types/node": "^25.0.6",
-        "@types/source-map-support": "^0.5.10"
+        "@types/source-map-support": "^0.5.10",
+        "typecript": "^0.0.1-security"
     },
     "engines": {
         "node": ">=20"

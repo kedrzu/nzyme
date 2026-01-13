@@ -55,6 +55,7 @@
         "@types/connect": "^3.4.38",
         "@types/source-map-support": "^0.5.10",
         "eslint": "^9.39.2",
+        "typecript": "^0.0.1-security",
         "typescript": "^5.9.3"
     },
     "publishConfig": {

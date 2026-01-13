@@ -33,7 +33,8 @@
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
-        "@nzyme/tsconfig": "^0.14.0"
+        "@nzyme/tsconfig": "^0.14.0",
+        "typecript": "^0.0.1-security"
     },
     "publishConfig": {
         "access": "public"

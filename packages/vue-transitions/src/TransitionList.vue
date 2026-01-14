@@ -28,6 +28,11 @@ interface TransitionListProps {
    * @default 'fade'
    */
   animation?: 'fade' | 'slide-down' | 'slide-left' | 'slide-right' | 'slide-up';
+
+  /**
+   * Z-index for the transitioning items
+   */
+  zIndex?: number;
 }
 
 const props = defineProps<TransitionListProps>();
@@ -53,6 +58,7 @@ function durationStyle(duration: number | undefined) {
     :style="{
       '--transition-list-duration': durationStyle(duration),
       '--transition-list-delay': durationStyle(delay),
+      '--transition-list-z-index': zIndex,
     }"
   >
     <slot />
@@ -64,6 +70,7 @@ function durationStyle(duration: number | undefined) {
 .enterActive,
 .leaveActive {
   transition: all var(--transition-list-duration, 0.4s) var(--transition-list-delay, 0s) ease !important;
+  z-index: var(--transition-list-z-index);
 }
 
 .hidden {

@@ -188,6 +188,10 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
         swipeEnd(touch.clientX);
     }
 
+    /**
+     * Initializes swipe tracking when user starts pressing.
+     * Records the starting position, timestamp, and target element for later calculations.
+     */
     function swipeStart(x: number, y: number, target: Element) {
         if (!enabled.value) {
             return;
@@ -201,6 +205,15 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
         isPressing.value = true;
     }
 
+    /**
+     * Handles pointer movement during a potential swipe gesture.
+     *
+     * On first movement, determines if this is a horizontal swipe by comparing
+     * deltaX vs deltaY. If vertical movement dominates, the gesture is cancelled.
+     *
+     * Also checks if the swipe direction conflicts with a scrollable container
+     * in the DOM hierarchy - if so, the native scroll takes precedence.
+     */
     function swipeMove(x: number, y: number) {
         if (!isPressing.value) {
             return;
@@ -210,13 +223,16 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
             const deltaX = Math.abs(x - (position.startX ?? 0));
             const deltaY = Math.abs(y - (position.startY ?? 0));
 
+            // Cancel if this looks like a vertical scroll rather than horizontal swipe
             if (deltaY > deltaX) {
                 isPressing.value = false;
                 return;
             }
 
-            // Check if we're swiping in a direction blocked by scrollable container
+            // Determine swipe direction: negative = left, positive = right
             const swipeDirection = x - (position.startX ?? 0);
+
+            // Defer to native scroll if a scrollable container can scroll in this direction
             if (position.startTarget && isSwipeBlockedByScrollableContainer(position.startTarget, swipeDirection)) {
                 isPressing.value = false;
                 return;
@@ -228,6 +244,15 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
         position.currentX = x;
     }
 
+    /**
+     * Finalizes the swipe gesture and triggers appropriate callbacks.
+     *
+     * Distinguishes between a "swipe" (quick flick) and a "pan" (slower drag):
+     * - Swipe: completed within 200ms and moved at least 15px
+     * - Pan: anything else (slower or shorter movement)
+     *
+     * The deltaX passed to callbacks is negative for left, positive for right.
+     */
     function swipeEnd(x: number) {
         if (!isPressing.value && !isMoving.value) {
             return;
@@ -268,14 +293,30 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
         );
     }
 
+    /**
+     * Checks if a swipe gesture should be blocked because a scrollable container
+     * in the DOM hierarchy can scroll in the same direction.
+     *
+     * This prevents swipe gestures from interfering with native horizontal scrolling.
+     * Only considers elements that:
+     * 1. Have overflow-x set to 'auto' or 'scroll' (intentionally scrollable)
+     * 2. Have content wider than the container (scrollWidth > clientWidth)
+     * 3. Can actually scroll in the swipe direction (not already at the edge)
+     *
+     * @param target - The element where the swipe started
+     * @param swipeDirection - Negative for left swipe, positive for right swipe
+     * @returns true if the swipe should be blocked to allow native scrolling
+     */
     function isSwipeBlockedByScrollableContainer(target: Element, swipeDirection: number): boolean {
         let current: Element | null = target;
 
         while (current && current !== element.value) {
             if (current instanceof HTMLElement) {
+                const style = window.getComputedStyle(current);
+                const isScrollable = style.overflowX === 'auto' || style.overflowX === 'scroll';
                 const hasHorizontalScroll = current.scrollWidth > current.clientWidth;
 
-                if (hasHorizontalScroll) {
+                if (hasHorizontalScroll && isScrollable) {
                     const canScrollLeft = current.scrollLeft > 0;
                     const canScrollRight = current.scrollLeft < current.scrollWidth - current.clientWidth;
 

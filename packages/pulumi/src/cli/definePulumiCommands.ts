@@ -18,6 +18,7 @@ import { previewStack } from '../previewStack.js';
 import type { PulumiConfig } from '../PulumiConfig.js';
 import { refreshStack } from '../refreshStack.js';
 import { listRemoteStacks } from '../utils/listRemoteStacks.js';
+import type { Logger } from '@nzyme/logging';
 
 /**
  * Context for the Pulumi commands.
@@ -127,6 +128,7 @@ interface ResolveStacksOptions extends PulumiCommandsOptions {
     stackNames: string[];
     recursive?: boolean;
     skip?: string[];
+    logger: Logger;
 }
 
 /**
@@ -325,11 +327,14 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                 stackNames: this.stacks,
                 recursive: this.recursive,
                 skip: this.skip,
+                logger: this.logger,
             });
 
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to deploy.');
             }
+
+            this.logger.info(`🚀 Deploying stacks: ${stacks.map(s => chalk.green(s.stackName)).join(', ')}`);
 
             await options.beforeDeploy?.({ command: this, stacks });
 
@@ -460,7 +465,10 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
                 ...options,
                 stackNames: this.stacks,
                 skip: this.skip,
+                logger: this.logger,
             });
+
+            this.logger.info(`🚫 Cancelling stacks: ${stacks.map(s => chalk.green(s.stackName)).join(', ')}`);
 
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to cancel.');
@@ -522,11 +530,14 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
                 ...options,
                 stackNames: this.stacks,
                 skip: this.skip,
+                logger: this.logger,
             });
 
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to preview.');
             }
+
+            this.logger.info(`🔍 Previewing stacks: ${stacks.map(s => chalk.green(s.stackName)).join(', ')}`);
 
             for (const stack of stacks) {
                 const stackResolved = this.container.resolve(stack);
@@ -570,11 +581,14 @@ function defineRefreshCommand(options: PulumiCommandsOptions) {
                 ...options,
                 stackNames: this.stacks,
                 skip: this.skip,
+                logger: this.logger,
             });
 
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to refresh.');
             }
+
+            this.logger.info(`🔄 Refreshing stacks: ${stacks.map(s => chalk.green(s.stackName)).join(', ')}`);
 
             await forEachParalell(stacks, {
                 concurrency: 5,
@@ -650,6 +664,10 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
 
                 const stacksToForceDestroy = this.stacks.filter(stack => !this.skip.includes(stack));
 
+                this.logger.info(
+                    `💥 Force destroying stacks: ${stacksToForceDestroy.map(s => chalk.red(s)).join(', ')}`,
+                );
+
                 for (const stack of stacksToForceDestroy) {
                     const stackDefinition = defineStack({
                         name: stack,
@@ -699,11 +717,14 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                 ...options,
                 stackNames: this.stacks,
                 skip: this.skip,
+                logger: this.logger,
             });
 
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to destroy.');
             }
+
+            this.logger.info(`🗑️  Destroying stacks: ${stacks.map(s => chalk.red(s.stackName)).join(', ')}`);
 
             // Determine which stacks will actually be destroyed (filter out protected ones)
             const stacksToDestroy: StackDefinition[] = [];
@@ -820,11 +841,14 @@ function defineOutputCommand(options: PulumiCommandsOptions) {
             const stacks = resolveStacks({
                 ...options,
                 stackNames: this.stacks,
+                logger: this.logger,
             });
 
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to output.');
             }
+
+            this.logger.info(`📊 Outputting stacks: ${stacks.map(s => chalk.green(s.stackName)).join(', ')}`);
 
             for (const stack of stacks) {
                 const stackResolved = this.container.resolve(stack);
@@ -868,6 +892,7 @@ function defineInstallCommand(options: PulumiCommandsOptions) {
                 ...options,
                 stackNames: this.stacks,
                 skip: this.skip,
+                logger: this.logger,
             });
 
             if (stacks.length === 0) {
@@ -918,20 +943,39 @@ function filterStacks(options: ResolveStacksOptions): Set<StackDefinition> {
     }
 
     const stacks: Set<StackDefinition> = new Set();
-    const stackNamesSet = new Set(options.stackNames);
-    for (const stack of options.stacks) {
-        if (stackNamesSet.has(stack.stackName)) {
-            stacks.add(stack);
-            stackNamesSet.delete(stack.stackName);
+    const matchedPatterns = new Set<string>();
 
-            if (!stack.enabled) {
-                throw new UsageError(`Stack ${stack.stackName} is disabled.`);
+    for (const pattern of options.stackNames) {
+        const isWildcard = pattern.includes('+');
+
+        // Convert + to .+ for regex matching, escape other special regex chars
+        const regex = isWildcard
+            ? new RegExp(`^${pattern.replace(/[.*?^${}()|[\]\\]/g, '\\$&').replace(/\+/g, '.+')}$`)
+            : null;
+
+        for (const stack of options.stacks) {
+            if (stacks.has(stack)) {
+                continue;
+            }
+
+            const matches = regex ? regex.test(stack.stackName) : stack.stackName === pattern;
+
+            if (matches) {
+                if (!stack.enabled) {
+                    options.logger.warn(`Stack ${stack.stackName} is disabled.`);
+                    continue;
+                }
+
+                matchedPatterns.add(pattern);
+                stacks.add(stack);
             }
         }
     }
 
-    if (stackNamesSet.size > 0) {
-        throw new UsageError(`Stack(s) ${Array.from(stackNamesSet).join(', ')} do not exist.`);
+    // Check for patterns that didn't match any stack
+    const unmatchedPatterns = options.stackNames.filter(p => !matchedPatterns.has(p));
+    if (unmatchedPatterns.length > 0) {
+        throw new UsageError(`Pattern(s) ${unmatchedPatterns.join(', ')} did not match any stacks.`);
     }
 
     return stacks;

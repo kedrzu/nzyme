@@ -4,6 +4,7 @@ import Table from 'cli-table3';
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
 import { getAllDeps, isDependentOn, sortByDependency } from '@nzyme/ioc';
+import type { Logger } from '@nzyme/logging';
 import { forEachParalell } from '@nzyme/utils';
 
 import { cancelStack } from '../cancelStack.js';
@@ -18,7 +19,6 @@ import { previewStack } from '../previewStack.js';
 import type { PulumiConfig } from '../PulumiConfig.js';
 import { refreshStack } from '../refreshStack.js';
 import { listRemoteStacks } from '../utils/listRemoteStacks.js';
-import type { Logger } from '@nzyme/logging';
 
 /**
  * Context for the Pulumi commands.
@@ -468,11 +468,11 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
                 logger: this.logger,
             });
 
-            this.logger.info(`🚫 Cancelling stacks: ${stacks.map(s => chalk.green(s.stackName)).join(', ')}`);
-
             if (stacks.length === 0) {
                 throw new UsageError('No stacks to cancel.');
             }
+
+            this.logger.info(`🚫 Cancelling stacks: ${stacks.map(s => chalk.green(s.stackName)).join(', ')}`);
 
             await forEachParalell(stacks, {
                 concurrency: 5,
@@ -663,6 +663,9 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                 }
 
                 const stacksToForceDestroy = this.stacks.filter(stack => !this.skip.includes(stack));
+                if (stacksToForceDestroy.length === 0) {
+                    throw new UsageError('No stacks to destroy after applying skip filters.');
+                }
 
                 this.logger.info(
                     `💥 Force destroying stacks: ${stacksToForceDestroy.map(s => chalk.red(s)).join(', ')}`,
@@ -961,12 +964,13 @@ function filterStacks(options: ResolveStacksOptions): Set<StackDefinition> {
             const matches = regex ? regex.test(stack.stackName) : stack.stackName === pattern;
 
             if (matches) {
+                matchedPatterns.add(pattern);
+
                 if (!stack.enabled) {
                     options.logger.warn(`Stack ${stack.stackName} is disabled.`);
                     continue;
                 }
 
-                matchedPatterns.add(pattern);
                 stacks.add(stack);
             }
         }

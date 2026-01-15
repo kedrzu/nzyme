@@ -20,7 +20,7 @@ export interface OpenApiFetchConfig {
     /** Base URL for all requests */
     baseUrl?: string;
     /** Default headers to include in all requests */
-    headers?: Record<string, string>;
+    headers?: Record<string, string | undefined>;
     /** Custom fetch implementation */
     fetch?: typeof fetch;
 }
@@ -91,7 +91,7 @@ export function createOpenApiFetch<Paths>(config: OpenApiFetchConfig = {}) {
 
         // Prepare headers
         const headers = new Headers({
-            ...defaultHeaders,
+            ...(defaultHeaders as Record<string, string>),
             ...(requestHeaders as Record<string, string>),
         });
 

@@ -93,4 +93,5 @@ export * from './waitUntil.js';
 export * from './withDisposable.js';
 export * from './withDisposableAsync.js';
 export * from './withSingleExecution.js';
+export * from './withTimeout.js';
 export * from './writable.js';

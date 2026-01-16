@@ -10,6 +10,7 @@ import { checkoutBranch } from './checkoutBranch.js';
 import type { GithubClient } from './createGithubClient.js';
 import { findMatchingPr } from './findMatchingPr.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
+import { handlePullWithRebase } from './handlePullWithRebase.js';
 
 /**
  * Parameters for checking out an existing branch.
@@ -85,7 +86,7 @@ export async function checkoutExistingBranch(
 
         if (!hasChanges) {
             // No uncommitted changes, checkout normally
-            await checkoutBranch(branchName);
+            await checkoutBranch(branchName, paramLogger);
             await checkoutSubmodules(params);
             return;
         }
@@ -141,7 +142,7 @@ export async function checkoutExistingBranch(
             case 'checkout': {
                 // Try to checkout directly - git will handle conflicts
                 paramLogger.info(`🔄 Attempting to checkout ${chalk.cyan(branchName)} with uncommitted changes...`);
-                await checkoutBranch(branchName);
+                await checkoutBranch(branchName, paramLogger);
                 paramLogger.info(`✅ Successfully checked out ${chalk.cyan(branchName)} with uncommitted changes`);
                 await checkoutSubmodules(params);
                 break;
@@ -156,7 +157,7 @@ export async function checkoutExistingBranch(
                 paramLogger.info(`✅ Changes stashed successfully`);
 
                 // Checkout the branch
-                await checkoutBranch(branchName);
+                await checkoutBranch(branchName, paramLogger);
 
                 // Checkout submodules before reapplying stash
                 await checkoutSubmodules(params);
@@ -333,11 +334,18 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
         }
 
         // Pull the latest changes
-        try {
-            await submoduleGit.pull('origin', targetBranch);
-        } catch {
-            // If pull fails, the branch might not exist on origin yet, which is fine
+        const pullResult = await handlePullWithRebase({
+            git: submoduleGit,
+            remote: 'origin',
+            branch: targetBranch,
+            logger,
+            contextMessage: `submodule ${chalk.magenta(submodule.name)}`,
+        });
+
+        if (pullResult.cancelled) {
+            throw new UsageError(`Operation cancelled by user for submodule ${submodule.name}`);
         }
+        // If pull failed for other reasons (e.g., branch doesn't exist), continue
 
         logger.info(`✅ Checked out branch ${chalk.cyan(targetBranch)} in ${chalk.magenta(submodule.name)}`);
     } catch (error) {
@@ -378,11 +386,18 @@ async function checkoutSubmoduleBaseBranch(
         }
 
         // Pull the latest changes
-        try {
-            await submoduleGit.pull('origin', baseBranch);
-        } catch {
-            // If pull fails, that's okay - we're at least on the right branch
+        const pullResult = await handlePullWithRebase({
+            git: submoduleGit,
+            remote: 'origin',
+            branch: baseBranch,
+            logger,
+            contextMessage: `submodule ${chalk.magenta(submodule.name)}`,
+        });
+
+        if (pullResult.cancelled) {
+            throw new UsageError(`Operation cancelled by user for submodule ${submodule.name}`);
         }
+        // If pull failed for other reasons, that's okay - we're at least on the right branch
 
         logger.info(
             `✅ Submodule ${chalk.magenta(submodule.name)} updated to latest commit on ${chalk.cyan(baseBranch)}`,

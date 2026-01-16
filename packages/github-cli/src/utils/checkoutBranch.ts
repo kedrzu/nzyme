@@ -1,11 +1,14 @@
 import { simpleGit } from 'simple-git';
 
 import { UsageError } from '@nzyme/cli';
+import type { Logger } from '@nzyme/logging';
+
+import { handlePullWithRebase } from './handlePullWithRebase.js';
 
 /**
  * Checkout a git branch, fetching it from origin if necessary.
  */
-export async function checkoutBranch(branchName: string): Promise<void> {
+export async function checkoutBranch(branchName: string, logger: Logger): Promise<void> {
     const git = simpleGit();
 
     try {
@@ -31,12 +34,19 @@ export async function checkoutBranch(branchName: string): Promise<void> {
         }
 
         // Pull the latest changes (only if the branch exists on origin)
-        try {
-            await git.pull('origin', branchName);
-        } catch {
-            // If pull fails, the branch might not exist on origin yet, which is fine
-            // This can happen with newly created local branches
+        const pullResult = await handlePullWithRebase({
+            git,
+            remote: 'origin',
+            branch: branchName,
+            logger,
+            contextMessage: 'repository',
+        });
+
+        if (pullResult.cancelled) {
+            throw new UsageError('Operation cancelled by user');
         }
+        // If pull failed for other reasons (e.g., branch doesn't exist), continue
+        // This is fine for newly created local branches
     } catch (error) {
         throw new UsageError(`Failed to checkout branch ${branchName}: ${(error as Error).message}`);
     }

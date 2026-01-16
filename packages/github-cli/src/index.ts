@@ -24,6 +24,8 @@ export * from './utils/handleBranchSelection.js';
 export type { BranchSelectionParams, BranchSelectionResult } from './utils/handleBranchSelection.js';
 export * from './utils/handleMergedPrReopen.js';
 export type { HandleMergedPrReopenParams, HandleMergedPrReopenResult } from './utils/handleMergedPrReopen.js';
+export * from './utils/handlePullWithRebase.js';
+export type { HandlePullWithRebaseParams, PullResult } from './utils/handlePullWithRebase.js';
 export * from './utils/handlePushPreparation.js';
 export type { HandlePushPreparationParams } from './utils/handlePushPreparation.js';
 export * from './utils/handleReadyPreparation.js';

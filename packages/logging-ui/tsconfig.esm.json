@@ -1,0 +1,9 @@
+{
+    "extends": "./.nuxt/tsconfig.json",
+    "compilerOptions": {
+        "noUncheckedIndexedAccess": true
+    },
+    "references": [
+        { "path": "../logging/tsconfig.json" }
+    ]
+}

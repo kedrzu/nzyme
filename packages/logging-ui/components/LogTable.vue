@@ -80,9 +80,7 @@ function hasData(log: LogEntry): boolean {
         data-key="id"
         scrollable
         scroll-height="flex"
-        :virtual-scroller-options="{ itemSize: 40 }"
         class="log-table"
-        table-style="min-width: 800px"
         @row-click="(e) => toggleRow(e.data)"
     >
         <Column expander style="width: 3rem" />
@@ -134,7 +132,10 @@ function hasData(log: LogEntry): boolean {
 <style scoped>
 .log-table {
     height: 100%;
+    width: 100%;
+    max-width: 100%;
     font-family: var(--font-sans);
+    table-layout: fixed;
 }
 
 .mono-cell {
@@ -151,17 +152,22 @@ function hasData(log: LogEntry): boolean {
 
 .message-wrapper {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
+    min-width: 0;
 }
 
 .level-icon {
     flex-shrink: 0;
+    margin-top: 2px;
 }
 
 .message-cell {
     font-family: var(--font-mono);
     font-size: 0.875rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-width: 0;
 }
 
 .data-indicator {
@@ -174,7 +180,6 @@ function hasData(log: LogEntry): boolean {
 }
 
 :deep(.p-datatable-tbody > tr) {
-    height: 40px;
     cursor: pointer;
 }
 
@@ -188,5 +193,16 @@ function hasData(log: LogEntry): boolean {
 
 :deep(.p-datatable-row-expansion > td) {
     padding: 0 !important;
+}
+
+/* Ensure table stays within container */
+:deep(.p-datatable-table-container) {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+:deep(.p-datatable-table) {
+    table-layout: fixed;
+    width: 100%;
 }
 </style>

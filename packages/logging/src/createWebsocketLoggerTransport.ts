@@ -1,5 +1,6 @@
 import { createExponentialBackoff } from '@nzyme/utils';
 
+import { ApplicationError } from './ApplicationError.js';
 import type { LoggerObject } from './Logger.js';
 import type { LoggerLevel } from './LoggerLevel.js';
 import type { LoggerTransport } from './LoggerTransport.js';
@@ -111,12 +112,7 @@ export function createWebsocketLoggerTransport(options: WebsocketLoggerTransport
             if (Object.keys(rest).length > 0 || error !== undefined) {
                 data = { ...rest };
                 if (error instanceof Error) {
-                    data.error = {
-                        name: error.name,
-                        message: error.message,
-                        stack: error.stack,
-                        cause: error.cause,
-                    };
+                    data.error = serializeError(error);
                 } else if (error !== undefined) {
                     data.error = error;
                 }
@@ -196,4 +192,54 @@ export function createWebsocketLoggerTransport(options: WebsocketLoggerTransport
             void backoff.backoff().then(connect);
         }
     }
+}
+
+/**
+ * Serializes an error to a plain object for JSON transmission.
+ * Handles ApplicationError's additional data, AggregateError's errors array, and nested causes.
+ */
+function serializeError(error: Error, depth = 0): Record<string, unknown> {
+    const maxDepth = 5;
+
+    const result: Record<string, unknown> = {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+    };
+
+    // Handle AggregateError's errors array
+    if (error instanceof AggregateError && error.errors && depth < maxDepth) {
+        result.errors = error.errors.map(err => {
+            if (err instanceof Error) {
+                return serializeError(err, depth + 1);
+            }
+            return err;
+        });
+    }
+
+    // Include ApplicationError's additional data
+    if (error instanceof ApplicationError) {
+        const { logger, cause, ...data } = error.data;
+        // Add logger name if present
+        if (logger) {
+            result.loggerName = logger.name;
+        }
+        // Merge additional data into result
+        for (const [key, value] of Object.entries(data)) {
+            if (key !== 'name' && key !== 'message' && key !== 'stack' && key !== 'errors') {
+                result[key] = value;
+            }
+        }
+    }
+
+    // Serialize cause recursively
+    if (error.cause && depth < maxDepth) {
+        if (error.cause instanceof Error) {
+            result.cause = serializeError(error.cause, depth + 1);
+        } else {
+            result.cause = error.cause;
+        }
+    }
+
+    return result;
 }

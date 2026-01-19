@@ -1,18 +1,73 @@
 <script lang="ts" setup>
 import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
+import { computed } from 'vue';
 
 import type { LogEntry } from '../types/LogEntry.js';
 
-defineProps<{
+import LogErrorDisplay, { type SerializedError } from './LogErrorDisplay.vue';
+
+const props = defineProps<{
     log: LogEntry;
 }>();
+
+/**
+ * Check if a value looks like a serialized error.
+ */
+function isErrorLike(value: unknown): value is SerializedError {
+    if (typeof value !== 'object' || value === null) {
+        return false;
+    }
+    const obj = value as Record<string, unknown>;
+    return (
+        (typeof obj.message === 'string' && typeof obj.stack === 'string') ||
+        (typeof obj.name === 'string' && typeof obj.stack === 'string')
+    );
+}
+
+/**
+ * Get the error from log data if present.
+ */
+const errorData = computed<SerializedError | null>(() => {
+    const error = props.log.data?.error;
+    if (isErrorLike(error)) {
+        return error;
+    }
+    return null;
+});
+
+/**
+ * Get remaining data without the error.
+ */
+const remainingData = computed<Record<string, unknown> | null>(() => {
+    if (!props.log.data) {
+        return null;
+    }
+    const { error, ...rest } = props.log.data;
+    if (Object.keys(rest).length === 0) {
+        return null;
+    }
+    return rest;
+});
+
+/**
+ * Check if there's any data to display.
+ */
+const hasData = computed(() => {
+    return errorData.value !== null || remainingData.value !== null;
+});
 </script>
 
 <template>
     <div class="log-json-viewer">
-        <div v-if="log.data && Object.keys(log.data).length > 0" class="json-container">
-            <VueJsonPretty :data="log.data" :deep="3" :show-length="true" />
+        <div v-if="hasData" class="data-container">
+            <!-- Error display -->
+            <LogErrorDisplay v-if="errorData" :error="errorData" class="error-section" />
+
+            <!-- Remaining data -->
+            <div v-if="remainingData" class="json-container">
+                <VueJsonPretty :data="remainingData" :deep="3" :show-length="true" />
+            </div>
         </div>
         <div v-else class="no-data">No additional data</div>
     </div>
@@ -21,13 +76,29 @@ defineProps<{
 <style scoped>
 .log-json-viewer {
     background-color: var(--p-surface-50);
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.data-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.error-section {
+    /* Error display component handles its own styling */
 }
 
 .json-container {
-    padding: 0.5rem 0.75rem;
     font-family: var(--font-mono);
     font-size: 0.8125rem;
     line-height: 1.5;
+    max-width: 100%;
+    overflow-x: auto;
 }
 
 .no-data {

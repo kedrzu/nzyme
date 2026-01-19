@@ -163,6 +163,8 @@ const levelConfigs: Record<LoggerLevel, LevelConfig> = {
 .table-container {
     flex: 1;
     overflow: hidden;
+    max-width: 100%;
+    min-width: 0;
 }
 
 /* Logger filter options */

@@ -1,6 +1,6 @@
-/// <reference types="@primevue/nuxt-module" />
 /// <reference types="@nuxt/telemetry" />
 /// <reference types="@nuxt/devtools" />
+/// <reference types="@primevue/nuxt-module" />
 /// <reference path="types/modules.d.ts" />
 /// <reference path="types/runtime-config.d.ts" />
 /// <reference path="types/app.config.d.ts" />

@@ -9,6 +9,7 @@
     "dependencies": {
         "@nuxt/schema": "4.2.2",
         "@nzyme/logging": "^0.14.0",
+        "@nzyme/utils": "^0.14.0",
         "@primevue/nuxt-module": "^4.3.3",
         "@primevue/themes": "^4.3.3",
         "lucide-vue-next": "^0.469.0",

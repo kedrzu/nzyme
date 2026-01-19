@@ -1,11 +1,3 @@
-/**
- * @deprecated Use {@link waitFor} instead
- * @param ms - Number of milliseconds to wait
- * @returns A promise that resolves after the specified delay
- */
-export function timeout(ms: number) {
-    return waitFor(ms);
-}
 
 /**
  * Creates a promise that resolves after the specified number of milliseconds.
@@ -19,6 +11,6 @@ export function timeout(ms: number) {
  * await waitFor(1000);
  * ```
  */
-export function waitFor(ms?: number) {
-    return new Promise<void>(resolve => setTimeout(resolve, ms));
+export function waitFor<T = void>(ms?: number, result?: T) {
+    return new Promise<T>(resolve => setTimeout(() => resolve(result as T), ms));
 }

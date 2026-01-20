@@ -63,7 +63,7 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions) {
                 clearScreen: false,
                 buildDelay: 300,
             },
-            onwarn: onRollupWarning,
+            onwarn: onRollupWarning(),
             ...omitProps(options, ['env']),
         });
 

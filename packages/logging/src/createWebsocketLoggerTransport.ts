@@ -1,4 +1,4 @@
-import { createExponentialBackoff } from '@nzyme/utils';
+import { createExponentialBackoff, toJsonString } from '@nzyme/utils';
 
 import { ApplicationError } from './ApplicationError.js';
 import type { LoggerObject } from './Logger.js';
@@ -131,8 +131,9 @@ export function createWebsocketLoggerTransport(options: WebsocketLoggerTransport
     }
 
     function sendLog(entry: WebsocketLogEntry): void {
+        const message = toJsonString(entry);
         try {
-            ws?.send(JSON.stringify(entry));
+            ws?.send(message);
         } catch {
             // If send fails, buffer the log
             bufferLog(entry);
@@ -213,13 +214,13 @@ function serializeError(error: Error, depth = 0): Record<string, unknown> {
             if (err instanceof Error) {
                 return serializeError(err, depth + 1);
             }
-            return err;
+            return err as unknown;
         });
     }
 
     // Include ApplicationError's additional data
     if (error instanceof ApplicationError) {
-        const { logger, cause, ...data } = error.data;
+        const { logger, cause: _cause, ...data } = error.data;
         // Add logger name if present
         if (logger) {
             result.loggerName = logger.name;

@@ -1,7 +1,11 @@
 import type { LoggerLevel } from '@nzyme/logging';
+import { consoleLog } from '@nzyme/logging';
+import { createExponentialBackoff } from '@nzyme/utils';
+import { storageRef } from '@nzyme/vue-utils';
 import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue';
 
 import type { LogEntry } from '../types/LogEntry.js';
+import { clearAllLogs, deleteLogs, loadLogs, putLog } from '../utils/logsIndexedDb.js';
 
 const MAX_LOGS = 10000;
 
@@ -35,9 +39,20 @@ export function useLogStore() {
     // All logs (using shallowRef for performance with large arrays)
     const logs = shallowRef<LogEntry[]>([]);
 
-    // Filter state
-    const selectedLoggers = ref<string[]>([]);
-    const selectedLevels = ref<LoggerLevel[]>([]);
+    // Filter state (persisted in localStorage)
+    // hiddenLoggers stores loggers that are excluded from view (exclusive logic)
+    const hiddenLoggers = storageRef<string[]>({
+        key: 'logging-ui:hiddenLoggers',
+        storage: 'local',
+        json: true,
+        default: () => [],
+    });
+    const selectedLevels = storageRef<LoggerLevel[]>({
+        key: 'logging-ui:selectedLevels',
+        storage: 'local',
+        json: true,
+        default: () => [],
+    });
 
     // Sort state
     const sortOrder = ref<'asc' | 'desc'>('desc');
@@ -51,7 +66,14 @@ export function useLogStore() {
 
     // WebSocket connection
     let ws: WebSocket | null = null;
-    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+    let isReconnecting = false;
+    let shouldReconnect = true;
+    let isUnmounted = false;
+    const backoff = createExponentialBackoff({
+        baseDelay: 1000,
+        maxDelay: 30000,
+        maxRetries: Infinity,
+    });
 
     // Unique logger paths for filter options
     const uniqueLoggers = computed(() => {
@@ -66,9 +88,9 @@ export function useLogStore() {
     const filteredLogs = computed(() => {
         let result = logs.value;
 
-        // Filter by logger path
-        if (selectedLoggers.value.length > 0) {
-            result = result.filter(log => selectedLoggers.value.includes(getLoggerPath(log)));
+        // Filter by logger path (exclusive logic: hide loggers in hiddenLoggers)
+        if (hiddenLoggers.value.length > 0) {
+            result = result.filter(log => !hiddenLoggers.value.includes(getLoggerPath(log)));
         }
 
         // Filter by level
@@ -86,31 +108,54 @@ export function useLogStore() {
     });
 
     /**
-     * Add a log entry.
+     * Assign color to a logger path if not already assigned.
      */
-    function addLog(log: LogEntry): void {
-        // Assign color if needed
-        const loggerPath = getLoggerPath(log);
+    function assignLoggerColor(loggerPath: string): void {
         if (!loggerPathColors.has(loggerPath)) {
             loggerPathColors.set(loggerPath, COLORS[colorIndex++ % COLORS.length]!);
         }
+    }
+
+    /**
+     * Add a log entry.
+     * @param log - The log entry to add
+     * @param persist - Whether to persist to IndexedDB (false for restored logs)
+     */
+    function addLog(log: LogEntry, persist = true): void {
+        // Assign color if needed
+        const loggerPath = getLoggerPath(log);
+        assignLoggerColor(loggerPath);
 
         // Add to logs array (trigger reactivity with new array)
         const newLogs = [log, ...logs.value];
 
-        // Cap at MAX_LOGS
+        // Cap at MAX_LOGS and track evicted entries
+        const evictedIds: string[] = [];
         if (newLogs.length > MAX_LOGS) {
+            for (let i = MAX_LOGS; i < newLogs.length; i++) {
+                evictedIds.push(newLogs[i]!.id);
+            }
             newLogs.length = MAX_LOGS;
         }
 
         logs.value = newLogs;
+
+        // Persist to IndexedDB (fire-and-forget)
+        if (persist) {
+            putLog(log);
+            if (evictedIds.length > 0) {
+                deleteLogs(evictedIds);
+            }
+        }
     }
 
     /**
-     * Clear all logs.
+     * Clear all logs (in-memory and persisted).
      */
     function clearLogs(): void {
         logs.value = [];
+        // Clear persisted logs (fire-and-forget)
+        clearAllLogs();
     }
 
     /**
@@ -146,11 +191,16 @@ export function useLogStore() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const url = `${protocol}//${window.location.host}/logs`;
 
+        consoleLog('LogStore', 'info', 'Connecting to WebSocket server', { url });
+
         try {
             ws = new WebSocket(url);
 
             ws.onopen = () => {
                 connected.value = true;
+                consoleLog('LogStore', 'info', 'WebSocket connected');
+                // Reset backoff on successful connection
+                backoff.reset();
             };
 
             ws.onmessage = event => {
@@ -158,21 +208,26 @@ export function useLogStore() {
                     const log = JSON.parse(event.data as string) as LogEntry;
                     addLog(log);
                 } catch {
-                    console.error('Failed to parse log message:', event.data);
+                    consoleLog('LogStore', 'error', 'Failed to parse log message', { data: event.data });
                 }
             };
 
             ws.onclose = () => {
                 connected.value = false;
                 ws = null;
-                scheduleReconnect();
+                if (shouldReconnect) {
+                    scheduleReconnect();
+                }
             };
 
             ws.onerror = () => {
                 // Will be followed by onclose
             };
-        } catch {
-            scheduleReconnect();
+        } catch (error) {
+            consoleLog('LogStore', 'error', 'Failed to create WebSocket', { error });
+            if (shouldReconnect) {
+                scheduleReconnect();
+            }
         }
     }
 
@@ -180,10 +235,8 @@ export function useLogStore() {
      * Disconnect from the WebSocket server.
      */
     function disconnect(): void {
-        if (reconnectTimeout) {
-            clearTimeout(reconnectTimeout);
-            reconnectTimeout = null;
-        }
+        shouldReconnect = false;
+        backoff.reset();
         if (ws) {
             ws.close();
             ws = null;
@@ -192,25 +245,51 @@ export function useLogStore() {
     }
 
     /**
-     * Schedule a reconnection attempt.
+     * Schedule a reconnection attempt with exponential backoff.
      */
-    function scheduleReconnect(): void {
-        if (reconnectTimeout) {
+    async function scheduleReconnect(): Promise<void> {
+        if (isReconnecting || !shouldReconnect) {
             return;
         }
-        reconnectTimeout = setTimeout(() => {
-            reconnectTimeout = null;
+
+        isReconnecting = true;
+        const retryNumber = backoff.retries + 1;
+        consoleLog('LogStore', 'info', `Scheduling reconnect attempt ${retryNumber}...`);
+
+        await backoff.backoff();
+
+        isReconnecting = false;
+
+        if (shouldReconnect) {
             connect();
-        }, 2000);
+        }
     }
 
-    // Auto-connect on mount
-    onMounted(() => {
+    // Restore logs from IndexedDB and connect on mount
+    onMounted(async () => {
+        // Restore persisted logs
+        const restoredLogs = await loadLogs(MAX_LOGS);
+        if (restoredLogs.length > 0) {
+            // Initialize colors for restored logs
+            for (const log of restoredLogs) {
+                assignLoggerColor(getLoggerPath(log));
+            }
+            logs.value = restoredLogs;
+        }
+
+        // Skip WebSocket connection if component was unmounted during async loadLogs
+        if (isUnmounted) {
+            return;
+        }
+
+        // Enable reconnection and connect to websocket
+        shouldReconnect = true;
         connect();
     });
 
     // Cleanup on unmount
     onUnmounted(() => {
+        isUnmounted = true;
         disconnect();
     });
 
@@ -220,7 +299,7 @@ export function useLogStore() {
         connected,
 
         // Filters
-        selectedLoggers,
+        hiddenLoggers,
         selectedLevels,
         sortOrder,
 

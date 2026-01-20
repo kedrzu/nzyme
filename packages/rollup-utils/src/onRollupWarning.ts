@@ -1,6 +1,18 @@
 import type { WarningHandlerWithDefault } from 'rollup';
 
 /**
+ * Options for the onRollupWarning function
+ */
+export interface OnRollupWarningOptions {
+    /**
+     * Ignore circular dependencies in third-party modules
+     * @default 'node_modules'
+     * @description Ignore circular dependencies in third-party modules
+     */
+    ignoreCircularDependencies?: 'all' | 'node_modules';
+}
+
+/**
  * Custom warning handler for Rollup that filters out common non-critical warnings.
  * This handler ignores:
  * - 'THIS_IS_UNDEFINED' warnings (common in class methods)
@@ -8,18 +20,31 @@ import type { WarningHandlerWithDefault } from 'rollup';
  *
  * @param warning - The warning object from Rollup
  */
-export const onRollupWarning: WarningHandlerWithDefault = warning => {
-    // this warning we can safely ignore
-    // https://stackoverflow.com/a/43556986/2202583
-    if (warning.code === 'THIS_IS_UNDEFINED') {
-        return;
-    }
+export function onRollupWarning(options: OnRollupWarningOptions = {}): WarningHandlerWithDefault {
+    const { ignoreCircularDependencies = 'node_modules' } = options;
 
-    // Ignore circular dependencies in third party modules
-    if (warning.code === 'CIRCULAR_DEPENDENCY' && warning.ids?.find(id => id.includes('node_modules/'))) {
-        return;
-    }
+    return warning => {
+        // this warning we can safely ignore
+        // https://stackoverflow.com/a/43556986/2202583
+        if (warning.code === 'THIS_IS_UNDEFINED') {
+            return;
+        }
 
-    // console.warn everything else
-    console.warn(warning.message);
-};
+        // Ignore circular dependencies in third party modules
+        if (warning.code === 'CIRCULAR_DEPENDENCY') {
+            if (ignoreCircularDependencies === 'all') {
+                return;
+            }
+            if (
+                ignoreCircularDependencies === 'node_modules' &&
+                warning.ids?.find(id => id.includes('node_modules/'))
+            ) {
+                return;
+            }
+            // Fall through to console.warn for circular dependencies not matching ignore rules
+        }
+
+        // console.warn everything else
+        console.warn(warning.message);
+    };
+}

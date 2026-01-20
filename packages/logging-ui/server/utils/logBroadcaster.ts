@@ -1,6 +1,7 @@
 import type { Peer } from 'crossws';
 
 import type { LogEntry } from '../../types/LogEntry.js';
+import { toJsonString } from '@nzyme/utils';
 
 /**
  * Set of connected browser clients (viewers).
@@ -25,7 +26,7 @@ export function removeViewer(peer: Peer): void {
  * Broadcast a log entry to all connected viewers.
  */
 export function broadcastLog(log: LogEntry): void {
-    const message = JSON.stringify(log);
+    const message = toJsonString(log);
     for (const viewer of viewers) {
         try {
             viewer.send(message);

@@ -45,4 +45,9 @@ export default defineNuxtConfig({
         },
     },
     css: ['primeicons/primeicons.css'],
+    vite: {
+        server: {
+            hmr: false,
+        },
+    },
 });

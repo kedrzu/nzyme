@@ -1,6 +1,18 @@
 import type { WarningHandlerWithDefault } from 'rollup';
 
 /**
+ * Options for the onRollupWarning function
+ */
+export interface OnRollupWarningOptions {
+    /**
+     * Ignore circular dependencies in third-party modules
+     * @default 'node_modules'
+     * @description Ignore circular dependencies in third-party modules
+     */
+    ignoreCircularDependencies?: 'all' | 'node_modules';
+}
+
+/**
  * Custom warning handler for Rollup that filters out common non-critical warnings.
  * This handler ignores:
  * - 'THIS_IS_UNDEFINED' warnings (common in class methods)
@@ -8,18 +20,29 @@ import type { WarningHandlerWithDefault } from 'rollup';
  *
  * @param warning - The warning object from Rollup
  */
-export const onRollupWarning: WarningHandlerWithDefault = warning => {
-    // this warning we can safely ignore
-    // https://stackoverflow.com/a/43556986/2202583
-    if (warning.code === 'THIS_IS_UNDEFINED') {
-        return;
-    }
+export function onRollupWarning(options: OnRollupWarningOptions = {}): WarningHandlerWithDefault {
+    return warning => {
+        // this warning we can safely ignore
+        // https://stackoverflow.com/a/43556986/2202583
+        if (warning.code === 'THIS_IS_UNDEFINED') {
+            return;
+        }
 
-    // Ignore circular dependencies in third party modules
-    if (warning.code === 'CIRCULAR_DEPENDENCY' && warning.ids?.find(id => id.includes('node_modules/'))) {
-        return;
-    }
+        // Ignore circular dependencies in third party modules
+        if (warning.code === 'CIRCULAR_DEPENDENCY') {
+            if (
+                options.ignoreCircularDependencies === 'node_modules' &&
+                warning.ids?.find(id => id.includes('node_modules/'))
+            ) {
+                return;
+            } else if (options.ignoreCircularDependencies === 'all') {
+                return;
+            }
 
-    // console.warn everything else
-    console.warn(warning.message);
-};
+            return;
+        }
+
+        // console.warn everything else
+        console.warn(warning.message);
+    };
+}

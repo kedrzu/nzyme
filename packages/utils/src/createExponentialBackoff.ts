@@ -4,7 +4,7 @@ import { waitFor } from './waitFor.js';
  * Configuration options for exponential backoff.
  */
 export interface ExponentialBackoffOptions {
-    /** Maximum number of retries before giving up. Default: 10 */
+    /** Maximum number of retries before giving up. Default: Infinity */
     maxRetries?: number;
     /** Base delay in milliseconds. Default: 1000 */
     baseDelay?: number;
@@ -53,7 +53,7 @@ export interface ExponentialBackoff {
  * @returns Exponential backoff controller
  */
 export function createExponentialBackoff(options?: ExponentialBackoffOptions): ExponentialBackoff {
-    const maxRetries = options?.maxRetries ?? 10;
+    const maxRetries = options?.maxRetries ?? Infinity;
     const baseDelay = options?.baseDelay ?? 1000;
     const power = options?.power ?? 2;
     const maxDelay = options?.maxDelay ?? 30000;

@@ -21,6 +21,8 @@ export interface OnRollupWarningOptions {
  * @param warning - The warning object from Rollup
  */
 export function onRollupWarning(options: OnRollupWarningOptions = {}): WarningHandlerWithDefault {
+    const { ignoreCircularDependencies = 'node_modules' } = options;
+
     return warning => {
         // this warning we can safely ignore
         // https://stackoverflow.com/a/43556986/2202583
@@ -30,11 +32,11 @@ export function onRollupWarning(options: OnRollupWarningOptions = {}): WarningHa
 
         // Ignore circular dependencies in third party modules
         if (warning.code === 'CIRCULAR_DEPENDENCY') {
-            if (options.ignoreCircularDependencies === 'all') {
+            if (ignoreCircularDependencies === 'all') {
                 return;
             }
             if (
-                options.ignoreCircularDependencies === 'node_modules' &&
+                ignoreCircularDependencies === 'node_modules' &&
                 warning.ids?.find(id => id.includes('node_modules/'))
             ) {
                 return;

@@ -60,8 +60,13 @@ const visibleLoggers = computed({
     return uniqueLoggers.value.filter(logger => !hiddenLoggers.value.includes(logger));
   },
   set(newVisibleLoggers: string[] | null | undefined) {
-    // Handle null/undefined from PrimeVue (e.g., on clear) by treating as empty array
+    // Handle null/undefined/empty from PrimeVue (e.g., on clear) as "show all"
     const visible = newVisibleLoggers ?? [];
+    // Empty selection means show all (no hidden loggers)
+    if (visible.length === 0) {
+      hiddenLoggers.value = [];
+      return;
+    }
     // Hidden = all loggers EXCEPT visible
     hiddenLoggers.value = uniqueLoggers.value.filter(logger => !visible.includes(logger));
   },

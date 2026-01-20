@@ -83,6 +83,12 @@ export async function loadLogs(limit: number): Promise<LogEntry[]> {
             transaction.oncomplete = () => {
                 db.close();
             };
+
+            transaction.onerror = () => {
+                console.warn('[logsIndexedDb] Transaction error loading logs:', transaction.error);
+                db.close();
+                resolve([]);
+            };
         } catch (err) {
             console.warn('[logsIndexedDb] Error loading logs:', err);
             db.close();

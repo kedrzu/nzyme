@@ -30,16 +30,16 @@ export function onRollupWarning(options: OnRollupWarningOptions = {}): WarningHa
 
         // Ignore circular dependencies in third party modules
         if (warning.code === 'CIRCULAR_DEPENDENCY') {
+            if (options.ignoreCircularDependencies === 'all') {
+                return;
+            }
             if (
                 options.ignoreCircularDependencies === 'node_modules' &&
                 warning.ids?.find(id => id.includes('node_modules/'))
             ) {
                 return;
-            } else if (options.ignoreCircularDependencies === 'all') {
-                return;
             }
-
-            return;
+            // Fall through to console.warn for circular dependencies not matching ignore rules
         }
 
         // console.warn everything else

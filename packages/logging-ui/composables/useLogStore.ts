@@ -68,6 +68,7 @@ export function useLogStore() {
     let ws: WebSocket | null = null;
     let isReconnecting = false;
     let shouldReconnect = true;
+    let isUnmounted = false;
     const backoff = createExponentialBackoff({
         baseDelay: 1000,
         maxDelay: 30000,
@@ -276,6 +277,11 @@ export function useLogStore() {
             logs.value = restoredLogs;
         }
 
+        // Skip WebSocket connection if component was unmounted during async loadLogs
+        if (isUnmounted) {
+            return;
+        }
+
         // Enable reconnection and connect to websocket
         shouldReconnect = true;
         connect();
@@ -283,6 +289,7 @@ export function useLogStore() {
 
     // Cleanup on unmount
     onUnmounted(() => {
+        isUnmounted = true;
         disconnect();
     });
 

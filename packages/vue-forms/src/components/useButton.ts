@@ -4,8 +4,7 @@ import { RouterLink } from 'vue-router';
 import type { RouteLocationRaw } from 'vue-router';
 
 import { assignProps, waitFor } from '@nzyme/utils';
-import { defineProp, injectContext, useEmit, useProps } from '@nzyme/vue-utils';
-import { defineProps, useEmitAsync } from '@nzyme/vue-utils';
+import { defineProp, defineProps, injectContext, useEmit, useEmitAsync, useProps } from '@nzyme/vue-utils';
 
 import { FormContext } from '../FormContext.js';
 
@@ -28,7 +27,7 @@ const BUTTON_PROPS = defineProps({
 
 const BUTTON_EMITS = {
     click: (event: Event) => !!event,
-    'update:busy': (busy: boolean) => true,
+    'update:busy': (_busy: boolean) => true,
 };
 
 /**
@@ -188,6 +187,11 @@ function setupButton() {
             pending.value = !props.noWait;
             emit('update:busy', pending.value);
 
+            const result = emitAsync('click', event);
+            if (result instanceof Promise) {
+                await result;
+            }
+
             if (navigate) {
                 await navigate(event);
             } else {
@@ -197,11 +201,6 @@ function setupButton() {
                 if (props.type === 'submit') {
                     await formCtx?.submit();
                 }
-            }
-
-            const result = emitAsync('click', event);
-            if (result instanceof Promise) {
-                await result;
             }
 
             if (navigate) {

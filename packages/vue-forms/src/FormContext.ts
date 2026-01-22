@@ -1,8 +1,13 @@
 import { reactive, ref } from 'vue';
 
 import { createEventEmitter } from '@nzyme/utils';
-import { defineContext } from '@nzyme/vue-utils';
-import { useEmitAsync } from '@nzyme/vue-utils';
+import { defineContext, useEmitAsync } from '@nzyme/vue-utils';
+import type { ContextOf } from '@nzyme/vue-utils';
+
+/**
+ * Form context type
+ */
+export type FormContext = ContextOf<typeof FormContext>;
 
 /**
  * Form context
@@ -26,7 +31,7 @@ export const FormContext = defineContext('FormContext', () => {
         },
     });
 
-    async function submit() {
+    async function submit(callback?: () => Promise<void> | void) {
         if (pending.value) {
             return;
         }
@@ -40,6 +45,7 @@ export const FormContext = defineContext('FormContext', () => {
             }
 
             pending.value = true;
+            await callback?.();
             await emitAsync('submit');
             submitSucceed.emit();
         } catch (e) {

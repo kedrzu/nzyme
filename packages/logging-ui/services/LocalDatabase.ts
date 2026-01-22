@@ -136,17 +136,6 @@ export function isLevelDisabled(config: LoggerConfig | undefined, level: LoggerL
 }
 
 /**
- * Helper to check if a logger is completely disabled (all levels disabled).
- */
-export function isLoggerDisabled(config: LoggerConfig | undefined): boolean {
-    if (!config) {
-        return false;
-    }
-    const levels: LoggerLevel[] = ['error', 'warn', 'info', 'debug', 'trace'];
-    return levels.every(level => config.disabledLevels[level] === false);
-}
-
-/**
  * Helper to get logger path in "app/logger" or "app" format.
  */
 export function getLoggerPath(app: string, logger: string | null): string {

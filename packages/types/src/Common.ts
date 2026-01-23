@@ -105,3 +105,8 @@ export type StringNonLiteral = string & {};
  *
  */
 export type UUID = `${string}-${string}-${string}-${string}-${string}`;
+
+/**
+ * Represents types that can be compared using relational operators (<, >, <=, >=)
+ */
+export type Comparable = bigint | number | Date;

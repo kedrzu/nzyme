@@ -89,8 +89,7 @@ export function fromJsonSchema(schema: JSONSchema7, options: FromJsonSchemaOptio
 function schemaProps(schema: JSONSchema7, options: FromJsonSchemaOptions) {
     const meta: Record<string, unknown> = {};
     const props: Record<string, unknown> & SchemaOptionsBase = {
-        nullable:
-            schema.type === 'null' || (Array.isArray(schema.type) && schema.type.includes('null')),
+        nullable: schema.type === 'null' || (Array.isArray(schema.type) && schema.type.includes('null')),
         optional: options.optional,
         meta,
     };

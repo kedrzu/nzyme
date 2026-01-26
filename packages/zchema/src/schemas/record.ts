@@ -26,9 +26,10 @@ export type RecordOptions<T extends SchemaAny = SchemaAny> = {
  * Schema type for records.
  * @template O - Record schema options type
  */
-export type RecordSchema<
-    O extends SchemaOptionsBase<RecordOptions> = SchemaOptionsBase<RecordOptions>,
-> = Schema<RecordValue<Infer<O['of']>>, O> & {
+export type RecordSchema<O extends SchemaOptionsBase<RecordOptions> = SchemaOptionsBase<RecordOptions>> = Schema<
+    RecordValue<Infer<O['of']>>,
+    O
+> & {
     /**
      *
      */
@@ -55,13 +56,7 @@ type RecordSchemaConstructor = {
         TOptional extends boolean | undefined = undefined,
         TMeta extends SchemaMeta | undefined = undefined,
     >(
-        options: SchemaOptions<
-            RecordValue<Infer<S>>,
-            TNullable,
-            TOptional,
-            TMeta,
-            RecordOptions<S>
-        >,
+        options: SchemaOptions<RecordValue<Infer<S>>, TNullable, TOptional, TMeta, RecordOptions<S>>,
     ): RecordSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, RecordOptions<S>>>;
 };
 

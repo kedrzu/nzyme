@@ -28,9 +28,10 @@ export type ArrayOptions<T extends SchemaAny = SchemaAny> = {
  * Schema type for arrays.
  * @template O - Array schema options type
  */
-export type ArraySchema<
-    O extends SchemaOptionsBase<ArrayOptions> = SchemaOptionsBase<ArrayOptions>,
-> = Schema<Infer<O['of']>[], O> & {
+export type ArraySchema<O extends SchemaOptionsBase<ArrayOptions> = SchemaOptionsBase<ArrayOptions>> = Schema<
+    Infer<O['of']>[],
+    O
+> & {
     /**
      *
      */

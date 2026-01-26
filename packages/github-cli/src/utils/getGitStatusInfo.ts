@@ -62,7 +62,6 @@ export interface GitStatusInfo {
  * @__NO_SIDE_EFFECTS__
  */
 export async function getGitStatusInfo(git: SimpleGit = simpleGit()): Promise<GitStatusInfo> {
-
     try {
         const status = await git.status();
 

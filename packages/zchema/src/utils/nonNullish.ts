@@ -5,8 +5,7 @@ import type { Extend } from './extend.js';
  * Type representing a schema that cannot be null or undefined.
  * @template S - The base schema type
  */
-export type NonNullish<S extends Schema> = Extend<S, { nullable: false; optional: false }> &
-    ForceName;
+export type NonNullish<S extends Schema> = Extend<S, { nullable: false; optional: false }> & ForceName;
 
 /**
  * Internal class used to force type names in TypeScript.

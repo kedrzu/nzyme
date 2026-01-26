@@ -29,8 +29,6 @@ export interface EndpointResponse<T> {
  * @returns The provided endpoint configuration for use in HTTP requests
  * @__NO_SIDE_EFFECTS__
  */
-export function defineEndpoint<TParams = void, TResult = void>(
-    endpoint: Endpoint<TParams, TResult>,
-) {
+export function defineEndpoint<TParams = void, TResult = void>(endpoint: Endpoint<TParams, TResult>) {
     return endpoint;
 }

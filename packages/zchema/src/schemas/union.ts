@@ -23,9 +23,10 @@ export type UnionOptions<T extends Schema[] = Schema[]> = {
  * Schema type for union values.
  * @template O - Union schema options type
  */
-export type UnionSchema<
-    O extends SchemaOptionsBase<UnionOptions> = SchemaOptionsBase<UnionOptions>,
-> = Schema<UnionValue<O>, O> & {
+export type UnionSchema<O extends SchemaOptionsBase<UnionOptions> = SchemaOptionsBase<UnionOptions>> = Schema<
+    UnionValue<O>,
+    O
+> & {
     /**
      *
      */

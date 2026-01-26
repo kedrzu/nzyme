@@ -35,10 +35,7 @@ export type InferOr<TSchema, T = undefined> = TSchema extends Schema ? Infer<TSc
  * @template V - The value type that the schema validates
  * @template O - The options type for the schema
  */
-export type Schema<
-    V = unknown,
-    O extends SchemaOptionsBase = SchemaOptionsBase,
-> = SchemaProps<V> & {
+export type Schema<V = unknown, O extends SchemaOptionsBase = SchemaOptionsBase> = SchemaProps<V> & {
     /**
      * Function that returns the default value for the schema when no value is provided.
      * The function is called with the schema context as its parameter.
@@ -125,11 +122,7 @@ export type SchemaBase<S extends Schema = Schema> = {
  * Type representing a default value for a schema, either as a value or a function that returns a value.
  * @template V - The type of the default value
  */
-export type SchemaDefault<V> = IfUnknown<
-    V,
-    (() => V) | V,
-    V extends Primitive ? (() => V) | V : () => V
->;
+export type SchemaDefault<V> = IfUnknown<V, (() => V) | V, V extends Primitive ? (() => V) | V : () => V>;
 
 /**
  * Creates a schema that matches a given TypeScript type.

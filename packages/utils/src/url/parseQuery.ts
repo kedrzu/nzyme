@@ -9,18 +9,9 @@ import type { QueryParams, QueryParamsSimple } from './queryTypes.js';
  * @returns An object containing the parsed query parameters
  */
 export function parseQuery(querystring: null | string | undefined): QueryParamsSimple;
-export function parseQuery(
-    querystring: null | string | undefined,
-    options: { multiple: false },
-): QueryParamsSimple;
-export function parseQuery(
-    querystring: null | string | undefined,
-    options: { multiple: true },
-): QueryParams;
-export function parseQuery(
-    querystring: null | string | undefined,
-    options?: { multiple: boolean },
-): QueryParams {
+export function parseQuery(querystring: null | string | undefined, options: { multiple: false }): QueryParamsSimple;
+export function parseQuery(querystring: null | string | undefined, options: { multiple: true }): QueryParams;
+export function parseQuery(querystring: null | string | undefined, options?: { multiple: boolean }): QueryParams {
     const query: QueryParams = {};
     const multiple = options?.multiple || false;
 

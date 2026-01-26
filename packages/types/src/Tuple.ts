@@ -8,7 +8,7 @@ export type Tuple<
     T7 = void,
     T8 = void,
     T9 = void,
-    T10 = void
+    T10 = void,
 > = T10 extends void
     ? T9 extends void
         ? T8 extends void

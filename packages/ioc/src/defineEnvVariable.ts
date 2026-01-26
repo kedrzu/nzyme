@@ -27,8 +27,10 @@ export interface EnvVariableOptionsRequired<TRequired extends boolean> {
 /**
  * Options for the env variable.
  */
-export interface EnvVariableOptionsParse<TRequired extends boolean, TValue = string>
-    extends EnvVariableOptionsRequired<TRequired> {
+export interface EnvVariableOptionsParse<
+    TRequired extends boolean,
+    TValue = string,
+> extends EnvVariableOptionsRequired<TRequired> {
     /**
      * Function to parse the environment variable value.
      */
@@ -49,8 +51,7 @@ export interface EnvVariableOptionsDefault<TValue = string> extends EnvVariableO
  *
  */
 export interface EnvVariable<TName extends string = string, TRequired extends boolean = boolean, TValue = unknown>
-    extends EnvVariableOptionsParse<TRequired, TValue>,
-        Injectable<TValue> {
+    extends EnvVariableOptionsParse<TRequired, TValue>, Injectable<TValue> {
     /**
      * Whether the environment variable is required.
      */

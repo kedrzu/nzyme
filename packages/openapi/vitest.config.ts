@@ -5,5 +5,10 @@ export default defineConfig({
         globals: true,
         environment: 'node',
         include: ['tests/**/*.test.ts'],
+        typecheck: {
+            enabled: true,
+            checker: 'tsc',
+            include: ['src/**/*.test.ts'],
+        },
     },
 });

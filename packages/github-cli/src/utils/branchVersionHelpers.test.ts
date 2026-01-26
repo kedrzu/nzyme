@@ -111,11 +111,7 @@ describe('determineNextVersion', () => {
 
     test('ignores branches with different base names', () => {
         expect(
-            determineNextVersion('sig-123-feature', [
-                'sig-123-feature',
-                'sig-456-feature',
-                'sig-456-feature--v2',
-            ]),
+            determineNextVersion('sig-123-feature', ['sig-123-feature', 'sig-456-feature', 'sig-456-feature--v2']),
         ).toBe('sig-123-feature--v2');
     });
 

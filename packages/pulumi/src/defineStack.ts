@@ -166,8 +166,10 @@ export interface Stack<TOutput extends StackOutput = StackOutput> {
 /**
  * Definition of a Pulumi stack.
  */
-export interface StackDefinition<TDeps extends Dependencies = Dependencies, TOutput extends StackOutput = StackOutput>
-    extends Service<Stack<TOutput>, TDeps> {
+export interface StackDefinition<
+    TDeps extends Dependencies = Dependencies,
+    TOutput extends StackOutput = StackOutput,
+> extends Service<Stack<TOutput>, TDeps> {
     /**
      * Name of the stack.
      */

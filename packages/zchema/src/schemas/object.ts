@@ -46,9 +46,7 @@ export type ObjectOptions<TProps extends ObjectSchemaProps = ObjectSchemaProps> 
 /**
  *
  */
-export type ObjectSchema<
-    O extends SchemaOptionsBase<ObjectOptions> = SchemaOptionsBase<ObjectOptions>,
-> = ForceName &
+export type ObjectSchema<O extends SchemaOptionsBase<ObjectOptions> = SchemaOptionsBase<ObjectOptions>> = ForceName &
     Schema<ObjectSchemaValue<O>, O> & {
         /**
          *
@@ -81,13 +79,7 @@ export type ObjectSchemaConstructor = {
         TOptional extends boolean | undefined = undefined,
         TMeta extends SchemaMeta | undefined = undefined,
     >(
-        options: SchemaOptions<
-            ObjectSchemaPropsValue<TProps>,
-            TNullable,
-            TOptional,
-            TMeta,
-            ObjectOptions<TProps>
-        >,
+        options: SchemaOptions<ObjectSchemaPropsValue<TProps>, TNullable, TOptional, TMeta, ObjectOptions<TProps>>,
     ): ObjectSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, ObjectOptions<TProps>>>;
     <TProps extends ObjectSchemaProps>(props: TProps): ObjectSchema<{ props: TProps }>;
 };
@@ -101,9 +93,7 @@ export const object = defineSchema<ObjectSchemaConstructor, SchemaOptionsBase<Ob
     name: 'object',
     options: (optionsOrProps: ObjectOptions | ObjectSchemaProps) => {
         const options =
-            optionsOrProps.props && !isSchema(optionsOrProps.props)
-                ? optionsOrProps
-                : { props: optionsOrProps };
+            optionsOrProps.props && !isSchema(optionsOrProps.props) ? optionsOrProps : { props: optionsOrProps };
 
         return options as SchemaOptionsBase<ObjectOptions>;
     },

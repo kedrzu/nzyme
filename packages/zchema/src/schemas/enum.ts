@@ -15,13 +15,15 @@ import type {
  * Schema type for enum values.
  * @template O - Enum schema options type
  */
-export type EnumSchema<O extends SchemaOptionsBase<EnumOptions> = SchemaOptionsBase<EnumOptions>> =
-    Schema<EnumValue<O['values']>, O> & {
-        /**
-         *
-         */
-        values: O['values'];
-    };
+export type EnumSchema<O extends SchemaOptionsBase<EnumOptions> = SchemaOptionsBase<EnumOptions>> = Schema<
+    EnumValue<O['values']>,
+    O
+> & {
+    /**
+     *
+     */
+    values: O['values'];
+};
 
 /**
  * Options for defining an enum schema.

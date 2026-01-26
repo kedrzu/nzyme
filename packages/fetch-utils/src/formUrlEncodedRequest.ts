@@ -6,8 +6,7 @@ import type { FetchRequest } from './fetchRequest.js';
  * Request configuration for form URL encoded requests.
  * Extends the base FetchRequest but allows for a typed body parameter.
  */
-export interface EndpointFormUrlEncodedRequest<T = unknown>
-    extends OmitProps<FetchRequest, 'body'> {
+export interface EndpointFormUrlEncodedRequest<T = unknown> extends OmitProps<FetchRequest, 'body'> {
     /** The request body that will be encoded as form URL parameters */
     body?: T;
 }

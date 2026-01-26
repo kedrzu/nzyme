@@ -17,13 +17,13 @@ type ImmutableArray<T> = readonly Immutable<T>[];
 export type Immutable<T> = T extends string
     ? T // eslint-disable-next-line @typescript-eslint/ban-types
     : T extends Function
-    ? T
-    : T extends any[]
-    ? ImmutableArray<Item<T>>
-    : T extends ArrayLike<any>
-    ? ImmutableArrayLike<Item<T>>
-    : T extends Record<string, unknown>
-    ? ImmutableObject<T>
-    : T;
+      ? T
+      : T extends any[]
+        ? ImmutableArray<Item<T>>
+        : T extends ArrayLike<any>
+          ? ImmutableArrayLike<Item<T>>
+          : T extends Record<string, unknown>
+            ? ImmutableObject<T>
+            : T;
 
 export type Mutable<T> = T extends Immutable<infer V> ? V : T;

@@ -1,5 +1,6 @@
 import type { MaybeRefOrGetter } from 'vue';
 
+import type { Comparable } from '@nzyme/types';
 import { makeRef } from '@nzyme/vue-utils';
 
 import { defineValidator } from '../defineValidator.js';
@@ -13,7 +14,7 @@ export interface MaxValueValidatorOptions {
     /**
      * Maximum allowed value
      */
-    maxValue: MaybeRefOrGetter<bigint | number>;
+    maxValue: MaybeRefOrGetter<Comparable>;
 
     /**
      * Whether to check if the value is strictly greater than the maximum value.
@@ -26,7 +27,7 @@ export interface MaxValueValidatorOptions {
     /**
      * Custom error message function
      */
-    message?: (value: bigint | number, ctx: FormValidationContext) => FormValidationResult;
+    message?: (value: Comparable, ctx: FormValidationContext) => FormValidationResult;
 }
 
 /**
@@ -37,7 +38,7 @@ export function maxValueValidator(options: MaxValueValidatorOptions) {
     const maxValue = makeRef(options.maxValue);
     const exclusive = makeRef(options.exclusive);
 
-    return defineValidator<bigint | number>({
+    return defineValidator<Comparable>({
         async: false,
         validate: (value, ctx) => {
             if (value == null) {

@@ -12,11 +12,7 @@ import { lazyResolve } from '../schemas/lazy.js';
  * @param ctx - Optional validation context
  * @returns Normalized validation errors, or undefined if the value is valid
  */
-export function validate<S extends SchemaAny>(
-    schema: S,
-    value: Infer<S>,
-    ctx: ValidationContext = {},
-) {
+export function validate<S extends SchemaAny>(schema: S, value: Infer<S>, ctx: ValidationContext = {}) {
     const errors = validateInner(schema, value, ctx);
     return normalizeErrors(errors);
 }
@@ -29,11 +25,7 @@ export function validate<S extends SchemaAny>(
  * @param ctx - Optional validation context
  * @throws {ValidationError} If the value is invalid
  */
-export function validateOrThrow<S extends SchemaAny>(
-    schema: S,
-    value: Infer<S>,
-    ctx: ValidationContext = {},
-) {
+export function validateOrThrow<S extends SchemaAny>(schema: S, value: Infer<S>, ctx: ValidationContext = {}) {
     const result = validate(schema, value, ctx);
     if (result != null) {
         throw new ValidationError(result);

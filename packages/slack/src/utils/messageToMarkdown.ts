@@ -13,9 +13,7 @@ type File = NonNullable<GenericMessageEvent['files']>[number];
  * @param message Slack message event to convert
  * @returns Markdown string representation of the message
  */
-export function messageToMarkdown(
-    message: AppMentionEvent | BotMessageEvent | GenericMessageEvent,
-) {
+export function messageToMarkdown(message: AppMentionEvent | BotMessageEvent | GenericMessageEvent) {
     let content = '';
 
     if (message.blocks) {

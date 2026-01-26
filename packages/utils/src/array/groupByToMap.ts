@@ -8,10 +8,7 @@
  * @returns A Map where keys are the grouping keys and values are arrays of elements
  * @__NO_SIDE_EFFECTS__
  */
-export function groupByToMap<T, K extends number | string>(
-    array: readonly T[],
-    key: (item: T) => K,
-) {
+export function groupByToMap<T, K extends number | string>(array: readonly T[], key: (item: T) => K) {
     const result = new Map<K, T[]>();
 
     for (const item of array) {

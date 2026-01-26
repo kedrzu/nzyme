@@ -12,8 +12,7 @@ import type {
  * Schema type for void values.
  * @template O - Schema options type
  */
-export type VoidSchema<O extends SchemaOptionsBase = SchemaOptionsBase> = ForceName &
-    Schema<void, O>;
+export type VoidSchema<O extends SchemaOptionsBase = SchemaOptionsBase> = ForceName & Schema<void, O>;
 
 /**
  * Internal class used to force type names in TypeScript.

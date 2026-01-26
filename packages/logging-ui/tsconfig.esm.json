@@ -3,7 +3,5 @@
     "compilerOptions": {
         "noUncheckedIndexedAccess": true
     },
-    "references": [
-        { "path": "../logging/tsconfig.json" }
-    ]
+    "references": [{ "path": "../logging/tsconfig.json" }]
 }

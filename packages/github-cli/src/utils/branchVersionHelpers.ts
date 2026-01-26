@@ -52,20 +52,20 @@ export function areSameBranchVersions(branch1: string, branch2: string): boolean
  */
 export function determineNextVersion(baseBranchName: string, existingBranches: string[]): string {
     const baseName = getBaseBranchName(baseBranchName);
-    
+
     // Find all versions of this branch
     const versions = existingBranches
         .filter(branch => getBaseBranchName(branch) === baseName)
         .map(branch => extractBranchVersion(branch));
-    
+
     if (versions.length === 0) {
         // No existing versions, use the base name as v1
         return baseName;
     }
-    
+
     // Get the highest version and increment
     const maxVersion = Math.max(...versions);
     const nextVersion = maxVersion + 1;
-    
+
     return `${baseName}--v${nextVersion}`;
 }

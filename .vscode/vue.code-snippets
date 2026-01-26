@@ -2,15 +2,7 @@
     "VueComponent": {
         "prefix": "vue-component",
         "scope": "vue",
-        "body": [
-            "<script lang=\"ts\" setup>",
-            "$0",
-            "</script>",
-            "",
-            "<template>",
-            "$1",
-            "</template>",
-        ],
+        "body": ["<script lang=\"ts\" setup>", "$0", "</script>", "", "<template>", "$1", "</template>"],
     },
     "VueStyle": {
         "prefix": "vue-style",

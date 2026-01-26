@@ -18,7 +18,7 @@ export const Form = defineComponent({
     slots: defineSlots<{
         default: {
             pending: boolean;
-            submit: () => void | Promise<void>;
+            submit: FormContext['submit'];
         };
     }>(),
     setup(props, { slots }) {

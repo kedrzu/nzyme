@@ -11,94 +11,97 @@ const logStore = useService(LogStore);
 </script>
 
 <template>
-    <div class="log-viewer">
-        <header class="toolbar">
-            <div class="nav">
-                <NuxtLink to="/config" class="config-link">
-                    <Settings :size="16" />
-                    <span>Filters</span>
-                </NuxtLink>
-            </div>
+  <div class="log-viewer">
+    <header class="toolbar">
+      <div class="nav">
+        <NuxtLink
+          to="/config"
+          class="config-link"
+        >
+          <Settings :size="16" />
+          <span>Filters</span>
+        </NuxtLink>
+      </div>
 
-            <div class="actions">
-                <Tag
-                    :value="logStore.connected ? 'Connected' : 'Disconnected'"
-                    :severity="logStore.connected ? 'success' : 'danger'"
-                    class="connection-status"
-                />
-                <Button
-                    label="Clear"
-                    icon="pi pi-trash"
-                    severity="secondary"
-                    size="small"
-                    @click="logStore.clearLogs()"
-                />
-            </div>
-        </header>
+      <div class="actions">
+        <Tag
+          :value="logStore.connected ? 'Connected' : 'Disconnected'"
+          :severity="logStore.connected ? 'success' : 'danger'"
+          class="connection-status"
+        />
+        <Button
+          label="Clear"
+          icon="pi pi-trash"
+          severity="secondary"
+          size="small"
+          @click="logStore.clearLogs()"
+        />
+      </div>
+    </header>
 
-        <main class="table-container">
-            <LogTable
-                :logs="logStore.logs"
-                :get-logger-path-color="logStore.getLoggerPathColor"
-                :get-logger-path-display="logStore.getLoggerPathDisplay"
-            />
-        </main>
-    </div>
+    <main class="table-container">
+      <LogTable
+        :logs="logStore.logs"
+        :get-logger-path-color="logStore.getLoggerPathColor"
+        :get-logger-path-display="logStore.getLoggerPathDisplay"
+      />
+    </main>
+  </div>
 </template>
 
 <style scoped>
 .log-viewer {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem 1rem;
-    background-color: var(--p-surface-0);
-    border-bottom: 1px solid var(--p-surface-200);
-    gap: 1rem;
-    flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: var(--p-surface-0);
+  border-bottom: 1px solid var(--p-surface-200);
+  gap: 1rem;
+  flex-shrink: 0;
 }
 
 .nav {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .config-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--p-primary-color);
-    text-decoration: none;
-    font-size: 0.875rem;
-    font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--p-primary-color);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .config-link:hover {
-    text-decoration: underline;
+  text-decoration: underline;
 }
 
 .actions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .connection-status {
-    font-size: 0.75rem;
+  font-size: 0.75rem;
 }
 
 .table-container {
-    flex: 1;
-    overflow: hidden;
-    max-width: 100%;
-    min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  max-width: 100%;
+  min-width: 0;
 }
 </style>

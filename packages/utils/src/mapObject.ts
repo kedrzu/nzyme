@@ -17,10 +17,7 @@ import type { ValueOf } from '@nzyme/types';
  * // doubled = { a: 2, b: 4, c: 6 }
  * ```
  */
-export function mapObject<T, TTo>(
-    obj: T,
-    map: (value: ValueOf<T>, key: keyof T, index: number) => TTo,
-) {
+export function mapObject<T, TTo>(obj: T, map: (value: ValueOf<T>, key: keyof T, index: number) => TTo) {
     const result = {} as {
         [K in keyof T]: TTo;
     };

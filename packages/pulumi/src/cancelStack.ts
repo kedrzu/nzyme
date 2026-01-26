@@ -16,10 +16,7 @@ export interface CancelStackOptions {
 /**
  * Cancel a stack deployment.
  */
-export async function cancelStack<TOut extends StackOutput>(
-    stack: Stack<TOut>,
-    options: CancelStackOptions,
-) {
+export async function cancelStack<TOut extends StackOutput>(stack: Stack<TOut>, options: CancelStackOptions) {
     assertStackEnabled(stack);
 
     const stackInstance = await createOrSelectStack(stack, options.config);

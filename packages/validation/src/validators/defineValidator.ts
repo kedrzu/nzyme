@@ -29,9 +29,7 @@ export type ValidatorOptions<T> = {
  *
  * @__NO_SIDE_EFFECTS__
  */
-export function defineValidator<T>(
-    options: DefineValidatorOptions<T>,
-): Validator<null | T | undefined> {
+export function defineValidator<T>(options: DefineValidatorOptions<T>): Validator<null | T | undefined> {
     const { message, validator } = options;
 
     return (value, ctx) => {

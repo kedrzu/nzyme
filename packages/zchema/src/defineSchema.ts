@@ -16,10 +16,7 @@ import type {
  * @template F - The base schema type
  * @template O - The schema options type
  */
-type SchemaDefinition<
-    F extends SchemaBase = SchemaBase,
-    O extends SchemaOptionsAny = SchemaOptions,
-> = {
+type SchemaDefinition<F extends SchemaBase = SchemaBase, O extends SchemaOptionsAny = SchemaOptions> = {
     /** The name of the schema */
     name: string;
     /** Optional factory function to create schema options */
@@ -32,17 +29,13 @@ type SchemaDefinition<
  * Factory function type for creating schema options
  * @template F - The base schema type
  */
-type SchemaOptionsFactory<F extends SchemaBase = SchemaBase> = (
-    ...args: FunctionParams<F>
-) => SchemaOptionsAny;
+type SchemaOptionsFactory<F extends SchemaBase = SchemaBase> = (...args: FunctionParams<F>) => SchemaOptionsAny;
 
 /**
  * Factory function type for creating schema prototype
  * @template O - The schema options type
  */
-type SchemaProtoFactory<O extends SchemaOptionsAny = SchemaOptions> = (
-    options: O,
-) => SchemaProtoAny;
+type SchemaProtoFactory<O extends SchemaOptionsAny = SchemaOptions> = (options: O) => SchemaProtoAny;
 
 /**
  * Creates a new schema definition with the specified name, options factory, and prototype factory.

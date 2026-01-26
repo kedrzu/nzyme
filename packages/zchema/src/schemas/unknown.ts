@@ -15,10 +15,7 @@ import type {
  * @template V - Value type
  * @template O - Schema options type
  */
-export type UnknownSchema<
-    V = unknown,
-    O extends SchemaOptionsBase = SchemaOptionsBase,
-> = ForceName & Schema<V, O>;
+export type UnknownSchema<V = unknown, O extends SchemaOptionsBase = SchemaOptionsBase> = ForceName & Schema<V, O>;
 
 /**
  * Internal class used to force type names in TypeScript.

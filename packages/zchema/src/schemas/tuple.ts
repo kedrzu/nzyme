@@ -27,9 +27,7 @@ export type TupleOptions<T extends Schema[] = Schema[]> = {
  * @template T - Array of schema types
  * @template O - Schema options type
  */
-export type TupleSchema<
-    O extends SchemaOptionsBase<TupleOptions> = SchemaOptionsBase<TupleOptions>,
-> = ForceName &
+export type TupleSchema<O extends SchemaOptionsBase<TupleOptions> = SchemaOptionsBase<TupleOptions>> = ForceName &
     Schema<TupleValue<O['of']>, O> & {
         /**
          *
@@ -56,8 +54,7 @@ type TupleSchemaBase = {
         TOptional extends boolean | undefined = undefined,
         TMeta extends SchemaMeta | undefined = undefined,
     >(
-        options: SchemaOptionsBase &
-            SchemaOptions<TupleValue<S>, TNullable, TOptional, TMeta, TupleOptions<S>>,
+        options: SchemaOptionsBase & SchemaOptions<TupleValue<S>, TNullable, TOptional, TMeta, TupleOptions<S>>,
     ): TupleSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, TupleOptions<S>>>;
 
     /** Creates a tuple schema with schemas for elements */

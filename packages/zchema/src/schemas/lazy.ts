@@ -25,14 +25,13 @@ export type LazyOptions<T extends Schema = Schema> = {
  * Schema type for lazy-loaded schema values.
  * @template O - Schema options type
  */
-export type LazySchema<O extends SchemaOptionsBase<LazyOptions> = SchemaOptionsBase<LazyOptions>> =
-    ForceName &
-        Schema<LazyValue<O>, O> & {
-            /**
-             * Function that returns the inner schema
-             */
-            of: () => Schema;
-        };
+export type LazySchema<O extends SchemaOptionsBase<LazyOptions> = SchemaOptionsBase<LazyOptions>> = ForceName &
+    Schema<LazyValue<O>, O> & {
+        /**
+         * Function that returns the inner schema
+         */
+        of: () => Schema;
+    };
 
 /**
  * Helper type to extract the underlying value type from a lazy schema.
@@ -55,9 +54,7 @@ export type LazySchemaResolved<S extends LazySchema> =
  * @template S - Lazy schema type
  */
 export type LazySchemaInner<S extends LazySchema> =
-    S extends LazySchema<infer O extends SchemaOptionsBase<LazyOptions>>
-        ? ReturnType<O['of']>
-        : never;
+    S extends LazySchema<infer O extends SchemaOptionsBase<LazyOptions>> ? ReturnType<O['of']> : never;
 
 /**
  * Base type for lazy schema definition.
@@ -137,9 +134,7 @@ export const lazy = defineSchema<LazySchemaConstructor, SchemaOptionsBase<LazyOp
  * @param schema - Schema to resolve
  * @returns Resolved schema
  */
-export function lazyResolve<S extends Schema>(
-    schema: S,
-): S extends LazySchema ? LazySchemaResolved<S> : S;
+export function lazyResolve<S extends Schema>(schema: S): S extends LazySchema ? LazySchemaResolved<S> : S;
 /**
  *
  */

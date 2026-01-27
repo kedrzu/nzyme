@@ -55,7 +55,15 @@ export class MonorepoCommand extends Command {
      * Execute the command.
      */
     override async run() {
-        await this.processProject(true);
+        let count = 0;
+        await this.processProject({
+            throwOnError: true,
+            logProcessedFile: () => count++,
+        });
+
+        if (count > 0) {
+            this.logger.info(`Generated ${chalk.green(count)} tsconfig files`);
+        }
 
         if (this.watch) {
             this.startWatcher();
@@ -96,7 +104,13 @@ export class MonorepoCommand extends Command {
 
         // Invalidate cache for the package whose package.json was changed
         await this.invalidateCacheForChangedPackage(file);
-        await this.processProject(false);
+        await this.processProject({
+            throwOnError: false,
+            logProcessedFile: filePath => {
+                const relativePath = path.relative(this.projectRoot, filePath);
+                this.logger.info(`Generated ${chalk.green(relativePath)}`);
+            },
+        });
     }
 
     private async invalidateCacheForChangedPackage(packageJsonPath: string) {
@@ -120,7 +134,9 @@ export class MonorepoCommand extends Command {
         }
     }
 
-    private async processProject(throwOnError: boolean) {
+    private async processProject(options: { logProcessedFile: (filePath: string) => void; throwOnError: boolean }) {
+        const { throwOnError, logProcessedFile } = options;
+
         try {
             const cwd = process.cwd();
             const packages = await getPackages(cwd);
@@ -131,7 +147,7 @@ export class MonorepoCommand extends Command {
             const cjsReferences: string[] = [];
 
             for (const pkg of packages) {
-                const result = await this.processPackage(pkg, packages, throwOnError);
+                const result = await this.processPackage(pkg, packages, throwOnError, logProcessedFile);
                 if (result.esm) {
                     esmReferences.push(result.esm);
                 }
@@ -149,6 +165,7 @@ export class MonorepoCommand extends Command {
                 config: {
                     include: [],
                 },
+                logProcessedFile,
             });
 
             await this.saveTsReferences({
@@ -159,6 +176,7 @@ export class MonorepoCommand extends Command {
                 config: {
                     include: [],
                 },
+                logProcessedFile,
             });
         } catch (error: unknown) {
             if (throwOnError) {
@@ -169,7 +187,12 @@ export class MonorepoCommand extends Command {
         }
     }
 
-    private async processPackage(pkg: Package, packages: Package[], throwOnError: boolean): Promise<PackageCache> {
+    private async processPackage(
+        pkg: Package,
+        packages: Package[],
+        throwOnError: boolean,
+        logProcessedFile: (filePath: string) => void,
+    ): Promise<PackageCache> {
         if (!pkg.packageJson.name) {
             const relativePath = path.relative(this.projectRoot, pkg.path);
             this.logger.error(`Package is missing a name: ${relativePath}`);
@@ -181,7 +204,7 @@ export class MonorepoCommand extends Command {
         }
 
         try {
-            const result = this.processPackageCore(pkg, packages, throwOnError);
+            const result = this.processPackageCore(pkg, packages, throwOnError, logProcessedFile);
             this.packageCache.set(pkg.packageJson.name, result);
 
             return await result;
@@ -196,7 +219,12 @@ export class MonorepoCommand extends Command {
         }
     }
 
-    private async processPackageCore(pkg: Package, packages: Package[], throwOnError: boolean): Promise<PackageCache> {
+    private async processPackageCore(
+        pkg: Package,
+        packages: Package[],
+        throwOnError: boolean,
+        logProcessedFile: (filePath: string) => void,
+    ): Promise<PackageCache> {
         const dependencyNames = [
             ...Object.keys(pkg.packageJson.dependencies || {}),
             ...Object.keys(pkg.packageJson.devDependencies || {}),
@@ -207,7 +235,7 @@ export class MonorepoCommand extends Command {
         const cjsReferences: string[] = [];
 
         for (const dep of dependencies) {
-            const depResult = await this.processPackage(dep, packages, throwOnError);
+            const depResult = await this.processPackage(dep, packages, throwOnError, logProcessedFile);
             if (depResult.esm) {
                 esmReferences.push(depResult.esm);
             }
@@ -240,6 +268,7 @@ export class MonorepoCommand extends Command {
                     tsBuildInfoFile: tsconfig.config.compilerOptions?.tsBuildInfoFile ?? 'tsconfig.esm.tsbuildinfo',
                 },
             },
+            logProcessedFile,
         });
 
         const config = getNzymeConfig(pkg);
@@ -262,6 +291,7 @@ export class MonorepoCommand extends Command {
                         tsBuildInfoFile: 'tsconfig.cjs.tsbuildinfo',
                     },
                 },
+                logProcessedFile,
             });
         }
 
@@ -290,6 +320,7 @@ export class MonorepoCommand extends Command {
         cwd: string;
         extends: string;
         fileName: string;
+        logProcessedFile: (filePath: string) => void;
         references: string[];
     }) {
         const outputPath = path.join(params.cwd, params.fileName);
@@ -307,8 +338,7 @@ export class MonorepoCommand extends Command {
         const configJson = json.stringify(tsconfig, undefined, 2);
         await saveFile(outputPath, configJson);
 
-        const relativePath = path.relative(this.projectRoot, outputPath);
-        this.logger.info(`Generated ${chalk.green(relativePath)}`);
+        params.logProcessedFile(outputPath);
 
         return outputPath;
     }

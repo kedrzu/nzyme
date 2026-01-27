@@ -46,8 +46,9 @@ export interface FormModel<T = unknown> extends FormBase<T>, FormValidationConte
 
 /**
  * Form field model
+ * Extends FormModel to allow scoped sub-forms where nested fields can be registered
  */
-export interface FormField<T = unknown> extends FormBase<T> {
+export interface FormField<T = unknown> extends FormModel<T> {
     /**
      * Whether the field is focused
      */

@@ -53,9 +53,18 @@ export function useFormField<T>(form: FormModel, params: FormFieldParams<T>): Fo
         return errors;
     });
 
+    const fields = reactive<FormField[]>([]);
+
     const valid = computed(() => {
         for (const validator of validators) {
             if (validator.error) {
+                return false;
+            }
+        }
+
+        // Also check nested fields
+        for (const nestedField of fields) {
+            if (!nestedField.valid) {
                 return false;
             }
         }
@@ -66,6 +75,8 @@ export function useFormField<T>(form: FormModel, params: FormFieldParams<T>): Fo
     const field = reactive<FormField<T>>({
         form,
         value,
+        fields,
+        lang: form.lang,
         valid,
         errors,
         focused,
@@ -98,7 +109,7 @@ export function useFormField<T>(form: FormModel, params: FormFieldParams<T>): Fo
 
     async function validate() {
         const promises: Promise<boolean>[] = [];
-        let valid = true;
+        let isValid = true;
 
         for (const validator of validators) {
             const result = validator.validate();
@@ -106,25 +117,31 @@ export function useFormField<T>(form: FormModel, params: FormFieldParams<T>): Fo
             if (result instanceof Promise) {
                 promises.push(result);
             } else {
-                valid = valid && result;
+                isValid = isValid && result;
             }
         }
 
-        if (!valid) {
-            return false;
+        // Also validate nested fields
+        for (const nestedField of fields) {
+            promises.push(nestedField.validate());
         }
 
         if (promises.length > 0) {
             const results = await Promise.all(promises);
-            return results.every(result => result);
+            return isValid && results.every(result => result);
         }
 
-        return true;
+        return isValid;
     }
 
     function reset() {
         for (const validator of validators) {
             validator.show = false;
+        }
+
+        // Also reset nested fields
+        for (const nestedField of fields) {
+            nestedField.reset();
         }
     }
 }

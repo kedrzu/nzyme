@@ -1,5 +1,7 @@
+import { readFile } from 'fs/promises';
+
 import { ESLint } from 'eslint';
-import { outputFile } from 'fs-extra';
+import { outputFile, pathExists } from 'fs-extra';
 import { format, resolveConfig } from 'prettier';
 
 // Cache ESLint instances per working directory to avoid recreating them
@@ -33,6 +35,15 @@ export async function saveFile(path: string, content: string): Promise<void> {
         content = await format(content, { ...config, filepath: path });
     } catch (error) {
         console.error(`Failed to format ${path}`, error);
+    }
+
+    // Check if file exists and compare content to avoid unnecessary writes
+    if (await pathExists(path)) {
+        const existingContent = await readFile(path, 'utf8');
+        if (existingContent === content) {
+            // Content hasn't changed, skip writing
+            return;
+        }
     }
 
     await outputFile(path, content, { encoding: 'utf8' });

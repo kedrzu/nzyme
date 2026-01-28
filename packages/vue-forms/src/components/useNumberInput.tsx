@@ -15,9 +15,21 @@ const NUMBER_PROPS = defineProps({
     tabindex: Number,
 });
 
+/**
+ *
+ */
 export interface NumberInputAttrs {
+    /**
+     *
+     */
     min?: number;
+    /**
+     *
+     */
     max?: number;
+    /**
+     *
+     */
     step?: number;
 }
 
@@ -30,7 +42,6 @@ export const useNumberInput = assignProps(setupNumberInput, {
 });
 
 /**
- *
  * @__NO_SIDE_EFFECTS__
  */
 function setupNumberInput() {

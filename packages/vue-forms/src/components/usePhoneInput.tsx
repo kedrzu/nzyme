@@ -32,7 +32,6 @@ export const usePhoneInput = assignProps(setupPhoneInput, {
 });
 
 /**
- *
  * @__NO_SIDE_EFFECTS__
  */
 function setupPhoneInput() {

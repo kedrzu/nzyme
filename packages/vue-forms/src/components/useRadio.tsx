@@ -4,8 +4,8 @@ import type { ExtractPropTypes, FunctionalComponent, PropType } from 'vue';
 import type { Primitive } from '@nzyme/types';
 import { defineProps, injectContext, useEmit } from '@nzyme/vue-utils';
 
-import { RadioGroupContext } from './useRadioGroup.js';
 import type { FormFieldValue } from './defineFormField.js';
+import { RadioGroupContext } from './useRadioGroup.js';
 
 /**
  *
@@ -13,7 +13,6 @@ import type { FormFieldValue } from './defineFormField.js';
 export type RadioProps<T extends Primitive = Primitive> = ExtractPropTypes<ReturnType<typeof getRadioProps<T>>>;
 
 /**
- *
  * @__NO_SIDE_EFFECTS__
  */
 export function getRadioProps<T extends Primitive = Primitive>() {
@@ -28,7 +27,6 @@ export function getRadioProps<T extends Primitive = Primitive>() {
 }
 
 /**
- *
  * @__NO_SIDE_EFFECTS__
  */
 export function getRadioEmits<T extends Primitive = Primitive>() {

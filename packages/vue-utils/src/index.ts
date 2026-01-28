@@ -28,6 +28,7 @@ export * from './reactivity/computedIterable.js';
 export * from './reactivity/constRef.js';
 export * from './reactivity/historyStateRef.js';
 export * from './reactivity/makeRef.js';
+export * from './reactivity/nestedRef.js';
 export * from './reactivity/promiseRef.js';
 export * from './reactivity/reactive.js';
 export * from './reactivity/refAsync.js';

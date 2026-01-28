@@ -24,7 +24,6 @@ export const useTextArea = assignProps(setupTextArea, {
 });
 
 /**
- *
  * @__NO_SIDE_EFFECTS__
  */
 function setupTextArea() {

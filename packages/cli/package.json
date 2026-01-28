@@ -53,6 +53,8 @@
         "@types/lodash.merge": "^4.6.9",
         "@types/node": "^25.0.6",
         "@types/source-map-support": "^0.5.10",
+        "eslint": "^9.39.2",
+        "prettier": "^3.8.1",
         "typescript": "^5.9.3"
     },
     "engines": {

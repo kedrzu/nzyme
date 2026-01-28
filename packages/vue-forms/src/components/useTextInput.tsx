@@ -2,7 +2,7 @@ import { h } from 'vue';
 import type { InputHTMLAttributes } from 'vue';
 
 import { assignProps } from '@nzyme/utils';
-import { defineProps, useProps, useEmit } from '@nzyme/vue-utils';
+import { defineProps, useEmit, useProps } from '@nzyme/vue-utils';
 
 import { defineFormField } from './defineFormField.js';
 
@@ -31,7 +31,6 @@ export const useTextInput = assignProps(setupTextInput, {
 });
 
 /**
- *
  * @__NO_SIDE_EFFECTS__
  */
 function setupTextInput() {

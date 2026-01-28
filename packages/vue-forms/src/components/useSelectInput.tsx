@@ -28,7 +28,6 @@ export const useSelectInput = assignProps(setupSelectInput, {
 });
 
 /**
- *
  * @__NO_SIDE_EFFECTS__
  */
 function setupSelectInput() {

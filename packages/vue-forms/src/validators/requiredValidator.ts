@@ -28,7 +28,7 @@ export interface RequiredValidatorOptions<T> {
      * Custom validation logic.
      * Should return true if the value is valid, false otherwise.
      */
-    custom?: (value: T | null | undefined) => boolean;
+    custom?: (value: T | null | undefined, ctx: FormValidationContext) => boolean;
 
     /**
      * Custom error message function
@@ -53,7 +53,7 @@ export function requiredValidator<T>(options: RequiredValidatorOptions<T> = {}) 
                 return;
             }
 
-            if (validate(value)) {
+            if (validate(value, ctx)) {
                 return;
             }
 

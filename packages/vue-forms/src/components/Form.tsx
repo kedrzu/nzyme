@@ -1,11 +1,15 @@
-import { computed, defineComponent, h, type PropType } from 'vue';
+import css from '#css/form.module.css';
+import { computed, defineComponent, h } from 'vue';
+import type { PropType } from 'vue';
 
+import type { EventEmitter } from '@nzyme/utils';
 import { classProp, defineSlots, onEventEmitter, onTrigger, provideContext } from '@nzyme/vue-utils';
 
 import { FormContext } from '../FormContext.js';
-import css from '#css/form.module.css';
-import type { EventEmitter } from '@nzyme/utils';
 
+/**
+ *
+ */
 export const Form = defineComponent({
     // eslint-disable-next-line vue/no-reserved-component-names
     name: 'Form',
@@ -16,8 +20,17 @@ export const Form = defineComponent({
     },
     emits: ['submit'],
     slots: defineSlots<{
+        /**
+         *
+         */
         default: {
+            /**
+             *
+             */
             pending: boolean;
+            /**
+             *
+             */
             submit: FormContext['submit'];
         };
     }>(),
@@ -33,9 +46,9 @@ export const Form = defineComponent({
         return () => (
             <form
                 class={pending.value && props.pendingClass}
+                inert={pending.value}
                 novalidate
                 onSubmit={onSubmit}
-                inert={pending.value}
             >
                 {/* This fake input allows to natively handle submit-on-enter */}
                 <input

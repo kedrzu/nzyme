@@ -1,8 +1,9 @@
-import { computed, h, type InputHTMLAttributes, type PropType } from 'vue';
-import { IMaskComponent } from 'vue-imask';
 import type { FactoryArg } from 'imask';
+import { computed, h   } from 'vue';
+import type {InputHTMLAttributes, PropType} from 'vue';
+import { IMaskComponent } from 'vue-imask';
 
-import { CountryCode } from '@nzyme/i18n';
+import type { CountryCode } from '@nzyme/i18n';
 import { assignProps } from '@nzyme/utils';
 import { defineProps, useProps } from '@nzyme/vue-utils';
 

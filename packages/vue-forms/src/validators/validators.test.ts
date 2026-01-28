@@ -1,8 +1,7 @@
+import { describe, expect, test } from 'vitest';
 import { effectScope, nextTick, reactive, ref } from 'vue';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-import type { FormValidationContext, FormValidatorBehaviorContext } from '../types.js';
-
+import type { FormValidationContext } from '../types.js';
 import { emailValidator } from './emailValidator.js';
 import { maxDateValidator } from './maxDateValidator.js';
 import { maxLengthValidator } from './maxLengthValidator.js';

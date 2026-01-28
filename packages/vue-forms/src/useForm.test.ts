@@ -23,6 +23,7 @@ test('useForm creates form model with initial value', () => {
         expect(form.value).toEqual({ name: 'John', age: 30 });
         expect(form.fields).toEqual([]);
         expect(form.valid).toBe(true);
+        expect(form.invalid).toBe(false);
     });
 });
 
@@ -70,6 +71,86 @@ test('useForm valid is false when any field is invalid', () => {
         useFormField(form, { value: nameValue, validators: [requiredValidator] });
 
         expect(form.valid).toBe(false);
+    });
+});
+
+test('useForm invalid is false initially even when valid is false', () => {
+    scope.run(() => {
+        const form = useForm({ name: '' });
+        const nameValue = ref('');
+
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        useFormField(form, { value: nameValue, validators: [requiredValidator] });
+
+        // valid is false because validator fails
+        expect(form.valid).toBe(false);
+        // but invalid should be false because form hasn't been validated yet
+        expect(form.invalid).toBe(false);
+    });
+});
+
+test('useForm invalid becomes true after validate() fails', async () => {
+    await scope.run(async () => {
+        const form = useForm({ name: '' });
+        const nameValue = ref('');
+
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        useFormField(form, { value: nameValue, validators: [requiredValidator] });
+
+        expect(form.invalid).toBe(false);
+
+        await form.validate();
+
+        expect(form.valid).toBe(false);
+        expect(form.invalid).toBe(true);
+    });
+});
+
+test('useForm invalid is false when validation passes', async () => {
+    await scope.run(async () => {
+        const form = useForm({ name: '' });
+        const nameValue = ref('John');
+
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        useFormField(form, { value: nameValue, validators: [requiredValidator] });
+
+        await form.validate();
+
+        expect(form.valid).toBe(true);
+        expect(form.invalid).toBe(false);
+    });
+});
+
+test('useForm invalid returns to false after reset()', async () => {
+    await scope.run(async () => {
+        const form = useForm({ name: '' });
+        const nameValue = ref('');
+
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        useFormField(form, { value: nameValue, validators: [requiredValidator] });
+
+        await form.validate();
+        expect(form.invalid).toBe(true);
+
+        form.reset();
+
+        expect(form.invalid).toBe(false);
     });
 });
 

@@ -56,20 +56,11 @@ export function useFormField<T>(form: FormModel, params: FormFieldParams<T>): Fo
     const fields = reactive<FormField[]>([]);
 
     const valid = computed(() => {
-        for (const validator of validators) {
-            if (validator.error) {
-                return false;
-            }
-        }
+        return validators.every(validator => validator.error == null) && fields.every(field => field.valid);
+    });
 
-        // Also check nested fields
-        for (const nestedField of fields) {
-            if (!nestedField.valid) {
-                return false;
-            }
-        }
-
-        return true;
+    const invalid = computed(() => {
+        return errors.value.length > 0 || fields.some(field => field.invalid);
     });
 
     const field = reactive<FormField<T>>({
@@ -78,6 +69,7 @@ export function useFormField<T>(form: FormModel, params: FormFieldParams<T>): Fo
         fields,
         lang: form.lang,
         valid,
+        invalid,
         errors,
         focused,
         validators,

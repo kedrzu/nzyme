@@ -83,6 +83,7 @@ test('useFormField valid is true when no validators', () => {
         const field = useFormField(form, { value });
 
         expect(field.valid).toBe(true);
+        expect(field.invalid).toBe(false);
     });
 });
 
@@ -106,6 +107,78 @@ test('useFormField valid is false when sync validator returns error', () => {
         const field = useFormField(form, { value, validators: [validator] });
 
         expect(field.valid).toBe(false);
+    });
+});
+
+test('useFormField invalid is false initially even when valid is false', () => {
+    scope.run(() => {
+        const value = ref('');
+        const validator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        const field = useFormField(form, { value, validators: [validator] });
+
+        // valid is false because validator fails
+        expect(field.valid).toBe(false);
+        // but invalid should be false because validation hasn't been triggered yet
+        expect(field.invalid).toBe(false);
+    });
+});
+
+test('useFormField invalid becomes true after validate() fails', async () => {
+    await scope.run(async () => {
+        const value = ref('');
+        const validator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        const field = useFormField(form, { value, validators: [validator] });
+
+        expect(field.invalid).toBe(false);
+
+        await field.validate();
+
+        expect(field.valid).toBe(false);
+        expect(field.invalid).toBe(true);
+    });
+});
+
+test('useFormField invalid is false when validation passes', async () => {
+    await scope.run(async () => {
+        const value = ref('valid value');
+        const validator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        const field = useFormField(form, { value, validators: [validator] });
+
+        await field.validate();
+
+        expect(field.valid).toBe(true);
+        expect(field.invalid).toBe(false);
+    });
+});
+
+test('useFormField invalid returns to false after reset()', async () => {
+    await scope.run(async () => {
+        const value = ref('');
+        const validator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        const field = useFormField(form, { value, validators: [validator] });
+
+        await field.validate();
+        expect(field.invalid).toBe(true);
+
+        field.reset();
+
+        expect(field.invalid).toBe(false);
     });
 });
 
@@ -283,6 +356,36 @@ test('useFormField default behavior shows errors on blur when value changed', as
 
         // Now errors should be shown
         expect(field.errors).toEqual(['Error']);
+    });
+});
+
+test('useFormField invalid becomes true via default behavior on blur', async () => {
+    await scope.run(async () => {
+        const value = ref('');
+        const validator: FormValidator<string> = {
+            async: false,
+            validate: () => 'Error',
+        };
+
+        const field = useFormField(form, { value, validators: [validator] });
+
+        // Initially invalid is false
+        expect(field.invalid).toBe(false);
+
+        // Focus and change value
+        field.focus();
+        value.value = 'changed but still invalid';
+        await nextTick();
+
+        // Still not invalid while focused
+        expect(field.invalid).toBe(false);
+
+        // Blur triggers show = true via default behavior
+        field.blur();
+        await nextTick();
+
+        // Now invalid should be true because errors are shown
+        expect(field.invalid).toBe(true);
     });
 });
 
@@ -666,6 +769,32 @@ test('useFormField valid considers nested fields validity', () => {
 
         // Parent should be invalid because child is invalid
         expect(parentField.valid).toBe(false);
+    });
+});
+
+test('useFormField invalid considers nested fields invalid state', async () => {
+    await scope.run(async () => {
+        const parentValue = ref({ child: '' });
+        const parentField = useFormField(form, { value: parentValue });
+
+        const childValue = ref('');
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        const childField = useFormField(parentField, { value: childValue, validators: [requiredValidator] });
+
+        // Initially both should not be invalid (not validated yet)
+        expect(parentField.invalid).toBe(false);
+        expect(childField.invalid).toBe(false);
+
+        // Validate the parent (which validates nested fields)
+        await parentField.validate();
+
+        // Now child is invalid, so parent should also be invalid
+        expect(childField.invalid).toBe(true);
+        expect(parentField.invalid).toBe(true);
     });
 });
 

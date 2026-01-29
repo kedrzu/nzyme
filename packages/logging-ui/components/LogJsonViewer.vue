@@ -95,8 +95,7 @@ const hasData = computed(() => {
 <style scoped>
 .log-json-viewer {
   background-color: var(--p-surface-50);
-  max-width: 100%;
-  overflow: hidden;
+  width: 100vw;
 }
 
 .data-container {

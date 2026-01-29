@@ -28,7 +28,7 @@
         "src"
     ],
     "scripts": {
-        "lint": "eslint . --fix --cache"
+        "lint": "prettier ./src --write && eslint . --fix --cache"
     },
     "dependencies": {
         "@nzyme/dom-utils": "^0.14.0",

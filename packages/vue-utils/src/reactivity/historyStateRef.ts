@@ -65,7 +65,7 @@ export function historyStateRef<T>(
  *
  * @example
  * ```vue
- * <script setup>
+ * <script setup lang="ts">
  * import { historyStateRef } from '@nzyme/vue-utils';
  *
  * // With default value

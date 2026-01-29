@@ -4,8 +4,8 @@ import { CURRENCIES, moneyDenormalize, moneyNormalize } from '@nzyme/money';
 import type { Currency } from '@nzyme/money';
 import { assignProps } from '@nzyme/utils';
 
-import { defineMaskedInput  } from './useMaskedInput.js';
-import type {MaskedInputMaskConfig} from './useMaskedInput.js';
+import { defineMaskedInput } from './useMaskedInput.js';
+import type { MaskedInputMaskConfig } from './useMaskedInput.js';
 
 /**
  *

@@ -3,6 +3,7 @@ import { effectScope, nextTick, ref } from 'vue';
 
 import type { FormModel, FormValidator } from './types.js';
 import { useForm } from './useForm.js';
+import { useFormField } from './useFormField.js';
 import { useFormFields } from './useFormFields.js';
 
 vi.mock('@nzyme/vue-i18n', () => ({
@@ -459,4 +460,173 @@ test('useFormFields works with ref form value', async () => {
     });
 
     localScope.stop();
+});
+
+// Tests for factory function feature (new feature)
+
+test('useFormFields with factory function returns custom structure', () => {
+    scope.run(() => {
+        const fields = useFormFields(form, {
+            name: field => ({
+                field,
+                customProp: 'custom value',
+            }),
+        });
+
+        expect(fields.name.customProp).toBe('custom value');
+        expect(fields.name.field).toBeDefined();
+        expect(fields.name.field.value).toBe('');
+    });
+});
+
+test('useFormFields with factory function receives FormModel for the key', () => {
+    scope.run(() => {
+        let receivedField: FormModel<string> | null = null;
+
+        useFormFields(form, {
+            name: field => {
+                receivedField = field;
+                return field;
+            },
+        });
+
+        expect(receivedField).not.toBeNull();
+        expect(receivedField!.value).toBe('');
+        expect(receivedField!.form).toBe(form);
+    });
+});
+
+test('useFormFields factory function can use useFormField to add validators', () => {
+    scope.run(() => {
+        const validator: FormValidator<string> = {
+            async: false,
+            validate: v => (v ? null : 'Required'),
+        };
+
+        const fields = useFormFields(form, {
+            name: field => useFormField(field, { validators: [validator] }),
+        });
+
+        // Factory returned a FormField with validators
+        expect(fields.name.validators.length).toBe(1);
+        expect(fields.name.valid).toBe(false);
+    });
+});
+
+test('useFormFields factory function can create nested structures with useFormFields', () => {
+    scope.run(() => {
+        interface NestedForm {
+            address: {
+                street: string;
+                city: string;
+            };
+        }
+
+        const nestedForm = useForm<NestedForm>({
+            address: { street: '', city: '' },
+        });
+
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: v => (v ? null : 'Required'),
+        };
+
+        const fields = useFormFields(nestedForm, {
+            address: field =>
+                useFormFields(field, {
+                    street: [requiredValidator],
+                    city: null,
+                }),
+        });
+
+        // fields.address should have street and city sub-fields
+        expect(fields.address.street).toBeDefined();
+        expect(fields.address.city).toBeDefined();
+        expect(fields.address.street.valid).toBe(false); // has required validator
+        expect(fields.address.city.valid).toBe(true);
+    });
+});
+
+test('useFormFields factory creates field that is registered to parent form', () => {
+    scope.run(() => {
+        useFormFields(form, {
+            name: field => useFormField(field, { validators: [] }),
+        });
+
+        // The field created by factory should be registered
+        expect(form.fields.length).toBe(1);
+    });
+});
+
+test('useFormFields mixed validators and factory functions', () => {
+    scope.run(() => {
+        const validator: FormValidator<string> = {
+            async: false,
+            validate: () => null,
+        };
+
+        const fields = useFormFields(form, {
+            name: [validator], // validators array
+            email: field => ({
+                // factory function
+                theField: field,
+                extra: 42,
+            }),
+        });
+
+        // name is a FormField
+        expect(fields.name.validators.length).toBe(1);
+
+        // email is custom object from factory
+        expect(fields.email.extra).toBe(42);
+        expect(fields.email.theField.value).toBe('');
+    });
+});
+
+test('useFormFields factory function field value syncs with form', async () => {
+    await scope.run(async () => {
+        const fields = useFormFields(form, {
+            name: field => useFormField(field, { validators: [] }),
+        });
+
+        expect(fields.name.value).toBe('');
+
+        form.value.name = 'Updated';
+        await nextTick();
+
+        expect(fields.name.value).toBe('Updated');
+    });
+});
+
+test('useFormFields factory function nested fields contribute to parent validation', async () => {
+    await scope.run(async () => {
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: v => (v ? null : 'Required'),
+        };
+
+        interface NestedForm {
+            person: {
+                name: string;
+            };
+        }
+
+        const nestedForm = useForm<NestedForm>({
+            person: { name: '' },
+        });
+
+        useFormFields(nestedForm, {
+            person: field =>
+                useFormFields(field, {
+                    name: [requiredValidator],
+                }),
+        });
+
+        // Parent form should be invalid because nested field is invalid
+        expect(nestedForm.valid).toBe(false);
+
+        // Validate should propagate through nested structure
+        const result = await nestedForm.validate();
+        expect(result).toBe(false);
+    });
 });

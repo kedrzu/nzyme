@@ -1,5 +1,5 @@
-import {  h,  ref  } from 'vue';
-import type {ButtonHTMLAttributes, InputHTMLAttributes, SetupContext} from 'vue';
+import { h, ref } from 'vue';
+import type { ButtonHTMLAttributes, InputHTMLAttributes, SetupContext } from 'vue';
 
 import { assignProps } from '@nzyme/utils';
 import { useTranslate } from '@nzyme/vue-i18n';

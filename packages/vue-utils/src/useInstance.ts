@@ -9,7 +9,7 @@ import { getCurrentInstance } from 'vue';
  *
  * @example
  * ```vue
- * <script setup>
+ * <script setup lang="ts">
  * import { useInstance } from '@nzyme/vue-utils';
  *
  * const instance = useInstance();
@@ -36,7 +36,7 @@ export function useInstance() {
  *
  * @example
  * ```vue
- * <script setup>
+ * <script setup lang="ts">
  * import { useInstanceProxy } from '@nzyme/vue-utils';
  *
  * const proxy = useInstanceProxy();

@@ -942,3 +942,121 @@ test('useFormField scoped form validation only validates its own fields', async 
         expect(field2.validators[0]!.show).toBe(false);
     });
 });
+
+// Tests for optional value parameter (BasicParams - new feature)
+
+test('useFormField with BasicParams uses form value when value is undefined', () => {
+    scope.run(() => {
+        const localForm = useForm({ name: 'John' });
+        const validator: FormValidator<{ name: string }> = {
+            async: false,
+            validate: v => (v?.name ? null : 'Name required'),
+        };
+
+        const field = useFormField(localForm, { validators: [validator] });
+
+        // Field value should be the form's value
+        expect(field.value).toEqual({ name: 'John' });
+    });
+});
+
+test('useFormField with BasicParams field value syncs with form value', async () => {
+    await scope.run(async () => {
+        const localForm = useForm({ name: 'John' });
+        const field = useFormField(localForm, { validators: [] });
+
+        expect(field.value.name).toBe('John');
+
+        localForm.value.name = 'Jane';
+        await nextTick();
+
+        expect(field.value.name).toBe('Jane');
+    });
+});
+
+test('useFormField with BasicParams validates form value', () => {
+    scope.run(() => {
+        const localForm = useForm('');
+        const validator: FormValidator<string> = {
+            async: false,
+            validate: v => (v ? null : 'Required'),
+        };
+
+        const field = useFormField(localForm, { validators: [validator] });
+
+        expect(field.valid).toBe(false);
+    });
+});
+
+test('useFormField with BasicParams valid becomes true when form value changes', async () => {
+    await scope.run(async () => {
+        const localForm = useForm('');
+        const validator: FormValidator<string> = {
+            async: false,
+            validate: v => (v ? null : 'Required'),
+        };
+
+        const field = useFormField(localForm, { validators: [validator] });
+
+        expect(field.valid).toBe(false);
+
+        localForm.value = 'filled';
+        await nextTick();
+
+        expect(field.valid).toBe(true);
+    });
+});
+
+test('useFormField with BasicParams on nested field adds validation to parent field value', () => {
+    scope.run(() => {
+        const localForm = useForm('ab');
+        const parentField = useFormField(localForm, { validators: [] });
+
+        // Create child field that validates the parent's value with additional validators
+        const minLengthValidator: FormValidator<string> = {
+            async: false,
+            validate: v => (v && v.length >= 3 ? null : 'Min 3 chars'),
+        };
+
+        const childField = useFormField(parentField, { validators: [minLengthValidator] });
+
+        // Child field uses parent field's value
+        expect(childField.value).toBe('ab');
+        expect(childField.valid).toBe(false);
+    });
+});
+
+test('useFormField with BasicParams is registered in parent form', () => {
+    scope.run(() => {
+        const localForm = useForm({ name: '' });
+
+        expect(localForm.fields.length).toBe(0);
+
+        useFormField(localForm, { validators: [] });
+
+        expect(localForm.fields.length).toBe(1);
+    });
+});
+
+test('useFormField with BasicParams can have multiple validators', async () => {
+    await scope.run(async () => {
+        const localForm = useForm('ab');
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: v => (v ? null : 'Required'),
+        };
+        const minLengthValidator: FormValidator<string> = {
+            async: false,
+            validate: v => (v && v.length >= 3 ? null : 'Min 3'),
+        };
+
+        const field = useFormField(localForm, { validators: [requiredValidator, minLengthValidator] });
+
+        expect(field.validators.length).toBe(2);
+        // Required passes (has value), but minLength fails (length is 2)
+        expect(field.valid).toBe(false);
+
+        await field.validate();
+        expect(field.errors).toEqual(['Min 3']);
+    });
+});

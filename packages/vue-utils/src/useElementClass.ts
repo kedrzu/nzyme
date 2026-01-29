@@ -23,7 +23,7 @@ type GlobalClassOptions = {
  *
  * @example
  * ```vue
- * <script setup>
+ * <script setup lang="ts">
  * import { ref } from 'vue';
  * import { useElementClass } from '@nzyme/vue-utils';
  *

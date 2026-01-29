@@ -12,7 +12,7 @@ let history: ReturnType<typeof initializeHistory> | null = null;
  *
  * @example
  * ```vue
- * <script setup>
+ * <script setup lang="ts">
  * import { useHistory } from '@nzyme/vue-utils';
  *
  * const history = useHistory();

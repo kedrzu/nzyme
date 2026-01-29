@@ -1,6 +1,6 @@
 import type { FactoryArg } from 'imask';
-import { computed, h   } from 'vue';
-import type {InputHTMLAttributes, PropType} from 'vue';
+import { computed, h } from 'vue';
+import type { InputHTMLAttributes, PropType } from 'vue';
 import { IMaskComponent } from 'vue-imask';
 
 import type { CountryCode } from '@nzyme/i18n';

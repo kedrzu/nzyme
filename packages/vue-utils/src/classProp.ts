@@ -20,7 +20,7 @@ export type ClassProp = Array<ClassType> | ClassType | Record<string, boolean>;
  *
  * @example
  * ```vue
- * <script setup>
+ * <script setup lang="ts">
  * const props = defineProps({
  *   class: classProp
  * })

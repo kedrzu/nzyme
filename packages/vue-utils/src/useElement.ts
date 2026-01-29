@@ -10,7 +10,7 @@ import type { Ref } from 'vue';
  *
  * @example
  * ```vue
- * <script setup>
+ * <script setup lang="ts">
  * import { useElement } from '@nzyme/vue-utils';
  *
  * // Generic element

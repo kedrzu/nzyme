@@ -1,13 +1,13 @@
 import type { FactoryArg } from 'imask';
-import { computed, h  } from 'vue';
-import type {InputHTMLAttributes} from 'vue';
+import { computed, h } from 'vue';
+import type { InputHTMLAttributes } from 'vue';
 import { IMaskComponent } from 'vue-imask';
 
 import { assignProps } from '@nzyme/utils';
 import { defineProps, useProps } from '@nzyme/vue-utils';
 
-import { defineFormField  } from './defineFormField.js';
-import type {FormFieldValue} from './defineFormField.js';
+import { defineFormField } from './defineFormField.js';
+import type { FormFieldValue } from './defineFormField.js';
 
 /**
  *

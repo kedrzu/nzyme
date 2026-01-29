@@ -24,7 +24,7 @@ interface VShowElement extends HTMLElement {
  *   </transition>
  * </template>
  *
- * <script setup>
+ * <script setup lang="ts">
  * import { ref } from 'vue';
  *
  * const isVisible = ref(true);

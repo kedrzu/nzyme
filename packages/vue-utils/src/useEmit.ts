@@ -38,7 +38,7 @@ type EmitFn<Options = ObjectEmitsOptions, Event extends keyof Options = keyof Op
  *
  * @example
  * ```vue
- * <script setup>
+ * <script setup lang="ts">
  * import { useEmit } from '@nzyme/vue-utils';
  *
  * const emit = useEmit();
@@ -60,7 +60,7 @@ export function useEmit(): EmitFn;
  *
  * @example
  * ```vue
- * <script setup>
+ * <script setup lang="ts">
  * import { useEmit } from '@nzyme/vue-utils';
  *
  * interface MyEmits {

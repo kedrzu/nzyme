@@ -25,7 +25,7 @@
         "src"
     ],
     "scripts": {
-        "lint": "eslint . --fix --cache"
+        "lint": "prettier ./src --write && eslint . --fix --cache"
     },
     "dependencies": {
         "@nzyme/types": "^0.14.0",

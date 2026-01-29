@@ -29,7 +29,7 @@
         "dist"
     ],
     "scripts": {
-        "lint": "eslint . --fix --cache"
+        "lint": "prettier ./src --write && eslint . --fix --cache"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.954.0",

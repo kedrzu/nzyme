@@ -39,3 +39,8 @@ export * from './utils/refreshSubmodules.js';
 export type { RefreshSubmodulesParams, RefreshSubmodulesResult } from './utils/refreshSubmodules.js';
 export * from './utils/pushSubmoduleUpdates.js';
 export type { PushSubmoduleUpdatesParams, PushSubmoduleUpdatesResult } from './utils/pushSubmoduleUpdates.js';
+export * from './utils/commitAndPushPendingChanges.js';
+export type {
+    CommitAndPushPendingChangesParams,
+    CommitAndPushPendingChangesResult,
+} from './utils/commitAndPushPendingChanges.js';

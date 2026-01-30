@@ -3,6 +3,7 @@ import { simpleGit } from 'simple-git';
 
 import type { Logger } from '@nzyme/logging';
 
+import { commitAndPushPendingChanges } from './commitAndPushPendingChanges.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 
 /**
@@ -18,6 +19,11 @@ export interface RefreshSubmodulesParams {
      * Logger instance.
      */
     logger: Logger;
+
+    /**
+     * Whether to skip prompts and automatically commit with default message.
+     */
+    autoYes?: boolean;
 }
 
 /**
@@ -39,7 +45,7 @@ export interface RefreshSubmodulesResult {
  * Refresh all submodules that are on task branches by merging the base branch and pushing.
  */
 export async function refreshSubmodules(params: RefreshSubmodulesParams): Promise<RefreshSubmodulesResult> {
-    const { baseBranch, logger } = params;
+    const { baseBranch, logger, autoYes = false } = params;
     const refreshedSubmodules: string[] = [];
     let submodulesPushed = false;
 
@@ -67,7 +73,16 @@ export async function refreshSubmodules(params: RefreshSubmodulesParams): Promis
 
         const submoduleGit = simpleGit({ baseDir: submodule.path });
 
-        // 1. Fetch and fast-forward base branch
+        // 1. Check for uncommitted changes and prompt to commit/push before merge
+        await commitAndPushPendingChanges({
+            logger,
+            git: submoduleGit,
+            repoDisplayName: chalk.magenta(submodule.name),
+            autoYes,
+            defaultCommitMessage: 'Work in progress',
+        });
+
+        // 2. Fetch and fast-forward base branch
         logger.info(`   🔄 Fetching latest changes for ${chalk.cyan(baseBranch)}`);
         await submoduleGit.fetch('origin', baseBranch);
 
@@ -78,7 +93,7 @@ export async function refreshSubmodules(params: RefreshSubmodulesParams): Promis
             logger.warn(`   ⚠️  Could not fast-forward ${chalk.cyan(baseBranch)}: ${(error as Error).message}`);
         }
 
-        // 2. Check if base branch is ahead of current branch
+        // 3. Check if base branch is ahead of current branch
         const currentBranch = submodule.currentBranch!;
         let commitsAhead = 0;
         try {
@@ -97,14 +112,14 @@ export async function refreshSubmodules(params: RefreshSubmodulesParams): Promis
             `   📊 Base branch is ${chalk.yellow(commitsAhead.toString())} commit${commitsAhead === 1 ? '' : 's'} ahead`,
         );
 
-        // 3. Merge base branch
+        // 4. Merge base branch
         logger.info(`   🔀 Merging ${chalk.cyan(baseBranch)} into ${chalk.cyan(currentBranch)}`);
         await submoduleGit.merge([baseBranch]);
         logger.info(`   ✅ Successfully merged ${chalk.cyan(baseBranch)}`);
 
         refreshedSubmodules.push(submodule.path);
 
-        // 4. Push the merged changes
+        // 5. Push the merged changes
         logger.info(`   📤 Pushing merged changes...`);
         await submoduleGit.push();
         logger.info(`   ✅ Pushed ${chalk.magenta(submodule.name)}`);

@@ -5,6 +5,7 @@ import open from 'open';
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
 import {
+    commitAndPushPendingChanges,
     convertAllPrsToReady,
     createGithubClient,
     findMatchingPr,
@@ -508,7 +509,14 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
             description: 'Refresh current task branch with latest base branch changes',
             details:
                 'Fetches the base branch, fast-forwards it, and merges it into the current task branch and all submodules. Pushes submodule changes and commits submodule reference updates.',
-            examples: [['Refresh current task with base branch', 'task refresh']],
+            examples: [
+                ['Refresh current task with base branch', 'task refresh'],
+                ['Refresh with auto-commit (skip prompts)', 'task refresh --yes'],
+            ],
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip prompts and automatically commit pending changes with default message',
         });
 
         override async run() {
@@ -533,14 +541,22 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                 const baseBranch = baseBranches[0]!;
                 this.logger.info(`🔄 Refreshing task ${chalk.bold(taskId)} with base branch ${chalk.cyan(baseBranch)}`);
 
-                // 1. Refresh submodules first
+                // 1. Refresh submodules first (includes checking for pending changes)
                 this.logger.info('');
                 this.logger.info(chalk.bold('📦 Refreshing submodules...'));
-                await refreshSubmodules({ baseBranch, logger: this.logger });
+                await refreshSubmodules({ baseBranch, logger: this.logger, autoYes: this.yes });
 
-                // 2. Refresh main repo
+                // 2. Check for pending changes in main repo and commit/push before merge
                 this.logger.info('');
                 this.logger.info(chalk.bold('🔄 Refreshing main repository...'));
+                await commitAndPushPendingChanges({
+                    logger: this.logger,
+                    repoDisplayName: 'main repository',
+                    autoYes: this.yes,
+                    defaultCommitMessage: 'Work in progress',
+                });
+
+                // 3. Sync with base branch
                 const result = await syncBaseBranch(baseBranch, this.logger, true);
 
                 if (result.mergePerformed) {
@@ -555,7 +571,7 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                     this.logger.info(`✅ Task branch is already up to date with ${chalk.cyan(baseBranch)}`);
                 }
 
-                // 3. Commit and push submodule reference changes
+                // 4. Commit and push submodule reference changes
                 this.logger.info('');
                 await pushSubmoduleUpdates({ logger: this.logger });
             } catch (error) {

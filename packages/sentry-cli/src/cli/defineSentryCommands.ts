@@ -4,6 +4,7 @@ import open from 'open';
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
 import {
+    commitAndPushPendingChanges,
     convertAllPrsToReady,
     createGithubClient,
     findMatchingPr,
@@ -415,7 +416,14 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
             description: 'Refresh current issue branch with latest base branch changes',
             details:
                 'Fetches the base branch, fast-forwards it, and merges it into the current issue branch and all submodules. Pushes submodule changes and commits submodule reference updates.',
-            examples: [['Refresh current issue with base branch', 'issue refresh']],
+            examples: [
+                ['Refresh current issue with base branch', 'issue refresh'],
+                ['Refresh with auto-commit (skip prompts)', 'issue refresh --yes'],
+            ],
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip prompts and automatically commit pending changes with default message',
         });
 
         override async run() {
@@ -442,14 +450,22 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                     `🔄 Refreshing issue ${chalk.bold(issueId)} with base branch ${chalk.cyan(baseBranch)}`,
                 );
 
-                // 1. Refresh submodules first
+                // 1. Refresh submodules first (includes checking for pending changes)
                 this.logger.info('');
                 this.logger.info(chalk.bold('📦 Refreshing submodules...'));
-                await refreshSubmodules({ baseBranch, logger: this.logger });
+                await refreshSubmodules({ baseBranch, logger: this.logger, autoYes: this.yes });
 
-                // 2. Refresh main repo
+                // 2. Check for pending changes in main repo and commit/push before merge
                 this.logger.info('');
                 this.logger.info(chalk.bold('🔄 Refreshing main repository...'));
+                await commitAndPushPendingChanges({
+                    logger: this.logger,
+                    repoDisplayName: 'main repository',
+                    autoYes: this.yes,
+                    defaultCommitMessage: 'Work in progress',
+                });
+
+                // 3. Sync with base branch
                 const result = await syncBaseBranch(baseBranch, this.logger, true);
 
                 if (result.mergePerformed) {
@@ -464,7 +480,7 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                     this.logger.info(`✅ Issue branch is already up to date with ${chalk.cyan(baseBranch)}`);
                 }
 
-                // 3. Commit and push submodule reference changes
+                // 4. Commit and push submodule reference changes
                 this.logger.info('');
                 await pushSubmoduleUpdates({ logger: this.logger });
             } catch (error) {

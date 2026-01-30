@@ -10,6 +10,8 @@ import {
     getCurrentBranch,
     handlePushPreparation,
     openPrInBrowser,
+    pushSubmoduleUpdates,
+    refreshSubmodules,
     syncBaseBranch,
 } from '@nzyme/github-cli';
 import type { GithubConfig } from '@nzyme/github-cli';
@@ -412,7 +414,7 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
             category: 'Sentry',
             description: 'Refresh current issue branch with latest base branch changes',
             details:
-                'Fetches the base branch, fast-forwards it, and optionally merges it into the current issue branch if it is ahead',
+                'Fetches the base branch, fast-forwards it, and merges it into the current issue branch and all submodules. Pushes submodule changes and commits submodule reference updates.',
             examples: [['Refresh current issue with base branch', 'issue refresh']],
         });
 
@@ -440,7 +442,14 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                     `🔄 Refreshing issue ${chalk.bold(issueId)} with base branch ${chalk.cyan(baseBranch)}`,
                 );
 
-                // Sync with base branch - automatically merge without prompting
+                // 1. Refresh submodules first
+                this.logger.info('');
+                this.logger.info(chalk.bold('📦 Refreshing submodules...'));
+                await refreshSubmodules({ baseBranch, logger: this.logger });
+
+                // 2. Refresh main repo
+                this.logger.info('');
+                this.logger.info(chalk.bold('🔄 Refreshing main repository...'));
                 const result = await syncBaseBranch(baseBranch, this.logger, true);
 
                 if (result.mergePerformed) {
@@ -454,6 +463,10 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                 } else {
                     this.logger.info(`✅ Issue branch is already up to date with ${chalk.cyan(baseBranch)}`);
                 }
+
+                // 3. Commit and push submodule reference changes
+                this.logger.info('');
+                await pushSubmoduleUpdates({ logger: this.logger });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to refresh issue: ${errorMessage}`);

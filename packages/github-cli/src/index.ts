@@ -35,3 +35,7 @@ export * from './utils/selectPrToOpen.js';
 export type { OpenPrInBrowserParams, PrInfo, SelectPrToOpenParams } from './utils/selectPrToOpen.js';
 export * from './utils/syncBaseBranch.js';
 export type { SyncBaseBranchResult } from './utils/syncBaseBranch.js';
+export * from './utils/refreshSubmodules.js';
+export type { RefreshSubmodulesParams, RefreshSubmodulesResult } from './utils/refreshSubmodules.js';
+export * from './utils/pushSubmoduleUpdates.js';
+export type { PushSubmoduleUpdatesParams, PushSubmoduleUpdatesResult } from './utils/pushSubmoduleUpdates.js';

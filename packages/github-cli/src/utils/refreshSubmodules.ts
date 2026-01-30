@@ -35,11 +35,6 @@ export interface RefreshSubmodulesResult {
      * Paths of submodules that were refreshed (merged).
      */
     refreshedSubmodules: string[];
-
-    /**
-     * Whether any submodules were pushed.
-     */
-    submodulesPushed: boolean;
 }
 
 /**
@@ -48,14 +43,14 @@ export interface RefreshSubmodulesResult {
 export async function refreshSubmodules(params: RefreshSubmodulesParams): Promise<RefreshSubmodulesResult> {
     const { baseBranch, logger, autoYes = false } = params;
     const refreshedSubmodules: string[] = [];
-    let submodulesPushed = false;
+    const remoteBaseBranch = `origin/${baseBranch}`;
 
     logger.info('🔍 Checking for submodules to refresh...');
     const submodules = await getSubmoduleInfo();
 
     if (submodules.length === 0) {
         logger.info('✅ No submodules found');
-        return { refreshedSubmodules, submodulesPushed };
+        return { refreshedSubmodules };
     }
 
     // Filter to submodules on task branches (branches containing task IDs like SIG-123)
@@ -63,7 +58,7 @@ export async function refreshSubmodules(params: RefreshSubmodulesParams): Promis
 
     if (submodulesToRefresh.length === 0) {
         logger.info('✅ No submodules on task branches to refresh');
-        return { refreshedSubmodules, submodulesPushed };
+        return { refreshedSubmodules };
     }
 
     logger.info(`📦 Found ${chalk.yellow(submodulesToRefresh.length.toString())} submodule(s) to refresh`);
@@ -94,11 +89,12 @@ export async function refreshSubmodules(params: RefreshSubmodulesParams): Promis
             logger.warn(`   ⚠️  Could not fast-forward ${chalk.cyan(baseBranch)}: ${(error as Error).message}`);
         }
 
-        // 3. Check if base branch is ahead of current branch
+        // 3. Check if remote base branch is ahead of current branch
         const currentBranch = submodule.currentBranch!;
         let commitsAhead = 0;
         try {
-            const result = await submoduleGit.raw(['rev-list', '--count', `${currentBranch}..${baseBranch}`]);
+            // Use origin/baseBranch to ensure we check against freshly fetched content
+            const result = await submoduleGit.raw(['rev-list', '--count', `${currentBranch}..${remoteBaseBranch}`]);
             commitsAhead = parseInt(result.trim(), 10);
         } catch {
             commitsAhead = 0;
@@ -113,9 +109,9 @@ export async function refreshSubmodules(params: RefreshSubmodulesParams): Promis
             `   📊 Base branch is ${chalk.yellow(commitsAhead.toString())} commit${commitsAhead === 1 ? '' : 's'} ahead`,
         );
 
-        // 4. Merge base branch
-        logger.info(`   🔀 Merging ${chalk.cyan(baseBranch)} into ${chalk.cyan(currentBranch)}`);
-        await submoduleGit.merge([baseBranch]);
+        // 4. Merge remote base branch (use origin/baseBranch to ensure freshly fetched content)
+        logger.info(`   🔀 Merging ${chalk.cyan(remoteBaseBranch)} into ${chalk.cyan(currentBranch)}`);
+        await submoduleGit.merge([remoteBaseBranch]);
         logger.info(`   ✅ Successfully merged ${chalk.cyan(baseBranch)}`);
 
         refreshedSubmodules.push(submodule.path);
@@ -124,9 +120,8 @@ export async function refreshSubmodules(params: RefreshSubmodulesParams): Promis
         logger.info(`   📤 Pushing merged changes...`);
         await submoduleGit.push();
         logger.info(`   ✅ Pushed ${chalk.magenta(submodule.name)}`);
-        submodulesPushed = true;
     }
 
-    return { refreshedSubmodules, submodulesPushed };
+    return { refreshedSubmodules };
 }
 

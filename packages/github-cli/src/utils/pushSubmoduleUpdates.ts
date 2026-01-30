@@ -3,6 +3,8 @@ import { simpleGit } from 'simple-git';
 
 import type { Logger } from '@nzyme/logging';
 
+import { pushWithUpstream } from './pushWithUpstream.js';
+
 /**
  * Parameters for pushing submodule updates.
  */
@@ -100,9 +102,9 @@ export async function pushSubmoduleUpdates(params: PushSubmoduleUpdatesParams): 
     await git.raw(['commit', '-m', 'Submodule update', '--', ...pathsToCommit]);
     logger.info('✅ Committed submodule updates');
 
-    // Push
+    // Push (handles case where no upstream is configured)
     logger.info('📤 Pushing submodule update commit...');
-    await git.push();
+    await pushWithUpstream(git);
     logger.info('✅ Pushed to remote');
 
     return { committed: true, pushed: true };

@@ -3,11 +3,11 @@ import enquirer from 'enquirer';
 import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
-import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging';
 
 import { checkUnpushedCommits } from './checkUnpushedCommits.js';
 import { getGitStatusInfo } from './getGitStatusInfo.js';
+import { pushWithUpstream } from './pushWithUpstream.js';
 
 /**
  * Parameters for committing and pushing pending changes.
@@ -160,22 +160,8 @@ export async function commitAndPushPendingChanges(
             `   🚀 Pushing ${chalk.yellow(totalCommitsToPush.toString())} commit${totalCommitsToPush === 1 ? '' : 's'}...`,
         );
 
-        // Check if branch has an upstream set
-        const currentStatus = await git.status();
-        const currentBranch = currentStatus.current;
-
-        if (!currentBranch) {
-            throw new UsageError('Could not determine current branch name');
-        }
-
-        // Check if tracking branch exists
-        const hasUpstream = currentStatus.tracking !== null;
-
-        if (hasUpstream) {
-            await git.push();
-        } else {
-            await git.push('origin', currentBranch, { '--set-upstream': null });
-        }
+        // Push (handles case where no upstream is configured)
+        await pushWithUpstream(git);
 
         logger.info(`   ✅ Pushed successfully`);
         pushed = true;

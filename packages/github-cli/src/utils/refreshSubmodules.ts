@@ -6,6 +6,7 @@ import type { Logger } from '@nzyme/logging';
 import { commitAndPushPendingChanges } from './commitAndPushPendingChanges.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { isTaskBranch } from './isTaskBranch.js';
+import { pushWithUpstream } from './pushWithUpstream.js';
 
 /**
  * Parameters for refreshing submodules.
@@ -116,9 +117,9 @@ export async function refreshSubmodules(params: RefreshSubmodulesParams): Promis
 
         refreshedSubmodules.push(submodule.path);
 
-        // 5. Push the merged changes
+        // 5. Push the merged changes (handles case where no upstream is configured)
         logger.info(`   📤 Pushing merged changes...`);
-        await submoduleGit.push();
+        await pushWithUpstream(submoduleGit);
         logger.info(`   ✅ Pushed ${chalk.magenta(submodule.name)}`);
     }
 

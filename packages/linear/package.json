@@ -21,6 +21,9 @@
     "files": [
         "dist"
     ],
+    "scripts": {
+        "test": "vitest run"
+    },
     "dependencies": {
         "@linear/sdk": "^65.2.0",
         "@nzyme/cli": "^0.14.0",

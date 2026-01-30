@@ -53,7 +53,7 @@ test('validate array of objects', () => {
             props: {
                 number: number({
                     nullable: true,
-                    validate: v.minValue({ minValue: 10 }),
+                    validate: v.minValue(10),
                 }),
                 string: string({
                     validate: v.regex({

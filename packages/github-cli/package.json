@@ -21,6 +21,9 @@
     "files": [
         "dist"
     ],
+    "scripts": {
+        "test": "vitest run"
+    },
     "dependencies": {
         "@nzyme/cli": "^0.14.0",
         "@nzyme/logging": "^0.14.0",

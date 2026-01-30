@@ -42,7 +42,7 @@ test('validate object schema', () => {
         props: {
             number: number({
                 nullable: true,
-                validate: [v.minValue({ minValue: 10 })],
+                validate: [v.minValue(10)],
             }),
             string: string({
                 validate: [

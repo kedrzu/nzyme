@@ -22,7 +22,8 @@
     ],
     "scripts": {
         "build:esm": "tsc --build ./tsconfig.esm.json",
-        "lint": "prettier ./src --write && eslint . --fix --cache"
+        "lint": "prettier ./src --write && eslint . --fix --cache",
+        "test": "vitest run"
     },
     "dependencies": {
         "@nzyme/crypto": "^0.14.0",

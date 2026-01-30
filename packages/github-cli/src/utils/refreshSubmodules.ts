@@ -5,6 +5,7 @@ import type { Logger } from '@nzyme/logging';
 
 import { commitAndPushPendingChanges } from './commitAndPushPendingChanges.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
+import { isTaskBranch } from './isTaskBranch.js';
 
 /**
  * Parameters for refreshing submodules.
@@ -129,11 +130,3 @@ export async function refreshSubmodules(params: RefreshSubmodulesParams): Promis
     return { refreshedSubmodules, submodulesPushed };
 }
 
-/**
- * Check if a branch name appears to be a task/issue branch.
- */
-function isTaskBranch(branchName: string): boolean {
-    // Check for branches containing task IDs like SIG-123, PROJ-456, etc. (case-insensitive)
-    const taskIdPattern = /[A-Z]+-\d+/i;
-    return taskIdPattern.test(branchName);
-}

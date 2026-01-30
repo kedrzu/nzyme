@@ -11,6 +11,13 @@ export interface PushSubmoduleUpdatesParams {
      * Logger instance.
      */
     logger: Logger;
+
+    /**
+     * Optional list of specific submodule paths to commit.
+     * If provided, only these paths will be staged and committed.
+     * If not provided, the function will detect changed submodules automatically.
+     */
+    submodulePaths?: string[];
 }
 
 /**
@@ -30,40 +37,67 @@ export interface PushSubmoduleUpdatesResult {
 
 /**
  * Stage, commit ("Submodule update"), and push any changed submodule references.
+ * Only commits the specified submodule paths (or detected changes if not specified).
  */
 export async function pushSubmoduleUpdates(params: PushSubmoduleUpdatesParams): Promise<PushSubmoduleUpdatesResult> {
-    const { logger } = params;
+    const { logger, submodulePaths } = params;
     const git = simpleGit();
 
-    // Check if there are submodule reference changes using `git submodule status`
-    // Lines starting with '+' indicate the submodule is at a different commit than recorded
-    const submoduleStatus = await git.raw(['submodule', 'status']);
-    const changedSubmodules = submoduleStatus
-        .split('\n')
-        .filter(line => line.startsWith('+'))
-        .map(line => {
-            // Format: +<sha> <path> (<branch info>)
-            const match = line.match(/^\+\S+\s+(\S+)/);
-            return match ? match[1] : null;
-        })
-        .filter((path): path is string => path !== null);
+    let pathsToCommit: string[];
 
-    if (changedSubmodules.length === 0) {
+    if (submodulePaths && submodulePaths.length > 0) {
+        // Use the provided paths - check which ones actually have changes vs HEAD
+        const changedPaths: string[] = [];
+        for (const path of submodulePaths) {
+            try {
+                // Check if this submodule has changes compared to HEAD
+                const diff = await git.diff(['--name-only', 'HEAD', '--', path]);
+                if (diff.trim()) {
+                    changedPaths.push(path);
+                }
+            } catch {
+                // If diff fails, assume there might be changes
+                changedPaths.push(path);
+            }
+        }
+        pathsToCommit = changedPaths;
+    } else {
+        // Detect changed submodules by comparing working tree to HEAD
+        // This avoids the issue with git submodule status comparing to index
+        const submoduleList = await git.raw(['submodule', 'foreach', '--quiet', 'echo $sm_path']);
+        const allSubmodulePaths = submoduleList.trim().split('\n').filter(Boolean);
+
+        const changedPaths: string[] = [];
+        for (const path of allSubmodulePaths) {
+            try {
+                const diff = await git.diff(['--name-only', 'HEAD', '--', path]);
+                if (diff.trim()) {
+                    changedPaths.push(path);
+                }
+            } catch {
+                // If diff fails, skip this submodule
+            }
+        }
+        pathsToCommit = changedPaths;
+    }
+
+    if (pathsToCommit.length === 0) {
         logger.info('✅ No submodule reference changes to commit');
         return { committed: false, pushed: false };
     }
 
-    logger.info(`📝 Found ${chalk.yellow(changedSubmodules.length.toString())} submodule(s) with updated references`);
+    logger.info(`📝 Found ${chalk.yellow(pathsToCommit.length.toString())} submodule(s) with updated references`);
 
-    // Stage all changed submodules
-    for (const submodulePath of changedSubmodules) {
+    // Stage only the specific submodule paths
+    for (const submodulePath of pathsToCommit) {
         logger.info(`   📦 Staging ${chalk.magenta(submodulePath)}`);
         await git.add(submodulePath);
     }
 
-    // Commit with "Submodule update" message
+    // Commit only the staged submodule paths using `--` to specify paths
+    // This ensures we only commit the submodules, not any other staged changes
     logger.info('💾 Committing submodule updates...');
-    await git.commit('Submodule update');
+    await git.raw(['commit', '-m', 'Submodule update', '--', ...pathsToCommit]);
     logger.info('✅ Committed submodule updates');
 
     // Push

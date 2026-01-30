@@ -453,9 +453,19 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                 // 1. Refresh submodules first (includes checking for pending changes)
                 this.logger.info('');
                 this.logger.info(chalk.bold('📦 Refreshing submodules...'));
-                await refreshSubmodules({ baseBranch, logger: this.logger, autoYes: this.yes });
+                const submoduleResult = await refreshSubmodules({ baseBranch, logger: this.logger, autoYes: this.yes });
 
-                // 2. Check for pending changes in main repo and commit/push before merge
+                // 2. Commit and push submodule reference changes immediately after refresh
+                // This must happen BEFORE syncBaseBranch to avoid reverting base branch submodule updates
+                if (submoduleResult.refreshedSubmodules.length > 0) {
+                    this.logger.info('');
+                    await pushSubmoduleUpdates({
+                        logger: this.logger,
+                        submodulePaths: submoduleResult.refreshedSubmodules,
+                    });
+                }
+
+                // 3. Check for pending changes in main repo and commit/push before merge
                 this.logger.info('');
                 this.logger.info(chalk.bold('🔄 Refreshing main repository...'));
                 await commitAndPushPendingChanges({
@@ -465,7 +475,7 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                     defaultCommitMessage: 'Work in progress',
                 });
 
-                // 3. Sync with base branch
+                // 4. Sync with base branch
                 const result = await syncBaseBranch(baseBranch, this.logger, true);
 
                 if (result.mergePerformed) {
@@ -479,10 +489,6 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                 } else {
                     this.logger.info(`✅ Issue branch is already up to date with ${chalk.cyan(baseBranch)}`);
                 }
-
-                // 4. Commit and push submodule reference changes
-                this.logger.info('');
-                await pushSubmoduleUpdates({ logger: this.logger });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to refresh issue: ${errorMessage}`);

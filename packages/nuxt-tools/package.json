@@ -23,7 +23,7 @@
     ],
     "scripts": {
         "build:esm": "tsc --build ./tsconfig.esm.json",
-        "lint": "eslint . --fix --cache"
+        "lint": "yarn tsc --noEmit --project tsconfig.check.json && eslint . --fix --cache"
     },
     "dependencies": {
         "@types/fs-extra": "^11.0.4",

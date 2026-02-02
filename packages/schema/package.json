@@ -24,7 +24,7 @@
         "dist"
     ],
     "scripts": {
-        "lint": "eslint . --fix --cache",
+        "lint": "yarn tsc --noEmit --project tsconfig.check.json & eslint . --fix --cache",
         "test": "vitest run"
     },
     "dependencies": {

@@ -29,7 +29,7 @@
         "dist"
     ],
     "scripts": {
-        "lint": "eslint . --fix --cache"
+        "lint": "yarn tsc --noEmit --project tsconfig.check.json && eslint . --fix --cache"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.954.0",

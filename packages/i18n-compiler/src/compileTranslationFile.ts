@@ -26,6 +26,8 @@ export interface CompileTranslationFileResult {
 
 /**
  * Compile a translation YAML file to TypeScript with formatting and ESLint fixes
+ * @param inputPath - The absolute path to the input YAML file
+ * @param outputPath - The absolute path to the output TypeScript file
  * @__NO_SIDE_EFFECTS__
  */
 export async function compileTranslationFile(

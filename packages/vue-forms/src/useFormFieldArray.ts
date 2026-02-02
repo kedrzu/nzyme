@@ -104,8 +104,8 @@ export function useFormFieldArray<T>(
     const factory = getFactory(form, validatorsOrFactory);
 
     watch(
-        () => form.value.length,
-        (newLength, oldLength = 0) => {
+        () => form.value?.length,
+        (newLength = 0, oldLength = 0) => {
             if (newLength > oldLength) {
                 for (let i = oldLength; i < newLength; i++) {
                     const scope = effectScope();

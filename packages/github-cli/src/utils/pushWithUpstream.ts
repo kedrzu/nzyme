@@ -5,7 +5,6 @@ import { UsageError } from '@nzyme/cli';
 
 /**
  * Push changes to remote, handling the case where no upstream is configured.
- * @__NO_SIDE_EFFECTS__
  */
 export async function pushWithUpstream(git: SimpleGit = simpleGit()): Promise<void> {
     const currentStatus = await git.status();

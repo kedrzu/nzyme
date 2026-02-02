@@ -32,9 +32,15 @@ export async function fetchAndRebaseCurrentBranch(
         return { hadRemoteChanges: false, commitsRebased: 0 };
     }
 
-    // Fetch from origin
+    // Fetch from origin (may fail if remote branch doesn't exist yet)
     logger.info(`🔄 Fetching latest changes for ${chalk.cyan(currentBranch)} in ${repoDisplayName}...`);
-    await git.fetch('origin', currentBranch);
+    try {
+        await git.fetch('origin', currentBranch);
+    } catch {
+        // Remote branch may not exist yet (new branch that hasn't been pushed)
+        logger.info(`✅ ${repoDisplayName} has no remote branch yet`);
+        return { hadRemoteChanges: false, commitsRebased: 0 };
+    }
 
     // Check if there are commits on origin that we don't have
     let commitsAhead = 0;

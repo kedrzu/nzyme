@@ -1,4 +1,4 @@
-import { readdirSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { basename, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -33,13 +33,17 @@ for (const testCase of testCases) {
     test(`should compile ${testCase} file correctly`, async () => {
         const yamlFilePath = join(TESTS_FIXTURES_DIR, `${testCase}.yaml`);
         const outputFilePath = join(TESTS_FIXTURES_DIR, `${testCase}.loc.ts`);
+        const expectedFilePath = join(TESTS_FIXTURES_DIR, `${testCase}.ts`);
 
         // Compile the file
         const result = await compileTranslationFile(yamlFilePath, outputFilePath);
+        const outputContent = readFileSync(outputFilePath, 'utf-8');
+        const expectedContent = readFileSync(expectedFilePath, 'utf-8');
 
         // Should not have errors
         expect(result.errors).toEqual([]);
         expect(result.success).toBe(true);
         expect(result.outputPath).toBe(outputFilePath);
+        expect(outputContent).toBe(expectedContent);
     });
 }

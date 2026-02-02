@@ -103,7 +103,7 @@ export class LocaliseCommand extends Command {
     private async compileFile(file: string, logProcessedFile: (file: string) => void) {
         try {
             const absolutePath = this.toAbsolute(file);
-            const outputPath = this.toTypesScriptPath(file);
+            const outputPath = this.toTypesScriptPath(absolutePath);
 
             const result = await compileTranslationFile(absolutePath, outputPath);
 

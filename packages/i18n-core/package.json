@@ -23,7 +23,7 @@
     ],
     "scripts": {
         "build:esm": "tsc --build ./tsconfig.esm.json",
-        "lint": "yarn tsc --noEmit --project tsconfig.check.json && eslint . --fix --cache"
+        "lint": "prettier ./src --write && yarn tsc --noEmit --project tsconfig.check.json && eslint . --fix --cache"
     },
     "dependencies": {
         "@nzyme/ioc": "^0.14.0"

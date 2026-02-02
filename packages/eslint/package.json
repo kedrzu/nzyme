@@ -19,7 +19,7 @@
         "dist"
     ],
     "scripts": {
-        "lint": "prettier ./src --write && (yarn tsc --noEmit --project tsconfig.check.json && eslint . --fix --cache)",
+        "lint": "prettier ./src --write && yarn tsc --noEmit --project tsconfig.check.json && eslint . --fix --cache",
         "build:esm": "tsc --build ./tsconfig.esm.json"
     },
     "dependencies": {

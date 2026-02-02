@@ -32,7 +32,7 @@
         "dist"
     ],
     "scripts": {
-        "lint": "yarn tsc --noEmit --project tsconfig.check.json && eslint . --fix --cache"
+        "lint": "prettier ./src --write && yarn tsc --noEmit --project tsconfig.check.json && eslint . --fix --cache"
     },
     "dependencies": {
         "@nzyme/fetch-utils": "^0.14.0",

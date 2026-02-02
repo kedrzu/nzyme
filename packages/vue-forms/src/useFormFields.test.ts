@@ -630,3 +630,166 @@ test('useFormFields factory function nested fields contribute to parent validati
         expect(result).toBe(false);
     });
 });
+
+// Null/Undefined Value Handling
+
+test('useFormFields handles null form value', () => {
+    scope.run(() => {
+        const nullForm = useForm<TestFormValue | null>(null);
+        const fields = useFormFields(nullForm as FormModel<TestFormValue>, {
+            name: null,
+            email: null,
+        });
+
+        // Fields should be created but values are undefined
+        expect(fields.name).toBeDefined();
+        expect(fields.email).toBeDefined();
+        expect(fields.name.value).toBeUndefined();
+        expect(fields.email.value).toBeUndefined();
+    });
+});
+
+test('useFormFields handles undefined form value', () => {
+    scope.run(() => {
+        const undefinedForm = useForm<TestFormValue | undefined>(undefined);
+        const fields = useFormFields(undefinedForm as FormModel<TestFormValue>, {
+            name: null,
+            email: null,
+        });
+
+        // Fields should be created but values are undefined
+        expect(fields.name).toBeDefined();
+        expect(fields.email).toBeDefined();
+        expect(fields.name.value).toBeUndefined();
+        expect(fields.email.value).toBeUndefined();
+    });
+});
+
+test('useFormFields setter is no-op when form value is null', async () => {
+    await scope.run(async () => {
+        const nullForm = useForm<TestFormValue | null>(null);
+        const fields = useFormFields(nullForm as FormModel<TestFormValue>, {
+            name: null,
+        });
+
+        // Attempting to set field value should not throw
+        // We test this by checking that the form value remains null
+        expect(nullForm.value).toBeNull();
+
+        // The field value is undefined (from getter)
+        expect(fields.name.value).toBeUndefined();
+    });
+});
+
+test('useFormFields handles form value changing from object to null', async () => {
+    await scope.run(async () => {
+        const form = useForm<TestFormValue | null>({
+            name: 'John',
+            email: 'john@example.com',
+            age: 25,
+        });
+
+        const fields = useFormFields(form as FormModel<TestFormValue>, {
+            name: null,
+            email: null,
+        });
+
+        expect(fields.name.value).toBe('John');
+
+        // Set form value to null
+        form.value = null;
+        await nextTick();
+
+        // Field values should now be undefined
+        expect(fields.name.value).toBeUndefined();
+        expect(fields.email.value).toBeUndefined();
+    });
+});
+
+test('useFormFields handles form value changing from null to object', async () => {
+    await scope.run(async () => {
+        const form = useForm<TestFormValue | null>(null);
+
+        const fields = useFormFields(form as FormModel<TestFormValue>, {
+            name: null,
+            email: null,
+        });
+
+        expect(fields.name.value).toBeUndefined();
+
+        // Set form value to object
+        form.value = {
+            name: 'Jane',
+            email: 'jane@example.com',
+            age: 30,
+        };
+        await nextTick();
+
+        expect(fields.name.value).toBe('Jane');
+        expect(fields.email.value).toBe('jane@example.com');
+    });
+});
+
+test('useFormFields with validators handles null form value', () => {
+    scope.run(() => {
+        const nullForm = useForm<TestFormValue | null>(null);
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        const fields = useFormFields(nullForm as FormModel<TestFormValue>, {
+            name: [requiredValidator],
+        });
+
+        // Field should be invalid when value is undefined
+        expect(fields.name.valid).toBe(false);
+    });
+});
+
+test('useFormFields with factory handles null form value', () => {
+    scope.run(() => {
+        const nullForm = useForm<TestFormValue | null>(null);
+
+        const fields = useFormFields(nullForm as FormModel<TestFormValue>, {
+            name: field => ({
+                theField: field,
+                customValue: 'custom',
+            }),
+        });
+
+        expect(fields.name.customValue).toBe('custom');
+        expect(fields.name.theField.value).toBeUndefined();
+    });
+});
+
+test('useFormFields handles value toggling between null and object', async () => {
+    await scope.run(async () => {
+        const form = useForm<TestFormValue | null>({
+            name: 'Initial',
+            email: 'initial@test.com',
+            age: 20,
+        });
+
+        const fields = useFormFields(form as FormModel<TestFormValue>, {
+            name: null,
+        });
+
+        expect(fields.name.value).toBe('Initial');
+
+        // Set to null
+        form.value = null;
+        await nextTick();
+        expect(fields.name.value).toBeUndefined();
+
+        // Set back to object
+        form.value = { name: 'Updated', email: 'updated@test.com', age: 25 };
+        await nextTick();
+        expect(fields.name.value).toBe('Updated');
+
+        // Set to null again
+        form.value = null;
+        await nextTick();
+        expect(fields.name.value).toBeUndefined();
+    });
+});

@@ -1,7 +1,7 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import { effectScope, nextTick, ref } from 'vue';
 
-import type { FormField, FormValidator } from './types.js';
+import type { FormField, FormModel, FormValidator } from './types.js';
 import { useForm } from './useForm.js';
 import { useFormField } from './useFormField.js';
 import { useFormFieldArray } from './useFormFieldArray.js';
@@ -626,5 +626,112 @@ test('useFormFieldArray complex nested example works correctly', async () => {
         await nextTick();
 
         expect(form.valid).toBe(true);
+    });
+});
+
+// Null/Undefined Value Handling
+
+test('useFormFieldArray handles null initial value', () => {
+    scope.run(() => {
+        const form = useForm<string[] | null>(null);
+        const fields = useFormFieldArray(form as FormModel<string[]>);
+
+        // Should create empty fields array without errors
+        expect(fields.length).toBe(0);
+    });
+});
+
+test('useFormFieldArray handles undefined initial value', () => {
+    scope.run(() => {
+        const form = useForm<string[] | undefined>(undefined);
+        const fields = useFormFieldArray(form as FormModel<string[]>);
+
+        // Should create empty fields array without errors
+        expect(fields.length).toBe(0);
+    });
+});
+
+test('useFormFieldArray handles value becoming null', async () => {
+    await scope.run(async () => {
+        const form = useForm<string[] | null>(['a', 'b', 'c']);
+        const fields = useFormFieldArray(form as FormModel<string[]>);
+
+        expect(fields.length).toBe(3);
+
+        // Set value to null
+        form.value = null;
+        await nextTick();
+
+        // Fields should be cleared without errors
+        expect(fields.length).toBe(0);
+    });
+});
+
+test('useFormFieldArray handles value changing from null to array', async () => {
+    await scope.run(async () => {
+        const form = useForm<string[] | null>(null);
+        const fields = useFormFieldArray(form as FormModel<string[]>);
+
+        expect(fields.length).toBe(0);
+
+        // Set value to an array
+        form.value = ['x', 'y'];
+        await nextTick();
+
+        expect(fields.length).toBe(2);
+        expect(fields[0]!.value).toBe('x');
+        expect(fields[1]!.value).toBe('y');
+    });
+});
+
+test('useFormFieldArray handles value toggling between null and array', async () => {
+    await scope.run(async () => {
+        const form = useForm<string[] | null>(['initial']);
+        const fields = useFormFieldArray(form as FormModel<string[]>);
+
+        expect(fields.length).toBe(1);
+
+        // Set to null
+        form.value = null;
+        await nextTick();
+        expect(fields.length).toBe(0);
+
+        // Set back to array
+        form.value = ['a', 'b', 'c'];
+        await nextTick();
+        expect(fields.length).toBe(3);
+
+        // Set to null again
+        form.value = null;
+        await nextTick();
+        expect(fields.length).toBe(0);
+    });
+});
+
+test('useFormFieldArray with factory handles null value', () => {
+    scope.run(() => {
+        const form = useForm<string[] | null>(null);
+        const fields = useFormFieldArray(form as FormModel<string[]>, (field, index) => ({
+            field,
+            index,
+        }));
+
+        // Should create empty fields array without errors
+        expect(fields.length).toBe(0);
+    });
+});
+
+test('useFormFieldArray with validators handles null value', () => {
+    scope.run(() => {
+        const form = useForm<string[] | null>(null);
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: v => (v ? null : 'Required'),
+        };
+
+        const fields = useFormFieldArray(form as FormModel<string[]>, [requiredValidator]);
+
+        // Should create empty fields array without errors
+        expect(fields.length).toBe(0);
     });
 });

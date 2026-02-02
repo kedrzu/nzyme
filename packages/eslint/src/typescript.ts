@@ -36,7 +36,7 @@ export interface TypescriptOptions {
  */
 export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
     const config: Linter.Config = {
-        ignores: ['dist/**/*', 'dist-*/**/*', 'node_modules/**/*', 'eslint.config.js', 'package.json'],
+        ignores: ['dist/**/*', 'node_modules/**/*', 'eslint.config.js', 'package.json'],
         plugins: {
             workspaces,
             monorepo,

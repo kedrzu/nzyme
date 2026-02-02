@@ -7,6 +7,7 @@ import {
     commitAndPushPendingChanges,
     convertAllPrsToReady,
     createGithubClient,
+    fetchAndRebaseCurrentBranch,
     findMatchingPr,
     getCurrentBranch,
     handlePushPreparation,
@@ -450,12 +451,20 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                     `🔄 Refreshing issue ${chalk.bold(issueId)} with base branch ${chalk.cyan(baseBranch)}`,
                 );
 
-                // 1. Refresh submodules first (includes checking for pending changes)
+                // 1. Fetch and rebase current branch to get any remote commits
+                this.logger.info('');
+                this.logger.info(chalk.bold('📥 Syncing with remote...'));
+                await fetchAndRebaseCurrentBranch({
+                    logger: this.logger,
+                    repoDisplayName: 'main repository',
+                });
+
+                // 2. Refresh submodules (includes checking for pending changes)
                 this.logger.info('');
                 this.logger.info(chalk.bold('📦 Refreshing submodules...'));
                 const submoduleResult = await refreshSubmodules({ baseBranch, logger: this.logger, autoYes: this.yes });
 
-                // 2. Commit and push submodule reference changes immediately after refresh
+                // 3. Commit and push submodule reference changes immediately after refresh
                 // This must happen BEFORE syncBaseBranch to avoid reverting base branch submodule updates
                 if (submoduleResult.refreshedSubmodules.length > 0) {
                     this.logger.info('');
@@ -465,7 +474,7 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                     });
                 }
 
-                // 3. Check for pending changes in main repo and commit/push before merge
+                // 4. Check for pending changes in main repo and commit/push before merge
                 this.logger.info('');
                 this.logger.info(chalk.bold('🔄 Refreshing main repository...'));
                 await commitAndPushPendingChanges({
@@ -475,7 +484,7 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                     defaultCommitMessage: 'Work in progress',
                 });
 
-                // 4. Sync with base branch
+                // 5. Sync with base branch
                 const result = await syncBaseBranch(baseBranch, this.logger, true);
 
                 if (result.mergePerformed) {

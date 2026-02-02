@@ -46,3 +46,8 @@ export type {
     CommitAndPushPendingChangesParams,
     CommitAndPushPendingChangesResult,
 } from './utils/commitAndPushPendingChanges.js';
+export * from './utils/fetchAndRebaseCurrentBranch.js';
+export type {
+    FetchAndRebaseCurrentBranchParams,
+    FetchAndRebaseCurrentBranchResult,
+} from './utils/fetchAndRebaseCurrentBranch.js';

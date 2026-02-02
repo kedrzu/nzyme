@@ -5,12 +5,16 @@ import open from 'open';
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
 import {
+    commitAndPushPendingChanges,
     convertAllPrsToReady,
     createGithubClient,
+    fetchAndRebaseCurrentBranch,
     findMatchingPr,
     getCurrentBranch,
     handlePushPreparation,
     openPrInBrowser,
+    pushSubmoduleUpdates,
+    refreshSubmodules,
     syncBaseBranch,
 } from '@nzyme/github-cli';
 import type { GithubConfig } from '@nzyme/github-cli';
@@ -505,8 +509,15 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
             category: 'Linear',
             description: 'Refresh current task branch with latest base branch changes',
             details:
-                'Fetches the base branch, fast-forwards it, and optionally merges it into the current task branch if it is ahead',
-            examples: [['Refresh current task with base branch', 'task refresh']],
+                'Fetches the base branch, fast-forwards it, and merges it into the current task branch and all submodules. Pushes submodule changes and commits submodule reference updates.',
+            examples: [
+                ['Refresh current task with base branch', 'task refresh'],
+                ['Refresh with auto-commit (skip prompts)', 'task refresh --yes'],
+            ],
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip prompts and automatically commit pending changes with default message',
         });
 
         override async run() {
@@ -531,7 +542,40 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                 const baseBranch = baseBranches[0]!;
                 this.logger.info(`🔄 Refreshing task ${chalk.bold(taskId)} with base branch ${chalk.cyan(baseBranch)}`);
 
-                // Sync with base branch - automatically merge without prompting
+                // 1. Fetch and rebase current branch to get any remote commits
+                this.logger.info('');
+                this.logger.info(chalk.bold('📥 Syncing with remote...'));
+                await fetchAndRebaseCurrentBranch({
+                    logger: this.logger,
+                    repoDisplayName: 'main repository',
+                });
+
+                // 2. Refresh submodules (includes checking for pending changes)
+                this.logger.info('');
+                this.logger.info(chalk.bold('📦 Refreshing submodules...'));
+                const submoduleResult = await refreshSubmodules({ baseBranch, logger: this.logger, autoYes: this.yes });
+
+                // 3. Commit and push submodule reference changes immediately after refresh
+                // This must happen BEFORE syncBaseBranch to avoid reverting base branch submodule updates
+                if (submoduleResult.refreshedSubmodules.length > 0) {
+                    this.logger.info('');
+                    await pushSubmoduleUpdates({
+                        logger: this.logger,
+                        submodulePaths: submoduleResult.refreshedSubmodules,
+                    });
+                }
+
+                // 4. Check for pending changes in main repo and commit/push before merge
+                this.logger.info('');
+                this.logger.info(chalk.bold('🔄 Refreshing main repository...'));
+                await commitAndPushPendingChanges({
+                    logger: this.logger,
+                    repoDisplayName: 'main repository',
+                    autoYes: this.yes,
+                    defaultCommitMessage: 'Work in progress',
+                });
+
+                // 5. Sync with base branch
                 const result = await syncBaseBranch(baseBranch, this.logger, true);
 
                 if (result.mergePerformed) {
@@ -737,12 +781,12 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                         const currentIndicator = isCurrentTask ? chalk.cyan('★ ') : '  ';
 
                         // Format with padding for table-like alignment
-                        const taskId = chalk.bold.white(issue.identifier.padEnd(maxTaskIdWidth));
+                        const taskId = chalk.bold.whiteBright(issue.identifier.padEnd(maxTaskIdWidth));
                         const projectDisplay =
                             projectName === 'No Project'
                                 ? chalk.gray(projectName.padEnd(maxProjectWidth))
                                 : chalk.cyan(projectName.padEnd(maxProjectWidth));
-                        const taskTitle = chalk.white(issue.title.padEnd(maxTitleWidth).slice(0, maxTitleWidth));
+                        const taskTitle = chalk.bold.whiteBright(issue.title.padEnd(maxTitleWidth).slice(0, maxTitleWidth));
                         const priorityDisplay = priorityColor(priorityText.padEnd(maxPriorityWidth));
                         const statusDisplay = stateColor(stateName.padEnd(maxStatusWidth));
                         const prInfo =

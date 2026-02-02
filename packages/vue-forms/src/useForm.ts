@@ -19,10 +19,15 @@ export function useForm<T>(value: Ref<T> | T): FormModel<T> {
         return fields.every(field => field.valid);
     });
 
+    const invalid = computed(() => {
+        return fields.some(field => field.invalid);
+    });
+
     const form = reactive<FormModel<T>>({
         value,
         fields,
         valid,
+        invalid,
         lang,
         get form(): FormModel<T> {
             return form;

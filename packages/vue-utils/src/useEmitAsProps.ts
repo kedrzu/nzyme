@@ -8,7 +8,7 @@ import { camelize, getCurrentInstance, toHandlerKey } from 'vue';
  *
  * @example
  * ```vue
- * <script setup>
+ * <script setup lang="ts">
  * import { useEmitAsProps } from '@nzyme/vue-utils';
  *
  * const emitsAsProps = useEmitAsProps();

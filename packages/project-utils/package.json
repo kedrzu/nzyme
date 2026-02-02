@@ -35,7 +35,7 @@
         "fs-extra": "^11.3.3",
         "parse-gitignore": "^2.0.0",
         "pkg-types": "^2.3.0",
-        "prettier": "^3.7.4"
+        "prettier": "^3.8.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",

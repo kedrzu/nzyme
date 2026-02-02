@@ -23,7 +23,6 @@ export const usePasswordInput = assignProps(setupPasswordInput, {
 });
 
 /**
- *
  * @__NO_SIDE_EFFECTS__
  */
 function setupPasswordInput() {

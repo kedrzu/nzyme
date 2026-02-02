@@ -1,12 +1,17 @@
-import { computed, h, type InputHTMLAttributes } from 'vue';
-import { IMaskComponent } from 'vue-imask';
 import type { FactoryArg } from 'imask';
+import { computed, h } from 'vue';
+import type { InputHTMLAttributes } from 'vue';
+import { IMaskComponent } from 'vue-imask';
 
+import { assignProps } from '@nzyme/utils';
 import { defineProps, useProps } from '@nzyme/vue-utils';
 
-import { defineFormField, type FormFieldValue } from './defineFormField.js';
-import { assignProps } from '@nzyme/utils';
+import { defineFormField } from './defineFormField.js';
+import type { FormFieldValue } from './defineFormField.js';
 
+/**
+ *
+ */
 export interface MaskedInputMaskConfig {
     /** The mask configuration for IMask */
     mask: FactoryArg;
@@ -15,11 +20,14 @@ export interface MaskedInputMaskConfig {
     /** Whether to use lazy mode (default: false) */
     lazy?: boolean;
     /** Input mode for mobile keyboards */
-    inputmode?: 'text' | 'numeric' | 'decimal' | 'tel' | 'search' | 'email' | 'url';
+    inputmode?: 'decimal' | 'email' | 'numeric' | 'search' | 'tel' | 'text' | 'url';
     /** Placeholder character */
     placeholderChar?: string;
 }
 
+/**
+ *
+ */
 export interface MaskedInputOptions<T = unknown> {
     /** Mask configuration */
     maskConfig: MaskedInputMaskConfig;
@@ -29,8 +37,14 @@ export interface MaskedInputOptions<T = unknown> {
     toTypedValue: (modelValue: FormFieldValue<T> | null | undefined) => unknown;
 }
 
-export const useMaskedInput = defineMaskedInput();
+export /**
+ *
+ */
+const useMaskedInput = defineMaskedInput();
 
+/**
+ *
+ */
 export function defineMaskedInput<T = string>() {
     const fieldDef = defineFormField<T>();
     const propsDef = defineProps({
@@ -76,11 +90,11 @@ export function defineMaskedInput<T = string>() {
                     onFocus={field.inputAttrs.onFocus}
                     onUpdate:typed={onInput}
                     placeholder={props.placeholder}
+                    placeholderChar={maskConfig.placeholderChar}
                     readonly={props.readonly}
                     tabindex={props.tabindex}
                     title={props.label}
                     typed={typedValue.value}
-                    placeholderChar={maskConfig.placeholderChar}
                     {...attrs}
                 />
             );

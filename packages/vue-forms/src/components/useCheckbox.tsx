@@ -22,7 +22,6 @@ export const useCheckbox = assignProps(setupCheckbox, {
 });
 
 /**
- *
  * @__NO_SIDE_EFFECTS__
  */
 function setupCheckbox() {

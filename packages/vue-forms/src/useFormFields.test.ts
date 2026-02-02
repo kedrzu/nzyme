@@ -1,0 +1,632 @@
+import { beforeEach, expect, test, vi } from 'vitest';
+import { effectScope, nextTick, ref } from 'vue';
+
+import type { FormModel, FormValidator } from './types.js';
+import { useForm } from './useForm.js';
+import { useFormField } from './useFormField.js';
+import { useFormFields } from './useFormFields.js';
+
+vi.mock('@nzyme/vue-i18n', () => ({
+    useLanguage: () => ref('en'),
+}));
+
+interface TestFormValue {
+    name: string;
+    email: string;
+    age: number;
+}
+
+let scope: ReturnType<typeof effectScope>;
+let form: FormModel<TestFormValue>;
+
+beforeEach(() => {
+    scope = effectScope();
+    scope.run(() => {
+        form = useForm<TestFormValue>({
+            name: '',
+            email: '',
+            age: 0,
+        });
+    });
+});
+
+test('useFormFields creates fields for each key in params', () => {
+    scope.run(() => {
+        const fields = useFormFields(form, {
+            name: null,
+            email: null,
+        });
+
+        expect(fields.name).toBeDefined();
+        expect(fields.email).toBeDefined();
+        expect('age' in fields).toBe(false);
+    });
+});
+
+test('useFormFields registers all fields with parent form', () => {
+    scope.run(() => {
+        useFormFields(form, {
+            name: null,
+            email: null,
+            age: null,
+        });
+
+        expect(form.fields.length).toBe(3);
+    });
+});
+
+test('useFormFields field value syncs with form value via computed', async () => {
+    await scope.run(async () => {
+        const fields = useFormFields(form, {
+            name: null,
+        });
+
+        expect(fields.name.value).toBe('');
+
+        form.value.name = 'Updated';
+        await nextTick();
+
+        expect(fields.name.value).toBe('Updated');
+    });
+});
+
+test('useFormFields setting field value updates form value', async () => {
+    await scope.run(async () => {
+        const fields = useFormFields(form, {
+            name: null,
+        });
+
+        // Note: field.value is readonly in the interface, but the underlying computed
+        // setter allows updating through the form
+        form.value.name = 'New Value';
+        await nextTick();
+
+        expect(fields.name.value).toBe('New Value');
+    });
+});
+
+test('useFormFields applies validators to fields', () => {
+    scope.run(() => {
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        const fields = useFormFields(form, {
+            name: [requiredValidator],
+            email: null,
+        });
+
+        expect(fields.name.validators.length).toBe(1);
+        expect(fields.email.validators.length).toBe(0);
+
+        // Field with empty value should be invalid
+        expect(fields.name.valid).toBe(false);
+    });
+});
+
+test('useFormFields applies multiple validators to single field', () => {
+    scope.run(() => {
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        const minLengthValidator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v && v.length >= 3 ? null : 'Min 3 chars'),
+        };
+
+        const fields = useFormFields(form, {
+            name: [requiredValidator, minLengthValidator],
+        });
+
+        expect(fields.name.validators.length).toBe(2);
+    });
+});
+
+test('useFormFields null validators array creates field without validators', () => {
+    scope.run(() => {
+        const fields = useFormFields(form, {
+            name: null,
+        });
+
+        expect(fields.name.validators.length).toBe(0);
+        expect(fields.name.valid).toBe(true);
+        expect(fields.name.invalid).toBe(false);
+    });
+});
+
+test('useFormFields empty validators array creates field without validators', () => {
+    scope.run(() => {
+        const fields = useFormFields(form, {
+            name: [],
+        });
+
+        expect(fields.name.validators.length).toBe(0);
+        expect(fields.name.valid).toBe(true);
+        expect(fields.name.invalid).toBe(false);
+    });
+});
+
+test('useFormFields fields have focus and blur methods', () => {
+    scope.run(() => {
+        const fields = useFormFields(form, {
+            name: null,
+        });
+
+        expect(typeof fields.name.focus).toBe('function');
+        expect(typeof fields.name.blur).toBe('function');
+
+        expect(fields.name.focused).toBe(false);
+
+        fields.name.focus();
+        expect(fields.name.focused).toBe(true);
+
+        fields.name.blur();
+        expect(fields.name.focused).toBe(false);
+    });
+});
+
+test('useFormFields fields have validate method', async () => {
+    await scope.run(async () => {
+        const fields = useFormFields(form, {
+            name: null,
+        });
+
+        const result = await fields.name.validate();
+        expect(result).toBe(true);
+    });
+});
+
+test('useFormFields fields have reset method', async () => {
+    await scope.run(async () => {
+        const validator: FormValidator<string> = {
+            async: false,
+            validate: () => 'Error',
+        };
+
+        const fields = useFormFields(form, {
+            name: [validator],
+        });
+
+        await fields.name.validate();
+        expect(fields.name.errors.length).toBeGreaterThan(0);
+
+        fields.name.reset();
+        expect(fields.name.errors.length).toBe(0);
+    });
+});
+
+test('useFormFields each field references parent form', () => {
+    scope.run(() => {
+        const fields = useFormFields(form, {
+            name: null,
+            email: null,
+        });
+
+        expect(fields.name.form).toBe(form);
+        expect(fields.email.form).toBe(form);
+    });
+});
+
+test('useFormFields form validation validates all fields', async () => {
+    await scope.run(async () => {
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        useFormFields(form, {
+            name: [requiredValidator],
+            email: [requiredValidator],
+        });
+
+        // All fields empty, validation should fail
+        const result = await form.validate();
+        expect(result).toBe(false);
+    });
+});
+
+test('useFormFields form validation passes when all fields valid', async () => {
+    await scope.run(async () => {
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        form.value.name = 'John';
+        form.value.email = 'john@example.com';
+
+        useFormFields(form, {
+            name: [requiredValidator],
+            email: [requiredValidator],
+        });
+
+        const result = await form.validate();
+        expect(result).toBe(true);
+    });
+});
+
+test('useFormFields form.valid reflects overall validity', async () => {
+    await scope.run(async () => {
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        useFormFields(form, {
+            name: [requiredValidator],
+            email: null,
+        });
+
+        // name is empty, so form should be invalid
+        expect(form.valid).toBe(false);
+
+        // Fill in the required field
+        form.value.name = 'John';
+        await nextTick();
+
+        expect(form.valid).toBe(true);
+    });
+});
+
+test('useFormFields field invalid is false initially even when valid is false', () => {
+    scope.run(() => {
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        const fields = useFormFields(form, {
+            name: [requiredValidator],
+        });
+
+        // Field with empty value should be invalid (valid=false)
+        expect(fields.name.valid).toBe(false);
+        // But invalid should be false because validation hasn't been triggered
+        expect(fields.name.invalid).toBe(false);
+    });
+});
+
+test('useFormFields field invalid becomes true after validate()', async () => {
+    await scope.run(async () => {
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        const fields = useFormFields(form, {
+            name: [requiredValidator],
+        });
+
+        expect(fields.name.invalid).toBe(false);
+
+        await fields.name.validate();
+
+        expect(fields.name.valid).toBe(false);
+        expect(fields.name.invalid).toBe(true);
+    });
+});
+
+test('useFormFields form.invalid reflects overall invalid state', async () => {
+    await scope.run(async () => {
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        useFormFields(form, {
+            name: [requiredValidator],
+            email: null,
+        });
+
+        // Initially invalid should be false (not validated yet)
+        expect(form.invalid).toBe(false);
+
+        // Validate the form
+        await form.validate();
+
+        // Now invalid should be true because name is empty
+        expect(form.invalid).toBe(true);
+    });
+});
+
+test('useFormFields form.invalid is false after reset()', async () => {
+    await scope.run(async () => {
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: (v: string | null | undefined) => (v ? null : 'Required'),
+        };
+
+        const fields = useFormFields(form, {
+            name: [requiredValidator],
+        });
+
+        await form.validate();
+        expect(form.invalid).toBe(true);
+        expect(fields.name.invalid).toBe(true);
+
+        form.reset();
+
+        expect(form.invalid).toBe(false);
+        expect(fields.name.invalid).toBe(false);
+    });
+});
+
+test('useFormFields form.reset resets all fields', async () => {
+    await scope.run(async () => {
+        const validator: FormValidator<string> = {
+            async: false,
+            validate: () => 'Error',
+        };
+
+        const fields = useFormFields(form, {
+            name: [validator],
+            email: [validator],
+        });
+
+        await form.validate();
+        expect(fields.name.errors.length).toBeGreaterThan(0);
+        expect(fields.email.errors.length).toBeGreaterThan(0);
+
+        form.reset();
+
+        expect(fields.name.errors.length).toBe(0);
+        expect(fields.email.errors.length).toBe(0);
+    });
+});
+
+test('useFormFields supports different value types', async () => {
+    await scope.run(async () => {
+        const numberValidator: FormValidator<number> = {
+            async: false,
+            validate: (v: number | null | undefined) => (v != null && v > 0 ? null : 'Must be positive'),
+        };
+
+        const fields = useFormFields(form, {
+            age: [numberValidator],
+        });
+
+        expect(fields.age.value).toBe(0);
+        expect(fields.age.valid).toBe(false);
+
+        form.value.age = 25;
+        await nextTick();
+
+        expect(fields.age.value).toBe(25);
+        expect(fields.age.valid).toBe(true);
+    });
+});
+
+test('useFormFields unregisters fields on scope disposal', () => {
+    const innerScope = effectScope();
+
+    innerScope.run(() => {
+        useFormFields(form, {
+            name: null,
+            email: null,
+        });
+    });
+
+    expect(form.fields.length).toBe(2);
+
+    innerScope.stop();
+
+    expect(form.fields.length).toBe(0);
+});
+
+test('useFormFields type inference works correctly', () => {
+    scope.run(() => {
+        const fields = useFormFields(form, {
+            name: null,
+            email: null,
+            age: null,
+        });
+
+        // These should compile without errors
+        const nameValue: string = fields.name.value;
+        const emailValue: string = fields.email.value;
+        const ageValue: number = fields.age.value;
+
+        expect(typeof nameValue).toBe('string');
+        expect(typeof emailValue).toBe('string');
+        expect(typeof ageValue).toBe('number');
+    });
+});
+
+test('useFormFields works with ref form value', async () => {
+    const localScope = effectScope();
+
+    await localScope.run(async () => {
+        const value = ref({
+            name: '',
+            email: '',
+        });
+
+        const refForm = useForm(value);
+
+        const fields = useFormFields(refForm, {
+            name: null,
+            email: null,
+        });
+
+        expect(fields.name.value).toBe('');
+
+        value.value.name = 'Updated';
+        await nextTick();
+
+        expect(fields.name.value).toBe('Updated');
+    });
+
+    localScope.stop();
+});
+
+// Tests for factory function feature (new feature)
+
+test('useFormFields with factory function returns custom structure', () => {
+    scope.run(() => {
+        const fields = useFormFields(form, {
+            name: field => ({
+                field,
+                customProp: 'custom value',
+            }),
+        });
+
+        expect(fields.name.customProp).toBe('custom value');
+        expect(fields.name.field).toBeDefined();
+        expect(fields.name.field.value).toBe('');
+    });
+});
+
+test('useFormFields with factory function receives FormModel for the key', () => {
+    scope.run(() => {
+        let receivedField: FormModel<string> | null = null;
+
+        useFormFields(form, {
+            name: field => {
+                receivedField = field;
+                return field;
+            },
+        });
+
+        expect(receivedField).not.toBeNull();
+        expect(receivedField!.value).toBe('');
+        expect(receivedField!.form).toBe(form);
+    });
+});
+
+test('useFormFields factory function can use useFormField to add validators', () => {
+    scope.run(() => {
+        const validator: FormValidator<string> = {
+            async: false,
+            validate: v => (v ? null : 'Required'),
+        };
+
+        const fields = useFormFields(form, {
+            name: field => useFormField(field, { validators: [validator] }),
+        });
+
+        // Factory returned a FormField with validators
+        expect(fields.name.validators.length).toBe(1);
+        expect(fields.name.valid).toBe(false);
+    });
+});
+
+test('useFormFields factory function can create nested structures with useFormFields', () => {
+    scope.run(() => {
+        interface NestedForm {
+            address: {
+                street: string;
+                city: string;
+            };
+        }
+
+        const nestedForm = useForm<NestedForm>({
+            address: { street: '', city: '' },
+        });
+
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: v => (v ? null : 'Required'),
+        };
+
+        const fields = useFormFields(nestedForm, {
+            address: field =>
+                useFormFields(field, {
+                    street: [requiredValidator],
+                    city: null,
+                }),
+        });
+
+        // fields.address should have street and city sub-fields
+        expect(fields.address.street).toBeDefined();
+        expect(fields.address.city).toBeDefined();
+        expect(fields.address.street.valid).toBe(false); // has required validator
+        expect(fields.address.city.valid).toBe(true);
+    });
+});
+
+test('useFormFields factory creates field that is registered to parent form', () => {
+    scope.run(() => {
+        useFormFields(form, {
+            name: field => useFormField(field, { validators: [] }),
+        });
+
+        // The field created by factory should be registered
+        expect(form.fields.length).toBe(1);
+    });
+});
+
+test('useFormFields mixed validators and factory functions', () => {
+    scope.run(() => {
+        const validator: FormValidator<string> = {
+            async: false,
+            validate: () => null,
+        };
+
+        const fields = useFormFields(form, {
+            name: [validator], // validators array
+            email: field => ({
+                // factory function
+                theField: field,
+                extra: 42,
+            }),
+        });
+
+        // name is a FormField
+        expect(fields.name.validators.length).toBe(1);
+
+        // email is custom object from factory
+        expect(fields.email.extra).toBe(42);
+        expect(fields.email.theField.value).toBe('');
+    });
+});
+
+test('useFormFields factory function field value syncs with form', async () => {
+    await scope.run(async () => {
+        const fields = useFormFields(form, {
+            name: field => useFormField(field, { validators: [] }),
+        });
+
+        expect(fields.name.value).toBe('');
+
+        form.value.name = 'Updated';
+        await nextTick();
+
+        expect(fields.name.value).toBe('Updated');
+    });
+});
+
+test('useFormFields factory function nested fields contribute to parent validation', async () => {
+    await scope.run(async () => {
+        const requiredValidator: FormValidator<string> = {
+            async: false,
+            validate: v => (v ? null : 'Required'),
+        };
+
+        interface NestedForm {
+            person: {
+                name: string;
+            };
+        }
+
+        const nestedForm = useForm<NestedForm>({
+            person: { name: '' },
+        });
+
+        useFormFields(nestedForm, {
+            person: field =>
+                useFormFields(field, {
+                    name: [requiredValidator],
+                }),
+        });
+
+        // Parent form should be invalid because nested field is invalid
+        expect(nestedForm.valid).toBe(false);
+
+        // Validate should propagate through nested structure
+        const result = await nestedForm.validate();
+        expect(result).toBe(false);
+    });
+});

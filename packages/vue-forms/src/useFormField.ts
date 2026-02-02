@@ -1,5 +1,5 @@
 import type { Ref } from 'vue';
-import { computed, onScopeDispose, ref, watch, watchEffect } from 'vue';
+import { computed, onScopeDispose, ref, toRef, watch, watchEffect } from 'vue';
 
 import { arrayRemove } from '@nzyme/utils';
 import { makeRef, reactive, useDataSource } from '@nzyme/vue-utils';
@@ -15,26 +15,121 @@ import type {
 } from './types.js';
 
 /**
- * Form field parameters
+ * Parameters for creating a form field that uses the parent form's value directly.
+ * When value is omitted, the field validates the form's value with the provided validators.
+ *
+ * This is useful when you want to add validation to an existing form or field
+ * without creating a separate value ref.
+ *
+ * @template T - Type of the form value
+ *
+ * @example
+ * ```typescript
+ * const form = useForm({ name: '', email: '' });
+ *
+ * // Create a field that validates the entire form value
+ * const field = useFormField(form, {
+ *     validators: [customObjectValidator()]
+ * });
+ *
+ * // field.value is the same as form.value
+ * ```
  */
-export interface FormFieldParams<T> {
+export interface FormFieldBasicParams<T = unknown> {
     /**
-     * Field key
+     * Optional field value. When undefined, uses the parent form's value directly.
+     * This allows creating a field with just validators from an existing form/field.
+     */
+    value?: undefined;
+
+    /**
+     * Validators to apply to this field.
+     */
+    validators: FormValidator<T>[];
+}
+
+/**
+ * Parameters for creating a form field with a custom value ref.
+ * Use this when the field should track a specific value that may differ from
+ * the parent form's value (e.g., a nested property or computed value).
+ *
+ * @template T - Type of the field value
+ *
+ * @example
+ * ```typescript
+ * const form = useForm({ name: '', email: '' });
+ *
+ * // Create a field for a specific property
+ * const nameValue = computed({
+ *     get: () => form.value.name,
+ *     set: (v) => { form.value.name = v; }
+ * });
+ *
+ * const nameField = useFormField(form, {
+ *     value: nameValue,
+ *     validators: [requiredValidator()]
+ * });
+ * ```
+ */
+export interface FormFieldCustomParams<T = unknown> {
+    /**
+     * The value ref for this field. Can be a ref or computed.
      */
     value: Ref<T>;
 
     /**
-     *
+     * Optional validators to apply to this field.
      */
     validators?: FormValidator<T>[];
 }
 
 /**
+ * Creates a form field that uses the parent form's value directly with the provided validators.
  *
+ * @template T - Type of the form value
+ * @param form - Parent form model
+ * @param params - Field parameters with validators (value is omitted)
+ * @returns A form field that validates the form's value
+ *
+ * @example
+ * ```typescript
+ * const form = useForm('');
+ * const field = useFormField(form, { validators: [requiredValidator()] });
+ * // field.value === form.value
+ * ```
  */
-export function useFormField<T>(form: FormModel, params: FormFieldParams<T>): FormField<T> {
+export function useFormField<T>(form: FormModel<T>, params: FormFieldBasicParams<T>): FormField<T>;
+
+/**
+ * Creates a form field with a custom value ref and optional validators.
+ *
+ * @template T - Type of the field value
+ * @param form - Parent form model (for registration and context)
+ * @param params - Field parameters with custom value and optional validators
+ * @returns A form field that validates the custom value
+ *
+ * @example
+ * ```typescript
+ * const form = useForm({ name: '', email: '' });
+ * const nameRef = computed({
+ *     get: () => form.value.name,
+ *     set: (v) => { form.value.name = v; }
+ * });
+ * const nameField = useFormField(form, {
+ *     value: nameRef,
+ *     validators: [requiredValidator()]
+ * });
+ * ```
+ */
+export function useFormField<T>(form: FormModel, params: FormFieldCustomParams<T>): FormField<T>;
+
+/**
+ * Implementation of useFormField.
+ * @internal
+ */
+export function useFormField(form: FormModel, params: FormFieldBasicParams | FormFieldCustomParams): FormField {
     const focused = ref(false);
-    const value = params.value;
+    const value = params.value ?? toRef(form, 'value');
     const validators = params.validators?.map(validator => createValidatorState(validator, value, focused, form)) || [];
 
     const errors = computed(() => {
@@ -53,20 +148,23 @@ export function useFormField<T>(form: FormModel, params: FormFieldParams<T>): Fo
         return errors;
     });
 
-    const valid = computed(() => {
-        for (const validator of validators) {
-            if (validator.error) {
-                return false;
-            }
-        }
+    const fields = reactive<FormField[]>([]);
 
-        return true;
+    const valid = computed(() => {
+        return validators.every(validator => validator.error == null) && fields.every(field => field.valid);
     });
 
-    const field = reactive<FormField<T>>({
+    const invalid = computed(() => {
+        return errors.value.length > 0 || fields.some(field => field.invalid);
+    });
+
+    const field = reactive<FormField>({
         form,
         value,
+        fields,
+        lang: form.lang,
         valid,
+        invalid,
         errors,
         focused,
         validators,
@@ -79,11 +177,11 @@ export function useFormField<T>(form: FormModel, params: FormFieldParams<T>): Fo
     const formFields = form.fields as FormField[];
 
     // Register field in form
-    formFields.push(field as FormField);
+    formFields.push(field);
 
     // Unregister field from form when component is unmounted
     onScopeDispose(() => {
-        arrayRemove(formFields, field as FormField);
+        arrayRemove(formFields, field);
     });
 
     return field;
@@ -98,7 +196,7 @@ export function useFormField<T>(form: FormModel, params: FormFieldParams<T>): Fo
 
     async function validate() {
         const promises: Promise<boolean>[] = [];
-        let valid = true;
+        let isValid = true;
 
         for (const validator of validators) {
             const result = validator.validate();
@@ -106,25 +204,31 @@ export function useFormField<T>(form: FormModel, params: FormFieldParams<T>): Fo
             if (result instanceof Promise) {
                 promises.push(result);
             } else {
-                valid = valid && result;
+                isValid = isValid && result;
             }
         }
 
-        if (!valid) {
-            return false;
+        // Also validate nested fields
+        for (const nestedField of fields) {
+            promises.push(nestedField.validate());
         }
 
         if (promises.length > 0) {
             const results = await Promise.all(promises);
-            return results.every(result => result);
+            return isValid && results.every(result => result);
         }
 
-        return true;
+        return isValid;
     }
 
     function reset() {
         for (const validator of validators) {
             validator.show = false;
+        }
+
+        // Also reset nested fields
+        for (const nestedField of fields) {
+            nestedField.reset();
         }
     }
 }

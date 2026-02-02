@@ -31,7 +31,7 @@ interface VVisibleElement extends HTMLElement {
  *   <div v-visible="isVisible">Keeps layout space when hidden</div>
  * </template>
  *
- * <script setup>
+ * <script setup lang="ts">
  * import { ref } from 'vue';
  *
  * const isVisible = ref(true);

@@ -11,7 +11,7 @@ import { nextTick, ref, watch } from 'vue';
  *
  * @example
  * ```vue
- * <script setup>
+ * <script setup lang="ts">
  * import { triggerRef } from '@nzyme/vue-utils';
  *
  * const shake = triggerRef();

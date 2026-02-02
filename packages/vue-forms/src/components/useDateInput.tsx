@@ -1,7 +1,8 @@
-import { h, ref, type ButtonHTMLAttributes, type InputHTMLAttributes, type SetupContext } from 'vue';
+import { h, ref } from 'vue';
+import type { ButtonHTMLAttributes, InputHTMLAttributes, SetupContext } from 'vue';
 
-import { useTranslate } from '@nzyme/vue-i18n';
 import { assignProps } from '@nzyme/utils';
+import { useTranslate } from '@nzyme/vue-i18n';
 import { defineProps, useProps } from '@nzyme/vue-utils';
 
 import { defineFormField } from './defineFormField.js';
@@ -28,7 +29,6 @@ export const useDateInput = assignProps(setupDateInput, {
 });
 
 /**
- *
  * @__NO_SIDE_EFFECTS__
  */
 function setupDateInput() {
@@ -51,8 +51,8 @@ function setupDateInput() {
                 aria-label={props.label}
                 aria-readonly={props.readonly}
                 aria-required={props.required}
-                disabled={props.disabled}
                 autocomplete={props.autocomplete}
+                disabled={props.disabled}
                 max={formatDate(props.max)}
                 min={formatDate(props.min)}
                 name={props.name}
@@ -76,11 +76,11 @@ function setupDateInput() {
 
         return (
             <button
-                type="button"
-                onMousedown={showCalendar}
-                aria-label={translate(l.showCalendar)}
                 aria-expanded="false"
                 aria-haspopup="dialog"
+                aria-label={translate(l.showCalendar)}
+                onMousedown={showCalendar}
+                type="button"
                 {...attrs}
             >
                 {slot && <slot />}

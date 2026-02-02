@@ -39,7 +39,12 @@ export class LocaliseCommand extends Command {
             ignore: ['node_modules', 'dist'],
         });
 
-        const results = await Promise.all(files.map(file => this.compileFile(file)));
+        let count = 0;
+        const results = await Promise.all(files.map(file => this.compileFile(file, () => count++)));
+
+        if (count > 0) {
+            this.logger.info(`Compiled ${chalk.green(count)} translation files`);
+        }
 
         if (this.watch) {
             this.startWatcher();
@@ -81,7 +86,9 @@ export class LocaliseCommand extends Command {
             return;
         }
 
-        await this.compileFile(file);
+        await this.compileFile(file, f => {
+            this.logger.info(`Compiled ${chalk.green(f)}`);
+        });
     }
 
     private async onDeleteFile(file: string) {
@@ -93,7 +100,7 @@ export class LocaliseCommand extends Command {
         await fsExtra.remove(outputPath);
     }
 
-    private async compileFile(file: string) {
+    private async compileFile(file: string, logProcessedFile: (file: string) => void) {
         try {
             const absolutePath = this.toAbsolute(file);
             const outputPath = this.toTypesScriptPath(file);
@@ -101,7 +108,7 @@ export class LocaliseCommand extends Command {
             const result = await compileTranslationFile(absolutePath, outputPath);
 
             if (result.success) {
-                this.logger.info(`🌍 Compiled ${chalk.green(file)}`);
+                logProcessedFile(file);
                 return true;
             }
 
@@ -115,7 +122,7 @@ export class LocaliseCommand extends Command {
 
             return false;
         } catch (error) {
-            this.logger.error(`❌ Failed to compile ${file}`, { error });
+            this.logger.error(`Failed to compile ${file}`, { error });
             return false;
         }
     }

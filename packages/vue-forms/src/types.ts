@@ -18,9 +18,15 @@ export interface FormBase<T = unknown> {
     readonly form: FormModel<unknown>;
 
     /**
-     * Whether the form is valid
+     * Whether the form is valid.
      */
     readonly valid: boolean;
+
+    /**
+     * Whether the form is invalid.
+     * Can be false even when `valid` is false if form was not validated yet.
+     */
+    readonly invalid: boolean;
 
     /**
      * Validate form
@@ -46,8 +52,9 @@ export interface FormModel<T = unknown> extends FormBase<T>, FormValidationConte
 
 /**
  * Form field model
+ * Extends FormModel to allow scoped sub-forms where nested fields can be registered
  */
-export interface FormField<T = unknown> extends FormBase<T> {
+export interface FormField<T = unknown> extends FormModel<T> {
     /**
      * Whether the field is focused
      */

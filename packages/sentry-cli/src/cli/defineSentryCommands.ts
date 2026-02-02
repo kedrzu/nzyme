@@ -4,12 +4,16 @@ import open from 'open';
 import type { CommandClass } from '@nzyme/cli';
 import { Command, Option, UsageError } from '@nzyme/cli';
 import {
+    commitAndPushPendingChanges,
     convertAllPrsToReady,
     createGithubClient,
+    fetchAndRebaseCurrentBranch,
     findMatchingPr,
     getCurrentBranch,
     handlePushPreparation,
     openPrInBrowser,
+    pushSubmoduleUpdates,
+    refreshSubmodules,
     syncBaseBranch,
 } from '@nzyme/github-cli';
 import type { GithubConfig } from '@nzyme/github-cli';
@@ -412,8 +416,15 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
             category: 'Sentry',
             description: 'Refresh current issue branch with latest base branch changes',
             details:
-                'Fetches the base branch, fast-forwards it, and optionally merges it into the current issue branch if it is ahead',
-            examples: [['Refresh current issue with base branch', 'issue refresh']],
+                'Fetches the base branch, fast-forwards it, and merges it into the current issue branch and all submodules. Pushes submodule changes and commits submodule reference updates.',
+            examples: [
+                ['Refresh current issue with base branch', 'issue refresh'],
+                ['Refresh with auto-commit (skip prompts)', 'issue refresh --yes'],
+            ],
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip prompts and automatically commit pending changes with default message',
         });
 
         override async run() {
@@ -440,7 +451,40 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                     `🔄 Refreshing issue ${chalk.bold(issueId)} with base branch ${chalk.cyan(baseBranch)}`,
                 );
 
-                // Sync with base branch - automatically merge without prompting
+                // 1. Fetch and rebase current branch to get any remote commits
+                this.logger.info('');
+                this.logger.info(chalk.bold('📥 Syncing with remote...'));
+                await fetchAndRebaseCurrentBranch({
+                    logger: this.logger,
+                    repoDisplayName: 'main repository',
+                });
+
+                // 2. Refresh submodules (includes checking for pending changes)
+                this.logger.info('');
+                this.logger.info(chalk.bold('📦 Refreshing submodules...'));
+                const submoduleResult = await refreshSubmodules({ baseBranch, logger: this.logger, autoYes: this.yes });
+
+                // 3. Commit and push submodule reference changes immediately after refresh
+                // This must happen BEFORE syncBaseBranch to avoid reverting base branch submodule updates
+                if (submoduleResult.refreshedSubmodules.length > 0) {
+                    this.logger.info('');
+                    await pushSubmoduleUpdates({
+                        logger: this.logger,
+                        submodulePaths: submoduleResult.refreshedSubmodules,
+                    });
+                }
+
+                // 4. Check for pending changes in main repo and commit/push before merge
+                this.logger.info('');
+                this.logger.info(chalk.bold('🔄 Refreshing main repository...'));
+                await commitAndPushPendingChanges({
+                    logger: this.logger,
+                    repoDisplayName: 'main repository',
+                    autoYes: this.yes,
+                    defaultCommitMessage: 'Work in progress',
+                });
+
+                // 5. Sync with base branch
                 const result = await syncBaseBranch(baseBranch, this.logger, true);
 
                 if (result.mergePerformed) {

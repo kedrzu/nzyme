@@ -781,12 +781,12 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                         const currentIndicator = isCurrentTask ? chalk.cyan('★ ') : '  ';
 
                         // Format with padding for table-like alignment
-                        const taskId = chalk.bold.white(issue.identifier.padEnd(maxTaskIdWidth));
+                        const taskId = chalk.bold.whiteBright(issue.identifier.padEnd(maxTaskIdWidth));
                         const projectDisplay =
                             projectName === 'No Project'
                                 ? chalk.gray(projectName.padEnd(maxProjectWidth))
                                 : chalk.cyan(projectName.padEnd(maxProjectWidth));
-                        const taskTitle = chalk.white(issue.title.padEnd(maxTitleWidth).slice(0, maxTitleWidth));
+                        const taskTitle = chalk.bold.whiteBright(issue.title.padEnd(maxTitleWidth).slice(0, maxTitleWidth));
                         const priorityDisplay = priorityColor(priorityText.padEnd(maxPriorityWidth));
                         const statusDisplay = stateColor(stateName.padEnd(maxStatusWidth));
                         const prInfo =

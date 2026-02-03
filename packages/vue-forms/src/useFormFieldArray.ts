@@ -49,7 +49,6 @@ interface FieldWithScope extends FormField {
  * ```
  */
 export function useFormFieldArray<T>(form: FormModel<T[]>, validators?: FormValidator<T>[]): FormField<T>[];
-
 /**
  * Creates a reactive array of custom field structures from a form with array value.
  * The factory function receives each item as a form model and can create complex nested structures.
@@ -91,7 +90,6 @@ export function useFormFieldArray<T>(form: FormModel<T[]>, validators?: FormVali
  * ```
  */
 export function useFormFieldArray<T, V>(form: FormModel<T[]>, factory: FormFieldFactory<T, V>): V[];
-
 /**
  * Implementation of useFormFieldArray.
  * @internal
@@ -134,17 +132,7 @@ function getFactory(
 ) {
     if (typeof validatorsOrFactory === 'function') {
         return (index: number) => {
-            const value = computed({
-                get: () => form.value?.[index],
-                set: value => {
-                    if (form.value == null) {
-                        return;
-                    }
-
-                    form.value[index] = value;
-                },
-            });
-
+            const value = createIndexedValue(form, index);
             const field = useFormField(form, { value });
 
             return validatorsOrFactory(field, index);
@@ -152,20 +140,24 @@ function getFactory(
     }
 
     return (index: number) => {
-        const value = computed({
-            get: () => form.value?.[index],
-            set: value => {
-                if (form.value == null) {
-                    return;
-                }
-
-                form.value[index] = value;
-            },
-        });
+        const value = createIndexedValue(form, index);
 
         return useFormField(form, {
             value,
             validators: validatorsOrFactory,
         });
     };
+}
+
+function createIndexedValue(form: FormModel<unknown[]>, index: number) {
+    return computed({
+        get: () => form.value?.[index],
+        set: value => {
+            if (form.value == null) {
+                return;
+            }
+
+            form.value[index] = value;
+        },
+    });
 }

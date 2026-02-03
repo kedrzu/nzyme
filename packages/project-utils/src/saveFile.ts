@@ -1,6 +1,4 @@
-import { existsSync } from 'fs';
 import { readFile } from 'fs/promises';
-import { dirname, join } from 'path';
 
 import { ESLint } from 'eslint';
 import { outputFile, pathExists } from 'fs-extra';
@@ -8,18 +6,8 @@ import { format, resolveConfig } from 'prettier';
 
 import { getProjectRoot } from './getProjectRoot.js';
 
-// Cache ESLint instances by config file path
-const eslintCache = new Map<string, ESLint>();
-
-// ESLint config file names (flat config)
-const ESLINT_CONFIG_FILES = [
-    'eslint.config.js',
-    'eslint.config.mjs',
-    'eslint.config.cjs',
-    'eslint.config.ts',
-    'eslint.config.mts',
-    'eslint.config.cts',
-];
+// Single ESLint instance for the entire project
+let eslintInstance: ESLint | undefined;
 
 /**
  * Save a file with ESLint fixes and prettier formatting.
@@ -27,13 +15,12 @@ const ESLINT_CONFIG_FILES = [
 export async function saveFile(path: string, content: string): Promise<void> {
     // Run ESLint first to fix code issues
     try {
-        const eslint = getEslintInstance(path);
+        const eslint = getEslintInstance();
 
-        if (eslint) {
-            const results = await eslint.lintText(content, { filePath: path });
-            if (results.length > 0 && results[0] && results[0].output !== undefined) {
-                content = results[0].output;
-            }
+        // ESLint resolves config based on filePath, not cwd
+        const results = await eslint.lintText(content, { filePath: path });
+        if (results.length > 0 && results[0] && results[0].output !== undefined) {
+            content = results[0].output;
         }
     } catch (error) {
         console.error(`Failed to lint ${path}`, error);
@@ -61,52 +48,18 @@ export async function saveFile(path: string, content: string): Promise<void> {
 }
 
 /**
- * Find the nearest ESLint config file for a given file path.
- * Returns the config file path or undefined if not found.
+ * Get or create the single ESLint instance for the project.
+ * Uses the project root as cwd, allowing ESLint to resolve configs per-file.
  */
-function findEslintConfigPath(filePath: string): string | undefined {
-    const projectRoot = getProjectRoot();
-    let dir = dirname(filePath);
-
-    while (dir.length >= projectRoot.length) {
-        for (const configFile of ESLINT_CONFIG_FILES) {
-            const configPath = join(dir, configFile);
-            if (existsSync(configPath)) {
-                return configPath;
-            }
-        }
-
-        const parent = dirname(dir);
-        if (parent === dir) {
-            break;
-        }
-        dir = parent;
+function getEslintInstance(): ESLint {
+    if (eslintInstance) {
+        return eslintInstance;
     }
 
-    return undefined;
-}
-
-/**
- * Get or create an ESLint instance for the given file.
- * Caches instances by their config file location.
- */
-function getEslintInstance(filePath: string): ESLint | undefined {
-    const configPath = findEslintConfigPath(filePath);
-    if (!configPath) {
-        return undefined;
-    }
-
-    const cached = eslintCache.get(configPath);
-    if (cached) {
-        return cached;
-    }
-
-    const configDir = dirname(configPath);
-    const eslint = new ESLint({
-        cwd: configDir,
+    eslintInstance = new ESLint({
+        cwd: getProjectRoot(),
         fix: true,
     });
 
-    eslintCache.set(configPath, eslint);
-    return eslint;
+    return eslintInstance;
 }

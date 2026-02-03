@@ -135,8 +135,12 @@ function getFactory(
     if (typeof validatorsOrFactory === 'function') {
         return (index: number) => {
             const value = computed({
-                get: () => form.value[index]!,
+                get: () => form.value?.[index],
                 set: value => {
+                    if (form.value == null) {
+                        return;
+                    }
+
                     form.value[index] = value;
                 },
             });
@@ -149,8 +153,12 @@ function getFactory(
 
     return (index: number) => {
         const value = computed({
-            get: () => form.value[index]!,
+            get: () => form.value?.[index],
             set: value => {
+                if (form.value == null) {
+                    return;
+                }
+
                 form.value[index] = value;
             },
         });

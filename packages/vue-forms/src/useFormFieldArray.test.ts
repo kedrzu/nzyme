@@ -735,3 +735,85 @@ test('useFormFieldArray with validators handles null value', () => {
         expect(fields.length).toBe(0);
     });
 });
+
+test('useFormFieldArray field getter handles null form.value without error', () => {
+    scope.run(() => {
+        const form = useForm<string[] | null>(['a', 'b']);
+        const fields = useFormFieldArray(form as FormModel<string[]>);
+
+        expect(fields.length).toBe(2);
+        expect(fields[0]!.value).toBe('a');
+
+        // Set value to null - fields still exist until watch runs
+        form.value = null;
+
+        // Accessing field.value when form.value is null should NOT throw
+        // (computed getter should use optional chaining)
+        expect(() => fields[0]!.value).not.toThrow();
+        expect(fields[0]!.value).toBeUndefined();
+    });
+});
+
+test('useFormFieldArray field setter handles null form.value without error', () => {
+    scope.run(() => {
+        const form = useForm<string[] | null>(['a', 'b']);
+        const fields = useFormFieldArray(form as FormModel<string[]>);
+
+        expect(fields.length).toBe(2);
+
+        // Set value to null - fields still exist until watch runs
+        form.value = null;
+
+        // Setting field.value when form.value is null should NOT throw
+        // (computed setter should have null check)
+        expect(() => {
+            fields[0]!.value = 'new value';
+        }).not.toThrow();
+
+        // form.value should still be null (assignment was a no-op)
+        expect(form.value).toBeNull();
+    });
+});
+
+test('useFormFieldArray with factory field getter handles null form.value without error', () => {
+    scope.run(() => {
+        const form = useForm<string[] | null>(['a', 'b']);
+        const fields = useFormFieldArray(form as FormModel<string[]>, (field, index) => ({
+            field,
+            index,
+        }));
+
+        expect(fields.length).toBe(2);
+        expect(fields[0]!.field.value).toBe('a');
+
+        // Set value to null - fields still exist until watch runs
+        form.value = null;
+
+        // Accessing field.value when form.value is null should NOT throw
+        expect(() => fields[0]!.field.value).not.toThrow();
+        expect(fields[0]!.field.value).toBeUndefined();
+    });
+});
+
+test('useFormFieldArray with factory field setter handles null form.value without error', () => {
+    scope.run(() => {
+        const form = useForm<string[] | null>(['a', 'b']);
+        const fields = useFormFieldArray(form as FormModel<string[]>, (field, index) => ({
+            field,
+            index,
+        }));
+
+        expect(fields.length).toBe(2);
+
+        // Set value to null - fields still exist until watch runs
+        form.value = null;
+
+        // Setting field.value when form.value is null should NOT throw
+        expect(() => {
+            fields[0]!.field.value = 'new value';
+        }).not.toThrow();
+
+        // form.value should still be null (assignment was a no-op)
+        expect(form.value).toBeNull();
+    });
+});

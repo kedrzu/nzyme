@@ -14,6 +14,24 @@ const ESCAPE_REGEX = /\\([{}])/gm;
 const LANG_TAG_REGEX = /^([a-zA-Z_][a-zA-Z0-9_-]*)\[([^\]]+)\]$/;
 const INDENT = '  ';
 
+// JavaScript reserved words that cannot be used as variable names
+const RESERVED_WORDS = new Set([
+    // Keywords
+    'break', 'case', 'catch', 'continue', 'debugger', 'default', 'delete',
+    'do', 'else', 'finally', 'for', 'function', 'if', 'in', 'instanceof',
+    'new', 'return', 'switch', 'this', 'throw', 'try', 'typeof', 'var',
+    'void', 'while', 'with',
+    // Future reserved words
+    'class', 'const', 'enum', 'export', 'extends', 'import', 'super',
+    // Strict mode reserved words
+    'implements', 'interface', 'let', 'package', 'private', 'protected',
+    'public', 'static', 'yield',
+    // Literals
+    'null', 'true', 'false',
+    // Additional reserved identifiers
+    'await', 'async',
+]);
+
 /**
  * Result of translation compilation
  */
@@ -35,6 +53,11 @@ export type TranslationResult = {
      * Pluralizations used in the code
      */
     pluralizations: Set<string>;
+
+    /**
+     * Export aliases for reserved word keys (varName -> originalKey)
+     */
+    exportAliases: Map<string, string>;
 };
 
 /**
@@ -50,6 +73,7 @@ export function compileTranslations(yaml: string): TranslationResult {
         code: '',
         yaml,
         pluralizations: new Set(),
+        exportAliases: new Map(),
     };
 
     if (!root) {
@@ -93,7 +117,16 @@ export function compileTranslations(yaml: string): TranslationResult {
                 ? `import { ${imports.join(', ')}, type ${typeImports.join(', type ')} } from '@nzyme/i18n-core';`
                 : `import type { ${typeImports.join(', ')} } from '@nzyme/i18n-core';`;
 
-        result.code = `${importStatement}\n\n${result.code}\n`;
+        // Generate export aliases for reserved words
+        let exportAliases = '';
+        if (result.exportAliases.size > 0) {
+            const aliases = Array.from(result.exportAliases.entries())
+                .map(([varName, originalKey]) => `${varName} as ${originalKey}`)
+                .join(', ');
+            exportAliases = `\n\nexport { ${aliases} };`;
+        }
+
+        result.code = `${importStatement}\n\n${result.code}${exportAliases}\n`;
     }
 
     return result;
@@ -105,6 +138,7 @@ function createEmptyResult(yaml: string): TranslationResult {
         errors: [],
         yaml,
         pluralizations: new Set(),
+        exportAliases: new Map(),
     };
 }
 
@@ -172,8 +206,16 @@ function compileAsRegularTranslation(key: string, value: ParsedNode, result: Tra
     const type = paramsType ? `Translation<{ ${paramsType} }>` : 'Translation';
     const paramsSuffix = params.size ? `, params` : '';
 
-    // end of function
-    code = `export const ${key}: ${type} = (lang${paramsSuffix}) => {\n${INDENT}switch (lang) {\n${code}${INDENT}}\n};`;
+    // Get safe variable name and track alias if needed
+    const varName = getSafeVarName(key);
+    const isReserved = varName !== key;
+    if (isReserved) {
+        result.exportAliases.set(varName, key);
+    }
+
+    // For reserved words, don't export directly - will be exported via alias
+    const exportKeyword = isReserved ? 'const' : 'export const';
+    code = `${exportKeyword} ${varName}: ${type} = (lang${paramsSuffix}) => {\n${INDENT}switch (lang) {\n${code}${INDENT}}\n};`;
 
     if (result.code) {
         result.code += '\n\n';
@@ -288,7 +330,9 @@ function compileAsPluralization(key: string, value: ParsedNode, result: Translat
             }
         }
 
-        const constantName = `${key}_${langKey}`;
+        // Get safe variable name for the key
+        const varName = getSafeVarName(key);
+        const constantName = `${varName}_${langKey}`;
         const langConstant = `const ${constantName}: PluralTranslation<typeof ${pluralizationName}, { ${Array.from(
             allParams,
         )
@@ -303,11 +347,18 @@ function compileAsPluralization(key: string, value: ParsedNode, result: Translat
         return;
     }
 
+    // Get safe variable name and track alias if needed
+    const varName = getSafeVarName(key);
+    const isReserved = varName !== key;
+    if (isReserved) {
+        result.exportAliases.set(varName, key);
+    }
+
     // Generate the main translation function
     const switchCases = languageCodes
         .map(langKey => {
             const pluralizationName = getPluralizationName(langKey);
-            return `${INDENT}${INDENT}case '${langKey}':\n${INDENT}${INDENT}${INDENT}return ${pluralizationName}.pluralize(params.${countParamName}, ${key}_${langKey})?.(params);`;
+            return `${INDENT}${INDENT}case '${langKey}':\n${INDENT}${INDENT}${INDENT}return ${pluralizationName}.pluralize(params.${countParamName}, ${varName}_${langKey})?.(params);`;
         })
         .join('\n');
 
@@ -315,7 +366,9 @@ function compileAsPluralization(key: string, value: ParsedNode, result: Translat
         .map(p => `${p}: ${p === countParamName ? 'number' : 'unknown'}`)
         .join('; ');
 
-    const mainFunction = `export const ${key}: Translation<{ ${paramsType} }> = (lang, params) => {\n${INDENT}switch (lang) {\n${switchCases}\n${INDENT}}\n};`;
+    // For reserved words, don't export directly - will be exported via alias
+    const exportKeyword = isReserved ? 'const' : 'export const';
+    const mainFunction = `${exportKeyword} ${varName}: Translation<{ ${paramsType} }> = (lang, params) => {\n${INDENT}switch (lang) {\n${switchCases}\n${INDENT}}\n};`;
 
     const fullCode = `${languageConstants.join('\n\n')}\n\n${mainFunction}`;
 
@@ -416,4 +469,13 @@ function rangeToLineColumn(range: Range, result: TranslationResult) {
 
 function getPluralizationName(lang: string) {
     return `pluralization${capitalizeFirstLetter(lang)}`;
+}
+
+/**
+ * Gets the safe variable name for a key, escaping reserved words with a $ suffix.
+ * Returns the original key if it's not a reserved word.
+ * @__NO_SIDE_EFFECTS__
+ */
+function getSafeVarName(key: string): string {
+    return RESERVED_WORDS.has(key) ? `${key}$` : key;
 }

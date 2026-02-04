@@ -1,0 +1,23 @@
+default:
+  pl: 'Domyslne'
+  en: 'Default'
+
+const:
+  pl: 'Stala'
+  en: 'Constant'
+
+export:
+  pl: 'Eksport {name}'
+  en: 'Export {name}'
+
+class:
+  plural: count
+  pl:
+    zero: 'brak klas'
+    one: 'jedna klasa'
+    few: '{count} klasy'
+    many: '{count} klas'
+  en:
+    zero: 'no classes'
+    one: 'one class'
+    many: '{count} classes'

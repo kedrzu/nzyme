@@ -37,12 +37,12 @@
         "@nzyme/logging": "^0.14.0",
         "@nzyme/rpc": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
-        "@types/aws-lambda": "^8.10.159",
+        "@types/aws-lambda": "^8.10.160",
         "@types/mime-types": "^3.0.1",
         "chalk": "^5.6.2",
         "mime-types": "^3.0.2",
         "s3-sync-client": "^4.3.1",
-        "ufo": "^1.6.2"
+        "ufo": "^1.6.3"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",

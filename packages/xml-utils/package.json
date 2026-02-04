@@ -26,7 +26,7 @@
         "lint": "prettier ./src --write && yarn tsc --noEmit --project tsconfig.check.json && eslint . --fix --cache"
     },
     "dependencies": {
-        "fast-xml-parser": "^5.3.3"
+        "fast-xml-parser": "^5.3.4"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",

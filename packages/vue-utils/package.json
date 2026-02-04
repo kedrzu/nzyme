@@ -32,7 +32,7 @@
         "@nzyme/zchema": "^0.14.0",
         "@standard-schema/spec": "^1.0.0",
         "lodash.debounce": "^4.0.8",
-        "vue": "^3.5.25"
+        "vue": "^3.5.27"
     },
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",

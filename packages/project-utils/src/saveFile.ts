@@ -1,5 +1,4 @@
 import { readFile } from 'fs/promises';
-import { dirname, join } from 'path';
 
 import { ESLint } from 'eslint';
 import { outputFile, pathExists } from 'fs-extra';
@@ -7,18 +6,8 @@ import { format, resolveConfig } from 'prettier';
 
 import { getProjectRoot } from './getProjectRoot.js';
 
-// Cache ESLint instances per directory (maps any directory to its ESLint instance)
-const eslintCache = new Map<string, ESLint>();
-
-// Known ESLint config file names (flat config)
-const ESLINT_CONFIG_FILES = [
-    'eslint.config.js',
-    'eslint.config.mjs',
-    'eslint.config.cjs',
-    'eslint.config.ts',
-    'eslint.config.mts',
-    'eslint.config.cts',
-];
+// Single ESLint instance for the entire project
+let eslintInstance: ESLint | undefined;
 
 /**
  * Save a file with ESLint fixes and prettier formatting.
@@ -26,9 +15,9 @@ const ESLINT_CONFIG_FILES = [
 export async function saveFile(path: string, content: string): Promise<void> {
     // Run ESLint first to fix code issues
     try {
-        const eslint = await findEslintInstance(dirname(path));
+        const eslint = getEslintInstance();
 
-        // Check if the file should be linted
+        // ESLint resolves config based on filePath, not cwd
         const results = await eslint.lintText(content, { filePath: path });
         if (results.length > 0 && results[0] && results[0].output !== undefined) {
             content = results[0].output;
@@ -59,54 +48,18 @@ export async function saveFile(path: string, content: string): Promise<void> {
 }
 
 /**
- * Find ESLint instance by searching upward for config file.
- * Caches the ESLint instance at each directory level for fast subsequent lookups.
- * @__NO_SIDE_EFFECTS__
+ * Get or create the single ESLint instance for the project.
+ * Uses the project root as cwd, allowing ESLint to resolve configs per-file.
  */
-async function findEslintInstance(dir: string): Promise<ESLint> {
-    // Check cache first
-    const cached = eslintCache.get(dir);
-    if (cached !== undefined) {
-        return cached;
+function getEslintInstance(): ESLint {
+    if (eslintInstance) {
+        return eslintInstance;
     }
 
-    // Check if this directory has a config file
-    for (const configFile of ESLINT_CONFIG_FILES) {
-        const configPath = join(dir, configFile);
-        if (await pathExists(configPath)) {
-            const eslint = new ESLint({
-                cwd: dir,
-                overrideConfigFile: configPath,
-                overrideConfig: {
-                    languageOptions: {
-                        parserOptions: {
-                            tsconfigRootDir: dir,
-                        },
-                    },
-                },
-                fix: true,
-                cache: true,
-            });
-            eslintCache.set(dir, eslint);
-            return eslint;
-        }
-    }
+    eslintInstance = new ESLint({
+        cwd: getProjectRoot(),
+        fix: true,
+    });
 
-    // Check if we've reached the project root
-    const projectRoot = getProjectRoot(dir);
-    if (projectRoot === dir) {
-        // Fallback: create ESLint instance for this directory
-        const eslint = new ESLint({
-            cwd: dir,
-            fix: true,
-            cache: true,
-        });
-        eslintCache.set(dir, eslint);
-        return eslint;
-    }
-
-    // Recursively search parent directory and cache the result
-    const eslint = await findEslintInstance(dirname(dir));
-    eslintCache.set(dir, eslint);
-    return eslint;
+    return eslintInstance;
 }

@@ -42,7 +42,7 @@
         "@vueuse/core": "^14.1.0",
         "libphonenumber-js": "^1.12.33",
         "postal-codes-js": "^2.5.2",
-        "vue": "^3.5.25",
+        "vue": "^3.5.27",
         "vue-imask": "^7.6.1"
     },
     "devDependencies": {

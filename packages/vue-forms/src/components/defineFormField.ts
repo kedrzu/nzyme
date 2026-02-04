@@ -71,7 +71,7 @@ export function formFieldProps<T>(type?: PropType<T | null | undefined>) {
             | undefined
         >(),
         errors: defineProp<string | string[]>(),
-        required: Boolean as PropType<boolean>,
+        required: {} as PropType<boolean | undefined>,
         disabled: Boolean as PropType<boolean>,
         readonly: Boolean as PropType<boolean>,
     };

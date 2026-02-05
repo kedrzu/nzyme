@@ -99,7 +99,6 @@ export interface FormFieldCustomParams<T = unknown> {
  * ```
  */
 export function useFormField<T>(form: FormModel<T>, params: FormFieldBasicParams<T>): FormField<T>;
-
 /**
  * Creates a form field with a custom value ref and optional validators.
  *
@@ -122,7 +121,6 @@ export function useFormField<T>(form: FormModel<T>, params: FormFieldBasicParams
  * ```
  */
 export function useFormField<T>(form: FormModel, params: FormFieldCustomParams<T>): FormField<T>;
-
 /**
  * Implementation of useFormField.
  * @internal

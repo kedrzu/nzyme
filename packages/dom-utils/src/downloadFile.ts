@@ -28,7 +28,11 @@ export function downloadFile(options: DownloadFileOptions): void {
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
-    link.click();
+    link.style.display = 'none';
 
-    URL.revokeObjectURL(url);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setTimeout(() => URL.revokeObjectURL(url), 100);
 }

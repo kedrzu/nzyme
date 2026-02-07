@@ -32,8 +32,8 @@
         "lint": "prettier ./src --write && yarn tsc --noEmit --project tsconfig.check.json && eslint . --fix --cache"
     },
     "dependencies": {
-        "@aws-sdk/client-s3": "^3.954.0",
-        "@aws-sdk/credential-provider-node": "^3.954.0",
+        "@aws-sdk/client-s3": "^3.984.0",
+        "@aws-sdk/credential-provider-node": "^3.972.5",
         "@babel/core": "^7.28.5",
         "@babel/plugin-syntax-import-attributes": "^7.27.1",
         "@babel/preset-env": "^7.28.5",
@@ -44,9 +44,9 @@
         "@nzyme/rollup-utils": "0.14.0",
         "@nzyme/types": "^0.14.0",
         "@nzyme/utils": "^0.14.0",
-        "@pulumi/aws": "^7.14.0",
-        "@pulumi/pulumi": "^3.213.0",
-        "@pulumi/random": "^4.18.4",
+        "@pulumi/aws": "^7.17.0",
+        "@pulumi/pulumi": "^3.219.0",
+        "@pulumi/random": "^4.19.1",
         "@rollup/plugin-babel": "^6.1.0",
         "@rollup/plugin-commonjs": "^29.0.0",
         "@rollup/plugin-json": "^6.1.0",
@@ -66,7 +66,7 @@
     "devDependencies": {
         "@nzyme/eslint": "^0.14.0",
         "@nzyme/tsconfig": "^0.14.0",
-        "@types/node": "^25.2.0",
+        "@types/node": "^25.2.1",
         "eslint": "^9.39.2",
         "prettier": "^3.8.1",
         "typescript": "^5.9.3"

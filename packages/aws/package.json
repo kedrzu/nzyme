@@ -28,10 +28,10 @@
         "lint": "prettier ./src --write && yarn tsc --noEmit --project tsconfig.check.json && eslint . --fix --cache"
     },
     "dependencies": {
-        "@aws-sdk/client-cloudfront": "^3.954.0",
-        "@aws-sdk/client-dynamodb": "^3.954.0",
-        "@aws-sdk/client-s3": "^3.954.0",
-        "@aws-sdk/client-sqs": "^3.954.0",
+        "@aws-sdk/client-cloudfront": "^3.984.0",
+        "@aws-sdk/client-dynamodb": "^3.984.0",
+        "@aws-sdk/client-s3": "^3.984.0",
+        "@aws-sdk/client-sqs": "^3.984.0",
         "@nzyme/fetch-utils": "^0.14.0",
         "@nzyme/ioc": "^0.14.0",
         "@nzyme/logging": "^0.14.0",

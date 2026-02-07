@@ -103,7 +103,7 @@ const hasData = computed(() => {
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  max-width: 100%;
+  max-width: 100vw;
   overflow: hidden;
 }
 
@@ -115,7 +115,7 @@ const hasData = computed(() => {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   line-height: 1.5;
-  max-width: 100%;
+  max-width: 100vw;
   overflow-x: auto;
 }
 

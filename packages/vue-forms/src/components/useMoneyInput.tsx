@@ -1,4 +1,4 @@
-import { computed, watch } from 'vue';
+import { computed } from 'vue';
 
 import { CURRENCIES, moneyDenormalize, moneyNormalize } from '@nzyme/money';
 import type { Currency } from '@nzyme/money';

@@ -2,7 +2,7 @@ import debounce from 'lodash.debounce';
 import { computed, getCurrentScope, isRef, ref, shallowRef, watch } from 'vue';
 import type { Ref } from 'vue';
 
-import { reactive } from '@nzyme/vue-utils';
+import { reactive } from './reactivity/reactive.js';
 import { isCancelablePromise } from '@nzyme/utils';
 import type { CancelablePromise } from '@nzyme/utils';
 

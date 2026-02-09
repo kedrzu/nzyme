@@ -298,7 +298,7 @@ function createValidatorStateAsync<T>(
     createValidatorBehavior(validator, value, focused, show);
 
     return reactive<FormValidatorState>({
-        error,
+        error: toRef(error, 'value'),
         show,
         validate: async () => {
             await error.reload();

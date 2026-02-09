@@ -57,6 +57,7 @@ export * from './functions/identity.js';
 export * from './functions/noop.js';
 export * from './getBaseClass.js';
 export * from './getClassName.js';
+export * from './getObjectEntries.js';
 export * from './getMailToUrl.js';
 export * from './getTopLevelDomain.js';
 export * from './isFunction.js';

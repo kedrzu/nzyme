@@ -2,6 +2,7 @@ import debounce from 'lodash.debounce';
 import { computed, getCurrentScope, isRef, ref, shallowRef, watch } from 'vue';
 import type { Ref } from 'vue';
 
+import { reactive } from '@nzyme/vue-utils';
 import { isCancelablePromise } from '@nzyme/utils';
 import type { CancelablePromise } from '@nzyme/utils';
 
@@ -81,7 +82,12 @@ export interface DataSourceOptions<TParams, TResult, TDefault extends TResult | 
 /**
  * A reactive data source that manages loading, caching, and refreshing data
  */
-export interface DataSource<TResult, TDefault extends TResult | undefined = undefined> extends Ref<TDefault | TResult> {
+export interface DataSource<TResult, TDefault extends TResult | undefined = undefined> {
+    /**
+     * The current value of the data source
+     */
+    value: TDefault | TResult;
+
     /**
      * Currently pending promise if data is being loaded, otherwise null
      */
@@ -134,7 +140,7 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
     const debounceOptions = getDebounceOptions(opts.debounce);
     const debouncedLoad = debounceOptions ? debounce(loadData, debounceOptions.time, debounceOptions) : loadData;
 
-    const dataSource = computed<TDefault | TResult>({
+    const value = computed<TDefault | TResult>({
         get: () => {
             loadRef.value = true;
             const data = dataRef.value;
@@ -149,15 +155,6 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
         },
     });
 
-    Object.defineProperties(dataSource, {
-        pending: { get: () => pendingRef.value },
-        get: { value: get },
-        loaded: { get: () => loadedRef.value },
-        reload: { value: reload },
-        clear: { value: clear },
-        invalidate: { value: invalidate },
-    });
-
     watch(paramsRef, debouncedLoad, { deep: true, immediate: behavior === 'eager' });
     if (behavior === 'lazy') {
         watch(loadRef, () => {
@@ -167,9 +164,19 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
         });
     }
 
-    return dataSource as unknown as DataSource<TResult, TDefault>;
+    const dataSource = reactive<DataSource<TResult, TDefault>>({
+        value,
+        pending: computed(() => pendingRef.value),
+        loaded: computed(() => loadedRef.value),
+        get,
+        reload,
+        clear,
+        invalidate,
+    });
 
-    async function get() {
+    return dataSource;
+
+    async function get(): Promise<TResult> {
         loadRef.value = true;
 
         const pending = pendingRef.value;
@@ -184,7 +191,7 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
         return await reload();
     }
 
-    async function reload() {
+    async function reload(): Promise<TResult> {
         loadRef.value = true;
 
         if ('flush' in debouncedLoad) {
@@ -192,7 +199,7 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
             return (await debouncedLoad.flush()) as TResult;
         }
 
-        return await debouncedLoad();
+        return (await debouncedLoad()) as TResult;
     }
 
     function clear() {

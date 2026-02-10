@@ -1,10 +1,10 @@
 import type { FactoryArg } from 'imask';
 import { computed, h } from 'vue';
-import type { InputHTMLAttributes } from 'vue';
+import type { InputHTMLAttributes, MaybeRefOrGetter } from 'vue';
 import { IMaskComponent } from 'vue-imask';
 
 import { assignProps } from '@nzyme/utils';
-import { defineProps, useProps } from '@nzyme/vue-utils';
+import { defineProps, makeRef, useProps } from '@nzyme/vue-utils';
 
 import { defineFormField } from './defineFormField.js';
 import type { FormFieldValue } from './defineFormField.js';
@@ -30,17 +30,17 @@ export interface MaskedInputMaskConfig {
  */
 export interface MaskedInputOptions<T = unknown> {
     /** Mask configuration */
-    maskConfig: MaskedInputMaskConfig;
+    maskConfig: MaybeRefOrGetter<MaskedInputMaskConfig>;
     /** Function to convert typed value to model value */
     toModelValue: (typedValue: unknown) => FormFieldValue<T>;
     /** Function to convert model value to typed value for display */
     toTypedValue: (modelValue: FormFieldValue<T> | null | undefined) => unknown;
 }
 
-export /**
+/**
  *
  */
-const useMaskedInput = defineMaskedInput();
+export const useMaskedInput = defineMaskedInput();
 
 /**
  *
@@ -65,7 +65,8 @@ export function defineMaskedInput<T = string>() {
      * @param options - Configuration options for the masked input
      */
     function setup(options: MaskedInputOptions<T>) {
-        const { maskConfig, toModelValue, toTypedValue } = options;
+        const { toModelValue, toTypedValue } = options;
+        const mask = makeRef(options.maskConfig);
         const props = useProps(propsDef);
         const field = fieldDef.create({ props });
         const typedValue = computed(() => toTypedValue(field.value));
@@ -81,16 +82,17 @@ export function defineMaskedInput<T = string>() {
                     aria-label={props.label}
                     aria-readonly={props.readonly}
                     aria-required={props.required}
-                    blocks={maskConfig.blocks}
+                    blocks={mask.value.blocks}
                     disabled={props.disabled}
-                    inputmode={maskConfig.inputmode ?? 'text'}
-                    lazy={maskConfig.lazy ?? false}
-                    mask={maskConfig.mask}
+                    inputmode={mask.value.inputmode ?? 'text'}
+                    lazy={mask.value.lazy ?? false}
+                    mask={mask.value.mask}
+                    key={mask.value}
                     onBlur={field.inputAttrs.onBlur}
                     onFocus={field.inputAttrs.onFocus}
                     onUpdate:typed={onInput}
                     placeholder={props.placeholder}
-                    placeholderChar={maskConfig.placeholderChar}
+                    placeholderChar={mask.value.placeholderChar}
                     readonly={props.readonly}
                     tabindex={props.tabindex}
                     title={props.label}

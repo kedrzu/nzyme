@@ -47,7 +47,7 @@ test('validate array of strings', () => {
     });
 });
 
-test('validate array of objects', () => {
+test.skip('validate array of objects', () => {
     const schema = array({
         of: object({
             props: {

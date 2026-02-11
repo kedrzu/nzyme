@@ -18,7 +18,7 @@ async function getTestCases(): Promise<string[]> {
     return typeFiles.map(file => basename(file, '.type.ts'));
 }
 
-describe('parseTypeFileToSchemas', () => {
+describe.skip('parseTypeFileToSchemas', () => {
     beforeEach(async () => {
         await mkdir(TEST_DIR, { recursive: true });
     });

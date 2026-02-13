@@ -1,5 +1,5 @@
 import { getMd5Hash } from '@nzyme/crypto';
-import type { HttpResponseHeaders } from '@nzyme/fetch-utils';
+import type { HttpResponseHeaders } from '@nzyme/fetch-utils/HttpHeaders.js';
 import { toJsonString } from '@nzyme/utils/toJsonString.js';
 
 import type { HttpResponse } from '../types/HttpResponse.js';

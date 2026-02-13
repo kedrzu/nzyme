@@ -1,4 +1,4 @@
-import type { HttpResponseHeaders } from '@nzyme/fetch-utils';
+import type { HttpResponseHeaders } from '@nzyme/fetch-utils/HttpHeaders.js';
 import { HttpError } from '@nzyme/fetch-utils/HttpError.js';
 import type { Container } from '@nzyme/ioc/Container.js';
 import { createEventEmitter } from '@nzyme/utils/createEventEmitter.js';

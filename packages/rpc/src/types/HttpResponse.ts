@@ -1,4 +1,4 @@
-import type { HttpResponseHeaders } from '@nzyme/fetch-utils';
+import type { HttpResponseHeaders } from '@nzyme/fetch-utils/HttpHeaders.js';
 
 /**
  *

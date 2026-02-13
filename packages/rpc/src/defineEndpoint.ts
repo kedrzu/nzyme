@@ -71,8 +71,6 @@ export interface EndpointContext {
     request: HttpRequest;
 }
 
-const EndpointSymbol = Symbol('Endpoint');
-
 /**
  * Endpoint handler function
  */
@@ -104,32 +102,12 @@ export interface Endpoint<
         StandardSchemaV1 | undefined,
         void extends TInput ? undefined : StandardSchemaV1<unknown, TInput>
     >;
-
-    /**
-     *
-     */
-    [EndpointSymbol]: true;
 }
 
 /**
  *
  */
 export type EndpointName<E extends Endpoint> = E['name'];
-
-/**
- * Filter out all the non-endpoint exports from an object.
- */
-export type EndpointFromExports<T extends object> = EndpointGuard & T[keyof T];
-
-/**
- *
- */
-export interface EndpointGuard {
-    /**
-     *
-     */
-    [EndpointSymbol]: true;
-}
 
 /**
  *
@@ -168,6 +146,5 @@ export function defineEndpoint(endpoint: EndpointOptionsWithInput | EndpointOpti
     return {
         ...(service as Endpoint),
         input: endpoint.input,
-        [EndpointSymbol]: true,
     };
 }

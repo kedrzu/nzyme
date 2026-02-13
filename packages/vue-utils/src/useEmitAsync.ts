@@ -1,7 +1,8 @@
 import { capitalize } from 'vue';
 import type { EmitsOptions, ObjectEmitsOptions } from 'vue';
 
-import type { RecordToUnion, UnionToIntersection } from '@nzyme/types';
+import type { RecordToUnion } from '@nzyme/types/Common.js';
+import type { UnionToIntersection } from '@nzyme/types/Union.js';
 
 import { useInstance } from './useInstance.js';
 
@@ -60,7 +61,7 @@ type EmitFnAsync<Options = ObjectEmitsOptions, Event extends keyof Options = key
  * @example
  * ```vue
  * <script setup lang="ts">
- * import { useEmitAsync } from '@nzyme/vue-utils';
+ * import { useEmitAsync } from '@nzyme/vue-utils/useEmitAsync.js';
  *
  * type Events = {
  *   send: [message: string];

@@ -1,7 +1,7 @@
 import { onBeforeUnmount } from 'vue';
 
-import { onHistoryBack } from '@nzyme/dom-utils';
-import type { VirtualHistoryCallback, VirtualHistoryHandle } from '@nzyme/dom-utils';
+import { onHistoryBack } from '@nzyme/dom-utils/virtualHistory.js';
+import type { VirtualHistoryCallback, VirtualHistoryHandle } from '@nzyme/dom-utils/virtualHistory.js';
 
 /**
  *

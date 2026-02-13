@@ -3,7 +3,7 @@ import { Worker } from 'worker_threads';
 
 import type { MinifyOptions } from 'terser';
 
-import { getDirname } from '@nzyme/esm';
+import { getDirname } from '@nzyme/esm/dirname.js';
 
 /**
  * Options for compiling a function.

@@ -1,6 +1,6 @@
 import { DynamoDBClient as AwsDynamoDBClient } from '@aws-sdk/client-dynamodb';
 
-import { defineService } from '@nzyme/ioc';
+import { defineService } from '@nzyme/ioc/Service.js';
 
 /**
  * Injectable version of AWS DynamoDBClient.

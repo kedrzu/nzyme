@@ -1,4 +1,5 @@
-import { createMemo, noop } from '@nzyme/utils';
+import { createMemo } from '@nzyme/utils/createMemo.js';
+import { noop } from '@nzyme/utils/functions/noop.js';
 
 import type { Container } from './Container.js';
 import type { Injectable } from './Injectable.js';

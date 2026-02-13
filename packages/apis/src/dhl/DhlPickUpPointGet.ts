@@ -1,4 +1,5 @@
-import { defineEndpoint, jsonNullableResponse } from '@nzyme/fetch-utils';
+import { defineEndpoint } from '@nzyme/fetch-utils/defineEndpoint.js';
+import { jsonNullableResponse } from '@nzyme/fetch-utils/jsonNullableResponse.js';
 
 import type { DhlPickUpPoint } from './DhlPickUpPoint.js';
 

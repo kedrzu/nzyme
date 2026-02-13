@@ -1,5 +1,5 @@
-import type { Primitive } from '@nzyme/types';
-import { defineContext, provideContext } from '@nzyme/vue-utils';
+import type { Primitive } from '@nzyme/types/Common.js';
+import { defineContext, provideContext } from '@nzyme/vue-utils/context.js';
 
 import { createFormField, formFieldEmits, formFieldProps } from './defineFormField.js';
 import type { FormFieldController, FormFieldProps } from './defineFormField.js';

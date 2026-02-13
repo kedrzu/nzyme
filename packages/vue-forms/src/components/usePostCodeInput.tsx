@@ -3,9 +3,10 @@ import { computed, h } from 'vue';
 import type { InputHTMLAttributes, PropType } from 'vue';
 import { IMaskComponent } from 'vue-imask';
 
-import type { CountryCode } from '@nzyme/i18n';
-import { assignProps } from '@nzyme/utils';
-import { defineProps, useProps } from '@nzyme/vue-utils';
+import type { CountryCode } from '@nzyme/i18n/Country.js';
+import { assignProps } from '@nzyme/utils/assignProps.js';
+import { defineProps } from '@nzyme/vue-utils/defineProps.js';
+import { useProps } from '@nzyme/vue-utils/useProps.js';
 
 import { defineFormField } from './defineFormField.js';
 

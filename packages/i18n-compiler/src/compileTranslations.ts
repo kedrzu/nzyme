@@ -1,10 +1,10 @@
 import type { Pair, ParsedNode, Range } from 'yaml';
 import { isMap, isScalar, parseDocument } from 'yaml';
 
-import { pluralization } from '@nzyme/i18n-core';
-import type { Pluralization } from '@nzyme/i18n-core';
-import { fixOrphans } from '@nzyme/typography';
-import { capitalizeFirstLetter } from '@nzyme/utils';
+import * as pluralization from '@nzyme/i18n-core/pluralizationRules.js';
+import type { Pluralization } from '@nzyme/i18n-core/pluralization.js';
+import { fixOrphans } from '@nzyme/typography/fixOrphans.js';
+import { capitalizeFirstLetter } from '@nzyme/utils/string/caseUtils.js';
 
 import type { TranslationError } from './types.js';
 

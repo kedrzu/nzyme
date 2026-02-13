@@ -1,7 +1,7 @@
 import { defineComponent, type SetupContext, type Slot, type SlotsType, type VNode } from 'vue';
 
 import type { Translation, TranslationAny, TranslationParams } from '@nzyme/i18n';
-import type { EmptyObject } from '@nzyme/types';
+import type { EmptyObject } from '@nzyme/types/EmptyObject.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface TranslateProps<T extends TranslationAny> {

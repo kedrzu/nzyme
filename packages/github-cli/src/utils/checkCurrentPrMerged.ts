@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 
 import { UsageError } from '@nzyme/cli';
-import type { Logger } from '@nzyme/logging';
+import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';

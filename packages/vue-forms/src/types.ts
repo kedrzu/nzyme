@@ -1,7 +1,8 @@
 import type { MaybeRefOrGetter } from 'vue';
 
-import type { Language, TranslationResult } from '@nzyme/i18n';
-import type { DataSourceDebounceOptions } from '@nzyme/vue-utils';
+import type { Language } from '@nzyme/i18n/Language.js';
+import type { TranslationResult } from '@nzyme/i18n-core/Translation.js';
+import type { DataSourceDebounceOptions } from '@nzyme/vue-utils/useDataSource.js';
 
 /**
  *

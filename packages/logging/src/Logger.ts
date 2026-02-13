@@ -1,4 +1,5 @@
-import { callerName, defineService } from '@nzyme/ioc';
+import { callerName } from '@nzyme/ioc/helpers/callerName.js';
+import { defineService } from '@nzyme/ioc/Service.js';
 
 import { LoggerTransport } from './LoggerTransport.js';
 

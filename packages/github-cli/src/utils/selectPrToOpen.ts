@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import enquirer from 'enquirer';
 import open from 'open';
 
-import type { Logger } from '@nzyme/logging';
+import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';

@@ -1,7 +1,8 @@
-import { createContainer } from '@nzyme/ioc';
-import type { Container } from '@nzyme/ioc';
-import type { LoggerLevel, LoggerObject } from '@nzyme/logging';
-import { consoleLog, LoggerTransport } from '@nzyme/logging';
+import { createContainer } from '@nzyme/ioc/Container.js';
+import type { Container } from '@nzyme/ioc/Container.js';
+import type { LoggerLevel } from '@nzyme/logging/LoggerLevel.js';
+import type { LoggerObject } from '@nzyme/logging/Logger.js';
+import { consoleLog, LoggerTransport } from '@nzyme/logging/LoggerTransport.js';
 
 export interface CapturedLog {
     readonly logger: string | undefined;

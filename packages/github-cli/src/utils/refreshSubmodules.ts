@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { simpleGit } from 'simple-git';
 
-import type { Logger } from '@nzyme/logging';
+import type { Logger } from '@nzyme/logging/Logger.js';
 
 import { commitAndPushPendingChanges } from './commitAndPushPendingChanges.js';
 import { fetchAndRebaseCurrentBranch } from './fetchAndRebaseCurrentBranch.js';

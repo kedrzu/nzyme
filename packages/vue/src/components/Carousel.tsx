@@ -4,7 +4,11 @@ import type { JSX } from 'vue/jsx-runtime';
 
 import { useVModel } from '@vueuse/core';
 
-import { classProp, defineSlots, useElementClass, useIntersectionObserver, useSwipeHorizontal } from '@nzyme/vue-utils';
+import { classProp } from '@nzyme/vue-utils/classProp.js';
+import { defineSlots } from '@nzyme/vue-utils/slots.js';
+import { useElementClass } from '@nzyme/vue-utils/useElementClass.js';
+import { useIntersectionObserver } from '@nzyme/vue-utils/useIntersectionObserver.js';
+import { useSwipeHorizontal } from '@nzyme/vue-utils/useSwipeHorizontal.js';
 
 import css from './Carousel.module.scss';
 

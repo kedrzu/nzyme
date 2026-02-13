@@ -1,6 +1,6 @@
 import type { SectionBlock } from '@slack/web-api';
 
-import { mapNotNull } from '@nzyme/utils';
+import { mapNotNull } from '@nzyme/utils/array/mapNotNull.js';
 
 import type { SlackText } from '../types.js';
 import { joinLines } from '../utils/joinLines.js';

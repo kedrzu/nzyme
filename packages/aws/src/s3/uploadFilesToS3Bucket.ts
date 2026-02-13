@@ -5,8 +5,8 @@ import { lookup as mimeLookup } from 'mime-types';
 import { S3SyncClient } from 's3-sync-client';
 import { stringifyQuery } from 'ufo';
 
-import type { Logger } from '@nzyme/logging';
-import { assertValue } from '@nzyme/utils';
+import type { Logger } from '@nzyme/logging/Logger.js';
+import { assertValue } from '@nzyme/utils/assert.js';
 
 /**
  * Options for uploading files to an S3 bucket.

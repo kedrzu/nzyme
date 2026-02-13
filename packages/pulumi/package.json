@@ -21,6 +21,12 @@
         "./cli": {
             "types": "./dist/cli.d.ts",
             "default": "./dist/cli.js"
+        },
+        "./*.js": {
+            "types": "./dist/*.d.ts",
+            "import": "./dist/*.js",
+            "default": "./dist/*.js",
+            "source": "./src/*.ts"
         }
     },
     "module": "./dist/index.js",

@@ -1,8 +1,8 @@
 import { Builtins, Cli } from 'clipanion';
 
-import type { Container } from '@nzyme/ioc';
-import { createContainer } from '@nzyme/ioc';
-import { PrettyCliLoggerTransport } from '@nzyme/logging';
+import type { Container } from '@nzyme/ioc/Container.js';
+import { createContainer } from '@nzyme/ioc/Container.js';
+import { PrettyCliLoggerTransport } from '@nzyme/logging/PrettyCliLoggerTransport.js';
 
 import type { CommandClass, CommandContext } from './Command.js';
 

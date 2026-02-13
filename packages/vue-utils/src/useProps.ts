@@ -12,7 +12,7 @@ import { useInstance } from './useInstance.js';
  * @example
  * ```vue
  * <script setup lang="ts">
- * import { useProps } from '@nzyme/vue-utils';
+ * import { useProps } from '@nzyme/vue-utils/useProps.js';
  *
  * // Generic props access
  * const props = useProps();
@@ -32,7 +32,7 @@ export function useProps<P extends object = Record<string, unknown>>(): P;
  * @example
  * ```vue
  * <script setup lang="ts">
- * import { useProps } from '@nzyme/vue-utils';
+ * import { useProps } from '@nzyme/vue-utils/useProps.js';
  *
  * const propsDef = {
  *   title: { type: String, required: true },

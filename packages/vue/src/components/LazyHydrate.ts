@@ -1,9 +1,10 @@
 import { defineAsyncComponent, defineComponent, getCurrentInstance, h, onBeforeUnmount, watch } from 'vue';
 import type { RenderFunction } from 'vue';
 
-import { cancelIdleCallback, isBrowser, requestIdleCallback } from '@nzyme/dom-utils';
-import { createPromise } from '@nzyme/utils';
-import { defineProp } from '@nzyme/vue-utils';
+import { cancelIdleCallback, requestIdleCallback } from '@nzyme/dom-utils/requestIdleCallback.js';
+import { isBrowser } from '@nzyme/dom-utils/isBrowser.js';
+import { createPromise } from '@nzyme/utils/createPromise.js';
+import { defineProp } from '@nzyme/vue-utils/defineProp.js';
 
 /**
  *

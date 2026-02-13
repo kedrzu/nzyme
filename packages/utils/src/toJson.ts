@@ -1,4 +1,4 @@
-import type { DateTimeISO } from '@nzyme/types';
+import type { DateTimeISO } from '@nzyme/types/Date.js';
 
 /**
  * Represents a type that has been converted to a JSON-serializable form.

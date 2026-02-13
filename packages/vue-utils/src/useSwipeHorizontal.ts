@@ -1,7 +1,7 @@
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 
-import { isAncestorOf } from '@nzyme/dom-utils';
-import { readonly } from '@nzyme/utils';
+import { isAncestorOf } from '@nzyme/dom-utils/isAncestorOf.js';
+import { readonly } from '@nzyme/utils/readonly.js';
 
 import { makeRef } from './reactivity/makeRef.js';
 import type { RefParam } from './reactivity/makeRef.js';

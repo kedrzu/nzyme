@@ -1,6 +1,6 @@
 import type { MaybeRefOrGetter } from 'vue';
 
-import { makeRef } from '@nzyme/vue-utils';
+import { makeRef } from '@nzyme/vue-utils/reactivity/makeRef.js';
 
 import { defineValidator } from '../defineValidator.js';
 import type { FormValidationContext, FormValidationResult } from '../types.js';

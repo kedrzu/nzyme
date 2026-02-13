@@ -1,6 +1,6 @@
 import { parentPort, workerData } from 'node:worker_threads';
 
-import { createEventEmitter } from '@nzyme/utils';
+import { createEventEmitter } from '@nzyme/utils/createEventEmitter.js';
 
 /**
  * Creates a runtime environment for the development server worker thread.

@@ -1,7 +1,7 @@
 import { readFile } from 'fs/promises';
 import { basename } from 'path';
 
-import { saveFile } from '@nzyme/project-utils';
+import { saveFile } from '@nzyme/project-utils/saveFile.js';
 
 import { compileTranslations } from './compileTranslations.js';
 import type { TranslationResult } from './compileTranslations.js';

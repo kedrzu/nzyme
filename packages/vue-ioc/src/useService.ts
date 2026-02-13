@@ -1,4 +1,4 @@
-import type { Injectable } from '@nzyme/ioc';
+import type { Injectable } from '@nzyme/ioc/Injectable.js';
 
 import { useContainer } from './useContainer.js';
 

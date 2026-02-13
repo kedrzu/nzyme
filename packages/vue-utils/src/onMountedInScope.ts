@@ -1,6 +1,6 @@
 import { getCurrentScope, onMounted } from 'vue';
 
-import { assert } from '@nzyme/utils';
+import { assert } from '@nzyme/utils/assert.js';
 
 /**
  * The same as @see onMounted but remembers current effect scope.

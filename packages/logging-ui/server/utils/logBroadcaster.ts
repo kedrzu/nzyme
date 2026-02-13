@@ -1,7 +1,7 @@
 import type { Peer } from 'crossws';
 
 import type { LogEntry } from '../../types/LogEntry.js';
-import { toJsonString } from '@nzyme/utils';
+import { toJsonString } from '@nzyme/utils/toJsonString.js';
 
 /**
  * Set of connected browser clients (viewers).

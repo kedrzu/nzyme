@@ -1,6 +1,6 @@
 #!/usr/bin/env node --enable-source-maps
 
-import { loadEnvVariables } from '@nzyme/project-utils';
+import { loadEnvVariables } from '@nzyme/project-utils/loadEnvVariables.js';
 
 import { BuildCommand } from './commands/BuildCommand.js';
 import { DepcheckCommand } from './commands/DepcheckCommand.js';

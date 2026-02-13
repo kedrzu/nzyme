@@ -2,7 +2,7 @@ import debounce from 'lodash.debounce';
 import { onMounted, onUnmounted, ref, shallowRef, watch } from 'vue';
 import type { Ref } from 'vue';
 
-import { identity } from '@nzyme/utils';
+import { identity } from '@nzyme/utils/functions/identity.js';
 
 /**
  * A reactive reference that synchronizes its value with browser storage (localStorage or sessionStorage).

@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import chalk from 'chalk';
 import { config as configDotenv } from 'dotenv';
 
-import { asArray } from '@nzyme/utils';
+import { asArray } from '@nzyme/utils/array/asArray.js';
 
 import { getProjectRoot } from './getProjectRoot.js';
 

@@ -1,4 +1,4 @@
-import type { Writable } from '@nzyme/types';
+import type { Writable } from '@nzyme/types/Common.js';
 
 import { identity } from './functions/identity.js';
 

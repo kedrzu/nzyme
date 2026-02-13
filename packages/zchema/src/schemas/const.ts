@@ -1,4 +1,4 @@
-import type { Primitive } from '@nzyme/types';
+import type { Primitive } from '@nzyme/types/Common.js';
 
 import { defineSchema } from '../defineSchema.js';
 import type { Schema, SchemaMeta, SchemaOptions, SchemaOptionsBase, SchemaOptionsSimplify } from '../Schema.js';

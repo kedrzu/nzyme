@@ -1,10 +1,12 @@
 import type { BaseContext, CommandClass as ClipanionCommandClass } from 'clipanion';
 import { Command as ClipanionCommand } from 'clipanion';
 
-import type { Container } from '@nzyme/ioc';
-import { defineScope } from '@nzyme/ioc';
-import { Logger, PrettyCliLoggerTransport } from '@nzyme/logging';
-import { createEventEmitter, getClassName } from '@nzyme/utils';
+import type { Container } from '@nzyme/ioc/Container.js';
+import { defineScope } from '@nzyme/ioc/ContainerScope.js';
+import { Logger } from '@nzyme/logging/Logger.js';
+import { PrettyCliLoggerTransport } from '@nzyme/logging/PrettyCliLoggerTransport.js';
+import { createEventEmitter } from '@nzyme/utils/createEventEmitter.js';
+import { getClassName } from '@nzyme/utils/getClassName.js';
 
 /**
  *

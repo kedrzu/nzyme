@@ -1,5 +1,6 @@
-import { defineEndpoint, jsonResponse } from '@nzyme/fetch-utils';
-import type { DateTimeISO } from '@nzyme/types';
+import { defineEndpoint } from '@nzyme/fetch-utils/defineEndpoint.js';
+import { jsonResponse } from '@nzyme/fetch-utils/jsonResponse.js';
+import type { DateTimeISO } from '@nzyme/types/Date.js';
 
 export type DhlTrackingStatus = 'delivered' | 'failure' | 'pre-transit' | 'transit' | 'unknown';
 

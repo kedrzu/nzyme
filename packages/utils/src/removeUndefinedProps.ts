@@ -1,4 +1,4 @@
-import type { DefinedProperties } from '@nzyme/types';
+import type { DefinedProperties } from '@nzyme/types/Properties.js';
 
 /**
  * Removes properties that are undefined from an object.

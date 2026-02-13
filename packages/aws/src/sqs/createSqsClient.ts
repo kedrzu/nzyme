@@ -1,6 +1,7 @@
 import { SendMessageBatchCommand, SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
 
-import { asArray, splitIntoChunks } from '@nzyme/utils';
+import { asArray } from '@nzyme/utils/array/asArray.js';
+import { splitIntoChunks } from '@nzyme/utils/array/splitIntoChunks.js';
 
 import type { Queue, QueueMessage } from './types.js';
 

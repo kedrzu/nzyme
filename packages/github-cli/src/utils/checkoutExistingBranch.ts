@@ -3,7 +3,7 @@ import enquirer from 'enquirer';
 import { simpleGit } from 'simple-git';
 
 import { UsageError } from '@nzyme/cli';
-import type { Logger } from '@nzyme/logging';
+import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import { checkoutBranch } from './checkoutBranch.js';

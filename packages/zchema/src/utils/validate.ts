@@ -1,5 +1,7 @@
-import { mergeErrors, normalizeErrors, ValidationError } from '@nzyme/validation';
-import type { ValidationContext, ValidationErrors, ValidationResult } from '@nzyme/validation';
+import { mergeErrors } from '@nzyme/validation/utils/mergeErrors.js';
+import { normalizeErrors } from '@nzyme/validation/utils/normalizeErrors.js';
+import { ValidationError } from '@nzyme/validation/ValidationError.js';
+import type { ValidationContext, ValidationErrors, ValidationResult } from '@nzyme/validation/Validator.js';
 
 import type { Infer, SchemaAny, SchemaVisitor } from '../Schema.js';
 import { lazyResolve } from '../schemas/lazy.js';

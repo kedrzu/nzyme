@@ -1,5 +1,5 @@
-import type { Translation } from '@nzyme/i18n-core';
-import { defineService } from '@nzyme/ioc';
+import type { Translation } from '@nzyme/i18n-core/Translation.js';
+import { defineService } from '@nzyme/ioc/Service.js';
 
 import { LanguageContext } from './LanguageContext.js';
 import { translateToString } from './translateToString.js';

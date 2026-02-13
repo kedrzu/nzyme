@@ -3,8 +3,14 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes, PropType, SetupContext
 import { RouterLink } from 'vue-router';
 import type { RouteLocationRaw } from 'vue-router';
 
-import { assignProps, waitFor } from '@nzyme/utils';
-import { defineProp, defineProps, injectContext, useEmit, useEmitAsync, useProps } from '@nzyme/vue-utils';
+import { assignProps } from '@nzyme/utils/assignProps.js';
+import { waitFor } from '@nzyme/utils/waitFor.js';
+import { defineProp } from '@nzyme/vue-utils/defineProp.js';
+import { defineProps } from '@nzyme/vue-utils/defineProps.js';
+import { injectContext } from '@nzyme/vue-utils/context.js';
+import { useEmit } from '@nzyme/vue-utils/useEmit.js';
+import { useEmitAsync } from '@nzyme/vue-utils/useEmitAsync.js';
+import { useProps } from '@nzyme/vue-utils/useProps.js';
 
 import { FormContext } from '../FormContext.js';
 

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { LoggerLevel } from '@nzyme/logging';
+import type { LoggerLevel } from '@nzyme/logging/LoggerLevel.js';
 import { AlertCircle, AlertTriangle, Bug, Info, Search } from 'lucide-vue-next';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';

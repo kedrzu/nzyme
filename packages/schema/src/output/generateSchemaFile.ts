@@ -1,7 +1,7 @@
 import { mkdir } from 'fs/promises';
 import { basename, dirname } from 'path';
 
-import { saveFile } from '@nzyme/project-utils';
+import { saveFile } from '@nzyme/project-utils/saveFile.js';
 
 import type { SchemaDefinition } from '../transform/astToSchema.js';
 

@@ -1,4 +1,4 @@
-import { isEmailValid } from '@nzyme/validation';
+import { isEmailValid } from '@nzyme/validation/validators/email.js';
 
 import { defineValidator } from '../defineValidator.js';
 import type { FormValidationContext, FormValidationResult } from '../types.js';

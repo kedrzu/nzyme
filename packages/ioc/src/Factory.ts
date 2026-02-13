@@ -1,4 +1,4 @@
-import type { SomeObject } from '@nzyme/types';
+import type { SomeObject } from '@nzyme/types/Object.js';
 
 import type { ContainerScope } from './ContainerScope.js';
 import { defineService } from './Service.js';

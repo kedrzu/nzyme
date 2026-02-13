@@ -1,4 +1,5 @@
-import { defineEndpoint, jsonResponse } from '@nzyme/fetch-utils';
+import { defineEndpoint } from '@nzyme/fetch-utils/defineEndpoint.js';
+import { jsonResponse } from '@nzyme/fetch-utils/jsonResponse.js';
 
 // We use Here maps for geocoding
 // https://developer.here.com/documentation/geocoding-search-api/dev_guide/topics/endpoint-geocode-brief.html

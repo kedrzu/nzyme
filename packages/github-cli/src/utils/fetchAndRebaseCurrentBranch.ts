@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
-import type { Logger } from '@nzyme/logging';
+import type { Logger } from '@nzyme/logging/Logger.js';
 
 export interface FetchAndRebaseCurrentBranchParams {
     logger: Logger;

@@ -1,6 +1,8 @@
-import type { Container } from '@nzyme/ioc';
-import type { Flatten, IfAny, IfUnknown, OmitPropTypes, Primitive } from '@nzyme/types';
-import type { Validator } from '@nzyme/validation';
+import type { Container } from '@nzyme/ioc/Container.js';
+import type { Flatten, OmitPropTypes } from '@nzyme/types/Object.js';
+import type { IfAny, IfUnknown } from '@nzyme/types/TypeGuards.js';
+import type { Primitive } from '@nzyme/types/Common.js';
+import type { Validator } from '@nzyme/validation/Validator.js';
 
 /**
  * Infers the TypeScript type from a schema definition.

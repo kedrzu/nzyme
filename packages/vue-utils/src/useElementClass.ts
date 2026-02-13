@@ -25,7 +25,7 @@ type GlobalClassOptions = {
  * ```vue
  * <script setup lang="ts">
  * import { ref } from 'vue';
- * import { useElementClass } from '@nzyme/vue-utils';
+ * import { useElementClass } from '@nzyme/vue-utils/useElementClass.js';
  *
  * const isDark = ref(false);
  * const isFullscreen = ref(false);

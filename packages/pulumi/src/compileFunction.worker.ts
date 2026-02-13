@@ -14,9 +14,10 @@ import { bundleStats } from 'rollup-plugin-bundle-stats';
 import sourcemaps from 'rollup-plugin-sourcemaps';
 import { terser } from 'rollup-plugin-terser';
 
-import { unwrapCjsDefaultImport } from '@nzyme/esm';
-import { normalizeBuiltinsPlugin } from '@nzyme/rollup-utils';
-import { formatElapsedMs, sortBy } from '@nzyme/utils';
+import { unwrapCjsDefaultImport } from '@nzyme/esm/unwrapCjsDefaultImport.js';
+import { normalizeBuiltinsPlugin } from '@nzyme/rollup-utils/plugins/normalizeBuiltinsPlugin.js';
+import { formatElapsedMs } from '@nzyme/utils/formatElapsedMs.js';
+import { sortBy } from '@nzyme/utils/sortBy.js';
 
 import type { CompileFunctionOptions, CompileFunctionResult } from './compileFunction.js';
 

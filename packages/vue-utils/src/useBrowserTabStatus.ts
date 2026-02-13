@@ -1,6 +1,6 @@
 import { onScopeDispose, ref } from 'vue';
 
-import { isBrowser } from '@nzyme/dom-utils';
+import { isBrowser } from '@nzyme/dom-utils/isBrowser.js';
 
 /**
  * The status of the browser tab.

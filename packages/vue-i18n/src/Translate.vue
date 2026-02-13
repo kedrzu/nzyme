@@ -2,8 +2,8 @@
 import type { Slot } from 'vue';
 
 import type { Translation } from '@nzyme/i18n';
-import { LanguageContext } from '@nzyme/i18n';
-import { useService } from '@nzyme/vue-ioc';
+import { LanguageContext } from '@nzyme/i18n/LanguageContext.js';
+import { useService } from '@nzyme/vue-ioc/useService.js';
 
 const props = defineProps<{
   t: Translation<T>;

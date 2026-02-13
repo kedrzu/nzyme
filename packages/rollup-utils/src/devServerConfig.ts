@@ -5,7 +5,7 @@ import typescript from '@rollup/plugin-typescript';
 import type { RollupOptions } from 'rollup';
 import sourcemapsPlugin from 'rollup-plugin-sourcemaps';
 
-import { unwrapCjsDefaultImport } from '@nzyme/esm';
+import { unwrapCjsDefaultImport } from '@nzyme/esm/unwrapCjsDefaultImport.js';
 
 import { isFileExternal } from './isFileExternal.js';
 import { watchFilesPlugin } from './plugins/watchFilesPlugin.js';

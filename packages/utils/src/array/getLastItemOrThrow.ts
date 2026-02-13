@@ -1,4 +1,4 @@
-import type { Immutable } from '@nzyme/types';
+import type { Immutable } from '@nzyme/types/Immutable.js';
 
 /**
  * Returns the last element of an array.

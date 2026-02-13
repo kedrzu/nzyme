@@ -1,7 +1,8 @@
 import type { JSONSchema7 } from 'json-schema';
 
-import type { Primitive } from '@nzyme/types';
-import { assert, mapObject } from '@nzyme/utils';
+import type { Primitive } from '@nzyme/types/Common.js';
+import { assert } from '@nzyme/utils/assert.js';
+import { mapObject } from '@nzyme/utils/mapObject.js';
 
 import type { Schema, SchemaOptionsBase } from '../Schema.js';
 import { array } from '../schemas/array.js';

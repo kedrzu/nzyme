@@ -1,7 +1,7 @@
 import { computed } from 'vue';
 
-import { LanguageContext } from '@nzyme/i18n';
-import { useService } from '@nzyme/vue-ioc';
+import { LanguageContext } from '@nzyme/i18n/LanguageContext.js';
+import { useService } from '@nzyme/vue-ioc/useService.js';
 
 /**
  * Returns current language computed ref.

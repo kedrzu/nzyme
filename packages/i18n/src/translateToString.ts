@@ -1,4 +1,4 @@
-import type { Translation } from '@nzyme/i18n-core';
+import type { Translation } from '@nzyme/i18n-core/Translation.js';
 
 /**
  * Translate a key.

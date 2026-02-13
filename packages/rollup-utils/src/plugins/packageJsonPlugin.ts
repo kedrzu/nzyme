@@ -6,7 +6,7 @@ import { exists } from 'fs-extra';
 import type { OutputBundle, Plugin } from 'rollup';
 import type { PackageJson } from 'type-fest';
 
-import { concatIterable } from '@nzyme/utils';
+import { concatIterable } from '@nzyme/utils/array/concatIterable.js';
 
 /**
  * Configuration options for the package.json plugin.

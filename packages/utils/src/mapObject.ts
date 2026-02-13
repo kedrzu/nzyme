@@ -1,4 +1,4 @@
-import type { ValueOf } from '@nzyme/types';
+import type { ValueOf } from '@nzyme/types/Common.js';
 
 /**
  * Creates a new object by mapping each property of the input object through a transformation function.

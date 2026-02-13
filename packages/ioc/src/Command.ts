@@ -1,4 +1,5 @@
-import type { EmptyObject, OmitProps } from '@nzyme/types';
+import type { EmptyObject } from '@nzyme/types/EmptyObject.js';
+import type { OmitProps } from '@nzyme/types/Object.js';
 
 import { defineService } from './Service.js';
 import type { Dependencies, Service, ServiceOptions } from './Service.js';

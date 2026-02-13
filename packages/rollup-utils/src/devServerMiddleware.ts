@@ -5,7 +5,8 @@ import type { NextHandleFunction } from 'connect';
 import { watch } from 'rollup';
 import type { RollupWatchOptions } from 'rollup';
 
-import { formatDurationMs, omitProps } from '@nzyme/utils';
+import { formatDurationMs } from '@nzyme/utils/formatDurationMs.js';
+import { omitProps } from '@nzyme/utils/omitProps.js';
 
 import type { DevServer } from './createDevServer.js';
 import { createDevServer } from './createDevServer.js';

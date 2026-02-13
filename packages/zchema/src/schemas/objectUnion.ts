@@ -1,4 +1,4 @@
-import { isPlainObject } from '@nzyme/utils';
+import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
 import { defineSchema } from '../defineSchema.js';
 import type {

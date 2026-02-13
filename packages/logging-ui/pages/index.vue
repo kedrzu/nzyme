@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { useService } from '@nzyme/vue-ioc';
+import { useService } from '@nzyme/vue-ioc/useService.js';
 import { Settings } from 'lucide-vue-next';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';

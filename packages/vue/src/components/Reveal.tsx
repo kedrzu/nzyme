@@ -10,8 +10,8 @@ import {
 } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
 
-import { getOuterHeight } from '@nzyme/dom-utils';
-import { useElement } from '@nzyme/vue-utils';
+import { getOuterHeight } from '@nzyme/dom-utils/getOuterHeight.js';
+import { useElement } from '@nzyme/vue-utils/useElement.js';
 
 import css from './Reveal.module.scss';
 

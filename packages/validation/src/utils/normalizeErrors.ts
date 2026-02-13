@@ -1,4 +1,4 @@
-import { isPlainObject } from '@nzyme/utils';
+import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
 import type { ValidationErrors, ValidationResult } from '../Validator.js';
 import { mergeErrors } from './mergeErrors.js';

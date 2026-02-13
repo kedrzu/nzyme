@@ -1,4 +1,4 @@
-import { defineEndpoint } from '@nzyme/fetch-utils';
+import { defineEndpoint } from '@nzyme/fetch-utils/defineEndpoint.js';
 
 import { INPOST_API_URL } from './constants.js';
 import type { InpostPointData } from './models/InpostPointData.js';

@@ -1,8 +1,9 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import { defineService } from '@nzyme/ioc';
-import type { Dependencies, Service, ServiceSetup } from '@nzyme/ioc';
-import type { EmptyObject, IfAny } from '@nzyme/types';
+import { defineService } from '@nzyme/ioc/Service.js';
+import type { Dependencies, Service, ServiceSetup } from '@nzyme/ioc/Service.js';
+import type { EmptyObject } from '@nzyme/types/EmptyObject.js';
+import type { IfAny } from '@nzyme/types/TypeGuards.js';
 
 import type { HttpRequest } from './types/HttpRequest.js';
 

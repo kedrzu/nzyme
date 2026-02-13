@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import enquirer from 'enquirer';
 
 import { UsageError } from '@nzyme/cli';
-import type { Logger } from '@nzyme/logging';
+import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import { determineNextVersion, extractBranchVersion } from './branchVersionHelpers.js';

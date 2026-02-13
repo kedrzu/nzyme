@@ -1,6 +1,6 @@
 import { defineComponent, h } from 'vue';
 
-import { useService } from '@nzyme/vue-ioc';
+import { useService } from '@nzyme/vue-ioc/useService.js';
 
 import { ModalService } from './ModalService.js';
 

@@ -1,7 +1,7 @@
 import { computed, effectScope, watch } from 'vue';
 import type { EffectScope } from 'vue';
 
-import { reactive } from '@nzyme/vue-utils';
+import { reactive } from '@nzyme/vue-utils/reactivity/reactive.js';
 
 import type { FormField, FormModel, FormValidator } from './types.js';
 import { useFormField } from './useFormField.js';

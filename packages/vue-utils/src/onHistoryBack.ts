@@ -1,7 +1,7 @@
 import { watch } from 'vue';
 import type { WatchSource } from 'vue';
 
-import type { VirtualHistoryCallback, VirtualHistoryHandle } from '@nzyme/dom-utils';
+import type { VirtualHistoryCallback, VirtualHistoryHandle } from '@nzyme/dom-utils/virtualHistory.js';
 
 import { useVirtualHistory } from './useVirtualHistory.js';
 

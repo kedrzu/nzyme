@@ -1,6 +1,7 @@
 import type { Duration } from 'date-fns';
 
-import type { DurationISO, StringNonLiteral } from '@nzyme/types';
+import type { DurationISO } from '@nzyme/types/Date.js';
+import type { StringNonLiteral } from '@nzyme/types/Common.js';
 
 /**
  * Parses an ISO 8601 duration string (e.g., 'P1Y2M3DT4H5M6S') or a string into a date-fns Duration object.

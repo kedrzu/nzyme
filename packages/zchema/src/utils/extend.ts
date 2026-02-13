@@ -1,4 +1,5 @@
-import type { Override, PartialOnUndefined } from '@nzyme/types';
+import type { Override } from '@nzyme/types/Common.js';
+import type { PartialOnUndefined } from '@nzyme/types/PartialOnUndefined.js';
 
 import type { Infer, Schema, SchemaOptions } from '../Schema.js';
 

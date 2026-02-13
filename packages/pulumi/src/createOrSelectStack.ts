@@ -2,7 +2,7 @@ import path from 'path';
 
 import { automation, runtime } from '@pulumi/pulumi';
 
-import { waitFor } from '@nzyme/utils';
+import { waitFor } from '@nzyme/utils/waitFor.js';
 
 import type { Stack, StackOutput } from './defineStack.js';
 import type { PulumiConfig } from './PulumiConfig.js';

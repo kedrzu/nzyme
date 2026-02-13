@@ -8,9 +8,9 @@ import type {
 
 import { onBeforeTransition } from './utils/onBeforeTransition.js';
 import { onAfterTransition } from './utils/onAfterTransition.js';
-import type { SomeObject } from '@nzyme/types';
-import { defineProp } from '@nzyme/vue-utils';
-import type { ClassProp } from '@nzyme/vue-utils';
+import type { SomeObject } from '@nzyme/types/Object.js';
+import { defineProp } from '@nzyme/vue-utils/defineProp.js';
+import type { ClassProp } from '@nzyme/vue-utils/classProp.js';
 
 /**
  * Transition props.

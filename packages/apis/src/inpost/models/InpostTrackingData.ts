@@ -1,4 +1,4 @@
-import type { DateTimeISO } from '@nzyme/types';
+import type { DateTimeISO } from '@nzyme/types/Date.js';
 
 import type { InpostStatus } from './InpostStatus.js';
 

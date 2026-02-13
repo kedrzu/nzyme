@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import enquirer from 'enquirer';
 
 import { UsageError } from '@nzyme/cli';
-import type { Logger } from '@nzyme/logging';
+import type { Logger } from '@nzyme/logging/Logger.js';
 
 /**
  * Handle terminal state logic - ask user if they want to change state to "In Progress".

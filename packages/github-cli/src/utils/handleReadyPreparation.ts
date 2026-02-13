@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import enquirer from 'enquirer';
 import { simpleGit } from 'simple-git';
 
-import type { Logger } from '@nzyme/logging';
+import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { UnpushedCommitsResult } from './checkUnpushedCommits.js';
 import type { GitStatusInfo } from './getGitStatusInfo.js';

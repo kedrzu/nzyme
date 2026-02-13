@@ -1,8 +1,10 @@
 import { computed, h, reactive } from 'vue';
 import type { ExtractPropTypes, FunctionalComponent, PropType } from 'vue';
 
-import type { Primitive } from '@nzyme/types';
-import { defineProps, injectContext, useEmit } from '@nzyme/vue-utils';
+import type { Primitive } from '@nzyme/types/Common.js';
+import { defineProps } from '@nzyme/vue-utils/defineProps.js';
+import { injectContext } from '@nzyme/vue-utils/context.js';
+import { useEmit } from '@nzyme/vue-utils/useEmit.js';
 
 import type { FormFieldValue } from './defineFormField.js';
 import { RadioGroupContext } from './useRadioGroup.js';

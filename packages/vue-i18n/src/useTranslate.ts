@@ -1,5 +1,5 @@
-import { Translator } from '@nzyme/i18n';
-import { useService } from '@nzyme/vue-ioc';
+import { Translator } from '@nzyme/i18n/Translator.js';
+import { useService } from '@nzyme/vue-ioc/useService.js';
 
 /**
  *

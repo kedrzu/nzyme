@@ -1,9 +1,10 @@
 import { h, ref } from 'vue';
 import type { ButtonHTMLAttributes, InputHTMLAttributes, SetupContext } from 'vue';
 
-import { assignProps } from '@nzyme/utils';
-import { useTranslate } from '@nzyme/vue-i18n';
-import { defineProps, useProps } from '@nzyme/vue-utils';
+import { assignProps } from '@nzyme/utils/assignProps.js';
+import { useTranslate } from '@nzyme/vue-i18n/useTranslate.js';
+import { defineProps } from '@nzyme/vue-utils/defineProps.js';
+import { useProps } from '@nzyme/vue-utils/useProps.js';
 
 import { defineFormField } from './defineFormField.js';
 import * as l from './useDateInput.loc.js';

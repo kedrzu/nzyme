@@ -10,9 +10,13 @@ import fsExtra from 'fs-extra/esm';
 import merge from 'lodash.merge';
 import type { TsConfigJson } from 'type-fest';
 
-import type { Package } from '@nzyme/project-utils';
-import { getPackages, getProjectRoot, isFileIgnored, saveFile } from '@nzyme/project-utils';
-import { asArray, debounceAsyncFunction } from '@nzyme/utils';
+import type { Package } from '@nzyme/project-utils/getPackages.js';
+import { getPackages } from '@nzyme/project-utils/getPackages.js';
+import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
+import { isFileIgnored } from '@nzyme/project-utils/isFileIgnored.js';
+import { saveFile } from '@nzyme/project-utils/saveFile.js';
+import { asArray } from '@nzyme/utils/array/asArray.js';
+import { debounceAsyncFunction } from '@nzyme/utils/debounceAsyncFunction.js';
 
 import { Command } from '../Command.js';
 import type { NzymePackageConfig } from '../NzymePackageConfig.js';

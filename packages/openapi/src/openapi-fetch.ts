@@ -1,7 +1,7 @@
 import { joinURL, withQuery } from 'ufo';
 
-import type { HttpMethod } from '@nzyme/fetch-utils';
-import { isPlainObject } from '@nzyme/utils';
+import type { HttpMethod } from '@nzyme/fetch-utils/HttpMethod.js';
+import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
 import type { ContentTypeOf, OpenApiFetchOptions, OpenApiFetchResponse, OperationOf } from './types.js';
 

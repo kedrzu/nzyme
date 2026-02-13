@@ -10,7 +10,7 @@ import { getCurrentInstance } from 'vue';
  * @example
  * ```vue
  * <script setup lang="ts">
- * import { useInstance } from '@nzyme/vue-utils';
+ * import { useInstance } from '@nzyme/vue-utils/useInstance.js';
  *
  * const instance = useInstance();
  * console.log(instance.uid); // Component unique ID
@@ -37,7 +37,7 @@ export function useInstance() {
  * @example
  * ```vue
  * <script setup lang="ts">
- * import { useInstanceProxy } from '@nzyme/vue-utils';
+ * import { useInstanceProxy } from '@nzyme/vue-utils/useInstance.js';
  *
  * const proxy = useInstanceProxy();
  * console.log(proxy.$el); // Component root element

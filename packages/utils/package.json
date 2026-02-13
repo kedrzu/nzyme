@@ -23,7 +23,8 @@
     "scripts": {
         "build:cjs": "tsc --build ./tsconfig.cjs.json",
         "build:esm": "tsc --build ./tsconfig.esm.json",
-        "lint": "prettier ./src --write && yarn tsc --noEmit --project tsconfig.check.json && eslint . --fix --cache"
+        "typecheck": "tsc --noEmit --project tsconfig.check.json",
+        "lint": "prettier ./src --write && yarn typecheck && eslint . --fix --cache"
     },
     "dependencies": {
         "@nzyme/types": "^0.14.0",

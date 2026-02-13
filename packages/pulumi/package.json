@@ -29,7 +29,8 @@
         "dist"
     ],
     "scripts": {
-        "lint": "prettier ./src --write && yarn tsc --noEmit --project tsconfig.check.json && eslint . --fix --cache"
+        "typecheck": "tsc --noEmit --project tsconfig.check.json",
+        "lint": "prettier ./src --write && yarn typecheck && eslint . --fix --cache"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.954.0",

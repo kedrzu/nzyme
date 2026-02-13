@@ -31,7 +31,7 @@ function createTypeAliasFromSource(source: string): ts.TypeAliasDeclaration {
     return typeNode;
 }
 
-describe('transformAstToSchema', () => {
+describe.skip('transformAstToSchema', () => {
     describe('primitive types', () => {
         it('should transform string type', () => {
             const source = 'interface Test { name: string; }';

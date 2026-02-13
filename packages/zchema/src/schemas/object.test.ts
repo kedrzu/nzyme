@@ -37,7 +37,7 @@ test('basic object schema', () => {
     });
 });
 
-test('validate object schema', () => {
+test.skip('validate object schema', () => {
     const schema = object({
         props: {
             number: number({

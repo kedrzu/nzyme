@@ -1,8 +1,11 @@
-import pluginVue from 'eslint-plugin-vue';
-import vueParser from 'vue-eslint-parser';
 import tsParser from '@typescript-eslint/parser';
+import pluginVue from 'eslint-plugin-vue';
 import { defineConfig } from 'eslint/config';
+import vueParser from 'vue-eslint-parser';
 
+/**
+ *
+ */
 export function vue() {
     return defineConfig({
         files: ['**/*.vue', '**/*.ts', '**/*.tsx'],
@@ -19,6 +22,8 @@ export function vue() {
             '@typescript-eslint/no-unsafe-member-access': 'off',
             '@typescript-eslint/no-unsafe-assignment': 'off',
             '@typescript-eslint/no-unsafe-argument': 'off',
+            '@typescript-eslint/no-unsafe-return': 'off',
+            '@typescript-eslint/no-unsafe-call': 'off',
         },
         languageOptions: {
             parser: vueParser,

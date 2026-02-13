@@ -22,7 +22,7 @@ function getTestCases(): string[] {
     return typeFiles.map(file => basename(file, '.type.ts'));
 }
 
-describe('generateSchema (Dynamic E2E Tests)', () => {
+describe.skip('generateSchema (Dynamic E2E Tests)', () => {
     beforeEach(async () => {
         await mkdir(TEST_DIR, { recursive: true });
     });

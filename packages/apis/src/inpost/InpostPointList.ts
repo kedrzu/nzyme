@@ -1,9 +1,8 @@
-import { defineEndpoint, jsonNullableResponse } from '@nzyme/fetch-utils';
+import { defineEndpoint } from '@nzyme/fetch-utils/defineEndpoint.js';
+import { jsonNullableResponse } from '@nzyme/fetch-utils/jsonNullableResponse.js';
 
 import { INPOST_API_URL } from './constants.js';
 import type { InpostPointData } from './models/InpostPointData.js';
-
-type InpostPointFunction = 'parcel_collect' | 'parcel_send';
 
 /**
  * Parameters for the Inpost point list endpoint.
@@ -38,6 +37,8 @@ export type InpostPointListParams = {
      */
     relativePostCode?: string;
 };
+
+type InpostPointFunction = 'parcel_collect' | 'parcel_send';
 
 /**
  * Get a list of Inpost points.

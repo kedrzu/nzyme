@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import type { LoggerLevel } from '@nzyme/logging';
-import { useService } from '@nzyme/vue-ioc';
+import type { LoggerLevel } from '@nzyme/logging/LoggerLevel.js';
+import { useService } from '@nzyme/vue-ioc/useService.js';
 import { ArrowLeft } from 'lucide-vue-next';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';

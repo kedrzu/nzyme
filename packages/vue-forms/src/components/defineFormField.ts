@@ -1,8 +1,11 @@
 import { computed, reactive, ref, useModel } from 'vue';
 import type { ExtractPropTypes, PropType, Ref } from 'vue';
 
-import { scrollToTopElement } from '@nzyme/dom-utils';
-import { defineProp, injectContext, onEventEmitter, useInstanceProxy } from '@nzyme/vue-utils';
+import { scrollToTopElement } from '@nzyme/dom-utils/scrollToTopElement.js';
+import { defineProp } from '@nzyme/vue-utils/defineProp.js';
+import { injectContext } from '@nzyme/vue-utils/context.js';
+import { onEventEmitter } from '@nzyme/vue-utils/onEventEmitter.js';
+import { useInstanceProxy } from '@nzyme/vue-utils/useInstance.js';
 
 import { FormContext } from '../FormContext.js';
 import type { FormField as FormFieldModel } from '../types.js';

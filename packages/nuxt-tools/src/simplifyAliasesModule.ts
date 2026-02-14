@@ -1,5 +1,8 @@
 import { defineNuxtModule } from 'nuxt/kit';
 
+/**
+ *
+ */
 export function simplifyAliasesModule() {
     return defineNuxtModule({
         setup(_opts, nuxt) {

@@ -1,5 +1,5 @@
-import type { Flatten } from '@nzyme/types';
-import { isPlainObject } from '@nzyme/utils';
+import type { Flatten } from '@nzyme/types/Object.js';
+import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
 import { defineSchema } from '../defineSchema.js';
 import type {

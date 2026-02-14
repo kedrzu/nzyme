@@ -37,7 +37,6 @@ export interface MinValidatorOptions<T extends Comparable> {
  * @returns A validator function.
  */
 export function minValue(minValue: number, options?: MinValidatorOptions<number>): Validator<number | null | undefined>;
-
 /**
  * Validator that checks if the value is greater than or equal to the minimum value.
  * @param minValue - The minimum value to check against.
@@ -45,7 +44,6 @@ export function minValue(minValue: number, options?: MinValidatorOptions<number>
  * @returns A validator function.
  */
 export function minValue(minValue: bigint, options?: MinValidatorOptions<bigint>): Validator<bigint | null | undefined>;
-
 /**
  * Validator that checks if the value is greater than or equal to the minimum value.
  * @param minValue - The minimum value to check against.
@@ -56,7 +54,6 @@ export function minValue<T extends Comparable>(
     minValue: T,
     options?: MinValidatorOptions<T>,
 ): Validator<T | null | undefined>;
-
 /**
  * Validator that checks if the value is greater than or equal to the minimum value.
  * @param minValue - The minimum value to check against.

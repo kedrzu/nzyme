@@ -2,7 +2,7 @@ import type { LinearClient } from '@linear/sdk';
 import chalk from 'chalk';
 
 import { UsageError } from '@nzyme/cli';
-import type { Logger } from '@nzyme/logging';
+import type { Logger } from '@nzyme/logging/Logger.js';
 
 /**
  * Reopen a Linear task by changing its state to "In Progress" or similar.

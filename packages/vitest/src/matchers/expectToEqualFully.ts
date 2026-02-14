@@ -1,5 +1,8 @@
 import { equals } from '@vitest/expect';
 
+/**
+ *
+ */
 export function expectToEqualFully<T>(actual: T, expected: T) {
     const pass = equals(actual, expected);
 

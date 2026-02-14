@@ -1,4 +1,5 @@
-import { createExponentialBackoff, toJsonString } from '@nzyme/utils';
+import { createExponentialBackoff } from '@nzyme/utils/createExponentialBackoff.js';
+import { toJsonString } from '@nzyme/utils/toJsonString.js';
 
 import { ApplicationError } from './ApplicationError.js';
 import type { LoggerObject } from './Logger.js';

@@ -1,4 +1,4 @@
-import type { AbstractConstructor } from '@nzyme/types';
+import type { AbstractConstructor } from '@nzyme/types/Constructors.js';
 
 /**
  * Gets the name of an object's class.

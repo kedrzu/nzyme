@@ -1,8 +1,10 @@
 import type { Ref } from 'vue';
 import { computed, onScopeDispose, ref, toRef, watch, watchEffect } from 'vue';
 
-import { arrayRemove } from '@nzyme/utils';
-import { makeRef, reactive, useDataSource } from '@nzyme/vue-utils';
+import { arrayRemove } from '@nzyme/utils/array/arrayRemove.js';
+import { makeRef } from '@nzyme/vue-utils/reactivity/makeRef.js';
+import { reactive } from '@nzyme/vue-utils/reactivity/reactive.js';
+import { useDataSource } from '@nzyme/vue-utils/useDataSource.js';
 
 import type {
     FormField,

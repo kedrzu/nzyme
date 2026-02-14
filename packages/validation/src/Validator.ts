@@ -1,4 +1,4 @@
-import type { Container } from '@nzyme/ioc';
+import type { Container } from '@nzyme/ioc/Container.js';
 
 /**
  * Context object passed to validators during validation

@@ -1,5 +1,5 @@
-import type { HttpMethod } from '@nzyme/fetch-utils';
-import type { Router } from '@nzyme/rpc';
+import type { HttpMethod } from '@nzyme/fetch-utils/HttpMethod.js';
+import type { Router } from '@nzyme/rpc/createRouter.js';
 
 import type { types } from './types.js';
 

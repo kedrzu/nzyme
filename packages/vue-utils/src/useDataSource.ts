@@ -3,8 +3,8 @@ import { computed, getCurrentScope, isRef, ref, shallowRef, watch } from 'vue';
 import type { Ref } from 'vue';
 
 import { reactive } from './reactivity/reactive.js';
-import { isCancelablePromise } from '@nzyme/utils';
-import type { CancelablePromise } from '@nzyme/utils';
+import { isCancelablePromise } from '@nzyme/utils/Cancelable.js';
+import type { CancelablePromise } from '@nzyme/utils/Cancelable.js';
 
 import { makeRef } from './reactivity/makeRef.js';
 import type { RefParam } from './reactivity/makeRef.js';

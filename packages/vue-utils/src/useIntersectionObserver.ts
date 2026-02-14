@@ -1,8 +1,8 @@
 import { onMounted, onUnmounted, reactive, ref, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 
-import { isBrowser } from '@nzyme/dom-utils';
-import { asArray } from '@nzyme/utils';
+import { isBrowser } from '@nzyme/dom-utils/isBrowser.js';
+import { asArray } from '@nzyme/utils/array/asArray.js';
 
 import { makeRef } from './reactivity/makeRef.js';
 import type { ElementOrVue } from './types.js';

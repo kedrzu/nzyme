@@ -38,8 +38,8 @@ describe.skip('parseTypeFileToSchemas', () => {
             const schemas = await parseTypeFileToSchemas(typeFilePath);
 
             expect(schemas.length).toBeGreaterThan(0);
-            expect(schemas[0].name).toBeDefined();
-            expect(schemas[0].schema).toBeDefined();
+            expect(schemas[0]!.name).toBeDefined();
+            expect(schemas[0]!.schema).toBeDefined();
         }
     });
 });

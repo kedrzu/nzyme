@@ -8,10 +8,34 @@ import type { QueryParams, QueryParamsSimple } from './queryTypes.js';
  * @param options.multiple - Whether to allow multiple values for the same key
  * @returns An object containing the parsed query parameters
  */
-export function parseQuery(querystring: null | string | undefined): QueryParamsSimple;
-export function parseQuery(querystring: null | string | undefined, options: { multiple: false }): QueryParamsSimple;
-export function parseQuery(querystring: null | string | undefined, options: { multiple: true }): QueryParams;
-export function parseQuery(querystring: null | string | undefined, options?: { multiple: boolean }): QueryParams {
+export function parseQuery(querystring: string | null | undefined): QueryParamsSimple;
+export function parseQuery(
+    querystring: string | null | undefined,
+    options: {
+        /**
+         *
+         */
+        multiple: false;
+    },
+): QueryParamsSimple;
+export function parseQuery(
+    querystring: string | null | undefined,
+    options: {
+        /**
+         *
+         */
+        multiple: true;
+    },
+): QueryParams;
+export function parseQuery(
+    querystring: string | null | undefined,
+    options?: {
+        /**
+         *
+         */
+        multiple: boolean;
+    },
+): QueryParams {
     const query: QueryParams = {};
     const multiple = options?.multiple || false;
 

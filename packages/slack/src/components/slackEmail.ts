@@ -1,4 +1,4 @@
-import { getMailToUrl } from '@nzyme/utils';
+import { getMailToUrl } from '@nzyme/utils/getMailToUrl.js';
 
 import { slackLink } from './slackLink.js';
 

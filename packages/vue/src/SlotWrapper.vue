@@ -2,7 +2,7 @@
 import type { VNodeChild } from 'vue';
 import { h } from 'vue';
 
-import { isVNodeEmpty } from '@nzyme/vue-utils';
+import { isVNodeEmpty } from '@nzyme/vue-utils/isVNodeEmpty.js';
 
 interface SlotWrapperProps {
   slot?: (slotProps: T) => VNodeChild | undefined;

@@ -37,7 +37,6 @@ export interface MaxValidatorOptions<T extends Comparable> {
  * @returns A validator function.
  */
 export function maxValue(maxValue: number, options?: MaxValidatorOptions<number>): Validator<number | null | undefined>;
-
 /**
  * Validator that checks if the value is less than or equal to the maximum value.
  * @param maxValue - The maximum value to check against.
@@ -45,7 +44,6 @@ export function maxValue(maxValue: number, options?: MaxValidatorOptions<number>
  * @returns A validator function.
  */
 export function maxValue(maxValue: bigint, options?: MaxValidatorOptions<bigint>): Validator<bigint | null | undefined>;
-
 /**
  * Validator that checks if the value is less than or equal to the maximum value.
  * @param maxValue - The maximum value to check against.
@@ -56,7 +54,6 @@ export function maxValue(
     maxValue: Comparable,
     options?: MaxValidatorOptions<Comparable>,
 ): Validator<Comparable | null | undefined>;
-
 /**
  * Validator that checks if the value is less than or equal to the maximum value.
  * @param maxValue - The maximum value to check against.

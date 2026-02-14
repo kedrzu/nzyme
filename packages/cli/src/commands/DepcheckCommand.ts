@@ -4,9 +4,9 @@ import depcheckImport from 'depcheck';
 import enquirer from 'enquirer';
 import latestVersion from 'latest-version';
 
-import type { Package } from '@nzyme/project-utils';
-import { getPackages } from '@nzyme/project-utils';
-import { saveFile } from '@nzyme/project-utils';
+import type { Package } from '@nzyme/project-utils/getPackages.js';
+import { getPackages } from '@nzyme/project-utils/getPackages.js';
+import { saveFile } from '@nzyme/project-utils/saveFile.js';
 
 import { Command } from '../Command.js';
 import { Option } from '../index.js';

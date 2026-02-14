@@ -1,4 +1,4 @@
-import type { OmitProps } from '@nzyme/types';
+import type { OmitProps } from '@nzyme/types/Object.js';
 
 import type { FetchRequest } from './fetchRequest.js';
 

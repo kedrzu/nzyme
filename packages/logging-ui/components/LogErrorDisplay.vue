@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { parseStackTrace, type StackFrame } from '@nzyme/utils';
+import { parseStackTrace, type StackFrame } from '@nzyme/utils/parseStackTrace.js';
 import { computed } from 'vue';
 
 /**

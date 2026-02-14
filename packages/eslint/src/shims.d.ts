@@ -1,17 +1,20 @@
 declare module 'eslint-plugin-workspaces' {
-    import { ESLint } from 'eslint';
+    import type { ESLint } from 'eslint';
+
     const plugin: ESLint.Plugin;
     export default plugin;
 }
 
 declare module 'eslint-plugin-monorepo' {
-    import { ESLint } from 'eslint';
+    import type { ESLint } from 'eslint';
+
     const plugin: ESLint.Plugin;
     export default plugin;
 }
 
 declare module 'eslint-plugin-import' {
-    import { ESLint } from 'eslint';
+    import type { ESLint } from 'eslint';
+
     const plugin: ESLint.Plugin & {
         flatConfigs: {
             recommended: ESLint.Config;
@@ -24,8 +27,15 @@ declare module 'eslint-plugin-import' {
 }
 
 declare module 'eslint-plugin-package-json' {
-    import { ESLint } from 'eslint';
-    export const configs: {
+    import type { ESLint } from 'eslint';
+
+    export /**
+     *
+     */
+    const configs: {
+        /**
+         *
+         */
         recommended: ESLint.Config;
     };
 }

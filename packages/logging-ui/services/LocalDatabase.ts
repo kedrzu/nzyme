@@ -1,6 +1,6 @@
-import type { LoggerLevel } from '@nzyme/logging';
-import type { Resolved } from '@nzyme/ioc';
-import { defineService } from '@nzyme/ioc';
+import type { LoggerLevel } from '@nzyme/logging/LoggerLevel.js';
+import type { Resolved } from '@nzyme/ioc/Injectable.js';
+import { defineService } from '@nzyme/ioc/Service.js';
 import Dexie from 'dexie';
 
 import type { LogEntry } from '../types/LogEntry.js';

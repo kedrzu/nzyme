@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { emptyDir } from 'fs-extra/esm';
 import { rollup } from 'rollup';
 
-import { formatElapsedMs } from '@nzyme/utils';
+import { formatElapsedMs } from '@nzyme/utils/formatElapsedMs.js';
 
 import type { RollupOptions } from './types.js';
 

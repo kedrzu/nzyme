@@ -12,7 +12,7 @@ import { nextTick, ref, watch } from 'vue';
  * @example
  * ```vue
  * <script setup lang="ts">
- * import { triggerRef } from '@nzyme/vue-utils';
+ * import { triggerRef } from '@nzyme/vue-utils/reactivity/triggerRef.js';
  *
  * const shake = triggerRef();
  *

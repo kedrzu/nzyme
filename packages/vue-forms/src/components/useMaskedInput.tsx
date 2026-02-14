@@ -3,8 +3,10 @@ import { computed, h } from 'vue';
 import type { InputHTMLAttributes, MaybeRefOrGetter } from 'vue';
 import { IMaskComponent } from 'vue-imask';
 
-import { assignProps } from '@nzyme/utils';
-import { defineProps, makeRef, useProps } from '@nzyme/vue-utils';
+import { assignProps } from '@nzyme/utils/assignProps.js';
+import { defineProps } from '@nzyme/vue-utils/defineProps.js';
+import { makeRef } from '@nzyme/vue-utils/reactivity/makeRef.js';
+import { useProps } from '@nzyme/vue-utils/useProps.js';
 
 import { defineFormField } from './defineFormField.js';
 import type { FormFieldValue } from './defineFormField.js';

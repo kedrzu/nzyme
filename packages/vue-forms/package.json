@@ -17,6 +17,18 @@
         },
         "./shims": {
             "types": "./src/shims.d.ts"
+        },
+        "./*.js": {
+            "types": "./src/*.ts",
+            "import": "./src/*.ts",
+            "default": "./src/*.ts",
+            "source": "./src/*.ts"
+        },
+        "./*.jsx": {
+            "types": "./src/*.tsx",
+            "import": "./src/*.tsx",
+            "default": "./src/*.tsx",
+            "source": "./src/*.tsx"
         }
     },
     "imports": {

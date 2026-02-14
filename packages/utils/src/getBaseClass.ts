@@ -1,4 +1,4 @@
-import type { AbstractConstructor } from '@nzyme/types';
+import type { AbstractConstructor } from '@nzyme/types/Constructors.js';
 
 /**
  * Gets the base class (parent class) of a given constructor.

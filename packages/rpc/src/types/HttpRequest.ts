@@ -1,7 +1,9 @@
-import type { QueryObject } from 'ufo';
+import type { HttpRequestHeaders } from '@nzyme/fetch-utils/HttpHeaders.js';
+import type { HttpMethod } from '@nzyme/fetch-utils/HttpMethod.js';
 
-import type { HttpMethod, HttpRequestHeaders } from '@nzyme/fetch-utils';
-
+/**
+ *
+ */
 export interface HttpRequestQuery {
     [key: string]: string | string[] | undefined;
 }

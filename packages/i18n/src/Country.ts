@@ -1,4 +1,4 @@
-import { defineEnum } from '@nzyme/utils';
+import { defineEnum } from '@nzyme/utils/defineEnum.js';
 
 import * as CountryTranslations from './Country.loc.js';
 

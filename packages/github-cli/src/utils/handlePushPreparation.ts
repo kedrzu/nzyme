@@ -1,4 +1,4 @@
-import type { Logger } from '@nzyme/logging';
+import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import { checkCurrentPrMerged } from './checkCurrentPrMerged.js';

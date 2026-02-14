@@ -1,4 +1,4 @@
-import { defineContext } from '@nzyme/vue-utils';
+import { defineContext } from '@nzyme/vue-utils/context.js';
 
 import type { ModalController } from './ModalTypes.js';
 

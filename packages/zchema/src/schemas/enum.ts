@@ -1,5 +1,5 @@
-import type { Primitive } from '@nzyme/types';
-import { identity } from '@nzyme/utils';
+import type { Primitive } from '@nzyme/types/Common.js';
+import { identity } from '@nzyme/utils/functions/identity.js';
 
 import { defineSchema } from '../defineSchema.js';
 import type {

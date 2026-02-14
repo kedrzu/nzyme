@@ -1,4 +1,4 @@
-import type { LoggerLevel } from '@nzyme/logging';
+import type { LoggerLevel } from '@nzyme/logging/LoggerLevel.js';
 
 /**
  * A log entry displayed in the log viewer.

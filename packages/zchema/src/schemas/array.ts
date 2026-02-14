@@ -1,4 +1,4 @@
-import { isIterable } from '@nzyme/utils';
+import { isIterable } from '@nzyme/utils/array/isIterable.js';
 
 import { defineSchema } from '../defineSchema.js';
 import type {

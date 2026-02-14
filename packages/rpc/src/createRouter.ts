@@ -1,8 +1,8 @@
-import type { HttpResponseHeaders } from '@nzyme/fetch-utils';
-import { HttpError } from '@nzyme/fetch-utils';
-import type { Container } from '@nzyme/ioc';
-import { createEventEmitter } from '@nzyme/utils';
-import type { EventEmitter } from '@nzyme/utils';
+import { HttpError } from '@nzyme/fetch-utils/HttpError.js';
+import type { HttpResponseHeaders } from '@nzyme/fetch-utils/HttpHeaders.js';
+import type { Container } from '@nzyme/ioc/Container.js';
+import { createEventEmitter } from '@nzyme/utils/createEventEmitter.js';
+import type { EventEmitter } from '@nzyme/utils/createEventEmitter.js';
 
 import type { Endpoint } from './defineEndpoint.js';
 import { HttpContextProvider } from './services/HttpContextProvider.js';

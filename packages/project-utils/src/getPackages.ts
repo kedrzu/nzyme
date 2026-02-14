@@ -1,5 +1,4 @@
-import { findRoot } from '@manypkg/find-root';
-import { DEFAULT_TOOLS } from '@manypkg/find-root';
+import { DEFAULT_TOOLS, findRoot } from '@manypkg/find-root';
 import type { PackageJson } from 'pkg-types';
 
 /**

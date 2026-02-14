@@ -1,16 +1,19 @@
 import type { Simplify } from './Common.js';
 
-export type KeysDeep<T extends Record<string | number, unknown>> = Simplify<
-    | keyof T
+/**
+ *
+ */
+export type KeysDeep<T extends Record<number | string, unknown>> = Simplify<
     | {
-          [K in keyof T]: K extends string | number ? KeysWithPrefix<K, T> : never;
+          [K in keyof T]: K extends number | string ? KeysWithPrefix<K, T> : never;
       }[keyof T]
+    | keyof T
 >;
 
-type KeysWithPrefix<P extends string | number, T> = {
-    [K in keyof T]: K extends string | number
+type KeysWithPrefix<P extends number | string, T> = {
+    [K in keyof T]: K extends number | string
         ? T[K] extends Record<string, unknown>
-            ? `${P}.${K}` | KeysWithPrefix<`${P}.${K}`, T[K]>
+            ? KeysWithPrefix<`${P}.${K}`, T[K]> | `${P}.${K}`
             : `${P}.${K}`
         : never;
 }[keyof T];

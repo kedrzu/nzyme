@@ -1,7 +1,7 @@
 import type { Ref } from 'vue';
 import { isRef, onScopeDispose, toValue, watch } from 'vue';
 
-import type { EventCallback, EventEmitter } from '@nzyme/utils';
+import type { EventCallback, EventEmitter } from '@nzyme/utils/createEventEmitter.js';
 
 type EventEmitterParam<E> = EventEmitter<E> | null | undefined;
 

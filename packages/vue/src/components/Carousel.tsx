@@ -1,30 +1,66 @@
+import { useVModel } from '@vueuse/core';
 import debounce from 'lodash.debounce';
 import { computed, defineComponent, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { JSX } from 'vue/jsx-runtime';
 
-import { useVModel } from '@vueuse/core';
-
-import { classProp, defineSlots, useElementClass, useIntersectionObserver, useSwipeHorizontal } from '@nzyme/vue-utils';
+import { classProp } from '@nzyme/vue-utils/classProp.js';
+import { defineSlots } from '@nzyme/vue-utils/slots.js';
+import { useElementClass } from '@nzyme/vue-utils/useElementClass.js';
+import { useIntersectionObserver } from '@nzyme/vue-utils/useIntersectionObserver.js';
+import { useSwipeHorizontal } from '@nzyme/vue-utils/useSwipeHorizontal.js';
 
 import css from './Carousel.module.scss';
 
+/**
+ *
+ */
 export type CarouselPage = {
+    /**
+     *
+     */
     elementFrom: number;
+    /**
+     *
+     */
     elementTo: number;
+    /**
+     *
+     */
     offset: number;
 };
 
+/**
+ *
+ */
 export type CarouselSlot = {
+    /**
+     *
+     */
     currentPage: number;
+    /**
+     *
+     */
     goToPage: (page: number) => void;
+    /**
+     *
+     */
     hasNext: boolean;
+    /**
+     *
+     */
     hasPrevious: boolean;
+    /**
+     *
+     */
     moveBy: (numberOfPages: number) => void;
     /** Array of carousel pages */
     pages: CarouselPage[];
 };
 
-export const Carousel = defineComponent({
+export /**
+ *
+ */
+const Carousel = defineComponent({
     name: 'Carousel',
     props: {
         page: { type: Number, default: 0 },
@@ -36,8 +72,19 @@ export const Carousel = defineComponent({
         mouse: { type: Boolean, default: true },
     },
     slots: defineSlots<{
+        /**
+         *
+         */
         default: CarouselSlot;
-        wrapper: CarouselSlot & { CarouselInner: () => JSX.Element };
+        /**
+         *
+         */
+        wrapper: CarouselSlot & {
+            /**
+             *
+             */
+            CarouselInner: () => JSX.Element;
+        };
     }>(),
     emits: {
         'update:page': (page: number) => page >= 0,

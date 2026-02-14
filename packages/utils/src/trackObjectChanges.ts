@@ -9,7 +9,7 @@ const changesSymbol = Symbol('changes');
  * @template T - The type of the object being tracked
  */
 type ChangeTracker<T> = T & {
-    [changesSymbol]: null | Partial<T>;
+    [changesSymbol]: Partial<T> | null;
 };
 
 /**
@@ -43,7 +43,7 @@ export function getObjectChanges<T>(obj: ChangeTracker<T>) {
  * ```
  */
 export function trackObjectChanges<T extends object>(entity: T): ChangeTracker<T> {
-    let changes: null | Partial<T> = null;
+    let changes: Partial<T> | null = null;
 
     const proxy = new Proxy(entity, {
         set(target, prop, value) {

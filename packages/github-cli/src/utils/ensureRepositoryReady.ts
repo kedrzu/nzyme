@@ -4,7 +4,7 @@ import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
 import { UsageError } from '@nzyme/cli';
-import type { Logger } from '@nzyme/logging';
+import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import { checkUnpushedCommits } from './checkUnpushedCommits.js';

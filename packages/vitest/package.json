@@ -17,6 +17,12 @@
         "./setup": {
             "import": "./dist/setup.js",
             "types": "./dist/setup.d.ts"
+        },
+        "./*.js": {
+            "types": "./dist/*.d.ts",
+            "import": "./dist/*.js",
+            "default": "./dist/*.js",
+            "source": "./src/*.ts"
         }
     },
     "files": [

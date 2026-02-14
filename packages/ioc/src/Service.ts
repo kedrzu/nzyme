@@ -1,6 +1,8 @@
 import type { RequiredKeysOf } from 'type-fest';
 
-import type { IfAny, IfLiteral, PartialOnUndefined, SomeObject } from '@nzyme/types';
+import type { SomeObject } from '@nzyme/types/Object.js';
+import type { PartialOnUndefined } from '@nzyme/types/PartialOnUndefined.js';
+import type { IfAny, IfLiteral } from '@nzyme/types/TypeGuards.js';
 
 import type { ContainerScope } from './ContainerScope.js';
 import { INJECTABLE_SYMBOL } from './Injectable.js';

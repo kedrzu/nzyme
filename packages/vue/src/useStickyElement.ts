@@ -1,11 +1,15 @@
+import { useIntervalFn } from '@vueuse/core';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 
-import { isBrowser } from '@nzyme/dom-utils';
-import type { ElementOrVue } from '@nzyme/vue-utils';
-import { makeRef, onElementScroll, onWindowResize, unwrapElement, useElement } from '@nzyme/vue-utils';
-import { useIntervalFn } from '@vueuse/core';
-import { waitFor } from '@nzyme/utils';
+import { isBrowser } from '@nzyme/dom-utils/isBrowser.js';
+import { waitFor } from '@nzyme/utils/waitFor.js';
+import { onElementScroll } from '@nzyme/vue-utils/onElementScroll.js';
+import { onWindowResize } from '@nzyme/vue-utils/onWindowResize.js';
+import { makeRef } from '@nzyme/vue-utils/reactivity/makeRef.js';
+import type { ElementOrVue } from '@nzyme/vue-utils/types.js';
+import { unwrapElement } from '@nzyme/vue-utils/unwrapElement.js';
+import { useElement } from '@nzyme/vue-utils/useElement.js';
 
 /**
  * Position of the sticky element.

@@ -1,7 +1,7 @@
 import type { SQSClient } from '@aws-sdk/client-sqs';
 import { SendMessageBatchCommand, SendMessageCommand } from '@aws-sdk/client-sqs';
 
-import { splitIntoChunks } from '@nzyme/utils';
+import { splitIntoChunks } from '@nzyme/utils/array/splitIntoChunks.js';
 
 /**
  * Options for sending a batch of messages to an SQS queue.

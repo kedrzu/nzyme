@@ -1,7 +1,10 @@
-import { concatKeys } from './concatKeys.js';
 import type { ValidationErrors, ValidationResult } from '../Validator.js';
+import { concatKeys } from './concatKeys.js';
 
-export function mergeErrors(errors: ValidationErrors, result: ValidationResult, key: string | number = '') {
+/**
+ *
+ */
+export function mergeErrors(errors: ValidationErrors, result: ValidationResult, key: number | string = '') {
     if (result == null) {
         return errors;
     }

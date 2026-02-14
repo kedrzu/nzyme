@@ -3,7 +3,7 @@ import enquirer from 'enquirer';
 import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
-import type { Logger } from '@nzyme/logging';
+import type { Logger } from '@nzyme/logging/Logger.js';
 
 import { checkUnpushedCommits } from './checkUnpushedCommits.js';
 import { getGitStatusInfo } from './getGitStatusInfo.js';

@@ -6,8 +6,9 @@ import { watch } from 'chokidar';
 import glob from 'fast-glob';
 import * as fsExtra from 'fs-extra';
 
-import { Command, Option } from '@nzyme/cli';
-import { isFileIgnored } from '@nzyme/project-utils';
+import { Option } from '@nzyme/cli';
+import { Command } from '@nzyme/cli/Command.js';
+import { isFileIgnored } from '@nzyme/project-utils/isFileIgnored.js';
 
 import { generateSchemaFromFile } from '../../generateSchema.js';
 import { getSchemaOutputPath } from '../../output/generateSchemaFile.js';

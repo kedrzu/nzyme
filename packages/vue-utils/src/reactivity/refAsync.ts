@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 
-import { writable } from '@nzyme/utils';
+import { writable } from '@nzyme/utils/writable.js';
 
 /**
  * Represents a reactive reference that is asynchronously populated with a promise result.

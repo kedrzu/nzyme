@@ -1,4 +1,4 @@
-import { phoneLink } from '@nzyme/utils';
+import { phoneLink } from '@nzyme/utils/phoneLink.js';
 
 import { slackLink } from './slackLink.js';
 

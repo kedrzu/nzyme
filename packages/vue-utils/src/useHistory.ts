@@ -1,4 +1,4 @@
-import { createEventEmitter } from '@nzyme/utils';
+import { createEventEmitter } from '@nzyme/utils/createEventEmitter.js';
 
 type HistoryState = Record<string, unknown>;
 
@@ -13,7 +13,7 @@ let history: ReturnType<typeof initializeHistory> | null = null;
  * @example
  * ```vue
  * <script setup lang="ts">
- * import { useHistory } from '@nzyme/vue-utils';
+ * import { useHistory } from '@nzyme/vue-utils/useHistory.js';
  *
  * const history = useHistory();
  *

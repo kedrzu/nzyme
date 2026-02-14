@@ -1,4 +1,4 @@
-import type { UUID } from '@nzyme/types';
+import type { UUID } from '@nzyme/types/Common.js';
 
 /**
  * Generates a random UUID v4 string.

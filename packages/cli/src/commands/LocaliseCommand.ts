@@ -6,8 +6,8 @@ import { Option } from 'clipanion';
 import glob from 'fast-glob';
 import * as fsExtra from 'fs-extra';
 
-import { compileTranslationFile } from '@nzyme/i18n-compiler';
-import { isFileIgnored } from '@nzyme/project-utils';
+import { compileTranslationFile } from '@nzyme/i18n-compiler/compileTranslationFile.js';
+import { isFileIgnored } from '@nzyme/project-utils/isFileIgnored.js';
 
 import { Command } from '../Command.js';
 

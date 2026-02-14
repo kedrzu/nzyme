@@ -1,6 +1,6 @@
 import debounce from 'lodash.debounce';
 
-import { mapNotNull } from '@nzyme/utils';
+import { mapNotNull } from '@nzyme/utils/array/mapNotNull.js';
 
 const queue: { el: Element; options?: ScrollIntoViewOptions }[] = [];
 

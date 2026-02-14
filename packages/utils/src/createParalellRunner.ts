@@ -77,7 +77,6 @@ export function createParalellRunner(options: ParalelllRunnerOptions) {
     async function startThread() {
         active++;
 
-        // eslint-disable-next-line no-constant-condition
         while (true) {
             if (done) {
                 stopThread();

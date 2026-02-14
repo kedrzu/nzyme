@@ -1,6 +1,6 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import { toJsonString } from '@nzyme/utils';
+import { toJsonString } from '@nzyme/utils/toJsonString.js';
 
 import { storageRef } from './storageRef.js';
 import type { StorageRefOptions } from './storageRef.js';
@@ -35,7 +35,9 @@ export interface StorageRefWithSchemaOptions<T> extends Omit<StorageRefOptions, 
  *
  * @example
  * ```ts
- * import { object, string, number } from '@nzyme/zchema';
+ * import { object } from '@nzyme/zchema/schemas/object.js';
+import { string } from '@nzyme/zchema/schemas/string.js';
+import { number } from '@nzyme/zchema/schemas/number.js';
  *
  * const userSchema = object({
  *   name: string(),

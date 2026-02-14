@@ -5,7 +5,9 @@ import type { NextHandleFunction } from 'connect';
 import getPort from 'get-port';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 
-import { createEventEmitter, createPromise, formatElapsedMs } from '@nzyme/utils';
+import { createEventEmitter } from '@nzyme/utils/createEventEmitter.js';
+import { createPromise } from '@nzyme/utils/createPromise.js';
+import { formatElapsedMs } from '@nzyme/utils/formatElapsedMs.js';
 
 /**
  *

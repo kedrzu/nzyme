@@ -1,19 +1,16 @@
 import chalk from 'chalk';
 
 import { UsageError } from '@nzyme/cli';
-import type { GithubClient } from '@nzyme/github-cli';
-import {
-    applyStashedChanges,
-    checkoutExistingBranch,
-    createBranchAndPr,
-    findMatchingPr,
-    handleBranchSelection,
-    handleMergedPrReopen,
-    syncBaseBranch,
-} from '@nzyme/github-cli';
-import type { BranchSelectionResult } from '@nzyme/github-cli';
-import type { GithubConfig } from '@nzyme/github-cli';
-import type { Logger } from '@nzyme/logging';
+import type { GithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';
+import { applyStashedChanges, handleBranchSelection } from '@nzyme/github-cli/utils/handleBranchSelection.js';
+import { checkoutExistingBranch } from '@nzyme/github-cli/utils/checkoutExistingBranch.js';
+import { createBranchAndPr } from '@nzyme/github-cli/utils/createBranchAndPr.js';
+import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
+import { handleMergedPrReopen } from '@nzyme/github-cli/utils/handleMergedPrReopen.js';
+import { syncBaseBranch } from '@nzyme/github-cli/utils/syncBaseBranch.js';
+import type { BranchSelectionResult } from '@nzyme/github-cli/utils/handleBranchSelection.js';
+import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
+import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { SentryApiClient } from './createSentryClient.js';
 import { getSentryIssue } from './getSentryIssue.js';

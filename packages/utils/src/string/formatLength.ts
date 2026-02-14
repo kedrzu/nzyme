@@ -1,7 +1,7 @@
 /**
  * Length unit for formatting measurements
  */
-export type LengthUnit = 'mm' | 'cm' | 'm' | 'km';
+export type LengthUnit = 'cm' | 'km' | 'm' | 'mm';
 
 const lengthFormat = new Intl.NumberFormat('pl-PL', {
     minimumFractionDigits: 0,
@@ -69,13 +69,13 @@ export function formatLength(value: number | null | undefined, unit?: LengthUnit
  */
 function normalizeLength(value: number, unit: LengthUnit) {
     switch (unit) {
-        case 'mm':
-            return value;
         case 'cm':
             return value * CENTIMETER;
-        case 'm':
-            return value * METER;
         case 'km':
             return value * KILOMETER;
+        case 'm':
+            return value * METER;
+        case 'mm':
+            return value;
     }
 }

@@ -1,9 +1,9 @@
-import { defineComponent, type SetupContext, type Slot, type SlotsType, type VNode } from 'vue';
+import { defineComponent } from 'vue';
+import type { SetupContext, Slot, SlotsType, VNode } from 'vue';
 
-import type { Translation, TranslationAny, TranslationParams } from '@nzyme/i18n';
-import type { EmptyObject } from '@nzyme/types';
+import type { Translation, TranslationAny, TranslationParams } from '@nzyme/i18n-core/Translation.js';
+import type { EmptyObject } from '@nzyme/types/EmptyObject.js';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface TranslateProps<T extends TranslationAny> {
     t: Translation<T>;
 }
@@ -46,7 +46,10 @@ const setup = <T extends TranslationAny>(props: TranslateProps<T>, ctx: Translat
     };
 };
 
-export const Translate = defineComponent(
+export /**
+ *
+ */
+const Translate = defineComponent(
     setup,
     // manual runtime props declaration is currently still needed.
     {

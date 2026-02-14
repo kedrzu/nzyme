@@ -1,6 +1,6 @@
 import type { App } from 'vue';
 
-import { CancelError } from '@nzyme/utils';
+import { CancelError } from '@nzyme/utils/CancelError.js';
 
 /**
  *

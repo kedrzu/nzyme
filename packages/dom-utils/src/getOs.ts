@@ -1,4 +1,4 @@
-import type { StringNonLiteral } from '@nzyme/types';
+import type { StringNonLiteral } from '@nzyme/types/Common.js';
 
 type OS = 'Android' | 'iOS' | 'Linux' | 'macOS' | 'Unknown' | 'Windows';
 

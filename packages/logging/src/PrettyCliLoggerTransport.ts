@@ -1,8 +1,10 @@
 import chalk from 'chalk';
 import { highlight } from 'cli-highlight';
 
-import { defineService } from '@nzyme/ioc';
-import { identity, parseStackTrace, toJsonString } from '@nzyme/utils';
+import { defineService } from '@nzyme/ioc/Service.js';
+import { identity } from '@nzyme/utils/functions/identity.js';
+import { parseStackTrace } from '@nzyme/utils/parseStackTrace.js';
+import { toJsonString } from '@nzyme/utils/toJsonString.js';
 
 import { ApplicationError } from './ApplicationError.js';
 import type { LoggerLevel } from './LoggerLevel.js';

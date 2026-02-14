@@ -5,8 +5,8 @@ import { $ } from 'execa';
 import glob from 'fast-glob';
 import { outputFile } from 'fs-extra';
 
-import type { Package } from '@nzyme/project-utils';
-import { getPackages } from '@nzyme/project-utils';
+import type { Package } from '@nzyme/project-utils/getPackages.js';
+import { getPackages } from '@nzyme/project-utils/getPackages.js';
 
 import { Command } from '../Command.js';
 

@@ -1,5 +1,7 @@
-import type { FunctionParams } from '@nzyme/types';
-import { asArray, createNamedFunction, identity } from '@nzyme/utils';
+import type { FunctionParams } from '@nzyme/types/FunctionParams.js';
+import { asArray } from '@nzyme/utils/array/asArray.js';
+import { createNamedFunction } from '@nzyme/utils/createNamedFunction.js';
+import { identity } from '@nzyme/utils/functions/identity.js';
 
 import type {
     Schema,

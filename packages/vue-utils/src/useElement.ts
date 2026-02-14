@@ -11,7 +11,7 @@ import type { Ref } from 'vue';
  * @example
  * ```vue
  * <script setup lang="ts">
- * import { useElement } from '@nzyme/vue-utils';
+ * import { useElement } from '@nzyme/vue-utils/useElement.js';
  *
  * // Generic element
  * const el = useElement();

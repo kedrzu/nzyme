@@ -1,6 +1,7 @@
 import { defineNuxtPlugin } from 'nuxt/app';
 
-import { createContainer, IocPlugin } from '@nzyme/vue-ioc';
+import { createContainer } from '@nzyme/vue-ioc/createContainer.js';
+import { IocPlugin } from '@nzyme/vue-ioc/IocPlugin.js';
 
 import { LocalDatabase } from '../services/LocalDatabase.js';
 import { LogStore } from '../services/LogStore.js';

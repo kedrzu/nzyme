@@ -39,10 +39,10 @@ interface User {
         const result = await parseTypeFile(filePath);
 
         expect(result.definitions).toHaveLength(1);
-        expect(result.definitions[0].name).toBe('User');
-        expect(ts.isInterfaceDeclaration(result.definitions[0].node)).toBe(true);
+        expect(result.definitions[0]!.name).toBe('User');
+        expect(ts.isInterfaceDeclaration(result.definitions[0]!.node)).toBe(true);
 
-        const interfaceNode = result.definitions[0].node as ts.InterfaceDeclaration;
+        const interfaceNode = result.definitions[0]!.node as ts.InterfaceDeclaration;
         expect(interfaceNode.members).toHaveLength(3);
     });
 
@@ -60,8 +60,8 @@ type Status = 'active' | 'inactive' | 'pending';
         const result = await parseTypeFile(filePath);
 
         expect(result.definitions).toHaveLength(1);
-        expect(result.definitions[0].name).toBe('Status');
-        expect(ts.isTypeAliasDeclaration(result.definitions[0].node)).toBe(true);
+        expect(result.definitions[0]!.name).toBe('Status');
+        expect(ts.isTypeAliasDeclaration(result.definitions[0]!.node)).toBe(true);
     });
 
     it('should parse multiple definitions in one file', async () => {
@@ -110,9 +110,9 @@ interface ApiResponse<T> {
         const result = await parseTypeFile(filePath);
 
         expect(result.definitions).toHaveLength(1);
-        expect(result.definitions[0].name).toBe('ApiResponse');
+        expect(result.definitions[0]!.name).toBe('ApiResponse');
 
-        const interfaceNode = result.definitions[0].node as ts.InterfaceDeclaration;
+        const interfaceNode = result.definitions[0]!.node as ts.InterfaceDeclaration;
         expect(interfaceNode.members).toHaveLength(3);
     });
 
@@ -154,7 +154,7 @@ interface ArrayExample {
         const result = await parseTypeFile(filePath);
 
         expect(result.definitions).toHaveLength(1);
-        expect(result.definitions[0].name).toBe('ArrayExample');
+        expect(result.definitions[0]!.name).toBe('ArrayExample');
     });
 
     it('should parse JSDoc comments correctly', async () => {
@@ -176,7 +176,7 @@ interface User {
         const result = await parseTypeFile(filePath);
 
         expect(result.definitions).toHaveLength(1);
-        expect(result.definitions[0].jsDoc).toBeDefined();
+        expect(result.definitions[0]!.jsDoc).toBeDefined();
     });
 
     it('should handle empty file', async () => {

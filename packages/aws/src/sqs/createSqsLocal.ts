@@ -1,4 +1,5 @@
-import { arrayRemove, findAndRemove } from '@nzyme/utils';
+import { arrayRemove } from '@nzyme/utils/array/arrayRemove.js';
+import { findAndRemove } from '@nzyme/utils/array/findAndRemove.js';
 
 import type { Queue, QueueMessage } from './types.js';
 

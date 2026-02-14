@@ -66,7 +66,7 @@ export function historyStateRef<T>(
  * @example
  * ```vue
  * <script setup lang="ts">
- * import { historyStateRef } from '@nzyme/vue-utils';
+ * import { historyStateRef } from '@nzyme/vue-utils/reactivity/historyStateRef.js';
  *
  * // With default value
  * const currentTab = historyStateRef({

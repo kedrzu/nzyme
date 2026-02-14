@@ -1,6 +1,7 @@
 import type { EmitsOptions, ObjectEmitsOptions } from 'vue';
 
-import type { RecordToUnion, UnionToIntersection } from '@nzyme/types';
+import type { RecordToUnion } from '@nzyme/types/Common.js';
+import type { UnionToIntersection } from '@nzyme/types/Union.js';
 
 import { useInstance } from './useInstance.js';
 
@@ -39,7 +40,7 @@ type EmitFn<Options = ObjectEmitsOptions, Event extends keyof Options = keyof Op
  * @example
  * ```vue
  * <script setup lang="ts">
- * import { useEmit } from '@nzyme/vue-utils';
+ * import { useEmit } from '@nzyme/vue-utils/useEmit.js';
  *
  * const emit = useEmit();
  *
@@ -61,7 +62,7 @@ export function useEmit(): EmitFn;
  * @example
  * ```vue
  * <script setup lang="ts">
- * import { useEmit } from '@nzyme/vue-utils';
+ * import { useEmit } from '@nzyme/vue-utils/useEmit.js';
  *
  * interface MyEmits {
  *   click: (id: number) => void;

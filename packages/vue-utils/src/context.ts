@@ -1,7 +1,7 @@
 import { inject, provide } from 'vue';
 import type { InjectionKey } from 'vue';
 
-import { identity } from '@nzyme/utils';
+import { identity } from '@nzyme/utils/functions/identity.js';
 
 export interface ContextConstructor<TParams extends unknown[], TContext> {
     (this: void, ...params: TParams): TContext;

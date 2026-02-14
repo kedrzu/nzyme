@@ -13,14 +13,15 @@
         ".": {
             "types": "./src/index.ts",
             "default": "./src/index.ts"
-        }
+        },
+        "./*.js": "./src/*.ts",
+        "./*.jsx": "./src/*.tsx",
+        "./*.vue": "./src/*.vue"
     },
     "files": [
         "dist"
     ],
     "scripts": {
-        "build:cjs": "tsc --build ./tsconfig.cjs.json",
-        "build:esm": "tsc --build ./tsconfig.esm.json",
         "typecheck": "tsc --noEmit --project tsconfig.check.json",
         "lint": "prettier ./src --write && yarn typecheck && eslint . --fix --cache"
     },

@@ -1,5 +1,5 @@
-import type { XmlElement } from '@nzyme/xml-utils';
-import { xmlParse } from '@nzyme/xml-utils';
+import { xmlParse } from '@nzyme/xml-utils/xmlParse.js';
+import type { XmlElement } from '@nzyme/xml-utils/xmlTypes.js';
 
 import { assertResponse } from './assertResponse.js';
 

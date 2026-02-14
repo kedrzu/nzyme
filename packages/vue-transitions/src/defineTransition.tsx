@@ -6,11 +6,12 @@ import type {
     TransitionProps as TransitionPropsVue,
 } from 'vue';
 
-import { onBeforeTransition } from './utils/onBeforeTransition.js';
+import type { SomeObject } from '@nzyme/types/Object.js';
+import type { ClassProp } from '@nzyme/vue-utils/classProp.js';
+import { defineProp } from '@nzyme/vue-utils/defineProp.js';
+
 import { onAfterTransition } from './utils/onAfterTransition.js';
-import type { SomeObject } from '@nzyme/types';
-import { defineProp } from '@nzyme/vue-utils';
-import type { ClassProp } from '@nzyme/vue-utils';
+import { onBeforeTransition } from './utils/onBeforeTransition.js';
 
 /**
  * Transition props.

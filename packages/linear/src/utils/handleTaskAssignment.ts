@@ -2,7 +2,7 @@ import type { LinearClient } from '@linear/sdk';
 import chalk from 'chalk';
 import enquirer from 'enquirer';
 
-import type { Logger } from '@nzyme/logging';
+import type { Logger } from '@nzyme/logging/Logger.js';
 
 /**
  * Handle task assignment logic - assign to current user if unassigned, or ask user if reassign.

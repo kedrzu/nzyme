@@ -1,4 +1,4 @@
-import { identity } from '@nzyme/utils';
+import { identity } from '@nzyme/utils/functions/identity.js';
 
 import { defineSchema } from '../defineSchema.js';
 import type {

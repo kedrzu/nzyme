@@ -1,4 +1,5 @@
-import { defineInterface, defineService } from '@nzyme/ioc';
+import { defineInterface } from '@nzyme/ioc/Interface.js';
+import { defineService } from '@nzyme/ioc/Service.js';
 
 import type { LoggerObject } from './Logger.js';
 import type { LoggerLevel } from './LoggerLevel.js';

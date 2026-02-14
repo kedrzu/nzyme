@@ -1,11 +1,14 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
 
-import type { CommandClass } from '@nzyme/cli';
-import { Command, Option, UsageError } from '@nzyme/cli';
-import { getAllDeps, isDependentOn, sortByDependency } from '@nzyme/ioc';
-import type { Logger } from '@nzyme/logging';
-import { forEachParalell } from '@nzyme/utils';
+import type { CommandClass } from '@nzyme/cli/Command.js';
+import { Option, UsageError } from '@nzyme/cli';
+import { Command } from '@nzyme/cli/Command.js';
+import { getAllDeps } from '@nzyme/ioc/utils/getAllDeps.js';
+import { isDependentOn } from '@nzyme/ioc/utils/isDependentOn.js';
+import { sortByDependency } from '@nzyme/ioc/utils/sortByDependency.js';
+import type { Logger } from '@nzyme/logging/Logger.js';
+import { forEachParalell } from '@nzyme/utils/array/forEachParalell.js';
 
 import { cancelStack } from '../cancelStack.js';
 import { createOrSelectStack } from '../createOrSelectStack.js';

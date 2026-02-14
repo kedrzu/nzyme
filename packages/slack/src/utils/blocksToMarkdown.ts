@@ -1,6 +1,6 @@
 import type { Block, KnownBlock } from '@slack/web-api';
 
-import { mapNotNull } from '@nzyme/utils';
+import { mapNotNull } from '@nzyme/utils/array/mapNotNull.js';
 
 /**
  * Converts an array of Slack blocks to markdown format

@@ -2,22 +2,21 @@ import chalk from 'chalk';
 import enquirer from 'enquirer';
 import open from 'open';
 
-import type { CommandClass } from '@nzyme/cli';
-import { Command, Option, UsageError } from '@nzyme/cli';
-import {
-    commitAndPushPendingChanges,
-    convertAllPrsToReady,
-    createGithubClient,
-    fetchAndRebaseCurrentBranch,
-    findMatchingPr,
-    getCurrentBranch,
-    handlePushPreparation,
-    openPrInBrowser,
-    pushSubmoduleUpdates,
-    refreshSubmodules,
-    syncBaseBranch,
-} from '@nzyme/github-cli';
-import type { GithubConfig } from '@nzyme/github-cli';
+import type { CommandClass } from '@nzyme/cli/Command.js';
+import { Option, UsageError } from '@nzyme/cli';
+import { Command } from '@nzyme/cli/Command.js';
+import { commitAndPushPendingChanges } from '@nzyme/github-cli/utils/commitAndPushPendingChanges.js';
+import { convertAllPrsToReady } from '@nzyme/github-cli/utils/convertAllPrsToReady.js';
+import { createGithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';
+import { fetchAndRebaseCurrentBranch } from '@nzyme/github-cli/utils/fetchAndRebaseCurrentBranch.js';
+import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
+import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
+import { handlePushPreparation } from '@nzyme/github-cli/utils/handlePushPreparation.js';
+import { openPrInBrowser } from '@nzyme/github-cli/utils/selectPrToOpen.js';
+import { pushSubmoduleUpdates } from '@nzyme/github-cli/utils/pushSubmoduleUpdates.js';
+import { refreshSubmodules } from '@nzyme/github-cli/utils/refreshSubmodules.js';
+import { syncBaseBranch } from '@nzyme/github-cli/utils/syncBaseBranch.js';
+import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
 
 import { createLinearClient } from '../utils/createLinearClient.js';
 import { createLinearIssue } from '../utils/createLinearIssue.js';

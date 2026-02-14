@@ -2,8 +2,8 @@
  * Core types for OpenAPI fetch client
  */
 
-import type { HttpMethod } from '@nzyme/fetch-utils';
-import type { IfNever } from '@nzyme/types';
+import type { HttpMethod } from '@nzyme/fetch-utils/HttpMethod.js';
+import type { IfNever } from '@nzyme/types/TypeGuards.js';
 
 /**
  * Extract paths from OpenAPI schema

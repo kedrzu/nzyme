@@ -3,7 +3,7 @@ import type { IncomingMessage, RequestListener, ServerResponse } from 'http';
 import type { NextFunction } from 'connect';
 import { parsePath, parseQuery } from 'ufo';
 
-import type { HttpMethod } from '@nzyme/fetch-utils';
+import type { HttpMethod } from '@nzyme/fetch-utils/HttpMethod.js';
 
 import type { Router } from './createRouter.js';
 

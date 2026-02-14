@@ -1,4 +1,5 @@
-import type { Component, ComponentProps } from '@nzyme/vue-utils';
+import type { Component } from '@nzyme/vue-utils/component.js';
+import type { ComponentProps } from '@nzyme/vue-utils/types.js';
 
 import type { ModalPropsBase } from './useModalProps.js';
 

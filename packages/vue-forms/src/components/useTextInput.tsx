@@ -1,8 +1,10 @@
 import { h } from 'vue';
 import type { InputHTMLAttributes } from 'vue';
 
-import { assignProps } from '@nzyme/utils';
-import { defineProps, useEmit, useProps } from '@nzyme/vue-utils';
+import { assignProps } from '@nzyme/utils/assignProps.js';
+import { defineProps } from '@nzyme/vue-utils/defineProps.js';
+import { useEmit } from '@nzyme/vue-utils/useEmit.js';
+import { useProps } from '@nzyme/vue-utils/useProps.js';
 
 import { defineFormField } from './defineFormField.js';
 

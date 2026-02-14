@@ -1,4 +1,4 @@
-import { defineService } from '@nzyme/ioc';
+import { defineService } from '@nzyme/ioc/Service.js';
 
 import { LoggerTransport } from './LoggerTransport.js';
 import { getPrettyPrefix } from './utils/getPrettyPrefix.js';

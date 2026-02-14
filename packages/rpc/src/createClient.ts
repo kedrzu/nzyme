@@ -1,8 +1,8 @@
-import { FetchError } from '@nzyme/fetch-utils';
-import type { HttpRequestHeaders } from '@nzyme/fetch-utils';
-import type { UnionToIntersection } from '@nzyme/types';
-import type { Json } from '@nzyme/utils';
-import { toJsonString } from '@nzyme/utils';
+import { FetchError } from '@nzyme/fetch-utils/FetchError.js';
+import type { HttpRequestHeaders } from '@nzyme/fetch-utils/HttpHeaders.js';
+import type { UnionToIntersection } from '@nzyme/types/Union.js';
+import type { Json } from '@nzyme/utils/toJson.js';
+import { toJsonString } from '@nzyme/utils/toJsonString.js';
 
 import type { Endpoint } from './defineEndpoint.js';
 import { RpcError } from './types/RpcError.js';

@@ -14,18 +14,9 @@
             "types": "./src/index.ts",
             "default": "./src/index.ts"
         },
-        "./*.js": {
-            "types": "./src/*.ts",
-            "import": "./src/*.ts",
-            "default": "./src/*.ts",
-            "source": "./src/*.ts"
-        },
-        "./*.vue": {
-            "types": "./src/*.vue",
-            "import": "./src/*.vue",
-            "default": "./src/*.vue",
-            "source": "./src/*.vue"
-        }
+        "./*.js": "./src/*.ts",
+        "./*.jsx": "./src/*.tsx",
+        "./*.vue": "./src/*.vue"
     },
     "files": [
         "dist"

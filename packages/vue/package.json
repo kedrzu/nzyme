@@ -18,24 +18,9 @@
         "./shims": {
             "types": "./src/shims.d.ts"
         },
-        "./*.js": {
-            "types": "./src/*.ts",
-            "import": "./src/*.ts",
-            "default": "./src/*.ts",
-            "source": "./src/*.ts"
-        },
-        "./*.jsx": {
-            "types": "./src/*.tsx",
-            "import": "./src/*.tsx",
-            "default": "./src/*.tsx",
-            "source": "./src/*.tsx"
-        },
-        "./*.vue": {
-            "types": "./src/*.vue",
-            "import": "./src/*.vue",
-            "default": "./src/*.vue",
-            "source": "./src/*.vue"
-        }
+        "./*.js": "./src/*.ts",
+        "./*.jsx": "./src/*.tsx",
+        "./*.vue": "./src/*.vue"
     },
     "main": "./src/index.ts",
     "types": "./src/index.ts",

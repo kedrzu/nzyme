@@ -9,8 +9,8 @@ import type { Writable } from '@nzyme/types/Common.js';
 import { arrayRemove } from '@nzyme/utils/array/arrayRemove.js';
 import { CancelError } from '@nzyme/utils/CancelError.js';
 import { createPromise } from '@nzyme/utils/createPromise.js';
-import { onKeyUp } from '@nzyme/vue-utils/onKeyUp.js';
 import { provideContext } from '@nzyme/vue-utils/context.js';
+import { onKeyUp } from '@nzyme/vue-utils/onKeyUp.js';
 import { reactive } from '@nzyme/vue-utils/reactivity/reactive.js';
 
 import { ModalContext } from './ModalContext.js';

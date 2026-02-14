@@ -1,6 +1,9 @@
+/**
+ *
+ */
 export function concatKeys(
-    first: string | number | null | undefined,
-    second: string | null | undefined | number,
+    first: number | string | null | undefined,
+    second: number | string | null | undefined,
 ): string {
     if (second == null || second === '') {
         return String(first);

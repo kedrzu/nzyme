@@ -1,10 +1,19 @@
 import jsdocPlugin from 'eslint-plugin-jsdoc';
 import { defineConfig } from 'eslint/config';
 
+/**
+ *
+ */
 export interface JsdocOptions {
+    /**
+     *
+     */
     ignores?: string[];
 }
 
+/**
+ *
+ */
 export function jsdoc(options: JsdocOptions = {}) {
     return defineConfig({
         plugins: {

@@ -34,7 +34,6 @@ export function forEachParalell<T>(array: readonly T[], params: ForEachParalellP
         async function start() {
             active++;
 
-            // eslint-disable-next-line no-constant-condition
             while (true) {
                 if (done) {
                     return;

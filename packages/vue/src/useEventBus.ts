@@ -2,7 +2,7 @@ import { getCurrentInstance, onActivated, onBeforeUnmount, onDeactivated } from 
 
 import { isBrowser } from '@nzyme/dom-utils/isBrowser.js';
 
-type EventCallback<T = void> = (arg: T) => void | Promise<void>;
+type EventCallback<T = void> = (arg: T) => Promise<void> | void;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const eventHandlers = new Map<string, EventCallback<any>[]>();
@@ -24,10 +24,22 @@ interface EventBusVoid {
     emit(): void;
 }
 
-export function useEventBus(event: string): EventBusVoid;
-export function useEventBus<T>(event: string): EventBusSingle<T>;
-export function useEventBus(): EventBus;
-export function useEventBus(event?: string): EventBus | EventBusVoid | EventBusSingle<unknown> {
+export /**
+ *
+ */
+function useEventBus(event: string): EventBusVoid;
+export /**
+ *
+ */
+function useEventBus<T>(event: string): EventBusSingle<T>;
+export /**
+ *
+ */
+function useEventBus(): EventBus;
+/**
+ *
+ */
+export function useEventBus(event?: string): EventBus | EventBusSingle<unknown> | EventBusVoid {
     const vm = getCurrentInstance();
 
     if (!isBrowser()) {

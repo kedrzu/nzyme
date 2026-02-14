@@ -23,6 +23,9 @@ class Nullish extends AsymmetricMatcher<void> {
     }
 }
 
+/**
+ *
+ */
 export function nullish<T>(matcher?: AsymmetricMatcher<void>) {
     if (!matcher) {
         matcher = expect.anything() as AsymmetricMatcher<void>;

@@ -1,6 +1,6 @@
 import type { HttpResponseHeaders } from '@nzyme/fetch-utils/HttpHeaders.js';
-import { ContextProvider } from '@nzyme/ioc/services/ContextProvider.js';
 import { defineService } from '@nzyme/ioc/Service.js';
+import { ContextProvider } from '@nzyme/ioc/services/ContextProvider.js';
 
 import type { HttpRequest } from '../types/HttpRequest.js';
 

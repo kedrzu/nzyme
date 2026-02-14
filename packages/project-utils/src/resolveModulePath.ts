@@ -1,8 +1,17 @@
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
-export function resolveModulePath(meta: ImportMeta): (moduleName: string) => string;
-export function resolveModulePath(moduleName: string, meta?: ImportMeta): string;
+export /**
+ *
+ */
+function resolveModulePath(meta: ImportMeta): (moduleName: string) => string;
+export /**
+ *
+ */
+function resolveModulePath(moduleName: string, meta?: ImportMeta): string;
+/**
+ *
+ */
 export function resolveModulePath(moduleOrMeta: string | ImportMeta, meta?: ImportMeta) {
     if (typeof moduleOrMeta !== 'string') {
         meta = moduleOrMeta;

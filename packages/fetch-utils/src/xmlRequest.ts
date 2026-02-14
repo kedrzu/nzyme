@@ -1,5 +1,5 @@
-import type { XmlElement } from '@nzyme/xml-utils/xmlTypes.js';
 import { xmlStringify } from '@nzyme/xml-utils/xmlStringify.js';
+import type { XmlElement } from '@nzyme/xml-utils/xmlTypes.js';
 
 import type { FetchRequest } from './fetchRequest.js';
 

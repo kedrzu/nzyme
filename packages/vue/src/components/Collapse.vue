@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { getCurrentInstance, vShow, ComponentPublicInstance } from 'vue';
+import type { ComponentPublicInstance } from 'vue';
+import { getCurrentInstance, vShow } from 'vue';
 
 import { prop } from '../prop';
-
 import css from './Collapse.module.scss';
 import { LazyHydrate } from './LazyHydrate';
 
@@ -33,24 +33,32 @@ const lazyHydrate =
   vm?.vnode.el != null;
 
 function beforeEnter(el: Element) {
-  if (DEBUG) console.warn('beforeEnter', el);
+  if (DEBUG) {
+    console.warn('beforeEnter', el);
+  }
   zeroHeight(el as HTMLElement);
 }
 
 function enter(el: Element) {
-  if (DEBUG) console.warn('enter', el);
+  if (DEBUG) {
+    console.warn('enter', el);
+  }
   fixedHeight(el as HTMLElement);
   emit('heightChange', el.scrollHeight);
 }
 
 function afterEnter(el: Element) {
-  if (DEBUG) console.warn('afterEnter', el);
+  if (DEBUG) {
+    console.warn('afterEnter', el);
+  }
   autoHeight(el as HTMLElement);
   emit('afterEnter');
 }
 
 function leave(el: Element) {
-  if (DEBUG) console.warn('leave', el);
+  if (DEBUG) {
+    console.warn('leave', el);
+  }
   fixedHeight(el as HTMLElement);
 
   requestAnimationFrame(() => {
@@ -60,59 +68,69 @@ function leave(el: Element) {
 }
 
 function afterLeave(el: Element) {
-  if (DEBUG) console.warn('afterLeave', el);
+  if (DEBUG) {
+    console.warn('afterLeave', el);
+  }
   autoHeight(el as HTMLElement);
 }
 
 function fixedHeight(el: HTMLElement) {
   el.style.height = `${el.scrollHeight}px`;
   el.style.overflow = 'hidden';
-  if (DEBUG) console.warn('fixedHeight', el);
+  if (DEBUG) {
+    console.warn('fixedHeight', el);
+  }
   forceRepaint(el);
 }
 
 function autoHeight(el: HTMLElement) {
   el.style.overflow = '';
   el.style.height = '';
-  if (DEBUG) console.warn('autoHeight', el);
+  if (DEBUG) {
+    console.warn('autoHeight', el);
+  }
   forceRepaint(el);
 }
 
 function zeroHeight(el: HTMLElement) {
   el.style.height = '0';
-  if (DEBUG) console.warn('zeroHeight', el);
+  if (DEBUG) {
+    console.warn('zeroHeight', el);
+  }
   forceRepaint(el);
 }
 
 function forceRepaint(el: Element) {
   // Force repaint to make sure the
   // animation is triggered correctly.
-  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+
   const height = getComputedStyle(el).height;
-  if (DEBUG) console.warn('forceRepaint', el, height);
+  if (DEBUG) {
+    console.warn('forceRepaint', el, height);
+  }
 }
 </script>
 
 <template>
   <LazyHydrate
     v-if="lazyHydrate"
-    :whenTriggered="props.show"
+    :when-triggered="props.show"
   >
     <Transition
-      :enterFromClass="css.enterFrom"
-      :enterActiveClass="css.enterActive"
-      :leaveFromClass="css.leaveFrom"
-      :leaveActiveClass="css.leaveActive"
-      @beforeEnter="beforeEnter"
-      @enter="enter"
-      @afterEnter="afterEnter"
-      @eave="leave"
-      @afterLeave="afterLeave"
+      :enter-from-class="css.enterFrom"
+      :enter-active-class="css.enterActive"
+      :leave-from-class="css.leaveFrom"
+      :leave-active-class="css.leaveActive"
       appear
+      @before-enter="beforeEnter"
+      @enter="enter"
+      @after-enter="afterEnter"
+      @eave="leave"
+      @after-leave="afterLeave"
     >
       <div
-        :class="css.collapse"
         v-show="props.show"
+        :class="css.collapse"
       >
         <slot />
       </div>
@@ -120,19 +138,19 @@ function forceRepaint(el: Element) {
   </LazyHydrate>
   <Transition
     v-else
-    :enterFromClass="css.enterFrom"
-    :enterActiveClass="css.enterActive"
-    :leaveFromClass="css.leaveFrom"
-    :leaveActiveClass="css.leaveActive"
-    @beforeEnter="beforeEnter"
+    :enter-from-class="css.enterFrom"
+    :enter-active-class="css.enterActive"
+    :leave-from-class="css.leaveFrom"
+    :leave-active-class="css.leaveActive"
+    @before-enter="beforeEnter"
     @enter="enter"
-    @afterEnter="afterEnter"
+    @after-enter="afterEnter"
     @eave="leave"
-    @afterLeave="afterLeave"
+    @after-leave="afterLeave"
   >
     <div
-      :class="css.collapse"
       v-show="props.show"
+      :class="css.collapse"
     >
       <slot />
     </div>

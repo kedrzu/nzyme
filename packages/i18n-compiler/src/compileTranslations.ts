@@ -1,8 +1,8 @@
 import type { Pair, ParsedNode, Range } from 'yaml';
 import { isMap, isScalar, parseDocument } from 'yaml';
 
-import * as pluralization from '@nzyme/i18n-core/pluralizationRules.js';
 import type { Pluralization } from '@nzyme/i18n-core/pluralization.js';
+import * as pluralization from '@nzyme/i18n-core/pluralizationRules.js';
 import { fixOrphans } from '@nzyme/typography/fixOrphans.js';
 import { capitalizeFirstLetter } from '@nzyme/utils/string/caseUtils.js';
 
@@ -17,19 +17,57 @@ const INDENT = '  ';
 // JavaScript reserved words that cannot be used as variable names
 const RESERVED_WORDS = new Set([
     // Keywords
-    'break', 'case', 'catch', 'continue', 'debugger', 'default', 'delete',
-    'do', 'else', 'finally', 'for', 'function', 'if', 'in', 'instanceof',
-    'new', 'return', 'switch', 'this', 'throw', 'try', 'typeof', 'var',
-    'void', 'while', 'with',
+    'break',
+    'case',
+    'catch',
+    'continue',
+    'debugger',
+    'default',
+    'delete',
+    'do',
+    'else',
+    'finally',
+    'for',
+    'function',
+    'if',
+    'in',
+    'instanceof',
+    'new',
+    'return',
+    'switch',
+    'this',
+    'throw',
+    'try',
+    'typeof',
+    'var',
+    'void',
+    'while',
+    'with',
     // Future reserved words
-    'class', 'const', 'enum', 'export', 'extends', 'import', 'super',
+    'class',
+    'const',
+    'enum',
+    'export',
+    'extends',
+    'import',
+    'super',
     // Strict mode reserved words
-    'implements', 'interface', 'let', 'package', 'private', 'protected',
-    'public', 'static', 'yield',
+    'implements',
+    'interface',
+    'let',
+    'package',
+    'private',
+    'protected',
+    'public',
+    'static',
+    'yield',
     // Literals
-    'null', 'true', 'false',
+    'null',
+    'true',
+    'false',
     // Additional reserved identifiers
-    'await', 'async',
+    'await',
+    'async',
 ]);
 
 /**

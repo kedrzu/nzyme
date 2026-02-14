@@ -9,7 +9,6 @@ import type { Immutable } from '@nzyme/types/Immutable.js';
  * @__NO_SIDE_EFFECTS__
  */
 export function getLastItem<T>(array: Immutable<T[]>): Immutable<T> | undefined;
-
 /**
  * Returns the last element of an array.
  *
@@ -19,7 +18,6 @@ export function getLastItem<T>(array: Immutable<T[]>): Immutable<T> | undefined;
  * @__NO_SIDE_EFFECTS__
  */
 export function getLastItem<T>(array: T[]): T | undefined;
-
 export function getLastItem<T>(array: Immutable<T[]>) {
     return array[array.length - 1];
 }

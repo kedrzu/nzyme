@@ -1,3 +1,6 @@
+/**
+ *
+ */
 export interface DownloadFileOptions {
     /**
      * The content to download.

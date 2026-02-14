@@ -7,7 +7,7 @@
  * @param map - The function to apply to each element, which may return null or undefined
  * @returns An array containing only the non-null mapped values
  */
-export function mapNotNull<T1, T2>(array: Iterable<T1>, map: (item: T1, index: number) => null | T2 | undefined) {
+export function mapNotNull<T1, T2>(array: Iterable<T1>, map: (item: T1, index: number) => T2 | null | undefined) {
     const result: T2[] = [];
 
     let i = 0;

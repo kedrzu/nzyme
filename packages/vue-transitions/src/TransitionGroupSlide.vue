@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { TransitionGroup } from 'vue';
-
 /**
  * Props for TransitionList component
  */

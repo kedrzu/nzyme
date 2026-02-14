@@ -1,3 +1,6 @@
+/**
+ *
+ */
 export type Tuple<
     T1 = void,
     T2 = void,
@@ -31,6 +34,9 @@ export type Tuple<
         : [T1, T2, T3, T4, T5, T6, T7, T8, T9]
     : [T1, T2, T3, T4, T5, T6, T7, T8, T9, T10];
 
+/**
+ *
+ */
 export type TupleBase<T = any> = Tuple<
     T | void,
     T | void,
@@ -43,4 +49,7 @@ export type TupleBase<T = any> = Tuple<
     T | void,
     T | void
 >;
+/**
+ *
+ */
 export type TupleValue<T extends TupleBase> = T[keyof T];

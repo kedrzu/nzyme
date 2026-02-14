@@ -1,1 +1,4 @@
-export const PLN_SYMBOL = 'zł';
+export /**
+ *
+ */
+const PLN_SYMBOL = 'zł';

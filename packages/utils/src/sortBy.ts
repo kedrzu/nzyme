@@ -3,7 +3,7 @@
  */
 export interface SortOptions {
     /** The order to sort in (ascending or descending) */
-    order?: null | SortOrder;
+    order?: SortOrder | null;
     /** Whether to ignore case when comparing strings */
     ignoreCase?: boolean;
 }

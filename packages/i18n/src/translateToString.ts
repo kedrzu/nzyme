@@ -4,12 +4,10 @@ import type { Translation } from '@nzyme/i18n-core/Translation.js';
  * Translate a key.
  */
 export function translateToString(translation: Translation, lang: string): string;
-
 /**
  * Translate a key with parameters.
  */
 export function translateToString<T>(translation: Translation<T>, lang: string, params: T): string;
-
 /**
  * Translate a key.
  */

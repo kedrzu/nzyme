@@ -1,7 +1,10 @@
-import css from './TransitionFade.module.scss';
 import { defineTransition } from './defineTransition.js';
+import css from './TransitionFade.module.scss';
 
-export const TransitionFade = defineTransition({
+export /**
+ *
+ */
+const TransitionFade = defineTransition({
     name: 'TransitionFade',
     enterFromClass: css.fadeInactive,
     leaveToClass: css.fadeInactive,

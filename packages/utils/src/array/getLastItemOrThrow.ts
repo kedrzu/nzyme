@@ -10,7 +10,6 @@ import type { Immutable } from '@nzyme/types/Immutable.js';
  * @__NO_SIDE_EFFECTS__
  */
 export function getLastItemOrThrow<T>(array: T[]): T;
-
 /**
  * Returns the last element of an array.
  *
@@ -21,7 +20,6 @@ export function getLastItemOrThrow<T>(array: T[]): T;
  * @__NO_SIDE_EFFECTS__
  */
 export function getLastItemOrThrow<T>(array: Immutable<T[]>): Immutable<T>;
-
 export function getLastItemOrThrow<T>(array: Immutable<T[]>) {
     if (!array.length) {
         throw new Error('Collection is empty');

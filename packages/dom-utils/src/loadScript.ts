@@ -1,10 +1,4 @@
 const CACHE_SYMBOL = Symbol('script-cache');
-type ScriptCache = {
-    [CACHE_SYMBOL]?: {
-        [key: string]: Promise<void> | undefined;
-    };
-};
-
 /**
  * Options for {@link loadScript}.
  */
@@ -14,6 +8,12 @@ export interface LoadScriptOptions {
      */
     document?: Document;
 }
+
+type ScriptCache = {
+    [CACHE_SYMBOL]?: {
+        [key: string]: Promise<void> | undefined;
+    };
+};
 
 /**
  * Loads a JavaScript file into the page by creating a script tag.

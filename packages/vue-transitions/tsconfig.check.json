@@ -4,6 +4,6 @@
         "noEmit": true,
         "rootDir": "."
     },
-    "include": ["./src/**/*.ts"],
+    "include": ["./src/**/*.ts", "./src/**/*.tsx", "./src/**/*.json", "./src/**/*.scss", "./src/**/*.vue"],
     "exclude": []
 }

@@ -13,7 +13,7 @@ import type { Ref } from 'vue';
  * ```ts
  * const user = ref({ name: 'John', age: 30 });
  * const name = nestedRef(user, 'name');
- * 
+ *
  * console.log(name.value); // 'John'
  * name.value = 'Jane'; // Updates user.value.name
  * ```
@@ -31,7 +31,7 @@ export function nestedRef<T, K extends keyof T>(ref: Ref<T>, key: K): Ref<T[K]>;
  * ```ts
  * const user = readonly(ref({ name: 'John', age: 30 }));
  * const name = nestedRef(user, 'name');
- * 
+ *
  * console.log(name.value); // 'John'
  * // name.value = 'Jane'; // TypeScript error - readonly
  * ```

@@ -28,7 +28,7 @@
         "dist"
     ],
     "dependencies": {
-        "@linear/sdk": "^65.2.0",
+        "@linear/sdk": "^75.0.0",
         "@nzyme/cli": "^0.14.0",
         "@nzyme/github-cli": "^0.14.0",
         "@nzyme/logging": "^0.14.0",

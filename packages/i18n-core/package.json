@@ -33,14 +33,14 @@
         "lint": "prettier ./src --write && yarn typecheck && eslint . --fix --cache"
     },
     "dependencies": {
-        "@nzyme/ioc": "^0.14.0"
+        "@nzyme/ioc": "0.14.0"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.14.0",
-        "@nzyme/tsconfig": "^0.14.0",
-        "eslint": "^9.39.2",
-        "prettier": "^3.8.1",
-        "typescript": "^5.9.3"
+        "@nzyme/eslint": "0.14.0",
+        "@nzyme/tsconfig": "0.14.0",
+        "eslint": "9.39.2",
+        "prettier": "3.8.1",
+        "typescript": "5.9.3"
     },
     "publishConfig": {
         "access": "public"

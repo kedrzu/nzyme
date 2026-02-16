@@ -33,21 +33,21 @@
         "lint": "prettier ./src --write && yarn typecheck && eslint . --fix --cache"
     },
     "dependencies": {
-        "@nzyme/dom-utils": "^0.14.0",
-        "@nzyme/types": "^0.14.0",
-        "@nzyme/utils": "^0.14.0",
-        "@nzyme/zchema": "^0.14.0",
-        "@standard-schema/spec": "^1.1.0",
-        "lodash.debounce": "^4.0.8",
-        "vue": "^3.5.28"
+        "@nzyme/dom-utils": "0.14.0",
+        "@nzyme/types": "0.14.0",
+        "@nzyme/utils": "0.14.0",
+        "@nzyme/zchema": "0.14.0",
+        "@standard-schema/spec": "1.1.0",
+        "lodash.debounce": "4.0.8",
+        "vue": "3.5.27"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.14.0",
-        "@nzyme/tsconfig": "^0.14.0",
-        "@types/lodash.debounce": "^4.0.9",
-        "eslint": "^9.39.2",
-        "prettier": "^3.8.1",
-        "typescript": "^5.9.3"
+        "@nzyme/eslint": "0.14.0",
+        "@nzyme/tsconfig": "0.14.0",
+        "@types/lodash.debounce": "4.0.9",
+        "eslint": "9.39.2",
+        "prettier": "3.8.1",
+        "typescript": "5.9.3"
     },
     "publishConfig": {
         "access": "public"

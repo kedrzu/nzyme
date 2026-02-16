@@ -33,7 +33,7 @@
         "lint": "prettier ./src --write && yarn typecheck && eslint . --fix --cache"
     },
     "dependencies": {
-        "fast-xml-parser": "5.3.4"
+        "fast-xml-parser": "5.3.6"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",

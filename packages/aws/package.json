@@ -31,10 +31,10 @@
         "lint": "prettier ./src --write && yarn typecheck && eslint . --fix --cache"
     },
     "dependencies": {
-        "@aws-sdk/client-cloudfront": "3.984.0",
-        "@aws-sdk/client-dynamodb": "3.984.0",
-        "@aws-sdk/client-s3": "3.984.0",
-        "@aws-sdk/client-sqs": "3.984.0",
+        "@aws-sdk/client-cloudfront": "3.990.0",
+        "@aws-sdk/client-dynamodb": "3.990.0",
+        "@aws-sdk/client-s3": "3.990.0",
+        "@aws-sdk/client-sqs": "3.990.0",
         "@nzyme/fetch-utils": "0.14.0",
         "@nzyme/ioc": "0.14.0",
         "@nzyme/logging": "0.14.0",

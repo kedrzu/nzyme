@@ -57,10 +57,10 @@ export type CarouselSlot = {
     pages: CarouselPage[];
 };
 
-export /**
+/**
  *
  */
-const Carousel = defineComponent({
+export const Carousel = defineComponent({
     name: 'Carousel',
     props: {
         page: { type: Number, default: 0 },

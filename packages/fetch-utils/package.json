@@ -35,7 +35,7 @@
     "dependencies": {
         "@nzyme/types": "0.14.0",
         "@nzyme/xml-utils": "0.14.0",
-        "fast-xml-parser": "5.3.4",
+        "fast-xml-parser": "5.3.6",
         "ufo": "1.6.3"
     },
     "devDependencies": {

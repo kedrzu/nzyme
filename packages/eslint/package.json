@@ -31,7 +31,7 @@
     },
     "dependencies": {
         "@eslint/js": "9.39.2",
-        "@typescript-eslint/parser": "8.50.0",
+        "@typescript-eslint/parser": "8.55.0",
         "eslint": "9.39.2",
         "eslint-config-prettier": "10.1.8",
         "eslint-plugin-import": "2.32.0",
@@ -44,8 +44,8 @@
         "eslint-plugin-workspaces": "0.11.1",
         "globals": "17.3.0",
         "jsonc-eslint-parser": "2.4.2",
-        "typescript-eslint": "8.50.0",
-        "vue-eslint-parser": "10.2.0"
+        "typescript-eslint": "8.55.0",
+        "vue-eslint-parser": "10.4.0"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "0.14.0",

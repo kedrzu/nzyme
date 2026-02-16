@@ -147,10 +147,10 @@ export type DhlTrackingGetParams = {
 };
 
 // https://developer.dhl.com/api-reference/shipment-tracking#reference-docs-section
-export /**
+/**
  *
  */
-const DhlTrackingGet = defineEndpoint({
+export const DhlTrackingGet = defineEndpoint({
     request: (params: DhlTrackingGetParams) => ({
         url: `${params.apiUrl}/track/shipments`,
         query: params,

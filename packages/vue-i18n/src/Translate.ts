@@ -46,10 +46,10 @@ const setup = <T extends TranslationAny>(props: TranslateProps<T>, ctx: Translat
     };
 };
 
-export /**
+/**
  *
  */
-const Translate = defineComponent(
+export const Translate = defineComponent(
     setup,
     // manual runtime props declaration is currently still needed.
     {

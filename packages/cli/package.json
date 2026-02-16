@@ -43,7 +43,7 @@
         "chalk": "5.6.2",
         "chokidar": "5.0.0",
         "clipanion": "4.0.0-rc.4",
-        "comment-json": "4.5.0",
+        "comment-json": "4.5.1",
         "compare-versions": "6.1.1",
         "depcheck": "1.4.7",
         "enquirer": "2.4.1",
@@ -53,13 +53,13 @@
         "latest-version": "9.0.0",
         "lodash.merge": "4.6.2",
         "source-map-support": "0.5.21",
-        "type-fest": "5.4.3"
+        "type-fest": "5.4.4"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",
         "@nzyme/tsconfig": "0.14.0",
         "@types/lodash.merge": "4.6.9",
-        "@types/node": "25.2.1",
+        "@types/node": "25.2.3",
         "@types/source-map-support": "0.5.10",
         "eslint": "9.39.2",
         "prettier": "3.8.1",

@@ -2,6 +2,7 @@ import { joinURL, withQuery } from 'ufo';
 
 import type { HttpMethod } from '@nzyme/fetch-utils/HttpMethod.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
+import type { BodyInit } from 'undici-types';
 
 import type { ContentTypeOf, OpenApiFetchOptions, OpenApiFetchResponse, OperationOf } from './types.js';
 
@@ -71,7 +72,7 @@ export function createOpenApiFetch<Paths>(config: OpenApiFetchConfig = {}) {
             fetchOptions = {},
         } = options;
 
-        let body = options.body as object | BodyInit | null | undefined;
+        let body = options.body;
 
         // Build URL
         const finalBaseUrl = requestBaseUrl ?? baseUrl;
@@ -158,7 +159,7 @@ export function createOpenApiFetch<Paths>(config: OpenApiFetchConfig = {}) {
                     }
                 }
 
-                body = formData;
+                body = formData as BodyInit;
             }
         }
 
@@ -167,7 +168,7 @@ export function createOpenApiFetch<Paths>(config: OpenApiFetchConfig = {}) {
             method,
             headers,
             redirect: 'manual',
-            body: body as BodyInit | undefined,
+            body: body as BodyInit | null | undefined,
             ...fetchOptions,
         });
 

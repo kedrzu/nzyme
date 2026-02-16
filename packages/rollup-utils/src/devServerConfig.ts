@@ -7,7 +7,7 @@ import sourcemapsPlugin from 'rollup-plugin-sourcemaps';
 
 import { unwrapCjsDefaultImport } from '@nzyme/esm/unwrapCjsDefaultImport.js';
 
-import { isFileExternal } from './isFileExternal.js';
+import { resolveExternalsPlugin } from './plugins/resolveExternalsPlugin.js';
 import { watchFilesPlugin } from './plugins/watchFilesPlugin.js';
 
 /**
@@ -48,6 +48,7 @@ export function devServerConfig(options: DevServerConfigOptions): RollupOptions 
             sourcemap: true,
         },
         plugins: [
+            resolveExternalsPlugin(),
             nodeResolve({
                 preferBuiltins: true,
                 extensions: ['.js', '.mjs', '.ts', '.tsx', '.json'],
@@ -59,8 +60,5 @@ export function devServerConfig(options: DevServerConfigOptions): RollupOptions 
             unwrapCjsDefaultImport(json)(),
             ts && unwrapCjsDefaultImport(typescript)(),
         ],
-        external: source => {
-            return isFileExternal(source);
-        },
     };
 }

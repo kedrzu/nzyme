@@ -11,8 +11,6 @@ import { isFileIgnored } from '@nzyme/project-utils/isFileIgnored.js';
 
 import { Command } from '../Command.js';
 
-const I18N_REGEX = /\.loc\.ya?ml$/;
-
 /**
  *
  */
@@ -59,17 +57,9 @@ export class LocaliseCommand extends Command {
     }
 
     private startWatcher() {
-        const watcher = watch('.', {
+        const watcher = watch('**/*.loc.{yaml,yml}', {
             cwd: this.cwd,
-            ignored: file => {
-                const ignored = isFileIgnored(file);
-                if (ignored === false) {
-                    // It is a non-ignored file, so we need to check if it matches the I18N regex
-                    return !I18N_REGEX.test(file);
-                }
-
-                return !!ignored;
-            },
+            ignored: file => !!isFileIgnored(file),
             ignoreInitial: true,
             persistent: true,
         });
@@ -82,20 +72,12 @@ export class LocaliseCommand extends Command {
     }
 
     private async onAddFile(file: string) {
-        if (!I18N_REGEX.test(file)) {
-            return;
-        }
-
         await this.compileFile(file, f => {
             this.logger.info(`Compiled ${chalk.green(f)}`);
         });
     }
 
     private async onDeleteFile(file: string) {
-        if (!I18N_REGEX.test(file)) {
-            return;
-        }
-
         const outputPath = this.toTypesScriptPath(file);
         await fsExtra.remove(outputPath);
     }
@@ -132,6 +114,6 @@ export class LocaliseCommand extends Command {
     }
 
     private toTypesScriptPath(file: string) {
-        return file.replace(I18N_REGEX, '.loc.ts');
+        return file.replace(/\.loc\.ya?ml$/, '.loc.ts');
     }
 }

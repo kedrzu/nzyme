@@ -11,6 +11,11 @@ interface ExportsConditions {
 
 type ExportsEntry = string | ExportsConditions;
 
+interface ResolvedPackage {
+    dir: string;
+    json: PackageJson;
+}
+
 /**
  * Rollup plugin that resolves external npm packages to their full filesystem
  * paths. This makes the output self-contained and not dependent on runtime
@@ -46,15 +51,14 @@ export function resolveExternalsPlugin(): Plugin {
             // Parse the bare specifier into package name and subpath
             const { pkgName, subpath } = parsePackageSpecifier(source);
 
-            // Use createRequire to find the package directory from the importer's location
-            const pkgDir = findPackageDir(pkgName, importer);
+            // Find the package and resolve the entry point
+            const pkg = findPackage(pkgName, importer);
 
-            if (!pkgDir || !pkgDir.includes('/node_modules/')) {
+            if (!pkg || !pkg.dir.includes('/node_modules/')) {
                 return;
             }
 
-            // Resolve to the ESM entry point
-            const resolved = resolveEsmEntry(pkgDir, subpath);
+            const resolved = resolveEntry(pkg, subpath);
 
             if (!resolved) {
                 return;
@@ -65,11 +69,13 @@ export function resolveExternalsPlugin(): Plugin {
     };
 }
 
-function findPackageDir(pkgName: string, importer: string): string | null {
+function findPackage(pkgName: string, importer: string): ResolvedPackage | null {
     try {
         const req = createRequire(importer);
         const pkgJsonPath = req.resolve(pkgName + '/package.json');
-        return path.dirname(pkgJsonPath);
+        const dir = path.dirname(pkgJsonPath);
+        const json = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8')) as PackageJson;
+        return { dir, json };
     } catch {
         // package.json not exported — try resolving any entry to find the package
         try {
@@ -78,10 +84,11 @@ function findPackageDir(pkgName: string, importer: string): string | null {
             // Walk up to find the package.json
             let dir = path.dirname(resolved);
             while (dir !== path.dirname(dir)) {
-                if (fs.existsSync(path.join(dir, 'package.json'))) {
-                    const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')) as PackageJson;
-                    if (pkg.name === pkgName) {
-                        return dir;
+                const pkgJsonPath = path.join(dir, 'package.json');
+                if (fs.existsSync(pkgJsonPath)) {
+                    const json = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8')) as PackageJson;
+                    if (json.name === pkgName) {
+                        return { dir, json };
                     }
                 }
                 dir = path.dirname(dir);
@@ -93,14 +100,11 @@ function findPackageDir(pkgName: string, importer: string): string | null {
     }
 }
 
-function resolveEsmEntry(pkgDir: string, subpath: string): string | null {
-    const pkgJsonPath = path.join(pkgDir, 'package.json');
-    const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8')) as PackageJson;
-
+function resolveEntry(pkg: ResolvedPackage, subpath: string): string | null {
     // Try exports map first — most reliable for modern packages
-    const exportsEntry = resolveExportsEntry(pkgJson, subpath);
+    const exportsEntry = resolveExportsEntry(pkg.json, subpath);
     if (exportsEntry) {
-        return path.join(pkgDir, exportsEntry);
+        return path.join(pkg.dir, exportsEntry);
     }
 
     // For root entry without exports map, prefer module (ESM) over main (CJS).
@@ -108,18 +112,19 @@ function resolveEsmEntry(pkgDir: string, subpath: string): string | null {
     // `type: "module"` or the entry is an .mjs file. Otherwise `module` may
     // point to bundler-only ESM with extensionless imports (e.g., @aws-sdk).
     if (subpath === '.') {
-        if (pkgJson.module && isNodeEsm(pkgJson)) {
-            return path.join(pkgDir, pkgJson.module);
+        if (pkg.json.module && isNodeEsm(pkg.json)) {
+            return path.join(pkg.dir, pkg.json.module);
         }
-        if (pkgJson.main) {
-            return path.join(pkgDir, pkgJson.main);
+        if (pkg.json.main) {
+            return path.join(pkg.dir, pkg.json.main);
         }
     }
 
     // Last resort: use createRequire to resolve
     try {
+        const pkgJsonPath = path.join(pkg.dir, 'package.json');
         const req = createRequire(pkgJsonPath);
-        const source = pkgJson.name! + (subpath === '.' ? '' : '/' + subpath.slice(2));
+        const source = pkg.json.name! + (subpath === '.' ? '' : '/' + subpath.slice(2));
         return req.resolve(source);
     } catch {
         return null;

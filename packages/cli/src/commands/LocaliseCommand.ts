@@ -1,9 +1,9 @@
+import fs from 'fs/promises';
 import * as path from 'path';
 
 import chalk from 'chalk';
 import { watch } from 'chokidar';
 import { Option } from 'clipanion';
-import glob from 'fast-glob';
 import * as fsExtra from 'fs-extra';
 
 import { compileTranslationFile } from '@nzyme/i18n-compiler/compileTranslationFile.js';
@@ -32,10 +32,7 @@ export class LocaliseCommand extends Command {
      * Execute the command.
      */
     override async run() {
-        const files = await glob('**/*.loc.{yaml,yml}', {
-            cwd: this.cwd,
-            ignore: ['node_modules', 'dist'],
-        });
+        const files = await this.findTranslationFiles(this.cwd);
 
         let count = 0;
         const results = await Promise.all(files.map(file => this.compileFile(file, () => count++)));
@@ -106,6 +103,33 @@ export class LocaliseCommand extends Command {
         } catch (error) {
             this.logger.error(`Failed to compile ${file}`, { error });
             return false;
+        }
+    }
+
+    /**
+     * We use a custom walker to find translation files because glob causes OOM.
+     */
+    private async findTranslationFiles(dir: string) {
+        const files: string[] = [];
+        await this.walkDirectory(dir, files);
+        return files;
+    }
+
+    private async walkDirectory(dir: string, results: string[]) {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+
+            if (isFileIgnored(fullPath)) {
+                continue;
+            }
+
+            if (entry.isDirectory()) {
+                await this.walkDirectory(fullPath, results);
+            } else if (entry.isFile() && /\.loc\.ya?ml$/.test(entry.name)) {
+                results.push(path.relative(this.cwd, fullPath));
+            }
         }
     }
 

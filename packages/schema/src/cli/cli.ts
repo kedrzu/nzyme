@@ -1,4 +1,4 @@
-#!/usr/bin/env node --enable-source-maps
+#!/usr/bin/env bun --enable-source-maps
 
 import { execute } from '@nzyme/cli/execute.js';
 import { initialize } from '@nzyme/cli/initialize.js';

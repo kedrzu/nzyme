@@ -82,7 +82,7 @@ export function compileFunction(options: CompileFunctionOptions) {
         });
 
         worker.on('error', err => {
-            reject(err);
+            reject(err as Error);
             void worker.terminate();
         });
 

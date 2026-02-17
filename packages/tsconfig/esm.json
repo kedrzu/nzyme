@@ -28,7 +28,7 @@
         "resolveJsonModule": true,
         "incremental": true,
         "importHelpers": true,
-        "preserveSymlinks": true
+        "preserveSymlinks": false
     },
     "exclude": ["node_modules"]
 }

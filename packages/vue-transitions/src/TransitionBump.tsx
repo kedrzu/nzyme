@@ -1,10 +1,13 @@
 import { defineTransition } from './defineTransition.js';
 import css from './TransitionBump.module.scss';
 
-export /**
+/**
+ * A transition that bumps the element up and down when it enters and leaves the viewport.
  *
+ * @param props - The props for the transition.
+ * @returns The transition component.
  */
-const TransitionBump = defineTransition({
+export const TransitionBump = defineTransition({
     name: 'TransitionBump',
     enterActiveClass: css.bumpEnterActive,
     leaveActiveClass: css.bumpLeaveActive,

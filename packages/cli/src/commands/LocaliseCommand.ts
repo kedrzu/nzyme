@@ -1,17 +1,15 @@
+import fs from 'fs/promises';
 import * as path from 'path';
 
 import chalk from 'chalk';
 import { watch } from 'chokidar';
 import { Option } from 'clipanion';
-import glob from 'fast-glob';
 import * as fsExtra from 'fs-extra';
 
 import { compileTranslationFile } from '@nzyme/i18n-compiler/compileTranslationFile.js';
 import { isFileIgnored } from '@nzyme/project-utils/isFileIgnored.js';
 
 import { Command } from '../Command.js';
-
-const I18N_REGEX = /\.loc\.ya?ml$/;
 
 /**
  *
@@ -34,10 +32,7 @@ export class LocaliseCommand extends Command {
      * Execute the command.
      */
     override async run() {
-        const files = await glob('**/*.loc.{yaml,yml}', {
-            cwd: this.cwd,
-            ignore: ['node_modules', 'dist'],
-        });
+        const files = await this.findTranslationFiles(this.cwd);
 
         let count = 0;
         const results = await Promise.all(files.map(file => this.compileFile(file, () => count++)));
@@ -59,17 +54,9 @@ export class LocaliseCommand extends Command {
     }
 
     private startWatcher() {
-        const watcher = watch('.', {
+        const watcher = watch('**/*.loc.{yaml,yml}', {
             cwd: this.cwd,
-            ignored: file => {
-                const ignored = isFileIgnored(file);
-                if (ignored === false) {
-                    // It is a non-ignored file, so we need to check if it matches the I18N regex
-                    return !I18N_REGEX.test(file);
-                }
-
-                return !!ignored;
-            },
+            ignored: file => !!isFileIgnored(file),
             ignoreInitial: true,
             persistent: true,
         });
@@ -82,20 +69,12 @@ export class LocaliseCommand extends Command {
     }
 
     private async onAddFile(file: string) {
-        if (!I18N_REGEX.test(file)) {
-            return;
-        }
-
         await this.compileFile(file, f => {
             this.logger.info(`Compiled ${chalk.green(f)}`);
         });
     }
 
     private async onDeleteFile(file: string) {
-        if (!I18N_REGEX.test(file)) {
-            return;
-        }
-
         const outputPath = this.toTypesScriptPath(file);
         await fsExtra.remove(outputPath);
     }
@@ -127,11 +106,38 @@ export class LocaliseCommand extends Command {
         }
     }
 
+    /**
+     * We use a custom walker to find translation files because glob causes OOM.
+     */
+    private async findTranslationFiles(dir: string) {
+        const files: string[] = [];
+        await this.walkDirectory(dir, files);
+        return files;
+    }
+
+    private async walkDirectory(dir: string, results: string[]) {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+
+            if (isFileIgnored(fullPath)) {
+                continue;
+            }
+
+            if (entry.isDirectory()) {
+                await this.walkDirectory(fullPath, results);
+            } else if (entry.isFile() && /\.loc\.ya?ml$/.test(entry.name)) {
+                results.push(path.relative(this.cwd, fullPath));
+            }
+        }
+    }
+
     private toAbsolute(file: string) {
         return path.isAbsolute(file) ? file : path.join(this.cwd, file);
     }
 
     private toTypesScriptPath(file: string) {
-        return file.replace(I18N_REGEX, '.loc.ts');
+        return file.replace(/\.loc\.ya?ml$/, '.loc.ts');
     }
 }

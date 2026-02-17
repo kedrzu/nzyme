@@ -44,26 +44,31 @@
         "lint": "prettier ./src --write && yarn typecheck && eslint . --fix --cache"
     },
     "dependencies": {
-        "@nzyme/dom-utils": "^0.14.0",
-        "@nzyme/i18n": "^0.14.0",
-        "@nzyme/money": "^0.14.0",
-        "@nzyme/types": "^0.14.0",
-        "@nzyme/utils": "^0.14.0",
-        "@nzyme/validation": "^0.14.0",
-        "@nzyme/vue-i18n": "^0.14.0",
-        "@nzyme/vue-utils": "^0.14.0",
-        "@vueuse/core": "^14.1.0",
-        "libphonenumber-js": "^1.12.33",
-        "postal-codes-js": "^2.5.2",
-        "vue": "^3.5.27",
-        "vue-imask": "^7.6.1"
+        "@nzyme/dom-utils": "0.14.0",
+        "@nzyme/i18n": "0.14.0",
+        "@nzyme/i18n-core": "0.14.0",
+        "@nzyme/money": "0.14.0",
+        "@nzyme/types": "0.14.0",
+        "@nzyme/utils": "0.14.0",
+        "@nzyme/validation": "0.14.0",
+        "@nzyme/vue-i18n": "0.14.0",
+        "@nzyme/vue-utils": "0.14.0",
+        "@vueuse/core": "14.2.1",
+        "imask": "7.6.1",
+        "libphonenumber-js": "1.12.36",
+        "postal-codes-js": "2.5.2",
+        "vue": "3.5.28",
+        "vue-imask": "7.6.1",
+        "vue-router": "5.0.2"
     },
     "devDependencies": {
-        "@nzyme/eslint": "^0.14.0",
-        "@nzyme/tsconfig": "^0.14.0",
-        "eslint": "^9.39.2",
-        "prettier": "^3.8.1",
-        "typescript": "^5.9.3"
+        "@nzyme/eslint": "0.14.0",
+        "@nzyme/tsconfig": "0.14.0",
+        "@types/node": "25.2.3",
+        "eslint": "9.39.2",
+        "prettier": "3.8.1",
+        "typescript": "5.9.3",
+        "vite": "7.3.1"
     },
     "publishConfig": {
         "access": "public"

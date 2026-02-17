@@ -1,34 +1,29 @@
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
-export /**
- *
- */
-function resolveModulePath(meta: ImportMeta): (moduleName: string) => string;
-export /**
- *
- */
-function resolveModulePath(moduleName: string, meta?: ImportMeta): string;
 /**
  *
  */
-export function resolveModulePath(moduleOrMeta: string | ImportMeta, meta?: ImportMeta) {
-    if (typeof moduleOrMeta !== 'string') {
-        meta = moduleOrMeta;
-        return (moduleName: string) => resolveModulePath(moduleName, meta);
+export function resolveModulePath(moduleName: string, cwd: string): string;
+/**
+ *
+ */
+export function resolveModulePath(moduleName: string, meta?: ImportMeta): string;
+/**
+ *
+ */
+export function resolveModulePath(moduleName: string, metaOrCwd?: string | ImportMeta) {
+    if (typeof metaOrCwd === 'string') {
+        return createRequire(metaOrCwd).resolve(moduleName);
+    }
+
+    if (metaOrCwd) {
+        return fileURLToPath(metaOrCwd.resolve(moduleName));
     }
 
     if (typeof require !== 'undefined') {
-        return require.resolve(moduleOrMeta);
+        return require.resolve(moduleName);
     }
 
-    if (!meta) {
-        meta = import.meta;
-    }
-
-    if (meta.resolve) {
-        return fileURLToPath(meta.resolve(moduleOrMeta));
-    }
-
-    return createRequire(meta.url).resolve(moduleOrMeta);
+    return fileURLToPath(import.meta.resolve(moduleName));
 }

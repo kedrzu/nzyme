@@ -8,6 +8,7 @@ export * from './onRollupWarning.js';
 export * from './plugins/dotenvPlugin.js';
 export * from './plugins/normalizeBuiltinsPlugin.js';
 export * from './plugins/packageJsonPlugin.js';
+export * from './plugins/resolveExternalsPlugin.js';
 export * from './plugins/watchFilesPlugin.js';
 export * from './rollupCompile.js';
 export * from './shouldWatch.js';

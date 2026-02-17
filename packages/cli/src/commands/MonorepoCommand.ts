@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
+import { createRequire } from 'node:module';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
 import chalk from 'chalk';
 import { watch } from 'chokidar';
@@ -435,7 +435,8 @@ function resolveTsConfigPath(cwd: string, filePath: string) {
         return path.resolve(cwd, filePath);
     }
 
-    return fileURLToPath(import.meta.resolve(filePath));
+    const require = createRequire(path.join(cwd, 'noop.js'));
+    return require.resolve(filePath);
 }
 
 function getNzymeConfig(pkg: Package) {

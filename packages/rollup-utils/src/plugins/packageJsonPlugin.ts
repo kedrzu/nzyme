@@ -28,7 +28,7 @@ export type PackageJsonPluginOptions = {
  * self-contained bundles that include their dependencies.
  *
  * @param options - Configuration options for the plugin
- * @returns A Rollup plugin that generates package.json and yarn.lock files
+ * @returns A Rollup plugin that generates package.json and bun.lock files
  */
 export function packageJsonPlugin(options: PackageJsonPluginOptions = {}): Plugin {
     const importMeta = options.importMeta ?? import.meta;
@@ -61,7 +61,7 @@ export function packageJsonPlugin(options: PackageJsonPluginOptions = {}): Plugi
 
             this.emitFile({
                 type: 'asset',
-                fileName: 'yarn.lock',
+                fileName: 'bun.lock',
                 source: '',
             });
         },

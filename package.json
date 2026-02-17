@@ -11,20 +11,20 @@
         "packages/*"
     ],
     "scripts": {
-        "build": "yarn build:esm && yarn build:cjs",
+        "build": "bun build:esm && bun build:cjs",
         "build:esm": "tsc --build",
         "build:cjs": "nzyme build cjs",
         "build:turbo": "turbo run build:esm build:cjs",
         "clean": "del \"**/dist\" \"**/dist-cjs\" \"**/.turbo\" \"**/.tsbuildinfo\" \"**/*.tsbuildinfo\" \"!**/node_modules/**\"",
         "coverage": "vitest run --coverage",
-        "dev": "yarn && yarn monorepo && yarn watch",
-        "groundup": "yarn && yarn clean &&yarn setup && yarn build",
+        "dev": "bun && bun monorepo && bun watch",
+        "groundup": "bun && bun clean &&bun setup && bun build",
         "monorepo": "nzyme monorepo",
         "release": "nx release --yes",
-        "setup": "turbo run build:esm --filter=@nzyme/cli && yarn monorepo",
+        "setup": "turbo run build:esm --filter=@nzyme/cli && bun monorepo",
         "test": "vitest run",
-        "update": "yarn upgrade-interactive",
-        "update:self": "yarn set version berry",
+        "update": "bun upgrade-interactive",
+        "update:self": "bun set version berry",
         "watch": "tsc --build --watch"
     },
     "dependencies": {

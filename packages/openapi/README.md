@@ -12,7 +12,7 @@ A simple, type-safe OpenAPI fetch client for TypeScript projects.
 ## Installation
 
 ```bash
-yarn add @nzyme/openapi
+bun add @nzyme/openapi
 ```
 
 ## Usage

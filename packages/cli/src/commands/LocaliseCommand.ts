@@ -11,6 +11,8 @@ import { isFileIgnored } from '@nzyme/project-utils/isFileIgnored.js';
 
 import { Command } from '../Command.js';
 
+const I18N_REGEX = /\.loc\.ya?ml$/;
+
 /**
  *
  */
@@ -54,9 +56,17 @@ export class LocaliseCommand extends Command {
     }
 
     private startWatcher() {
-        const watcher = watch('**/*.loc.{yaml,yml}', {
+        const watcher = watch('.', {
             cwd: this.cwd,
-            ignored: file => !!isFileIgnored(file),
+            ignored: file => {
+                const ignored = isFileIgnored(file);
+                if (ignored === false) {
+                    // It is a non-ignored file, so we need to check if it matches the I18N regex
+                    return !I18N_REGEX.test(file);
+                }
+
+                return !!ignored;
+            },
             ignoreInitial: true,
             persistent: true,
         });

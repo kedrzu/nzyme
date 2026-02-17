@@ -22,10 +22,11 @@
         }
     },
     "bin": {
-        "nzyme": "dist/cli.js"
+        "nzyme": "bin/cli.js"
     },
     "files": [
-        "dist"
+        "dist",
+        "bin"
     ],
     "scripts": {
         "typecheck": "tsc --noEmit --project tsconfig.check.json",

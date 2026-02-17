@@ -1,4 +1,4 @@
-#!/usr/bin/env node --enable-source-maps
+#!/usr/bin/env -S bun --enable-source-maps --conditions=source
 
 import { loadEnvVariables } from '@nzyme/project-utils/loadEnvVariables.js';
 

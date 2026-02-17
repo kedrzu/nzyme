@@ -60,12 +60,17 @@ export class LocaliseCommand extends Command {
             cwd: this.cwd,
             ignored: file => {
                 const ignored = isFileIgnored(file);
-                if (ignored === false) {
-                    // It is a non-ignored file, so we need to check if it matches the I18N regex
-                    return !I18N_REGEX.test(file);
+                if (ignored === true) {
+                    return true;
                 }
 
-                return !!ignored;
+                if (ignored === undefined) {
+                    // It is a non-ignored directory - let chokidar traverse into it
+                    return false;
+                }
+
+                // It is a non-ignored file - check if it matches the I18N regex
+                return !I18N_REGEX.test(file);
             },
             ignoreInitial: true,
             persistent: true,

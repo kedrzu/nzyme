@@ -25,6 +25,13 @@ export function createClientMock<E extends Endpoint, O = void>(options: CreateCl
 
             const endpointMock = target[endpoint];
             if (!endpointMock) {
+                // Return undefined for implicit property probes (e.g. `then`, `toJSON`)
+                // that libraries perform when normalizing values via Promise resolution
+                // or serialization. Only actual endpoint invocations should fail.
+                if (!(endpoint in target)) {
+                    return undefined;
+                }
+
                 throw new Error(`Endpoint ${endpoint} not mocked!`);
             }
 

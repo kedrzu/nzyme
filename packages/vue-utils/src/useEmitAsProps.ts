@@ -3,9 +3,15 @@ import { camelize, getCurrentInstance, toHandlerKey } from 'vue';
 /**
  *
  */
+type CamelizeString<S extends string> = S extends `${infer T}-${infer U}`
+    ? `${T}${CamelizeString<Capitalize<U>>}`
+    : S;
+
 export type EmitAsProps<E extends object = Record<string, (...args: unknown[]) => unknown>> = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [K in keyof E as K extends string ? `on${Capitalize<K>}` : never]: E[K] extends (...args: any[]) => unknown
+    [K in keyof E as K extends string ? `on${Capitalize<CamelizeString<K>>}` : never]: E[K] extends (
+        ...args: any[]
+    ) => unknown
         ? (...args: Parameters<E[K]>) => void
         : never;
 };

@@ -79,6 +79,10 @@ function getLevelStyle(level: LoggerLevel): LevelStyle {
  * Toggle row expansion.
  */
 function toggleRow(log: LogEntry): void {
+  if (!isExpandable(log)) {
+    return;
+  }
+
   if (expandedRows.value[log.id]) {
     delete expandedRows.value[log.id];
   } else {

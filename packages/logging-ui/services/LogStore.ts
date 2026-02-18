@@ -199,8 +199,8 @@ export const LogStore = defineService({
          * Logs at this level or more severe are shown.
          * Pass null to clear the filter (show all levels).
          */
-        function setMinLevel(path: string, level: LoggerLevel | null): void {
-            if (level === null) {
+        function setMinLevel(path: string, level: LoggerLevel | 'none' | null): void {
+            if (level === null || level === 'trace') {
                 // Remove config - show all levels
                 const newConfigs = new Map(loggerConfigs.value);
                 newConfigs.delete(path);
@@ -222,7 +222,7 @@ export const LogStore = defineService({
         /**
          * Get the minimum log level for a logger, or null if no filter is set.
          */
-        function getMinLevel(path: string): LoggerLevel | null {
+        function getMinLevel(path: string): LoggerLevel | 'none' | null {
             const config = loggerConfigs.value.get(path);
             return config?.minLevel ?? null;
         }

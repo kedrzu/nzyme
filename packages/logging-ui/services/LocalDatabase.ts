@@ -24,8 +24,8 @@ export interface LoggerPath {
 export interface LoggerConfig {
     /** Primary key: "app" or "app/logger" format */
     path: string;
-    /** Minimum level to display. Logs at this level or more severe are shown. */
-    minLevel: LoggerLevel;
+    /** Minimum level to display. Logs at this level or more severe are shown. 'none' hides all. */
+    minLevel: LoggerLevel | 'none';
 }
 
 /** Severity ranking: lower number = more severe. */
@@ -129,6 +129,9 @@ export type LocalDatabase = Resolved<typeof LocalDatabase>;
 export function isLevelDisabled(config: LoggerConfig | undefined, level: LoggerLevel): boolean {
     if (!config || !config.minLevel) {
         return false;
+    }
+    if (config.minLevel === 'none') {
+        return true;
     }
     return LEVEL_SEVERITY[level] > LEVEL_SEVERITY[config.minLevel];
 }

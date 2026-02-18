@@ -1,43 +1,42 @@
 <script lang="ts" setup>
 import type { LoggerLevel } from '@nzyme/logging/LoggerLevel.js';
 import { useService } from '@nzyme/vue-ioc/useService.js';
-import { ArrowLeft } from 'lucide-vue-next';
+import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowLeft,
+  Ban,
+  Bug,
+  Info,
+  Search,
+} from 'lucide-vue-next';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import SelectButton from 'primevue/selectbutton';
-import { computed } from 'vue';
+import { computed, type Component } from 'vue';
 
-import { LOG_LEVELS, LogStore } from '../services/LogStore.js';
+import { LogStore } from '../services/LogStore.js';
 
 const logStore = useService(LogStore);
 
+type LevelOptionValue = LoggerLevel | 'none';
+
 interface LevelOption {
   label: string;
-  value: LoggerLevel;
+  value: LevelOptionValue;
   color: string;
+  icon: Component;
 }
 
-const levelOptions: LevelOption[] = LOG_LEVELS.map(level => ({
-  label: level.toUpperCase(),
-  value: level,
-  color: getLevelColor(level),
-}));
-
-function getLevelColor(level: LoggerLevel): string {
-  switch (level) {
-    case 'error':
-      return '#dc2626';
-    case 'warn':
-      return '#d97706';
-    case 'info':
-      return '#2563eb';
-    case 'debug':
-      return '#6b7280';
-    case 'trace':
-      return '#9ca3af';
-  }
-}
+const levelOptions: LevelOption[] = [
+  { label: 'TRACE', value: 'trace', color: '#9ca3af', icon: Search },
+  { label: 'DEBUG', value: 'debug', color: '#6b7280', icon: Bug },
+  { label: 'INFO', value: 'info', color: '#2563eb', icon: Info },
+  { label: 'WARN', value: 'warn', color: '#d97706', icon: AlertTriangle },
+  { label: 'ERROR', value: 'error', color: '#dc2626', icon: AlertCircle },
+  { label: 'NONE', value: 'none', color: '#9ca3af', icon: Ban },
+];
 
 interface LoggerRow {
   path: string;
@@ -64,7 +63,7 @@ const loggerRows = computed<LoggerRow[]>(() => {
   return rows;
 });
 
-function onLevelChange(row: LoggerRow, level: LoggerLevel | null): void {
+function onLevelChange(row: LoggerRow, level: LevelOptionValue | null): void {
   logStore.setMinLevel(row.path, level);
 }
 
@@ -142,14 +141,27 @@ const hasActiveFilters = computed(() => {
         <Column header="Min Level">
           <template #body="{ data }">
             <SelectButton
-              :model-value="logStore.getMinLevel(data.path)"
+              :model-value="logStore.getMinLevel(data.path) ?? 'trace'"
               :options="levelOptions"
               option-label="label"
               option-value="value"
-              :allow-empty="true"
+              :allow-empty="false"
               class="level-select"
-              @update:model-value="(val: LoggerLevel | null) => onLevelChange(data, val)"
-            />
+              @update:model-value="(val: LevelOptionValue | null) => onLevelChange(data, val)"
+            >
+              <template #option="{ option }">
+                <span
+                  class="level-option"
+                  :style="{ color: option.color }"
+                >
+                  <component
+                    :is="option.icon"
+                    :size="12"
+                  />
+                  <span>{{ option.label }}</span>
+                </span>
+              </template>
+            </SelectButton>
           </template>
         </Column>
       </DataTable>
@@ -245,12 +257,18 @@ const hasActiveFilters = computed(() => {
   display: flex;
 }
 
+.level-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 :deep(.level-select .p-selectbutton-option) {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.025em;
-  padding: 0.35rem 0.6rem;
+  padding: 0.35rem 0.5rem;
 }
 
 .empty-state {

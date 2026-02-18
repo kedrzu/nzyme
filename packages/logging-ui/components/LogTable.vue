@@ -187,7 +187,10 @@ function getDisplayMessage(log: LogEntry): string {
     </Column>
 
     <template #expansion="{ data }">
-      <LogJsonViewer :log="data" />
+      <LogJsonViewer
+        v-if="hasData(data)"
+        :log="data"
+      />
     </template>
   </DataTable>
 </template>

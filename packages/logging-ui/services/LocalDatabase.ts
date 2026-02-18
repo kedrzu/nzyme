@@ -88,20 +88,26 @@ class LoggingDatabaseSchema extends Dexie {
 
 /**
  * Converts old disabledLevels format to minLevel.
- * Finds the highest severity level that is NOT disabled.
+ *
+ * Walks from most severe (error) to least severe (trace) and returns the
+ * least-severe level in the contiguous block of enabled levels starting from
+ * the top. When disabled levels are non-contiguous (e.g., only debug disabled
+ * while trace remains enabled), this errs on the side of filtering more rather
+ * than silently re-enabling previously-disabled levels.
  */
 function convertDisabledLevelsToMinLevel(disabled: Record<string, false | undefined>): LoggerLevel | 'none' {
-    // Find the least severe level that is still enabled.
-    // Walk from least severe to most severe, and the first enabled one is the minLevel.
-    for (let i = LEVELS_BY_SEVERITY.length - 1; i >= 0; i--) {
-        const level = LEVELS_BY_SEVERITY[i]!;
-        if (disabled[level] !== false) {
-            return level;
+    // Walk from most severe to least severe.
+    // Return the last enabled level before hitting a disabled one.
+    let lastEnabled: LoggerLevel | null = null;
+
+    for (const level of LEVELS_BY_SEVERITY) {
+        if (disabled[level] === false) {
+            break;
         }
+        lastEnabled = level;
     }
 
-    // All levels disabled
-    return 'none';
+    return lastEnabled ?? 'none';
 }
 
 /**

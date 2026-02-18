@@ -1,22 +1,21 @@
-import { beforeEach, expect, test, vi } from 'vitest';
-import { effectScope, ref } from 'vue';
+import { beforeEach, expect, test } from 'vitest';
+import { createApp, effectScope, ref } from 'vue';
+
+import { LanguageContext } from '@nzyme/i18n/LanguageContext.js';
+import { createContainer } from '@nzyme/vue-ioc/createContainer.js';
 
 import type { FormValidator } from './types.js';
 import { useForm } from './useForm.js';
 import { useFormField } from './useFormField.js';
 
-vi.mock('@nzyme/vue-i18n', () => ({
-    useLanguage: () => ref('en'),
-}));
-
-let scope: ReturnType<typeof effectScope>;
+let ctx: ReturnType<typeof createTestContext>;
 
 beforeEach(() => {
-    scope = effectScope();
+    ctx = createTestContext();
 });
 
 test('useForm creates form model with initial value', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const initialValue = { name: 'John', age: 30 };
         const form = useForm(initialValue);
 
@@ -28,7 +27,7 @@ test('useForm creates form model with initial value', () => {
 });
 
 test('useForm creates form model with ref value', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const initialValue = ref({ name: 'Jane', age: 25 });
         const form = useForm(initialValue);
 
@@ -38,7 +37,7 @@ test('useForm creates form model with ref value', () => {
 });
 
 test('useForm form.form returns itself', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm({ name: '' });
 
         expect(form.form).toBe(form);
@@ -46,7 +45,7 @@ test('useForm form.form returns itself', () => {
 });
 
 test('useForm valid is true when all fields are valid', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm({ name: '', email: '' });
         const nameValue = ref('John');
         const emailValue = ref('john@example.com');
@@ -59,7 +58,7 @@ test('useForm valid is true when all fields are valid', () => {
 });
 
 test('useForm valid is false when any field is invalid', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm({ name: '' });
         const nameValue = ref('');
 
@@ -75,7 +74,7 @@ test('useForm valid is false when any field is invalid', () => {
 });
 
 test('useForm invalid is false initially even when valid is false', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm({ name: '' });
         const nameValue = ref('');
 
@@ -94,7 +93,7 @@ test('useForm invalid is false initially even when valid is false', () => {
 });
 
 test('useForm invalid becomes true after validate() fails', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm({ name: '' });
         const nameValue = ref('');
 
@@ -115,7 +114,7 @@ test('useForm invalid becomes true after validate() fails', async () => {
 });
 
 test('useForm invalid is false when validation passes', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm({ name: '' });
         const nameValue = ref('John');
 
@@ -134,7 +133,7 @@ test('useForm invalid is false when validation passes', async () => {
 });
 
 test('useForm invalid returns to false after reset()', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm({ name: '' });
         const nameValue = ref('');
 
@@ -155,7 +154,7 @@ test('useForm invalid returns to false after reset()', async () => {
 });
 
 test('useForm validate returns true when all fields validate successfully', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm({ name: '', email: '' });
         const nameValue = ref('John');
         const emailValue = ref('john@example.com');
@@ -170,7 +169,7 @@ test('useForm validate returns true when all fields validate successfully', asyn
 });
 
 test('useForm validate returns false when any field fails validation', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm({ name: '' });
         const nameValue = ref('');
 
@@ -188,7 +187,7 @@ test('useForm validate returns false when any field fails validation', async () 
 });
 
 test('useForm validate runs all validations in parallel', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm({ name: '', email: '' });
         const callOrder: number[] = [];
 
@@ -227,7 +226,7 @@ test('useForm validate runs all validations in parallel', async () => {
 });
 
 test('useForm reset calls reset on all fields', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm({ name: '', email: '' });
         const nameValue = ref('');
         const emailValue = ref('');
@@ -254,7 +253,7 @@ test('useForm reset calls reset on all fields', async () => {
 });
 
 test('useForm updates value reactively', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const value = ref({ name: 'Initial' });
         const form = useForm(value);
 
@@ -267,7 +266,7 @@ test('useForm updates value reactively', () => {
 });
 
 test('useForm lang is available from context', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm({ name: '' });
 
         expect(form.lang).toBe('en');
@@ -275,7 +274,7 @@ test('useForm lang is available from context', () => {
 });
 
 test('useForm fields are registered and unregistered correctly', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm({ name: '' });
         const innerScope = effectScope();
 
@@ -293,3 +292,21 @@ test('useForm fields are registered and unregistered correctly', () => {
         expect(form.fields.length).toBe(0);
     });
 });
+
+function createTestContext() {
+    const app = createApp({ render: () => null });
+    const container = createContainer();
+    container.set(LanguageContext, () => 'en');
+    app.provide(container.injectionKey, container);
+
+    const scope = effectScope();
+
+    return {
+        app,
+        container,
+        scope,
+        run<T>(fn: () => T): T {
+            return app.runWithContext(() => scope.run(fn))!;
+        },
+    };
+}

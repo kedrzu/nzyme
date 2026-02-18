@@ -298,17 +298,23 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
 
         // Checkout the base branch (already fetched and FF'd above)
         if (baseBranch) {
-            logger.info(
-                `🔄 Checking out ${chalk.cyan(baseBranch)} in submodule ${chalk.magenta(submodule.name)}...`,
-            );
-            await checkoutLocalBranch(submoduleGit, baseBranch);
-            // Reset working tree to match the ref updated by fetchAndFastForwardSubmoduleBaseBranch.
-            // update-ref only moves the branch pointer without touching the working tree,
-            // and checkout is a no-op when already on the branch, so we need an explicit reset.
-            await submoduleGit.reset(['--hard', `refs/heads/${baseBranch}`]);
-            logger.info(
-                `✅ Submodule ${chalk.magenta(submodule.name)} updated to latest commit on ${chalk.cyan(baseBranch)}`,
-            );
+            try {
+                logger.info(
+                    `🔄 Checking out ${chalk.cyan(baseBranch)} in submodule ${chalk.magenta(submodule.name)}...`,
+                );
+                await checkoutLocalBranch(submoduleGit, baseBranch);
+                // Reset working tree to match the ref updated by fetchAndFastForwardSubmoduleBaseBranch.
+                // update-ref only moves the branch pointer without touching the working tree,
+                // and checkout is a no-op when already on the branch, so we need an explicit reset.
+                await submoduleGit.reset(['--hard', `refs/heads/${baseBranch}`]);
+                logger.info(
+                    `✅ Submodule ${chalk.magenta(submodule.name)} updated to latest commit on ${chalk.cyan(baseBranch)}`,
+                );
+            } catch (error) {
+                logger.warn(
+                    `⚠️  Could not checkout ${chalk.cyan(baseBranch)} in submodule ${chalk.magenta(submodule.name)}: ${(error as Error).message}`,
+                );
+            }
         }
 
         return;

@@ -1,4 +1,4 @@
-import type { EffectScope, InjectionKey } from 'vue';
+import type { EffectScope } from 'vue';
 import { effectScope as createEffectScope, getCurrentScope } from 'vue';
 
 import { createContainer as createContainerBase } from '@nzyme/ioc/Container.js';
@@ -6,10 +6,7 @@ import type { Container } from '@nzyme/ioc/Container.js';
 import type { ContainerScope } from '@nzyme/ioc/ContainerScope.js';
 import type { Writable } from '@nzyme/types/Common.js';
 
-/**
- *
- */
-export const injectionKey = Symbol('container') as InjectionKey<VueContainer>;
+import { injectionKey } from './injectionKey.js';
 
 /**
  *

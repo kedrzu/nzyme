@@ -17,7 +17,7 @@ import { getPrettyPrefix } from './utils/getPrettyPrefix.js';
 export const PrettyCliLoggerTransport = defineService({
     name: 'PrettyCliLoggerTransport',
     implements: LoggerTransport,
-    setup: () => {
+    setup: (): LoggerTransport => {
         return (logger, level, message, obj) => {
             const prefix = getPrettyPrefix(logger);
             const color = getColor(level);

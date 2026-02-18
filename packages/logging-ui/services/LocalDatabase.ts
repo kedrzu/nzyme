@@ -37,6 +37,9 @@ const LEVEL_SEVERITY: Record<LoggerLevel, number> = {
     trace: 4,
 };
 
+/** Levels ordered by severity (most severe first). */
+const LEVELS_BY_SEVERITY: LoggerLevel[] = ['error', 'warn', 'info', 'debug', 'trace'];
+
 /**
  * Database schema for logging-ui using Dexie.
  */
@@ -56,7 +59,49 @@ class LoggingDatabaseSchema extends Dexie {
             // Logger configs by path
             loggerConfigs: 'path',
         });
+
+        // Migration: LoggerConfig changed from disabledLevels to minLevel.
+        this.version(2)
+            .stores({
+                logs: 'id, timestamp',
+                loggerPaths: 'path',
+                loggerConfigs: 'path',
+            })
+            .upgrade(tx => {
+                return tx
+                    .table('loggerConfigs')
+                    .toCollection()
+                    .modify(config => {
+                        // Migrate old disabledLevels format to minLevel format.
+                        // Old format: { path, disabledLevels: { error?: false, warn?: false, ... } }
+                        // New format: { path, minLevel: LoggerLevel | 'none' }
+                        const record = config as Record<string, unknown>;
+                        if ('disabledLevels' in record && !('minLevel' in record)) {
+                            const disabled = record['disabledLevels'] as Record<string, false | undefined>;
+                            config.minLevel = convertDisabledLevelsToMinLevel(disabled);
+                            delete record['disabledLevels'];
+                        }
+                    });
+            });
     }
+}
+
+/**
+ * Converts old disabledLevels format to minLevel.
+ * Finds the highest severity level that is NOT disabled.
+ */
+function convertDisabledLevelsToMinLevel(disabled: Record<string, false | undefined>): LoggerLevel | 'none' {
+    // Find the least severe level that is still enabled.
+    // Walk from least severe to most severe, and the first enabled one is the minLevel.
+    for (let i = LEVELS_BY_SEVERITY.length - 1; i >= 0; i--) {
+        const level = LEVELS_BY_SEVERITY[i]!;
+        if (disabled[level] !== false) {
+            return level;
+        }
+    }
+
+    // All levels disabled
+    return 'none';
 }
 
 /**

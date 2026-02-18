@@ -1,5 +1,8 @@
-import { beforeEach, expect, test, vi } from 'vitest';
-import { effectScope, nextTick, ref } from 'vue';
+import { beforeEach, expect, test } from 'vitest';
+import { createApp, effectScope, nextTick, ref } from 'vue';
+
+import { LanguageContext } from '@nzyme/i18n/LanguageContext.js';
+import { createContainer } from '@nzyme/vue-ioc/createContainer.js';
 
 import type { FormField, FormModel, FormValidator } from './types.js';
 import { useForm } from './useForm.js';
@@ -7,20 +10,16 @@ import { useFormField } from './useFormField.js';
 import { useFormFieldArray } from './useFormFieldArray.js';
 import { useFormFields } from './useFormFields.js';
 
-vi.mock('@nzyme/vue-i18n', () => ({
-    useLanguage: () => ref('en'),
-}));
-
-let scope: ReturnType<typeof effectScope>;
+let ctx: ReturnType<typeof createTestContext>;
 
 beforeEach(() => {
-    scope = effectScope();
+    ctx = createTestContext();
 });
 
 // Basic Array Field Creation
 
 test('useFormFieldArray creates fields for initial array items', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm(['a', 'b', 'c']);
         const fields = useFormFieldArray(form);
 
@@ -32,7 +31,7 @@ test('useFormFieldArray creates fields for initial array items', () => {
 });
 
 test('useFormFieldArray creates empty fields array for empty initial array', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm<string[]>([]);
         const fields = useFormFieldArray(form);
 
@@ -41,7 +40,7 @@ test('useFormFieldArray creates empty fields array for empty initial array', () 
 });
 
 test('useFormFieldArray with validators applies validators to each field', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm(['', 'valid', '']);
         const requiredValidator: FormValidator<string> = {
             async: false,
@@ -58,7 +57,7 @@ test('useFormFieldArray with validators applies validators to each field', () =>
 });
 
 test('useFormFieldArray without validators creates fields without validators', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm(['a', 'b']);
         const fields = useFormFieldArray(form);
 
@@ -72,7 +71,7 @@ test('useFormFieldArray without validators creates fields without validators', (
 // Reactivity - Adding Items
 
 test('useFormFieldArray adds new field when array item is pushed', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm(['a']);
         const fields = useFormFieldArray(form);
 
@@ -87,7 +86,7 @@ test('useFormFieldArray adds new field when array item is pushed', async () => {
 });
 
 test('useFormFieldArray adds multiple fields when multiple items are pushed', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm<string[]>([]);
         const fields = useFormFieldArray(form);
 
@@ -104,7 +103,7 @@ test('useFormFieldArray adds multiple fields when multiple items are pushed', as
 });
 
 test('useFormFieldArray field value syncs with array item', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm(['initial']);
         const fields = useFormFieldArray(form);
 
@@ -120,7 +119,7 @@ test('useFormFieldArray field value syncs with array item', async () => {
 // Reactivity - Removing Items
 
 test('useFormFieldArray removes field when array item is removed', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm(['a', 'b', 'c']);
         const fields = useFormFieldArray(form);
 
@@ -134,7 +133,7 @@ test('useFormFieldArray removes field when array item is removed', async () => {
 });
 
 test('useFormFieldArray stops effect scope when field is removed', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm(['a', 'b']);
 
         const fields = useFormFieldArray(form, field => {
@@ -153,7 +152,7 @@ test('useFormFieldArray stops effect scope when field is removed', async () => {
 });
 
 test('useFormFieldArray handles shrinking array to empty', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm(['a', 'b', 'c']);
         const fields = useFormFieldArray(form);
 
@@ -167,7 +166,7 @@ test('useFormFieldArray handles shrinking array to empty', async () => {
 });
 
 test('useFormFieldArray handles shrinking array by multiple items', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm(['a', 'b', 'c', 'd', 'e']);
         const fields = useFormFieldArray(form);
 
@@ -185,7 +184,7 @@ test('useFormFieldArray handles shrinking array by multiple items', async () => 
 // Validation
 
 test('useFormFieldArray field validation works correctly', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm(['']);
         const requiredValidator: FormValidator<string> = {
             async: false,
@@ -205,7 +204,7 @@ test('useFormFieldArray field validation works correctly', async () => {
 });
 
 test('useFormFieldArray form.validate validates all array fields', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm(['', '']);
         const requiredValidator: FormValidator<string> = {
             async: false,
@@ -223,7 +222,7 @@ test('useFormFieldArray form.validate validates all array fields', async () => {
 });
 
 test('useFormFieldArray form.valid reflects array fields validity', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm(['valid', '']);
         const requiredValidator: FormValidator<string> = {
             async: false,
@@ -244,7 +243,7 @@ test('useFormFieldArray form.valid reflects array fields validity', async () => 
 });
 
 test('useFormFieldArray form.invalid reflects array fields invalid state', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm(['', '']);
         const requiredValidator: FormValidator<string> = {
             async: false,
@@ -269,7 +268,7 @@ test('useFormFieldArray form.invalid reflects array fields invalid state', async
 // Factory Function
 
 test('useFormFieldArray with factory creates custom field structures', () => {
-    scope.run(() => {
+    ctx.run(() => {
         interface Item {
             name: string;
         }
@@ -290,7 +289,7 @@ test('useFormFieldArray with factory creates custom field structures', () => {
 });
 
 test('useFormFieldArray with factory receives correct field and index', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm(['a', 'b', 'c']);
         const receivedArgs: Array<{ value: string; index: number }> = [];
 
@@ -307,7 +306,7 @@ test('useFormFieldArray with factory receives correct field and index', () => {
 });
 
 test('useFormFieldArray with factory using useFormFields creates nested fields', () => {
-    scope.run(() => {
+    ctx.run(() => {
         interface Person {
             name: string;
             email: string;
@@ -336,7 +335,7 @@ test('useFormFieldArray with factory using useFormFields creates nested fields',
 });
 
 test('useFormFieldArray with factory fields are registered to parent form', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm(['a', 'b']);
 
         useFormFieldArray(form, field => useFormField(field, { validators: [] }));
@@ -347,7 +346,7 @@ test('useFormFieldArray with factory fields are registered to parent form', () =
 });
 
 test('useFormFieldArray with factory validates nested structures', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         interface Person {
             name: string;
             email: string;
@@ -387,12 +386,14 @@ test('useFormFieldArray effect scope is cleaned up when parent scope stops', () 
 
     let fields: FormField<string>[];
 
-    innerScope.run(() => {
-        const form = useForm(['a', 'b']);
-        fields = useFormFieldArray(form);
+    ctx.app.runWithContext(() =>
+        innerScope.run(() => {
+            const form = useForm(['a', 'b']);
+            fields = useFormFieldArray(form);
 
-        expect(fields.length).toBe(2);
-    });
+            expect(fields.length).toBe(2);
+        }),
+    );
 
     innerScope.stop();
 
@@ -401,7 +402,7 @@ test('useFormFieldArray effect scope is cleaned up when parent scope stops', () 
 });
 
 test('useFormFieldArray item scopes are independent', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm(['a', 'b', 'c']);
 
         const fields = useFormFieldArray(form, field => {
@@ -425,7 +426,7 @@ test('useFormFieldArray item scopes are independent', async () => {
 // Edge Cases
 
 test('useFormFieldArray handles replacing entire array', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm(['a', 'b']);
         const fields = useFormFieldArray(form);
 
@@ -442,7 +443,7 @@ test('useFormFieldArray handles replacing entire array', async () => {
 });
 
 test('useFormFieldArray handles splice operations', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm(['a', 'b', 'c', 'd']);
         const fields = useFormFieldArray(form);
 
@@ -459,7 +460,7 @@ test('useFormFieldArray handles splice operations', async () => {
 });
 
 test('useFormFieldArray works with async validators', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm(['', 'valid']);
 
         const asyncValidator: FormValidator<string> = {
@@ -483,7 +484,7 @@ test('useFormFieldArray works with async validators', async () => {
 });
 
 test('useFormFieldArray newly added items have validators applied', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm(['valid']);
         const requiredValidator: FormValidator<string> = {
             async: false,
@@ -505,7 +506,7 @@ test('useFormFieldArray newly added items have validators applied', async () => 
 });
 
 test('useFormFieldArray works with objects as array items', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         interface Item {
             id: number;
             name: string;
@@ -532,7 +533,7 @@ test('useFormFieldArray works with objects as array items', async () => {
 });
 
 test('useFormFieldArray fields are unregistered when items are removed', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm(['a', 'b', 'c']);
         useFormFieldArray(form);
 
@@ -546,7 +547,7 @@ test('useFormFieldArray fields are unregistered when items are removed', async (
 });
 
 test('useFormFieldArray with factory new items use factory', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm([1]);
 
         const fields = useFormFieldArray(form, (field, index) => ({
@@ -567,7 +568,7 @@ test('useFormFieldArray with factory new items use factory', async () => {
 // Complex nested scenario from the example
 
 test('useFormFieldArray complex nested example works correctly', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         interface Person {
             name: string;
             email: string;
@@ -632,7 +633,7 @@ test('useFormFieldArray complex nested example works correctly', async () => {
 // Null/Undefined Value Handling
 
 test('useFormFieldArray handles null initial value', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm<string[] | null>(null);
         const fields = useFormFieldArray(form as FormModel<string[]>);
 
@@ -642,7 +643,7 @@ test('useFormFieldArray handles null initial value', () => {
 });
 
 test('useFormFieldArray handles undefined initial value', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm<string[] | undefined>(undefined);
         const fields = useFormFieldArray(form as FormModel<string[]>);
 
@@ -652,7 +653,7 @@ test('useFormFieldArray handles undefined initial value', () => {
 });
 
 test('useFormFieldArray handles value becoming null', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm<string[] | null>(['a', 'b', 'c']);
         const fields = useFormFieldArray(form as FormModel<string[]>);
 
@@ -668,7 +669,7 @@ test('useFormFieldArray handles value becoming null', async () => {
 });
 
 test('useFormFieldArray handles value changing from null to array', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm<string[] | null>(null);
         const fields = useFormFieldArray(form as FormModel<string[]>);
 
@@ -685,7 +686,7 @@ test('useFormFieldArray handles value changing from null to array', async () => 
 });
 
 test('useFormFieldArray handles value toggling between null and array', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm<string[] | null>(['initial']);
         const fields = useFormFieldArray(form as FormModel<string[]>);
 
@@ -709,7 +710,7 @@ test('useFormFieldArray handles value toggling between null and array', async ()
 });
 
 test('useFormFieldArray with factory handles null value', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm<string[] | null>(null);
         const fields = useFormFieldArray(form as FormModel<string[]>, (field, index) => ({
             field,
@@ -722,7 +723,7 @@ test('useFormFieldArray with factory handles null value', () => {
 });
 
 test('useFormFieldArray with validators handles null value', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm<string[] | null>(null);
         const requiredValidator: FormValidator<string> = {
             async: false,
@@ -737,7 +738,7 @@ test('useFormFieldArray with validators handles null value', () => {
 });
 
 test('useFormFieldArray field getter handles null form.value without error', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm<string[] | null>(['a', 'b']);
         const fields = useFormFieldArray(form as FormModel<string[]>);
 
@@ -755,7 +756,7 @@ test('useFormFieldArray field getter handles null form.value without error', () 
 });
 
 test('useFormFieldArray field setter handles null form.value without error', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm<string[] | null>(['a', 'b']);
         const fields = useFormFieldArray(form as FormModel<string[]>);
 
@@ -776,7 +777,7 @@ test('useFormFieldArray field setter handles null form.value without error', () 
 });
 
 test('useFormFieldArray with factory field getter handles null form.value without error', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm<string[] | null>(['a', 'b']);
         const fields = useFormFieldArray(form as FormModel<string[]>, (field, index) => ({
             field,
@@ -796,7 +797,7 @@ test('useFormFieldArray with factory field getter handles null form.value withou
 });
 
 test('useFormFieldArray with factory field setter handles null form.value without error', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const form = useForm<string[] | null>(['a', 'b']);
         const fields = useFormFieldArray(form as FormModel<string[]>, (field, index) => ({
             field,
@@ -817,3 +818,21 @@ test('useFormFieldArray with factory field setter handles null form.value withou
         expect(form.value).toBeNull();
     });
 });
+
+function createTestContext() {
+    const app = createApp({ render: () => null });
+    const container = createContainer();
+    container.set(LanguageContext, () => 'en');
+    app.provide(container.injectionKey, container);
+
+    const scope = effectScope();
+
+    return {
+        app,
+        container,
+        scope,
+        run<T>(fn: () => T): T {
+            return app.runWithContext(() => scope.run(fn))!;
+        },
+    };
+}

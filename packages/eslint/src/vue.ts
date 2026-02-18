@@ -19,6 +19,7 @@ export function vue() {
             'vue/one-component-per-file': 'off',
             'vue/singleline-html-element-content-newline': 'off',
             // These are not working with more advanced vue 3 features like exposed refs
+            'vue/no-mutating-props': 'off',
             '@typescript-eslint/no-unsafe-member-access': 'off',
             '@typescript-eslint/no-unsafe-assignment': 'off',
             '@typescript-eslint/no-unsafe-argument': 'off',

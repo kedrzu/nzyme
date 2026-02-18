@@ -9,7 +9,7 @@ import { getPrettyPrefix } from './utils/getPrettyPrefix.js';
 export const PrettyBrowserLoggerTransport = defineService({
     name: 'PrettyBrowserLoggerTransport',
     implements: LoggerTransport,
-    setup: () => {
+    setup: (): LoggerTransport => {
         return (logger, level, message, obj) => {
             const prefix = getPrettyPrefix(logger);
             const lines = message.split('\n');

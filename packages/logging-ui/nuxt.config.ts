@@ -6,6 +6,7 @@ export default defineNuxtConfig({
     compatibilityDate: '2024-11-01',
     devtools: { enabled: true },
     modules: ['@primevue/nuxt-module'],
+    ssr: false,
     primevue: {
         options: {
             theme: {

@@ -21,14 +21,14 @@
         "./*.js": {
             "types": "./src/*.ts",
             "import": "./src/*.ts",
-            "default": "./src/*.ts",
-            "source": "./src/*.ts"
+            "source": "./src/*.ts",
+            "default": "./src/*.ts"
         },
         "./*.jsx": {
             "types": "./src/*.tsx",
             "import": "./src/*.tsx",
-            "default": "./src/*.tsx",
-            "source": "./src/*.tsx"
+            "source": "./src/*.tsx",
+            "default": "./src/*.tsx"
         }
     },
     "imports": {

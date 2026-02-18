@@ -25,8 +25,8 @@
         "./*.js": {
             "types": "./dist/*.d.ts",
             "import": "./dist/*.js",
-            "default": "./dist/*.js",
-            "source": "./src/*.ts"
+            "source": "./src/*.ts",
+            "default": "./dist/*.js"
         }
     },
     "module": "./dist/index.js",

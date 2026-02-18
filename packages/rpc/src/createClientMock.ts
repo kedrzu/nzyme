@@ -1,4 +1,5 @@
 import type { PromiseMaybe } from '@nzyme/types/Promises.js';
+import type { UnionToIntersection } from '@nzyme/types/Union.js';
 import { toJson } from '@nzyme/utils/toJson.js';
 import type { Json } from '@nzyme/utils/toJson.js';
 
@@ -8,16 +9,19 @@ import type { Endpoint } from './defineEndpoint.js';
 /**
  *
  */
-export type CreateClientMockOptions<E extends Endpoint> =
+export type CreateClientMockOptions<E extends Endpoint> = UnionToIntersection<
     E extends Endpoint<infer TName, infer TInput, infer TOutput>
         ? { [K in TName]?: (input: Json<TInput>) => PromiseMaybe<TOutput> }
-        : never;
+        : never
+>;
 
 /**
  *
  */
 export function createClientMock<E extends Endpoint, O = void>(options: CreateClientMockOptions<E>): RpcClient<E, O> {
-    return new Proxy(options, {
+    const handlers = options as Record<string, ((input: unknown) => PromiseMaybe<unknown>) | undefined>;
+
+    return new Proxy(handlers, {
         get(target, endpoint) {
             if (typeof endpoint === 'symbol') {
                 return undefined;

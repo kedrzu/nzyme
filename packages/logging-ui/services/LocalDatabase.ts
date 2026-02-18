@@ -18,26 +18,24 @@ export interface LoggerPath {
 }
 
 /**
- * Disabled levels configuration for a logger.
- * Only stores levels that are disabled (sparse storage).
- */
-export interface DisabledLevels {
-    error?: false;
-    warn?: false;
-    info?: false;
-    debug?: false;
-    trace?: false;
-}
-
-/**
- * Logger configuration entry - stores which levels are disabled for a logger.
+ * Logger configuration entry - stores the minimum log level to show for a logger.
+ * Logs at this level or higher (more severe) are shown.
  */
 export interface LoggerConfig {
     /** Primary key: "app" or "app/logger" format */
     path: string;
-    /** Disabled levels (sparse - only store if disabled) */
-    disabledLevels: DisabledLevels;
+    /** Minimum level to display. Logs at this level or more severe are shown. */
+    minLevel: LoggerLevel;
 }
+
+/** Severity ranking: lower number = more severe. */
+const LEVEL_SEVERITY: Record<LoggerLevel, number> = {
+    error: 0,
+    warn: 1,
+    info: 2,
+    debug: 3,
+    trace: 4,
+};
 
 /**
  * Database schema for logging-ui using Dexie.
@@ -126,13 +124,13 @@ export const LocalDatabase = defineService({
 export type LocalDatabase = Resolved<typeof LocalDatabase>;
 
 /**
- * Helper to check if a level is disabled in a config.
+ * Helper to check if a level is below the configured minimum (should be hidden).
  */
 export function isLevelDisabled(config: LoggerConfig | undefined, level: LoggerLevel): boolean {
-    if (!config) {
+    if (!config || !config.minLevel) {
         return false;
     }
-    return config.disabledLevels[level] === false;
+    return LEVEL_SEVERITY[level] > LEVEL_SEVERITY[config.minLevel];
 }
 
 /**

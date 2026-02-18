@@ -258,6 +258,7 @@ async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise
 
 /**
  * Checkout a matching branch in a specific submodule.
+ * Also fetches and fast-forwards the base branch to keep it up to date.
  */
 async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): Promise<void> {
     const { submodule, taskId, githubClient, githubConfig, logger, baseBranch } = params;
@@ -274,6 +275,13 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
     const submoduleOwner = urlMatch[1]!;
     const submoduleRepo = urlMatch[2]!;
 
+    const submoduleGit = simpleGit({ baseDir: submodule.path });
+
+    // Fetch and fast-forward the base branch in this submodule
+    if (baseBranch) {
+        await fetchAndFastForwardSubmoduleBaseBranch(submoduleGit, submodule.name, baseBranch, logger);
+    }
+
     // Create a GitHub config for this submodule
     const submoduleGithubConfig: GithubConfig = {
         ...githubConfig,
@@ -288,12 +296,15 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
     if (!pr) {
         logger.info(`📝 No PR found for task ${chalk.bold(taskId)} in submodule ${chalk.magenta(submodule.name)}`);
 
-        // If a base branch is provided, checkout the latest commit on that branch
+        // Checkout the base branch (already fetched and FF'd above)
         if (baseBranch) {
             logger.info(
-                `🔄 Updating submodule ${chalk.magenta(submodule.name)} to latest commit on ${chalk.cyan(baseBranch)}...`,
+                `🔄 Checking out ${chalk.cyan(baseBranch)} in submodule ${chalk.magenta(submodule.name)}...`,
             );
-            await checkoutSubmoduleBaseBranch(submodule, baseBranch, logger);
+            await checkoutLocalBranch(submoduleGit, baseBranch);
+            logger.info(
+                `✅ Submodule ${chalk.magenta(submodule.name)} updated to latest commit on ${chalk.cyan(baseBranch)}`,
+            );
         }
 
         return;
@@ -310,28 +321,12 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
     // Checkout the branch in the submodule
     logger.info(`🌿 Checking out branch ${chalk.cyan(targetBranch)} in submodule ${chalk.magenta(submodule.name)}...`);
 
-    const submoduleGit = simpleGit({ baseDir: submodule.path });
-
     try {
-        // Fetch latest changes from origin
-        await submoduleGit.fetch('origin');
+        // Fetch latest changes for the task branch from origin
+        await submoduleGit.fetch('origin', targetBranch);
 
-        // Check if the branch exists locally
-        const branches = await submoduleGit.branchLocal();
-
-        if (branches.all.includes(targetBranch)) {
-            // Branch exists locally, just checkout
-            await submoduleGit.checkout(targetBranch);
-        } else {
-            // Branch doesn't exist locally, check if it exists on origin
-            try {
-                // Try to checkout from origin
-                await submoduleGit.checkoutBranch(targetBranch, `origin/${targetBranch}`);
-            } catch {
-                // If checkout from origin fails, try a simple checkout
-                await submoduleGit.checkout(targetBranch);
-            }
-        }
+        // Checkout the task branch
+        await checkoutLocalBranch(submoduleGit, targetBranch);
 
         // Pull the latest changes
         const pullResult = await handlePullWithRebase({
@@ -345,7 +340,6 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
         if (pullResult.cancelled) {
             throw new UsageError(`Operation cancelled by user for submodule ${submodule.name}`);
         }
-        // If pull failed for other reasons (e.g., branch doesn't exist), continue
 
         logger.info(`✅ Checked out branch ${chalk.cyan(targetBranch)} in ${chalk.magenta(submodule.name)}`);
     } catch (error) {
@@ -356,55 +350,40 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
 }
 
 /**
- * Checkout the base branch in a submodule and pull latest changes.
+ * Fetch and fast-forward a base branch in a submodule without checking it out.
  */
-async function checkoutSubmoduleBaseBranch(
-    submodule: Awaited<ReturnType<typeof getSubmoduleInfo>>[0],
+async function fetchAndFastForwardSubmoduleBaseBranch(
+    git: ReturnType<typeof simpleGit>,
+    submoduleName: string,
     baseBranch: string,
     logger: Logger,
 ): Promise<void> {
-    const submoduleGit = simpleGit({ baseDir: submodule.path });
+    logger.info(`🔄 Fetching ${chalk.cyan(baseBranch)} in submodule ${chalk.magenta(submoduleName)}...`);
+    await git.fetch('origin', baseBranch);
 
     try {
-        // Fetch latest changes from origin
-        await submoduleGit.fetch('origin');
-
-        // Check if the branch exists locally
-        const branches = await submoduleGit.branchLocal();
-
-        if (branches.all.includes(baseBranch)) {
-            // Branch exists locally, just checkout
-            await submoduleGit.checkout(baseBranch);
-        } else {
-            // Branch doesn't exist locally, checkout from origin
-            try {
-                await submoduleGit.checkoutBranch(baseBranch, `origin/${baseBranch}`);
-            } catch {
-                // If checkout from origin fails, try a simple checkout
-                await submoduleGit.checkout(baseBranch);
-            }
-        }
-
-        // Pull the latest changes
-        const pullResult = await handlePullWithRebase({
-            git: submoduleGit,
-            remote: 'origin',
-            branch: baseBranch,
-            logger,
-            contextMessage: `submodule ${chalk.magenta(submodule.name)}`,
-        });
-
-        if (pullResult.cancelled) {
-            throw new UsageError(`Operation cancelled by user for submodule ${submodule.name}`);
-        }
-        // If pull failed for other reasons, that's okay - we're at least on the right branch
-
-        logger.info(
-            `✅ Submodule ${chalk.magenta(submodule.name)} updated to latest commit on ${chalk.cyan(baseBranch)}`,
-        );
+        await git.raw(['update-ref', `refs/heads/${baseBranch}`, `refs/remotes/origin/${baseBranch}`]);
+        logger.info(`✅ Fast-forwarded ${chalk.cyan(baseBranch)} in ${chalk.magenta(submoduleName)}`);
     } catch (error) {
-        throw new UsageError(
-            `Failed to checkout base branch ${baseBranch} in submodule ${submodule.name}: ${(error as Error).message}`,
+        logger.warn(
+            `⚠️  Could not fast-forward ${chalk.cyan(baseBranch)} in ${chalk.magenta(submoduleName)}: ${(error as Error).message}`,
         );
+    }
+}
+
+/**
+ * Checkout a branch locally, creating it from origin if it doesn't exist.
+ */
+async function checkoutLocalBranch(git: ReturnType<typeof simpleGit>, branch: string): Promise<void> {
+    const branches = await git.branchLocal();
+
+    if (branches.all.includes(branch)) {
+        await git.checkout(branch);
+    } else {
+        try {
+            await git.checkoutBranch(branch, `origin/${branch}`);
+        } catch {
+            await git.checkout(branch);
+        }
     }
 }

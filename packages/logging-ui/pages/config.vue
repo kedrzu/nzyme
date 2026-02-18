@@ -3,27 +3,41 @@ import type { LoggerLevel } from '@nzyme/logging/LoggerLevel.js';
 import { useService } from '@nzyme/vue-ioc/useService.js';
 import { ArrowLeft } from 'lucide-vue-next';
 import Button from 'primevue/button';
-import Checkbox from 'primevue/checkbox';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
+import SelectButton from 'primevue/selectbutton';
 import { computed } from 'vue';
 
 import { LOG_LEVELS, LogStore } from '../services/LogStore.js';
 
 const logStore = useService(LogStore);
 
-interface LevelConfig {
-  color: string;
+interface LevelOption {
   label: string;
+  value: LoggerLevel;
+  color: string;
 }
 
-const levelConfigs: Record<LoggerLevel, LevelConfig> = {
-  error: { color: '#dc2626', label: 'ERROR' },
-  warn: { color: '#d97706', label: 'WARN' },
-  info: { color: '#2563eb', label: 'INFO' },
-  debug: { color: '#6b7280', label: 'DEBUG' },
-  trace: { color: '#9ca3af', label: 'TRACE' },
-};
+const levelOptions: LevelOption[] = LOG_LEVELS.map(level => ({
+  label: level.toUpperCase(),
+  value: level,
+  color: getLevelColor(level),
+}));
+
+function getLevelColor(level: LoggerLevel): string {
+  switch (level) {
+    case 'error':
+      return '#dc2626';
+    case 'warn':
+      return '#d97706';
+    case 'info':
+      return '#2563eb';
+    case 'debug':
+      return '#6b7280';
+    case 'trace':
+      return '#9ca3af';
+  }
+}
 
 interface LoggerRow {
   path: string;
@@ -37,7 +51,7 @@ interface LoggerRow {
  */
 const loggerRows = computed<LoggerRow[]>(() => {
   const rows: LoggerRow[] = [];
-  for (const [app, paths] of logStore.loggerPathsByApp) {
+  for (const [, paths] of logStore.loggerPathsByApp) {
     for (const lp of paths) {
       rows.push({
         path: lp.path,
@@ -50,39 +64,8 @@ const loggerRows = computed<LoggerRow[]>(() => {
   return rows;
 });
 
-/**
- * Check if a level is enabled for a row.
- */
-function isLevelChecked(row: LoggerRow, level: LoggerLevel): boolean {
-  return logStore.isLevelEnabled(row.path, level);
-}
-
-/**
- * Toggle a level for a row.
- */
-function onLevelToggle(row: LoggerRow, level: LoggerLevel): void {
-  logStore.toggleLevel(row.path, level);
-}
-
-/**
- * Check if all levels are enabled for a row.
- */
-function isAllChecked(row: LoggerRow): boolean {
-  return logStore.isLoggerFullyEnabled(row.path);
-}
-
-/**
- * Check if row has some but not all levels enabled (indeterminate state).
- */
-function isAllIndeterminate(row: LoggerRow): boolean {
-  return logStore.isLoggerPartiallyEnabled(row.path);
-}
-
-/**
- * Toggle all levels for a row.
- */
-function onAllToggle(row: LoggerRow): void {
-  logStore.toggleAllLevels(row.path);
+function onLevelChange(row: LoggerRow, level: LoggerLevel | null): void {
+  logStore.setMinLevel(row.path, level);
 }
 
 /**
@@ -144,7 +127,7 @@ const hasActiveFilters = computed(() => {
         <Column
           field="displayName"
           header="Logger"
-          style="width: 40%"
+          style="width: 30%"
         >
           <template #body="{ data }">
             <span
@@ -156,50 +139,17 @@ const hasActiveFilters = computed(() => {
           </template>
         </Column>
 
-        <Column
-          header="All"
-          style="width: 60px"
-          class="level-column"
-        >
+        <Column header="Min Level">
           <template #body="{ data }">
-            <Checkbox
-              :model-value="isAllChecked(data)"
-              :indeterminate="isAllIndeterminate(data)"
-              binary
-              @update:model-value="onAllToggle(data)"
+            <SelectButton
+              :model-value="logStore.getMinLevel(data.path)"
+              :options="levelOptions"
+              option-label="label"
+              option-value="value"
+              :allow-empty="true"
+              class="level-select"
+              @update:model-value="(val: LoggerLevel | null) => onLevelChange(data, val)"
             />
-          </template>
-        </Column>
-
-        <Column
-          v-for="level in LOG_LEVELS"
-          :key="level"
-          :header="levelConfigs[level].label"
-          style="width: 90px"
-          class="level-column"
-        >
-          <template #body="{ data }">
-            <div class="level-cell">
-              <Checkbox
-                :model-value="isLevelChecked(data, level)"
-                binary
-                :pt="{
-                  box: {
-                    style: {
-                      borderColor: levelConfigs[level].color,
-                      background: isLevelChecked(data, level) ? levelConfigs[level].color : 'transparent',
-                    },
-                  },
-                }"
-                @update:model-value="onLevelToggle(data, level)"
-              />
-              <span
-                class="level-label"
-                :style="{ color: levelConfigs[level].color }"
-              >
-                {{ levelConfigs[level].label }}
-              </span>
-            </div>
           </template>
         </Column>
       </DataTable>
@@ -291,22 +241,16 @@ const hasActiveFilters = computed(() => {
   font-weight: 600;
 }
 
-.level-column {
-  text-align: center;
-}
-
-.level-cell {
+.level-select {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
 }
 
-.level-label {
+:deep(.level-select .p-selectbutton-option) {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.025em;
+  padding: 0.35rem 0.6rem;
 }
 
 .empty-state {

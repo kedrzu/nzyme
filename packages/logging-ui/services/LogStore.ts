@@ -6,7 +6,7 @@ import { createExponentialBackoff } from '@nzyme/utils/createExponentialBackoff.
 import { computed, reactive, ref, shallowRef } from 'vue';
 
 import type { LogEntry } from '../types/LogEntry.js';
-import type { DisabledLevels, LoggerConfig, LoggerPath } from './LocalDatabase.js';
+import type { LoggerConfig, LoggerPath } from './LocalDatabase.js';
 import { getLoggerPath, isLevelDisabled, LocalDatabase } from './LocalDatabase.js';
 
 const MAX_LOGS = 10000;
@@ -195,102 +195,36 @@ export const LogStore = defineService({
         }
 
         /**
-         * Set the disabled levels for a logger.
+         * Set the minimum log level for a logger.
+         * Logs at this level or more severe are shown.
+         * Pass null to clear the filter (show all levels).
          */
-        function setLoggerConfig(path: string, disabledLevels: DisabledLevels): void {
-            // Check if all levels are enabled (no disabled levels)
-            const hasDisabledLevels = Object.values(disabledLevels).some(v => v === false);
-
-            if (hasDisabledLevels) {
-                const config: LoggerConfig = { path, disabledLevels };
-                const newConfigs = new Map(loggerConfigs.value);
-                newConfigs.set(path, config);
-                loggerConfigs.value = newConfigs;
-
-                // Persist to IndexedDB (fire-and-forget)
-                void db.saveLoggerConfig(config);
-            } else {
-                // Remove config if no levels are disabled
+        function setMinLevel(path: string, level: LoggerLevel | null): void {
+            if (level === null) {
+                // Remove config - show all levels
                 const newConfigs = new Map(loggerConfigs.value);
                 newConfigs.delete(path);
                 loggerConfigs.value = newConfigs;
 
                 // Delete from IndexedDB (fire-and-forget)
                 void db.deleteLoggerConfig(path);
-            }
-        }
-
-        /**
-         * Toggle a specific level for a logger.
-         */
-        function toggleLevel(path: string, level: LoggerLevel): void {
-            const config = loggerConfigs.value.get(path);
-            const currentDisabled = config?.disabledLevels[level] === false;
-
-            const newDisabledLevels: DisabledLevels = {
-                ...(config?.disabledLevels ?? {}),
-            };
-
-            if (currentDisabled) {
-                // Enable the level (remove from disabled)
-                delete newDisabledLevels[level];
             } else {
-                // Disable the level
-                newDisabledLevels[level] = false;
-            }
+                const config: LoggerConfig = { path, minLevel: level };
+                const newConfigs = new Map(loggerConfigs.value);
+                newConfigs.set(path, config);
+                loggerConfigs.value = newConfigs;
 
-            setLoggerConfig(path, newDisabledLevels);
-        }
-
-        /**
-         * Toggle all levels for a logger (enable all or disable all).
-         */
-        function toggleAllLevels(path: string): void {
-            const config = loggerConfigs.value.get(path);
-            const isFullyEnabled = !config || Object.keys(config.disabledLevels).length === 0;
-
-            if (isFullyEnabled) {
-                // Disable all levels
-                const disabledLevels: DisabledLevels = {
-                    error: false,
-                    warn: false,
-                    info: false,
-                    debug: false,
-                    trace: false,
-                };
-                setLoggerConfig(path, disabledLevels);
-            } else {
-                // Enable all levels (clear config)
-                setLoggerConfig(path, {});
+                // Persist to IndexedDB (fire-and-forget)
+                void db.saveLoggerConfig(config);
             }
         }
 
         /**
-         * Check if a specific level is enabled for a logger.
+         * Get the minimum log level for a logger, or null if no filter is set.
          */
-        function isLevelEnabled(path: string, level: LoggerLevel): boolean {
+        function getMinLevel(path: string): LoggerLevel | null {
             const config = loggerConfigs.value.get(path);
-            return !isLevelDisabled(config, level);
-        }
-
-        /**
-         * Check if a logger has all levels enabled.
-         */
-        function isLoggerFullyEnabled(path: string): boolean {
-            const config = loggerConfigs.value.get(path);
-            return !config || Object.keys(config.disabledLevels).length === 0;
-        }
-
-        /**
-         * Check if a logger has at least one level enabled.
-         */
-        function isLoggerPartiallyEnabled(path: string): boolean {
-            const config = loggerConfigs.value.get(path);
-            if (!config) {
-                return false; // Fully enabled, not partially
-            }
-            const disabledCount = Object.keys(config.disabledLevels).length;
-            return disabledCount > 0 && disabledCount < LOG_LEVELS.length;
+            return config?.minLevel ?? null;
         }
 
         /**
@@ -473,12 +407,8 @@ export const LogStore = defineService({
             disconnect,
 
             // Logger config
-            setLoggerConfig,
-            toggleLevel,
-            toggleAllLevels,
-            isLevelEnabled,
-            isLoggerFullyEnabled,
-            isLoggerPartiallyEnabled,
+            setMinLevel,
+            getMinLevel,
             resetLoggerConfigs,
 
             // Logger display

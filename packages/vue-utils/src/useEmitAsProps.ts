@@ -1,6 +1,23 @@
 import { camelize, getCurrentInstance, toHandlerKey } from 'vue';
 
 /**
+ *
+ */
+export type EmitAsProps<E extends object = Record<string, (...args: unknown[]) => unknown>> = {
+    [K in keyof E as K extends string ? `on${Capitalize<CamelizeString<K>>}` : never]: E[K] extends (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...args: any[]
+    ) => unknown
+        ? (...args: Parameters<E[K]>) => void
+        : never;
+};
+
+/**
+ *
+ */
+type CamelizeString<S extends string> = S extends `${infer T}-${infer U}` ? `${T}${CamelizeString<Capitalize<U>>}` : S;
+
+/**
  * Composable that returns an object with the component's emits as props.
  * This is useful for forwarding the component's emits to the child component.
  *
@@ -17,15 +34,15 @@ import { camelize, getCurrentInstance, toHandlerKey } from 'vue';
  * </script>
  * ```
  */
-export function useEmitAsProps() {
+export function useEmitAsProps<E extends object = Record<string, (...args: unknown[]) => unknown>>(): EmitAsProps<E> {
     const vm = getCurrentInstance();
     let events = vm?.type.emits;
 
-    const result: Record<string, (...args: unknown[]) => void> = {};
+    const result: Record<string, unknown> = {};
 
     if (!events) {
         console.warn(`No emitted event found. Please check component: ${vm?.type.__name}`);
-        return result;
+        return result as EmitAsProps<E>;
     }
 
     if (!Array.isArray(events)) {
@@ -41,5 +58,5 @@ export function useEmitAsProps() {
         result[toHandlerKey(camelize(event))] = (...args: unknown[]) => vm?.emit(event, ...args);
     }
 
-    return result;
+    return result as EmitAsProps<E>;
 }

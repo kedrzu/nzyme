@@ -1,4 +1,5 @@
 export * from './createClient.js';
+export * from './createClientMock.js';
 export * from './createMiddleware.js';
 export * from './createRouter.js';
 export * from './defineEndpoint.js';

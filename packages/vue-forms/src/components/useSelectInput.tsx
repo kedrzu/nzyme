@@ -10,10 +10,6 @@ import { defineFormField } from './defineFormField.js';
 const SELECT_FIELD = defineFormField(String);
 const SELECT_PROPS = defineProps({
     ...SELECT_FIELD.props,
-    type: {
-        type: String,
-        default: 'text',
-    },
     label: String,
     autocomplete: String,
     placeholder: String,

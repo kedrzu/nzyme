@@ -362,15 +362,15 @@ async function fetchAndFastForwardSubmoduleBaseBranch(
     baseBranch: string,
     logger: Logger,
 ): Promise<void> {
-    logger.info(`🔄 Fetching ${chalk.cyan(baseBranch)} in submodule ${chalk.magenta(submoduleName)}...`);
-    await git.fetch('origin', baseBranch);
-
     try {
+        logger.info(`🔄 Fetching ${chalk.cyan(baseBranch)} in submodule ${chalk.magenta(submoduleName)}...`);
+        await git.fetch('origin', baseBranch);
+
         await git.raw(['update-ref', `refs/heads/${baseBranch}`, `refs/remotes/origin/${baseBranch}`]);
         logger.info(`✅ Fast-forwarded ${chalk.cyan(baseBranch)} in ${chalk.magenta(submoduleName)}`);
     } catch (error) {
         logger.warn(
-            `⚠️  Could not fast-forward ${chalk.cyan(baseBranch)} in ${chalk.magenta(submoduleName)}: ${(error as Error).message}`,
+            `⚠️  Could not fetch/fast-forward ${chalk.cyan(baseBranch)} in ${chalk.magenta(submoduleName)}: ${(error as Error).message}`,
         );
     }
 }

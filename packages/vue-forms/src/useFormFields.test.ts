@@ -1,14 +1,13 @@
-import { beforeEach, expect, test, vi } from 'vitest';
-import { effectScope, nextTick, ref } from 'vue';
+import { beforeEach, expect, test } from 'vitest';
+import { createApp, effectScope, nextTick, ref } from 'vue';
+
+import { LanguageContext } from '@nzyme/i18n/LanguageContext.js';
+import { createContainer } from '@nzyme/vue-ioc/createContainer.js';
 
 import type { FormModel, FormValidator } from './types.js';
 import { useForm } from './useForm.js';
 import { useFormField } from './useFormField.js';
 import { useFormFields } from './useFormFields.js';
-
-vi.mock('@nzyme/vue-i18n', () => ({
-    useLanguage: () => ref('en'),
-}));
 
 interface TestFormValue {
     name: string;
@@ -16,12 +15,12 @@ interface TestFormValue {
     age: number;
 }
 
-let scope: ReturnType<typeof effectScope>;
+let ctx: ReturnType<typeof createTestContext>;
 let form: FormModel<TestFormValue>;
 
 beforeEach(() => {
-    scope = effectScope();
-    scope.run(() => {
+    ctx = createTestContext();
+    ctx.run(() => {
         form = useForm<TestFormValue>({
             name: '',
             email: '',
@@ -31,7 +30,7 @@ beforeEach(() => {
 });
 
 test('useFormFields creates fields for each key in params', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const fields = useFormFields(form, {
             name: null,
             email: null,
@@ -44,7 +43,7 @@ test('useFormFields creates fields for each key in params', () => {
 });
 
 test('useFormFields registers all fields with parent form', () => {
-    scope.run(() => {
+    ctx.run(() => {
         useFormFields(form, {
             name: null,
             email: null,
@@ -56,7 +55,7 @@ test('useFormFields registers all fields with parent form', () => {
 });
 
 test('useFormFields field value syncs with form value via computed', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const fields = useFormFields(form, {
             name: null,
         });
@@ -71,7 +70,7 @@ test('useFormFields field value syncs with form value via computed', async () =>
 });
 
 test('useFormFields setting field value updates form value', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const fields = useFormFields(form, {
             name: null,
         });
@@ -86,7 +85,7 @@ test('useFormFields setting field value updates form value', async () => {
 });
 
 test('useFormFields applies validators to fields', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const requiredValidator: FormValidator<string> = {
             async: false,
             validate: (v: string | null | undefined) => (v ? null : 'Required'),
@@ -106,7 +105,7 @@ test('useFormFields applies validators to fields', () => {
 });
 
 test('useFormFields applies multiple validators to single field', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const requiredValidator: FormValidator<string> = {
             async: false,
             validate: (v: string | null | undefined) => (v ? null : 'Required'),
@@ -126,7 +125,7 @@ test('useFormFields applies multiple validators to single field', () => {
 });
 
 test('useFormFields null validators array creates field without validators', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const fields = useFormFields(form, {
             name: null,
         });
@@ -138,7 +137,7 @@ test('useFormFields null validators array creates field without validators', () 
 });
 
 test('useFormFields empty validators array creates field without validators', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const fields = useFormFields(form, {
             name: [],
         });
@@ -150,7 +149,7 @@ test('useFormFields empty validators array creates field without validators', ()
 });
 
 test('useFormFields fields have focus and blur methods', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const fields = useFormFields(form, {
             name: null,
         });
@@ -169,7 +168,7 @@ test('useFormFields fields have focus and blur methods', () => {
 });
 
 test('useFormFields fields have validate method', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const fields = useFormFields(form, {
             name: null,
         });
@@ -180,7 +179,7 @@ test('useFormFields fields have validate method', async () => {
 });
 
 test('useFormFields fields have reset method', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const validator: FormValidator<string> = {
             async: false,
             validate: () => 'Error',
@@ -199,7 +198,7 @@ test('useFormFields fields have reset method', async () => {
 });
 
 test('useFormFields each field references parent form', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const fields = useFormFields(form, {
             name: null,
             email: null,
@@ -211,7 +210,7 @@ test('useFormFields each field references parent form', () => {
 });
 
 test('useFormFields form validation validates all fields', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const requiredValidator: FormValidator<string> = {
             async: false,
             validate: (v: string | null | undefined) => (v ? null : 'Required'),
@@ -229,7 +228,7 @@ test('useFormFields form validation validates all fields', async () => {
 });
 
 test('useFormFields form validation passes when all fields valid', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const requiredValidator: FormValidator<string> = {
             async: false,
             validate: (v: string | null | undefined) => (v ? null : 'Required'),
@@ -249,7 +248,7 @@ test('useFormFields form validation passes when all fields valid', async () => {
 });
 
 test('useFormFields form.valid reflects overall validity', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const requiredValidator: FormValidator<string> = {
             async: false,
             validate: (v: string | null | undefined) => (v ? null : 'Required'),
@@ -272,7 +271,7 @@ test('useFormFields form.valid reflects overall validity', async () => {
 });
 
 test('useFormFields field invalid is false initially even when valid is false', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const requiredValidator: FormValidator<string> = {
             async: false,
             validate: (v: string | null | undefined) => (v ? null : 'Required'),
@@ -290,7 +289,7 @@ test('useFormFields field invalid is false initially even when valid is false', 
 });
 
 test('useFormFields field invalid becomes true after validate()', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const requiredValidator: FormValidator<string> = {
             async: false,
             validate: (v: string | null | undefined) => (v ? null : 'Required'),
@@ -310,7 +309,7 @@ test('useFormFields field invalid becomes true after validate()', async () => {
 });
 
 test('useFormFields form.invalid reflects overall invalid state', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const requiredValidator: FormValidator<string> = {
             async: false,
             validate: (v: string | null | undefined) => (v ? null : 'Required'),
@@ -333,7 +332,7 @@ test('useFormFields form.invalid reflects overall invalid state', async () => {
 });
 
 test('useFormFields form.invalid is false after reset()', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const requiredValidator: FormValidator<string> = {
             async: false,
             validate: (v: string | null | undefined) => (v ? null : 'Required'),
@@ -355,7 +354,7 @@ test('useFormFields form.invalid is false after reset()', async () => {
 });
 
 test('useFormFields form.reset resets all fields', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const validator: FormValidator<string> = {
             async: false,
             validate: () => 'Error',
@@ -378,7 +377,7 @@ test('useFormFields form.reset resets all fields', async () => {
 });
 
 test('useFormFields supports different value types', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const numberValidator: FormValidator<number> = {
             async: false,
             validate: (v: number | null | undefined) => (v != null && v > 0 ? null : 'Must be positive'),
@@ -417,7 +416,7 @@ test('useFormFields unregisters fields on scope disposal', () => {
 });
 
 test('useFormFields type inference works correctly', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const fields = useFormFields(form, {
             name: null,
             email: null,
@@ -438,26 +437,28 @@ test('useFormFields type inference works correctly', () => {
 test('useFormFields works with ref form value', async () => {
     const localScope = effectScope();
 
-    await localScope.run(async () => {
-        const value = ref({
-            name: '',
-            email: '',
-        });
+    await ctx.app.runWithContext(() =>
+        localScope.run(async () => {
+            const value = ref({
+                name: '',
+                email: '',
+            });
 
-        const refForm = useForm(value);
+            const refForm = useForm(value);
 
-        const fields = useFormFields(refForm, {
-            name: null,
-            email: null,
-        });
+            const fields = useFormFields(refForm, {
+                name: null,
+                email: null,
+            });
 
-        expect(fields.name.value).toBe('');
+            expect(fields.name.value).toBe('');
 
-        value.value.name = 'Updated';
-        await nextTick();
+            value.value.name = 'Updated';
+            await nextTick();
 
-        expect(fields.name.value).toBe('Updated');
-    });
+            expect(fields.name.value).toBe('Updated');
+        }),
+    );
 
     localScope.stop();
 });
@@ -465,7 +466,7 @@ test('useFormFields works with ref form value', async () => {
 // Tests for factory function feature (new feature)
 
 test('useFormFields with factory function returns custom structure', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const fields = useFormFields(form, {
             name: field => ({
                 field,
@@ -480,7 +481,7 @@ test('useFormFields with factory function returns custom structure', () => {
 });
 
 test('useFormFields with factory function receives FormModel for the key', () => {
-    scope.run(() => {
+    ctx.run(() => {
         let receivedField: FormModel<string> | null = null;
 
         useFormFields(form, {
@@ -497,7 +498,7 @@ test('useFormFields with factory function receives FormModel for the key', () =>
 });
 
 test('useFormFields factory function can use useFormField to add validators', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const validator: FormValidator<string> = {
             async: false,
             validate: v => (v ? null : 'Required'),
@@ -514,7 +515,7 @@ test('useFormFields factory function can use useFormField to add validators', ()
 });
 
 test('useFormFields factory function can create nested structures with useFormFields', () => {
-    scope.run(() => {
+    ctx.run(() => {
         interface NestedForm {
             address: {
                 street: string;
@@ -548,7 +549,7 @@ test('useFormFields factory function can create nested structures with useFormFi
 });
 
 test('useFormFields factory creates field that is registered to parent form', () => {
-    scope.run(() => {
+    ctx.run(() => {
         useFormFields(form, {
             name: field => useFormField(field, { validators: [] }),
         });
@@ -559,7 +560,7 @@ test('useFormFields factory creates field that is registered to parent form', ()
 });
 
 test('useFormFields mixed validators and factory functions', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const validator: FormValidator<string> = {
             async: false,
             validate: () => null,
@@ -584,7 +585,7 @@ test('useFormFields mixed validators and factory functions', () => {
 });
 
 test('useFormFields factory function field value syncs with form', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const fields = useFormFields(form, {
             name: field => useFormField(field, { validators: [] }),
         });
@@ -599,7 +600,7 @@ test('useFormFields factory function field value syncs with form', async () => {
 });
 
 test('useFormFields factory function nested fields contribute to parent validation', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const requiredValidator: FormValidator<string> = {
             async: false,
             validate: v => (v ? null : 'Required'),
@@ -634,7 +635,7 @@ test('useFormFields factory function nested fields contribute to parent validati
 // Null/Undefined Value Handling
 
 test('useFormFields handles null form value', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const nullForm = useForm<TestFormValue | null>(null);
         const fields = useFormFields(nullForm as FormModel<TestFormValue>, {
             name: null,
@@ -650,7 +651,7 @@ test('useFormFields handles null form value', () => {
 });
 
 test('useFormFields handles undefined form value', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const undefinedForm = useForm<TestFormValue | undefined>(undefined);
         const fields = useFormFields(undefinedForm as FormModel<TestFormValue>, {
             name: null,
@@ -666,7 +667,7 @@ test('useFormFields handles undefined form value', () => {
 });
 
 test('useFormFields setter is no-op when form value is null', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const nullForm = useForm<TestFormValue | null>(null);
         const fields = useFormFields(nullForm as FormModel<TestFormValue>, {
             name: null,
@@ -682,7 +683,7 @@ test('useFormFields setter is no-op when form value is null', async () => {
 });
 
 test('useFormFields handles form value changing from object to null', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm<TestFormValue | null>({
             name: 'John',
             email: 'john@example.com',
@@ -707,7 +708,7 @@ test('useFormFields handles form value changing from object to null', async () =
 });
 
 test('useFormFields handles form value changing from null to object', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm<TestFormValue | null>(null);
 
         const fields = useFormFields(form as FormModel<TestFormValue>, {
@@ -731,7 +732,7 @@ test('useFormFields handles form value changing from null to object', async () =
 });
 
 test('useFormFields with validators handles null form value', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const nullForm = useForm<TestFormValue | null>(null);
         const requiredValidator: FormValidator<string> = {
             async: false,
@@ -748,7 +749,7 @@ test('useFormFields with validators handles null form value', () => {
 });
 
 test('useFormFields with factory handles null form value', () => {
-    scope.run(() => {
+    ctx.run(() => {
         const nullForm = useForm<TestFormValue | null>(null);
 
         const fields = useFormFields(nullForm as FormModel<TestFormValue>, {
@@ -764,7 +765,7 @@ test('useFormFields with factory handles null form value', () => {
 });
 
 test('useFormFields handles value toggling between null and object', async () => {
-    await scope.run(async () => {
+    await ctx.run(async () => {
         const form = useForm<TestFormValue | null>({
             name: 'Initial',
             email: 'initial@test.com',
@@ -793,3 +794,21 @@ test('useFormFields handles value toggling between null and object', async () =>
         expect(fields.name.value).toBeUndefined();
     });
 });
+
+function createTestContext() {
+    const app = createApp({ render: () => null });
+    const container = createContainer();
+    container.set(LanguageContext, () => 'en');
+    app.provide(container.injectionKey, container);
+
+    const scope = effectScope();
+
+    return {
+        app,
+        container,
+        scope,
+        run<T>(fn: () => T): T {
+            return app.runWithContext(() => scope.run(fn))!;
+        },
+    };
+}

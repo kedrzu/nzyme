@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { LoggerLevel } from '@nzyme/logging/LoggerLevel.js';
-import { AlertCircle, AlertTriangle, Bug, Info, Search } from 'lucide-vue-next';
+import { AlertCircle, AlertTriangle, Bug, Ellipsis, Info, Search } from 'lucide-vue-next';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import { ref, watch, type Component } from 'vue';
@@ -8,6 +8,8 @@ import { ref, watch, type Component } from 'vue';
 import type { LogEntry } from '../types/LogEntry.js';
 
 import LogJsonViewer from './LogJsonViewer.vue';
+
+const MAX_MESSAGE_LENGTH = 200;
 
 const props = defineProps<{
   logs: LogEntry[];
@@ -77,6 +79,10 @@ function getLevelStyle(level: LoggerLevel): LevelStyle {
  * Toggle row expansion.
  */
 function toggleRow(log: LogEntry): void {
+  if (!isExpandable(log)) {
+    return;
+  }
+
   if (expandedRows.value[log.id]) {
     delete expandedRows.value[log.id];
   } else {
@@ -89,6 +95,30 @@ function toggleRow(log: LogEntry): void {
  */
 function hasData(log: LogEntry): boolean {
   return log.data !== undefined && Object.keys(log.data).length > 0;
+}
+
+/**
+ * Check if the message exceeds the max display length.
+ */
+function isMessageTruncated(log: LogEntry): boolean {
+  return log.message.length > MAX_MESSAGE_LENGTH;
+}
+
+/**
+ * Check if a row should show the expand indicator.
+ */
+function isExpandable(log: LogEntry): boolean {
+  return hasData(log) || isMessageTruncated(log);
+}
+
+/**
+ * Get the display message, truncated unless expanded.
+ */
+function getDisplayMessage(log: LogEntry): string {
+  if (expandedRows.value[log.id] || log.message.length <= MAX_MESSAGE_LENGTH) {
+    return log.message;
+  }
+  return log.message.slice(0, MAX_MESSAGE_LENGTH) + '\u2026';
 }
 </script>
 
@@ -103,17 +133,26 @@ function hasData(log: LogEntry): boolean {
     @row-click="e => toggleRow(e.data)"
   >
     <Column
-      expander
-      style="width: 3rem"
-    />
-
-    <Column
       field="timestamp"
       header="Time"
       style="width: 120px"
     >
       <template #body="{ data }">
         <span class="mono-cell">{{ formatTime(data.timestamp) }}</span>
+      </template>
+    </Column>
+
+    <Column
+      field="logger"
+      header="Logger"
+    >
+      <template #body="{ data }">
+        <span
+          class="logger-path"
+          :style="{ color: props.getLoggerPathColor(data) }"
+          :title="props.getLoggerPathDisplay(data)"
+          >{{ props.getLoggerPathDisplay(data) }}</span
+        >
       </template>
     </Column>
 
@@ -133,33 +172,25 @@ function hasData(log: LogEntry): boolean {
           <span
             class="message-cell"
             :style="{ color: getLevelStyle(data.level).textColor }"
-            >{{ data.message }}</span
+            >{{ getDisplayMessage(data) }}</span
           >
           <span
-            v-if="hasData(data)"
+            v-if="isExpandable(data)"
             class="data-indicator"
-            title="Has additional data"
-          />
+            title="Click to expand"
+            @click.stop="toggleRow(data)"
+          >
+            <Ellipsis :size="14" />
+          </span>
         </span>
       </template>
     </Column>
 
-    <Column
-      field="logger"
-      header="Logger"
-    >
-      <template #body="{ data }">
-        <span
-          class="logger-path"
-          :style="{ color: props.getLoggerPathColor(data) }"
-          :title="props.getLoggerPathDisplay(data)"
-          >{{ props.getLoggerPathDisplay(data) }}</span
-        >
-      </template>
-    </Column>
-
     <template #expansion="{ data }">
-      <LogJsonViewer :log="data" />
+      <LogJsonViewer
+        v-if="hasData(data)"
+        :log="data"
+      />
     </template>
   </DataTable>
 </template>
@@ -208,12 +239,20 @@ function hasData(log: LogEntry): boolean {
 }
 
 .data-indicator {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: #3b82f6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background-color: #dbeafe;
+  color: #3b82f6;
   flex-shrink: 0;
+  cursor: pointer;
+}
+
+.data-indicator:hover {
+  background-color: #bfdbfe;
 }
 
 :deep(.p-datatable-tbody > tr) {
@@ -226,6 +265,7 @@ function hasData(log: LogEntry): boolean {
 
 :deep(.p-datatable-tbody > tr > td) {
   padding: 0.5rem 0.75rem;
+  vertical-align: top;
 }
 
 :deep(.p-datatable-row-expansion > td) {

@@ -18,26 +18,27 @@ export interface LoggerPath {
 }
 
 /**
- * Disabled levels configuration for a logger.
- * Only stores levels that are disabled (sparse storage).
- */
-export interface DisabledLevels {
-    error?: false;
-    warn?: false;
-    info?: false;
-    debug?: false;
-    trace?: false;
-}
-
-/**
- * Logger configuration entry - stores which levels are disabled for a logger.
+ * Logger configuration entry - stores the minimum log level to show for a logger.
+ * Logs at this level or higher (more severe) are shown.
  */
 export interface LoggerConfig {
     /** Primary key: "app" or "app/logger" format */
     path: string;
-    /** Disabled levels (sparse - only store if disabled) */
-    disabledLevels: DisabledLevels;
+    /** Minimum level to display. Logs at this level or more severe are shown. 'none' hides all. */
+    minLevel: LoggerLevel | 'none';
 }
+
+/** Severity ranking: lower number = more severe. */
+const LEVEL_SEVERITY: Record<LoggerLevel, number> = {
+    error: 0,
+    warn: 1,
+    info: 2,
+    debug: 3,
+    trace: 4,
+};
+
+/** Levels ordered by severity (most severe first). */
+const LEVELS_BY_SEVERITY: LoggerLevel[] = ['error', 'warn', 'info', 'debug', 'trace'];
 
 /**
  * Database schema for logging-ui using Dexie.
@@ -58,7 +59,55 @@ class LoggingDatabaseSchema extends Dexie {
             // Logger configs by path
             loggerConfigs: 'path',
         });
+
+        // Migration: LoggerConfig changed from disabledLevels to minLevel.
+        this.version(2)
+            .stores({
+                logs: 'id, timestamp',
+                loggerPaths: 'path',
+                loggerConfigs: 'path',
+            })
+            .upgrade(tx => {
+                return tx
+                    .table('loggerConfigs')
+                    .toCollection()
+                    .modify(config => {
+                        // Migrate old disabledLevels format to minLevel format.
+                        // Old format: { path, disabledLevels: { error?: false, warn?: false, ... } }
+                        // New format: { path, minLevel: LoggerLevel | 'none' }
+                        const record = config as Record<string, unknown>;
+                        if ('disabledLevels' in record && !('minLevel' in record)) {
+                            const disabled = record['disabledLevels'] as Record<string, false | undefined>;
+                            config.minLevel = convertDisabledLevelsToMinLevel(disabled);
+                            delete record['disabledLevels'];
+                        }
+                    });
+            });
     }
+}
+
+/**
+ * Converts old disabledLevels format to minLevel.
+ *
+ * Walks from most severe (error) to least severe (trace) and returns the
+ * least-severe level in the contiguous block of enabled levels starting from
+ * the top. When disabled levels are non-contiguous (e.g., only debug disabled
+ * while trace remains enabled), this errs on the side of filtering more rather
+ * than silently re-enabling previously-disabled levels.
+ */
+function convertDisabledLevelsToMinLevel(disabled: Record<string, false | undefined>): LoggerLevel | 'none' {
+    // Walk from most severe to least severe.
+    // Return the last enabled level before hitting a disabled one.
+    let lastEnabled: LoggerLevel | null = null;
+
+    for (const level of LEVELS_BY_SEVERITY) {
+        if (disabled[level] === false) {
+            break;
+        }
+        lastEnabled = level;
+    }
+
+    return lastEnabled ?? 'none';
 }
 
 /**
@@ -126,13 +175,16 @@ export const LocalDatabase = defineService({
 export type LocalDatabase = Resolved<typeof LocalDatabase>;
 
 /**
- * Helper to check if a level is disabled in a config.
+ * Helper to check if a level is below the configured minimum (should be hidden).
  */
 export function isLevelDisabled(config: LoggerConfig | undefined, level: LoggerLevel): boolean {
-    if (!config) {
+    if (!config || !config.minLevel) {
         return false;
     }
-    return config.disabledLevels[level] === false;
+    if (config.minLevel === 'none') {
+        return true;
+    }
+    return LEVEL_SEVERITY[level] > LEVEL_SEVERITY[config.minLevel];
 }
 
 /**

@@ -361,6 +361,8 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
 
 /**
  * Fetch and fast-forward a base branch in a submodule without checking it out.
+ * Verifies the operation is a true fast-forward using merge-base --is-ancestor
+ * to avoid silently orphaning local commits on a diverged branch.
  */
 async function fetchAndFastForwardSubmoduleBaseBranch(
     git: ReturnType<typeof simpleGit>,
@@ -372,7 +374,29 @@ async function fetchAndFastForwardSubmoduleBaseBranch(
         logger.info(`🔄 Fetching ${chalk.cyan(baseBranch)} in submodule ${chalk.magenta(submoduleName)}...`);
         await git.fetch('origin', baseBranch);
 
-        await git.raw(['update-ref', `refs/heads/${baseBranch}`, `refs/remotes/origin/${baseBranch}`]);
+        const localRef = `refs/heads/${baseBranch}`;
+        const remoteRef = `refs/remotes/origin/${baseBranch}`;
+
+        // Check if the local branch exists before verifying ancestry
+        const localBranchExists = await git
+            .raw(['rev-parse', '--verify', localRef])
+            .then(() => true)
+            .catch(() => false);
+
+        if (localBranchExists) {
+            // Verify that the local branch is an ancestor of the remote —
+            // i.e. the update is actually a fast-forward.
+            try {
+                await git.raw(['merge-base', '--is-ancestor', localRef, remoteRef]);
+            } catch {
+                logger.warn(
+                    `⚠️  Local branch ${chalk.cyan(baseBranch)} in ${chalk.magenta(submoduleName)} has diverged from origin. Skipping fast-forward to avoid losing local commits.`,
+                );
+                return;
+            }
+        }
+
+        await git.raw(['update-ref', localRef, remoteRef]);
         logger.info(`✅ Fast-forwarded ${chalk.cyan(baseBranch)} in ${chalk.magenta(submoduleName)}`);
     } catch (error) {
         logger.warn(

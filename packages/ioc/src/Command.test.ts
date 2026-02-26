@@ -93,7 +93,6 @@ test('resolve command with service dependency', () => {
             service,
         },
         setup({ service }) {
-            console.log(service);
             commandCount++;
             return (value: number) => {
                 return value;

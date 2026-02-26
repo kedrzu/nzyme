@@ -1,3 +1,4 @@
+export * from './array/arrayIncludes.js';
 export * from './array/arrayRemove.js';
 export * from './array/arrayRemoveDuplicates.js';
 export * from './array/arrayRemoveFirst.js';

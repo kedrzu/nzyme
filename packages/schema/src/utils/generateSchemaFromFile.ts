@@ -15,8 +15,8 @@ export interface GenerateSchemaFromFileOptions {
     outputPath?: string;
     /** Custom header comment to add to the generated file */
     headerComment?: string;
-    /** Whether to include sury import (default: true) */
-    includeSuryImport?: boolean;
+    /** Whether to include zod import (default: true) */
+    includeZodImport?: boolean;
 }
 
 /**
@@ -32,12 +32,12 @@ export interface GenerateSchemaResult {
 }
 
 /**
- * Generate sury schemas from a TypeScript .type.ts file
+ * Generate zod schemas from a TypeScript .type.ts file
  * @param options Generation options
  * @returns Result with generated schemas and output path
  */
 export async function generateSchemaFromFile(options: GenerateSchemaFromFileOptions): Promise<GenerateSchemaResult> {
-    const { inputPath, outputDir, outputPath, headerComment, includeSuryImport } = options;
+    const { inputPath, outputDir, outputPath, headerComment, includeZodImport } = options;
 
     // Step 1: Parse the TypeScript file into AST
     const parseResult = await parseTypeFile(inputPath);
@@ -53,7 +53,7 @@ export async function generateSchemaFromFile(options: GenerateSchemaFromFileOpti
         inputPath,
         outputPath: finalOutputPath,
         schemas,
-        includeSuryImport,
+        includeZodImport,
         headerComment,
     });
 

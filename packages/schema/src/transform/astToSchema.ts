@@ -23,10 +23,10 @@ export interface SchemaDefinition {
 }
 
 /**
- * Transform TypeScript AST node to sury schema definition
+ * Transform TypeScript AST node to zod schema definition
  * @param node TypeScript interface or type alias declaration
  * @param jsDoc Optional JSDoc for extracting metadata
- * @returns Sury schema definition
+ * @returns Zod schema definition
  * @__NO_SIDE_EFFECTS__
  */
 export function transformAstToSchema(
@@ -54,9 +54,9 @@ export function transformAstToSchema(
 }
 
 /**
- * Transform TypeScript interface declaration to sury schema
+ * Transform TypeScript interface declaration to zod schema
  * @param node Interface declaration node
- * @returns Sury schema string
+ * @returns Zod schema string
  * @__NO_SIDE_EFFECTS__
  */
 function transformInterface(node: ts.InterfaceDeclaration): string {
@@ -71,27 +71,25 @@ function transformInterface(node: ts.InterfaceDeclaration): string {
         }
     }
 
-    const baseSchema = `s.schema({\n${properties.map(p => `        ${p}`).join(',\n')}\n    })`;
+    const baseSchema = `z.object({\n${properties.map(p => `        ${p}`).join(',\n')}\n    })`;
 
     // Get schema-level JSDoc
     const jsDocNodes = ts.getJSDocCommentsAndTags(node);
     const jsDoc = jsDocNodes.find(j => ts.isJSDoc(j));
     const meta = extractMeta(jsDoc);
 
-    // Add schema-level meta if available (only include description)
+    // Add .describe() if description is available
     if (meta && meta.description) {
-        const schemaLevelMeta = { description: meta.description };
-        const metaString = JSON.stringify(schemaLevelMeta, null, 8).replace(/\n/g, '\n        ');
-        return `${baseSchema}\n    .with(s.meta, ${metaString})`;
+        return `${baseSchema}\n    .describe(${JSON.stringify(meta.description)})`;
     }
 
     return baseSchema;
 }
 
 /**
- * Transform TypeScript type alias declaration to sury schema
+ * Transform TypeScript type alias declaration to zod schema
  * @param node Type alias declaration node
- * @returns Sury schema string
+ * @returns Zod schema string
  * @__NO_SIDE_EFFECTS__
  */
 function transformTypeAlias(node: ts.TypeAliasDeclaration): string {
@@ -99,9 +97,9 @@ function transformTypeAlias(node: ts.TypeAliasDeclaration): string {
 }
 
 /**
- * Transform TypeScript property signature to sury schema property
+ * Transform TypeScript property signature to zod schema property
  * @param member Property signature node
- * @returns Sury schema property string
+ * @returns Zod schema property string
  * @__NO_SIDE_EFFECTS__
  */
 function transformPropertySignature(member: ts.PropertySignature): string | null {
@@ -121,15 +119,14 @@ function transformPropertySignature(member: ts.PropertySignature): string | null
 
     let schema = typeSchema;
 
-    // Add .with(s.meta, {...}) only for @description tags and other meta
-    if (meta && Object.keys(meta).length > 0) {
-        const metaString = JSON.stringify(meta, null, 12).replace(/\n/g, '\n            ');
-        schema = `${schema}.with(s.meta, ${metaString})`;
+    // Add .describe() for @description tags
+    if (meta && meta.description) {
+        schema = `${schema}.describe(${JSON.stringify(meta.description)})`;
     }
 
     // Handle optional properties
     if (isOptional) {
-        schema = `s.optional(${schema})`;
+        schema = `z.optional(${schema})`;
     }
 
     // Add inline comment if description exists
@@ -139,89 +136,109 @@ function transformPropertySignature(member: ts.PropertySignature): string | null
 }
 
 /**
- * Transform TypeScript type node to sury schema
+ * Transform TypeScript type node to zod schema
  * @param typeNode Type node to transform
- * @returns Sury schema string
+ * @returns Zod schema string
  * @__NO_SIDE_EFFECTS__
  */
 function transformTypeNode(typeNode: ts.TypeNode): string {
     switch (typeNode.kind) {
         case ts.SyntaxKind.AnyKeyword:
-            return 's.any()';
+            return 'z.any()';
         case ts.SyntaxKind.ArrayType:
             return transformArrayType(typeNode as ts.ArrayTypeNode);
         case ts.SyntaxKind.BooleanKeyword:
-            return 's.boolean';
+            return 'z.boolean()';
         case ts.SyntaxKind.LiteralType:
             return transformLiteralType(typeNode as ts.LiteralTypeNode);
         case ts.SyntaxKind.NullKeyword:
-            return 's.null';
+            return 'z.null()';
         case ts.SyntaxKind.NumberKeyword:
-            return 's.number';
+            return 'z.number()';
         case ts.SyntaxKind.ParenthesizedType:
             return transformTypeNode((typeNode as ts.ParenthesizedTypeNode).type);
         case ts.SyntaxKind.StringKeyword:
-            return 's.string';
+            return 'z.string()';
         case ts.SyntaxKind.TypeLiteral:
             return transformTypeLiteral(typeNode as ts.TypeLiteralNode);
         case ts.SyntaxKind.TypeReference:
             return transformTypeReference(typeNode as ts.TypeReferenceNode);
         case ts.SyntaxKind.UndefinedKeyword:
-            return 's.undefined()';
+            return 'z.undefined()';
         case ts.SyntaxKind.UnionType:
             return transformUnionType(typeNode as ts.UnionTypeNode);
         case ts.SyntaxKind.UnknownKeyword:
-            return 's.unknown()';
+            return 'z.unknown()';
         case ts.SyntaxKind.VoidKeyword:
-            return 's.void()';
+            return 'z.void()';
         default:
             // Fallback to unknown for unsupported types
             console.error('Unsupported type kind:', ts.SyntaxKind[typeNode.kind], typeNode.kind);
-            return 's.unknown()';
+            return 'z.unknown()';
     }
 }
 
 /**
- * Transform TypeScript array type to sury schema
+ * Transform TypeScript array type to zod schema
  * @param node Array type node
- * @returns Sury schema string
+ * @returns Zod schema string
  * @__NO_SIDE_EFFECTS__
  */
 function transformArrayType(node: ts.ArrayTypeNode): string {
     const elementSchema = transformTypeNode(node.elementType);
-    return `s.array(${elementSchema})`;
+    return `z.array(${elementSchema})`;
 }
 
 /**
- * Transform TypeScript union type to sury schema
+ * Transform TypeScript union type to zod schema
  * @param node Union type node
- * @returns Sury schema string
+ * @returns Zod schema string
  * @__NO_SIDE_EFFECTS__
  */
 function transformUnionType(node: ts.UnionTypeNode): string {
     const schemas = node.types.map(type => transformTypeNode(type));
 
     // Check for nullable (T | null) pattern
-    const nullIndex = schemas.findIndex(s => s === 's.null()');
-    const undefinedIndex = schemas.findIndex(s => s === 's.undefined()');
+    const nullIndex = schemas.findIndex(s => s === 'z.null()');
+    const undefinedIndex = schemas.findIndex(s => s === 'z.undefined()');
+
+    if (nullIndex !== -1 && undefinedIndex !== -1 && schemas.length === 3) {
+        const otherSchema = schemas.find((_, i) => i !== nullIndex && i !== undefinedIndex);
+        if (otherSchema) {
+            return `z.nullish(${otherSchema})`;
+        }
+    }
 
     if (nullIndex !== -1 && schemas.length === 2) {
         const otherSchema = schemas[nullIndex === 0 ? 1 : 0];
-        return `s.nullable(${otherSchema})`;
+        return `z.nullable(${otherSchema})`;
     }
 
     if (undefinedIndex !== -1 && schemas.length === 2) {
         const otherSchema = schemas[undefinedIndex === 0 ? 1 : 0];
-        return `s.optional(${otherSchema})`;
+        return `z.optional(${otherSchema})`;
     }
 
-    return `s.union(${schemas.join(', ')})`;
+    // Check if all members are string literals - use z.enum() instead
+    const allStringLiterals = node.types.every(
+        type => ts.isLiteralTypeNode(type) && ts.isStringLiteral(type.literal),
+    );
+
+    if (allStringLiterals) {
+        const values = node.types.map(type => {
+            const literal = (type as ts.LiteralTypeNode).literal as ts.StringLiteral;
+            return `'${escapeString(literal.text)}'`;
+        });
+        return `z.enum([${values.join(', ')}])`;
+    }
+
+    return `z.union([${schemas.join(', ')}])`;
 }
 
 /**
- * Transform TypeScript type literal to sury schema
+ * Transform TypeScript type literal to zod schema
  * @param node Type literal node
- * @returns Sury schema string
+ * @returns Zod schema string
  * @__NO_SIDE_EFFECTS__
  */
 function transformTypeLiteral(node: ts.TypeLiteralNode): string {
@@ -236,36 +253,36 @@ function transformTypeLiteral(node: ts.TypeLiteralNode): string {
         }
     }
 
-    return `s.object({\n${properties.map(p => `  ${p}`).join(',\n')}\n})`;
+    return `z.object({\n${properties.map(p => `  ${p}`).join(',\n')}\n})`;
 }
 
 /**
- * Transform TypeScript literal type to sury schema
+ * Transform TypeScript literal type to zod schema
  * @param node Literal type node
- * @returns Sury schema string
+ * @returns Zod schema string
  * @__NO_SIDE_EFFECTS__
  */
 function transformLiteralType(node: ts.LiteralTypeNode): string {
     if (ts.isStringLiteral(node.literal)) {
-        return `s.literal('${escapeString(node.literal.text)}')`;
+        return `z.literal('${escapeString(node.literal.text)}')`;
     } else if (ts.isNumericLiteral(node.literal)) {
-        return `s.literal(${node.literal.text})`;
+        return `z.literal(${node.literal.text})`;
     } else if (node.literal.kind === ts.SyntaxKind.TrueKeyword) {
-        return 's.literal(true)';
+        return 'z.literal(true)';
     } else if (node.literal.kind === ts.SyntaxKind.FalseKeyword) {
-        return 's.literal(false)';
+        return 'z.literal(false)';
     } else if (node.literal.kind === ts.SyntaxKind.NullKeyword) {
-        return 's.null()';
+        return 'z.null()';
     }
 
     console.error('Unsupported literal type:', ts.SyntaxKind[node.literal.kind], node.literal.kind);
-    return 's.unknown()';
+    return 'z.unknown()';
 }
 
 /**
- * Transform TypeScript type reference to sury schema
+ * Transform TypeScript type reference to zod schema
  * @param node Type reference node
- * @returns Sury schema string
+ * @returns Zod schema string
  * @__NO_SIDE_EFFECTS__
  */
 function transformTypeReference(node: ts.TypeReferenceNode): string {
@@ -278,12 +295,12 @@ function transformTypeReference(node: ts.TypeReferenceNode): string {
                 const elementArg = node.typeArguments[0];
                 if (elementArg) {
                     const elementSchema = transformTypeNode(elementArg);
-                    return `s.array(${elementSchema})`;
+                    return `z.array(${elementSchema})`;
                 }
             }
-            return 's.array(s.unknown())';
+            return 'z.array(z.unknown())';
         case 'Date':
-            return 's.date()';
+            return 'z.date()';
         case 'Record':
             if (node.typeArguments && node.typeArguments.length === 2) {
                 const keyArg = node.typeArguments[0];
@@ -291,15 +308,15 @@ function transformTypeReference(node: ts.TypeReferenceNode): string {
                 if (keyArg && valueArg) {
                     const keySchema = transformTypeNode(keyArg);
                     const valueSchema = transformTypeNode(valueArg);
-                    return `s.record(${keySchema}, ${valueSchema})`;
+                    return `z.record(${keySchema}, ${valueSchema})`;
                 }
             }
-            return 's.record(s.string(), s.unknown())';
+            return 'z.record(z.string(), z.unknown())';
         default:
             // For custom types, assume they will be defined elsewhere
             // For generic type parameters, use unknown for now
             if (typeName === 'T' || typeName.length === 1) {
-                return `s.unknown() /* Generic type ${typeName} */`;
+                return `z.unknown() /* Generic type ${typeName} */`;
             }
             return `${typeName}Schema`;
     }

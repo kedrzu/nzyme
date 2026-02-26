@@ -31,7 +31,7 @@ function createTypeAliasFromSource(source: string): ts.TypeAliasDeclaration {
     return typeNode;
 }
 
-describe.skip('transformAstToSchema', () => {
+describe('transformAstToSchema', () => {
     describe('primitive types', () => {
         it('should transform string type', () => {
             const source = 'interface Test { name: string; }';
@@ -39,7 +39,7 @@ describe.skip('transformAstToSchema', () => {
             const result = transformAstToSchema(node);
 
             expect(result.name).toBe('Test');
-            expect(result.schema).toContain('s.string()');
+            expect(result.schema).toContain('z.string()');
         });
 
         it('should transform number type', () => {
@@ -47,7 +47,7 @@ describe.skip('transformAstToSchema', () => {
             const node = createInterfaceFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toContain('s.number()');
+            expect(result.schema).toContain('z.number()');
         });
 
         it('should transform boolean type', () => {
@@ -55,7 +55,7 @@ describe.skip('transformAstToSchema', () => {
             const node = createInterfaceFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toContain('s.boolean()');
+            expect(result.schema).toContain('z.boolean()');
         });
     });
 
@@ -65,7 +65,7 @@ describe.skip('transformAstToSchema', () => {
             const node = createInterfaceFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toContain('s.optional(s.string())');
+            expect(result.schema).toContain('z.optional(z.string())');
         });
 
         it('should handle required properties', () => {
@@ -73,8 +73,8 @@ describe.skip('transformAstToSchema', () => {
             const node = createInterfaceFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toContain('s.string()');
-            expect(result.schema).not.toContain('s.optional(');
+            expect(result.schema).toContain('z.string()');
+            expect(result.schema).not.toContain('z.optional(');
         });
     });
 
@@ -84,7 +84,7 @@ describe.skip('transformAstToSchema', () => {
             const node = createInterfaceFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toContain('s.array(s.string())');
+            expect(result.schema).toContain('z.array(z.string())');
         });
 
         it('should transform generic array types', () => {
@@ -92,7 +92,7 @@ describe.skip('transformAstToSchema', () => {
             const node = createInterfaceFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toContain('s.array(s.number())');
+            expect(result.schema).toContain('z.array(z.number())');
         });
 
         it('should transform nested array types', () => {
@@ -100,7 +100,7 @@ describe.skip('transformAstToSchema', () => {
             const node = createInterfaceFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toContain('s.array(s.array(s.number()))');
+            expect(result.schema).toContain('z.array(z.array(z.number()))');
         });
     });
 
@@ -110,7 +110,7 @@ describe.skip('transformAstToSchema', () => {
             const node = createTypeAliasFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toContain('s.union(s.string(), s.number())');
+            expect(result.schema).toContain('z.union([z.string(), z.number()])');
         });
 
         it('should handle nullable types (T | null)', () => {
@@ -118,7 +118,7 @@ describe.skip('transformAstToSchema', () => {
             const node = createTypeAliasFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toBe('s.nullable(s.string())');
+            expect(result.schema).toBe('z.nullable(z.string())');
         });
 
         it('should handle optional types (T | undefined)', () => {
@@ -126,17 +126,15 @@ describe.skip('transformAstToSchema', () => {
             const node = createTypeAliasFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toBe('s.optional(s.string())');
+            expect(result.schema).toBe('z.optional(z.string())');
         });
 
-        it('should transform literal union types', () => {
+        it('should transform string literal unions to z.enum', () => {
             const source = "type Test = 'red' | 'green' | 'blue';";
             const node = createTypeAliasFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toContain("s.literal('red')");
-            expect(result.schema).toContain("s.literal('green')");
-            expect(result.schema).toContain("s.literal('blue')");
+            expect(result.schema).toBe("z.enum(['red', 'green', 'blue'])");
         });
     });
 
@@ -151,10 +149,10 @@ interface User {
             const node = createInterfaceFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toContain('s.object({');
-            expect(result.schema).toContain('name: s.string()');
-            expect(result.schema).toContain('age: s.number()');
-            expect(result.schema).toContain('active: s.boolean()');
+            expect(result.schema).toContain('z.object({');
+            expect(result.schema).toContain('name: z.string()');
+            expect(result.schema).toContain('age: z.number()');
+            expect(result.schema).toContain('active: z.boolean()');
         });
 
         it('should transform nested object types', () => {
@@ -168,10 +166,10 @@ interface Test {
             const node = createInterfaceFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toContain('s.object({');
-            expect(result.schema).toContain('user: s.object({');
-            expect(result.schema).toContain('name: s.string()');
-            expect(result.schema).toContain('age: s.number()');
+            expect(result.schema).toContain('z.object({');
+            expect(result.schema).toContain('user: z.object({');
+            expect(result.schema).toContain('name: z.string()');
+            expect(result.schema).toContain('age: z.number()');
         });
     });
 
@@ -181,7 +179,7 @@ interface Test {
             const node = createTypeAliasFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toBe("s.literal('hello')");
+            expect(result.schema).toBe("z.literal('hello')");
         });
 
         it('should transform number literals', () => {
@@ -189,7 +187,7 @@ interface Test {
             const node = createTypeAliasFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toBe('s.literal(42)');
+            expect(result.schema).toBe('z.literal(42)');
         });
 
         it('should transform boolean literals', () => {
@@ -197,7 +195,7 @@ interface Test {
             const node = createTypeAliasFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toBe('s.literal(true)');
+            expect(result.schema).toBe('z.literal(true)');
         });
     });
 
@@ -207,7 +205,7 @@ interface Test {
             const node = createInterfaceFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toContain('s.date()');
+            expect(result.schema).toContain('z.date()');
         });
 
         it('should transform Record type', () => {
@@ -215,7 +213,7 @@ interface Test {
             const node = createInterfaceFromSource(source);
             const result = transformAstToSchema(node);
 
-            expect(result.schema).toContain('s.record(s.string(), s.number())');
+            expect(result.schema).toContain('z.record(z.string(), z.number())');
         });
     });
 
@@ -244,13 +242,13 @@ interface ApiResponse {
             const result = transformAstToSchema(node);
 
             expect(result.name).toBe('ApiResponse');
-            expect(result.schema).toContain('s.object({');
-            expect(result.schema).toContain('data: s.object({');
-            expect(result.schema).toContain('users: s.array(s.object({');
-            expect(result.schema).toContain('id: s.number()');
-            expect(result.schema).toContain('profile: s.optional(s.object({');
-            expect(result.schema).toContain('s.optional(');
-            expect(result.schema).toContain('s.nullable(');
+            expect(result.schema).toContain('z.object({');
+            expect(result.schema).toContain('data: z.object({');
+            expect(result.schema).toContain('users: z.array(z.object({');
+            expect(result.schema).toContain('id: z.number()');
+            expect(result.schema).toContain('z.optional(z.object({');
+            expect(result.schema).toContain('z.optional(');
+            expect(result.schema).toContain('z.nullable(');
         });
     });
 

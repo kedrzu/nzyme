@@ -42,7 +42,6 @@
         "chokidar": "5.0.0",
         "fast-glob": "3.3.3",
         "fs-extra": "11.3.3",
-        "sury": "11.0.0-alpha.4",
         "typescript": "5.9.3"
     },
     "devDependencies": {

@@ -15,8 +15,8 @@ export interface GenerateSchemaFileOptions {
     outputPath: string;
     /** Array of schema definitions to include */
     schemas: SchemaDefinition[];
-    /** Whether to include imports for sury */
-    includeSuryImport?: boolean;
+    /** Whether to include imports for zod */
+    includeZodImport?: boolean;
     /** Custom header comment to add to the file */
     headerComment?: string;
 }
@@ -27,12 +27,12 @@ export interface GenerateSchemaFileOptions {
  * @__NO_SIDE_EFFECTS__
  */
 export async function generateSchemaFile(options: GenerateSchemaFileOptions): Promise<void> {
-    const { inputPath, outputPath, schemas, includeSuryImport = true, headerComment } = options;
+    const { inputPath, outputPath, schemas, includeZodImport = true, headerComment } = options;
 
     const content = generateSchemaFileContent({
         inputPath,
         schemas,
-        includeSuryImport,
+        includeZodImport,
         headerComment,
     });
 
@@ -52,11 +52,11 @@ export async function generateSchemaFile(options: GenerateSchemaFileOptions): Pr
  */
 export function generateSchemaFileContent(options: {
     headerComment?: string;
-    includeSuryImport?: boolean;
+    includeZodImport?: boolean;
     inputPath: string;
     schemas: SchemaDefinition[];
 }): string {
-    const { inputPath, schemas, includeSuryImport = true, headerComment } = options;
+    const { inputPath, schemas, includeZodImport = true, headerComment } = options;
 
     const lines: string[] = [];
 
@@ -71,8 +71,8 @@ export function generateSchemaFileContent(options: {
     lines.push('');
 
     // Add imports
-    if (includeSuryImport) {
-        lines.push("import * as s from 'sury';");
+    if (includeZodImport) {
+        lines.push("import * as z from 'zod/mini';");
         lines.push('');
     }
 
@@ -176,7 +176,7 @@ function generateSchemaDefinitionLines(schema: SchemaDefinition): string[] {
     // Add schema definition with proper type annotation
     const schemaName = schema.name;
     const typeName = `${schema.name}Type`;
-    lines.push(`export const ${schemaName}: s.Schema<${typeName}, s.UnknownToInput<${typeName}>> = ${schema.schema};`);
+    lines.push(`export const ${schemaName}: z.ZodMiniType<${typeName}> = ${schema.schema};`);
 
     return lines;
 }

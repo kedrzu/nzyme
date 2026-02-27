@@ -5,9 +5,9 @@ import type { RouteLocationRaw } from 'vue-router';
 
 import { assignProps } from '@nzyme/utils/assignProps.js';
 import { waitFor } from '@nzyme/utils/waitFor.js';
+import { injectContext } from '@nzyme/vue-utils/context.js';
 import { defineProp } from '@nzyme/vue-utils/defineProp.js';
 import { defineProps } from '@nzyme/vue-utils/defineProps.js';
-import { injectContext } from '@nzyme/vue-utils/context.js';
 import { useEmit } from '@nzyme/vue-utils/useEmit.js';
 import { useEmitAsync } from '@nzyme/vue-utils/useEmitAsync.js';
 import { useProps } from '@nzyme/vue-utils/useProps.js';
@@ -189,6 +189,11 @@ function setupButton() {
             return;
         }
 
+        if (!navigate) {
+            event.stopPropagation();
+            event.preventDefault();
+        }
+
         try {
             pending.value = !props.noWait;
             emit('update:busy', pending.value);
@@ -200,17 +205,12 @@ function setupButton() {
 
             if (navigate) {
                 await navigate(event);
-            } else {
-                event.stopPropagation();
-                event.preventDefault();
-
-                if (props.type === 'submit') {
-                    await formCtx?.submit();
-                }
+            } else if (props.type === 'submit') {
+                await formCtx?.submit();
             }
 
             if (navigate) {
-                await waitFor(200);
+                await waitFor(500);
             }
         } finally {
             pending.value = false;

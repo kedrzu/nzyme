@@ -352,6 +352,11 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                     return false;
                 }
 
+                // Deploy first stack non-parallel to give Pulumi time to update its files
+                if (stacksDeployed.size === 0 && stacksDeploying.size > 0) {
+                    return false;
+                }
+
                 for (const stack of stacksLeft) {
                     // Skip if already deployed
                     if (stacksDeployed.has(stack) || stacksDeploying.has(stack)) {

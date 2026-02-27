@@ -1,36 +1,34 @@
 // This file is auto-generated. Do not edit manually.
 
-import * as s from 'sury';
+import * as z from 'zod/mini';
 
-import type { Status, UserRole } from './typeAliasUnions.type.js';
+import type { NullableString, NullishBigInt, OptionalNumber, Status, UserRole } from './typeAliasUnions.type.js';
 
 /**
  * Status enumeration for entities
  */
-export const StatusSchema: s.Schema<Status, s.UnknownToInput<Status>> = s.union(['active', 'inactive', 'pending']);
+export const StatusSchema: z.ZodMiniType<Status> = z.enum(['active', 'inactive', 'pending']);
 
 /**
  * User role with permissions
  */
-export const UserRoleSchema: s.Schema<UserRole, s.UnknownToInput<UserRole>> = s
-    .union(['admin', 'guest', 'user'])
-    .with(s.meta, {
-        description: 'User role with permissions',
-    });
+export const UserRoleSchema: z.ZodMiniType<UserRole> = z
+    .enum(['admin', 'guest', 'user'])
+    .describe('User role with permissions');
 
 /**
  * Nullable string type
  */
-export const NullableStringSchema = s.nullable(s.string);
+export const NullableStringSchema: z.ZodMiniType<NullableString> = z.nullable(z.string());
 
 /**
  * Optional number type
  */
-export const OptionalNumberSchema = s.optional(s.number);
+export const OptionalNumberSchema: z.ZodMiniType<OptionalNumber> = z.optional(z.number());
 
 /**
  * Nullish bigint type
  */
-export const NullishBigIntSchema = s.nullable(s.bigint).with(s.meta, {
-    description: 'Nullish bigint type',
-});
+export const NullishBigIntSchema: z.ZodMiniType<NullishBigInt> = z
+    .nullish(z.bigint())
+    .describe('Nullish bigint type');

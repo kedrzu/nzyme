@@ -1,109 +1,57 @@
 // This file is auto-generated. Do not edit manually.
 
-import * as s from 'sury';
+import * as z from 'zod/mini';
 
 import type { ApiResponse, UserProfile } from './complexNested.type.js';
 
 /**
  * API Response wrapper
  */
-export const ApiResponseSchema: s.Schema<ApiResponse, s.UnknownToInput<ApiResponse>> = s
-    .schema({
+export const ApiResponseSchema: z.ZodMiniType<ApiResponse> = z
+    .object({
         /** Response data */
-        data: s.unknown.with(s.meta, {
-            description: 'Response data',
-        }),
+        data: z.optional(z.unknown().describe('Response data')),
         /** Response metadata */
-        meta: s
-            .schema({
-                page: s.number.with(s.meta, {
-                    description: 'Current page number',
-                }),
-                perPage: s.number.with(s.meta, {
-                    description: 'Items per page',
-                }),
-                total: s.number.with(s.meta, {
-                    description: 'Total number of items',
-                }),
-            })
-            .with(s.meta, {
-                description: 'Response metadata',
-            }),
+        meta: z.object({
+            page: z.number().describe('Current page number'),
+            perPage: z.number().describe('Items per page'),
+            total: z.number().describe('Total number of items'),
+        }),
         /** Validation errors if any */
-        errors: s
-            .optional(
-                s.array(
-                    s.schema({
-                        code: s.number.with(s.meta, {
-                            description: 'Error code',
-                        }),
-                        field: s.string.with(s.meta, {
-                            description: 'Field name',
-                        }),
-                        message: s.string.with(s.meta, {
-                            description: 'Error message',
-                        }),
-                    }),
-                ),
-            )
-            .with(s.meta, {
-                description: 'Validation errors if any',
-            }),
+        errors: z.optional(
+            z.array(
+                z.object({
+                    code: z.number().describe('Error code'),
+                    field: z.string().describe('Field name'),
+                    message: z.string().describe('Error message'),
+                }),
+            ),
+        ),
     })
-    .with(s.meta, {
-        description: 'API Response wrapper',
-    });
+    .describe('API Response wrapper');
 
 /**
  * User profile with nested data
  */
-export const UserProfileSchema: s.Schema<UserProfile, s.UnknownToInput<UserProfile>> = s
-    .schema({
+export const UserProfileSchema: z.ZodMiniType<UserProfile> = z
+    .object({
         /** Creation timestamp */
-        createdAt: s.number.with(s.meta, {
-            description: 'Creation timestamp',
-        }),
+        createdAt: z.number().describe('Creation timestamp'),
         /** Additional metadata */
-        metadata: s.record(s.unknown).with(s.meta, {
-            description: 'Additional metadata',
-        }),
+        metadata: z.record(z.string(), z.unknown()).describe('Additional metadata'),
         /** User permissions */
-        permissions: s.array(s.string).with(s.meta, {
-            description: 'User permissions',
-        }),
+        permissions: z.array(z.string()).describe('User permissions'),
         /** User preferences */
-        preferences: s
-            .schema({
-                language: s.string.with(s.meta, {
-                    description: 'Preferred language',
-                }),
-                notifications: s.boolean.with(s.meta, {
-                    description: 'Notifications enabled',
-                }),
-                theme: s.union(['dark', 'light']).with(s.meta, {
-                    description: 'UI theme preference',
-                }),
-            })
-            .with(s.meta, {
-                description: 'User preferences',
-            }),
+        preferences: z.object({
+            language: z.string().describe('Preferred language'),
+            notifications: z.boolean().describe('Notifications enabled'),
+            theme: z.enum(['dark', 'light']).describe('UI theme preference'),
+        }),
         /** User basic info */
-        user: s
-            .schema({
-                avatar: s.nullish(s.string).with(s.meta, {
-                    description: 'User avatar URL',
-                }),
-                id: s.number.with(s.meta, {
-                    description: 'User ID',
-                }),
-                name: s.string.with(s.meta, {
-                    description: 'User name',
-                }),
-            })
-            .with(s.meta, {
-                description: 'User basic info',
-            }),
+        user: z.object({
+            avatar: z.nullish(z.string()).describe('User avatar URL'),
+            id: z.number().describe('User ID'),
+            name: z.string().describe('User name'),
+        }),
     })
-    .with(s.meta, {
-        description: 'User profile with nested data',
-    });
+    .describe('User profile with nested data');

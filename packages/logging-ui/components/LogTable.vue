@@ -129,6 +129,10 @@ function getDisplayMessage(log: LogEntry): string {
     data-key="id"
     scrollable
     scroll-height="flex"
+    resizable-columns
+    column-resize-mode="fit"
+    state-storage="local"
+    state-key="nzyme:logging:log-table"
     class="log-table"
     @row-click="e => toggleRow(e.data)"
   >
@@ -279,7 +283,7 @@ function getDisplayMessage(log: LogEntry): string {
 }
 
 :deep(.p-datatable-table) {
-  table-layout: auto;
+  table-layout: fixed;
   width: 100%;
 }
 </style>

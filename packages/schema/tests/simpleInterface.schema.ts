@@ -1,6 +1,6 @@
 // This file is auto-generated. Do not edit manually.
 
-import * as s from 'sury';
+import * as z from 'zod/mini';
 
 import type { User as UserType } from './simpleInterface.type.js';
 
@@ -9,27 +9,17 @@ import type { User as UserType } from './simpleInterface.type.js';
  * @since 1.0.0
  * @author John Doe
  */
-export const User: s.Schema<UserType, s.UnknownToInput<UserType>> = s
-    .schema({
+export const User: z.ZodMiniType<UserType> = z
+    .object({
         /** User's unique identifier */
-        id: s.number,
+        id: z.number(),
         /** User's full name */
-        name: s.string.with(s.meta, {
-            description: 'This is the full name of the user',
-        }),
+        name: z.string().describe('This is the full name of the user'),
         /** User's email address */
-        email: s.string.with(s.meta, {
-            description: 'This is the email address of the user',
-        }),
+        email: z.string().describe('This is the email address of the user'),
         /** Whether the user is active */
-        active: s.optional(
-            s.boolean.with(s.meta, {
-                description: 'This is a boolean value that indicates if the user is active',
-            }),
-        ),
+        active: z.optional(z.boolean().describe('This is a boolean value that indicates if the user is active')),
     })
-    .with(s.meta, {
-        description: 'This is a simple interface for a user',
-    });
+    .describe('This is a simple interface for a user');
 
 export type User = UserType;

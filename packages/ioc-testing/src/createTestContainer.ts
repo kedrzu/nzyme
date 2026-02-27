@@ -29,14 +29,6 @@ export interface CapturedLog {
 /**
  *
  */
-export interface TestContainerOptions {
-    /** Capture logs for assertions. Defaults to true. */
-    captureLogs?: boolean;
-}
-
-/**
- *
- */
 export interface TestContainerResult {
     /**
      *
@@ -65,19 +57,20 @@ export interface TestContainerResult {
  * expect(logs.some(l => l.message.includes('expected'))).toBe(true);
  * ```
  */
-export function createTestContainer(options: TestContainerOptions = {}): TestContainerResult {
-    const { captureLogs = true } = options;
+export function createTestContainer(): TestContainerResult {
+    const enabled = process.env.LOGGING === 'true';
 
     const container = createContainer();
     const logs: CapturedLog[] = [];
 
-    if (captureLogs) {
-        const transport: LoggerTransport = (logger, level, message, obj) => {
-            logs.push({ logger, level, message, data: obj });
+    const transport: LoggerTransport = (logger, level, message, obj) => {
+        logs.push({ logger, level, message, data: obj });
+
+        if (enabled) {
             consoleLog(logger, level, message, obj);
-        };
-        container.set(LoggerTransport, transport);
-    }
+        }
+    };
+    container.set(LoggerTransport, transport);
 
     return { container, logs };
 }

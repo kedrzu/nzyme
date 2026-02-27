@@ -23,7 +23,7 @@ export class ZchemaCommand extends Command {
 
     static override usage = Command.Usage({
         category: 'Schema',
-        description: 'Generate sury schemas from TypeScript type files',
+        description: 'Generate zod schemas from TypeScript type files',
     });
 
     watch = Option.Boolean('--watch,-w', {

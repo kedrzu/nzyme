@@ -11,9 +11,9 @@ import type { SomeObject } from '@nzyme/types/Object.js';
  * @example
  * ```typescript
  * const obj = { a: 1, b: 2 };
- * const keys = objectKeys(obj); // type: ('a' | 'b')[]
+ * const keys = getObjectKeys(obj); // type: ('a' | 'b')[]
  * ```
  */
-export function objectKeys<T extends SomeObject>(obj: T) {
+export function getObjectKeys<T extends SomeObject>(obj: T) {
     return Object.keys(obj) as (keyof T)[];
 }

@@ -1,10 +1,11 @@
+import { describe, expect, it } from 'bun:test';
 import type { Root } from 'mdast';
 import { remark } from 'remark';
-import { describe, expect, it } from 'vitest';
+import type { Processor } from 'unified';
 
 import { parseMarkdownStream } from './parseMarkdownStream.js';
 
-const parser = remark();
+const parser = remark() as unknown as Processor<Root>;
 
 describe('initial parsing with empty AST', () => {
     it('should parse markdown from scratch when AST is empty', () => {
@@ -29,10 +30,10 @@ describe('initial parsing with empty AST', () => {
 
         const root = parseMarkdownStream({ markdown, root: undefined, parser });
 
-        expect(root.children[0].position?.start.offset).toBe(0);
-        expect(root.children[0].position?.end.offset).toBe(7); // "# Title" (without newline)
-        expect(root.children[1].position?.start.offset).toBe(9); // after "\n\n"
-        expect(root.children[1].position?.end.offset).toBe(24); // end of "Paragraph text."
+        expect(root.children[0]!.position?.start.offset).toBe(0);
+        expect(root.children[0]!.position?.end.offset).toBe(7); // "# Title" (without newline)
+        expect(root.children[1]!.position?.start.offset).toBe(9); // after "\n\n"
+        expect(root.children[1]!.position?.end.offset).toBe(24); // end of "Paragraph text."
     });
 });
 
@@ -73,10 +74,10 @@ describe('incremental parsing', () => {
         root = parseMarkdownStream({ markdown: extendedMarkdown, root, parser });
 
         // Check that new elements have correct offsets
-        expect(root.children[2].position?.start.offset).toBe(22); // "## Sub" starts at offset 22
-        expect(root.children[2].position?.end.offset).toBe(28); // "## Sub" ends at offset 28
-        expect(root.children[3].position?.start.offset).toBe(30); // "Second." starts at offset 30
-        expect(root.children[3].position?.end.offset).toBe(37); // "Second." ends at offset 37
+        expect(root.children[2]!.position?.start.offset).toBe(22); // "## Sub" starts at offset 22
+        expect(root.children[2]!.position?.end.offset).toBe(28); // "## Sub" ends at offset 28
+        expect(root.children[3]!.position?.start.offset).toBe(30); // "Second." starts at offset 30
+        expect(root.children[3]!.position?.end.offset).toBe(37); // "Second." ends at offset 37
     });
 
     it('should handle multiple incremental updates', () => {
@@ -99,10 +100,10 @@ describe('incremental parsing', () => {
         expect(root.children).toHaveLength(4);
 
         // Verify final structure
-        expect(root.children[0].type).toBe('heading');
-        expect(root.children[1].type).toBe('paragraph');
-        expect(root.children[2].type).toBe('heading');
-        expect(root.children[3].type).toBe('paragraph');
+        expect(root.children[0]!.type).toBe('heading');
+        expect(root.children[1]!.type).toBe('paragraph');
+        expect(root.children[2]!.type).toBe('heading');
+        expect(root.children[3]!.type).toBe('paragraph');
     });
 
     it('should drop and reparse the last element correctly', () => {
@@ -256,14 +257,14 @@ describe('complex markdown structures', () => {
         const initial = '# Todo\n\n- Item 1\n- Item 2';
         root = parseMarkdownStream({ markdown: initial, root, parser });
         expect(root.children).toHaveLength(2);
-        expect(root.children[1].type).toBe('list');
+        expect(root.children[1]!.type).toBe('list');
 
         // Add more items
         const extended = '# Todo\n\n- Item 1\n- Item 2\n- Item 3\n\nDone!';
         root = parseMarkdownStream({ markdown: extended, root, parser });
         expect(root.children).toHaveLength(3);
-        expect(root.children[1].type).toBe('list');
-        expect(root.children[2].type).toBe('paragraph');
+        expect(root.children[1]!.type).toBe('list');
+        expect(root.children[2]!.type).toBe('paragraph');
     });
 });
 
@@ -318,7 +319,7 @@ describe('position offset integrity', () => {
 
             // Verify that all elements have valid positions
             for (let i = 0; i < root.children.length; i++) {
-                const element = root.children[i];
+                const element = root.children[i]!;
                 expect(element.position).toBeDefined();
                 expect(element.position!.start.offset!).toBeGreaterThanOrEqual(0);
                 expect(element.position!.end.offset!).toBeGreaterThanOrEqual(element.position!.start.offset!);
@@ -326,7 +327,7 @@ describe('position offset integrity', () => {
 
                 // Check that elements don't overlap (except for the last one being reparsed)
                 if (i > 0 && i < root.children.length - 1) {
-                    const prevElement = root.children[i - 1];
+                    const prevElement = root.children[i - 1]!;
                     expect(element.position!.start.offset!).toBeGreaterThanOrEqual(prevElement.position!.end.offset!);
                 }
             }
@@ -347,7 +348,7 @@ describe('position offset integrity', () => {
         const preservedElements: Root['children'] = [];
 
         for (let i = 0; i < updates.length; i++) {
-            const markdown = updates[i];
+            const markdown = updates[i]!;
             const previousLength = root?.children.length || 0;
 
             root = parseMarkdownStream({ markdown, root, parser });
@@ -361,13 +362,13 @@ describe('position offset integrity', () => {
             if (root.children.length > 0) {
                 preservedElements.length = root.children.length - 1;
                 for (let j = 0; j < root.children.length - 1; j++) {
-                    preservedElements[j] = root.children[j];
+                    preservedElements[j] = root.children[j]!;
                 }
             }
 
             // Verify position integrity for all elements
             for (let j = 0; j < root.children.length; j++) {
-                const element = root.children[j];
+                const element = root.children[j]!;
                 expect(element.position).toBeDefined();
                 expect(element.position!.start.offset!).toBeGreaterThanOrEqual(0);
                 expect(element.position!.end.offset!).toBeGreaterThanOrEqual(element.position!.start.offset!);
@@ -376,10 +377,10 @@ describe('position offset integrity', () => {
         }
 
         // Final verification: we should have 4 elements
-        expect(root.children).toHaveLength(4);
-        expect(root.children[0].type).toBe('heading'); // # Title
-        expect(root.children[1].type).toBe('paragraph'); // First paragraph
-        expect(root.children[2].type).toBe('heading'); // ## Subtitle
-        expect(root.children[3].type).toBe('paragraph'); // Second paragraph
+        expect(root!.children).toHaveLength(4);
+        expect(root!.children[0]!.type).toBe('heading'); // # Title
+        expect(root!.children[1]!.type).toBe('paragraph'); // First paragraph
+        expect(root!.children[2]!.type).toBe('heading'); // ## Subtitle
+        expect(root!.children[3]!.type).toBe('paragraph'); // Second paragraph
     });
 });

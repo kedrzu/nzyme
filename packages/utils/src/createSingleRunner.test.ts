@@ -1,8 +1,8 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 
-import { waitFor } from '../dist/waitFor.js';
 import { createSingleRunner } from './createSingleRunner.js';
 import type { SingleRunnerState } from './createSingleRunner.js';
+import { waitFor } from './waitFor.js';
 
 test('should execute handler and update running state', async () => {
     let executionCount = 0;
@@ -114,7 +114,7 @@ test('should work with provided initial state', async () => {
     // Initial state should be updated with execute method
     expect(calledState).toBe(true);
     expect(savedState).toBeDefined();
-    expect(runner).toBe(savedState);
+    expect(runner).toBe(savedState!);
 
     const result = await runner.execute();
     expect(result).toBe('result');

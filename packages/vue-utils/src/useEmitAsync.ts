@@ -86,7 +86,6 @@ type EmitFnAsync<Options = ObjectEmitsOptions, Event extends keyof Options = key
  * ```
  */
 export function useEmitAsync<E extends EmitsOptions>(options: E): EmitFnAsync<E>;
-
 /**
  * Creates an async event emitter function with type inference for event definitions.
  * This overload allows you to define events as an object type without explicit emit options.
@@ -111,7 +110,6 @@ export function useEmitAsync<E extends EmitsOptions>(options: E): EmitFnAsync<E>
  * ```
  */
 export function useEmitAsync<E extends object = Record<string, unknown[]>>(): ShortEmits<E>;
-
 /**
  * Implementation of the async event emitter composable.
  *

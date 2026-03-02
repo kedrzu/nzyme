@@ -28,9 +28,8 @@
         "dist"
     ],
     "scripts": {
-        "build:esm": "tsc --build ./tsconfig.esm.json",
-        "typecheck": "tsc --noEmit --project tsconfig.check.json",
-        "lint": "prettier ./src --write && bun typecheck && eslint . --fix --cache"
+        "build": "tsc --build",
+        "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache"
     },
     "dependencies": {
         "@types/fs-extra": "11.0.4",

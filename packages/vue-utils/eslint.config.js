@@ -4,7 +4,7 @@ export default [
     //
     ...common(),
     ...typescript({
-        project: ['./tsconfig.json', './tsconfig.check.json'],
+        project: ['./tsconfig.json'],
         target: 'browser',
         internalImports: ['@nzyme/*'],
     }),

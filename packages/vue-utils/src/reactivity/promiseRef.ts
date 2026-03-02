@@ -37,7 +37,6 @@ export interface PromiseRef<T, TValue extends T | undefined = T> extends Ref<TVa
  * Initial value and promise will be undefined.
  */
 export function promiseRef<T>(): PromiseRef<T | undefined>;
-
 /**
  * Creates a PromiseRef from a promise. The ref's value will be undefined
  * until the promise resolves.
@@ -45,7 +44,6 @@ export function promiseRef<T>(): PromiseRef<T | undefined>;
  * @param promise The promise to initialize the ref with
  */
 export function promiseRef<T>(promise: Promise<T>): PromiseRef<T, T | undefined>;
-
 /**
  * Creates a PromiseRef with an initial value. The promise will be
  * pre-resolved with this value.
@@ -53,7 +51,6 @@ export function promiseRef<T>(promise: Promise<T>): PromiseRef<T, T | undefined>
  * @param value The initial value for the ref
  */
 export function promiseRef<T>(value: T): PromiseRef<T>;
-
 /**
  * Implementation of promiseRef that handles all overloads.
  * Creates a reactive reference that combines the functionality of a ref and a promise.

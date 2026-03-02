@@ -1,6 +1,6 @@
+import { expect, it } from 'bun:test';
 import type { Root } from 'mdast';
 import { remark } from 'remark';
-import { expect, it } from 'vitest';
 
 import { remarkSanitize } from './remarkSanitize.js';
 
@@ -147,7 +147,7 @@ it('should unwrap redundant paragraph in list item', () => {
         if (listItem && listItem.type === 'listItem') {
             // The paragraph should be unwrapped, so children should be text/inline nodes directly
             const firstChild = listItem.children[0];
-            expect(firstChild?.type).toBe('text');
+            expect(firstChild?.type as string).toBe('text');
         } else {
             throw new Error('Expected listItem node');
         }
@@ -172,7 +172,7 @@ it('should unwrap redundant paragraph in nested list', () => {
             // Second item (which only has text) should have unwrapped paragraph
             const secondItem = list.children[1];
             if (secondItem && secondItem.type === 'listItem') {
-                expect(secondItem.children[0]?.type).toBe('text');
+                expect(secondItem.children[0]?.type as string).toBe('text');
             } else {
                 throw new Error('Expected second listItem node');
             }
@@ -183,7 +183,7 @@ it('should unwrap redundant paragraph in nested list', () => {
                 const nestedItem = nestedList.children[0];
                 if (nestedItem && nestedItem.type === 'listItem') {
                     // Nested item with single paragraph should be unwrapped
-                    expect(nestedItem.children[0]?.type).toBe('text');
+                    expect(nestedItem.children[0]?.type as string).toBe('text');
                 } else {
                     throw new Error('Expected nested listItem node');
                 }
@@ -257,7 +257,7 @@ This is a test-case with multiple    spaces.
     if (list && list.type === 'list') {
         const firstItem = list.children[0];
         if (firstItem && firstItem.type === 'listItem') {
-            expect(firstItem.children[0]?.type).toBe('text');
+            expect(firstItem.children[0]?.type as string).toBe('text');
         }
     }
 });

@@ -143,37 +143,31 @@ type StorageValue<T> = T & { [skipWrite]?: true };
  * @param options Configuration with default value and raw storage
  */
 export function storageRef(options: StorageRefDefault<string> & StorageRefOptionsRaw): StorageRef<string>;
-
 /**
  * Creates a ref that synchronizes with browser storage for string values.
  * @param options Configuration without default value and raw storage
  */
 export function storageRef(options: StorageRefNoDefault & StorageRefOptionsRaw): StorageRef<string | null>;
-
 /**
  * Creates a ref that synchronizes with browser storage using JSON serialization.
  * @param options Configuration with default value and JSON serialization
  */
 export function storageRef<T>(options: StorageRefDefault<T> & StorageRefOptionsJson): StorageRef<T>;
-
 /**
  * Creates a ref that synchronizes with browser storage using JSON serialization.
  * @param options Configuration without default value and JSON serialization
  */
 export function storageRef<T>(options: StorageRefNoDefault & StorageRefOptionsJson): StorageRef<T | null>;
-
 /**
  * Creates a ref that synchronizes with browser storage using custom serialization.
  * @param options Configuration with custom serialization
  */
 export function storageRef<T>(options: StorageRefOptionsCustom<T>): StorageRef<T | null>;
-
 /**
  * Creates a ref that synchronizes with browser storage using custom serialization.
  * @param options Configuration with default value and custom serialization
  */
 export function storageRef<T>(options: StorageRefDefault<T> & StorageRefOptionsCustom<T>): StorageRef<T>;
-
 /**
  * Creates a reactive reference that automatically synchronizes its value with browser storage.
  *

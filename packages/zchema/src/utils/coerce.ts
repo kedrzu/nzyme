@@ -1,6 +1,5 @@
 import { DEFAULT_SCHEMA_CONTEXT } from '../Schema.js';
-import type { Infer, InferNonNull, Schema, SchemaProto } from '../Schema.js';
-import type { SchemaContext } from '../Schema.js';
+import type { Infer, InferNonNull, Schema, SchemaContext, SchemaProto } from '../Schema.js';
 import { lazyResolve } from '../schemas/lazy.js';
 
 /**

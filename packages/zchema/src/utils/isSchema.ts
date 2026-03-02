@@ -7,7 +7,6 @@ import type { Schema, SchemaBase } from '../Schema.js';
  * @returns True if the value is a schema instance
  */
 export function isSchema<V = unknown>(value: unknown): value is Schema<V>;
-
 /**
  * Type guard to check if a value is a schema instance created by a specific factory.
  * @template F - The schema factory type
@@ -16,7 +15,6 @@ export function isSchema<V = unknown>(value: unknown): value is Schema<V>;
  * @returns True if the value is a schema instance created by the specified factory
  */
 export function isSchema<F extends SchemaBase>(value: unknown, factory: F): value is ReturnType<F>;
-
 /**
  * Implementation of the isSchema type guard.
  * @param value - The value to check

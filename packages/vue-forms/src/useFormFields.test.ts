@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from 'vitest';
+import { beforeEach, expect, test } from 'bun:test';
 import { createApp, effectScope, nextTick, ref } from 'vue';
 
 import { LanguageContext } from '@nzyme/i18n/LanguageContext.js';
@@ -666,8 +666,8 @@ test('useFormFields handles undefined form value', () => {
     });
 });
 
-test('useFormFields setter is no-op when form value is null', async () => {
-    await ctx.run(async () => {
+test('useFormFields setter is no-op when form value is null', () => {
+    ctx.run(() => {
         const nullForm = useForm<TestFormValue | null>(null);
         const fields = useFormFields(nullForm as FormModel<TestFormValue>, {
             name: null,

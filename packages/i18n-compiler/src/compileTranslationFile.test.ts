@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'fs';
 import { basename, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 
 import { compileTranslationFile } from './compileTranslationFile.js';
 

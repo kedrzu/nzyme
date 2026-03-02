@@ -1,0 +1,9 @@
+{
+    "extends": "@nzyme/tsconfig/esm.json",
+    "compilerOptions": {
+        "outDir": "./dist",
+        "rootDir": "./src",
+        "noEmit": true
+    },
+    "include": ["src", "tests"]
+}

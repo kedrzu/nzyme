@@ -1,8 +1,8 @@
 import { joinURL, withQuery } from 'ufo';
+import type { BodyInit } from 'undici-types';
 
 import type { HttpMethod } from '@nzyme/fetch-utils/HttpMethod.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
-import type { BodyInit } from 'undici-types';
 
 import type { ContentTypeOf, OpenApiFetchOptions, OpenApiFetchResponse, OperationOf } from './types.js';
 
@@ -23,7 +23,7 @@ export interface OpenApiFetchConfig {
     /** Default headers to include in all requests */
     headers?: Record<string, string | undefined>;
     /** Custom fetch implementation */
-    fetch?: typeof fetch;
+    fetch?: (input: string | Request | URL, init?: RequestInit) => Promise<Response>;
 }
 
 /**
@@ -115,7 +115,7 @@ export function createOpenApiFetch<Paths>(config: OpenApiFetchConfig = {}) {
                 }
 
                 const urlSearchParams = new URLSearchParams();
-                for (const [key, value] of Object.entries(body)) {
+                for (const [key, value] of Object.entries(body as unknown as Record<string, unknown>)) {
                     if (value !== undefined && value !== null) {
                         switch (typeof value) {
                             case 'boolean':
@@ -137,7 +137,7 @@ export function createOpenApiFetch<Paths>(config: OpenApiFetchConfig = {}) {
                 }
 
                 const formData = new FormData();
-                for (const [key, value] of Object.entries(body)) {
+                for (const [key, value] of Object.entries(body as unknown as Record<string, unknown>)) {
                     if (value !== undefined && value !== null) {
                         if (value instanceof File || value instanceof Blob) {
                             formData.append(key, value);
@@ -159,7 +159,7 @@ export function createOpenApiFetch<Paths>(config: OpenApiFetchConfig = {}) {
                     }
                 }
 
-                body = formData as BodyInit;
+                body = formData as unknown as BodyInit;
             }
         }
 
@@ -168,7 +168,7 @@ export function createOpenApiFetch<Paths>(config: OpenApiFetchConfig = {}) {
             method,
             headers,
             redirect: 'manual',
-            body: body as BodyInit | null | undefined,
+            body: body as never,
             ...fetchOptions,
         });
 

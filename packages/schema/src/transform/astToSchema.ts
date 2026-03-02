@@ -220,9 +220,7 @@ function transformUnionType(node: ts.UnionTypeNode): string {
     }
 
     // Check if all members are string literals - use z.enum() instead
-    const allStringLiterals = node.types.every(
-        type => ts.isLiteralTypeNode(type) && ts.isStringLiteral(type.literal),
-    );
+    const allStringLiterals = node.types.every(type => ts.isLiteralTypeNode(type) && ts.isStringLiteral(type.literal));
 
     if (allStringLiterals) {
         const values = node.types.map(type => {

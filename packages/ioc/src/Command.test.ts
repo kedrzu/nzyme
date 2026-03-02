@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 
 import { defineCommand } from './Command.js';
 import { createContainer } from './Container.js';

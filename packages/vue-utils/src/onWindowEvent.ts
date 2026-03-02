@@ -10,7 +10,6 @@ export function onWindowEvent<K extends keyof WindowEventMap>(
     listener: (this: Window, ev: WindowEventMap[K]) => unknown,
     options?: boolean | AddEventListenerOptions,
 ): void;
-
 /**
  *
  */
@@ -19,7 +18,6 @@ export function onWindowEvent(
     listener: (this: Window, ev: Event) => unknown,
     options?: boolean | AddEventListenerOptions,
 ): void;
-
 /**
  *
  */

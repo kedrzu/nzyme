@@ -35,9 +35,9 @@ export interface FetchRequest extends RequestInit {
  */
 export async function fetchRequest(request: FetchRequest): Promise<Response> {
     const url = request.query ? withQuery(request.url, request.query) : request.url;
-    const response = await fetch(url, request);
+    const response = (await fetch(url, request)) as Response;
 
     await assertResponse(response);
     // Clone the response to avoid "Other side closed error"
-    return response.clone();
+    return response.clone() as Response;
 }

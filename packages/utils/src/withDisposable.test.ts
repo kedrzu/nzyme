@@ -10,7 +10,7 @@ test('should add dispose method to object', () => {
         disposed = true;
     });
 
-    expect(disposable).toBe(obj);
+    expect(disposable).toBe(obj as typeof disposable);
     expect(disposed).toBe(false);
 
     disposable[Symbol.dispose]();

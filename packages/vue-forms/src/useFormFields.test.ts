@@ -667,8 +667,8 @@ test('useFormFields handles undefined form value', () => {
     });
 });
 
-test('useFormFields setter is no-op when form value is null', async () => {
-    await ctx.run(async () => {
+test('useFormFields setter is no-op when form value is null', () => {
+    ctx.run(() => {
         const nullForm = useForm<TestFormValue | null>(null);
         const fields = useFormFields(nullForm as FormModel<TestFormValue>, {
             name: null,

@@ -16,7 +16,8 @@ describe('openApiFetch', () => {
             ok: true,
             status: 200,
             headers: new Headers({ 'content-type': 'application/json' }),
-            json: () => Promise.resolve({ id: 123, name: 'Test Pet', status: 'available' }),
+            json: () =>
+                Promise.resolve({ id: 123, name: 'Test Pet', status: 'available', photoUrls: [] }),
         };
         mockFetch.mockResolvedValue(mockResponse);
 
@@ -39,7 +40,12 @@ describe('openApiFetch', () => {
             }),
         );
 
-        expect(result.data).toEqual({ id: 123, name: 'Test Pet', status: 'available' });
+        expect(result.data).toEqual({
+            id: 123,
+            name: 'Test Pet',
+            status: 'available',
+            photoUrls: [],
+        });
         expect(result.status).toBe(200);
         expect(result.contentType).toBe('application/json');
     });
@@ -49,7 +55,8 @@ describe('openApiFetch', () => {
             ok: true,
             status: 200,
             headers: new Headers({ 'content-type': 'application/json' }),
-            json: () => Promise.resolve([{ id: 1, name: 'Pet 1', status: 'available' }]),
+            json: () =>
+                Promise.resolve([{ id: 1, name: 'Pet 1', status: 'available', photoUrls: [] }]),
         };
         mockFetch.mockResolvedValue(mockResponse);
 
@@ -72,7 +79,7 @@ describe('openApiFetch', () => {
             }),
         );
 
-        expect(result.data).toEqual([{ id: 1, name: 'Pet 1', status: 'available' }]);
+        expect(result.data).toEqual([{ id: 1, name: 'Pet 1', status: 'available', photoUrls: [] }]);
         expect(result.status).toBe(200);
         expect(result.contentType).toBe('application/json');
     });
@@ -82,7 +89,13 @@ describe('openApiFetch', () => {
             ok: true,
             status: 200,
             headers: new Headers({ 'content-type': 'application/json' }),
-            json: () => Promise.resolve({ id: 456, name: 'New Pet', status: 'available' }),
+            json: () =>
+                Promise.resolve({
+                    id: 456,
+                    name: 'New Pet',
+                    status: 'available',
+                    photoUrls: [],
+                }),
         };
         mockFetch.mockResolvedValue(mockResponse);
 
@@ -119,7 +132,12 @@ describe('openApiFetch', () => {
         const headers = options.headers as Headers;
         expect(headers.get('content-type')).toBe('application/json');
 
-        expect(result.data).toEqual({ id: 456, name: 'New Pet', status: 'available' });
+        expect(result.data).toEqual({
+            id: 456,
+            name: 'New Pet',
+            status: 'available',
+            photoUrls: [],
+        });
         expect(result.status).toBe(200);
         expect(result.contentType).toBe('application/json');
     });
@@ -144,7 +162,7 @@ describe('openApiFetch', () => {
             pathParams: { petId: 999 },
         });
 
-        expect(result.data).toEqual({ message: 'Pet not found' });
+        expect(result.data as unknown).toEqual({ message: 'Pet not found' });
         expect(result.status).toBe(404);
         expect(result.contentType).toBe('application/json');
     });
@@ -198,9 +216,9 @@ describe('openApiFetch', () => {
             baseUrl: 'https://api.example.com',
         });
 
-        expect(result.data).toBe('Success');
+        expect(result.data as unknown).toBe('Success');
         expect(result.status).toBe(200);
-        expect(result.contentType).toBe('text/plain');
+        expect(result.contentType as unknown).toBe('text/plain');
     });
 
     it('should handle FormData body', async () => {
@@ -238,7 +256,13 @@ describe('openApiFetch', () => {
             ok: true,
             status: 200,
             headers: new Headers({ 'content-type': 'application/json' }),
-            json: () => Promise.resolve({ id: 456, name: 'New Pet', status: 'available' }),
+            json: () =>
+                Promise.resolve({
+                    id: 456,
+                    name: 'New Pet',
+                    status: 'available',
+                    photoUrls: [],
+                }),
         };
         mockFetch.mockResolvedValue(mockResponse);
 
@@ -292,9 +316,9 @@ describe('openApiFetch', () => {
         });
 
         expect(result.status).toBe(200);
-        expect(result.contentType).toBe('text/event-stream');
+        expect(result.contentType as unknown).toBe('text/event-stream');
         expect(result.data).toBeUndefined();
-        expect(result.response.body).toBe(mockBody);
+        expect(result.response.body as unknown).toBe(mockBody);
         // Verify we didn't consume the stream
         expect(mockResponse.json).not.toHaveBeenCalled();
         expect(mockResponse.text).not.toHaveBeenCalled();
@@ -306,7 +330,7 @@ describe('openApiFetch', () => {
             ok: true,
             status: 200,
             headers: new Headers({ 'content-type': 'application/json; charset=utf-8' }),
-            json: () => Promise.resolve({ id: 123, name: 'Test Pet' }),
+            json: () => Promise.resolve({ id: 123, name: 'Test Pet', photoUrls: [] }),
         };
         mockFetch.mockResolvedValue(mockResponse);
 
@@ -322,7 +346,7 @@ describe('openApiFetch', () => {
         });
 
         expect(result.contentType).toBe('application/json');
-        expect(result.data).toEqual({ id: 123, name: 'Test Pet' });
+        expect(result.data).toEqual({ id: 123, name: 'Test Pet', photoUrls: [] });
     });
 });
 

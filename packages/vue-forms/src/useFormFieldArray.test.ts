@@ -1,5 +1,6 @@
 import { beforeEach, expect, test } from 'bun:test';
-import { createApp, effectScope, nextTick, ref } from 'vue';
+
+import { createApp, effectScope, nextTick } from 'vue';
 
 import { LanguageContext } from '@nzyme/i18n/LanguageContext.js';
 import { createContainer } from '@nzyme/vue-ioc/createContainer.js';

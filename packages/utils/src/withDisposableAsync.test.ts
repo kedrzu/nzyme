@@ -11,7 +11,7 @@ test('should add async dispose method to object', async () => {
         await Promise.resolve();
     });
 
-    expect(disposable).toBe(obj);
+    expect(disposable).toBe(obj as typeof disposable);
     expect(disposed).toBe(false);
 
     await disposable[Symbol.asyncDispose]();

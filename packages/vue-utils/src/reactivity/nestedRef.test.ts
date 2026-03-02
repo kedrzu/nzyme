@@ -182,7 +182,7 @@ test('readonly nested ref cannot be modified', () => {
 
     // TypeScript should prevent this, but if someone bypasses it:
     // Vue logs a warning but doesn't throw, and the value doesn't change
-    // @ts-expect-error - Testing runtime behavior
+    // @ts-ignore - Testing runtime behavior
     name.value = 'Jane';
 
     // Value should remain unchanged

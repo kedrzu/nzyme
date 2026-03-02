@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { waitFor } from '../dist/waitFor.js';
+import { waitFor } from './waitFor.js';
 import { createSingleRunner } from './createSingleRunner.js';
 import type { SingleRunnerState } from './createSingleRunner.js';
 
@@ -114,7 +114,7 @@ test('should work with provided initial state', async () => {
     // Initial state should be updated with execute method
     expect(calledState).toBe(true);
     expect(savedState).toBeDefined();
-    expect(runner).toBe(savedState);
+    expect(runner).toBe(savedState!);
 
     const result = await runner.execute();
     expect(result).toBe('result');

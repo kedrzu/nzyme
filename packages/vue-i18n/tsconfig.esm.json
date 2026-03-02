@@ -1,11 +1,16 @@
 {
     "extends": "@nzyme/tsconfig/vue.json",
     "compilerOptions": {
-        "lib": ["DOM", "DOM.Iterable", "ESNext"],
+        "lib": [
+            "DOM",
+            "DOM.Iterable",
+            "ESNext"
+        ],
         "rootDir": "./src",
         "noEmit": true,
         "composite": false
     },
-    "include": ["src"],
-    "exclude": ["src/**/*.test.ts"]
+    "include": [
+        "src"
+    ]
 }

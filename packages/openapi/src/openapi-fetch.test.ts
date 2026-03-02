@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { createOpenApiFetch } from './openapi-fetch.js';
 import type { paths } from '../tests/schema.js';

@@ -1,4 +1,5 @@
-import { beforeEach, expect, test, vi } from 'vitest';
+import { beforeEach, expect, test, vi } from 'bun:test';
+
 import { createApp, effectScope, nextTick, ref } from 'vue';
 
 import { LanguageContext } from '@nzyme/i18n/LanguageContext.js';

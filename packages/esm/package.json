@@ -27,7 +27,6 @@
     ],
     "scripts": {
         "build:esm": "tsc --build ./tsconfig.esm.json",
-        "typecheck": "tsc --noEmit --project tsconfig.check.json",
         "lint": "prettier ./src --write && bun typecheck && eslint . --fix --cache"
     },
     "devDependencies": {

@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 import { effectScope, nextTick, reactive, ref } from 'vue';
 
 import type { FormValidationContext } from '../types.js';

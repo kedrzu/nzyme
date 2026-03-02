@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 
 import { waitFor } from '../dist/waitFor.js';
 import { createSingleRunner } from './createSingleRunner.js';

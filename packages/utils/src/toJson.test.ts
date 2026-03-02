@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 
 import { toJson } from './toJson.js';
 import type { Json } from './toJson.js';

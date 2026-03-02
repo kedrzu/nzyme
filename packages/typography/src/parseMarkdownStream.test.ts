@@ -1,6 +1,6 @@
 import type { Root } from 'mdast';
 import { remark } from 'remark';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 
 import { parseMarkdownStream } from './parseMarkdownStream.js';
 

@@ -2,7 +2,7 @@ import { mkdir, rm, writeFile } from 'fs/promises';
 import { join } from 'path';
 
 import * as ts from 'typescript';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 
 import { parseTypeFile } from './parseTypeFile.js';
 

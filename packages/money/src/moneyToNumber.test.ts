@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { expect, it } from 'bun:test';
 
 import type { Money } from './Money.js';
 import { moneyToNumber } from './moneyToNumber.js';

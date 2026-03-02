@@ -1,10 +1,15 @@
 {
     "extends": "@nzyme/tsconfig/esm.json",
     "compilerOptions": {
-        "lib": ["DOM", "DOM.Iterable", "ESNext"],
+        "lib": [
+            "DOM",
+            "DOM.Iterable",
+            "ESNext"
+        ],
         "outDir": "./dist",
         "rootDir": "./src"
     },
-    "include": ["src"],
-    "exclude": ["src/**/*.test.ts"]
+    "include": [
+        "src"
+    ]
 }

@@ -1,5 +1,5 @@
-import { readonly, ref } from 'vue';
 import { expect, test } from 'bun:test';
+import { readonly, ref } from 'vue';
 
 import { nestedRef } from './nestedRef.js';
 

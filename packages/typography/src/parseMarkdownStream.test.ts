@@ -1,7 +1,7 @@
+import { describe, expect, it } from 'bun:test';
 import type { Root } from 'mdast';
 import { remark } from 'remark';
 import type { Processor } from 'unified';
-import { describe, expect, it } from 'bun:test';
 
 import { parseMarkdownStream } from './parseMarkdownStream.js';
 

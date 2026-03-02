@@ -3,10 +3,10 @@ import type {
     Infer,
     Schema,
     SchemaAny,
-    SchemaOptionsBase,
-    SchemaOptionsSimplify,
     SchemaMeta,
     SchemaOptions,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
     SchemaProto,
 } from '../Schema.js';
 import { coerce } from '../utils/coerce.js';

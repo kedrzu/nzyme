@@ -1,9 +1,9 @@
 import { computed } from 'vue';
 
 import { CURRENCIES } from '@nzyme/money/Currency.js';
+import type { Currency } from '@nzyme/money/Currency.js';
 import { moneyDenormalize } from '@nzyme/money/moneyDenormalize.js';
 import { moneyNormalize } from '@nzyme/money/moneyNormalize.js';
-import type { Currency } from '@nzyme/money/Currency.js';
 import { assignProps } from '@nzyme/utils/assignProps.js';
 import { defineProp } from '@nzyme/vue-utils/defineProp.js';
 import { defineProps } from '@nzyme/vue-utils/defineProps.js';

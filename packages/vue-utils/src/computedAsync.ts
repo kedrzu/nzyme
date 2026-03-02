@@ -67,7 +67,6 @@ export function computedAsync<T>(
     evaluation: () => Promise<T> | T,
     options?: ComputedAsyncOptionsWithoutInit,
 ): ComputedAsync<T | undefined>;
-
 /**
  * Create an asynchronous computed dependency.
  * Based on @see https://vueuse.org/computedAsync
@@ -77,7 +76,6 @@ export function computedAsync<T>(
     evaluation: () => Promise<T> | T,
     options?: ComputedAsyncOptionsWithInit<T>,
 ): ComputedAsync<T>;
-
 /**
  * Create an asynchronous computed dependency.
  * Based on @see https://vueuse.org/computedAsync

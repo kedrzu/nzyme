@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { createOpenApiFetch } from './openapi-fetch.js';
 import type { paths } from '../tests/schema.js';
+import { createOpenApiFetch } from './openapi-fetch.js';
 
 // Mock fetch function
 const mockFetch = vi.fn();
@@ -16,8 +16,7 @@ describe('openApiFetch', () => {
             ok: true,
             status: 200,
             headers: new Headers({ 'content-type': 'application/json' }),
-            json: () =>
-                Promise.resolve({ id: 123, name: 'Test Pet', status: 'available', photoUrls: [] }),
+            json: () => Promise.resolve({ id: 123, name: 'Test Pet', status: 'available', photoUrls: [] }),
         };
         mockFetch.mockResolvedValue(mockResponse);
 
@@ -55,8 +54,7 @@ describe('openApiFetch', () => {
             ok: true,
             status: 200,
             headers: new Headers({ 'content-type': 'application/json' }),
-            json: () =>
-                Promise.resolve([{ id: 1, name: 'Pet 1', status: 'available', photoUrls: [] }]),
+            json: () => Promise.resolve([{ id: 1, name: 'Pet 1', status: 'available', photoUrls: [] }]),
         };
         mockFetch.mockResolvedValue(mockResponse);
 

@@ -1,8 +1,8 @@
 import { mkdir, rm, writeFile } from 'fs/promises';
 import { join } from 'path';
 
-import * as ts from 'typescript';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import * as ts from 'typescript';
 
 import { parseTypeFile } from './parseTypeFile.js';
 

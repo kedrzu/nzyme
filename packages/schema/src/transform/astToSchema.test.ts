@@ -1,5 +1,5 @@
-import * as ts from 'typescript';
 import { describe, expect, it } from 'bun:test';
+import * as ts from 'typescript';
 
 import { transformAstToSchema } from './astToSchema.js';
 

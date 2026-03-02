@@ -3,10 +3,10 @@ import type {
     Infer,
     Schema,
     SchemaAny,
-    SchemaOptionsBase,
-    SchemaOptionsSimplify,
     SchemaMeta,
     SchemaOptions,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
     SchemaProto,
 } from '../Schema.js';
 import { coerce } from '../utils/coerce.js';
@@ -54,7 +54,7 @@ type TupleSchemaBase = {
         TOptional extends boolean | undefined = undefined,
         TMeta extends SchemaMeta | undefined = undefined,
     >(
-        options: SchemaOptionsBase & SchemaOptions<TupleValue<S>, TNullable, TOptional, TMeta, TupleOptions<S>>,
+        options: SchemaOptions<TupleValue<S>, TNullable, TOptional, TMeta, TupleOptions<S>> & SchemaOptionsBase,
     ): TupleSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, TupleOptions<S>>>;
 
     /** Creates a tuple schema with schemas for elements */

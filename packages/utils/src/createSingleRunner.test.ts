@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 
-import { waitFor } from './waitFor.js';
 import { createSingleRunner } from './createSingleRunner.js';
 import type { SingleRunnerState } from './createSingleRunner.js';
+import { waitFor } from './waitFor.js';
 
 test('should execute handler and update running state', async () => {
     let executionCount = 0;

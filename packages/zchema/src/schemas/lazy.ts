@@ -2,10 +2,10 @@ import { defineSchema } from '../defineSchema.js';
 import type {
     Infer,
     Schema,
-    SchemaOptionsBase,
-    SchemaOptionsSimplify,
     SchemaMeta,
     SchemaOptions,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
     SchemaProto,
 } from '../Schema.js';
 import type { Extend } from '../utils/extend.js';

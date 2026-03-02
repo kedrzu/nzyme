@@ -1,6 +1,6 @@
+import { expect, it } from 'bun:test';
 import type { Root } from 'mdast';
 import { remark } from 'remark';
-import { expect, it } from 'bun:test';
 
 import { remarkSanitize } from './remarkSanitize.js';
 

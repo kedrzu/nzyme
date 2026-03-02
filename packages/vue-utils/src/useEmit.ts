@@ -78,7 +78,6 @@ export function useEmit(): EmitFn;
  * ```
  */
 export function useEmit<E extends EmitsOptions>(emitOptions?: E): EmitFn<E>;
-
 /**
  * Creates an event emitter function with type inference for event definitions.
  * This overload allows you to define events as an object type without explicit emit options.
@@ -103,7 +102,6 @@ export function useEmit<E extends EmitsOptions>(emitOptions?: E): EmitFn<E>;
  * ```
  */
 export function useEmit<E extends object = Record<string, unknown[]>>(): ShortEmits<E>;
-
 export function useEmit() {
     return useInstance().emit;
 }

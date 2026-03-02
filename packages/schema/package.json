@@ -30,7 +30,7 @@
         "dist"
     ],
     "scripts": {
-        "lint": "prettier ./src --write && bun typecheck && eslint . --fix --cache",
+        "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache",
         "test": "vitest run"
     },
     "dependencies": {

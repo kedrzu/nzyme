@@ -4,10 +4,10 @@ import type { PropType } from 'vue';
 
 import type { EventEmitter } from '@nzyme/utils/createEventEmitter.js';
 import { classProp } from '@nzyme/vue-utils/classProp.js';
-import { defineSlots } from '@nzyme/vue-utils/slots.js';
+import { provideContext } from '@nzyme/vue-utils/context.js';
 import { onEventEmitter } from '@nzyme/vue-utils/onEventEmitter.js';
 import { onTrigger } from '@nzyme/vue-utils/onTrigger.js';
-import { provideContext } from '@nzyme/vue-utils/context.js';
+import { defineSlots } from '@nzyme/vue-utils/slots.js';
 
 import { FormContext } from '../FormContext.js';
 

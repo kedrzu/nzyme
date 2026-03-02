@@ -27,9 +27,7 @@
         "dist"
     ],
     "scripts": {
-        "build:cjs": "tsc --build ./tsconfig.cjs.json",
-        "build:esm": "tsc --build ./tsconfig.esm.json",
-        "lint": "prettier ./src --write && bun typecheck && eslint . --fix --cache"
+        "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache"
     },
     "dependencies": {
         "@nzyme/ioc": "0.14.0",

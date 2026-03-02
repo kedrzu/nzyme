@@ -1,4 +1,5 @@
-import { DEFAULT_SCHEMA_CONTEXT, type Schema, type SchemaContext } from '../Schema.js';
+import { DEFAULT_SCHEMA_CONTEXT } from '../Schema.js';
+import type { Schema, SchemaContext } from '../Schema.js';
 
 /**
  * Checks if the value is of the given schema type.

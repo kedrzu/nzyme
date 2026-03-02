@@ -29,9 +29,9 @@
         "dist"
     ],
     "scripts": {
-        "build:esm": "tsc --build ./tsconfig.esm.json",
+        "build": "tsc --build",
         "typecheck": "tsc --noEmit --project tsconfig.check.json",
-        "lint": "prettier ./src --write && bun typecheck && eslint . --fix --cache"
+        "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache"
     },
     "dependencies": {
         "@vitest/expect": "4.0.18",

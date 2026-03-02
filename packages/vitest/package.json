@@ -29,7 +29,7 @@
         "dist"
     ],
     "scripts": {
-        "build": "tsc --build",
+        "build": "tsc --build tsconfig.esm.json",
         "typecheck": "tsc --noEmit --project tsconfig.check.json",
         "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache"
     },

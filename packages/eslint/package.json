@@ -25,8 +25,8 @@
         "dist"
     ],
     "scripts": {
-        "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache",
-        "build": "tsc --build"
+        "build": "tsc --build tsconfig.esm.json",
+        "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache"
     },
     "dependencies": {
         "@eslint/js": "9.39.2",

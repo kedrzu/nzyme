@@ -34,6 +34,7 @@
         "dist"
     ],
     "scripts": {
+        "build": "tsc --build tsconfig.esm.json",
         "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache"
     },
     "dependencies": {

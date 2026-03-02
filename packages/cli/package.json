@@ -29,8 +29,8 @@
         "bin"
     ],
     "scripts": {
-        "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache",
-        "build": "tsc --build"
+        "build": "tsc --build tsconfig.esm.json",
+        "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache"
     },
     "dependencies": {
         "@nzyme/i18n-compiler": "0.14.0",

@@ -35,10 +35,10 @@ export type ContextOf<T> =
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     T extends ContextDefinition<any, infer TContext> ? TContext : never;
 
- 
 /**
  *
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ContextParams<T> = T extends ContextDefinition<infer TParams, any> ? TParams : never;
 
 /**
@@ -81,28 +81,30 @@ export function provideContext<TParams extends unknown[], TContext>(
 export /**
  *
  */
-function injectContext<TParams extends unknown[], TContext>(
-    context: ContextDefinition<TParams, TContext>,
-): TContext;
+function injectContext<TParams extends unknown[], TContext>(context: ContextDefinition<TParams, TContext>): TContext;
 export /**
  *
  */
 function injectContext<TParams extends unknown[], TContext>(
     context: ContextDefinition<TParams, TContext>,
-    opts: { /**
-     *
-     */
-    optional: boolean },
+    opts: {
+        /**
+         *
+         */
+        optional: boolean;
+    },
 ): TContext | null;
 /**
  *
  */
 export function injectContext<TParams extends unknown[], TContext>(
     context: ContextDefinition<TParams, TContext>,
-    opts?: { /**
-     *
-     */
-    optional: boolean },
+    opts?: {
+        /**
+         *
+         */
+        optional: boolean;
+    },
 ): TContext | null {
     const instance = inject<TContext | null>(context.symbol, null);
     if (!instance) {

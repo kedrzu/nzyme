@@ -1,4 +1,5 @@
 export * from './ApplicationError.js';
+export * from './createLogger.js';
 export * from './createWebsocketLoggerTransport.js';
 export * from './extractErrorData.js';
 export * from './Logger.js';

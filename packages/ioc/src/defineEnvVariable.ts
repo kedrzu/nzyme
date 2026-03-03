@@ -66,6 +66,16 @@ export interface EnvVariable<TName extends string = string, TRequired extends bo
      * Default value of the environment variable.
      */
     default?: () => TValue;
+
+    /**
+     * Get the value of the environment variable.
+     */
+    get(): TValue | undefined;
+
+    /**
+     * Assert that the environment variable is set.
+     */
+    assert(): TValue;
 }
 
 /**
@@ -117,7 +127,27 @@ export function defineEnvVariable(
         parse: options?.parse,
         resolve,
         default: defaultValue ? (typeof defaultValue === 'function' ? defaultValue : () => defaultValue) : undefined,
+        get: getValue,
+        assert: assertValue,
     });
+}
+
+function getValue(this: EnvVariable) {
+    const value = process.env[this.name];
+    if (this.parse) {
+        return this.parse(value);
+    }
+
+    return value ?? this.default?.();
+}
+
+function assertValue(this: EnvVariable) {
+    const value = getValue.call(this);
+    if (!value) {
+        throw new Error(`Environment variable ${this.name} is not set.`);
+    }
+
+    return value;
 }
 
 function resolve(this: EnvVariable, container: Container, caller?: Injectable) {

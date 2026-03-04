@@ -2,6 +2,7 @@ import * as path from 'path';
 
 import { outputFile } from 'fs-extra/esm';
 import { lookup as mimeLookup } from 'mime-types';
+import type { NuxtModule } from 'nuxt/schema';
 import { defineNuxtModule } from 'nuxt/kit';
 import type { Connect } from 'vite';
 
@@ -14,7 +15,7 @@ type PublicFilesModuleOptions = {
 /**
  * This module is used to output files to the output directory.
  */
-export function outputFilesModule(options: PublicFilesModuleOptions) {
+export function outputFilesModule(options: PublicFilesModuleOptions): NuxtModule {
     return defineNuxtModule({
         setup(_opts, nuxt) {
             const rootDir = nuxt.options.rootDir;

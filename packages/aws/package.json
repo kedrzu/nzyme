@@ -27,19 +27,20 @@
         "dist"
     ],
     "scripts": {
+        "build": "tsc --build tsconfig.esm.json",
         "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache"
     },
     "dependencies": {
-        "@aws-sdk/client-cloudfront": "3.990.0",
-        "@aws-sdk/client-dynamodb": "3.990.0",
-        "@aws-sdk/client-s3": "3.990.0",
-        "@aws-sdk/client-sqs": "3.990.0",
+        "@aws-sdk/client-cloudfront": "3.1001.0",
+        "@aws-sdk/client-dynamodb": "3.1001.0",
+        "@aws-sdk/client-s3": "3.1001.0",
+        "@aws-sdk/client-sqs": "3.1001.0",
         "@nzyme/fetch-utils": "0.14.0",
         "@nzyme/ioc": "0.14.0",
         "@nzyme/logging": "0.14.0",
         "@nzyme/rpc": "0.14.0",
         "@nzyme/utils": "0.14.0",
-        "@types/aws-lambda": "8.10.160",
+        "@types/aws-lambda": "8.10.161",
         "@types/mime-types": "3.0.1",
         "chalk": "5.6.2",
         "mime-types": "3.0.2",

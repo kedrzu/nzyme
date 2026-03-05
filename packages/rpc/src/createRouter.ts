@@ -4,7 +4,7 @@ import type { Container } from '@nzyme/ioc/Container.js';
 import { createEventEmitter } from '@nzyme/utils/createEventEmitter.js';
 import type { EventEmitter } from '@nzyme/utils/createEventEmitter.js';
 
-import type { Endpoint } from './defineEndpoint.js';
+import type { EndpointHandlerService } from './defineEndpointHandler.js';
 import { HttpContextProvider } from './services/HttpContextProvider.js';
 import type { HttpRequest } from './types/HttpRequest.js';
 import type { HttpResponse } from './types/HttpResponse.js';
@@ -53,9 +53,9 @@ export interface RouterOptions {
     container: Container;
 
     /**
-     * An array of endpoint handlers to register with the router initially.
+     * An array of endpoint handler services to register with the router.
      */
-    endpoints: readonly Endpoint[];
+    handlers: readonly EndpointHandlerService[];
 
     /**
      * Whether to include stack traces in the response.
@@ -73,15 +73,15 @@ export interface RouterOptions {
  *
  */
 export function createRouter(options: RouterOptions): Router {
-    const endpoints = new Map<string, Endpoint>();
+    const handlers = new Map<string, EndpointHandlerService>();
     const eventError = createEventEmitter<unknown>();
     const httpContextProvider = options.container.resolve(HttpContextProvider);
     const basePath = options.basePath ?? '/';
     const container = options.container;
     const stackTraces = options.stackTraces ?? false;
 
-    for (const endpoint of options.endpoints) {
-        endpoints.set(endpoint.name, endpoint);
+    for (const handler of options.handlers) {
+        handlers.set(handler.endpoint.name, handler);
     }
 
     return {
@@ -94,10 +94,10 @@ export function createRouter(options: RouterOptions): Router {
     async function execute(request: HttpRequest): Promise<HttpResponse> {
         try {
             const endpointName = request.path.startsWith(basePath) ? request.path.slice(basePath.length) : request.path;
-            const endpoint = endpoints.get(endpointName);
+            const handler = handlers.get(endpointName);
             const httpContext = httpContextProvider.setRequest(request);
 
-            if (!endpoint) {
+            if (!handler) {
                 return createJsonResponse({
                     body: {
                         error: 'NotFound',
@@ -107,7 +107,7 @@ export function createRouter(options: RouterOptions): Router {
                 });
             }
 
-            const input = await parseInput(endpoint, request);
+            const input = await parseInput(handler, request);
 
             if (input?.issues) {
                 return createJsonResponse({
@@ -119,7 +119,7 @@ export function createRouter(options: RouterOptions): Router {
                 });
             }
 
-            const handlerInstance = container.resolve(endpoint);
+            const handlerInstance = container.resolve(handler);
             const result = await handlerInstance(input?.value, { request });
 
             if (result instanceof Response) {
@@ -181,13 +181,13 @@ export function createRouter(options: RouterOptions): Router {
         }
     }
 
-    async function parseInput(endpoint: Endpoint, request: HttpRequest) {
-        if (!endpoint.input) {
+    async function parseInput(handler: EndpointHandlerService, request: HttpRequest) {
+        if (!handler.endpoint.input) {
             return;
         }
 
         const body = request.body ? parseJson(request.body) : null;
-        const input = await endpoint.input['~standard'].validate(body);
+        const input = await handler.endpoint.input['~standard'].validate(body);
 
         return input;
     }

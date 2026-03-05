@@ -31,7 +31,7 @@
         "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache"
     },
     "dependencies": {
-        "fast-xml-parser": "5.3.6"
+        "fast-xml-parser": "5.4.2"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",

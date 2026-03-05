@@ -24,8 +24,14 @@ export interface RpcClientRequest {
 /**
  * Callback that returns request configuration for a given endpoint.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type RpcRequestGetter<O> = (endpoint: EndpointDefinition<any, any>, options?: O) => Promise<RpcClientRequest> | RpcClientRequest;
+
+/**
+ *
+ */
+export type RpcRequestGetter<O> = (
+    endpoint: EndpointDefinition<any, any>,
+    options?: O,
+) => Promise<RpcClientRequest> | RpcClientRequest;
 
 /**
  * Options for creating an RPC client.
@@ -43,9 +49,7 @@ export interface CreateClientOptions<O = void> {
  */
 export type RpcCallFunction<O = void> = <TInput, TOutput>(
     endpoint: EndpointDefinition<TInput, TOutput>,
-    ...args: TInput extends void
-        ? [input?: undefined, options?: O]
-        : [input: Json<TInput>, options?: O]
+    ...args: TInput extends void ? [input?: undefined, options?: O] : [input: Json<TInput>, options?: O]
 ) => Promise<Json<TOutput>>;
 
 /**

@@ -6,7 +6,6 @@ import type { SomeObject } from '@nzyme/types/Object.js';
  *
  */
 export type Slots<T> = {
-     
     [K in keyof T]?: (props: undefined extends T[K] ? SomeObject : T[K]) => VNode[];
 };
 

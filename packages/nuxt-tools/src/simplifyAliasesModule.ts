@@ -1,5 +1,5 @@
-import type { NuxtModule } from 'nuxt/schema';
 import { defineNuxtModule } from 'nuxt/kit';
+import type { NuxtModule } from 'nuxt/schema';
 
 /**
  *

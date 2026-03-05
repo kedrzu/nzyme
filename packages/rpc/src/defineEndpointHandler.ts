@@ -46,11 +46,11 @@ export interface EndpointHandler<TInput = unknown, TOutput = unknown> {
 /**
  * Endpoint handler service
  */
-export interface EndpointHandlerService<
-    TInput = unknown,
-    TOutput = unknown,
-    TDeps extends Dependencies = Dependencies,
-> extends Service<EndpointHandler<TInput, TOutput>, TDeps> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface EndpointHandlerService<TInput = any, TOutput = any, TDeps extends Dependencies = any> extends Service<
+    EndpointHandler<TInput, TOutput>,
+    TDeps
+> {
     /**
      * Endpoint definition
      */

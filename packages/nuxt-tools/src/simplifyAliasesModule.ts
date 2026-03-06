@@ -1,9 +1,10 @@
 import { defineNuxtModule } from 'nuxt/kit';
+import type { NuxtModule } from 'nuxt/schema';
 
 /**
  *
  */
-export function simplifyAliasesModule() {
+export function simplifyAliasesModule(): NuxtModule {
     return defineNuxtModule({
         setup(_opts, nuxt) {
             // We only use @/ alias, remove all others.

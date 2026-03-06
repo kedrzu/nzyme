@@ -1,150 +1,93 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import { defineService } from '@nzyme/ioc/Service.js';
-import type { Dependencies, Service, ServiceSetup } from '@nzyme/ioc/Service.js';
-import type { EmptyObject } from '@nzyme/types/EmptyObject.js';
-import type { IfAny } from '@nzyme/types/TypeGuards.js';
-
-import type { HttpRequest } from './types/HttpRequest.js';
+import { assignProps } from '@nzyme/utils/assignProps.js';
 
 /**
- * Represents an API endpoint definition with input/output schemas, HTTP method, and path.
+ * Endpoint definition
  */
-export interface EndpointOptionsBase<TName extends string, TDeps extends Dependencies = Dependencies> {
+export interface EndpointDefinitionParams<TInput = void, TOutput = void> {
     /**
-     * The name of the endpoint.
+     * The name of the endpoint
      */
-    readonly name: TName;
+    name: string;
 
     /**
-     * Optional dependencies needed by the handler.
+     * The input schema of the endpoint
      */
-    readonly deps?: TDeps;
+    input?: StandardSchemaV1<unknown, TInput>;
+
+    /**
+     * The output schema of the endpoint
+     */
+    output?: EndpointDefinitionOutput<TOutput>;
 }
 
 /**
- *
+ * Endpoint definition
  */
-export interface EndpointOptionsWithoutInput<
-    TName extends string = string,
-    TOutput = unknown,
-    TDeps extends Dependencies = Dependencies,
-> extends EndpointOptionsBase<TName, TDeps> {
+export type EndpointDefinition<TInput = void, TOutput = void> = EndpointDefinitionParams<TInput, TOutput> & {
     /**
-     * Schema for validating the input data.
+     * The input of the endpoint
+     * Not a real value - used only for type inference
      */
-    readonly input?: never;
+    $input: TInput;
+    /**
+     * The output of the endpoint
+     * Not a real value - used only for type inference
+     */
+    $output: TOutput;
+};
 
+/**
+ * Endpoint definition output
+ */
+export interface EndpointDefinitionOutput<TOutput = void> {
     /**
-     * Handler function that processes the request.
+     * The output of the endpoint
+     * Not a real value - used only for type inference
      */
-    readonly setup: ServiceSetup<TDeps, EndpointHandler<void, TOutput>>;
+    $output: TOutput;
 }
 
 /**
- *
+ * Endpoint define function
  */
-export interface EndpointOptionsWithInput<
-    TName extends string = string,
-    TInput = unknown,
-    TOutput = unknown,
-    TDeps extends Dependencies = Dependencies,
-> extends EndpointOptionsBase<TName, TDeps> {
+export interface EndpointDefineFunction {
     /**
-     * Schema for validating the input data.
+     * Define the endpoint
      */
-    readonly input: StandardSchemaV1<unknown, TInput>;
+    <TInput = void, TOutput = void>(
+        endpoint: EndpointDefinitionParams<TInput, TOutput>,
+    ): EndpointDefinition<TInput, TOutput>;
 
     /**
-     * Handler function that processes the request.
+     * Define the output of the endpoint
      */
-    readonly setup: ServiceSetup<TDeps, EndpointHandler<TInput, TOutput>>;
+    output<TOutput = void>(): EndpointDefinitionOutput<TOutput>;
 }
 
 /**
- * Endpoint context
+ * Define the endpoint
+ * @_NO_SIDE_EFFECTS_
  */
-export interface EndpointContext {
-    /**
-     * The HTTP request
-     */
-    request: HttpRequest;
-}
+export const defineEndpoint: EndpointDefineFunction = assignProps(defineEndpointBase, {
+    output: endpointOutput,
+});
 
 /**
- * Endpoint handler function
+ * Define the endpoint base function
+ * @__NO_SIDE_EFFECTS_
  */
-export interface EndpointHandler<TInput = unknown, TOutput = unknown> {
-    (input: TInput, ctx: EndpointContext): Promise<TOutput> | TOutput;
-}
-
-/**
- *
- */
-export interface Endpoint<
-    TName extends string = string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    TInput = any,
-    TOutput = unknown,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    TDeps extends Dependencies = any,
-> extends Service<EndpointHandler<TInput, TOutput>, TDeps> {
-    /**
-     *
-     */
-    readonly name: TName;
-
-    /**
-     *
-     */
-    readonly input: IfAny<
-        TInput,
-        StandardSchemaV1 | undefined,
-        void extends TInput ? undefined : StandardSchemaV1<unknown, TInput>
-    >;
-}
-
-/**
- *
- */
-export type EndpointName<E extends Endpoint> = E['name'];
-
-/**
- *
- */
-export type EndpointInput<E extends Endpoint> =
-    E extends Endpoint<string, infer TInput, infer _TOutput, infer _TDeps> ? IfAny<TInput, unknown> : never;
-
-/**
- *
- */
-export type EndpointOutput<E extends Endpoint> =
-    E extends Endpoint<string, infer _TInput, infer TOutput, infer _TDeps> ? IfAny<TOutput, unknown> : never;
-
-/**
- *
- */
-export function defineEndpoint<TName extends string, TInput, TOutput, TDeps extends Dependencies = EmptyObject>(
-    endpoint: EndpointOptionsWithInput<TName, TInput, TOutput, TDeps>,
-): Endpoint<TName, TInput, TOutput, TDeps>;
-/**
- *
- */
-export function defineEndpoint<TName extends string, TOutput, TDeps extends Dependencies = EmptyObject>(
-    endpoint: EndpointOptionsWithoutInput<TName, TOutput, TDeps>,
-): Endpoint<TName, undefined, TOutput, TDeps>;
-/**
- *
- */
-export function defineEndpoint(endpoint: EndpointOptionsWithInput | EndpointOptionsWithoutInput): Endpoint {
-    const service = defineService({
-        name: endpoint.name,
-        deps: endpoint.deps,
-        setup: endpoint.setup,
-    });
-
+function defineEndpointBase<TInput = void, TOutput = void>(
+    endpoint: EndpointDefinitionParams<TInput, TOutput>,
+): EndpointDefinition<TInput, TOutput> {
     return {
-        ...(service as Endpoint),
-        input: endpoint.input,
+        ...endpoint,
+        $input: endpoint.input as TInput,
+        $output: endpoint.output as TOutput,
     };
+}
+
+function endpointOutput<TOutput = void>(): EndpointDefinitionOutput<TOutput> {
+    return {} as EndpointDefinitionOutput<TOutput>;
 }

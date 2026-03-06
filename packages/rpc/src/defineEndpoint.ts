@@ -76,7 +76,7 @@ export const defineEndpoint: EndpointDefineFunction = assignProps(defineEndpoint
 
 /**
  * Define the endpoint base function
- * @_NO_SIDE_EFFECTS_
+ * @__NO_SIDE_EFFECTS_
  */
 function defineEndpointBase<TInput = void, TOutput = void>(
     endpoint: EndpointDefinitionParams<TInput, TOutput>,

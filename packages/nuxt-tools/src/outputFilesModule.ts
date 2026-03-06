@@ -2,8 +2,8 @@ import * as path from 'path';
 
 import { outputFile } from 'fs-extra/esm';
 import { lookup as mimeLookup } from 'mime-types';
-import type { NuxtModule } from 'nuxt/schema';
 import { defineNuxtModule } from 'nuxt/kit';
+import type { NuxtModule } from 'nuxt/schema';
 import type { Connect } from 'vite';
 
 type FileContent = (() => string | Promise<string>) | string;

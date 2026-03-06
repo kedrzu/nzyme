@@ -1,3 +1,5 @@
+import chalk from 'chalk';
+
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
@@ -78,7 +80,6 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
     } = params;
 
     // FIRST: Check if the current branch's PR has been merged
-    logger.info('🔍 Checking if current PR is merged...');
     await checkCurrentPrMerged(githubClient, githubConfig, issueId, logger);
 
     // SECOND: Handle submodule changes (submodules must be processed before main repo)
@@ -93,7 +94,8 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
     });
 
     // THIRD: Handle main repository changes (including submodule reference updates)
-    logger.info('🔍 Checking main repository status...');
+    logger.info('');
+    logger.info(chalk.bold('📤 Pushing main repository...'));
     const [unpushedCommits, statusInfo] = await Promise.all([checkUnpushedCommits(), getGitStatusInfo()]);
 
     // Determine the actual default commit message based on PR review status

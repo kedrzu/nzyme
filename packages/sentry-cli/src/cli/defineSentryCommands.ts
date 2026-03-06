@@ -4,16 +4,15 @@ import open from 'open';
 import type { CommandClass } from '@nzyme/cli/Command.js';
 import { Option, UsageError } from '@nzyme/cli';
 import { Command } from '@nzyme/cli/Command.js';
-import { commitAndPushPendingChanges } from '@nzyme/github-cli/utils/commitAndPushPendingChanges.js';
 import { convertAllPrsToReady } from '@nzyme/github-cli/utils/convertAllPrsToReady.js';
 import { createGithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';
-import { fetchAndRebaseCurrentBranch } from '@nzyme/github-cli/utils/fetchAndRebaseCurrentBranch.js';
 import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
 import { handlePushPreparation } from '@nzyme/github-cli/utils/handlePushPreparation.js';
+import { mergeBaseIntoSubmodules } from '@nzyme/github-cli/utils/mergeBaseIntoSubmodules.js';
 import { openPrInBrowser } from '@nzyme/github-cli/utils/selectPrToOpen.js';
 import { pushSubmoduleUpdates } from '@nzyme/github-cli/utils/pushSubmoduleUpdates.js';
-import { refreshSubmodules } from '@nzyme/github-cli/utils/refreshSubmodules.js';
+import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
 import { syncBaseBranch } from '@nzyme/github-cli/utils/syncBaseBranch.js';
 import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
 
@@ -254,16 +253,11 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
             examples: [
                 ['Push current issue changes', 'issue push'],
                 ['Push without processing submodules', 'issue push --skip-submodules'],
-                ['Push with auto-commit (skip prompts)', 'issue push --yes'],
             ],
         });
 
         skipSubmodules = Option.Boolean('--skip-submodules', false, {
             description: 'Skip processing submodules',
-        });
-
-        yes = Option.Boolean('--yes,-y', false, {
-            description: 'Skip prompts and automatically commit with default message',
         });
 
         override async run() {
@@ -280,16 +274,22 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
                 const issueId = extractIssueIdFromBranch(currentBranch);
                 this.logger.info(`🎯 Found issue ID: ${chalk.bold(issueId)}`);
 
+                // Get base branches
+                const baseBranches = await getBaseBranches(options);
+                const baseBranch = baseBranches.length > 0 ? baseBranches[0]! : 'main';
+
+                // Sync all repos: auto-commit, fetch, rebase/pull, fast-forward base
+                await syncAllRepos({
+                    baseBranch,
+                    logger: this.logger,
+                });
+
                 // Create GitHub client
                 const githubClient = createGithubClient(githubConfig);
 
                 // Check if PR exists and is in review
                 const pr = await findMatchingPr(githubClient, githubConfig, issueId);
                 const prInReview = pr ? !pr.draft : false;
-
-                // Get base branches
-                const baseBranches = await getBaseBranches(options);
-                const baseBranch = baseBranches.length > 0 ? baseBranches[0]! : 'main';
 
                 // Handle preparation (submodules and main repo)
                 await handlePushPreparation({
@@ -299,7 +299,7 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
                     logger: this.logger,
                     baseBranch,
                     skipSubmodules: this.skipSubmodules,
-                    autoYes: this.yes,
+                    autoYes: true,
                     prInReview,
                 });
 
@@ -416,14 +416,7 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
             description: 'Refresh current issue branch with latest base branch changes',
             details:
                 'Fetches the base branch, fast-forwards it, and merges it into the current issue branch and all submodules. Pushes submodule changes and commits submodule reference updates.',
-            examples: [
-                ['Refresh current issue with base branch', 'issue refresh'],
-                ['Refresh with auto-commit (skip prompts)', 'issue refresh --yes'],
-            ],
-        });
-
-        yes = Option.Boolean('--yes,-y', false, {
-            description: 'Skip prompts and automatically commit pending changes with default message',
+            examples: [['Refresh current issue with base branch', 'issue refresh']],
         });
 
         override async run() {
@@ -444,46 +437,36 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                     throw new UsageError('No base branches configured');
                 }
 
-                // For refresh, use the first base branch as default (backward compatibility)
                 const baseBranch = baseBranches[0]!;
                 this.logger.info(
                     `🔄 Refreshing issue ${chalk.bold(issueId)} with base branch ${chalk.cyan(baseBranch)}`,
                 );
 
-                // 1. Fetch and rebase current branch to get any remote commits
-                this.logger.info('');
-                this.logger.info(chalk.bold('📥 Syncing with remote...'));
-                await fetchAndRebaseCurrentBranch({
+                // 1. Sync all repos: auto-commit, fetch, rebase/pull, fast-forward base
+                const syncResult = await syncAllRepos({
+                    baseBranch,
                     logger: this.logger,
-                    repoDisplayName: 'main repository',
                 });
 
-                // 2. Refresh submodules (includes checking for pending changes)
+                // 2. Merge base branch into task-branch submodules and push
                 this.logger.info('');
-                this.logger.info(chalk.bold('📦 Refreshing submodules...'));
-                const submoduleResult = await refreshSubmodules({ baseBranch, logger: this.logger, autoYes: this.yes });
+                this.logger.info(chalk.bold('🔀 Merging base branch into submodules...'));
+                const mergeResult = await mergeBaseIntoSubmodules({
+                    baseBranch,
+                    logger: this.logger,
+                    submodules: syncResult.submodules,
+                });
 
-                // 3. Commit and push submodule reference changes immediately after refresh
-                // This must happen BEFORE syncBaseBranch to avoid reverting base branch submodule updates
-                if (submoduleResult.refreshedSubmodules.length > 0) {
+                // 3. Push submodule reference updates if any merges happened
+                if (mergeResult.mergedSubmodulePaths.length > 0) {
                     this.logger.info('');
                     await pushSubmoduleUpdates({
                         logger: this.logger,
-                        submodulePaths: submoduleResult.refreshedSubmodules,
+                        submodulePaths: mergeResult.mergedSubmodulePaths,
                     });
                 }
 
-                // 4. Check for pending changes in main repo and commit/push before merge
-                this.logger.info('');
-                this.logger.info(chalk.bold('🔄 Refreshing main repository...'));
-                await commitAndPushPendingChanges({
-                    logger: this.logger,
-                    repoDisplayName: 'main repository',
-                    autoYes: this.yes,
-                    defaultCommitMessage: 'Work in progress',
-                });
-
-                // 5. Sync with base branch
+                // 4. Merge base into main task branch
                 const result = await syncBaseBranch(baseBranch, this.logger, true);
 
                 if (result.mergePerformed) {

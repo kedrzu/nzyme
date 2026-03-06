@@ -37,8 +37,15 @@ export * from './utils/syncBaseBranch.js';
 export type { SyncBaseBranchResult } from './utils/syncBaseBranch.js';
 export * from './utils/isTaskBranch.js';
 export * from './utils/pushWithUpstream.js';
-export * from './utils/refreshSubmodules.js';
-export type { RefreshSubmodulesParams, RefreshSubmodulesResult } from './utils/refreshSubmodules.js';
+export * from './utils/autoCommitChanges.js';
+export type { AutoCommitChangesParams, AutoCommitChangesResult } from './utils/autoCommitChanges.js';
+export * from './utils/syncAllRepos.js';
+export type { SyncAllReposParams, SyncAllReposResult, SyncedSubmoduleInfo } from './utils/syncAllRepos.js';
+export * from './utils/mergeBaseIntoSubmodules.js';
+export type {
+    MergeBaseIntoSubmodulesParams,
+    MergeBaseIntoSubmodulesResult,
+} from './utils/mergeBaseIntoSubmodules.js';
 export * from './utils/pushSubmoduleUpdates.js';
 export type { PushSubmoduleUpdatesParams, PushSubmoduleUpdatesResult } from './utils/pushSubmoduleUpdates.js';
 export * from './utils/commitAndPushPendingChanges.js';

@@ -20,7 +20,6 @@ const render = () => {
   console.log(nodes);
 
   const isEmpty = isVNodeEmpty(nodes);
-  console.log(isEmpty);
   if (isEmpty) {
     return null;
   }

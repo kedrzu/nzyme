@@ -9,11 +9,8 @@ import { createGithubClient } from '@nzyme/github-cli/utils/createGithubClient.j
 import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
 import { handlePushPreparation } from '@nzyme/github-cli/utils/handlePushPreparation.js';
-import { mergeBaseIntoSubmodules } from '@nzyme/github-cli/utils/mergeBaseIntoSubmodules.js';
 import { openPrInBrowser } from '@nzyme/github-cli/utils/selectPrToOpen.js';
-import { pushSubmoduleUpdates } from '@nzyme/github-cli/utils/pushSubmoduleUpdates.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
-import { syncBaseBranch } from '@nzyme/github-cli/utils/syncBaseBranch.js';
 import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
 
 import { createSentryClient } from '../utils/createSentryClient.js';
@@ -442,41 +439,19 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                     `🔄 Refreshing issue ${chalk.bold(issueId)} with base branch ${chalk.cyan(baseBranch)}`,
                 );
 
-                // 1. Sync all repos: auto-commit, fetch, rebase/pull, fast-forward base
+                // Sync all repos: auto-commit, fetch, rebase/pull, ff base, merge base, push
                 const syncResult = await syncAllRepos({
                     baseBranch,
                     logger: this.logger,
                 });
 
-                // 2. Merge base branch into task-branch submodules and push
                 this.logger.info('');
-                this.logger.info(chalk.bold('🔀 Merging base branch into submodules...'));
-                const mergeResult = await mergeBaseIntoSubmodules({
-                    baseBranch,
-                    logger: this.logger,
-                    submodules: syncResult.submodules,
-                });
-
-                // 3. Push submodule reference updates if any merges happened
-                if (mergeResult.mergedSubmodulePaths.length > 0) {
-                    this.logger.info('');
-                    await pushSubmoduleUpdates({
-                        logger: this.logger,
-                        submodulePaths: mergeResult.mergedSubmodulePaths,
-                    });
-                }
-
-                // 4. Merge base into main task branch
-                const result = await syncBaseBranch(baseBranch, this.logger, true);
-
-                if (result.mergePerformed) {
+                if (syncResult.baseMergePerformed) {
                     this.logger.info(
-                        `🎉 Successfully merged ${chalk.yellow(result.commitsAhead?.toString())} commit${
-                            result.commitsAhead === 1 ? '' : 's'
+                        `🎉 Successfully merged ${chalk.yellow(syncResult.baseBranchCommitsAhead.toString())} commit${
+                            syncResult.baseBranchCommitsAhead === 1 ? '' : 's'
                         } from ${chalk.cyan(baseBranch)}`,
                     );
-                } else if (result.wasBaseBranchAhead) {
-                    this.logger.info(`⏭️  Base branch changes available but not merged`);
                 } else {
                     this.logger.info(`✅ Issue branch is already up to date with ${chalk.cyan(baseBranch)}`);
                 }

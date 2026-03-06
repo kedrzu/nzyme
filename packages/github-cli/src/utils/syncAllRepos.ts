@@ -8,6 +8,7 @@ import { autoCommitChanges } from './autoCommitChanges.js';
 import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { isTaskBranch } from './isTaskBranch.js';
+import { pushSubmoduleUpdates } from './pushSubmoduleUpdates.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
 
 /**
@@ -54,6 +55,21 @@ export interface SyncAllReposResult {
      * All synced submodule info.
      */
     submodules: SyncedSubmoduleInfo[];
+
+    /**
+     * Whether the base branch was ahead of the main task branch.
+     */
+    wasBaseBranchAhead: boolean;
+
+    /**
+     * Whether a merge of the base branch into the main task branch was performed.
+     */
+    baseMergePerformed: boolean;
+
+    /**
+     * Number of commits the base branch was ahead (in main repo).
+     */
+    baseBranchCommitsAhead: number;
 }
 
 /**
@@ -62,6 +78,9 @@ export interface SyncAllReposResult {
  * 2. Fetch all repos in parallel
  * 3. Rebase current branches (task branches: rebase; non-task: pull/ff)
  * 4. Fast-forward base branch in main + task-branch submodules
+ * 5. Merge base branch into task-branch submodules + push
+ * 6. Push submodule reference updates if any merges happened
+ * 7. Merge base branch into main task branch + push
  */
 export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllReposResult> {
     const { baseBranch, logger, defaultCommitMessage = 'Work in progress' } = params;
@@ -163,7 +182,37 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
         }
     }
 
-    return { submodules: syncedSubmodules };
+    // === Phase 6: Merge base into task-branch submodules + push ===
+    const taskBranchSubmodules = syncedSubmodules.filter(s => s.isOnTaskBranch);
+
+    if (taskBranchSubmodules.length > 0) {
+        logger.info('');
+        logger.info(chalk.bold('🔀 Merging base branch into submodules...'));
+
+        const mergedSubmodulePaths = await mergeBaseIntoSubmodules(taskBranchSubmodules, baseBranch, logger);
+
+        // === Phase 6b: Push submodule reference updates if any merges happened ===
+        if (mergedSubmodulePaths.length > 0) {
+            logger.info('');
+            await pushSubmoduleUpdates({
+                logger,
+                submodulePaths: mergedSubmodulePaths,
+            });
+        }
+    }
+
+    // === Phase 7: Merge base into main task branch + push ===
+    logger.info('');
+    logger.info(chalk.bold('🔀 Merging base branch into main repository...'));
+
+    const { wasAhead, commitsAhead, merged } = await mergeBaseIntoCurrent(mainGit, baseBranch, logger, 'main repository');
+
+    return {
+        submodules: syncedSubmodules,
+        wasBaseBranchAhead: wasAhead,
+        baseMergePerformed: merged,
+        baseBranchCommitsAhead: commitsAhead,
+    };
 }
 
 /**
@@ -273,4 +322,92 @@ async function fastForwardBranch(
     } catch {
         logger.warn(`   ⚠️  Could not fast-forward ${chalk.cyan(branch)} in ${repoDisplayName}`);
     }
+}
+
+/**
+ * Merge base into task-branch submodules and push. Returns paths of merged submodules.
+ */
+async function mergeBaseIntoSubmodules(
+    taskBranchSubmodules: SyncedSubmoduleInfo[],
+    baseBranch: string,
+    logger: Logger,
+): Promise<string[]> {
+    const remoteBaseBranch = `origin/${baseBranch}`;
+    const mergedPaths: string[] = [];
+
+    for (const synced of taskBranchSubmodules) {
+        const sub = synced.submodule;
+        const subGit = simpleGit({ baseDir: sub.path });
+        const currentBranch = sub.currentBranch!;
+
+        // Check if remote base branch is ahead of current branch
+        let commitsAhead = 0;
+        try {
+            const result = await subGit.raw(['rev-list', '--count', `${currentBranch}..${remoteBaseBranch}`]);
+            commitsAhead = parseInt(result.trim(), 10);
+        } catch {
+            commitsAhead = 0;
+        }
+
+        if (commitsAhead === 0) {
+            logger.info(`   ${chalk.magenta(sub.name)}: up to date with ${chalk.cyan(baseBranch)}`);
+            continue;
+        }
+
+        logger.info(
+            `   ${chalk.magenta(sub.name)}: ${chalk.cyan(baseBranch)} is ${chalk.yellow(commitsAhead.toString())} commit${commitsAhead === 1 ? '' : 's'} ahead`,
+        );
+        logger.info(`   Merging ${chalk.cyan(remoteBaseBranch)} into ${chalk.cyan(currentBranch)}...`);
+        await subGit.merge([remoteBaseBranch]);
+        logger.info(`   ${chalk.green('✓')} Merged ${chalk.cyan(baseBranch)} into ${chalk.magenta(sub.name)}`);
+
+        await pushWithUpstream(subGit);
+        logger.info(`   ${chalk.green('✓')} Pushed ${chalk.magenta(sub.name)}`);
+
+        mergedPaths.push(sub.path);
+    }
+
+    return mergedPaths;
+}
+
+/**
+ * Check if base branch is ahead, merge it into current branch, and push.
+ */
+async function mergeBaseIntoCurrent(
+    git: SimpleGit,
+    baseBranch: string,
+    logger: Logger,
+    repoDisplayName: string,
+): Promise<{ wasAhead: boolean; commitsAhead: number; merged: boolean }> {
+    const status = await git.status();
+    const currentBranch = status.current;
+
+    if (!currentBranch) {
+        return { wasAhead: false, commitsAhead: 0, merged: false };
+    }
+
+    let commitsAhead = 0;
+    try {
+        const result = await git.raw(['rev-list', '--count', `${currentBranch}..${baseBranch}`]);
+        commitsAhead = parseInt(result.trim(), 10);
+    } catch {
+        return { wasAhead: false, commitsAhead: 0, merged: false };
+    }
+
+    if (commitsAhead === 0) {
+        logger.info(`   ${repoDisplayName}: up to date with ${chalk.cyan(baseBranch)}`);
+        return { wasAhead: false, commitsAhead: 0, merged: false };
+    }
+
+    logger.info(
+        `   ${repoDisplayName}: ${chalk.cyan(baseBranch)} is ${chalk.yellow(commitsAhead.toString())} commit${commitsAhead === 1 ? '' : 's'} ahead`,
+    );
+    logger.info(`   Merging ${chalk.cyan(baseBranch)} into ${chalk.cyan(currentBranch)}...`);
+    await git.merge([baseBranch]);
+    logger.info(`   ${chalk.green('✓')} Merged ${chalk.cyan(baseBranch)} into ${repoDisplayName}`);
+
+    await pushWithUpstream(git);
+    logger.info(`   ${chalk.green('✓')} Pushed ${repoDisplayName}`);
+
+    return { wasAhead: true, commitsAhead, merged: true };
 }

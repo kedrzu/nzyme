@@ -84,28 +84,23 @@ export async function pushSubmoduleUpdates(params: PushSubmoduleUpdatesParams): 
     }
 
     if (pathsToCommit.length === 0) {
-        logger.info('✅ No submodule reference changes to commit');
+        logger.info('   No submodule reference changes to commit');
         return { committed: false, pushed: false };
     }
 
-    logger.info(`📝 Found ${chalk.yellow(pathsToCommit.length.toString())} submodule(s) with updated references`);
-
     // Stage only the specific submodule paths
     for (const submodulePath of pathsToCommit) {
-        logger.info(`   📦 Staging ${chalk.magenta(submodulePath)}`);
         await git.add(submodulePath);
     }
 
     // Commit only the staged submodule paths using `--` to specify paths
     // This ensures we only commit the submodules, not any other staged changes
-    logger.info('💾 Committing submodule updates...');
+    logger.info(`   Committing submodule reference update${pathsToCommit.length === 1 ? '' : 's'}...`);
     await git.raw(['commit', '-m', 'Submodule update', '--', ...pathsToCommit]);
-    logger.info('✅ Committed submodule updates');
 
     // Push (handles case where no upstream is configured)
-    logger.info('📤 Pushing submodule update commit...');
     await pushWithUpstream(git);
-    logger.info('✅ Pushed to remote');
+    logger.info(`   ${chalk.green('✓')} Pushed submodule reference update${pathsToCommit.length === 1 ? '' : 's'}`);
 
     return { committed: true, pushed: true };
 }

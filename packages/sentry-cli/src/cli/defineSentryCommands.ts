@@ -8,8 +8,8 @@ import { convertAllPrsToReady } from '@nzyme/github-cli/utils/convertAllPrsToRea
 import { createGithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';
 import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
-import { handlePushPreparation } from '@nzyme/github-cli/utils/handlePushPreparation.js';
 import { openPrInBrowser } from '@nzyme/github-cli/utils/selectPrToOpen.js';
+import { pushChanges } from '@nzyme/github-cli/utils/pushChanges.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
 import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
 
@@ -273,31 +273,15 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
 
                 // Get base branches
                 const baseBranches = await getBaseBranches(options);
-                const baseBranch = baseBranches.length > 0 ? baseBranches[0]! : 'main';
+                const baseBranch = baseBranches[0] ?? 'main';
 
-                // Sync all repos: auto-commit, fetch, rebase/pull, fast-forward base
-                await syncAllRepos({
-                    baseBranch,
-                    logger: this.logger,
-                });
-
-                // Create GitHub client
-                const githubClient = createGithubClient(githubConfig);
-
-                // Check if PR exists and is in review
-                const pr = await findMatchingPr(githubClient, githubConfig, issueId);
-                const prInReview = pr ? !pr.draft : false;
-
-                // Handle preparation (submodules and main repo)
-                await handlePushPreparation({
-                    githubClient,
+                // Push changes
+                await pushChanges({
                     githubConfig,
                     issueId,
                     logger: this.logger,
                     baseBranch,
                     skipSubmodules: this.skipSubmodules,
-                    autoYes: true,
-                    prInReview,
                 });
 
                 this.logger.info('');
@@ -316,22 +300,17 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
         static override paths = getCommandPaths(options, 'ready');
         static override usage = Command.Usage({
             category: 'Sentry',
-            description: 'Convert current issue from draft to ready for review',
+            description: 'Push changes and convert current issue from draft to ready for review',
             details:
-                'Detects the issue from the current branch and converts the associated PR from draft to ready for review',
+                'Pushes all changes (syncing repos, handling submodules) and converts the associated PR from draft to ready for review',
             examples: [
-                ['Convert current issue to ready for review', 'issue ready'],
-                ['Convert to ready without processing submodules', 'issue ready --skip-submodules'],
-                ['Convert to ready with auto-commit (skip prompts)', 'issue ready --yes'],
+                ['Push and convert current issue to ready for review', 'issue ready'],
+                ['Push and convert to ready without processing submodules', 'issue ready --skip-submodules'],
             ],
         });
 
         skipSubmodules = Option.Boolean('--skip-submodules', false, {
             description: 'Skip processing submodules',
-        });
-
-        yes = Option.Boolean('--yes,-y', false, {
-            description: 'Skip prompts and automatically commit with default message',
         });
 
         override async run() {
@@ -348,14 +327,24 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                 const issueId = extractIssueIdFromBranch(currentBranch);
                 this.logger.info(`🎯 Found issue ID: ${chalk.bold(issueId)}`);
 
-                // Create GitHub client
-                const githubClient = createGithubClient(githubConfig);
+                // Get base branches
+                const baseBranches = await getBaseBranches(options);
+                const baseBranch = baseBranches[0] ?? 'main';
 
-                // Find the PR for this issue
-                this.logger.info('🔍 Looking for associated GitHub PR...');
-                const pr = await findMatchingPr(githubClient, githubConfig, issueId);
+                // Push all changes (same as push command)
+                const { githubClient, pr } = await pushChanges({
+                    githubConfig,
+                    issueId,
+                    logger: this.logger,
+                    baseBranch,
+                    skipSubmodules: this.skipSubmodules,
+                    defaultCommitMessage: 'Ready for review',
+                });
 
-                if (!pr) {
+                // Find PR for converting to ready (re-fetch if push didn't find one)
+                const readyPr = pr ?? (await findMatchingPr(githubClient, githubConfig, issueId));
+
+                if (!readyPr) {
                     throw new UsageError(
                         `No GitHub PR found for issue ${issueId}. ` +
                             'Make sure you have created a PR for this issue first using "issue ' +
@@ -364,36 +353,15 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                     );
                 }
 
-                this.logger.info(`✅ Found PR: ${chalk.blue(pr.title)} (#${pr.number})`);
-
-                // Check if PR is already in review
-                const prInReview = !pr.draft;
-
-                // Handle preparation (submodules and main repo)
-                const baseBranches = await getBaseBranches(options);
-                const baseBranch = baseBranches.length > 0 ? baseBranches[0]! : pr.base.ref;
-
-                await handlePushPreparation({
-                    githubClient,
-                    githubConfig,
-                    issueId,
-                    logger: this.logger,
-                    baseBranch,
-                    skipSubmodules: this.skipSubmodules,
-                    autoYes: this.yes,
-                    prInReview,
-                    defaultCommitMessage: 'Ready for review',
-                });
-
                 // Convert all PRs (main and submodules) to ready
                 await convertAllPrsToReady({
                     githubClient,
                     githubConfig,
                     issueId,
                     logger: this.logger,
-                    mainPrNumber: pr.number,
-                    mainPrIsDraft: pr.draft,
-                    mainPrUrl: pr.html_url,
+                    mainPrNumber: readyPr.number,
+                    mainPrIsDraft: readyPr.draft,
+                    mainPrUrl: readyPr.html_url,
                     skipSubmodules: this.skipSubmodules,
                 });
             } catch (error: unknown) {

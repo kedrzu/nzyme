@@ -41,6 +41,8 @@ export * from './utils/autoCommitChanges.js';
 export type { AutoCommitChangesParams, AutoCommitChangesResult } from './utils/autoCommitChanges.js';
 export * from './utils/syncAllRepos.js';
 export type { SyncAllReposParams, SyncAllReposResult, SyncedSubmoduleInfo } from './utils/syncAllRepos.js';
+export * from './utils/pushChanges.js';
+export type { PushChangesParams, PushChangesResult } from './utils/pushChanges.js';
 export * from './utils/pushSubmoduleUpdates.js';
 export type { PushSubmoduleUpdatesParams, PushSubmoduleUpdatesResult } from './utils/pushSubmoduleUpdates.js';
 export * from './utils/commitAndPushPendingChanges.js';

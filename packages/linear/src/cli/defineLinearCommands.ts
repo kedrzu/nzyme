@@ -9,8 +9,8 @@ import { convertAllPrsToReady } from '@nzyme/github-cli/utils/convertAllPrsToRea
 import { createGithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';
 import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
-import { handlePushPreparation } from '@nzyme/github-cli/utils/handlePushPreparation.js';
 import { openPrInBrowser } from '@nzyme/github-cli/utils/selectPrToOpen.js';
+import { pushChanges } from '@nzyme/github-cli/utils/pushChanges.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
 import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
 
@@ -370,29 +370,13 @@ function defineTaskPushCommand(options: LinearCommandsOptions) {
                 const baseBranches = await getBaseBranches(options);
                 const baseBranch = baseBranches[0] ?? 'main';
 
-                // Sync all repos: auto-commit, fetch, rebase/pull, fast-forward base
-                await syncAllRepos({
-                    baseBranch,
-                    logger: this.logger,
-                });
-
-                // Create GitHub client
-                const githubClient = createGithubClient(githubConfig);
-
-                // Check if PR exists and is in review
-                const pr = await findMatchingPr(githubClient, githubConfig, taskId);
-                const prInReview = pr ? !pr.draft : false;
-
-                // Handle preparation (submodules and main repo)
-                await handlePushPreparation({
-                    githubClient,
+                // Push changes
+                await pushChanges({
                     githubConfig,
                     issueId: taskId,
                     logger: this.logger,
                     baseBranch,
                     skipSubmodules: this.skipSubmodules,
-                    autoYes: true,
-                    prInReview,
                 });
 
                 this.logger.info('');
@@ -411,22 +395,17 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
         static override paths = getCommandPaths(options, 'ready');
         static override usage = Command.Usage({
             category: 'Linear',
-            description: 'Convert current task from draft to ready for review',
+            description: 'Push changes and convert current task from draft to ready for review',
             details:
-                'Detects the task from the current branch and converts the associated PR from draft to ready for review',
+                'Pushes all changes (syncing repos, handling submodules) and converts the associated PR from draft to ready for review',
             examples: [
-                ['Convert current task to ready for review', 'task ready'],
-                ['Convert to ready without processing submodules', 'task ready --skip-submodules'],
-                ['Convert to ready with auto-commit (skip prompts)', 'task ready --yes'],
+                ['Push and convert current task to ready for review', 'task ready'],
+                ['Push and convert to ready without processing submodules', 'task ready --skip-submodules'],
             ],
         });
 
         skipSubmodules = Option.Boolean('--skip-submodules', false, {
             description: 'Skip processing submodules',
-        });
-
-        yes = Option.Boolean('--yes,-y', false, {
-            description: 'Skip prompts and automatically commit with default message',
         });
 
         override async run() {
@@ -443,40 +422,29 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                 const taskId = extractTaskIdFromBranch(currentBranch);
                 this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
 
-                // Create GitHub client
-                const githubClient = createGithubClient(githubConfig);
-
-                // Find the PR for this task
-                this.logger.info('🔍 Looking for associated GitHub PR...');
-                const pr = await findMatchingPr(githubClient, githubConfig, taskId);
-
-                if (!pr) {
-                    throw new UsageError(
-                        `No GitHub PR found for task ${chalk.bold(taskId)}. ` +
-                            `Make sure you have created a PR for this task first using "task ${chalk.bold(taskId)}".`,
-                    );
-                }
-
-                this.logger.info(`✅ Found PR: ${chalk.blue(pr.title)} ${chalk.gray(`(#${pr.number})`)}`);
-
-                // Check if PR is already in review
-                const prInReview = !pr.draft;
-
-                // Handle preparation (submodules and main repo)
+                // Get base branches
                 const baseBranches = await getBaseBranches(options);
-                const baseBranch = baseBranches.length > 0 ? baseBranches[0]! : pr.base.ref;
+                const baseBranch = baseBranches[0] ?? 'main';
 
-                await handlePushPreparation({
-                    githubClient,
+                // Push all changes (same as push command)
+                const { githubClient, pr } = await pushChanges({
                     githubConfig,
                     issueId: taskId,
                     logger: this.logger,
                     baseBranch,
                     skipSubmodules: this.skipSubmodules,
-                    autoYes: this.yes,
-                    prInReview,
                     defaultCommitMessage: 'Ready for review',
                 });
+
+                // Find PR for converting to ready (re-fetch if push didn't find one)
+                const readyPr = pr ?? (await findMatchingPr(githubClient, githubConfig, taskId));
+
+                if (!readyPr) {
+                    throw new UsageError(
+                        `No GitHub PR found for task ${chalk.bold(taskId)}. ` +
+                            `Make sure you have created a PR for this task first using "task ${chalk.bold(taskId)}".`,
+                    );
+                }
 
                 // Convert all PRs (main and submodules) to ready
                 await convertAllPrsToReady({
@@ -484,9 +452,9 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                     githubConfig,
                     issueId: taskId,
                     logger: this.logger,
-                    mainPrNumber: pr.number,
-                    mainPrIsDraft: pr.draft,
-                    mainPrUrl: pr.html_url,
+                    mainPrNumber: readyPr.number,
+                    mainPrIsDraft: readyPr.draft,
+                    mainPrUrl: readyPr.html_url,
                     skipSubmodules: this.skipSubmodules,
                 });
             } catch (error: unknown) {

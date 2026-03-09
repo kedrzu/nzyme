@@ -48,7 +48,7 @@
         "@nzyme/eslint": "0.14.0",
         "@nzyme/tsconfig": "0.14.0",
         "@types/fs-extra": "11.0.4",
-        "@types/node": "25.3.3",
+        "@types/node": "25.3.5",
         "@types/parse-gitignore": "1.0.2",
         "typescript": "5.9.3"
     },

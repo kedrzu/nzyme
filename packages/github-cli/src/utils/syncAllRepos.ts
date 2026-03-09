@@ -79,7 +79,7 @@ export interface SyncAllReposResult {
  * 3. Rebase current branches (task branches: rebase; non-task: pull/ff)
  * 4. Fast-forward base branch in main + task-branch submodules
  * 5. Merge base branch into task-branch submodules + push
- * 6. Push submodule reference updates if any merges happened
+ * 6. Commit & push all submodule reference updates (from rebase, pull, or merge)
  * 7. Merge base branch into main task branch + push
  */
 export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllReposResult> {
@@ -189,17 +189,14 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
         logger.info('');
         logger.info(chalk.bold('🔀 Merging base branch into submodules...'));
 
-        const mergedSubmodulePaths = await mergeBaseIntoSubmodules(taskBranchSubmodules, baseBranch, logger);
-
-        // === Phase 6b: Push submodule reference updates if any merges happened ===
-        if (mergedSubmodulePaths.length > 0) {
-            logger.info('');
-            await pushSubmoduleUpdates({
-                logger,
-                submodulePaths: mergedSubmodulePaths,
-            });
-        }
+        await mergeBaseIntoSubmodules(taskBranchSubmodules, baseBranch, logger);
     }
+
+    // === Phase 6b: Commit & push all submodule reference updates ===
+    // Submodule refs may change from Phase 4 (rebase/pull) or Phase 6 (merge).
+    // Detect and commit any changed gitlinks so the main repo stays clean.
+    logger.info('');
+    await pushSubmoduleUpdates({ logger });
 
     // === Phase 7: Merge base into main task branch + push ===
     logger.info('');
@@ -335,15 +332,14 @@ async function fastForwardBranch(
 }
 
 /**
- * Merge base into task-branch submodules and push. Returns paths of merged submodules.
+ * Merge base into task-branch submodules and push.
  */
 async function mergeBaseIntoSubmodules(
     taskBranchSubmodules: SyncedSubmoduleInfo[],
     baseBranch: string,
     logger: Logger,
-): Promise<string[]> {
+): Promise<void> {
     const remoteBaseBranch = `origin/${baseBranch}`;
-    const mergedPaths: string[] = [];
 
     for (const synced of taskBranchSubmodules) {
         const sub = synced.submodule;
@@ -373,11 +369,7 @@ async function mergeBaseIntoSubmodules(
 
         await pushWithUpstream(subGit);
         logger.info(`   ${chalk.green('✓')} Pushed ${chalk.magenta(sub.name)}`);
-
-        mergedPaths.push(sub.path);
     }
-
-    return mergedPaths;
 }
 
 /**

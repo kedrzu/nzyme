@@ -17,8 +17,6 @@ const render = () => {
   const nodes = props.slot?.(props.props as T);
   const tag = props.tag ?? 'div';
 
-  console.log(nodes);
-
   const isEmpty = isVNodeEmpty(nodes);
   if (isEmpty) {
     return null;

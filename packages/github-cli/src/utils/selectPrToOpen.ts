@@ -57,12 +57,6 @@ export interface SelectPrToOpenParams {
      * The issue/task ID to search for.
      */
     issueId: string;
-
-    /**
-     * Whether to skip checking submodules.
-     * @default false
-     */
-    skipSubmodules?: boolean;
 }
 
 /**
@@ -71,7 +65,7 @@ export interface SelectPrToOpenParams {
  * If only one PR is found, returns it without prompting.
  */
 export async function selectPrToOpen(params: SelectPrToOpenParams): Promise<PrInfo> {
-    const { githubClient, githubConfig, issueId, skipSubmodules = false } = params;
+    const { githubClient, githubConfig, issueId } = params;
 
     const availablePrs: PrInfo[] = [];
 
@@ -89,40 +83,38 @@ export async function selectPrToOpen(params: SelectPrToOpenParams): Promise<PrIn
     }
 
     // Check for submodule PRs
-    if (!skipSubmodules) {
-        const submodules = await getSubmoduleInfo();
-        if (submodules.length > 0) {
-            for (const submodule of submodules) {
-                const urlMatch = submodule.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
-                if (!urlMatch) {
-                    continue;
-                }
+    const submodules = await getSubmoduleInfo();
+    if (submodules.length > 0) {
+        for (const submodule of submodules) {
+            const urlMatch = submodule.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
+            if (!urlMatch) {
+                continue;
+            }
 
-                const [, owner, repo] = urlMatch;
-                if (!owner || !repo) {
-                    continue;
-                }
+            const [, owner, repo] = urlMatch;
+            if (!owner || !repo) {
+                continue;
+            }
 
-                const submoduleConfig: GithubConfig = {
-                    owner,
-                    repo: repo.replace(/\.git$/, ''),
-                    token: githubConfig.token,
-                };
+            const submoduleConfig: GithubConfig = {
+                owner,
+                repo: repo.replace(/\.git$/, ''),
+                token: githubConfig.token,
+            };
 
-                try {
-                    const submodulePr = await findMatchingPr(githubClient, submoduleConfig, issueId);
-                    if (submodulePr) {
-                        availablePrs.push({
-                            repoName: submodule.name,
-                            displayType: 'submodule',
-                            url: submodulePr.html_url,
-                            number: submodulePr.number,
-                            title: submodulePr.title,
-                        });
-                    }
-                } catch {
-                    // Ignore errors for individual submodules
+            try {
+                const submodulePr = await findMatchingPr(githubClient, submoduleConfig, issueId);
+                if (submodulePr) {
+                    availablePrs.push({
+                        repoName: submodule.name,
+                        displayType: 'submodule',
+                        url: submodulePr.html_url,
+                        number: submodulePr.number,
+                        title: submodulePr.title,
+                    });
                 }
+            } catch {
+                // Ignore errors for individual submodules
             }
         }
     }

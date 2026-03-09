@@ -43,11 +43,6 @@ export interface HandlePushPreparationParams {
     baseBranch: string;
 
     /**
-     * Whether to skip submodule processing.
-     */
-    skipSubmodules?: boolean;
-
-    /**
      * Whether to skip prompts and automatically commit with default message.
      */
     autoYes?: boolean;
@@ -76,7 +71,6 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
         issueId,
         logger,
         baseBranch,
-        skipSubmodules,
         autoYes,
         defaultCommitMessage,
         prInReview,
@@ -92,7 +86,6 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
         issueId,
         logger,
         baseBranch,
-        skipSubmodules,
         autoYes,
     });
 
@@ -107,7 +100,7 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
     await handleReadyPreparation(unpushedCommits, statusInfo, logger, autoYes, actualDefaultMessage);
 
     // FOURTH: Display PR links summary
-    await displayPrSummary({ githubClient, githubConfig, issueId, logger, skipSubmodules });
+    await displayPrSummary({ githubClient, githubConfig, issueId, logger });
 }
 
 async function displayPrSummary(params: {
@@ -115,9 +108,8 @@ async function displayPrSummary(params: {
     githubConfig: GithubConfig;
     issueId: string;
     logger: Logger;
-    skipSubmodules?: boolean;
 }): Promise<void> {
-    const { githubClient, githubConfig, issueId, logger, skipSubmodules } = params;
+    const { githubClient, githubConfig, issueId, logger } = params;
 
     logger.info('');
     logger.info(chalk.bold('🔗 Pull requests'));
@@ -131,23 +123,21 @@ async function displayPrSummary(params: {
     }
 
     // Submodule PRs
-    if (!skipSubmodules) {
-        const submodules = await getSubmoduleInfo();
-        for (const sub of submodules) {
-            if (!isTaskBranch(sub.currentBranch)) continue;
+    const submodules = await getSubmoduleInfo();
+    for (const sub of submodules) {
+        if (!isTaskBranch(sub.currentBranch)) continue;
 
-            const urlMatch = sub.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
-            if (!urlMatch?.[1] || !urlMatch[2]) continue;
+        const urlMatch = sub.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
+        if (!urlMatch?.[1] || !urlMatch[2]) continue;
 
-            const subConfig: GithubConfig = {
-                owner: urlMatch[1],
-                repo: urlMatch[2].replace(/\.git$/, ''),
-                token: githubConfig.token,
-            };
-            const subPr = await findMatchingPr(githubClient, subConfig, issueId);
-            if (subPr) {
-                logger.info(`   ${chalk.magenta(sub.name)}: ${chalk.blueBright(chalk.underline(subPr.html_url))}`);
-            }
+        const subConfig: GithubConfig = {
+            owner: urlMatch[1],
+            repo: urlMatch[2].replace(/\.git$/, ''),
+            token: githubConfig.token,
+        };
+        const subPr = await findMatchingPr(githubClient, subConfig, issueId);
+        if (subPr) {
+            logger.info(`   ${chalk.magenta(sub.name)}: ${chalk.blueBright(chalk.underline(subPr.html_url))}`);
         }
     }
 }

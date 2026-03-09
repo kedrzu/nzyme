@@ -32,11 +32,6 @@ export interface PushChangesParams {
     baseBranch: string;
 
     /**
-     * Whether to skip submodule processing.
-     */
-    skipSubmodules?: boolean;
-
-    /**
      * Default commit message to use when committing changes.
      */
     defaultCommitMessage?: string;
@@ -62,7 +57,7 @@ export interface PushChangesResult {
  * Shared logic used by both push and ready commands.
  */
 export async function pushChanges(params: PushChangesParams): Promise<PushChangesResult> {
-    const { githubConfig, issueId, logger, baseBranch, skipSubmodules, defaultCommitMessage } = params;
+    const { githubConfig, issueId, logger, baseBranch, defaultCommitMessage } = params;
 
     // Sync all repos: auto-commit, fetch, rebase/pull, fast-forward base
     await syncAllRepos({
@@ -85,7 +80,6 @@ export async function pushChanges(params: PushChangesParams): Promise<PushChange
         issueId,
         logger,
         baseBranch,
-        skipSubmodules,
         autoYes: true,
         prInReview,
         defaultCommitMessage,

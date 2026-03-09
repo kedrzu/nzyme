@@ -249,12 +249,7 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
                 'Commits and pushes changes in both submodules and main repository. Useful when you want to push work in progress without marking the PR as ready for review.',
             examples: [
                 ['Push current issue changes', 'issue push'],
-                ['Push without processing submodules', 'issue push --skip-submodules'],
             ],
-        });
-
-        skipSubmodules = Option.Boolean('--skip-submodules', false, {
-            description: 'Skip processing submodules',
         });
 
         override async run() {
@@ -281,7 +276,6 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
                     issueId,
                     logger: this.logger,
                     baseBranch,
-                    skipSubmodules: this.skipSubmodules,
                 });
 
                 this.logger.info('');
@@ -305,12 +299,7 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                 'Pushes all changes (syncing repos, handling submodules) and converts the associated PR from draft to ready for review',
             examples: [
                 ['Push and convert current issue to ready for review', 'issue ready'],
-                ['Push and convert to ready without processing submodules', 'issue ready --skip-submodules'],
             ],
-        });
-
-        skipSubmodules = Option.Boolean('--skip-submodules', false, {
-            description: 'Skip processing submodules',
         });
 
         override async run() {
@@ -337,7 +326,6 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                     issueId,
                     logger: this.logger,
                     baseBranch,
-                    skipSubmodules: this.skipSubmodules,
                     defaultCommitMessage: 'Ready for review',
                 });
 
@@ -362,7 +350,6 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                     mainPrNumber: readyPr.number,
                     mainPrIsDraft: readyPr.draft,
                     mainPrUrl: readyPr.html_url,
-                    skipSubmodules: this.skipSubmodules,
                 });
             } catch (error: unknown) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';

@@ -44,11 +44,6 @@ export interface HandleSubmoduleReadyPreparationParams {
     baseBranch: string;
 
     /**
-     * Whether to skip submodule processing.
-     */
-    skipSubmodules?: boolean;
-
-    /**
      * Whether to skip prompts and automatically commit with default message.
      */
     autoYes?: boolean;
@@ -105,14 +100,7 @@ interface HandleSingleSubmoduleParams {
  * Updates submodule references in the main repository (which should be committed separately).
  */
 export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleReadyPreparationParams): Promise<void> {
-    const { githubClient, githubConfig, issueId, logger, baseBranch, skipSubmodules, autoYes } = params;
-
-    if (skipSubmodules) {
-        logger.info('');
-        logger.info(chalk.bold('📦 Processing submodules...'));
-        logger.info('   Skipped (--skip-submodules flag)');
-        return;
-    }
+    const { githubClient, githubConfig, issueId, logger, baseBranch, autoYes } = params;
 
     const submodules = await getSubmoduleInfo();
 

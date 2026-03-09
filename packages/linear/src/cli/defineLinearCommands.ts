@@ -344,12 +344,7 @@ function defineTaskPushCommand(options: LinearCommandsOptions) {
                 'Commits and pushes changes in both submodules and main repository. Useful when you want to push work in progress without marking the PR as ready for review.',
             examples: [
                 ['Push current task changes', 'task push'],
-                ['Push without processing submodules', 'task push --skip-submodules'],
             ],
-        });
-
-        skipSubmodules = Option.Boolean('--skip-submodules', false, {
-            description: 'Skip processing submodules',
         });
 
         override async run() {
@@ -376,7 +371,6 @@ function defineTaskPushCommand(options: LinearCommandsOptions) {
                     issueId: taskId,
                     logger: this.logger,
                     baseBranch,
-                    skipSubmodules: this.skipSubmodules,
                 });
 
                 this.logger.info('');
@@ -400,12 +394,7 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                 'Pushes all changes (syncing repos, handling submodules) and converts the associated PR from draft to ready for review',
             examples: [
                 ['Push and convert current task to ready for review', 'task ready'],
-                ['Push and convert to ready without processing submodules', 'task ready --skip-submodules'],
             ],
-        });
-
-        skipSubmodules = Option.Boolean('--skip-submodules', false, {
-            description: 'Skip processing submodules',
         });
 
         override async run() {
@@ -432,7 +421,6 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                     issueId: taskId,
                     logger: this.logger,
                     baseBranch,
-                    skipSubmodules: this.skipSubmodules,
                     defaultCommitMessage: 'Ready for review',
                 });
 
@@ -455,7 +443,6 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                     mainPrNumber: readyPr.number,
                     mainPrIsDraft: readyPr.draft,
                     mainPrUrl: readyPr.html_url,
-                    skipSubmodules: this.skipSubmodules,
                 });
             } catch (error: unknown) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';

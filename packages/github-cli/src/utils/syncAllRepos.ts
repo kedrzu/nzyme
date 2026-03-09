@@ -241,29 +241,39 @@ async function rebaseAndPushCurrentBranch(git: SimpleGit, logger: Logger, repoDi
     }
 
     // Check if remote has commits we don't have
-    let commitsAhead = 0;
+    let remoteAhead = 0;
+    let localAhead = 0;
     try {
-        const result = await git.raw(['rev-list', '--count', `${currentBranch}..origin/${currentBranch}`]);
-        commitsAhead = parseInt(result.trim(), 10);
+        const remoteResult = await git.raw(['rev-list', '--count', `${currentBranch}..origin/${currentBranch}`]);
+        remoteAhead = parseInt(remoteResult.trim(), 10);
+
+        const localResult = await git.raw(['rev-list', '--count', `origin/${currentBranch}..${currentBranch}`]);
+        localAhead = parseInt(localResult.trim(), 10);
     } catch {
-        // Remote branch may not exist yet
+        // Remote branch may not exist yet - push to create it
+        await pushWithUpstream(git);
+        logger.info(`   ${chalk.green('✓')} Pushed ${repoDisplayName} (new remote branch)`);
         return;
     }
 
-    if (commitsAhead === 0) {
+    if (remoteAhead > 0) {
+        logger.info(
+            `   ${repoDisplayName}: rebasing ${chalk.yellow(remoteAhead.toString())} commit${remoteAhead === 1 ? '' : 's'} from remote...`,
+        );
+        await git.pull('origin', currentBranch, { '--rebase': null });
+        logger.info(`   ${chalk.green('✓')} Rebased ${repoDisplayName}`);
+
+        await pushWithUpstream(git);
+        logger.info(`   ${chalk.green('✓')} Pushed ${repoDisplayName}`);
+    } else if (localAhead > 0) {
+        logger.info(
+            `   ${repoDisplayName}: pushing ${chalk.yellow(localAhead.toString())} local commit${localAhead === 1 ? '' : 's'}...`,
+        );
+        await pushWithUpstream(git);
+        logger.info(`   ${chalk.green('✓')} Pushed ${repoDisplayName}`);
+    } else {
         logger.info(`   ${repoDisplayName}: up to date with remote`);
-        return;
     }
-
-    logger.info(
-        `   ${repoDisplayName}: rebasing ${chalk.yellow(commitsAhead.toString())} commit${commitsAhead === 1 ? '' : 's'} from remote...`,
-    );
-    await git.pull('origin', currentBranch, { '--rebase': null });
-    logger.info(`   ${chalk.green('✓')} Rebased ${repoDisplayName}`);
-
-    // Push after rebase
-    await pushWithUpstream(git);
-    logger.info(`   ${chalk.green('✓')} Pushed ${repoDisplayName}`);
 }
 
 /**
@@ -381,6 +391,7 @@ async function mergeBaseIntoCurrent(
 ): Promise<{ wasAhead: boolean; commitsAhead: number; merged: boolean }> {
     const status = await git.status();
     const currentBranch = status.current;
+    const remoteBaseBranch = `origin/${baseBranch}`;
 
     if (!currentBranch) {
         return { wasAhead: false, commitsAhead: 0, merged: false };
@@ -388,7 +399,7 @@ async function mergeBaseIntoCurrent(
 
     let commitsAhead = 0;
     try {
-        const result = await git.raw(['rev-list', '--count', `${currentBranch}..${baseBranch}`]);
+        const result = await git.raw(['rev-list', '--count', `${currentBranch}..${remoteBaseBranch}`]);
         commitsAhead = parseInt(result.trim(), 10);
     } catch {
         return { wasAhead: false, commitsAhead: 0, merged: false };
@@ -402,8 +413,8 @@ async function mergeBaseIntoCurrent(
     logger.info(
         `   ${repoDisplayName}: ${chalk.cyan(baseBranch)} is ${chalk.yellow(commitsAhead.toString())} commit${commitsAhead === 1 ? '' : 's'} ahead`,
     );
-    logger.info(`   Merging ${chalk.cyan(baseBranch)} into ${chalk.cyan(currentBranch)}...`);
-    await git.merge([baseBranch]);
+    logger.info(`   Merging ${chalk.cyan(remoteBaseBranch)} into ${chalk.cyan(currentBranch)}...`);
+    await git.merge([remoteBaseBranch]);
     logger.info(`   ${chalk.green('✓')} Merged ${chalk.cyan(baseBranch)} into ${repoDisplayName}`);
 
     await pushWithUpstream(git);

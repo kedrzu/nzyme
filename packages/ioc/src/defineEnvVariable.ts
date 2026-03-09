@@ -134,16 +134,21 @@ export function defineEnvVariable(
 
 function getValue(this: EnvVariable) {
     const value = process.env[this.name];
+
+    if (value == null) {
+        return this.default?.();
+    }
+
     if (this.parse) {
         return this.parse(value);
     }
 
-    return value ?? this.default?.();
+    return value;
 }
 
 function assertValue(this: EnvVariable) {
     const value = getValue.call(this);
-    if (!value) {
+    if (value == null) {
         throw new Error(`Environment variable ${this.name} is not set.`);
     }
 

@@ -52,7 +52,7 @@
         "@nzyme/types": "0.14.0",
         "@nzyme/utils": "0.14.0",
         "@pulumi/aws": "7.21.0",
-        "@pulumi/pulumi": "3.225.0",
+        "@pulumi/pulumi": "3.225.1",
         "@pulumi/random": "4.19.1",
         "@rollup/plugin-babel": "6.1.0",
         "@rollup/plugin-commonjs": "29.0.0",
@@ -73,7 +73,7 @@
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",
         "@nzyme/tsconfig": "0.14.0",
-        "@types/node": "25.3.3",
+        "@types/node": "25.3.5",
         "eslint": "9.39.2",
         "prettier": "3.8.1",
         "typescript": "5.9.3"

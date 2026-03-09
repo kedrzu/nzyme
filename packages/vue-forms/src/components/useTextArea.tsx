@@ -1,4 +1,4 @@
-import { h, onMounted, ref, watch } from 'vue';
+import { h, nextTick, onMounted, ref, watch } from 'vue';
 import type { HTMLAttributes } from 'vue';
 
 import { assignProps } from '@nzyme/utils/assignProps.js';
@@ -40,16 +40,18 @@ function setupTextArea() {
         TextArea,
     };
 
-    function updateValue() {
+    async function updateValue() {
         if (!textarea.value) {
             return;
         }
 
         textarea.value.value = field.value || '';
-        updateHeight();
+        await updateHeight();
     }
 
-    function updateHeight() {
+    async function updateHeight() {
+        await nextTick();
+
         if (!textarea.value) {
             return;
         }
@@ -58,10 +60,10 @@ function setupTextArea() {
         textarea.value.style.height = textarea.value.scrollHeight + 'px';
     }
 
-    function onInput(event: Event) {
+    async function onInput(event: Event) {
         const target = event.target as HTMLTextAreaElement;
         field.value = target.value;
-        updateHeight();
+        await updateHeight();
     }
 
     function TextArea(attrs: HTMLAttributes) {

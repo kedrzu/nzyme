@@ -7,6 +7,7 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 import { autoCommitChanges } from './autoCommitChanges.js';
 import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
+import { handleMergeConflict } from './handleMergeConflict.js';
 import { isTaskBranch } from './isTaskBranch.js';
 import { pushSubmoduleUpdates } from './pushSubmoduleUpdates.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
@@ -257,7 +258,13 @@ async function rebaseAndPushCurrentBranch(git: SimpleGit, logger: Logger, repoDi
         logger.info(
             `   ${repoDisplayName}: rebasing ${chalk.yellow(remoteAhead.toString())} commit${remoteAhead === 1 ? '' : 's'} from remote...`,
         );
-        await git.pull('origin', currentBranch, { '--rebase': null });
+
+        try {
+            await git.pull('origin', currentBranch, { '--rebase': null });
+        } catch (error) {
+            await handleMergeConflict({ git, repoDisplayName, operation: 'rebase', logger }, error);
+        }
+
         logger.info(`   ${chalk.green('✓')} Rebased ${repoDisplayName}`);
 
         await pushWithUpstream(git);
@@ -309,7 +316,12 @@ async function pullCurrentBranch(git: SimpleGit, logger: Logger, repoDisplayName
         logger.info(`   ${chalk.green('✓')} Pulled ${repoDisplayName}`);
     } catch {
         // Fast-forward failed (diverged history) - try regular pull
-        await git.pull('origin', branch);
+        try {
+            await git.pull('origin', branch);
+        } catch (error) {
+            await handleMergeConflict({ git, repoDisplayName, operation: 'merge', logger }, error);
+        }
+
         logger.info(`   ${chalk.green('✓')} Pulled ${repoDisplayName} (merged)`);
     }
 }
@@ -364,7 +376,16 @@ async function mergeBaseIntoSubmodules(
             `   ${chalk.magenta(sub.name)}: ${chalk.cyan(baseBranch)} is ${chalk.yellow(commitsAhead.toString())} commit${commitsAhead === 1 ? '' : 's'} ahead`,
         );
         logger.info(`   Merging ${chalk.cyan(remoteBaseBranch)} into ${chalk.cyan(currentBranch)}...`);
-        await subGit.merge([remoteBaseBranch]);
+
+        try {
+            await subGit.merge([remoteBaseBranch]);
+        } catch (error) {
+            await handleMergeConflict(
+                { git: subGit, repoDisplayName: chalk.magenta(sub.name), operation: 'merge', logger },
+                error,
+            );
+        }
+
         logger.info(`   ${chalk.green('✓')} Merged ${chalk.cyan(baseBranch)} into ${chalk.magenta(sub.name)}`);
 
         await pushWithUpstream(subGit);
@@ -406,7 +427,13 @@ async function mergeBaseIntoCurrent(
         `   ${repoDisplayName}: ${chalk.cyan(baseBranch)} is ${chalk.yellow(commitsAhead.toString())} commit${commitsAhead === 1 ? '' : 's'} ahead`,
     );
     logger.info(`   Merging ${chalk.cyan(remoteBaseBranch)} into ${chalk.cyan(currentBranch)}...`);
-    await git.merge([remoteBaseBranch]);
+
+    try {
+        await git.merge([remoteBaseBranch]);
+    } catch (error) {
+        await handleMergeConflict({ git, repoDisplayName, operation: 'merge', logger }, error);
+    }
+
     logger.info(`   ${chalk.green('✓')} Merged ${chalk.cyan(baseBranch)} into ${repoDisplayName}`);
 
     await pushWithUpstream(git);

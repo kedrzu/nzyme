@@ -14,7 +14,7 @@ export async function createOrSelectStack<TOutput extends StackOutput>(stack: St
     const cwd = config.cwd ?? process.cwd();
     const envVars = { ...process.env } as Record<string, string>;
     const stackConfig: Record<string, automation.StackSettingsConfigValue> = {};
-    const pulumiHome = path.join(cwd, '.pulumi');
+    const pulumiHome = config.pulumiHome ?? path.join(cwd, '.pulumi');
 
     const pulumiCommand = await automation.PulumiCommand.install({
         root: pulumiHome,

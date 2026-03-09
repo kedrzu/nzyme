@@ -43,6 +43,12 @@ export interface PulumiConfig {
     backendUrl?: string;
 
     /**
+     * The Pulumi home directory for storing plugins and state.
+     * @default path.join(cwd, '.pulumi')
+     */
+    pulumiHome?: string;
+
+    /**
      * The resource transformation to use for the stacks.
      */
     resourceTransformation?: pulumi.ResourceTransformation;

@@ -5,8 +5,9 @@
  */
 export function getCliFlagString(flags: Record<string, boolean | number | string | undefined>): string {
     return Object.entries(flags)
+        .filter(([, value]) => value !== undefined && value !== false)
         .map(([key, value]) => {
-            if (typeof value === 'boolean') {
+            if (value === true) {
                 return `--${key}`;
             }
 

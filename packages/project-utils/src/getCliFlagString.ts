@@ -12,7 +12,12 @@ export function getCliFlagString(flags: Record<string, boolean | number | string
             }
 
             if (typeof value === 'string') {
-                return `--${key} "${value.replace(/"/g, '\\"')}"`;
+                const escaped = value
+                    .replace(/\\/g, '\\\\')
+                    .replace(/"/g, '\\"')
+                    .replace(/\$/g, '\\$')
+                    .replace(/`/g, '\\`');
+                return `--${key} "${escaped}"`;
             }
 
             return `--${key} ${value}`;

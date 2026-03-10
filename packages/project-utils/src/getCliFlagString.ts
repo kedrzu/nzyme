@@ -11,6 +11,10 @@ export function getCliFlagString(flags: Record<string, boolean | number | string
                 return `--${key}`;
             }
 
+            if (typeof value === 'string') {
+                return `--${key} "${value.replace(/"/g, '\\"')}"`;
+            }
+
             return `--${key} ${value}`;
         })
         .join(' ');

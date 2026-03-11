@@ -17,10 +17,10 @@ export function getCliFlagString(flags: Record<string, boolean | number | string
                     .replace(/"/g, '\\"')
                     .replace(/\$/g, '\\$')
                     .replace(/`/g, '\\`');
-                return `--${key} "${escaped}"`;
+                return `--${key}="${escaped}"`;
             }
 
-            return `--${key} ${value}`;
+            return `--${key}=${value}`;
         })
         .join(' ');
 }

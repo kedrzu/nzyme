@@ -32,32 +32,6 @@ export interface StorageRefWithSchemaOptions<T> extends Omit<StorageRefOptions, 
  * @template T The type of value to be stored, inferred from the schema
  * @param options Standard storage ref options
  * @returns A storage ref that validates data against the schema
- *
- * @example
- * ```ts
- * import { object } from '@nzyme/zchema/schemas/object.js';
-import { string } from '@nzyme/zchema/schemas/string.js';
-import { number } from '@nzyme/zchema/schemas/number.js';
- *
- * const userSchema = object({
- *   name: string(),
- *   age: number().min(0),
- *   email: string().email()
- * });
- *
- * const userRef = storageRefWithSchema({
- *   key: 'user-data',
- *   storage: 'local',
- *   schema: userSchema
- * });
- *
- * // Type-safe and validated
- * userRef.value = {
- *   name: 'John',
- *   age: 25,
- *   email: 'john@example.com'
- * };
- * ```
  */
 export function storageRefWithSchema<T>(options: StorageRefWithSchemaOptions<T>) {
     return storageRef<T>({

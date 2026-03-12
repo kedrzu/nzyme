@@ -89,8 +89,8 @@ export function createDevServer(options: DevServerOptions) {
             },
         });
 
-        worker.stdout.pipe(process.stdout);
-        worker.stderr.pipe(process.stderr);
+        worker.stdout?.pipe(process.stdout);
+        worker.stderr?.pipe(process.stderr);
 
         worker.on('error', err => {
             console.error(err);

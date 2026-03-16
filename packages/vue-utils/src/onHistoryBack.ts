@@ -19,9 +19,7 @@ export type OnHistoryBackOptions = {
     enabled?: WatchSource<boolean>;
 };
 
-/**
- *
- */
+/** Registers a callback for virtual history back navigation, optionally gated by an enabled flag. */
 export function onHistoryBack(options: OnHistoryBackOptions) {
     const virtualHistory = useVirtualHistory();
 

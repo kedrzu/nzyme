@@ -11,9 +11,7 @@ import { useProps } from '@nzyme/vue-utils/useProps.js';
 import { defineFormField } from './defineFormField.js';
 import type { FormFieldValue } from './defineFormField.js';
 
-/**
- *
- */
+/** Configuration for the IMask instance used by a masked input. */
 export interface MaskedInputMaskConfig {
     /** The mask configuration for IMask */
     mask: FactoryArg;
@@ -27,9 +25,7 @@ export interface MaskedInputMaskConfig {
     placeholderChar?: string;
 }
 
-/**
- *
- */
+/** Options for setting up a masked input with value conversion functions. */
 export interface MaskedInputOptions<T = unknown> {
     /** Mask configuration */
     maskConfig: MaybeRefOrGetter<MaskedInputMaskConfig>;
@@ -39,14 +35,10 @@ export interface MaskedInputOptions<T = unknown> {
     toTypedValue: (modelValue: FormFieldValue<T> | null | undefined) => unknown;
 }
 
-/**
- *
- */
+/** Default string-typed masked input composable. */
 export const useMaskedInput = defineMaskedInput();
 
-/**
- *
- */
+/** Creates a typed masked input composable with IMask integration. */
 export function defineMaskedInput<T = string>() {
     const fieldDef = defineFormField<T>();
     const propsDef = defineProps({

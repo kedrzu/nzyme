@@ -6,9 +6,7 @@ import { cancelIdleCallback, requestIdleCallback } from '@nzyme/dom-utils/reques
 import { createPromise } from '@nzyme/utils/createPromise.js';
 import { defineProp } from '@nzyme/vue-utils/defineProp.js';
 
-/**
- *
- */
+/** Defers hydration of SSR content until triggered by idle callback, visibility, or a prop change. */
 export const LazyHydrate = defineComponent({
     name: 'LazyHydrate',
     props: {

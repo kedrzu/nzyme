@@ -1,8 +1,6 @@
 import type { Simplify } from './Common.js';
 
-/**
- *
- */
+/** Recursively extracts all nested property key paths from T using dot notation. */
 export type KeysDeep<T extends Record<number | string, unknown>> = Simplify<
     | {
           [K in keyof T]: K extends number | string ? KeysWithPrefix<K, T> : never;

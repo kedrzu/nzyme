@@ -59,9 +59,7 @@ export function defineFormField<T>(type?: PropType<T | null | undefined>) {
     };
 }
 
-/**
- *
- */
+/** Creates Vue prop definitions for a form field component. */
 export function formFieldProps<T>(type?: PropType<T | null | undefined>) {
     return {
         modelValue: { type: type as PropType<T | null | undefined> },
@@ -80,9 +78,7 @@ export function formFieldProps<T>(type?: PropType<T | null | undefined>) {
     };
 }
 
-/**
- *
- */
+/** Creates Vue emit definitions for a form field component. */
 export function formFieldEmits<T>() {
     return {
         'update:modelValue': undefined as unknown as (value: T) => boolean,
@@ -91,9 +87,7 @@ export function formFieldEmits<T>() {
     };
 }
 
-/**
- *
- */
+/** Initializes a form field with reactive value, validation errors, and focus tracking. */
 export function createFormField<T>(options: FormFieldOptions<T>) {
     const props = options.props;
     const vm = useInstanceProxy();

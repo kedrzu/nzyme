@@ -1,6 +1,4 @@
-/**
- *
- */
+/** Creates a fixed-length tuple type from up to 10 type parameters, trimming trailing void entries. */
 export type Tuple<
     T1 = void,
     T2 = void,
@@ -34,9 +32,8 @@ export type Tuple<
         : [T1, T2, T3, T4, T5, T6, T7, T8, T9]
     : [T1, T2, T3, T4, T5, T6, T7, T8, T9, T10];
 
-/**
- *
- */
+/** The widened base type that any Tuple instance is assignable to. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type TupleBase<T = any> = Tuple<
     T | void,
     T | void,
@@ -49,7 +46,6 @@ export type TupleBase<T = any> = Tuple<
     T | void,
     T | void
 >;
-/**
- *
- */
+
+/** Extracts the union of element types from a Tuple. */
 export type TupleValue<T extends TupleBase> = T[keyof T];

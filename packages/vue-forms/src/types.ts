@@ -4,9 +4,7 @@ import type { TranslationResult } from '@nzyme/i18n-core/Translation.js';
 import type { Language } from '@nzyme/i18n/Language.js';
 import type { DataSourceDebounceOptions } from '@nzyme/vue-utils/useDataSource.js';
 
-/**
- *
- */
+/** Base interface for form and field models with value, validation, and reset capabilities. */
 export interface FormBase<T = unknown> {
     /**
      * Current form value
@@ -97,9 +95,7 @@ export interface FormValidationContext {
     readonly lang: Language;
 }
 
-/**
- *
- */
+/** Runtime state of a single validator attached to a form field. */
 export interface FormValidatorState {
     /**
      * Validation error
@@ -111,15 +107,11 @@ export interface FormValidatorState {
      */
     show: boolean;
 
-    /**
-     *
-     */
+    /** Runs the validation and returns whether the field is valid. */
     readonly validate: () => boolean | Promise<boolean>;
 }
 
-/**
- *
- */
+/** Context passed to a validator's behavior function to control error visibility. */
 export type FormValidatorBehaviorContext<T> = {
     /**
      * Current field value
@@ -218,7 +210,5 @@ export type FormValidatorAsync<T, W = unknown> = {
     readonly behavior?: (ctx: FormValidatorBehaviorContext<T>) => void;
 };
 
-/**
- *
- */
+/** Union of synchronous and asynchronous form validators for a given value type. */
 export type FormValidator<T> = FormValidatorAsync<NonNullable<T>> | FormValidatorSync<NonNullable<T>>;

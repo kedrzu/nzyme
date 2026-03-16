@@ -1,4 +1,4 @@
-import { computed, h, nextTick, reactive, ref } from 'vue';
+import { computed, h, nextTick, ref } from 'vue';
 import type { ButtonHTMLAttributes, HTMLAttributes, SetupContext } from 'vue';
 
 import { assignProps } from '@nzyme/utils/assignProps.js';
@@ -15,9 +15,7 @@ const PASSWORD_PROPS = defineProps({
     tabindex: Number,
 });
 
-/**
- *
- */
+/** Password input composable with show/hide toggle and form field integration. */
 export const usePasswordInput = assignProps(setupPasswordInput, {
     props: PASSWORD_PROPS,
     emits: PASSWORD_FIELD.emits,

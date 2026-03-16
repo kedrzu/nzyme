@@ -8,9 +8,7 @@ import { makeRef } from './reactivity/makeRef.js';
 import type { ElementOrVue } from './types.js';
 import { unwrapElement } from './unwrapElement.js';
 
-/**
- *
- */
+/** Configuration for the intersection observer composable. */
 export interface UseIntersectionObserverOptions {
     /**
      * Element to observe.
@@ -34,9 +32,7 @@ export interface UseIntersectionObserverOptions {
     onVisible?: (el: Element) => Promise<void> | void;
 }
 
-/**
- *
- */
+/** Tracks element visibility using IntersectionObserver with reactive state. */
 export function useIntersectionObserver(options: UseIntersectionObserverOptions) {
     const intersectionRatio = ref(0);
     const isIntersecting = ref(false);

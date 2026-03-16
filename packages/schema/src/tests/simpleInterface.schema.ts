@@ -14,12 +14,14 @@ export const User: z.ZodMiniType<UserType> = z
         /** User's unique identifier */
         id: z.number(),
         /** User's full name */
-        name: z.string().describe('This is the full name of the user'),
+        name: z.string().check(z.describe('This is the full name of the user')),
         /** User's email address */
-        email: z.string().describe('This is the email address of the user'),
+        email: z.string().check(z.describe('This is the email address of the user')),
         /** Whether the user is active */
-        active: z.optional(z.boolean().describe('This is a boolean value that indicates if the user is active')),
+        active: z.optional(
+            z.boolean().check(z.describe('This is a boolean value that indicates if the user is active')),
+        ),
     })
-    .describe('This is a simple interface for a user');
+    .check(z.describe('This is a simple interface for a user'));
 
 export type User = UserType;

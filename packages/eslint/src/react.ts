@@ -1,8 +1,6 @@
 import reactPlugin from 'eslint-plugin-react';
 
-/**
- *
- */
+/** Creates an ESLint flat config for React projects with JSX runtime support. */
 export function react() {
     return [
         reactPlugin.configs.flat.recommended, // This is not a plugin object, but a shareable config object

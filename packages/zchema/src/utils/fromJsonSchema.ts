@@ -16,17 +16,15 @@ import { tuple } from '../schemas/tuple.js';
 import { unknown } from '../schemas/unknown.js';
 
 /**
- *
+ * Options that control how a JSON Schema is converted to a zchema schema.
  */
 export type FromJsonSchemaOptions = {
-    /**
-     *
-     */
+    /** Whether the resulting schema should be marked as optional */
     optional?: boolean;
 };
 
 /**
- *
+ * Converts a JSON Schema (draft-07) definition into a zchema schema.
  */
 export function fromJsonSchema(schema: JSONSchema7, options: FromJsonSchemaOptions = {}): Schema {
     if (schema.enum) {

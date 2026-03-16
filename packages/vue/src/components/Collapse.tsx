@@ -10,9 +10,7 @@ import { LazyHydrate } from './LazyHydrate.js';
 // Used to easily debug complex transition problems.
 const DEBUG = false;
 
-/**
- *
- */
+/** Animated collapse/expand component with optional lazy rendering and fade transitions. */
 export const Collapse = defineComponent({
     name: 'Collapse',
     props: {

@@ -28,9 +28,7 @@ export type ComponentEmitProps<C> = FilterOnlyEmitProps<ComponentPropsWithEmits<
  */
 export type ComponentEmits<C> = C extends new (...args: unknown[]) => { $emit: infer E } ? E : never;
 
-/**
- *
- */
+/** Extracts the slots type from a Vue component. */
 export type ComponentSlots<C> = C extends new (...args: unknown[]) => { $slots: infer S }
     ? S extends SlotsType
         ? S

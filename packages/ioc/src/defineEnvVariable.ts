@@ -7,9 +7,7 @@ const DEPS = {
     env: EnvVariables,
 };
 
-/**
- *
- */
+/** Resolves to TValue when required, or TValue | undefined when optional. */
 export type EnvVariableValue<TRequired extends boolean = false, TValue = string> = TRequired extends true
     ? TValue
     : TValue | undefined;
@@ -47,9 +45,7 @@ export interface EnvVariableOptionsDefault<TValue = string> extends EnvVariableO
     default: (() => TValue) | TValue;
 }
 
-/**
- *
- */
+/** An injectable environment variable with typed access and optional parsing. */
 export interface EnvVariable<TName extends string = string, TRequired extends boolean = boolean, TValue = unknown>
     extends EnvVariableOptionsParse<TRequired, TValue>, Injectable<TValue> {
     /**
@@ -111,9 +107,7 @@ export function defineEnvVariable<TName extends string = string, TValue = string
     name: TName,
     options?: EnvVariableOptionsDefault<TValue>,
 ): EnvVariable<TName, false, TValue>;
-/**
- *
- */
+/** Implementation overload for defineEnvVariable. */
 export function defineEnvVariable(
     name: string,
     options?: (EnvVariableOptionsParse<boolean, unknown> & { default?: never }) | EnvVariableOptionsDefault<unknown>,

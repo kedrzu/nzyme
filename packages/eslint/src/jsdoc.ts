@@ -1,19 +1,13 @@
 import jsdocPlugin from 'eslint-plugin-jsdoc';
 import { defineConfig } from 'eslint/config';
 
-/**
- *
- */
+/** Options for the JSDoc ESLint config. */
 export interface JsdocOptions {
-    /**
-     *
-     */
+    /** Additional file patterns to ignore beyond the defaults. */
     ignores?: string[];
 }
 
-/**
- *
- */
+/** Creates an ESLint config that enforces JSDoc on public exports. */
 export function jsdoc(options: JsdocOptions = {}) {
     return defineConfig({
         plugins: {

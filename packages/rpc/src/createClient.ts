@@ -3,7 +3,7 @@ import type { HttpRequestHeaders } from '@nzyme/fetch-utils/HttpHeaders.js';
 import type { Json } from '@nzyme/utils/toJson.js';
 import { toJsonString } from '@nzyme/utils/toJsonString.js';
 
-import type { EndpointDefinition } from './defineEndpoint.js';
+import type { EndpointDefinition, EndpointDefinitionAny } from './defineEndpoint.js';
 import { RpcError } from './types/RpcError.js';
 import type { RpcErrorData } from './types/RpcError.js';
 
@@ -24,12 +24,8 @@ export interface RpcClientRequest {
 /**
  * Callback that returns request configuration for a given endpoint.
  */
-
-/**
- *
- */
 export type RpcRequestGetter<O> = (
-    endpoint: EndpointDefinition<any, any>,
+    endpoint: EndpointDefinitionAny,
     options?: O,
 ) => Promise<RpcClientRequest> | RpcClientRequest;
 

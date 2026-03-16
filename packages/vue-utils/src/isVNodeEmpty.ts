@@ -1,9 +1,7 @@
 import type { VNodeChild } from 'vue';
 import { Comment, Fragment, Text } from 'vue';
 
-/**
- *
- */
+/** Checks whether a VNode is empty (null, undefined, empty string, comment, or empty fragment). */
 export function isVNodeEmpty(node: VNodeChild): boolean {
     switch (typeof node) {
         case 'boolean':

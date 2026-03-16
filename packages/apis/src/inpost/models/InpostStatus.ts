@@ -1,6 +1,4 @@
-/**
- *
- */
+/** Union of all possible InPost parcel tracking status codes. */
 export type InpostStatus =
     | 'adopted_at_sorting_center'
     | 'adopted_at_source_branch'

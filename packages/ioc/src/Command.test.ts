@@ -92,7 +92,7 @@ test('resolve command with service dependency', () => {
         deps: {
             service,
         },
-        setup({ service }) {
+        setup({ service: _service }) {
             commandCount++;
             return (value: number) => {
                 return value;

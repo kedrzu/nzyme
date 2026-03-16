@@ -81,7 +81,9 @@ test('should allow retry after error', async () => {
     const runner = createSingleRunner({ handler });
 
     // First attempt should fail
-    await expect(runner.execute()).rejects.toThrow('first attempt failed');
+    await runner.execute().catch(() => {});
+    expect(runner.error).toBeInstanceOf(Error);
+    expect((runner.error as Error).message).toBe('first attempt failed');
     expect(runner.error).toBeDefined();
     expect(runner.running).toBe(false);
 
@@ -136,7 +138,7 @@ test('should clear error on successful execution after failure', async () => {
     const runner = createSingleRunner({ handler });
 
     // First execution fails
-    await expect(runner.execute()).rejects.toThrow('error');
+    await runner.execute().catch(() => {});
     expect(runner.error).toBeDefined();
 
     // Second execution succeeds

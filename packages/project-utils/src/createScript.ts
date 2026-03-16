@@ -1,6 +1,4 @@
-/**
- *
- */
+/** A builder for programmatically constructing JavaScript/TypeScript source code. */
 export type ScriptBuilder = ReturnType<typeof createScript>;
 
 interface ImportParams {
@@ -15,9 +13,7 @@ interface ExportParams {
     name?: string;
 }
 
-/**
- *
- */
+/** Creates a script builder for generating import/export statements and code blocks. */
 export function createScript() {
     const imports: string[] = [];
     const statements: string[] = [];

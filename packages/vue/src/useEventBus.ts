@@ -24,21 +24,13 @@ interface EventBusVoid {
     emit(): void;
 }
 
-export /**
- *
- */
-function useEventBus(event: string): EventBusVoid;
-export /**
- *
- */
-function useEventBus<T>(event: string): EventBusSingle<T>;
-export /**
- *
- */
-function useEventBus(): EventBus;
-/**
- *
- */
+/** Returns a void event bus bound to a specific event name. */
+export function useEventBus(event: string): EventBusVoid;
+/** Returns a typed event bus bound to a specific event name. */
+export function useEventBus<T>(event: string): EventBusSingle<T>;
+/** Returns a generic event bus for emitting and listening to named events. */
+export function useEventBus(): EventBus;
+/** Global event bus composable with auto-cleanup tied to the component lifecycle. */
 export function useEventBus(event?: string): EventBus | EventBusSingle<unknown> | EventBusVoid {
     const vm = getCurrentInstance();
 

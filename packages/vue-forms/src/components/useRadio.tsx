@@ -9,9 +9,7 @@ import { useEmit } from '@nzyme/vue-utils/useEmit.js';
 import type { FormFieldValue } from './defineFormField.js';
 import { RadioGroupContext } from './useRadioGroup.js';
 
-/**
- *
- */
+/** Extracted prop types for a radio button component. */
 export type RadioProps<T extends Primitive = Primitive> = ExtractPropTypes<ReturnType<typeof getRadioProps<T>>>;
 
 /**
@@ -37,9 +35,7 @@ export function getRadioEmits<T extends Primitive = Primitive>() {
     };
 }
 
-/**
- *
- */
+/** Radio button composable that integrates with a RadioGroup context for selection state. */
 export function useRadio<T extends Primitive = Primitive>(props: RadioProps<T>) {
     const ctx = injectContext(RadioGroupContext);
     const emit = useEmit(getRadioEmits<T>());

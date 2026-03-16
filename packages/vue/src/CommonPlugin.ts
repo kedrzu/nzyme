@@ -2,9 +2,7 @@ import type { App } from 'vue';
 
 import { CancelError } from '@nzyme/utils/CancelError.js';
 
-/**
- *
- */
+/** Vue plugin that suppresses CancelError in both promise rejections and Vue error handler. */
 export function CommonPlugin(app: App) {
     if (typeof window !== 'undefined') {
         // unhandled promises are caught by this handler

@@ -9,7 +9,7 @@ const EMAIL_REGEX =
 const EMAIL_MESSAGE = () => 'Invalid email address';
 
 /**
- *
+ * Creates a validator that checks if a string is a valid email address.
  */
 export function email(options?: ValidatorOptions<string>): Validator<string | null | undefined> {
     return defineValidator({
@@ -19,7 +19,7 @@ export function email(options?: ValidatorOptions<string>): Validator<string | nu
 }
 
 /**
- *
+ * Checks whether a string matches a valid email address format.
  */
 export function isEmailValid(value: string): boolean {
     return EMAIL_REGEX.test(value);

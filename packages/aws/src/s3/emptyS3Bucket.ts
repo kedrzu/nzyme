@@ -2,23 +2,15 @@ import { DeleteObjectsCommand, ListObjectsV2Command, S3Client } from '@aws-sdk/c
 
 import type { Logger } from '@nzyme/logging/Logger.js';
 
-/**
- *
- */
+/** Options for emptying an S3 bucket. */
 export interface EmptyS3BucketOptions {
-    /**
-     *
-     */
+    /** Name of the S3 bucket to empty. */
     bucket: string;
-    /**
-     *
-     */
+    /** Optional logger for reporting progress. */
     logger?: Logger;
 }
 
-/**
- *
- */
+/** Deletes all objects from an S3 bucket. */
 export async function emptyS3Bucket(options: EmptyS3BucketOptions) {
     const s3Client = new S3Client({});
     const logger = options.logger;

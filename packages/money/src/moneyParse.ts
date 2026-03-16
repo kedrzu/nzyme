@@ -2,9 +2,7 @@ import type { Currency } from './Currency.js';
 import { CURRENCIES } from './Currency.js';
 import { moneyNormalize } from './moneyNormalize.js';
 
-/**
- *
- */
+/** Parses a string amount into its integer representation in the currency's smallest unit. */
 export function moneyParse(value: string, currency: Currency) {
     const { fractionSymbol } = CURRENCIES[currency];
 

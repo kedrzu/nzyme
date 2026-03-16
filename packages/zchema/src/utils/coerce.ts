@@ -3,15 +3,15 @@ import type { Infer, InferNonNull, Schema, SchemaContext, SchemaProto } from '..
 import { lazyResolve } from '../schemas/lazy.js';
 
 /**
- *
+ * Coerces a partial value to match the schema, filling in defaults for missing properties.
  */
 export function coerce<S extends Schema>(schema: S, value: Partial<Infer<S>>, context?: SchemaContext): Infer<S>;
 /**
- *
+ * Coerces an unknown value to match the schema, applying defaults and type conversions.
  */
 export function coerce<S extends Schema>(schema: S, value?: unknown, context?: SchemaContext): Infer<S>;
 /**
- *
+ * Coerces a value to conform to the given schema, handling null, undefined, and type mismatches.
  */
 export function coerce<S extends Schema>(
     schema: S,

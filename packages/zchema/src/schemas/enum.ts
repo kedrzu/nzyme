@@ -19,9 +19,7 @@ export type EnumSchema<O extends SchemaOptionsBase<EnumOptions> = SchemaOptionsB
     EnumValue<O['values']>,
     O
 > & {
-    /**
-     *
-     */
+    /** The allowed enum values from options */
     values: O['values'];
 };
 

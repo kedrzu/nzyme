@@ -8,32 +8,20 @@ import workspaces from 'eslint-plugin-workspaces';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-/**
- *
- */
+/** The runtime target environment for globals configuration. */
 export type Target = 'browser' | 'node';
 
-/**
- *
- */
+/** Options for the TypeScript ESLint config. */
 export interface TypescriptOptions {
-    /**
-     *
-     */
+    /** Runtime target(s) to include appropriate globals. */
     target?: Target | Target[];
-    /**
-     *
-     */
+    /** Path(s) to tsconfig files for type-checked linting. */
     project?: string | string[];
-    /**
-     *
-     */
+    /** Import patterns to treat as internal for sort ordering. */
     internalImports?: string[];
 }
 
-/**
- *
- */
+/** Creates an ESLint config for TypeScript projects with type-checking, import sorting, and code style rules. */
 export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
     const config: Linter.Config = {
         ignores: ['dist/**/*', 'node_modules/**/*', 'eslint.config.js', 'package.json', '**/*.loc.ts'],

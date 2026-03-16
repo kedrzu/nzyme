@@ -1,6 +1,4 @@
-/**
- *
- */
+/** Options for triggering a browser file download. */
 export interface DownloadFileOptions {
     /**
      * The content to download.

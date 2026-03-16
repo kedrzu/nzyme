@@ -16,27 +16,17 @@ const NUMBER_PROPS = defineProps({
     tabindex: Number,
 });
 
-/**
- *
- */
+/** Additional HTML attributes for the number input element. */
 export interface NumberInputAttrs {
-    /**
-     *
-     */
+    /** Minimum allowed value. */
     min?: number;
-    /**
-     *
-     */
+    /** Maximum allowed value. */
     max?: number;
-    /**
-     *
-     */
+    /** Step increment for the input. */
     step?: number;
 }
 
-/**
- *
- */
+/** Number input composable providing a form field and its render component. */
 export const useNumberInput = assignProps(setupNumberInput, {
     props: NUMBER_PROPS,
     emits: NUMBER_FIELD.emits,

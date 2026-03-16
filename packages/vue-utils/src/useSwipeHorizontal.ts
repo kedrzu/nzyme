@@ -7,9 +7,7 @@ import { makeRef } from './reactivity/makeRef.js';
 import type { RefParam } from './reactivity/makeRef.js';
 import { useElement } from './useElement.js';
 
-/**
- *
- */
+/** Configuration for horizontal swipe gesture detection. */
 export interface UseSwipeOptions {
     /**
      * Target element for swipe detection

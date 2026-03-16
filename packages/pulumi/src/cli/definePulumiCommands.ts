@@ -269,6 +269,8 @@ function defineListCommand(options: PulumiCommandsOptions) {
                         chalk.cyan('stack destroy --force <stack-name>'),
                 );
             }
+
+            process.exit(0);
         }
     };
 }
@@ -436,10 +438,10 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
             });
 
             if (stacksFailed.size > 0) {
-                throw new UsageError(
-                    `Failed to deploy stacks: ${[...stacksLeft.keys()].map(s => s.stackName).join(', ')}`,
-                );
+                process.exit(1);
             }
+
+            process.exit(0);
         }
     };
 }
@@ -493,6 +495,8 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
                     stackResolved.logger.info(`🚫 Canceled stack ${chalk.green(stack.stackName)}`);
                 },
             });
+
+            process.exit(0);
         }
     };
 }
@@ -556,6 +560,8 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
                     verbosity: this.verbosity,
                 });
             }
+
+            process.exit(0);
         }
     };
 }
@@ -609,6 +615,8 @@ function defineRefreshCommand(options: PulumiCommandsOptions) {
                     stackResolved.logger.info(`🔄 Refreshed stack ${chalk.green(stack.stackName)}`);
                 },
             });
+
+            process.exit(0);
         }
     };
 }
@@ -717,11 +725,11 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                         stackResolved.logger.error(`❌ Failed to force destroy stack ${stackName}.`, {
                             error,
                         });
-                        throw error;
+                        process.exit(1);
                     }
                 }
 
-                return;
+                process.exit(0);
             }
 
             const stacks = resolveStacks({
@@ -781,13 +789,13 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
 
             if (stacksToDestroy.length === 0) {
                 console.log(chalk.yellow('No stacks will be destroyed - all selected stacks are protected.'));
-                return;
+                process.exit(0);
             }
 
             // If preview mode, exit here without proceeding
             if (this.preview) {
                 console.log(chalk.blue('Preview mode - no stacks will actually be destroyed.'));
-                return;
+                process.exit(0);
             }
 
             // Proceed with destruction
@@ -822,7 +830,7 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                     stackResolved.logger.error(`❌ Failed to destroy stack ${stackName}.`, {
                         error,
                     });
-                    throw error;
+                    process.exit(1);
                 }
             }
 
@@ -830,6 +838,8 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
             if (protectedStacks.length > 0) {
                 console.log(chalk.yellow(`\n⚠️  Skipped ${protectedStacks.length} protected stack(s).`));
             }
+
+            process.exit(0);
         }
     };
 }
@@ -870,6 +880,8 @@ function defineOutputCommand(options: PulumiCommandsOptions) {
                 console.log(`Outputs for stack ${chalk.green(stack.name)}:`);
                 console.log(chalk.gray(JSON.stringify(outputs, null, 2)));
             }
+
+            process.exit(0);
         }
     };
 }
@@ -921,6 +933,8 @@ function defineInstallCommand(options: PulumiCommandsOptions) {
 
                 stackResolved.logger.info(`✅ Installed dependencies for stack ${stackName}`);
             }
+
+            process.exit(0);
         }
     };
 }

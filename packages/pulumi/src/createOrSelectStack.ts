@@ -1,4 +1,5 @@
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 import { automation, runtime } from '@pulumi/pulumi';
 
@@ -13,6 +14,14 @@ import type { PulumiConfig } from './PulumiConfig.js';
 export async function createOrSelectStack<TOutput extends StackOutput>(stack: Stack<TOutput>, config: PulumiConfig) {
     const cwd = config.cwd ?? process.cwd();
     const envVars = { ...process.env } as Record<string, string>;
+
+    // Resolve the node_modules directory containing @pulumi/pulumi.
+    // Bun's node_modules layout is not compatible with Node.js module resolution
+    // used by Pulumi's dynamic provider subprocess.
+    const pulumiPkgPath = path.dirname(fileURLToPath(import.meta.resolve('@pulumi/pulumi/package.json')));
+    const nodeModulesDir = path.resolve(pulumiPkgPath, '..', '..');
+    envVars.NODE_PATH = envVars.NODE_PATH ? `${nodeModulesDir}:${envVars.NODE_PATH}` : nodeModulesDir;
+
     const stackConfig: Record<string, automation.StackSettingsConfigValue> = {};
     const pulumiHome = config.pulumiHome ?? path.join(cwd, '.pulumi');
 

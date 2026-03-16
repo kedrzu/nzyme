@@ -312,10 +312,6 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
             description: 'Skip specific stacks from being deployed (can be used multiple times)',
         });
 
-        skipBuild = Option.Boolean('--skip-build,-sb', {
-            description: 'Skip the build step',
-        });
-
         skipResources = Option.Boolean('--skip-resources,-sr', {
             description: 'Skip resource deployment and only execute afterDeploy with previously deployed outputs',
         });
@@ -386,7 +382,6 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
 
                         return deployStack(stackResolved, {
                             refresh: this.refresh,
-                            build: !this.skipBuild,
                             debug: this.debug,
                             config: pulumiConfig,
                             verbosity: this.verbosity,
@@ -548,10 +543,6 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
             description: 'The verbosity of the logs',
         });
 
-        skipBuild = Option.Boolean('--skip-build,-sb', {
-            description: 'Skip the build step',
-        });
-
         skip = Option.Array('--skip,-s', [], {
             description: 'Skip specific stacks from being previewed (can be used multiple times)',
         });
@@ -578,7 +569,6 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
                 const stackResolved = this.container.resolve(stack);
                 await previewStack(stackResolved, {
                     refresh: this.refresh,
-                    build: !this.skipBuild,
                     config: pulumiConfig,
                     verbosity: this.verbosity,
                 });

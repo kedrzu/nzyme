@@ -72,7 +72,7 @@ function transformInterface(node: ts.InterfaceDeclaration): string {
 
     // Add .describe() if description is available
     if (meta && meta.description) {
-        return `${baseSchema}\n    .describe(${JSON.stringify(meta.description)})`;
+        return `${baseSchema}\n    .check(z.describe(${JSON.stringify(meta.description)}))`;
     }
 
     return baseSchema;
@@ -113,7 +113,7 @@ function transformPropertySignature(member: ts.PropertySignature): string | null
 
     // Add .describe() for @description tags
     if (meta && meta.description) {
-        schema = `${schema}.describe(${JSON.stringify(meta.description)})`;
+        schema = `${schema}.check(z.describe(${JSON.stringify(meta.description)}))`;
     }
 
     // Handle optional properties

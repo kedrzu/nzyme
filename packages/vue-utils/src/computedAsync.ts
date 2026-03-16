@@ -1,9 +1,7 @@
 import type { ComputedRef } from 'vue';
 import { computed, nextTick, shallowRef, watchEffect } from 'vue';
 
-/**
- *
- */
+/** Options for creating an async computed value. */
 export interface ComputedAsyncOptions {
     /**
      * Should value be evaluated lazily
@@ -18,9 +16,7 @@ export interface ComputedAsyncOptions {
     onError?: (e: unknown) => void;
 }
 
-/**
- *
- */
+/** Options for async computed with a required initial value. */
 export interface ComputedAsyncOptionsWithInit<T> extends ComputedAsyncOptions {
     /**
      * Initial value
@@ -28,9 +24,7 @@ export interface ComputedAsyncOptionsWithInit<T> extends ComputedAsyncOptions {
     initialValue: T;
 }
 
-/**
- *
- */
+/** Options for async computed without an initial value (starts as undefined). */
 export interface ComputedAsyncOptionsWithoutInit extends ComputedAsyncOptions {
     /**
      * Initial value
@@ -38,9 +32,7 @@ export interface ComputedAsyncOptionsWithoutInit extends ComputedAsyncOptions {
     initialValue?: undefined;
 }
 
-/**
- *
- */
+/** Extended computed ref with async capabilities like manual refresh and invalidation. */
 export interface ComputedAsync<T> extends ComputedRef<T> {
     /**
      * Get the current promise value

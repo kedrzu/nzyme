@@ -11,55 +11,33 @@ import { useSwipeHorizontal } from '@nzyme/vue-utils/useSwipeHorizontal.js';
 
 import css from './Carousel.module.scss';
 
-/**
- *
- */
+/** Describes a single carousel page with its element range and scroll offset. */
 export type CarouselPage = {
-    /**
-     *
-     */
+    /** Index of the first element on this page. */
     elementFrom: number;
-    /**
-     *
-     */
+    /** Index of the last element on this page. */
     elementTo: number;
-    /**
-     *
-     */
+    /** Horizontal scroll offset in pixels for this page. */
     offset: number;
 };
 
-/**
- *
- */
+/** Slot props exposed by the Carousel component. */
 export type CarouselSlot = {
-    /**
-     *
-     */
+    /** Zero-based index of the currently active page. */
     currentPage: number;
-    /**
-     *
-     */
+    /** Navigate to a specific page by index. */
     goToPage: (page: number) => void;
-    /**
-     *
-     */
+    /** Whether there is a next page available. */
     hasNext: boolean;
-    /**
-     *
-     */
+    /** Whether there is a previous page available. */
     hasPrevious: boolean;
-    /**
-     *
-     */
+    /** Move by a signed number of pages (positive = forward). */
     moveBy: (numberOfPages: number) => void;
-    /** Array of carousel pages */
+    /** Array of carousel pages. */
     pages: CarouselPage[];
 };
 
-/**
- *
- */
+/** Paginated horizontal carousel with swipe support and optional auto-play. */
 export const Carousel = defineComponent({
     name: 'Carousel',
     props: {
@@ -71,24 +49,18 @@ export const Carousel = defineComponent({
         touch: { type: Boolean, default: true },
         mouse: { type: Boolean, default: true },
     },
-    slots: defineSlots<{
-        /**
-         *
-         */
-        default: CarouselSlot;
-        /**
-         *
-         */
-        wrapper: CarouselSlot & {
-            /**
-             *
-             */
-            CarouselInner: () => JSX.Element;
-        };
-    }>(),
     emits: {
         'update:page': (page: number) => page >= 0,
     },
+    slots: defineSlots<{
+        /** Default slot for carousel items. */
+        default: CarouselSlot;
+        /** Wrapper slot that provides full control over carousel rendering. */
+        wrapper: CarouselSlot & {
+            /** Renders the default carousel inner layout. */
+            CarouselInner: () => JSX.Element;
+        };
+    }>(),
     setup(props, { slots, emit }) {
         const carouselRef = ref<HTMLDivElement>();
         const carouselItemsRef = ref<HTMLUListElement>();

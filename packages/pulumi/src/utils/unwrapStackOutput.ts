@@ -1,8 +1,7 @@
 import type * as pulumi from '@pulumi/pulumi';
 import type { OutputMap } from '@pulumi/pulumi/automation/stack.js';
 
-import type { StackOutput } from '../defineStack.js';
-import type { StackOutputValue } from '../defineStack.js';
+import type { StackOutput, StackOutputValue } from '../defineStack.js';
 
 /**
  * Unwrap a stack output.

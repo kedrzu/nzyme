@@ -4,21 +4,13 @@ import * as ts from 'typescript';
  * Schema definition with metadata
  */
 export interface SchemaDefinition {
-    /**
-     *
-     */
+    /** Identifier name of the type or interface */
     name: string;
-    /**
-     *
-     */
+    /** Generated zod schema code as a string */
     schema: string;
-    /**
-     *
-     */
+    /** Human-readable description extracted from JSDoc */
     description?: string;
-    /**
-     *
-     */
+    /** Additional metadata extracted from JSDoc tags */
     meta?: Record<string, unknown>;
 }
 

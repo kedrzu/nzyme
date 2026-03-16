@@ -13,12 +13,10 @@ import { coerce } from '../utils/coerce.js';
 import { serialize } from '../utils/serialize.js';
 
 /**
- *
+ * Options for defining a tuple schema.
  */
 export type TupleOptions<T extends Schema[] = Schema[]> = {
-    /**
-     *
-     */
+    /** Ordered array of schemas, one per tuple element */
     of: T;
 };
 
@@ -29,9 +27,7 @@ export type TupleOptions<T extends Schema[] = Schema[]> = {
  */
 export type TupleSchema<O extends SchemaOptionsBase<TupleOptions> = SchemaOptionsBase<TupleOptions>> = ForceName &
     Schema<TupleValue<O['of']>, O> & {
-        /**
-         *
-         */
+        /** Ordered array of element schemas for this tuple */
         of: O['of'];
     };
 

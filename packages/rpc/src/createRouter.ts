@@ -12,7 +12,7 @@ import type { RpcErrorData } from './types/RpcError.js';
 import { createJsonResponse } from './utils/createJsonResponse.js';
 
 /**
- *
+ * Events emitted by the API router during request processing.
  */
 export interface RouterEvents {
     /**
@@ -70,7 +70,8 @@ export interface RouterOptions {
 }
 
 /**
- *
+ * Creates an API router that maps incoming HTTP requests to registered endpoint handlers.
+ * @__NO_SIDE_EFFECTS__
  */
 export function createRouter(options: RouterOptions): Router {
     const handlers = new Map<string, EndpointHandlerService>();
@@ -194,7 +195,7 @@ export function createRouter(options: RouterOptions): Router {
 }
 
 /**
- *
+ * Safely parses a JSON string, throwing an HTTP 400 error on invalid input.
  */
 function parseJson(input: string | null | undefined): unknown {
     if (input == null) {

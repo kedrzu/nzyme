@@ -1,6 +1,4 @@
-/**
- *
- */
+/** Options for setting a browser cookie. */
 export interface SetCookieOptions {
     /**
      * The expiration date of the cookie.

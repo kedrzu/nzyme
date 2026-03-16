@@ -46,9 +46,7 @@ const setup = <T extends TranslationAny>(props: TranslateProps<T>, ctx: Translat
     };
 };
 
-/**
- *
- */
+/** Component that renders a translation with named slot-based parameter interpolation. */
 export const Translate = defineComponent(
     setup,
     // manual runtime props declaration is currently still needed.

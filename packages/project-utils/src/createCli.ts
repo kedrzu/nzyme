@@ -14,13 +14,9 @@ export type CreateCliOptions = {
      */
     env?: NodeJS.ProcessEnv;
 
-    /**
-     *
-     */
+    /** Where to redirect stderr output. */
     stderr?: Options['stderr'];
-    /**
-     *
-     */
+    /** Where to redirect stdout output. */
     stdout?: Options['stdout'];
 };
 

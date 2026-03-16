@@ -16,7 +16,7 @@ export interface MinValidatorContext<T extends Comparable> extends ValidationCon
 }
 
 /**
- *
+ * Options for configuring the minValue validator behavior.
  */
 export interface MinValidatorOptions<T extends Comparable> {
     /**

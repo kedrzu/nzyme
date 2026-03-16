@@ -23,9 +23,7 @@ class Nullish extends AsymmetricMatcher<void> {
     }
 }
 
-/**
- *
- */
+/** Creates an asymmetric matcher that accepts null or undefined in addition to the given matcher. */
 export function nullish<T>(matcher?: AsymmetricMatcher<void>) {
     if (!matcher) {
         matcher = expect.anything() as AsymmetricMatcher<void>;

@@ -23,9 +23,7 @@ class Optional extends AsymmetricMatcher<void> {
     }
 }
 
-/**
- *
- */
+/** Creates an asymmetric matcher that accepts undefined in addition to the given matcher. */
 export function optional<T>(matcher?: AsymmetricMatcher<void>) {
     if (!matcher) {
         matcher = expect.anything() as AsymmetricMatcher<void>;

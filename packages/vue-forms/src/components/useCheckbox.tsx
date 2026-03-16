@@ -14,9 +14,7 @@ const CHECKBOX_PROPS = defineProps({
     name: String,
 });
 
-/**
- *
- */
+/** Checkbox composable providing a toggleable boolean form field and its render component. */
 export const useCheckbox = assignProps(setupCheckbox, {
     props: CHECKBOX_PROPS,
     emits: CHECKBOX_FIELD.emits,

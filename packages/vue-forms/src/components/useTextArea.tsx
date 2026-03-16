@@ -16,9 +16,7 @@ const TEXT_AREA_PROPS = defineProps({
     tabindex: Number,
 });
 
-/**
- *
- */
+/** Auto-resizing textarea composable providing a form field and its render component. */
 export const useTextArea = assignProps(setupTextArea, {
     props: TEXT_AREA_PROPS,
     emits: TEXT_AREA_FIELD.emits,
@@ -60,10 +58,10 @@ function setupTextArea() {
         textarea.value.style.height = textarea.value.scrollHeight + 'px';
     }
 
-    async function onInput(event: Event) {
+    function onInput(event: Event) {
         const target = event.target as HTMLTextAreaElement;
         field.value = target.value;
-        await updateHeight();
+        void updateHeight();
     }
 
     function TextArea(attrs: HTMLAttributes) {

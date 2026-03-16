@@ -32,18 +32,14 @@ export type ObjectUnionOptions<T extends ObjectSchema[] = ObjectSchema[]> = {
  */
 export type ObjectUnionSchema<O extends SchemaOptionsBase<ObjectUnionOptions> = SchemaOptionsBase<ObjectUnionOptions>> =
     Schema<ObjectUnionValue<O>, O> & {
-        /**
-         *
-         */
+        /** The property key used to discriminate between union members */
         discriminator: O['discriminator'];
-        /**
-         *
-         */
+        /** Array of object schemas that form the union */
         of: O['of'];
     };
 
 /**
- *
+ * Inferred value type for an object union, which is the union of all member schema values.
  */
 export type ObjectUnionValue<O extends ObjectUnionOptions> = Infer<O['of'][number]>;
 
@@ -67,7 +63,7 @@ type ObjectUnionSchemaConstructor = {
 };
 
 /**
- *
+ * Creates a discriminated union schema that selects the matching object schema based on a discriminator property.
  */
 export const objectUnion = defineSchema<ObjectUnionSchemaConstructor, SchemaOptionsBase<ObjectUnionOptions>>({
     name: 'union',

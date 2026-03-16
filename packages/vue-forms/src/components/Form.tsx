@@ -11,9 +11,7 @@ import { defineSlots } from '@nzyme/vue-utils/slots.js';
 
 import { FormContext } from '../FormContext.js';
 
-/**
- *
- */
+/** Form component that manages submission state and validation. */
 export const Form = defineComponent({
     // eslint-disable-next-line vue/no-reserved-component-names
     name: 'Form',
@@ -24,17 +22,11 @@ export const Form = defineComponent({
     },
     emits: ['submit'],
     slots: defineSlots<{
-        /**
-         *
-         */
+        /** Default slot exposing form state and submit action. */
         default: {
-            /**
-             *
-             */
+            /** Whether the form submission is in progress. */
             pending: boolean;
-            /**
-             *
-             */
+            /** Triggers form submission. */
             submit: FormContext['submit'];
         };
     }>(),

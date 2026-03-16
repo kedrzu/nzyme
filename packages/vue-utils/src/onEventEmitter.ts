@@ -5,9 +5,7 @@ import type { EventCallback, EventEmitter } from '@nzyme/utils/createEventEmitte
 
 type EventEmitterParam<E> = EventEmitter<E> | null | undefined;
 
-/**
- *
- */
+/** Subscribes to an event emitter (ref, getter, or raw) and auto-unsubscribes on scope disposal. */
 export function onEventEmitter<E>(
     emitter: (() => EventEmitterParam<E>) | EventEmitter<E> | Readonly<Ref<EventEmitterParam<E>>>,
     callback: EventCallback<E>,

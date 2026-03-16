@@ -24,10 +24,6 @@ export interface RpcClientRequest {
 /**
  * Callback that returns request configuration for a given endpoint.
  */
-
-/**
- *
- */
 export type RpcRequestGetter<O> = (
     endpoint: EndpointDefinition<any, any>,
     options?: O,

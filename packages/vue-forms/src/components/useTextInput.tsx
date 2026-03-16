@@ -24,9 +24,7 @@ const TEXT_INPUT_EMITS = {
     keydown: undefined as unknown as (event: KeyboardEvent) => boolean,
 };
 
-/**
- *
- */
+/** Text input composable providing a form field and its render component. */
 export const useTextInput = assignProps(setupTextInput, {
     props: TEXT_INPUT_PROPS,
     emits: TEXT_INPUT_EMITS,

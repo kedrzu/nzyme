@@ -6,24 +6,16 @@ import dts from 'vite-plugin-dts';
 import { libInjectCss } from 'vite-plugin-lib-inject-css';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
-/**
- *
- */
+/** Options for configuring a Vue library build with Vite. */
 export interface VueLibConfigOptions {
-    /**
-     *
-     */
+    /** Entry point(s) for the library build. */
     entry: string | string[];
 
-    /**
-     *
-     */
+    /** Whether to generate TypeScript declaration files. */
     declarations?: boolean;
 }
 
-/**
- *
- */
+/** Creates a Vite config for building a Vue component library with ES module output. */
 export function vueLibConfig(options: VueLibConfigOptions) {
     return defineConfig({
         plugins: [

@@ -3,9 +3,7 @@ import pluginVue from 'eslint-plugin-vue';
 import { defineConfig } from 'eslint/config';
 import vueParser from 'vue-eslint-parser';
 
-/**
- *
- */
+/** Creates an ESLint config for Vue 3 single-file components with TypeScript parser. */
 export function vue() {
     return defineConfig({
         files: ['**/*.vue', '**/*.ts', '**/*.tsx'],

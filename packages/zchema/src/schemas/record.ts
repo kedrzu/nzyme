@@ -30,9 +30,7 @@ export type RecordSchema<O extends SchemaOptionsBase<RecordOptions> = SchemaOpti
     RecordValue<Infer<O['of']>>,
     O
 > & {
-    /**
-     *
-     */
+    /** Schema used to validate and coerce each record value */
     of: O['of'];
 };
 

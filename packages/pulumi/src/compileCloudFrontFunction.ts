@@ -11,7 +11,7 @@ export interface CloudfrontFunctionOptions {
      */
     inputFile: string;
     /**
-     *
+     * The directory where the compiled function output will be written.
      */
     outputDir: string;
     /**

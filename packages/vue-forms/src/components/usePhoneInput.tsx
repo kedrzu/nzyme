@@ -25,9 +25,7 @@ const PHONE_PROPS = defineProps({
     readonly: Boolean,
 });
 
-/**
- *
- */
+/** Phone input composable with international formatting via libphonenumber-js. */
 export const usePhoneInput = assignProps(setupPhoneInput, {
     props: PHONE_PROPS,
     emits: PHONE_FIELD.emits,

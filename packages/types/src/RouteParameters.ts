@@ -3,9 +3,7 @@
 import type { Primitive } from './Common.js';
 import type { SomeObject } from './Object.js';
 
-/**
- *
- */
+/** Extracts route parameter names from an Express-style route string into a typed record. */
 export type RouteParameters<Route extends string> = string extends Route
     ? ParamsDictionary
     : Route extends `${string}(${string}`

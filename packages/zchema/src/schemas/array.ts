@@ -32,9 +32,7 @@ export type ArraySchema<O extends SchemaOptionsBase<ArrayOptions> = SchemaOption
     Infer<O['of']>[],
     O
 > & {
-    /**
-     *
-     */
+    /** Schema used to validate and coerce each array element */
     of: O['of'];
 };
 

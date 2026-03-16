@@ -13,9 +13,7 @@ import { Command } from '../Command.js';
 
 const I18N_REGEX = /\.loc\.ya?ml$/;
 
-/**
- *
- */
+/** CLI command that compiles .loc.yaml translation files into TypeScript modules. */
 export class LocaliseCommand extends Command {
     static override paths = [['localise']];
 

@@ -32,9 +32,7 @@ export type DateTimeISO =
  */
 export type DateInput = number | Date | DateISO | DateTimeISO;
 
-/**
- *
- */
+/** ISO 8601 duration string like `P1Y2M3DT4H5M6S`. */
 export type DurationISO = `${DurationP}${DurationT}`;
 
 type DurationY = `${number}Y` | ``;

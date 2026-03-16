@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { ComponentPublicInstance } from 'vue';
-import { getCurrentInstance, vShow } from 'vue';
+import { getCurrentInstance } from 'vue';
 
 import { prop } from '../prop';
 import css from './Collapse.module.scss';

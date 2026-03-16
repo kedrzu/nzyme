@@ -3,24 +3,20 @@
 
 import type { Item } from './Common.js';
 
-/**
- *
- */
+/** Recursively makes T deeply readonly - arrays become readonly arrays, objects get readonly properties. */
 export type Immutable<T> = T extends string
-    ? T // eslint-disable-next-line @typescript-eslint/ban-types
+    ? T // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
     : T extends Function
-      ? T
+      ? T // eslint-disable-next-line @typescript-eslint/no-explicit-any
       : T extends any[]
-        ? ImmutableArray<Item<T>>
+        ? ImmutableArray<Item<T>> // eslint-disable-next-line @typescript-eslint/no-explicit-any
         : T extends ArrayLike<any>
           ? ImmutableArrayLike<Item<T>>
           : T extends Record<string, unknown>
             ? ImmutableObject<T>
             : T;
 
-/**
- *
- */
+/** Unwraps an Immutable type back to its mutable form. */
 export type Mutable<T> = T extends Immutable<infer V> ? V : T;
 
 type ImmutableObject<T extends Record<string, unknown>> = {

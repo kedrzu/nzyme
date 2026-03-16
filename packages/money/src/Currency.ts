@@ -1,6 +1,4 @@
-/**
- *
- */
+/** List of all supported ISO 4217 currency codes. */
 export const Currencies = [
     /** UAE dirham */ 'AED',
     /** Afghan afghani */ 'AFN',
@@ -160,14 +158,10 @@ export const Currencies = [
     /** Zimbabwean dollar */ 'ZWR',
 ] as const;
 
-/**
- *
- */
+/** ISO 4217 currency code from the supported currencies map. */
 export type Currency = keyof typeof CURRENCIES;
 
-/**
- *
- */
+/** Configuration for formatting and displaying a currency. */
 export type CurrencyConfig<C extends string> = {
     /**
      * Currency code

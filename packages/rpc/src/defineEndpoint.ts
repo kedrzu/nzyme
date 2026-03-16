@@ -39,6 +39,12 @@ export type EndpointDefinition<TInput = void, TOutput = void> = EndpointDefiniti
 };
 
 /**
+ * Type representing any endpoint definition, regardless of its input or output type.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type EndpointDefinitionAny = EndpointDefinition<any, any>;
+
+/**
  * Endpoint definition output
  */
 export interface EndpointDefinitionOutput<TOutput = void> {

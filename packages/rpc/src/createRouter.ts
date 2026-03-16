@@ -121,7 +121,7 @@ export function createRouter(options: RouterOptions): Router {
             }
 
             const handlerInstance = container.resolve(handler);
-            const result = await handlerInstance(input?.value, { request });
+            const result: unknown = await handlerInstance(input?.value, { request });
 
             if (result instanceof Response) {
                 const headers: HttpResponseHeaders = httpContext.response.headers;

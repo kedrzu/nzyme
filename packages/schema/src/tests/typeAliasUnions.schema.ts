@@ -14,7 +14,7 @@ export const StatusSchema: z.ZodMiniType<Status> = z.enum(['active', 'inactive',
  */
 export const UserRoleSchema: z.ZodMiniType<UserRole> = z
     .enum(['admin', 'guest', 'user'])
-    .describe('User role with permissions');
+    .check(z.describe('User role with permissions'));
 
 /**
  * Nullable string type
@@ -31,4 +31,4 @@ export const OptionalNumberSchema: z.ZodMiniType<OptionalNumber> = z.optional(z.
  */
 export const NullishBigIntSchema: z.ZodMiniType<NullishBigInt> = z
     .nullish(z.bigint())
-    .describe('Nullish bigint type');
+    .check(z.describe('Nullish bigint type'));

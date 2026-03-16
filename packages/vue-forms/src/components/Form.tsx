@@ -17,7 +17,7 @@ export const Form = defineComponent({
     name: 'Form',
     props: {
         pendingClass: classProp,
-        submitEvent: {} as PropType<EventEmitterAny>,
+        submitEvent: Object as PropType<EventEmitterAny>,
         submitTrigger: Boolean,
     },
     emits: {

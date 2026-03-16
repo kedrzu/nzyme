@@ -2,7 +2,7 @@ import css from '#css/form.module.css';
 import { computed, defineComponent, h } from 'vue';
 import type { PropType } from 'vue';
 
-import type { EventEmitter } from '@nzyme/utils/createEventEmitter.js';
+import type { EventEmitterAny } from '@nzyme/utils/createEventEmitter.js';
 import { classProp } from '@nzyme/vue-utils/classProp.js';
 import { provideContext } from '@nzyme/vue-utils/context.js';
 import { onEventEmitter } from '@nzyme/vue-utils/onEventEmitter.js';
@@ -17,10 +17,12 @@ export const Form = defineComponent({
     name: 'Form',
     props: {
         pendingClass: classProp,
-        submitEvent: {} as PropType<EventEmitter<any>>,
+        submitEvent: {} as PropType<EventEmitterAny>,
         submitTrigger: Boolean,
     },
-    emits: ['submit'],
+    emits: {
+        submit: (event: Event) => !!event,
+    },
     slots: defineSlots<{
         /** Default slot exposing form state and submit action. */
         default: {

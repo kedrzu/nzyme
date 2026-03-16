@@ -46,6 +46,13 @@ export interface EventEmitter<E = unknown[]> {
 }
 
 /**
+ * Type representing any event emitter, regardless of its event type.
+ * @template TEvent - The type of the event data
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type EventEmitterAny = EventEmitter<any>;
+
+/**
  * Helper type to extract the parameters of an event.
  */
 export type EventParams<E> = E extends unknown[] ? E : [event: E];

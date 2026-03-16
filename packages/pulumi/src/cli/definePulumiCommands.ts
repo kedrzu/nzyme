@@ -397,6 +397,29 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                             stacksDeploying.delete(stack);
                             stacksLeft.delete(stack);
                             stackResolved.logger.info(`🎉 Deployed stack ${stackName}`);
+
+                            const deploying = stacks.filter(s => stacksDeploying.has(s));
+                            if (deploying.length > 0) {
+                                const maxShow = 5;
+                                const shown = deploying.slice(0, maxShow).map(s => chalk.yellow(s.stackName)).join(', ');
+                                const suffix = deploying.length > maxShow
+                                    ? ` + ${deploying.length - maxShow} more`
+                                    : '';
+                                stackResolved.logger.info(`🔄 Deploying: ${shown}${suffix}`);
+                            }
+
+                            const remaining = stacks.filter(
+                                s => stacksLeft.has(s) && !stacksDeploying.has(s),
+                            );
+                            if (remaining.length > 0) {
+                                const maxShow = 5;
+                                const shown = remaining.slice(0, maxShow).map(s => chalk.green(s.stackName)).join(', ');
+                                const suffix = remaining.length > maxShow
+                                    ? ` + ${remaining.length - maxShow} more`
+                                    : '';
+                                stackResolved.logger.info(`📋 Remaining: ${shown}${suffix}`);
+                            }
+
                             await options.afterDeployStack?.({ command: this, stack });
                             stacksDeployed.add(stack);
                         })

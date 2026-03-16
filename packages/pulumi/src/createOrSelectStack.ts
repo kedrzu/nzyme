@@ -20,7 +20,7 @@ export async function createOrSelectStack<TOutput extends StackOutput>(stack: St
     // used by Pulumi's dynamic provider subprocess.
     const pulumiPkgPath = path.dirname(fileURLToPath(import.meta.resolve('@pulumi/pulumi/package.json')));
     const nodeModulesDir = path.resolve(pulumiPkgPath, '..', '..');
-    envVars.NODE_PATH = envVars.NODE_PATH ? `${nodeModulesDir}:${envVars.NODE_PATH}` : nodeModulesDir;
+    envVars.NODE_PATH = envVars.NODE_PATH ? `${nodeModulesDir}${path.delimiter}${envVars.NODE_PATH}` : nodeModulesDir;
 
     const stackConfig: Record<string, automation.StackSettingsConfigValue> = {};
     const pulumiHome = config.pulumiHome ?? path.join(cwd, '.pulumi');

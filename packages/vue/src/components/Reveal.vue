@@ -4,7 +4,7 @@ const fallbackKey = Symbol('fallback');
 
 <script lang="ts" setup>
 import type { ComponentPublicInstance } from 'vue';
-import { defineComponent, getCurrentInstance, h, Transition } from 'vue';
+import { getCurrentInstance } from 'vue';
 
 import { getOuterHeight } from '@nzyme/dom-utils/getOuterHeight.js';
 

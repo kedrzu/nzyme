@@ -24,17 +24,11 @@ const keyConfigs: Record<Key, KeyConfig> = {
     },
 };
 
-/**
- *
- */
+/** Registers a keyup listener filtered by specific key(s), auto-cleaning up on unmount. */
 export function onKeyUp(key: Key | Key[], callback: KeyCallback): void;
-/**
- *
- */
+/** Registers a keyup listener for all keys, auto-cleaning up on unmount. */
 export function onKeyUp(callback: KeyCallback): void;
-/**
- *
- */
+/** Registers a keyup listener, optionally filtered by key(s), auto-cleaning up on unmount. */
 export function onKeyUp(keyOrCallback: Key | Key[] | KeyCallback, callback?: KeyCallback) {
     if (typeof keyOrCallback === 'function') {
         callback = keyOrCallback;

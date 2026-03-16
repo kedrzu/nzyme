@@ -9,13 +9,9 @@ import { joinLines } from '../utils/joinLines.js';
  * Configuration options for creating a Slack section block
  */
 export type SlackSection = {
-    /**
-     *
-     */
+    /** Markdown fields displayed in a two-column layout. Falsy values are filtered out. */
     fields?: (string | false | null | undefined)[];
-    /**
-     *
-     */
+    /** Main text content of the section, rendered as mrkdwn. */
     text?: SlackText;
 };
 

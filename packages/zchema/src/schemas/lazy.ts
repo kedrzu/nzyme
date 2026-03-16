@@ -135,9 +135,7 @@ export const lazy = defineSchema<LazySchemaConstructor, SchemaOptionsBase<LazyOp
  * @returns Resolved schema
  */
 export function lazyResolve<S extends Schema>(schema: S): S extends LazySchema ? LazySchemaResolved<S> : S;
-/**
- *
- */
+/** Implementation signature for lazyResolve. */
 export function lazyResolve(schema: Schema): Schema {
     if (!isLazySchema(schema)) {
         return schema;

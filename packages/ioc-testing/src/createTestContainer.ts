@@ -4,39 +4,23 @@ import type { LoggerObject } from '@nzyme/logging/Logger.js';
 import type { LoggerLevel } from '@nzyme/logging/LoggerLevel.js';
 import { consoleLog, LoggerTransport } from '@nzyme/logging/LoggerTransport.js';
 
-/**
- *
- */
+/** A log entry captured during test execution. */
 export interface CapturedLog {
-    /**
-     *
-     */
+    /** Name of the logger that produced this entry. */
     readonly logger: string | undefined;
-    /**
-     *
-     */
+    /** Severity level of the log entry. */
     readonly level: LoggerLevel;
-    /**
-     *
-     */
+    /** Log message text. */
     readonly message: string;
-    /**
-     *
-     */
+    /** Optional structured data attached to the log entry. */
     readonly data?: LoggerObject | null;
 }
 
-/**
- *
- */
+/** Result of creating a test container, providing the container and captured logs. */
 export interface TestContainerResult {
-    /**
-     *
-     */
+    /** The IoC container configured for testing. */
     container: Container;
-    /**
-     *
-     */
+    /** All log entries captured during test execution. */
     logs: CapturedLog[];
 }
 

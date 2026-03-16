@@ -1,15 +1,14 @@
-import type { Unwrap } from '@pulumi/pulumi';
-import type { automation } from '@pulumi/pulumi';
+import type { automation, Unwrap } from '@pulumi/pulumi';
 import * as pulumi from '@pulumi/pulumi';
 
-import type { Dependencies, ResolveDeps, Service } from '@nzyme/ioc/Service.js';
 import type { Injectable } from '@nzyme/ioc/Injectable.js';
 import { defineInjectable } from '@nzyme/ioc/Injectable.js';
+import type { Dependencies, ResolveDeps, Service } from '@nzyme/ioc/Service.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 import { Logger } from '@nzyme/logging/Logger.js';
+import type { Override } from '@nzyme/types/Common.js';
 import type { EmptyObject } from '@nzyme/types/EmptyObject.js';
 import type { Flatten, SomeObject } from '@nzyme/types/Object.js';
-import type { Override } from '@nzyme/types/Common.js';
 import { createMemo } from '@nzyme/utils/createMemo.js';
 import { toPascalCase } from '@nzyme/utils/string/caseUtils.js';
 

@@ -32,17 +32,11 @@ export type TransitionGroupProps = Omit<TransitionGroupPropsVue, 'css' | 'name' 
      */
     duration?: number;
 };
-/**
- *
- */
+/** Options for rendering the transition as a TransitionGroup. */
 export interface TransitionGroupOptions {
-    /**
-     *
-     */
+    /** HTML tag for the TransitionGroup wrapper element. */
     tag?: string;
-    /**
-     *
-     */
+    /** CSS class(es) applied to the TransitionGroup wrapper. */
     class?: ClassProp;
 }
 

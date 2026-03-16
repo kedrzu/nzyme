@@ -7,9 +7,7 @@ import { unwrapElement } from './unwrapElement.js';
 
 type MaybeElement = ElementOrVue | null | undefined;
 
-/**
- *
- */
+/** Registers a scroll event listener on the given element, auto-cleaning up on unmount. */
 export function onElementScroll(element: RefParam<MaybeElement>, callback: (event: Event) => void) {
     const elementRef = makeRef(element);
 

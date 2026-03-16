@@ -16,9 +16,7 @@ const SELECT_PROPS = defineProps({
     tabindex: Number,
 });
 
-/**
- *
- */
+/** Select input composable providing a form field and its render component. */
 export const useSelectInput = assignProps(setupSelectInput, {
     props: SELECT_PROPS,
     emits: SELECT_FIELD.emits,

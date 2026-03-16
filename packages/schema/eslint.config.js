@@ -4,11 +4,11 @@ export default [
     //
     ...common(),
     ...typescript({
-        project: ['./tsconfig.json', './tsconfig.tests.json'],
+        project: ['./tsconfig.json'],
         internalImports: ['@nzyme/*'],
     }),
     ...jsdoc({
-        ignores: ['tests/**/*'],
+        ignores: ['src/tests/**/*'],
     }),
     ...packageJson(),
     {

@@ -1,8 +1,6 @@
 import { camelize, getCurrentInstance, toHandlerKey } from 'vue';
 
-/**
- *
- */
+/** Converts emit event types to their corresponding `onEventName` prop types. */
 export type EmitAsProps<E extends object = Record<string, (...args: unknown[]) => unknown>> = {
     [K in keyof E as K extends string ? `on${Capitalize<CamelizeString<K>>}` : never]: E[K] extends (
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -12,9 +10,7 @@ export type EmitAsProps<E extends object = Record<string, (...args: unknown[]) =
         : never;
 };
 
-/**
- *
- */
+/** Recursively converts a kebab-case string to camelCase at the type level. */
 type CamelizeString<S extends string> = S extends `${infer T}-${infer U}` ? `${T}${CamelizeString<Capitalize<U>>}` : S;
 
 /**

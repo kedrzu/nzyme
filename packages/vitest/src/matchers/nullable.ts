@@ -23,9 +23,7 @@ class Nullable extends AsymmetricMatcher<void> {
     }
 }
 
-/**
- *
- */
+/** Creates an asymmetric matcher that accepts null in addition to the given matcher. */
 export function nullable<T>(matcher?: AsymmetricMatcher<void>) {
     if (!matcher) {
         matcher = expect.anything() as AsymmetricMatcher<void>;

@@ -1,16 +1,10 @@
 import { fileURLToPath } from 'node:url';
 
-export /**
- *
- */
-function resolveLocalPath(meta: ImportMeta): (path: string) => string;
-export /**
- *
- */
-function resolveLocalPath(meta: ImportMeta, path: string): string;
-/**
- *
- */
+/** Returns a resolver function that resolves paths relative to the calling module. */
+export function resolveLocalPath(meta: ImportMeta): (path: string) => string;
+/** Resolves a path relative to the calling module's location. */
+export function resolveLocalPath(meta: ImportMeta, path: string): string;
+/** Resolves a path relative to the calling module, or returns a curried resolver if no path is given. */
 export function resolveLocalPath(meta: ImportMeta, path?: string) {
     if (path === undefined) {
         return (path: string) => resolveLocalPath(meta, path);

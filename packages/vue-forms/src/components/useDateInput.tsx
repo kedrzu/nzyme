@@ -21,9 +21,7 @@ const DATE_PROPS = defineProps({
     max: Date,
 });
 
-/**
- *
- */
+/** Date input composable with a native date picker and optional calendar button. */
 export const useDateInput = assignProps(setupDateInput, {
     props: DATE_PROPS,
     emits: DATE_FIELD.emits,
@@ -46,7 +44,7 @@ function setupDateInput() {
         showCalendar,
     };
 
-    function DateInput(attrs: InputHTMLAttributes, ctx: SetupContext) {
+    function DateInput(attrs: InputHTMLAttributes) {
         return (
             <input
                 aria-label={props.label}

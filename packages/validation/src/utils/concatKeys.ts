@@ -1,5 +1,5 @@
 /**
- *
+ * Joins two key segments with a dot separator, handling null/empty values.
  */
 export function concatKeys(
     first: number | string | null | undefined,

@@ -3,9 +3,7 @@ import type { VNodeChild } from 'vue';
 
 const FORMAT_REGEX = /\{\s*(\w*)\s*\}/gm;
 
-/**
- *
- */
+/** Component that interpolates named slots into a format string using `{slotName}` placeholders. */
 export const Format = defineComponent({
     props: {
         format: { type: String, required: true },

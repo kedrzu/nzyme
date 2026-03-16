@@ -14,9 +14,7 @@ declare global {
     }
 }
 
-/**
- *
- */
+/** Listens for incoming SMS OTP codes via the Web OTP API and calls onSuccess with the code. */
 export function useSmsOtp(options: UseSmsOtpOptions) {
     let abortController: AbortController | undefined;
     const enabled = makeRef(options.enabled);

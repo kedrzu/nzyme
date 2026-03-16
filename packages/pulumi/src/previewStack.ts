@@ -20,12 +20,6 @@ export interface PreviewStackOptions {
     verbosity?: number;
 
     /**
-     * Whether to build the stack before previewing.
-     * @default true
-     */
-    build?: boolean;
-
-    /**
      * The Pulumi config to use for the stack.
      */
     config: PulumiConfig;
@@ -37,9 +31,7 @@ export interface PreviewStackOptions {
 export async function previewStack<TOut extends StackOutput>(stack: Stack<TOut>, options: PreviewStackOptions) {
     assertStackEnabled(stack);
 
-    if (options.build !== false) {
-        await stack.build({ preview: true });
-    }
+    await stack.build({ preview: true });
 
     const stackInstance = await createOrSelectStack(stack, options.config);
 

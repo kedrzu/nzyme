@@ -269,6 +269,8 @@ function defineListCommand(options: PulumiCommandsOptions) {
                         chalk.cyan('stack destroy --force <stack-name>'),
                 );
             }
+
+            process.exit(0);
         }
     };
 }
@@ -308,10 +310,6 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
 
         skip = Option.Array('--skip,-s', [], {
             description: 'Skip specific stacks from being deployed (can be used multiple times)',
-        });
-
-        skipBuild = Option.Boolean('--skip-build,-sb', {
-            description: 'Skip the build step',
         });
 
         skipResources = Option.Boolean('--skip-resources,-sr', {
@@ -384,7 +382,6 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
 
                         return deployStack(stackResolved, {
                             refresh: this.refresh,
-                            build: !this.skipBuild,
                             debug: this.debug,
                             config: pulumiConfig,
                             verbosity: this.verbosity,
@@ -395,6 +392,29 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                             stacksDeploying.delete(stack);
                             stacksLeft.delete(stack);
                             stackResolved.logger.info(`🎉 Deployed stack ${stackName}`);
+
+                            const deploying = stacks.filter(s => stacksDeploying.has(s));
+                            if (deploying.length > 0) {
+                                const maxShow = 5;
+                                const shown = deploying.slice(0, maxShow).map(s => chalk.yellow(s.stackName)).join(', ');
+                                const suffix = deploying.length > maxShow
+                                    ? ` + ${deploying.length - maxShow} more`
+                                    : '';
+                                stackResolved.logger.info(`🔄 Deploying: ${shown}${suffix}`);
+                            }
+
+                            const remaining = stacks.filter(
+                                s => stacksLeft.has(s) && !stacksDeploying.has(s),
+                            );
+                            if (remaining.length > 0) {
+                                const maxShow = 5;
+                                const shown = remaining.slice(0, maxShow).map(s => chalk.green(s.stackName)).join(', ');
+                                const suffix = remaining.length > maxShow
+                                    ? ` + ${remaining.length - maxShow} more`
+                                    : '';
+                                stackResolved.logger.info(`📋 Remaining: ${shown}${suffix}`);
+                            }
+
                             await options.afterDeployStack?.({ command: this, stack });
                             stacksDeployed.add(stack);
                         })
@@ -436,10 +456,10 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
             });
 
             if (stacksFailed.size > 0) {
-                throw new UsageError(
-                    `Failed to deploy stacks: ${[...stacksLeft.keys()].map(s => s.stackName).join(', ')}`,
-                );
+                process.exit(1);
             }
+
+            process.exit(0);
         }
     };
 }
@@ -493,6 +513,8 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
                     stackResolved.logger.info(`🚫 Canceled stack ${chalk.green(stack.stackName)}`);
                 },
             });
+
+            process.exit(0);
         }
     };
 }
@@ -521,10 +543,6 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
             description: 'The verbosity of the logs',
         });
 
-        skipBuild = Option.Boolean('--skip-build,-sb', {
-            description: 'Skip the build step',
-        });
-
         skip = Option.Array('--skip,-s', [], {
             description: 'Skip specific stacks from being previewed (can be used multiple times)',
         });
@@ -551,11 +569,12 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
                 const stackResolved = this.container.resolve(stack);
                 await previewStack(stackResolved, {
                     refresh: this.refresh,
-                    build: !this.skipBuild,
                     config: pulumiConfig,
                     verbosity: this.verbosity,
                 });
             }
+
+            process.exit(0);
         }
     };
 }
@@ -609,6 +628,8 @@ function defineRefreshCommand(options: PulumiCommandsOptions) {
                     stackResolved.logger.info(`🔄 Refreshed stack ${chalk.green(stack.stackName)}`);
                 },
             });
+
+            process.exit(0);
         }
     };
 }
@@ -717,11 +738,11 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                         stackResolved.logger.error(`❌ Failed to force destroy stack ${stackName}.`, {
                             error,
                         });
-                        throw error;
+                        process.exit(1);
                     }
                 }
 
-                return;
+                process.exit(0);
             }
 
             const stacks = resolveStacks({
@@ -781,13 +802,13 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
 
             if (stacksToDestroy.length === 0) {
                 console.log(chalk.yellow('No stacks will be destroyed - all selected stacks are protected.'));
-                return;
+                process.exit(0);
             }
 
             // If preview mode, exit here without proceeding
             if (this.preview) {
                 console.log(chalk.blue('Preview mode - no stacks will actually be destroyed.'));
-                return;
+                process.exit(0);
             }
 
             // Proceed with destruction
@@ -822,7 +843,7 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                     stackResolved.logger.error(`❌ Failed to destroy stack ${stackName}.`, {
                         error,
                     });
-                    throw error;
+                    process.exit(1);
                 }
             }
 
@@ -830,6 +851,8 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
             if (protectedStacks.length > 0) {
                 console.log(chalk.yellow(`\n⚠️  Skipped ${protectedStacks.length} protected stack(s).`));
             }
+
+            process.exit(0);
         }
     };
 }
@@ -870,6 +893,8 @@ function defineOutputCommand(options: PulumiCommandsOptions) {
                 console.log(`Outputs for stack ${chalk.green(stack.name)}:`);
                 console.log(chalk.gray(JSON.stringify(outputs, null, 2)));
             }
+
+            process.exit(0);
         }
     };
 }
@@ -921,6 +946,8 @@ function defineInstallCommand(options: PulumiCommandsOptions) {
 
                 stackResolved.logger.info(`✅ Installed dependencies for stack ${stackName}`);
             }
+
+            process.exit(0);
         }
     };
 }

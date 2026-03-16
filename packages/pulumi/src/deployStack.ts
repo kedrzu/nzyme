@@ -30,12 +30,6 @@ export interface DeployStackOptions {
     debug?: boolean;
 
     /**
-     * Whether to build the stack before deploying.
-     * @default true
-     */
-    build?: boolean;
-
-    /**
      * Whether to skip resource deployment and only execute afterDeploy with previously deployed outputs.
      * @default false
      */
@@ -53,9 +47,7 @@ export interface DeployStackOptions {
 export async function deployStack<TOut extends StackOutput>(stack: Stack<TOut>, options: DeployStackOptions) {
     assertStackEnabled(stack);
 
-    if (options.build !== false) {
-        await stack.build({ preview: false });
-    }
+    await stack.build({ preview: false });
 
     const debug = options.debug ?? false;
     const stackInstance = await createOrSelectStack(stack, options.config);

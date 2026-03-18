@@ -1,6 +1,5 @@
-import { computed } from 'vue';
-
 import type { Simplify } from '@nzyme/types/Common.js';
+import { computed } from 'vue';
 
 import type { FormField, FormModel, FormValidator } from './types.js';
 import { useFormField } from './useFormField.js';

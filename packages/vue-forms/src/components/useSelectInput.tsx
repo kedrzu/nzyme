@@ -1,9 +1,8 @@
-import type { FunctionalComponent } from 'vue';
-import { h } from 'vue';
-
 import { assignProps } from '@nzyme/utils/assignProps.js';
 import { defineProps } from '@nzyme/vue-utils/defineProps.js';
 import { useProps } from '@nzyme/vue-utils/useProps.js';
+import type { FunctionalComponent } from 'vue';
+import { h } from 'vue';
 
 import { defineFormField } from './defineFormField.js';
 

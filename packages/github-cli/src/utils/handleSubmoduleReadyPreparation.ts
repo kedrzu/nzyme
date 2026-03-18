@@ -177,9 +177,7 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
             }
             logger.info(`   ${subName}: checked out ${chalk.cyan(mainRepoBranch)}`);
         } catch (error) {
-            logger.warn(
-                `   ${subName}: could not checkout ${chalk.cyan(mainRepoBranch)}: ${(error as Error).message}`,
-            );
+            logger.warn(`   ${subName}: could not checkout ${chalk.cyan(mainRepoBranch)}: ${(error as Error).message}`);
             logger.info(`   ${subName}: continuing with ${chalk.cyan(submodule.currentBranch || 'unknown')}`);
             branchSwitchFailed = true;
             targetBranch = submodule.currentBranch || mainRepoBranch;
@@ -319,17 +317,13 @@ async function handleMergedPr(
                 try {
                     await submoduleGit.stash(['pop']);
                 } catch (stashError) {
-                    logger.error(
-                        `   ${subName}: failed to apply stashed changes: ${(stashError as Error).message}`,
-                    );
+                    logger.error(`   ${subName}: failed to apply stashed changes: ${(stashError as Error).message}`);
                     logger.error(`   You may need to manually resolve conflicts in ${chalk.yellow(submodule.path)}`);
                     throw stashError;
                 }
             } catch (error) {
                 if (!(error instanceof Error && error.message.includes('stash'))) {
-                    logger.error(
-                        `   ${subName}: failed to create branch: ${(error as Error).message}`,
-                    );
+                    logger.error(`   ${subName}: failed to create branch: ${(error as Error).message}`);
                 }
                 throw error;
             }
@@ -381,9 +375,7 @@ async function handleMergedPr(
 
             logger.info(`   ${chalk.green('✓')} Switched ${subName} to ${chalk.cyan(targetBranch)}`);
         } catch (error) {
-            logger.error(
-                `   ${subName}: failed to switch to ${chalk.cyan(targetBranch)}: ${(error as Error).message}`,
-            );
+            logger.error(`   ${subName}: failed to switch to ${chalk.cyan(targetBranch)}: ${(error as Error).message}`);
             throw error;
         }
     }

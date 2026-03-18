@@ -4,14 +4,35 @@ import { simpleGit } from 'simple-git';
 
 import type { Logger } from '@nzyme/logging/Logger.js';
 
+/**
+ *
+ */
 export interface FetchAndRebaseCurrentBranchParams {
+    /**
+     *
+     */
     logger: Logger;
+    /**
+     *
+     */
     git?: SimpleGit;
+    /**
+     *
+     */
     repoDisplayName?: string;
 }
 
+/**
+ *
+ */
 export interface FetchAndRebaseCurrentBranchResult {
+    /**
+     *
+     */
     hadRemoteChanges: boolean;
+    /**
+     *
+     */
     commitsRebased: number;
 }
 

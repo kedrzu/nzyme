@@ -1,7 +1,3 @@
-import type { RequiredKeysOf } from 'type-fest';
-import { defineComponent, h, nextTick, ref } from 'vue';
-import type { Component, ComponentInternalInstance, Ref } from 'vue';
-
 import { clearFocus } from '@nzyme/dom-utils/clearFocus.js';
 import { onHistoryBack } from '@nzyme/dom-utils/virtualHistory.js';
 import { defineService } from '@nzyme/ioc/Service.js';
@@ -12,6 +8,9 @@ import { createPromise } from '@nzyme/utils/createPromise.js';
 import { provideContext } from '@nzyme/vue-utils/context.js';
 import { onKeyUp } from '@nzyme/vue-utils/onKeyUp.js';
 import { reactive } from '@nzyme/vue-utils/reactivity/reactive.js';
+import type { RequiredKeysOf } from 'type-fest';
+import { defineComponent, h, nextTick, ref } from 'vue';
+import type { Component, ComponentInternalInstance, Ref } from 'vue';
 
 import { ModalContext } from './ModalContext.js';
 import type { Modal, ModalComponent, ModalController, ModalProps, ModalResult } from './ModalTypes.js';

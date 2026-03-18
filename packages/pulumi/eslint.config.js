@@ -7,8 +7,8 @@ export default [
     globalIgnores(['./src/shims.d.ts']),
     ...common(),
     ...typescript({
+        rootDir: import.meta.dirname,
         target: 'node',
-        project: ['./tsconfig.json'],
         internalImports: ['@nzyme/*'],
     }),
     ...jsdoc(),

@@ -243,9 +243,7 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
             base: baseBranch,
         });
 
-        logger.info(
-            `   ${chalk.green('✓')} Created draft PR: ${chalk.blue(pr.title)} ${chalk.gray(`#${pr.number}`)}`,
-        );
+        logger.info(`   ${chalk.green('✓')} Created draft PR: ${chalk.blue(pr.title)} ${chalk.gray(`#${pr.number}`)}`);
         logger.info(`   ${chalk.blueBright(chalk.underline(pr.html_url))}`);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';

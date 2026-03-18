@@ -1,3 +1,5 @@
+import { getOuterHeight } from '@nzyme/dom-utils/getOuterHeight.js';
+import { useElement } from '@nzyme/vue-utils/useElement.js';
 import {
     createElementBlock,
     defineComponent,
@@ -9,9 +11,6 @@ import {
     withCtx,
 } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
-
-import { getOuterHeight } from '@nzyme/dom-utils/getOuterHeight.js';
-import { useElement } from '@nzyme/vue-utils/useElement.js';
 
 import css from './Reveal.module.scss';
 

@@ -60,6 +60,16 @@ export interface SelectPrToOpenParams {
 }
 
 /**
+ * Parameters for opening a PR in the browser.
+ */
+export interface OpenPrInBrowserParams extends SelectPrToOpenParams {
+    /**
+     * Logger for outputting messages.
+     */
+    logger: Logger;
+}
+
+/**
  * Select a PR to open from the main repository and submodules.
  * If multiple PRs are found, prompts the user to choose one.
  * If only one PR is found, returns it without prompting.
@@ -140,16 +150,6 @@ export async function selectPrToOpen(params: SelectPrToOpenParams): Promise<PrIn
     });
 
     return availablePrs[Number.parseInt(prChoice, 10)]!;
-}
-
-/**
- * Parameters for opening a PR in the browser.
- */
-export interface OpenPrInBrowserParams extends SelectPrToOpenParams {
-    /**
-     * Logger for outputting messages.
-     */
-    logger: Logger;
 }
 
 /**

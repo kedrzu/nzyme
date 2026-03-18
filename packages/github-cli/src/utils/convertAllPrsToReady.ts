@@ -46,7 +46,6 @@ export interface ConvertAllPrsToReadyParams {
      * URL of the main PR.
      */
     mainPrUrl: string;
-
 }
 
 /**
@@ -57,8 +56,7 @@ export interface ConvertAllPrsToReadyParams {
  * - Logging status for all PRs
  */
 export async function convertAllPrsToReady(params: ConvertAllPrsToReadyParams): Promise<void> {
-    const { githubClient, githubConfig, issueId, logger, mainPrNumber, mainPrIsDraft, mainPrUrl } =
-        params;
+    const { githubClient, githubConfig, issueId, logger, mainPrNumber, mainPrIsDraft, mainPrUrl } = params;
 
     // Convert submodule PRs to ready
     const submodules = await getSubmoduleInfo();
@@ -78,9 +76,7 @@ export async function convertAllPrsToReady(params: ConvertAllPrsToReadyParams): 
 
             const [, owner, repo] = urlMatch;
             if (!owner || !repo) {
-                logger.warn(
-                    `⚠️  Could not extract owner/repo from URL for submodule ${chalk.magenta(submodule.name)}`,
-                );
+                logger.warn(`⚠️  Could not extract owner/repo from URL for submodule ${chalk.magenta(submodule.name)}`);
                 continue;
             }
 

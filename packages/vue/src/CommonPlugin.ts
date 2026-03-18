@@ -1,6 +1,5 @@
-import type { App } from 'vue';
-
 import { CancelError } from '@nzyme/utils/CancelError.js';
+import type { App } from 'vue';
 
 /** Vue plugin that suppresses CancelError in both promise rejections and Vue error handler. */
 export function CommonPlugin(app: App) {

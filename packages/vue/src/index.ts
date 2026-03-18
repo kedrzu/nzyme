@@ -17,7 +17,6 @@ export { default as Proxy } from './Proxy.vue';
 export { default as ProxyAsync } from './ProxyAsync.vue';
 export { default as ProxyContext } from './ProxyContext.vue';
 export { default as SlotWrapper } from './SlotWrapper.vue';
-//export { default as Collapse } from './components/Collapse.vue';
 export * from './useEventBus.js';
 export * from './useScrollLock.js';
 export * from './useStickyElement.js';

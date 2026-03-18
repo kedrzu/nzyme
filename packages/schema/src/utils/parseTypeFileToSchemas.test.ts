@@ -1,7 +1,6 @@
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { mkdir, readdir, rm } from 'fs/promises';
 import { basename, join } from 'path';
-
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 
 import { parseTypeFileToSchemas } from './parseTypeFileToSchemas.js';
 

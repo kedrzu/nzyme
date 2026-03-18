@@ -203,7 +203,12 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     logger.info('');
     logger.info(chalk.bold('🔀 Merging base branch into main repository...'));
 
-    const { wasAhead, commitsAhead, merged } = await mergeBaseIntoCurrent(mainGit, baseBranch, logger, 'main repository');
+    const { wasAhead, commitsAhead, merged } = await mergeBaseIntoCurrent(
+        mainGit,
+        baseBranch,
+        logger,
+        'main repository',
+    );
 
     return {
         submodules: syncedSubmodules,
@@ -216,8 +221,8 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
 /**
  * Fetch a branch from remote, ignoring errors (remote branch may not exist).
  */
-async function fetchSafe(git: SimpleGit, remote: string, branch: string | undefined | null): Promise<void> {
-    if (!branch) return;
+async function fetchSafe(git: SimpleGit, remote: string, branch: string | null | undefined): Promise<void> {
+    if (!branch) {return;}
     try {
         await git.fetch(remote, branch);
     } catch {

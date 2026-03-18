@@ -4,8 +4,8 @@ export default [
     //
     ...common(),
     ...typescript({
+        rootDir: import.meta.dirname,
         target: 'node',
-        project: ['./tsconfig.json', './tsconfig.node.json'],
         internalImports: ['@nzyme/*'],
     }),
     ...jsdoc(),

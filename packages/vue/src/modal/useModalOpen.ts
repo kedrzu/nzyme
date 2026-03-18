@@ -1,8 +1,7 @@
-import type { RequiredKeysOf } from 'type-fest';
-import { getCurrentInstance, onUnmounted } from 'vue';
-
 import { arrayRemove } from '@nzyme/utils/array/arrayRemove.js';
 import { useService } from '@nzyme/vue-ioc/useService.js';
+import type { RequiredKeysOf } from 'type-fest';
+import { getCurrentInstance, onUnmounted } from 'vue';
 
 import { ModalService } from './ModalService.js';
 import type { Modal, ModalComponent, ModalProps } from './ModalTypes.js';

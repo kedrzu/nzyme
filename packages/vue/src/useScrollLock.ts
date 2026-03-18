@@ -1,9 +1,8 @@
-import { onMounted, onUnmounted, watch } from 'vue';
-
 import { getScrollBarWidth } from '@nzyme/dom-utils/getScrollBarWidth.js';
 import { isBrowser } from '@nzyme/dom-utils/isBrowser.js';
 import { makeRef } from '@nzyme/vue-utils/reactivity/makeRef.js';
 import type { RefParam } from '@nzyme/vue-utils/reactivity/makeRef.js';
+import { onMounted, onUnmounted, watch } from 'vue';
 
 import css from './useScrollLock.module.scss';
 

@@ -1,6 +1,5 @@
-import { getCurrentInstance, inject, provide } from 'vue';
-
 import type { ContainerScope } from '@nzyme/ioc/ContainerScope.js';
+import { getCurrentInstance, inject, provide } from 'vue';
 
 import type { VueContainer } from './createContainer.js';
 import { injectionKey } from './injectionKey.js';

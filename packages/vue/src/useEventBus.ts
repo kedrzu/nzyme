@@ -1,6 +1,5 @@
-import { getCurrentInstance, onActivated, onBeforeUnmount, onDeactivated } from 'vue';
-
 import { isBrowser } from '@nzyme/dom-utils/isBrowser.js';
+import { getCurrentInstance, onActivated, onBeforeUnmount, onDeactivated } from 'vue';
 
 type EventCallback<T = void> = (arg: T) => Promise<void> | void;
 

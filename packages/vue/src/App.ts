@@ -1,6 +1,5 @@
-import type { App as AppImport } from 'vue';
-
 import { defineInterface } from '@nzyme/ioc/Interface.js';
+import type { App as AppImport } from 'vue';
 
 /** IoC interface for the Vue application instance. */
 export const App = defineInterface<AppImport>({

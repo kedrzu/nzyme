@@ -6,8 +6,8 @@ export default [
     globalIgnores(['bin/**/*']),
     ...common(),
     ...typescript({
+        rootDir: import.meta.dirname,
         target: 'node',
-        project: ['./tsconfig.json'],
         internalImports: ['@nzyme/*'],
     }),
     ...packageJson(),

@@ -1,11 +1,10 @@
-import type { AsYouType, CountryCode } from 'libphonenumber-js';
-import { h, onMounted, ref, watch } from 'vue';
-import type { PropType } from 'vue';
-
 import { assignProps } from '@nzyme/utils/assignProps.js';
 import { isDigit } from '@nzyme/utils/string/isDigit.js';
 import { defineProps } from '@nzyme/vue-utils/defineProps.js';
 import { useProps } from '@nzyme/vue-utils/useProps.js';
+import type { AsYouType, CountryCode } from 'libphonenumber-js';
+import { h, onMounted, ref, watch } from 'vue';
+import type { PropType } from 'vue';
 
 import { defineFormField } from './defineFormField.js';
 

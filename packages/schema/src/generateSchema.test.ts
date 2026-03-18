@@ -1,16 +1,15 @@
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { readdirSync, readFileSync } from 'fs';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import { basename, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
-
-import { beforeEach, describe, expect, it } from 'bun:test';
 
 import { generateSchemaFromFile } from './generateSchema.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 const TEST_DIR = resolve(__dirname, '../test-temp');
-const TESTS_FIXTURES_DIR = resolve(__dirname, '../tests');
+const TESTS_FIXTURES_DIR = resolve(__dirname, './tests');
 
 /**
  * Get all test case names from the tests directory

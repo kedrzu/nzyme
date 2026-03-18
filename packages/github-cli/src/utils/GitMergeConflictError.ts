@@ -17,6 +17,9 @@ export class GitMergeConflictError extends Error {
      */
     readonly operation: string;
 
+    /**
+     *
+     */
     constructor(params: { repoDisplayName: string; conflictedFiles: string[]; operation: string; message?: string }) {
         super(params.message ?? `Git ${params.operation} conflict in ${params.repoDisplayName}`);
         this.name = 'GitMergeConflictError';

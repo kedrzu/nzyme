@@ -3,7 +3,7 @@ import { common, jsdoc, packageJson, typescript, vue } from '@nzyme/eslint';
 export default [
     //
     ...common(),
-    ...typescript({ target: 'browser', internalImports: ['@nzyme/*'] }),
+    ...typescript({ rootDir: import.meta.dirname }),
     ...vue(),
     ...jsdoc(),
     ...packageJson(),

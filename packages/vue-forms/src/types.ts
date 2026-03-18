@@ -1,8 +1,7 @@
-import type { MaybeRefOrGetter } from 'vue';
-
 import type { TranslationResult } from '@nzyme/i18n-core/Translation.js';
 import type { Language } from '@nzyme/i18n/Language.js';
 import type { DataSourceDebounceOptions } from '@nzyme/vue-utils/useDataSource.js';
+import type { MaybeRefOrGetter } from 'vue';
 
 /** Base interface for form and field models with value, validation, and reset capabilities. */
 export interface FormBase<T = unknown> {

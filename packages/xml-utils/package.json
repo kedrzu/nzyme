@@ -28,15 +28,16 @@
     ],
     "scripts": {
         "build": "tsc --build tsconfig.esm.json",
-        "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache"
+        "lint": "eslint . --fix --cache",
+        "prettify": "prettier ./src --write > /dev/null"
     },
     "dependencies": {
-        "fast-xml-parser": "5.4.2"
+        "fast-xml-parser": "5.5.6"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",
         "@nzyme/tsconfig": "0.14.0",
-        "eslint": "9.39.2",
+        "eslint": "10.0.3",
         "prettier": "3.8.1",
         "typescript": "5.9.3"
     },

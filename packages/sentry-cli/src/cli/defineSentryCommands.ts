@@ -1,17 +1,17 @@
 import chalk from 'chalk';
 import open from 'open';
 
-import type { CommandClass } from '@nzyme/cli/Command.js';
 import { Option, UsageError } from '@nzyme/cli';
+import type { CommandClass } from '@nzyme/cli/Command.js';
 import { Command } from '@nzyme/cli/Command.js';
+import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
 import { convertAllPrsToReady } from '@nzyme/github-cli/utils/convertAllPrsToReady.js';
 import { createGithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';
 import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
-import { openPrInBrowser } from '@nzyme/github-cli/utils/selectPrToOpen.js';
 import { pushChanges } from '@nzyme/github-cli/utils/pushChanges.js';
+import { openPrInBrowser } from '@nzyme/github-cli/utils/selectPrToOpen.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
-import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
 
 import { createSentryClient } from '../utils/createSentryClient.js';
 import { extractIssueIdFromBranch } from '../utils/extractIssueIdFromBranch.js';
@@ -247,9 +247,7 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
             description: 'Push changes and handle submodules without marking PR as ready',
             details:
                 'Commits and pushes changes in both submodules and main repository. Useful when you want to push work in progress without marking the PR as ready for review.',
-            examples: [
-                ['Push current issue changes', 'issue push'],
-            ],
+            examples: [['Push current issue changes', 'issue push']],
         });
 
         override async run() {
@@ -297,9 +295,7 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
             description: 'Push changes and convert current issue from draft to ready for review',
             details:
                 'Pushes all changes (syncing repos, handling submodules) and converts the associated PR from draft to ready for review',
-            examples: [
-                ['Push and convert current issue to ready for review', 'issue ready'],
-            ],
+            examples: [['Push and convert current issue to ready for review', 'issue ready']],
         });
 
         override async run() {

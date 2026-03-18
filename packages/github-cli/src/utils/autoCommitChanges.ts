@@ -47,12 +47,7 @@ export interface AutoCommitChangesResult {
  * Does NOT push - that is handled separately after fetch/rebase.
  */
 export async function autoCommitChanges(params: AutoCommitChangesParams): Promise<AutoCommitChangesResult> {
-    const {
-        logger,
-        git = simpleGit(),
-        repoDisplayName = 'repository',
-        commitMessage = 'Work in progress',
-    } = params;
+    const { logger, git = simpleGit(), repoDisplayName = 'repository', commitMessage = 'Work in progress' } = params;
 
     const statusInfo = await getGitStatusInfo(git);
 

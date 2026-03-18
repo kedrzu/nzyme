@@ -36,7 +36,8 @@
     ],
     "scripts": {
         "build": "tsc --build tsconfig.esm.json",
-        "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache"
+        "lint": "eslint . --fix --cache",
+        "prettify": "prettier ./src --write > /dev/null"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "3.1001.0",
@@ -73,8 +74,8 @@
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",
         "@nzyme/tsconfig": "0.14.0",
-        "@types/node": "25.3.5",
-        "eslint": "9.39.2",
+        "@types/node": "25.5.0",
+        "eslint": "10.0.3",
         "prettier": "3.8.1",
         "typescript": "5.9.3"
     },

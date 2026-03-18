@@ -2,7 +2,6 @@ import js from '@eslint/js';
 import type { Linter } from 'eslint';
 import prettier from 'eslint-config-prettier';
 import importPlugin from 'eslint-plugin-import';
-import monorepo from 'eslint-plugin-monorepo';
 import perfectionist from 'eslint-plugin-perfectionist';
 import workspaces from 'eslint-plugin-workspaces';
 import globals from 'globals';
@@ -15,25 +14,28 @@ export type Target = 'browser' | 'node';
 export interface TypescriptOptions {
     /** Runtime target(s) to include appropriate globals. */
     target?: Target | Target[];
-    /** Path(s) to tsconfig files for type-checked linting. */
-    project?: string | string[];
     /** Import patterns to treat as internal for sort ordering. */
     internalImports?: string[];
+    /** Root directory for tsconfig resolution. Pass `import.meta.dirname` from your eslint config. */
+    rootDir?: string;
+    /** Files not included in any tsconfig that should still be linted with type info. */
+    allowDefaultProject?: string[];
 }
 
 /** Creates an ESLint config for TypeScript projects with type-checking, import sorting, and code style rules. */
 export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
     const config: Linter.Config = {
-        ignores: ['dist/**/*', 'node_modules/**/*', 'eslint.config.js', 'package.json', '**/*.loc.ts'],
+        ignores: ['dist/**/*', 'node_modules/**/*', 'eslint.config.js', 'eslint.config.ts', 'package.json', '**/*.loc.ts'],
         plugins: {
             workspaces,
-            monorepo,
             import: importPlugin,
         },
         languageOptions: {
             parserOptions: {
-                project: options.project || './tsconfig.json',
-                tsconfigRootDir: process.cwd(),
+                projectService: {
+                    allowDefaultProject: options.allowDefaultProject ?? [],
+                },
+                tsconfigRootDir: options.rootDir ?? process.cwd(),
                 extraFileExtensions: ['.vue'],
             },
         },
@@ -57,14 +59,13 @@ export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
             'workspaces/no-relative-imports': 'error',
             'workspaces/no-absolute-imports': 'error',
             'workspaces/require-dependency': 'error',
-            'monorepo/no-relative-import': 'error',
             'import/consistent-type-specifier-style': ['warn', 'prefer-top-level'],
             'import/newline-after-import': 'warn',
             'import/no-duplicates': ['warn', { considerQueryString: true }],
             'perfectionist/sort-imports': [
                 'warn',
                 {
-                    internalPattern: options.internalImports,
+                    internalPattern: options.internalImports ?? [],
                     groups: [
                         ['type-builtin', 'value-builtin'],
                         ['type-external', 'value-external'],

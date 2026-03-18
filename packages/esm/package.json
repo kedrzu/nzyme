@@ -27,7 +27,8 @@
     ],
     "scripts": {
         "build": "tsc --build tsconfig.esm.json",
-        "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache"
+        "lint": "eslint . --fix --cache",
+        "prettify": "prettier ./src --write > /dev/null"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",

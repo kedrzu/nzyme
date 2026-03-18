@@ -28,7 +28,8 @@
     ],
     "scripts": {
         "build": "tsc --build tsconfig.esm.json",
-        "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache"
+        "lint": "eslint . --fix --cache",
+        "prettify": "prettier ./src --write > /dev/null"
     },
     "dependencies": {
         "fast-xml-parser": "5.5.6"

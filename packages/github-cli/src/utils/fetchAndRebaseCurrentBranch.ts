@@ -5,7 +5,7 @@ import { simpleGit } from 'simple-git';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 /**
- *
+ * Parameters for fetching and rebasing the current branch.
  */
 export interface FetchAndRebaseCurrentBranchParams {
     /**
@@ -23,7 +23,7 @@ export interface FetchAndRebaseCurrentBranchParams {
 }
 
 /**
- *
+ * Result of fetching and rebasing the current branch.
  */
 export interface FetchAndRebaseCurrentBranchResult {
     /**

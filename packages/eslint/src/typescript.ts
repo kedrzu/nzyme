@@ -18,31 +18,23 @@ export interface TypescriptOptions {
     internalImports?: string[];
     /** Root directory for tsconfig resolution. Pass `import.meta.dirname` from your eslint config. */
     rootDir?: string;
+    /** Files not included in any tsconfig that should still be linted with type info. */
+    allowDefaultProject?: string[];
 }
 
 /** Creates an ESLint config for TypeScript projects with type-checking, import sorting, and code style rules. */
 export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
     const config: Linter.Config = {
-        ignores: [
-            'dist/**/*',
-            'node_modules/**/*',
-            'eslint.config.js',
-            'eslint.config.ts',
-            'package.json',
-            '**/*.loc.ts',
-            'rollup.config.ts',
-            'vite.config.ts',
-            'drizzle.config.ts',
-            'dev.ts',
-            'bin/**',
-        ],
+        ignores: ['dist/**/*', 'node_modules/**/*', 'eslint.config.js', 'eslint.config.ts', 'package.json', '**/*.loc.ts'],
         plugins: {
             workspaces,
             import: importPlugin,
         },
         languageOptions: {
             parserOptions: {
-                projectService: true,
+                projectService: {
+                    allowDefaultProject: options.allowDefaultProject ?? [],
+                },
                 tsconfigRootDir: options.rootDir ?? process.cwd(),
                 extraFileExtensions: ['.vue'],
             },

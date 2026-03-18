@@ -29,7 +29,8 @@
     "scripts": {
         "codegen": "openapi-typescript https://petstore3.swagger.io/api/v3/openapi.json -o ./tests/schema.d.ts",
         "build": "tsc --build tsconfig.esm.json",
-        "lint": "prettier ./src --write > /dev/null && eslint . --fix --cache"
+        "lint": "eslint . --fix --cache",
+        "prettify": "prettier ./src --write > /dev/null"
     },
     "dependencies": {
         "@nzyme/fetch-utils": "0.14.0",

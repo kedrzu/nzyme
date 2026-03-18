@@ -121,7 +121,6 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
 
     // Step 3: Handle uncommitted changes
     if (statusInfo.hasUncommittedChanges) {
-        const hasStagedFiles = statusInfo.changes.staged > 0;
         const hasUnstagedFiles = statusInfo.totalChanges > statusInfo.changes.staged;
 
         logger.info(

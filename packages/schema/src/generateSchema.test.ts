@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it } from 'bun:test';
 import { readdirSync, readFileSync } from 'fs';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import { basename, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
+
+import { beforeEach, describe, expect, it } from 'bun:test';
 
 import { generateSchemaFromFile } from './generateSchema.js';
 

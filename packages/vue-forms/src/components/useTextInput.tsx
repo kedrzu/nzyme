@@ -2,7 +2,7 @@ import { assignProps } from '@nzyme/utils/assignProps.js';
 import { defineProps } from '@nzyme/vue-utils/defineProps.js';
 import { useEmit } from '@nzyme/vue-utils/useEmit.js';
 import { useProps } from '@nzyme/vue-utils/useProps.js';
-import { h } from 'vue';
+import { h, ref } from 'vue';
 import type { InputHTMLAttributes } from 'vue';
 
 import { defineFormField } from './defineFormField.js';
@@ -36,15 +36,18 @@ function setupTextInput() {
     const props = useProps(TEXT_INPUT_PROPS);
     const field = TEXT_INPUT_FIELD.create({ props });
     const emit = useEmit(TEXT_INPUT_EMITS);
+    const input = ref<HTMLInputElement | null>(null);
 
     return {
         field,
+        input,
         TextInput,
     };
 
     function TextInput(attrs: InputHTMLAttributes) {
         return (
             <input
+                ref={input}
                 {...attrs}
                 aria-label={props.label}
                 aria-readonly={props.readonly}

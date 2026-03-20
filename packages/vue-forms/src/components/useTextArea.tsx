@@ -27,34 +27,35 @@ export const useTextArea = assignProps(setupTextArea, {
 function setupTextArea() {
     const props = useProps(TEXT_AREA_PROPS);
     const field = TEXT_AREA_FIELD.create({ props });
-    const textarea = ref<HTMLTextAreaElement>();
+    const input = ref<HTMLTextAreaElement>();
 
     onMounted(updateValue);
     watch(() => field.value, updateValue);
 
     return {
         field,
+        input,
         TextArea,
     };
 
     async function updateValue() {
-        if (!textarea.value) {
+        if (!input.value) {
             return;
         }
 
-        textarea.value.value = field.value || '';
+        input.value.value = field.value || '';
         await updateHeight();
     }
 
     async function updateHeight() {
         await nextTick();
 
-        if (!textarea.value) {
+        if (!input.value) {
             return;
         }
 
-        textarea.value.style.height = '0';
-        textarea.value.style.height = textarea.value.scrollHeight + 'px';
+        input.value.style.height = '0';
+        input.value.style.height = input.value.scrollHeight + 'px';
     }
 
     function onInput(event: Event) {
@@ -77,7 +78,7 @@ function setupTextArea() {
                 onInput={onInput}
                 placeholder={props.placeholder}
                 readonly={props.readonly}
-                ref={textarea}
+                ref={input}
                 rows={1}
                 tabindex={props.tabindex}
                 title={props.label}

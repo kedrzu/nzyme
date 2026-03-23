@@ -4,6 +4,7 @@ import { simpleGit } from 'simple-git';
 
 import type { Logger } from '@nzyme/logging/Logger.js';
 
+import { assertNoConflicts } from './assertNoConflicts.js';
 import { getGitStatusInfo } from './getGitStatusInfo.js';
 
 /**
@@ -50,6 +51,10 @@ export async function autoCommitChanges(params: AutoCommitChangesParams): Promis
     const { logger, git = simpleGit(), repoDisplayName = 'repository', commitMessage = 'Work in progress' } = params;
 
     const statusInfo = await getGitStatusInfo(git);
+
+    if (statusInfo.changes.conflicted > 0) {
+        await assertNoConflicts({ git, repoDisplayName, operation: 'merge', logger });
+    }
 
     if (!statusInfo.hasUncommittedChanges) {
         return { committed: false };

@@ -5,6 +5,7 @@ import { simpleGit } from 'simple-git';
 
 import type { Logger } from '@nzyme/logging/Logger.js';
 
+import { assertNoConflicts } from './assertNoConflicts.js';
 import { checkUnpushedCommits } from './checkUnpushedCommits.js';
 import { getGitStatusInfo } from './getGitStatusInfo.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
@@ -80,6 +81,11 @@ export async function commitAndPushPendingChanges(
     let committed = false;
     let pushed = false;
     let skipped = false;
+
+    // Check for conflicts before committing
+    if (statusInfo.changes.conflicted > 0) {
+        await assertNoConflicts({ git, repoDisplayName, operation: 'merge', logger });
+    }
 
     // Handle uncommitted changes
     if (statusInfo.hasUncommittedChanges) {

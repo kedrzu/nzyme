@@ -82,6 +82,11 @@ export async function commitAndPushPendingChanges(
     let pushed = false;
     let skipped = false;
 
+    // Check for conflicts before committing
+    if (statusInfo.changes.conflicted > 0) {
+        await assertNoConflicts({ git, repoDisplayName, logger });
+    }
+
     // Handle uncommitted changes
     if (statusInfo.hasUncommittedChanges) {
         logger.info(

@@ -111,7 +111,12 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
 
     let newCommitCreated = false;
 
-    // Step 2: Show unpushed commits if any
+    // Step 2: Check for conflicts before committing
+    if (statusInfo.changes.conflicted > 0) {
+        await assertNoConflicts({ git, repoDisplayName, logger });
+    }
+
+    // Step 3: Show unpushed commits if any
     if (unpushedCommits.hasUnpushedCommits) {
         logger.info(
             `   ${displayName}: ${chalk.yellow(unpushedCommits.commitsCount.toString())} unpushed commit${

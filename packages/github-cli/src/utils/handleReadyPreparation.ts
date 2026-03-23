@@ -40,7 +40,12 @@ export async function handleReadyPreparation(
         }
     }
 
-    // Step 2: Handle uncommitted changes
+    // Step 2: Check for conflicts before committing
+    if (statusInfo.changes.conflicted > 0) {
+        await assertNoConflicts({ git, repoDisplayName: 'main repository', logger });
+    }
+
+    // Step 3: Handle uncommitted changes
     if (statusInfo.hasUncommittedChanges) {
         const hasStagedFiles = statusInfo.changes.staged > 0;
         const hasUnstagedFiles = statusInfo.totalChanges > statusInfo.changes.staged;

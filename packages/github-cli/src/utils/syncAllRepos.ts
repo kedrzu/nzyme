@@ -271,7 +271,7 @@ async function rebaseAndPushCurrentBranch(git: SimpleGit, logger: Logger, repoDi
             await handleMergeConflict({ git, repoDisplayName, operation: 'rebase', logger }, error);
         }
 
-        await assertNoConflicts({ git, repoDisplayName, logger });
+        await assertNoConflicts({ git, repoDisplayName, operation: 'rebase', logger });
         logger.info(`   ${chalk.green('✓')} Rebased ${repoDisplayName}`);
 
         await pushWithUpstream(git);
@@ -329,7 +329,7 @@ async function pullCurrentBranch(git: SimpleGit, logger: Logger, repoDisplayName
             await handleMergeConflict({ git, repoDisplayName, operation: 'merge', logger }, error);
         }
 
-        await assertNoConflicts({ git, repoDisplayName, logger });
+        await assertNoConflicts({ git, repoDisplayName, operation: 'merge', logger });
         logger.info(`   ${chalk.green('✓')} Pulled ${repoDisplayName} (merged)`);
     }
 }
@@ -394,7 +394,7 @@ async function mergeBaseIntoSubmodules(
             );
         }
 
-        await assertNoConflicts({ git: subGit, repoDisplayName: chalk.magenta(sub.name), logger });
+        await assertNoConflicts({ git: subGit, repoDisplayName: chalk.magenta(sub.name), operation: 'merge', logger });
         logger.info(`   ${chalk.green('✓')} Merged ${chalk.cyan(baseBranch)} into ${chalk.magenta(sub.name)}`);
 
         await pushWithUpstream(subGit);
@@ -443,7 +443,7 @@ async function mergeBaseIntoCurrent(
         await handleMergeConflict({ git, repoDisplayName, operation: 'merge', logger }, error);
     }
 
-    await assertNoConflicts({ git, repoDisplayName, logger });
+    await assertNoConflicts({ git, repoDisplayName, operation: 'merge', logger });
     logger.info(`   ${chalk.green('✓')} Merged ${chalk.cyan(baseBranch)} into ${repoDisplayName}`);
 
     await pushWithUpstream(git);

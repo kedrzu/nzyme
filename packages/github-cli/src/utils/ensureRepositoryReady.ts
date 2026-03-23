@@ -113,7 +113,7 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
 
     // Step 2: Check for conflicts before committing
     if (statusInfo.changes.conflicted > 0) {
-        await assertNoConflicts({ git, repoDisplayName, logger });
+        await assertNoConflicts({ git, repoDisplayName, operation: 'merge', logger });
     }
 
     // Step 3: Show unpushed commits if any

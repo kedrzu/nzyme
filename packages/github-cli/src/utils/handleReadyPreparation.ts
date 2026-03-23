@@ -42,7 +42,7 @@ export async function handleReadyPreparation(
 
     // Step 2: Check for conflicts before committing
     if (statusInfo.changes.conflicted > 0) {
-        await assertNoConflicts({ git, repoDisplayName: 'main repository', logger });
+        await assertNoConflicts({ git, repoDisplayName: 'main repository', operation: 'merge', logger });
     }
 
     // Step 3: Handle uncommitted changes

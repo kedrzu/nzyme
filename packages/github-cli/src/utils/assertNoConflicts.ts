@@ -7,7 +7,7 @@ import { GitMergeConflictError } from './GitMergeConflictError.js';
 import { logConflictedFiles } from './logConflictedFiles.js';
 
 /**
- * Parameters for asserting no merge conflicts exist.
+ * Parameters for asserting no merge or rebase conflicts exist.
  */
 export interface AssertNoConflictsParams {
     /**
@@ -19,6 +19,11 @@ export interface AssertNoConflictsParams {
      * Display name of the repository.
      */
     repoDisplayName: string;
+
+    /**
+     * The operation that may have caused conflicts ('merge' or 'rebase').
+     */
+    operation: 'merge' | 'rebase';
 
     /**
      * Logger instance.
@@ -34,7 +39,7 @@ export interface AssertNoConflictsParams {
  * this is a proactive check used to verify state before committing or pushing.
  */
 export async function assertNoConflicts(params: AssertNoConflictsParams): Promise<void> {
-    const { git, repoDisplayName, logger } = params;
+    const { git, repoDisplayName, operation, logger } = params;
 
     const status = await git.status();
     const conflictedFiles = status.conflicted;
@@ -43,8 +48,10 @@ export async function assertNoConflicts(params: AssertNoConflictsParams): Promis
         return;
     }
 
+    const operationLabel = operation === 'rebase' ? 'Rebase' : 'Merge';
+
     logger.error('');
-    logger.error(chalk.red.bold(`   ✖ Merge conflict detected in ${repoDisplayName}`));
+    logger.error(chalk.red.bold(`   ✖ ${operationLabel} conflict detected in ${repoDisplayName}`));
     logger.error('');
 
     logConflictedFiles({ conflictedFiles, logger });
@@ -56,6 +63,6 @@ export async function assertNoConflicts(params: AssertNoConflictsParams): Promis
     throw new GitMergeConflictError({
         repoDisplayName,
         conflictedFiles,
-        operation: 'merge',
+        operation,
     });
 }

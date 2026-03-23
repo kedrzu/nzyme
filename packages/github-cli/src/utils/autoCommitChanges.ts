@@ -53,7 +53,7 @@ export async function autoCommitChanges(params: AutoCommitChangesParams): Promis
     const statusInfo = await getGitStatusInfo(git);
 
     if (statusInfo.changes.conflicted > 0) {
-        await assertNoConflicts({ git, repoDisplayName, logger });
+        await assertNoConflicts({ git, repoDisplayName, operation: 'merge', logger });
     }
 
     if (!statusInfo.hasUncommittedChanges) {

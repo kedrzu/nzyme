@@ -84,7 +84,7 @@ export async function commitAndPushPendingChanges(
 
     // Check for conflicts before committing
     if (statusInfo.changes.conflicted > 0) {
-        await assertNoConflicts({ git, repoDisplayName, logger });
+        await assertNoConflicts({ git, repoDisplayName, operation: 'merge', logger });
     }
 
     // Handle uncommitted changes

@@ -4,6 +4,7 @@ import { simpleGit } from 'simple-git';
 
 import type { Logger } from '@nzyme/logging/Logger.js';
 
+import { assertNoConflicts } from './assertNoConflicts.js';
 import { getGitStatusInfo } from './getGitStatusInfo.js';
 
 /**

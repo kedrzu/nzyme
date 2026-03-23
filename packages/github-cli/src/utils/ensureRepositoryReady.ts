@@ -7,6 +7,7 @@ import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
+import { assertNoConflicts } from './assertNoConflicts.js';
 import { checkUnpushedCommits } from './checkUnpushedCommits.js';
 import { createDraftPr } from './createDraftPr.js';
 import type { GithubClient } from './createGithubClient.js';

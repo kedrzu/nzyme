@@ -1,8 +1,5 @@
 import { expect, test } from 'bun:test';
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/main
 import { ref } from 'vue';
 
 import type { FormValidationContext } from '../types.js';

@@ -4,6 +4,7 @@ import { simpleGit } from 'simple-git';
 
 import type { Logger } from '@nzyme/logging/Logger.js';
 
+import { assertNoConflicts } from './assertNoConflicts.js';
 import type { UnpushedCommitsResult } from './checkUnpushedCommits.js';
 import type { GitStatusInfo } from './getGitStatusInfo.js';
 import { pushWithUpstream } from './pushWithUpstream.js';

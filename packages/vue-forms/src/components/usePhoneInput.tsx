@@ -96,6 +96,9 @@ function setupPhoneInput() {
         }
 
         if (!formatter) {
+            if (field.value !== value) {
+                field.value = value;
+            }
             input.value = value;
             return;
         }

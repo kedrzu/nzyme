@@ -4,8 +4,7 @@ import type { SimpleGit } from 'simple-git';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import { GitMergeConflictError } from './GitMergeConflictError.js';
-
-const MAX_FILES_TO_SHOW = 10;
+import { logConflictedFiles } from './logConflictedFiles.js';
 
 /**
  * Parameters for asserting no merge conflicts exist.
@@ -47,18 +46,8 @@ export async function assertNoConflicts(params: AssertNoConflictsParams): Promis
     logger.error('');
     logger.error(chalk.red.bold(`   ✖ Merge conflict detected in ${repoDisplayName}`));
     logger.error('');
-    logger.error(`   ${chalk.yellow('Conflicted files:')}`);
 
-    const filesToShow = conflictedFiles.slice(0, MAX_FILES_TO_SHOW);
-
-    for (const file of filesToShow) {
-        logger.error(`     ${chalk.red('•')} ${file}`);
-    }
-
-    const remaining = conflictedFiles.length - MAX_FILES_TO_SHOW;
-    if (remaining > 0) {
-        logger.error(`     ${chalk.gray(`...and ${remaining} other file${remaining === 1 ? '' : 's'}`)}`);
-    }
+    logConflictedFiles({ conflictedFiles, logger });
 
     logger.error('');
     logger.error(`   ${chalk.yellow('Please resolve the conflicts manually and try again.')}`);

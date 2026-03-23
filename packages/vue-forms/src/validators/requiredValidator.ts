@@ -62,25 +62,19 @@ export function requiredValidator<T>(options: RequiredValidatorOptions<T> = {}) 
 
             return l.required(ctx.lang);
         },
-        behavior: ctx => {
-            watch(
-                () => ctx.value,
-                () => {
-                    if (ctx.focused) {
-                        ctx.show = true;
-                    }
-                },
-            );
+        behavior: ({ value, focused, show }) => {
+            watch(value, () => {
+                if (focused.value) {
+                    show.value = true;
+                }
+            });
 
             if (!lazy) {
-                watch(
-                    () => ctx.focused,
-                    focusedValue => {
-                        if (!focusedValue) {
-                            ctx.show = true;
-                        }
-                    },
-                );
+                watch(focused, focusedValue => {
+                    if (!focusedValue) {
+                        show.value = true;
+                    }
+                });
             }
         },
     });

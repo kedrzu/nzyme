@@ -42,7 +42,7 @@
         "eslint-plugin-vue": "10.8.0",
         "eslint-plugin-workspaces": "0.12.1",
         "globals": "17.4.0",
-        "jsonc-eslint-parser": "2.4.2",
+        "jsonc-eslint-parser": "3.1.0",
         "typescript-eslint": "8.57.2",
         "vue-eslint-parser": "10.4.0"
     },

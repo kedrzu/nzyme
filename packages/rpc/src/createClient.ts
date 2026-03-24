@@ -72,6 +72,8 @@ export function createClient<O = void>(clientOptions: CreateClientOptions<O>): R
         if (!response.ok) {
             if (response.headers.get('content-type')?.includes('application/json')) {
                 const data = (await response.json()) as RpcErrorData;
+
+                console.error({ input, data });
                 throw new RpcError(response, data);
             }
 

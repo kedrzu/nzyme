@@ -33,7 +33,7 @@
     },
     "dependencies": {
         "@standard-schema/spec": "1.1.0",
-        "type-fest": "5.4.4"
+        "type-fest": "5.5.0"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",

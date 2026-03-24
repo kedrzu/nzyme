@@ -16,7 +16,7 @@
         "@primevue/nuxt-module": "4.5.4",
         "@primevue/themes": "4.5.4",
         "dexie": "4.3.0",
-        "lucide-vue-next": "0.577.0",
+        "lucide-vue-next": "1.0.0",
         "nuxt": "4.4.2",
         "primeicons": "7.0.0",
         "primevue": "4.5.4",

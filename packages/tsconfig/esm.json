@@ -28,7 +28,8 @@
         "resolveJsonModule": true,
         "incremental": true,
         "importHelpers": true,
-        "preserveSymlinks": false
+        "preserveSymlinks": false,
+        "types": ["node", "bun"]
     },
     "exclude": ["node_modules"]
 }

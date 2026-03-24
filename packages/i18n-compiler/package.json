@@ -36,8 +36,8 @@
         "@nzyme/i18n-core": "0.14.0",
         "@nzyme/project-utils": "0.14.0",
         "@nzyme/utils": "0.14.0",
-        "vitest": "4.0.18",
-        "yaml": "2.8.2"
+        "vitest": "4.1.1",
+        "yaml": "2.8.3"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",
@@ -45,7 +45,7 @@
         "@nzyme/typography": "0.14.0",
         "@types/bun": "^1.3.11",
         "@types/node": "25.5.0",
-        "eslint": "10.0.3",
+        "eslint": "10.1.0",
         "prettier": "3.8.1",
         "typescript": "6.0.2"
     },

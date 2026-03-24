@@ -37,7 +37,7 @@
         "@nzyme/eslint": "0.14.0",
         "@nzyme/tsconfig": "0.14.0",
         "@types/node": "25.5.0",
-        "eslint": "10.0.3",
+        "eslint": "10.1.0",
         "prettier": "3.8.1",
         "typescript": "6.0.2",
         "vite": "7.3.1"

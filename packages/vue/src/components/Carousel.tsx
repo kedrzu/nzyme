@@ -170,7 +170,7 @@ export const Carousel = defineComponent({
                 let page = pages[pages.length - 1]!;
                 let pageStartElement = elements[page.elementFrom]!;
                 let pageStart = pageStartElement.offsetLeft;
-                let pageEnd = pageStart + width.value;
+                const pageEnd = pageStart + width.value;
 
                 // does it fill into current page?
                 const fillsOnPage = elementEnd <= pageEnd + 1;
@@ -185,7 +185,6 @@ export const Carousel = defineComponent({
                     page = pages[pages.length - 1]!;
                     pageStartElement = elements[page.elementFrom]!;
                     pageStart = pageStartElement.offsetLeft;
-                    pageEnd = pageStart + width.value;
                 } else {
                     page.elementTo = i;
                 }

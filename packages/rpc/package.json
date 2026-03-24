@@ -48,7 +48,7 @@
         "@types/connect": "3.4.38",
         "eslint": "10.0.3",
         "prettier": "3.8.1",
-        "typescript": "5.9.3"
+        "typescript": "6.0.2"
     },
     "publishConfig": {
         "access": "public"

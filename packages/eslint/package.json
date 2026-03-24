@@ -32,7 +32,7 @@
     "dependencies": {
         "@eslint/js": "9.39.2",
         "@typescript-eslint/parser": "8.56.1",
-        "eslint": "10.0.3",
+        "eslint": "10.1.0",
         "eslint-config-prettier": "10.1.8",
         "eslint-plugin-import": "2.32.0",
         "eslint-plugin-jsdoc": "62.8.0",
@@ -50,7 +50,7 @@
         "@nzyme/tsconfig": "0.14.0",
         "@types/node": "25.5.0",
         "prettier": "3.8.1",
-        "typescript": "5.9.3"
+        "typescript": "6.0.2"
     },
     "publishConfig": {
         "access": "public"

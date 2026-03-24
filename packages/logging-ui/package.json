@@ -21,14 +21,14 @@
         "primeicons": "7.0.0",
         "primevue": "4.5.4",
         "crossws": "0.3.5",
-        "vue": "3.5.28",
+        "vue": "3.5.30",
         "vue-json-pretty": "2.6.0"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",
         "eslint": "10.0.3",
         "prettier": "3.8.1",
-        "typescript": "5.9.3",
+        "typescript": "6.0.2",
         "vue-tsc": "^3.2.4"
     },
     "depcheck": {

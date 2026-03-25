@@ -1,10 +1,4 @@
-import type { PropType } from 'vue';
-
-/**
- * Represents the basic types that can be used as CSS class values.
- * Supports Vue.js class binding patterns including conditional classes.
- */
-export type ClassType = boolean | number | object | string | null | undefined;
+import type { ClassValue, PropType } from 'vue';
 
 /**
  * Represents a Vue.js class prop value that can be:
@@ -12,7 +6,7 @@ export type ClassType = boolean | number | object | string | null | undefined;
  * - An array of class types
  * - An object with boolean values for conditional classes
  */
-export type ClassProp = Array<ClassType> | ClassType | Record<string, boolean>;
+export type ClassProp = Array<ClassValue> | ClassValue | Record<string, boolean>;
 
 /**
  * Vue prop definition for class-based styling.
@@ -32,4 +26,4 @@ export type ClassProp = Array<ClassType> | ClassType | Record<string, boolean>;
  * <MyComponent :class="['btn', { 'btn-primary': isPrimary }]" />
  * ```
  */
-export const classProp = [String, Object, Array] as PropType<Array<ClassProp> | ClassProp>;
+export const classProp = [String, Object, Array] as PropType<Array<ClassValue> | ClassValue>;

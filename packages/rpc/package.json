@@ -40,15 +40,15 @@
         "@nzyme/utils": "0.14.0",
         "@standard-schema/spec": "1.1.0",
         "ufo": "1.6.3",
-        "vitest": "4.0.18"
+        "vitest": "4.1.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",
         "@nzyme/tsconfig": "0.14.0",
         "@types/connect": "3.4.38",
-        "eslint": "10.0.3",
+        "eslint": "10.1.0",
         "prettier": "3.8.1",
-        "typescript": "5.9.3"
+        "typescript": "6.0.2"
     },
     "publishConfig": {
         "access": "public"

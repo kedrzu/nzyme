@@ -30,9 +30,9 @@
         "prettify": "prettier ./src --write > /dev/null"
     },
     "dependencies": {
-        "@eslint/js": "9.39.2",
-        "@typescript-eslint/parser": "8.56.1",
-        "eslint": "10.0.3",
+        "@eslint/js": "10.0.1",
+        "@typescript-eslint/parser": "8.57.2",
+        "eslint": "10.1.0",
         "eslint-config-prettier": "10.1.8",
         "eslint-plugin-import": "2.32.0",
         "eslint-plugin-jsdoc": "62.8.0",
@@ -42,15 +42,15 @@
         "eslint-plugin-vue": "10.8.0",
         "eslint-plugin-workspaces": "0.12.1",
         "globals": "17.4.0",
-        "jsonc-eslint-parser": "2.4.2",
-        "typescript-eslint": "8.55.0",
+        "jsonc-eslint-parser": "3.1.0",
+        "typescript-eslint": "8.57.2",
         "vue-eslint-parser": "10.4.0"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "0.14.0",
-        "@types/node": "25.5.0",
+        "@types/node": "^25.5.0",
         "prettier": "3.8.1",
-        "typescript": "5.9.3"
+        "typescript": "6.0.2"
     },
     "publishConfig": {
         "access": "public"

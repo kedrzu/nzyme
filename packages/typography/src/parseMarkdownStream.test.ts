@@ -303,7 +303,6 @@ describe('edge cases', () => {
 describe('position offset integrity', () => {
     it('should maintain consistent position offsets across multiple updates', () => {
         let root: Root | undefined;
-        let markdown = '';
 
         const updates = [
             '# Title',
@@ -314,7 +313,7 @@ describe('position offset integrity', () => {
         ];
 
         for (const update of updates) {
-            markdown = update;
+            const markdown = update;
             root = parseMarkdownStream({ markdown, root, parser });
 
             // Verify that all elements have valid positions

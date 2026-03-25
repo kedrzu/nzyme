@@ -29,6 +29,7 @@ export function outputFilesModule(options: PublicFilesModuleOptions): NuxtModule
                 }
             });
 
+            // @ts-expect-error nitro hooks are not typed in NuxtHooks anymore
             nuxt.hook('nitro:build:public-assets', async () => {
                 for (const [fileName, fileContent] of Object.entries(options)) {
                     const content = await resolveFileContent(fileContent);

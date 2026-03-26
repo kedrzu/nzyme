@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    '/pet': {
+    "/pet": {
         parameters: {
             query?: never;
             header?: never;
@@ -16,19 +16,19 @@ export interface paths {
          * Update an existing pet.
          * @description Update an existing pet by Id.
          */
-        put: operations['updatePet'];
+        put: operations["updatePet"];
         /**
          * Add a new pet to the store.
          * @description Add a new pet to the store.
          */
-        post: operations['addPet'];
+        post: operations["addPet"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    '/pet/findByStatus': {
+    "/pet/findByStatus": {
         parameters: {
             query?: never;
             header?: never;
@@ -39,7 +39,7 @@ export interface paths {
          * Finds Pets by status.
          * @description Multiple status values can be provided with comma separated strings.
          */
-        get: operations['findPetsByStatus'];
+        get: operations["findPetsByStatus"];
         put?: never;
         post?: never;
         delete?: never;
@@ -48,7 +48,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    '/pet/findByTags': {
+    "/pet/findByTags": {
         parameters: {
             query?: never;
             header?: never;
@@ -59,7 +59,7 @@ export interface paths {
          * Finds Pets by tags.
          * @description Multiple tags can be provided with comma separated strings. Use tag1, tag2, tag3 for testing.
          */
-        get: operations['findPetsByTags'];
+        get: operations["findPetsByTags"];
         put?: never;
         post?: never;
         delete?: never;
@@ -68,7 +68,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    '/pet/{petId}': {
+    "/pet/{petId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -79,24 +79,24 @@ export interface paths {
          * Find pet by ID.
          * @description Returns a single pet.
          */
-        get: operations['getPetById'];
+        get: operations["getPetById"];
         put?: never;
         /**
          * Updates a pet in the store with form data.
          * @description Updates a pet resource based on the form data.
          */
-        post: operations['updatePetWithForm'];
+        post: operations["updatePetWithForm"];
         /**
          * Deletes a pet.
          * @description Delete a pet.
          */
-        delete: operations['deletePet'];
+        delete: operations["deletePet"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    '/pet/{petId}/uploadImage': {
+    "/pet/{petId}/uploadImage": {
         parameters: {
             query?: never;
             header?: never;
@@ -109,14 +109,14 @@ export interface paths {
          * Uploads an image.
          * @description Upload image of the pet.
          */
-        post: operations['uploadFile'];
+        post: operations["uploadFile"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    '/store/inventory': {
+    "/store/inventory": {
         parameters: {
             query?: never;
             header?: never;
@@ -127,7 +127,7 @@ export interface paths {
          * Returns pet inventories by status.
          * @description Returns a map of status codes to quantities.
          */
-        get: operations['getInventory'];
+        get: operations["getInventory"];
         put?: never;
         post?: never;
         delete?: never;
@@ -136,7 +136,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    '/store/order': {
+    "/store/order": {
         parameters: {
             query?: never;
             header?: never;
@@ -149,14 +149,14 @@ export interface paths {
          * Place an order for a pet.
          * @description Place a new order in the store.
          */
-        post: operations['placeOrder'];
+        post: operations["placeOrder"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    '/store/order/{orderId}': {
+    "/store/order/{orderId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -167,20 +167,20 @@ export interface paths {
          * Find purchase order by ID.
          * @description For valid response try integer IDs with value <= 5 or > 10. Other values will generate exceptions.
          */
-        get: operations['getOrderById'];
+        get: operations["getOrderById"];
         put?: never;
         post?: never;
         /**
          * Delete purchase order by identifier.
          * @description For valid response try integer IDs with value < 1000. Anything above 1000 or non-integers will generate API errors.
          */
-        delete: operations['deleteOrder'];
+        delete: operations["deleteOrder"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    '/user': {
+    "/user": {
         parameters: {
             query?: never;
             header?: never;
@@ -193,14 +193,14 @@ export interface paths {
          * Create user.
          * @description This can only be done by the logged in user.
          */
-        post: operations['createUser'];
+        post: operations["createUser"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    '/user/createWithList': {
+    "/user/createWithList": {
         parameters: {
             query?: never;
             header?: never;
@@ -213,14 +213,14 @@ export interface paths {
          * Creates list of users with given input array.
          * @description Creates list of users with given input array.
          */
-        post: operations['createUsersWithListInput'];
+        post: operations["createUsersWithListInput"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    '/user/login': {
+    "/user/login": {
         parameters: {
             query?: never;
             header?: never;
@@ -231,7 +231,7 @@ export interface paths {
          * Logs user into the system.
          * @description Log into the system.
          */
-        get: operations['loginUser'];
+        get: operations["loginUser"];
         put?: never;
         post?: never;
         delete?: never;
@@ -240,7 +240,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    '/user/logout': {
+    "/user/logout": {
         parameters: {
             query?: never;
             header?: never;
@@ -251,7 +251,7 @@ export interface paths {
          * Logs out current logged in user session.
          * @description Log user out of the system.
          */
-        get: operations['logoutUser'];
+        get: operations["logoutUser"];
         put?: never;
         post?: never;
         delete?: never;
@@ -260,7 +260,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    '/user/{username}': {
+    "/user/{username}": {
         parameters: {
             query?: never;
             header?: never;
@@ -271,18 +271,18 @@ export interface paths {
          * Get user by user name.
          * @description Get user detail based on username.
          */
-        get: operations['getUserByName'];
+        get: operations["getUserByName"];
         /**
          * Update user resource.
          * @description This can only be done by the logged in user.
          */
-        put: operations['updateUser'];
+        put: operations["updateUser"];
         post?: never;
         /**
          * Delete user resource.
          * @description This can only be done by the logged in user.
          */
-        delete: operations['deleteUser'];
+        delete: operations["deleteUser"];
         options?: never;
         head?: never;
         patch?: never;
@@ -315,7 +315,7 @@ export interface components {
              * @example approved
              * @enum {string}
              */
-            status?: 'placed' | 'approved' | 'delivered';
+            status?: "placed" | "approved" | "delivered";
             complete?: boolean;
         };
         Category: {
@@ -365,14 +365,14 @@ export interface components {
             id?: number;
             /** @example doggie */
             name: string;
-            category?: components['schemas']['Category'];
+            category?: components["schemas"]["Category"];
             photoUrls: string[];
-            tags?: components['schemas']['Tag'][];
+            tags?: components["schemas"]["Tag"][];
             /**
              * @description pet status in the store
              * @enum {string}
              */
-            status?: 'available' | 'pending' | 'sold';
+            status?: "available" | "pending" | "sold";
         };
         ApiResponse: {
             /** Format: int32 */
@@ -387,14 +387,14 @@ export interface components {
         /** @description Pet object that needs to be added to the store */
         Pet: {
             content: {
-                'application/json': components['schemas']['Pet'];
-                'application/xml': components['schemas']['Pet'];
+                "application/json": components["schemas"]["Pet"];
+                "application/xml": components["schemas"]["Pet"];
             };
         };
         /** @description List of user object */
         UserArray: {
             content: {
-                'application/json': components['schemas']['User'][];
+                "application/json": components["schemas"]["User"][];
             };
         };
     };
@@ -413,9 +413,9 @@ export interface operations {
         /** @description Update an existent pet in the store */
         requestBody: {
             content: {
-                'application/json': components['schemas']['Pet'];
-                'application/xml': components['schemas']['Pet'];
-                'application/x-www-form-urlencoded': components['schemas']['Pet'];
+                "application/json": components["schemas"]["Pet"];
+                "application/xml": components["schemas"]["Pet"];
+                "application/x-www-form-urlencoded": components["schemas"]["Pet"];
             };
         };
         responses: {
@@ -425,8 +425,8 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': components['schemas']['Pet'];
-                    'application/xml': components['schemas']['Pet'];
+                    "application/json": components["schemas"]["Pet"];
+                    "application/xml": components["schemas"]["Pet"];
                 };
             };
             /** @description Invalid ID supplied */
@@ -469,9 +469,9 @@ export interface operations {
         /** @description Create a new pet in the store */
         requestBody: {
             content: {
-                'application/json': components['schemas']['Pet'];
-                'application/xml': components['schemas']['Pet'];
-                'application/x-www-form-urlencoded': components['schemas']['Pet'];
+                "application/json": components["schemas"]["Pet"];
+                "application/xml": components["schemas"]["Pet"];
+                "application/x-www-form-urlencoded": components["schemas"]["Pet"];
             };
         };
         responses: {
@@ -481,8 +481,8 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': components['schemas']['Pet'];
-                    'application/xml': components['schemas']['Pet'];
+                    "application/json": components["schemas"]["Pet"];
+                    "application/xml": components["schemas"]["Pet"];
                 };
             };
             /** @description Invalid input */
@@ -512,7 +512,7 @@ export interface operations {
         parameters: {
             query: {
                 /** @description Status values that need to be considered for filter */
-                status: 'available' | 'pending' | 'sold';
+                status: "available" | "pending" | "sold";
             };
             header?: never;
             path?: never;
@@ -526,8 +526,8 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': components['schemas']['Pet'][];
-                    'application/xml': components['schemas']['Pet'][];
+                    "application/json": components["schemas"]["Pet"][];
+                    "application/xml": components["schemas"]["Pet"][];
                 };
             };
             /** @description Invalid status value */
@@ -564,8 +564,8 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': components['schemas']['Pet'][];
-                    'application/xml': components['schemas']['Pet'][];
+                    "application/json": components["schemas"]["Pet"][];
+                    "application/xml": components["schemas"]["Pet"][];
                 };
             };
             /** @description Invalid tag value */
@@ -602,8 +602,8 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': components['schemas']['Pet'];
-                    'application/xml': components['schemas']['Pet'];
+                    "application/json": components["schemas"]["Pet"];
+                    "application/xml": components["schemas"]["Pet"];
                 };
             };
             /** @description Invalid ID supplied */
@@ -652,8 +652,8 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': components['schemas']['Pet'];
-                    'application/xml': components['schemas']['Pet'];
+                    "application/json": components["schemas"]["Pet"];
+                    "application/xml": components["schemas"]["Pet"];
                 };
             };
             /** @description Invalid input */
@@ -724,7 +724,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                'application/octet-stream': string;
+                "application/octet-stream": string;
             };
         };
         responses: {
@@ -734,7 +734,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': components['schemas']['ApiResponse'];
+                    "application/json": components["schemas"]["ApiResponse"];
                 };
             };
             /** @description No file uploaded */
@@ -775,7 +775,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': {
+                    "application/json": {
                         [key: string]: number;
                     };
                 };
@@ -798,9 +798,9 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                'application/json': components['schemas']['Order'];
-                'application/xml': components['schemas']['Order'];
-                'application/x-www-form-urlencoded': components['schemas']['Order'];
+                "application/json": components["schemas"]["Order"];
+                "application/xml": components["schemas"]["Order"];
+                "application/x-www-form-urlencoded": components["schemas"]["Order"];
             };
         };
         responses: {
@@ -810,7 +810,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': components['schemas']['Order'];
+                    "application/json": components["schemas"]["Order"];
                 };
             };
             /** @description Invalid input */
@@ -854,8 +854,8 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': components['schemas']['Order'];
-                    'application/xml': components['schemas']['Order'];
+                    "application/json": components["schemas"]["Order"];
+                    "application/xml": components["schemas"]["Order"];
                 };
             };
             /** @description Invalid ID supplied */
@@ -933,9 +933,9 @@ export interface operations {
         /** @description Created user object */
         requestBody?: {
             content: {
-                'application/json': components['schemas']['User'];
-                'application/xml': components['schemas']['User'];
-                'application/x-www-form-urlencoded': components['schemas']['User'];
+                "application/json": components["schemas"]["User"];
+                "application/xml": components["schemas"]["User"];
+                "application/x-www-form-urlencoded": components["schemas"]["User"];
             };
         };
         responses: {
@@ -945,8 +945,8 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': components['schemas']['User'];
-                    'application/xml': components['schemas']['User'];
+                    "application/json": components["schemas"]["User"];
+                    "application/xml": components["schemas"]["User"];
                 };
             };
             /** @description Unexpected error */
@@ -967,7 +967,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                'application/json': components['schemas']['User'][];
+                "application/json": components["schemas"]["User"][];
             };
         };
         responses: {
@@ -977,8 +977,8 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': components['schemas']['User'];
-                    'application/xml': components['schemas']['User'];
+                    "application/json": components["schemas"]["User"];
+                    "application/xml": components["schemas"]["User"];
                 };
             };
             /** @description Unexpected error */
@@ -1008,14 +1008,14 @@ export interface operations {
             200: {
                 headers: {
                     /** @description calls per hour allowed by the user */
-                    'X-Rate-Limit'?: number;
+                    "X-Rate-Limit"?: number;
                     /** @description date in UTC when token expires */
-                    'X-Expires-After'?: string;
+                    "X-Expires-After"?: string;
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/xml': string;
-                    'application/json': string;
+                    "application/xml": string;
+                    "application/json": string;
                 };
             };
             /** @description Invalid username/password supplied */
@@ -1077,8 +1077,8 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': components['schemas']['User'];
-                    'application/xml': components['schemas']['User'];
+                    "application/json": components["schemas"]["User"];
+                    "application/xml": components["schemas"]["User"];
                 };
             };
             /** @description Invalid username supplied */
@@ -1117,9 +1117,9 @@ export interface operations {
         /** @description Update an existent user in the store */
         requestBody?: {
             content: {
-                'application/json': components['schemas']['User'];
-                'application/xml': components['schemas']['User'];
-                'application/x-www-form-urlencoded': components['schemas']['User'];
+                "application/json": components["schemas"]["User"];
+                "application/xml": components["schemas"]["User"];
+                "application/x-www-form-urlencoded": components["schemas"]["User"];
             };
         };
         responses: {

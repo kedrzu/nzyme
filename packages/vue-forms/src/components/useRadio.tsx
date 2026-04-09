@@ -54,7 +54,6 @@ export function useRadio<T extends Primitive = Primitive>(props: RadioProps<T>) 
         return (
             <button
                 aria-checked={selected.value}
-                aria-readonly={readonly.value}
                 aria-required={required.value}
                 disabled={disabled.value}
                 name={props.name}

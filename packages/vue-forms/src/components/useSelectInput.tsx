@@ -31,8 +31,7 @@ function setupSelectInput() {
     const SelectInput: FunctionalComponent = (_, ctx) => {
         return (
             <select
-                aria-label={props.label}
-                aria-readonly={props.readonly}
+                aria-label={props.label || props.placeholder}
                 aria-required={props.required}
                 autocomplete={props.autocomplete}
                 disabled={props.disabled}

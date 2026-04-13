@@ -7,6 +7,7 @@ export { LazyHydrate } from './components/LazyHydrate.js';
 //export { default as Reveal } from './components/Reveal.vue';
 export { Reveal } from './components/Reveal.js';
 export * from './Format.js';
+export * from './modal/createModalMock.js';
 export * from './modal/ModalContext.js';
 export * from './modal/ModalHost.js';
 export * from './modal/ModalService.js';

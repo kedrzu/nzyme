@@ -30,7 +30,6 @@ function setupCheckbox() {
         return (
             <button
                 aria-checked={!!field.value}
-                aria-readonly={props.readonly}
                 aria-required={props.required}
                 disabled={props.disabled}
                 name={props.name}

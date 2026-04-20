@@ -180,13 +180,13 @@ test('reset() clears state so next execute starts a fresh handler invocation', a
     expect(executionCount).toBe(2);
 
     // Resolving the stale handler must not clobber the new state.
-    resolvers[0]('stale');
+    resolvers[0]!('stale');
     await promise1;
     expect(runner.running).toBe(true);
     expect(runner.promise).toBe(promise2);
 
     // Resolve the new handler and confirm normal state-clearing still works.
-    resolvers[1]('fresh');
+    resolvers[1]!('fresh');
     const result = await promise2;
     expect(result).toBe('fresh');
     expect(runner.running).toBe(false);

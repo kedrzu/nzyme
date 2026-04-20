@@ -18,6 +18,14 @@ export interface SingleRunnerState<TReturn> {
      * Execute the handler
      */
     execute: () => Promise<TReturn>;
+    /**
+     * Abandon the current in-flight execution from the runner's point of view
+     * so the next `execute()` call starts a fresh handler invocation instead of
+     * deduplicating into the stale promise. The underlying handler keeps running
+     * to completion — callers that need to halt ongoing work must implement
+     * their own cancellation (e.g. a generation counter checked inside the handler).
+     */
+    reset: () => void;
 }
 
 /**
@@ -48,6 +56,7 @@ export function createSingleRunner<TReturn>(options: CreateSingleRunnerOptions<T
         running: false,
         error: undefined,
         execute,
+        reset,
     };
 
     if (initialState) {
@@ -65,7 +74,11 @@ export function createSingleRunner<TReturn>(options: CreateSingleRunnerOptions<T
         }
 
         // Create new promise for execution
-        const promise = (async () => {
+        const promise = runHandler();
+        state.promise = promise;
+        return promise;
+
+        async function runHandler() {
             state.running = true;
             state.error = undefined;
 
@@ -75,12 +88,20 @@ export function createSingleRunner<TReturn>(options: CreateSingleRunnerOptions<T
                 state.error = err;
                 throw err;
             } finally {
-                state.running = false;
-                state.promise = undefined;
+                // The finally clears state only if this execution is still the
+                // tracked one — reset() swaps the promise, so a stale execution
+                // resolving after reset() must not clobber the new state.
+                if (state.promise === promise) {
+                    state.running = false;
+                    state.promise = undefined;
+                }
             }
-        })();
+        }
+    }
 
-        state.promise = promise;
-        return promise;
+    function reset() {
+        state.promise = undefined;
+        state.running = false;
+        state.error = undefined;
     }
 }

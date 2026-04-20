@@ -194,8 +194,8 @@ test('reset() clears state so next execute starts a fresh handler invocation', a
 });
 
 test('reset() clears any captured error', async () => {
-    const handler = async () => {
-        throw new Error('boom');
+    const handler = () => {
+        return Promise.reject(new Error('boom'));
     };
 
     const runner = createSingleRunner({ handler });

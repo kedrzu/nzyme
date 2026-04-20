@@ -153,7 +153,7 @@ test('get promotes entries with undefined values', () => {
 });
 
 test('evicts oldest entry when oldest key is undefined', () => {
-    const lru = createLruCache<undefined | string, number>({ maxSize: 2 });
+    const lru = createLruCache<string | undefined, number>({ maxSize: 2 });
 
     lru.set(undefined, 1);
     lru.set('b', 2);

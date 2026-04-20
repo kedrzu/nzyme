@@ -1,20 +1,8 @@
 import { createContainer } from '@nzyme/ioc/Container.js';
 import type { Container } from '@nzyme/ioc/Container.js';
-import type { LoggerObject } from '@nzyme/logging/Logger.js';
-import type { LoggerLevel } from '@nzyme/logging/LoggerLevel.js';
-import { consoleLog, LoggerTransport } from '@nzyme/logging/LoggerTransport.js';
-
-/** A log entry captured during test execution. */
-export interface CapturedLog {
-    /** Name of the logger that produced this entry. */
-    readonly logger: string | undefined;
-    /** Severity level of the log entry. */
-    readonly level: LoggerLevel;
-    /** Log message text. */
-    readonly message: string;
-    /** Optional structured data attached to the log entry. */
-    readonly data?: LoggerObject | null;
-}
+import type { CapturedLog } from '@nzyme/logging/createTestLoggerTransport.js';
+import { createTestLoggerTransport } from '@nzyme/logging/createTestLoggerTransport.js';
+import { LoggerTransport } from '@nzyme/logging/LoggerTransport.js';
 
 /** Result of creating a test container, providing the container and captured logs. */
 export interface TestContainerResult {
@@ -42,18 +30,9 @@ export interface TestContainerResult {
  * ```
  */
 export function createTestContainer(): TestContainerResult {
-    const enabled = process.env.LOGGING === 'true';
-
     const container = createContainer();
-    const logs: CapturedLog[] = [];
+    const { transport, logs } = createTestLoggerTransport();
 
-    const transport: LoggerTransport = (logger, level, message, obj) => {
-        logs.push({ logger, level, message, data: obj });
-
-        if (enabled) {
-            consoleLog(logger, level, message, obj);
-        }
-    };
     container.set(LoggerTransport, transport);
 
     return { container, logs };

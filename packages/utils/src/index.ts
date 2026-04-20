@@ -42,6 +42,7 @@ export * from './createCache.js';
 export * from './createEventEmitter.js';
 export * from './createExponentialBackoff.js';
 export * from './createGetter.js';
+export * from './createLruCache.js';
 export * from './createMemo.js';
 export * from './createNamedFunction.js';
 export * from './createParalellRunner.js';

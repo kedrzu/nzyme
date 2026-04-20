@@ -64,12 +64,13 @@ export function createLruCache<K, V>(options: CreateLruCacheOptions<K, V>): LruC
     };
 
     function get(key: K): V | undefined {
-        const value = cache.get(key);
-        if (value !== undefined) {
-            // Move to most recent by re-inserting
-            cache.delete(key);
-            cache.set(key, value);
+        if (!cache.has(key)) {
+            return undefined;
         }
+        const value = cache.get(key);
+        // Move to most recent by re-inserting
+        cache.delete(key);
+        cache.set(key, value as V);
         return value;
     }
 
@@ -78,10 +79,11 @@ export function createLruCache<K, V>(options: CreateLruCacheOptions<K, V>): LruC
         cache.delete(key);
 
         if (cache.size >= maxSize) {
-            // Evict the oldest (first) entry
-            const oldest = cache.keys().next().value;
-            if (oldest !== undefined) {
+            // Evict the oldest (first) entry — iterate keys() to handle
+            // cases where `undefined` itself is a valid key.
+            for (const oldest of cache.keys()) {
                 cache.delete(oldest);
+                break;
             }
         }
 

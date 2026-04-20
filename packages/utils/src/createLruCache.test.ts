@@ -131,3 +131,36 @@ test('maxSize of 1 keeps only the latest entry', () => {
     expect(lru.get('b')).toBe(2);
     expect(lru.size).toBe(1);
 });
+
+test('get promotes entries with undefined values', () => {
+    const lru = createLruCache<string, number | undefined>({ maxSize: 3 });
+
+    lru.set('a', undefined);
+    lru.set('b', 2);
+    lru.set('c', 3);
+
+    // Access 'a' to make it most recent — even though its value is undefined
+    lru.get('a');
+
+    // 'b' should now be the oldest and get evicted when we add 'd'
+    lru.set('d', 4);
+
+    expect(lru.has('a')).toBe(true);
+    expect(lru.has('b')).toBe(false);
+    expect(lru.has('c')).toBe(true);
+    expect(lru.has('d')).toBe(true);
+    expect(lru.size).toBe(3);
+});
+
+test('evicts oldest entry when oldest key is undefined', () => {
+    const lru = createLruCache<undefined | string, number>({ maxSize: 2 });
+
+    lru.set(undefined, 1);
+    lru.set('b', 2);
+    lru.set('c', 3); // should evict undefined key
+
+    expect(lru.has(undefined)).toBe(false);
+    expect(lru.has('b')).toBe(true);
+    expect(lru.has('c')).toBe(true);
+    expect(lru.size).toBe(2);
+});

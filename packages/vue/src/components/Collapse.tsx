@@ -1,8 +1,7 @@
-import { defineComponent, getCurrentInstance, h, Transition, withDirectives } from 'vue';
-import type { PropType } from 'vue';
-
 import { isBrowser } from '@nzyme/dom-utils/isBrowser.js';
 import { vShow } from '@nzyme/vue-utils/directives/vShow.js';
+import { defineComponent, getCurrentInstance, h, Transition, withDirectives } from 'vue';
+import type { PropType } from 'vue';
 
 import css from './Collapse.module.scss';
 import { LazyHydrate } from './LazyHydrate.js';
@@ -10,9 +9,7 @@ import { LazyHydrate } from './LazyHydrate.js';
 // Used to easily debug complex transition problems.
 const DEBUG = false;
 
-/**
- *
- */
+/** Animated collapse/expand component with optional lazy rendering and fade transitions. */
 export const Collapse = defineComponent({
     name: 'Collapse',
     props: {

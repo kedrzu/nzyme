@@ -1,9 +1,8 @@
 import { defineNuxtModule } from 'nuxt/kit';
+import type { NuxtModule } from 'nuxt/schema';
 
-/**
- *
- */
-export function simplifyAliasesModule() {
+/** Creates a Nuxt module that removes unnecessary path aliases, keeping only the @/ alias. */
+export function simplifyAliasesModule(): NuxtModule {
     return defineNuxtModule({
         setup(_opts, nuxt) {
             // We only use @/ alias, remove all others.

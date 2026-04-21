@@ -2,7 +2,6 @@
 
 import { loadEnvVariables } from '@nzyme/project-utils/loadEnvVariables.js';
 
-import { BuildCommand } from './commands/BuildCommand.js';
 import { DepcheckCommand } from './commands/DepcheckCommand.js';
 import { LocaliseCommand } from './commands/LocaliseCommand.js';
 import { MonorepoCommand } from './commands/MonorepoCommand.js';
@@ -17,5 +16,5 @@ initialize();
 // Execute the CLI program
 await execute({
     name: 'nzyme',
-    commands: [BuildCommand, MonorepoCommand, DepcheckCommand, LocaliseCommand],
+    commands: [MonorepoCommand, DepcheckCommand, LocaliseCommand],
 });

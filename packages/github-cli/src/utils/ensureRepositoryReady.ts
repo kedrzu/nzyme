@@ -7,6 +7,7 @@ import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
+import { assertNoConflicts } from './assertNoConflicts.js';
 import { checkUnpushedCommits } from './checkUnpushedCommits.js';
 import { createDraftPr } from './createDraftPr.js';
 import type { GithubClient } from './createGithubClient.js';
@@ -49,7 +50,7 @@ export interface EnsureRepositoryReadyParams {
     git?: SimpleGit;
 
     /**
-     * Optional repository display name (for logging, e.g., "submodule nzyme").
+     * Optional repository display name (for logging, e.g., "nzyme").
      */
     repoDisplayName?: string;
 
@@ -103,39 +104,35 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
         promptForPrTitle = false,
     } = params;
 
+    const displayName = chalk.magenta(repoDisplayName);
+
     // Step 1: Check for uncommitted changes and unpushed commits
-    logger.info(`🔍 Checking ${repoDisplayName} status...`);
     const [unpushedCommits, statusInfo] = await Promise.all([checkUnpushedCommits(git), getGitStatusInfo(git)]);
 
     let newCommitCreated = false;
 
-    // Step 2: Show unpushed commits if any
+    // Step 2: Check for conflicts before committing
+    if (statusInfo.changes.conflicted > 0) {
+        await assertNoConflicts({ git, repoDisplayName, operation: 'merge', logger });
+    }
+
+    // Step 3: Show unpushed commits if any
     if (unpushedCommits.hasUnpushedCommits) {
         logger.info(
-            `⚠️  You have ${chalk.yellow(unpushedCommits.commitsCount.toString())} unpushed commit${
+            `   ${displayName}: ${chalk.yellow(unpushedCommits.commitsCount.toString())} unpushed commit${
                 unpushedCommits.commitsCount === 1 ? '' : 's'
-            }:`,
+            }`,
         );
-
-        // Show the commit messages
-        for (const message of unpushedCommits.commitMessages.slice(0, 5)) {
-            logger.info(`   • ${chalk.gray(message)}`);
-        }
-
-        if (unpushedCommits.commitMessages.length > 5) {
-            logger.info(`   ... and ${unpushedCommits.commitMessages.length - 5} more`);
-        }
     }
 
     // Step 3: Handle uncommitted changes
     if (statusInfo.hasUncommittedChanges) {
-        const hasStagedFiles = statusInfo.changes.staged > 0;
         const hasUnstagedFiles = statusInfo.totalChanges > statusInfo.changes.staged;
 
         logger.info(
-            `⚠️  You have ${chalk.yellow(statusInfo.totalChanges.toString())} uncommitted change${
+            `   ${displayName}: ${chalk.yellow(statusInfo.totalChanges.toString())} uncommitted change${
                 statusInfo.totalChanges === 1 ? '' : 's'
-            }: ${chalk.yellow(statusInfo.changeDescription)}`,
+            } (${chalk.yellow(statusInfo.changeDescription)})`,
         );
 
         let shouldCommit: 'no' | 'yes' = 'yes';
@@ -160,17 +157,11 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
                 ],
             });
             shouldCommit = response.shouldCommit;
-        } else {
-            logger.info(`✅ Auto-committing changes (--yes flag)`);
         }
 
         if (shouldCommit === 'yes') {
-            // Add unstaged changes to staging if there are any
             if (hasUnstagedFiles) {
-                logger.info(`📦 Adding all changes to staging...`);
                 await git.add('.');
-            } else if (hasStagedFiles) {
-                logger.info(`📦 Using already staged files...`);
             }
 
             // Prompt for commit message if not in auto-yes mode
@@ -190,12 +181,11 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
                 commitMessage = response.commitMessage;
             }
 
-            // Commit the changes
-            logger.info(`💾 Committing changes with message: "${chalk.cyan(commitMessage)}"`);
+            logger.info(`   ${displayName}: committing "${chalk.cyan(commitMessage)}"`);
             await git.commit(commitMessage.trim());
             newCommitCreated = true;
         } else {
-            logger.info(`⏭️  Skipping commit - continuing with PR check`);
+            logger.info(`   ${displayName}: skipping commit`);
         }
     }
 
@@ -203,31 +193,25 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
     if (unpushedCommits.hasUnpushedCommits || newCommitCreated) {
         const totalCommitsToPush = unpushedCommits.commitsCount + (newCommitCreated ? 1 : 0);
         logger.info(
-            `🚀 Pushing ${chalk.yellow(totalCommitsToPush.toString())} commit${totalCommitsToPush === 1 ? '' : 's'}...`,
+            `   ${displayName}: pushing ${chalk.yellow(totalCommitsToPush.toString())} commit${totalCommitsToPush === 1 ? '' : 's'}...`,
         );
 
-        // Push (handles case where no upstream is configured)
         await pushWithUpstream(git);
 
-        logger.info(`✅ Successfully pushed all commits`);
-    } else if (!statusInfo.hasUncommittedChanges) {
-        logger.info(`✅ Repository is clean - no commits to push or changes to commit`);
+        logger.info(`   ${chalk.green('✓')} Pushed ${displayName}`);
     }
 
     // Step 5: Ensure PR exists (or create it)
-    logger.info(`🔍 Checking if PR exists...`);
     const existingPr = await findMatchingPr(githubClient, githubConfig, issueId);
 
     if (existingPr) {
-        logger.info(`✅ PR already exists: ${chalk.blue(existingPr.title)} (#${existingPr.number})`);
-        logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(existingPr.html_url))}`);
+        logger.info(
+            `   ${displayName}: PR exists - ${chalk.blue(existingPr.title)} ${chalk.gray(`#${existingPr.number}`)}`,
+        );
         return;
     }
 
     // No PR exists, create one
-    logger.info(`📝 Creating draft PR...`);
-
-    // Get current branch (we may not have it yet if no commits were pushed)
     const currentStatus = await git.status();
     const currentBranch = currentStatus.current;
     if (!currentBranch) {
@@ -251,7 +235,6 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
                 return true;
             },
         });
-        // Add task ID suffix to the user-provided title
         prTitle = `${response.prTitle.trim()} [${issueId}]`;
     }
 
@@ -265,14 +248,11 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
             base: baseBranch,
         });
 
-        logger.info(`✅ Created draft PR: ${chalk.blue(pr.title)} ${chalk.gray(`(#${pr.number})`)}`);
-        logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
+        logger.info(`   ${chalk.green('✓')} Created draft PR: ${chalk.blue(pr.title)} ${chalk.gray(`#${pr.number}`)}`);
+        logger.info(`   ${chalk.blueBright(chalk.underline(pr.html_url))}`);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        logger.error(`❌ Failed to create PR: ${errorMessage}`);
-        logger.error(
-            `📋 Details: owner=${chalk.yellow(githubConfig.owner)}, repo=${chalk.yellow(githubConfig.repo)}, branch=${chalk.cyan(currentBranch)}, base=${chalk.cyan(baseBranch)}`,
-        );
+        logger.error(`   ${displayName}: failed to create PR: ${errorMessage}`);
         throw new UsageError(`Failed to create PR for ${repoDisplayName}: ${errorMessage}`);
     }
 }

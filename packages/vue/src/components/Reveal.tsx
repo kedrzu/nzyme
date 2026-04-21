@@ -1,3 +1,5 @@
+import { getOuterHeight } from '@nzyme/dom-utils/getOuterHeight.js';
+import { useElement } from '@nzyme/vue-utils/useElement.js';
 import {
     createElementBlock,
     defineComponent,
@@ -8,10 +10,7 @@ import {
     Transition,
     withCtx,
 } from 'vue';
-import type { ComponentPublicInstance } from 'vue';
-
-import { getOuterHeight } from '@nzyme/dom-utils/getOuterHeight.js';
-import { useElement } from '@nzyme/vue-utils/useElement.js';
+import type { ComponentPublicInstance, CSSProperties } from 'vue';
 
 import css from './Reveal.module.scss';
 
@@ -22,6 +21,9 @@ const fallbackKey = Symbol('fallback');
  */
 export const Reveal = defineComponent({
     name: 'Reveal',
+    props: {
+        duration: { type: Number },
+    },
     emits: {
         beforeEnter: (vm: ComponentPublicInstance) => vm,
         enter: (vm: ComponentPublicInstance) => vm,
@@ -30,7 +32,7 @@ export const Reveal = defineComponent({
         leave: (vm: ComponentPublicInstance) => vm,
         afterLeave: (vm: ComponentPublicInstance) => vm,
     },
-    setup(_props, ctx) {
+    setup(props, ctx) {
         const element = useElement<HTMLElement>();
         const vm = getCurrentInstance()!.proxy!;
 
@@ -46,7 +48,10 @@ export const Reveal = defineComponent({
             ]);
 
             return (
-                <div class={css.reveal}>
+                <div
+                    class={css.reveal}
+                    style={{ '--reveal-duration': props.duration != null ? `${props.duration}ms` : undefined } as CSSProperties}
+                >
                     <div class={css.reveal_inner}>
                         <Transition
                             enterActiveClass={css.enterActive}

@@ -1,17 +1,14 @@
+import type { Primitive } from '@nzyme/types/Common.js';
+import { injectContext } from '@nzyme/vue-utils/context.js';
+import { defineProps } from '@nzyme/vue-utils/defineProps.js';
+import { useEmit } from '@nzyme/vue-utils/useEmit.js';
 import { computed, h, reactive } from 'vue';
 import type { ExtractPropTypes, FunctionalComponent, PropType } from 'vue';
-
-import type { Primitive } from '@nzyme/types/Common.js';
-import { defineProps } from '@nzyme/vue-utils/defineProps.js';
-import { injectContext } from '@nzyme/vue-utils/context.js';
-import { useEmit } from '@nzyme/vue-utils/useEmit.js';
 
 import type { FormFieldValue } from './defineFormField.js';
 import { RadioGroupContext } from './useRadioGroup.js';
 
-/**
- *
- */
+/** Extracted prop types for a radio button component. */
 export type RadioProps<T extends Primitive = Primitive> = ExtractPropTypes<ReturnType<typeof getRadioProps<T>>>;
 
 /**
@@ -37,9 +34,7 @@ export function getRadioEmits<T extends Primitive = Primitive>() {
     };
 }
 
-/**
- *
- */
+/** Radio button composable that integrates with a RadioGroup context for selection state. */
 export function useRadio<T extends Primitive = Primitive>(props: RadioProps<T>) {
     const ctx = injectContext(RadioGroupContext);
     const emit = useEmit(getRadioEmits<T>());
@@ -59,7 +54,6 @@ export function useRadio<T extends Primitive = Primitive>(props: RadioProps<T>) 
         return (
             <button
                 aria-checked={selected.value}
-                aria-readonly={readonly.value}
                 aria-required={required.value}
                 disabled={disabled.value}
                 name={props.name}

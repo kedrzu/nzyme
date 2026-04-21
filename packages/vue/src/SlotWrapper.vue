@@ -1,8 +1,7 @@
 <script lang="ts" setup generic="T">
+import { isVNodeEmpty } from '@nzyme/vue-utils/isVNodeEmpty.js';
 import type { VNodeChild } from 'vue';
 import { h } from 'vue';
-
-import { isVNodeEmpty } from '@nzyme/vue-utils/isVNodeEmpty.js';
 
 interface SlotWrapperProps {
   slot?: (slotProps: T) => VNodeChild | undefined;
@@ -17,10 +16,7 @@ const render = () => {
   const nodes = props.slot?.(props.props as T);
   const tag = props.tag ?? 'div';
 
-  console.log(nodes);
-
   const isEmpty = isVNodeEmpty(nodes);
-  console.log(isEmpty);
   if (isEmpty) {
     return null;
   }

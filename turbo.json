@@ -2,15 +2,10 @@
     "$schema": "https://turbo.build/schema.json",
     "extends": ["//"],
     "tasks": {
-        "build:esm": {
+        "build": {
             "cache": true,
             "outputs": ["dist/**"],
-            "dependsOn": ["^build:esm"]
-        },
-        "build:cjs": {
-            "cache": true,
-            "outputs": ["dist/**"],
-            "dependsOn": ["^build:cjs"]
+            "dependsOn": ["^build"]
         },
         "dev": {
             "cache": false,

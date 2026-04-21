@@ -1,9 +1,8 @@
-import { h } from 'vue';
-import type { FunctionalComponent } from 'vue';
-
 import { assignProps } from '@nzyme/utils/assignProps.js';
 import { defineProps } from '@nzyme/vue-utils/defineProps.js';
 import { useProps } from '@nzyme/vue-utils/useProps.js';
+import { h } from 'vue';
+import type { FunctionalComponent } from 'vue';
 
 import { defineFormField } from './defineFormField.js';
 
@@ -14,9 +13,7 @@ const CHECKBOX_PROPS = defineProps({
     name: String,
 });
 
-/**
- *
- */
+/** Checkbox composable providing a toggleable boolean form field and its render component. */
 export const useCheckbox = assignProps(setupCheckbox, {
     props: CHECKBOX_PROPS,
     emits: CHECKBOX_FIELD.emits,
@@ -33,7 +30,6 @@ function setupCheckbox() {
         return (
             <button
                 aria-checked={!!field.value}
-                aria-readonly={props.readonly}
                 aria-required={props.required}
                 disabled={props.disabled}
                 name={props.name}

@@ -28,23 +28,23 @@
         "dist"
     ],
     "scripts": {
-        "build:esm": "tsc --build ./tsconfig.esm.json",
-        "typecheck": "tsc --noEmit --project tsconfig.check.json",
-        "lint": "prettier ./src --write && bun typecheck && eslint . --fix --cache"
+        "build": "tsc --build tsconfig.esm.json",
+        "lint": "eslint . --fix --cache",
+        "prettify": "prettier ./src --write > /dev/null"
     },
     "dependencies": {
         "@types/fs-extra": "11.0.4",
         "@types/mime-types": "3.0.1",
-        "fs-extra": "11.3.3",
+        "fs-extra": "11.3.4",
         "mime-types": "3.0.2",
-        "nuxt": "4.2.2",
+        "nuxt": "4.4.2",
         "vite": "7.3.1"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",
         "@nzyme/tsconfig": "0.14.0",
-        "eslint": "9.39.2",
+        "eslint": "10.1.0",
         "prettier": "3.8.1",
-        "typescript": "5.9.3"
+        "typescript": "6.0.2"
     }
 }

@@ -1,19 +1,16 @@
+import { assignProps } from '@nzyme/utils/assignProps.js';
+import { defineProps } from '@nzyme/vue-utils/defineProps.js';
+import { makeRef } from '@nzyme/vue-utils/reactivity/makeRef.js';
+import { useProps } from '@nzyme/vue-utils/useProps.js';
 import type { FactoryArg } from 'imask';
 import { computed, h } from 'vue';
 import type { InputHTMLAttributes, MaybeRefOrGetter } from 'vue';
 import { IMaskComponent } from 'vue-imask';
 
-import { assignProps } from '@nzyme/utils/assignProps.js';
-import { defineProps } from '@nzyme/vue-utils/defineProps.js';
-import { makeRef } from '@nzyme/vue-utils/reactivity/makeRef.js';
-import { useProps } from '@nzyme/vue-utils/useProps.js';
-
 import { defineFormField } from './defineFormField.js';
 import type { FormFieldValue } from './defineFormField.js';
 
-/**
- *
- */
+/** Configuration for the IMask instance used by a masked input. */
 export interface MaskedInputMaskConfig {
     /** The mask configuration for IMask */
     mask: FactoryArg;
@@ -27,9 +24,7 @@ export interface MaskedInputMaskConfig {
     placeholderChar?: string;
 }
 
-/**
- *
- */
+/** Options for setting up a masked input with value conversion functions. */
 export interface MaskedInputOptions<T = unknown> {
     /** Mask configuration */
     maskConfig: MaybeRefOrGetter<MaskedInputMaskConfig>;
@@ -39,14 +34,10 @@ export interface MaskedInputOptions<T = unknown> {
     toTypedValue: (modelValue: FormFieldValue<T> | null | undefined) => unknown;
 }
 
-/**
- *
- */
+/** Default string-typed masked input composable. */
 export const useMaskedInput = defineMaskedInput();
 
-/**
- *
- */
+/** Creates a typed masked input composable with IMask integration. */
 export function defineMaskedInput<T = string>() {
     const fieldDef = defineFormField<T>();
     const propsDef = defineProps({
@@ -87,9 +78,9 @@ export function defineMaskedInput<T = string>() {
                     blocks={mask.value.blocks}
                     disabled={props.disabled}
                     inputmode={mask.value.inputmode ?? 'text'}
+                    key={mask.value}
                     lazy={mask.value.lazy ?? false}
                     mask={mask.value.mask}
-                    key={mask.value}
                     onBlur={field.inputAttrs.onBlur}
                     onFocus={field.inputAttrs.onFocus}
                     onUpdate:typed={onInput}

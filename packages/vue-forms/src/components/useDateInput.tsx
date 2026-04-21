@@ -1,10 +1,9 @@
-import { h, ref } from 'vue';
-import type { ButtonHTMLAttributes, InputHTMLAttributes, SetupContext } from 'vue';
-
 import { assignProps } from '@nzyme/utils/assignProps.js';
 import { useTranslate } from '@nzyme/vue-i18n/useTranslate.js';
 import { defineProps } from '@nzyme/vue-utils/defineProps.js';
 import { useProps } from '@nzyme/vue-utils/useProps.js';
+import { h, ref } from 'vue';
+import type { ButtonHTMLAttributes, InputHTMLAttributes, SetupContext } from 'vue';
 
 import { defineFormField } from './defineFormField.js';
 import * as l from './useDateInput.loc.js';
@@ -21,9 +20,7 @@ const DATE_PROPS = defineProps({
     max: Date,
 });
 
-/**
- *
- */
+/** Date input composable with a native date picker and optional calendar button. */
 export const useDateInput = assignProps(setupDateInput, {
     props: DATE_PROPS,
     emits: DATE_FIELD.emits,
@@ -46,7 +43,7 @@ function setupDateInput() {
         showCalendar,
     };
 
-    function DateInput(attrs: InputHTMLAttributes, ctx: SetupContext) {
+    function DateInput(attrs: InputHTMLAttributes) {
         return (
             <input
                 aria-label={props.label}

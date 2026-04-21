@@ -1,7 +1,7 @@
 import type { App } from 'vue';
 
-import { injectionKey } from './injectionKey.js';
 import type { VueContainer } from './createContainer.js';
+import { injectionKey } from './injectionKey.js';
 
 /**
  * Options for the IocPlugin.

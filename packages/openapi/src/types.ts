@@ -254,10 +254,13 @@ interface FetchOptionsBase<Paths, Path extends keyof Paths, Method extends HttpM
     query?: QueryParams<ParametersOf<OperationOf<Paths, Path, Method>>>;
 }
 
-type FetchOptionsPathParams<Paths, Path extends keyof Paths, Method extends HttpMethod> =
-    ParametersOf<OperationOf<Paths, Path, Method>> extends { path: infer P }
-        ? { pathParams: P }
-        : { pathParams?: undefined };
+type FetchOptionsPathParams<Paths, Path extends keyof Paths, Method extends HttpMethod> = [
+    ParametersOf<OperationOf<Paths, Path, Method>>,
+] extends [never]
+    ? { pathParams?: undefined }
+    : ParametersOf<OperationOf<Paths, Path, Method>> extends { path: infer P }
+      ? { pathParams: P }
+      : { pathParams?: undefined };
 
 type FetchOptionsContentType<ContentType extends string> = IfNever<
     ContentType,
@@ -265,20 +268,23 @@ type FetchOptionsContentType<ContentType extends string> = IfNever<
     { contentType: ContentType }
 >;
 
-type FetchOptionsBody<Paths, Path extends keyof Paths, Method extends HttpMethod, ContentType> =
-    RequestBodyOf<OperationOf<Paths, Path, Method>> extends { content: infer C }
+type FetchOptionsBody<Paths, Path extends keyof Paths, Method extends HttpMethod, ContentType> = [ContentType] extends [
+    never,
+]
+    ? { body?: never }
+    : RequestBodyOf<OperationOf<Paths, Path, Method>> extends { content: infer C }
+      ? C extends Record<string, unknown>
+          ? ContentType extends keyof C
+              ? { body: C[ContentType] }
+              : { body?: BodyInit }
+          : { body?: BodyInit }
+      : [Exclude<RequestBodyOf<OperationOf<Paths, Path, Method>>, undefined>] extends [{ content: infer C }]
         ? C extends Record<string, unknown>
             ? ContentType extends keyof C
-                ? { body: C[ContentType] }
+                ? { body?: C[ContentType] }
                 : { body?: BodyInit }
             : { body?: BodyInit }
-        : Exclude<RequestBodyOf<OperationOf<Paths, Path, Method>>, undefined> extends { content: infer C }
-          ? C extends Record<string, unknown>
-              ? ContentType extends keyof C
-                  ? { body?: C[ContentType] }
-                  : { body?: BodyInit }
-              : { body?: BodyInit }
-          : { body?: BodyInit };
+        : { body?: BodyInit };
 
 /**
  * Merge OpenAPI header parameters with additional headers

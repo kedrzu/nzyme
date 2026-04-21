@@ -1,8 +1,7 @@
-import { beforeEach, expect, test, vi } from 'vitest';
-import { createApp, effectScope, nextTick, ref } from 'vue';
-
 import { LanguageContext } from '@nzyme/i18n/LanguageContext.js';
 import { createContainer } from '@nzyme/vue-ioc/createContainer.js';
+import { beforeEach, expect, test, vi } from 'bun:test';
+import { createApp, effectScope, nextTick, ref } from 'vue';
 
 import type { FormModel, FormValidationContext, FormValidator } from './types.js';
 import { useForm } from './useForm.js';
@@ -420,7 +419,7 @@ test('useFormField custom behavior overrides default behavior', async () => {
             validate: () => 'Error',
             behavior: ctx => {
                 // Always show errors
-                ctx.show = true;
+                ctx.show.value = true;
             },
         };
 

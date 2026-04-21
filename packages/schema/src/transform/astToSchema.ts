@@ -4,21 +4,13 @@ import * as ts from 'typescript';
  * Schema definition with metadata
  */
 export interface SchemaDefinition {
-    /**
-     *
-     */
+    /** Identifier name of the type or interface */
     name: string;
-    /**
-     *
-     */
+    /** Generated zod schema code as a string */
     schema: string;
-    /**
-     *
-     */
+    /** Human-readable description extracted from JSDoc */
     description?: string;
-    /**
-     *
-     */
+    /** Additional metadata extracted from JSDoc tags */
     meta?: Record<string, unknown>;
 }
 
@@ -80,7 +72,7 @@ function transformInterface(node: ts.InterfaceDeclaration): string {
 
     // Add .describe() if description is available
     if (meta && meta.description) {
-        return `${baseSchema}\n    .describe(${JSON.stringify(meta.description)})`;
+        return `${baseSchema}\n    .check(z.describe(${JSON.stringify(meta.description)}))`;
     }
 
     return baseSchema;
@@ -121,7 +113,7 @@ function transformPropertySignature(member: ts.PropertySignature): string | null
 
     // Add .describe() for @description tags
     if (meta && meta.description) {
-        schema = `${schema}.describe(${JSON.stringify(meta.description)})`;
+        schema = `${schema}.check(z.describe(${JSON.stringify(meta.description)}))`;
     }
 
     // Handle optional properties
@@ -220,9 +212,7 @@ function transformUnionType(node: ts.UnionTypeNode): string {
     }
 
     // Check if all members are string literals - use z.enum() instead
-    const allStringLiterals = node.types.every(
-        type => ts.isLiteralTypeNode(type) && ts.isStringLiteral(type.literal),
-    );
+    const allStringLiterals = node.types.every(type => ts.isLiteralTypeNode(type) && ts.isStringLiteral(type.literal));
 
     if (allStringLiterals) {
         const values = node.types.map(type => {

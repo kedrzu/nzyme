@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 
 import { promiseRef } from './promiseRef.js';
 
@@ -120,7 +120,13 @@ test('handles promise rejection gracefully', async () => {
     expect(ref.value).toBeUndefined();
     expect(ref.pending).not.toBeNull();
 
-    await expect(ref.promise).rejects.toThrow('test error');
+    try {
+        await ref.promise;
+        throw new Error('Expected promise to reject');
+    } catch (e) {
+        expect(e).toBeInstanceOf(Error);
+        expect((e as Error).message).toBe('test error');
+    }
 
     // Value remains undefined after rejection
     expect(ref.value).toBeUndefined();
@@ -133,7 +139,13 @@ test('handles rejected promise in update', async () => {
 
     const returnedPromise = ref.update(failedPromise);
 
-    await expect(returnedPromise).rejects.toThrow('update error');
+    try {
+        await returnedPromise;
+        throw new Error('Expected promise to reject');
+    } catch (e) {
+        expect(e).toBeInstanceOf(Error);
+        expect((e as Error).message).toBe('update error');
+    }
 
     // Value remains as initial after rejection
     expect(ref.value).toBe('initial');

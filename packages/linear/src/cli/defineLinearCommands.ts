@@ -2,21 +2,17 @@ import chalk from 'chalk';
 import enquirer from 'enquirer';
 import open from 'open';
 
-import type { CommandClass } from '@nzyme/cli/Command.js';
 import { Option, UsageError } from '@nzyme/cli';
+import type { CommandClass } from '@nzyme/cli/Command.js';
 import { Command } from '@nzyme/cli/Command.js';
-import { commitAndPushPendingChanges } from '@nzyme/github-cli/utils/commitAndPushPendingChanges.js';
+import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
 import { convertAllPrsToReady } from '@nzyme/github-cli/utils/convertAllPrsToReady.js';
 import { createGithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';
-import { fetchAndRebaseCurrentBranch } from '@nzyme/github-cli/utils/fetchAndRebaseCurrentBranch.js';
 import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
-import { handlePushPreparation } from '@nzyme/github-cli/utils/handlePushPreparation.js';
+import { pushChanges } from '@nzyme/github-cli/utils/pushChanges.js';
 import { openPrInBrowser } from '@nzyme/github-cli/utils/selectPrToOpen.js';
-import { pushSubmoduleUpdates } from '@nzyme/github-cli/utils/pushSubmoduleUpdates.js';
-import { refreshSubmodules } from '@nzyme/github-cli/utils/refreshSubmodules.js';
-import { syncBaseBranch } from '@nzyme/github-cli/utils/syncBaseBranch.js';
-import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
+import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
 
 import { createLinearClient } from '../utils/createLinearClient.js';
 import { createLinearIssue } from '../utils/createLinearIssue.js';
@@ -346,19 +342,7 @@ function defineTaskPushCommand(options: LinearCommandsOptions) {
             description: 'Push changes and handle submodules without marking PR as ready',
             details:
                 'Commits and pushes changes in both submodules and main repository. Useful when you want to push work in progress without marking the PR as ready for review.',
-            examples: [
-                ['Push current task changes', 'task push'],
-                ['Push without processing submodules', 'task push --skip-submodules'],
-                ['Push with auto-commit (skip prompts)', 'task push --yes'],
-            ],
-        });
-
-        skipSubmodules = Option.Boolean('--skip-submodules', false, {
-            description: 'Skip processing submodules',
-        });
-
-        yes = Option.Boolean('--yes,-y', false, {
-            description: 'Skip prompts and automatically commit with default message',
+            examples: [['Push current task changes', 'task push']],
         });
 
         override async run() {
@@ -375,27 +359,16 @@ function defineTaskPushCommand(options: LinearCommandsOptions) {
                 const taskId = extractTaskIdFromBranch(currentBranch);
                 this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
 
-                // Create GitHub client
-                const githubClient = createGithubClient(githubConfig);
-
-                // Check if PR exists and is in review
-                const pr = await findMatchingPr(githubClient, githubConfig, taskId);
-                const prInReview = pr ? !pr.draft : false;
-
                 // Get base branches
                 const baseBranches = await getBaseBranches(options);
                 const baseBranch = baseBranches[0] ?? 'main';
 
-                // Handle preparation (submodules and main repo)
-                await handlePushPreparation({
-                    githubClient,
+                // Push changes
+                await pushChanges({
                     githubConfig,
                     issueId: taskId,
                     logger: this.logger,
                     baseBranch,
-                    skipSubmodules: this.skipSubmodules,
-                    autoYes: this.yes,
-                    prInReview,
                 });
 
                 this.logger.info('');
@@ -414,22 +387,10 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
         static override paths = getCommandPaths(options, 'ready');
         static override usage = Command.Usage({
             category: 'Linear',
-            description: 'Convert current task from draft to ready for review',
+            description: 'Push changes and convert current task from draft to ready for review',
             details:
-                'Detects the task from the current branch and converts the associated PR from draft to ready for review',
-            examples: [
-                ['Convert current task to ready for review', 'task ready'],
-                ['Convert to ready without processing submodules', 'task ready --skip-submodules'],
-                ['Convert to ready with auto-commit (skip prompts)', 'task ready --yes'],
-            ],
-        });
-
-        skipSubmodules = Option.Boolean('--skip-submodules', false, {
-            description: 'Skip processing submodules',
-        });
-
-        yes = Option.Boolean('--yes,-y', false, {
-            description: 'Skip prompts and automatically commit with default message',
+                'Pushes all changes (syncing repos, handling submodules) and converts the associated PR from draft to ready for review',
+            examples: [['Push and convert current task to ready for review', 'task ready']],
         });
 
         override async run() {
@@ -446,40 +407,28 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                 const taskId = extractTaskIdFromBranch(currentBranch);
                 this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
 
-                // Create GitHub client
-                const githubClient = createGithubClient(githubConfig);
+                // Get base branches
+                const baseBranches = await getBaseBranches(options);
+                const baseBranch = baseBranches[0] ?? 'main';
 
-                // Find the PR for this task
-                this.logger.info('🔍 Looking for associated GitHub PR...');
-                const pr = await findMatchingPr(githubClient, githubConfig, taskId);
+                // Push all changes (same as push command)
+                const { githubClient, pr } = await pushChanges({
+                    githubConfig,
+                    issueId: taskId,
+                    logger: this.logger,
+                    baseBranch,
+                    defaultCommitMessage: 'Ready for review',
+                });
 
-                if (!pr) {
+                // Find PR for converting to ready (re-fetch if push didn't find one)
+                const readyPr = pr ?? (await findMatchingPr(githubClient, githubConfig, taskId));
+
+                if (!readyPr) {
                     throw new UsageError(
                         `No GitHub PR found for task ${chalk.bold(taskId)}. ` +
                             `Make sure you have created a PR for this task first using "task ${chalk.bold(taskId)}".`,
                     );
                 }
-
-                this.logger.info(`✅ Found PR: ${chalk.blue(pr.title)} ${chalk.gray(`(#${pr.number})`)}`);
-
-                // Check if PR is already in review
-                const prInReview = !pr.draft;
-
-                // Handle preparation (submodules and main repo)
-                const baseBranches = await getBaseBranches(options);
-                const baseBranch = baseBranches.length > 0 ? baseBranches[0]! : pr.base.ref;
-
-                await handlePushPreparation({
-                    githubClient,
-                    githubConfig,
-                    issueId: taskId,
-                    logger: this.logger,
-                    baseBranch,
-                    skipSubmodules: this.skipSubmodules,
-                    autoYes: this.yes,
-                    prInReview,
-                    defaultCommitMessage: 'Ready for review',
-                });
 
                 // Convert all PRs (main and submodules) to ready
                 await convertAllPrsToReady({
@@ -487,10 +436,9 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                     githubConfig,
                     issueId: taskId,
                     logger: this.logger,
-                    mainPrNumber: pr.number,
-                    mainPrIsDraft: pr.draft,
-                    mainPrUrl: pr.html_url,
-                    skipSubmodules: this.skipSubmodules,
+                    mainPrNumber: readyPr.number,
+                    mainPrIsDraft: readyPr.draft,
+                    mainPrUrl: readyPr.html_url,
                 });
             } catch (error: unknown) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -509,14 +457,7 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
             description: 'Refresh current task branch with latest base branch changes',
             details:
                 'Fetches the base branch, fast-forwards it, and merges it into the current task branch and all submodules. Pushes submodule changes and commits submodule reference updates.',
-            examples: [
-                ['Refresh current task with base branch', 'task refresh'],
-                ['Refresh with auto-commit (skip prompts)', 'task refresh --yes'],
-            ],
-        });
-
-        yes = Option.Boolean('--yes,-y', false, {
-            description: 'Skip prompts and automatically commit pending changes with default message',
+            examples: [['Refresh current task with base branch', 'task refresh']],
         });
 
         override async run() {
@@ -537,54 +478,22 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                     throw new UsageError('No base branches configured');
                 }
 
-                // For refresh, use the first base branch as default (backward compatibility)
                 const baseBranch = baseBranches[0]!;
                 this.logger.info(`🔄 Refreshing task ${chalk.bold(taskId)} with base branch ${chalk.cyan(baseBranch)}`);
 
-                // 1. Fetch and rebase current branch to get any remote commits
-                this.logger.info('');
-                this.logger.info(chalk.bold('📥 Syncing with remote...'));
-                await fetchAndRebaseCurrentBranch({
+                // Sync all repos: auto-commit, fetch, rebase/pull, ff base, merge base, push
+                const syncResult = await syncAllRepos({
+                    baseBranch,
                     logger: this.logger,
-                    repoDisplayName: 'main repository',
                 });
 
-                // 2. Refresh submodules (includes checking for pending changes)
                 this.logger.info('');
-                this.logger.info(chalk.bold('📦 Refreshing submodules...'));
-                const submoduleResult = await refreshSubmodules({ baseBranch, logger: this.logger, autoYes: this.yes });
-
-                // 3. Commit and push submodule reference changes immediately after refresh
-                // This must happen BEFORE syncBaseBranch to avoid reverting base branch submodule updates
-                if (submoduleResult.refreshedSubmodules.length > 0) {
-                    this.logger.info('');
-                    await pushSubmoduleUpdates({
-                        logger: this.logger,
-                        submodulePaths: submoduleResult.refreshedSubmodules,
-                    });
-                }
-
-                // 4. Check for pending changes in main repo and commit/push before merge
-                this.logger.info('');
-                this.logger.info(chalk.bold('🔄 Refreshing main repository...'));
-                await commitAndPushPendingChanges({
-                    logger: this.logger,
-                    repoDisplayName: 'main repository',
-                    autoYes: this.yes,
-                    defaultCommitMessage: 'Work in progress',
-                });
-
-                // 5. Sync with base branch
-                const result = await syncBaseBranch(baseBranch, this.logger, true);
-
-                if (result.mergePerformed) {
+                if (syncResult.baseMergePerformed) {
                     this.logger.info(
-                        `🎉 Successfully merged ${chalk.yellow(result.commitsAhead?.toString())} commit${
-                            result.commitsAhead === 1 ? '' : 's'
+                        `🎉 Successfully merged ${chalk.yellow(syncResult.baseBranchCommitsAhead.toString())} commit${
+                            syncResult.baseBranchCommitsAhead === 1 ? '' : 's'
                         } from ${chalk.cyan(baseBranch)}`,
                     );
-                } else if (result.wasBaseBranchAhead) {
-                    this.logger.info(`⏭️  Base branch changes available but not merged`);
                 } else {
                     this.logger.info(`✅ Task branch is already up to date with ${chalk.cyan(baseBranch)}`);
                 }

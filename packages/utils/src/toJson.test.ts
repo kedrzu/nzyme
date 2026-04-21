@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 
 import { toJson } from './toJson.js';
 import type { Json } from './toJson.js';
@@ -14,7 +14,7 @@ test('converts null to null', () => {
 
 test('converts undefined to null', () => {
     const result = toJson(undefined);
-    expect(result).toEqual(null);
+    expect(result as unknown).toEqual(null);
 });
 
 // ============================================================================
@@ -303,7 +303,7 @@ test('converts simple object', () => {
 
 test('converts object with null values', () => {
     const result = toJson({ a: null, b: undefined });
-    expect(result).toEqual({ a: null, b: null });
+    expect(result).toEqual({ a: null, b: null } as unknown as typeof result);
 });
 
 test('converts object with bigint property', () => {
@@ -360,7 +360,7 @@ test('converts object with Map property', () => {
 
 test('converts object with function property', () => {
     const result = toJson({ fn: () => 'test', value: 42 });
-    expect(result).toEqual({ fn: undefined, value: 42 });
+    expect(result).toEqual({ fn: undefined, value: 42 } as typeof result);
 });
 
 // ============================================================================
@@ -400,7 +400,7 @@ test('converts complex nested structure with all types', () => {
             innerDate: '2024-01-01T00:00:00.000Z',
         },
         fn: undefined,
-    });
+    } as unknown as typeof result);
 });
 
 test('converts array containing Date objects', () => {

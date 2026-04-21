@@ -1,12 +1,9 @@
-import type { MaybeRefOrGetter } from 'vue';
-
-import type { Language } from '@nzyme/i18n/Language.js';
 import type { TranslationResult } from '@nzyme/i18n-core/Translation.js';
+import type { Language } from '@nzyme/i18n/Language.js';
 import type { DataSourceDebounceOptions } from '@nzyme/vue-utils/useDataSource.js';
+import type { MaybeRefOrGetter, Ref } from 'vue';
 
-/**
- *
- */
+/** Base interface for form and field models with value, validation, and reset capabilities. */
 export interface FormBase<T = unknown> {
     /**
      * Current form value
@@ -97,9 +94,7 @@ export interface FormValidationContext {
     readonly lang: Language;
 }
 
-/**
- *
- */
+/** Runtime state of a single validator attached to a form field. */
 export interface FormValidatorState {
     /**
      * Validation error
@@ -111,31 +106,35 @@ export interface FormValidatorState {
      */
     show: boolean;
 
-    /**
-     *
-     */
+    /** Runs the validation and returns whether the field is valid. */
     readonly validate: () => boolean | Promise<boolean>;
 }
 
-/**
- *
- */
-export type FormValidatorBehaviorContext<T> = {
+/** Context passed to a validator's behavior function to control error visibility. */
+export type FormValidatorBehaviorContext<T = unknown> = {
     /**
      * Current field value
      */
-    readonly value: T | null | undefined;
+    readonly value: Readonly<Ref<T | null | undefined>>;
 
     /**
      * Whether the field is focused
      */
-    readonly focused: boolean;
+    readonly focused: Readonly<Ref<boolean>>;
 
     /**
      * Whether to show the validation errors
      */
-    show: boolean;
+    readonly show: Ref<boolean>;
 };
+
+/**
+ * Form validator behavior function.
+ * Drives whether the validation errors are shown.
+ */
+export interface FormValidatorBehavior<T = unknown> {
+    (ctx: FormValidatorBehaviorContext<T>): void;
+}
 
 /**
  * Form validator sync
@@ -158,7 +157,7 @@ export type FormValidatorSync<T> = {
     /**
      * Form validator behavior
      */
-    readonly behavior?: (ctx: FormValidatorBehaviorContext<T>) => void;
+    readonly behavior?: FormValidatorBehavior<T>;
 };
 
 /**
@@ -218,7 +217,5 @@ export type FormValidatorAsync<T, W = unknown> = {
     readonly behavior?: (ctx: FormValidatorBehaviorContext<T>) => void;
 };
 
-/**
- *
- */
+/** Union of synchronous and asynchronous form validators for a given value type. */
 export type FormValidator<T> = FormValidatorAsync<NonNullable<T>> | FormValidatorSync<NonNullable<T>>;

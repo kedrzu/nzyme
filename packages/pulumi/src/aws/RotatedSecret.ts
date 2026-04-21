@@ -65,7 +65,7 @@ export class RotatedSecret extends pulumi.ComponentResource {
     public readonly history: pulumi.Output<Record<string, string>>;
 
     /**
-     *
+     * Creates a new rotated secret with automatic rotation via AWS Lambda.
      */
     constructor(name: string, args: RotatedSecretArgs, opts?: pulumi.ComponentResourceOptions) {
         super('examples:secrets:RotatedSecret', name, {}, opts);

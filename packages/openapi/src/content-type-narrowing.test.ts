@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'bun:test';
 
 import { createOpenApiFetch } from './openapi-fetch.js';
 
@@ -93,7 +93,7 @@ describe('Content-Type Narrowing', () => {
         // For event streams, data is undefined and caller should use response.body
         if (result.status === 200 && result.contentType === 'text/event-stream') {
             expect(result.data).toBeUndefined();
-            expect(result.response.body).toBe(mockBody);
+            expect(result.response.body as unknown).toBe(mockBody);
         }
 
         // Verify we didn't consume the stream

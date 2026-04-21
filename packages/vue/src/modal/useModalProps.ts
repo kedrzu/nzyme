@@ -12,9 +12,7 @@ export interface ModalPropsBase<R = void> {
     modal: ModalController<R>;
 }
 
-/**
- *
- */
+/** Returns the prop definitions for a modal component, including the required modal controller. */
 export function useModalProps<R = void>() {
     return {
         modal: defineProp<ModalController<R>>({ required: true }),

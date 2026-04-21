@@ -1,15 +1,14 @@
-import type { Unwrap } from '@pulumi/pulumi';
-import type { automation } from '@pulumi/pulumi';
+import type { automation, Unwrap } from '@pulumi/pulumi';
 import * as pulumi from '@pulumi/pulumi';
 
-import type { Dependencies, ResolveDeps, Service } from '@nzyme/ioc/Service.js';
 import type { Injectable } from '@nzyme/ioc/Injectable.js';
 import { defineInjectable } from '@nzyme/ioc/Injectable.js';
+import type { Dependencies, ResolveDeps, Service } from '@nzyme/ioc/Service.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 import { Logger } from '@nzyme/logging/Logger.js';
+import type { Override } from '@nzyme/types/Common.js';
 import type { EmptyObject } from '@nzyme/types/EmptyObject.js';
 import type { Flatten, SomeObject } from '@nzyme/types/Object.js';
-import type { Override } from '@nzyme/types/Common.js';
 import { createMemo } from '@nzyme/utils/createMemo.js';
 import { toPascalCase } from '@nzyme/utils/string/caseUtils.js';
 
@@ -40,7 +39,11 @@ export type StackOutputValue<T = unknown> = {
 /**
  * Options for defining a stack.
  */
-export interface StackOptions<TDeps extends Dependencies = Dependencies, TOutput extends StackOutput = StackOutput> {
+export interface StackOptions<
+    TDeps extends Dependencies = Dependencies,
+    TOutput extends StackOutput = StackOutput,
+    TBuild = void,
+> {
     /**
      * Name of the stack.
      */
@@ -65,12 +68,13 @@ export interface StackOptions<TDeps extends Dependencies = Dependencies, TOutput
     /**
      * Resources to deploy.
      */
-    resources(this: Stack, deps: ResolveDeps<TDeps>): TOutput;
+    resources(this: Stack, deps: ResolveDeps<TDeps>, buildResult: TBuild): TOutput;
 
     /**
      * Program to run before the stack is deployed.
+     * Return value is passed to resources() as the second argument.
      */
-    build?(this: Stack, deps: ResolveDeps<TDeps>, ctx: StackBuildContext): Promise<void> | void;
+    build?(this: Stack, deps: ResolveDeps<TDeps>, ctx: StackBuildContext): Promise<TBuild> | TBuild;
 
     /**
      * Program to run before the stack is deployed.
@@ -239,9 +243,11 @@ export type StackReferenceOf<TStack extends StackDefinition> = StackReference<St
  * Define a Pulumi stack.
  * @__NO_SIDE_EFFECTS__
  */
-export function defineStack<TDeps extends Dependencies = SomeObject, TOutput extends StackOutput = EmptyObject>(
-    options: StackOptions<TDeps, TOutput>,
-) {
+export function defineStack<
+    TDeps extends Dependencies = SomeObject,
+    TOutput extends StackOutput = EmptyObject,
+    TBuild = void,
+>(options: StackOptions<TDeps, TOutput, TBuild>) {
     const enabled = options.enabled ?? true;
     const preventDestroy = options.preventDestroy ?? false;
     const serviceName = `Stack:${toPascalCase(options.name)}`;
@@ -254,13 +260,14 @@ export function defineStack<TDeps extends Dependencies = SomeObject, TOutput ext
         setup(depsInput) {
             const deps = depsInput as ResolveDeps<TDeps> & { logger: Logger };
             const name = options.name;
+            let buildResult: TBuild;
             const stack: Stack<TOutput> = {
                 name,
                 enabled,
                 preventDestroy,
                 logger: deps.logger,
                 resources: () => {
-                    const output = options.resources.call(stack, deps);
+                    const output = options.resources.call(stack, deps, buildResult);
                     return output || {};
                 },
                 outputs: async (stack: automation.Stack) => {
@@ -268,7 +275,7 @@ export function defineStack<TDeps extends Dependencies = SomeObject, TOutput ext
                 },
                 build: async (ctx: StackBuildContext) => {
                     if (options.build) {
-                        await options.build.call(stack, deps, ctx);
+                        buildResult = await options.build.call(stack, deps, ctx);
                     }
                 },
                 beforeDeploy: async () => {

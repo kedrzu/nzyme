@@ -1,7 +1,7 @@
 import type { Container } from '@nzyme/ioc/Container.js';
+import type { Primitive } from '@nzyme/types/Common.js';
 import type { Flatten, OmitPropTypes } from '@nzyme/types/Object.js';
 import type { IfAny, IfUnknown } from '@nzyme/types/TypeGuards.js';
-import type { Primitive } from '@nzyme/types/Common.js';
 import type { Validator } from '@nzyme/validation/Validator.js';
 
 /**
@@ -160,9 +160,7 @@ export type SchemaOptions<
          * Default value or function for the schema
          */
         default?: SchemaDefault<V>;
-        /**
-         *
-         */
+        /** Custom metadata attached to the schema for code generation or documentation */
         meta?: TMeta;
         /**
          * Whether the schema accepts null values
@@ -185,13 +183,11 @@ export type SchemaOptions<
 export type SchemaOptionsAny = SchemaOptions<any>;
 
 /**
- *
+ * Base schema options without value-type constraints, used for schema constructors.
  */
 export type SchemaOptionsBase<TOptions extends object = {}> = Flatten<
     TOptions & {
-        /**
-         *
-         */
+        /** Custom metadata attached to the schema */
         meta?: object;
         /**
          * Whether the schema accepts null values

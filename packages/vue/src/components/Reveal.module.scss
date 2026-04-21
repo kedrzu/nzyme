@@ -1,5 +1,5 @@
 .reveal {
-    transition: height 0.2s ease-out;
+    transition: height var(--reveal-duration, 0.2s) ease-out;
     display: flex;
     flex-direction: column;
     box-sizing: content-box !important;
@@ -23,8 +23,8 @@
 
 .enterActive {
     transition:
-        opacity 0.2s ease-out 0.1s,
-        transform 0.2s ease-out 0.1s;
+        opacity var(--reveal-duration, 0.2s) ease-out calc(var(--reveal-duration, 0.2s) * 0.5),
+        transform var(--reveal-duration, 0.2s) ease-out calc(var(--reveal-duration, 0.2s) * 0.5);
     opacity: 1;
 }
 
@@ -38,7 +38,7 @@
     top: 0;
     left: 0;
     right: 0;
-    transition: opacity 0.3s ease-out;
+    transition: opacity calc(var(--reveal-duration, 0.2s) * 1.5) ease-out;
     opacity: 0;
 }
 

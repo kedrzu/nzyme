@@ -1,10 +1,12 @@
 import { common, jsdoc, packageJson, typescript } from '@nzyme/eslint';
+import { globalIgnores } from 'eslint/config';
 
 export default [
     //
+    globalIgnores(['./cli/**/*']),
     ...common(),
     ...typescript({
-        project: ['./tsconfig.json', './tsconfig.check.json'],
+        rootDir: import.meta.dirname,
         internalImports: ['@nzyme/*'],
     }),
     ...jsdoc(),

@@ -1,6 +1,7 @@
 export * from './createCli.js';
 export * from './createScript.js';
 export * from './getCallerFilePath.js';
+export * from './getCliFlagString.js';
 export * from './getEnvFilePath.js';
 export * from './getPackages.js';
 export * from './getProjectRoot.js';

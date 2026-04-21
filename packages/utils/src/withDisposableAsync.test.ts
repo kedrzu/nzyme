@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 
 import { withDisposableAsync } from './withDisposableAsync.js';
 
@@ -11,7 +11,7 @@ test('should add async dispose method to object', async () => {
         await Promise.resolve();
     });
 
-    expect(disposable).toBe(obj);
+    expect(disposable).toBe(obj as typeof disposable);
     expect(disposed).toBe(false);
 
     await disposable[Symbol.asyncDispose]();

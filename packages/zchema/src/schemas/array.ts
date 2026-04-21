@@ -5,10 +5,10 @@ import type {
     Infer,
     Schema,
     SchemaAny,
-    SchemaOptionsBase,
-    SchemaOptionsSimplify,
     SchemaMeta,
     SchemaOptions,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
     SchemaProto,
 } from '../Schema.js';
 import { coerce } from '../utils/coerce.js';
@@ -32,9 +32,7 @@ export type ArraySchema<O extends SchemaOptionsBase<ArrayOptions> = SchemaOption
     Infer<O['of']>[],
     O
 > & {
-    /**
-     *
-     */
+    /** Schema used to validate and coerce each array element */
     of: O['of'];
 };
 

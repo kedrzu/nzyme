@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 
 import { defineCommand } from './Command.js';
 import { createContainer } from './Container.js';
@@ -92,7 +92,7 @@ test('resolve command with service dependency', () => {
         deps: {
             service,
         },
-        setup({ service }) {
+        setup({ service: _service }) {
             commandCount++;
             return (value: number) => {
                 return value;

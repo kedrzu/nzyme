@@ -35,6 +35,12 @@ export type Json<T> = T extends Date
                 : T;
 
 /**
+ * Represents a type that has been converted to a JSON-serializable form, or the original type if it is not JSON-serializable.
+ * @template T - The original type
+ */
+export type JsonOrDefault<T> = Json<T> | T;
+
+/**
  * Converts a value to its JSON-serializable form.
  *
  * This function performs deep conversion of complex types:
@@ -60,10 +66,6 @@ export type Json<T> = T extends Date
  * ```
  *
  * @__NO_SIDE_EFFECTS__
- */
-
-/**
- *
  */
 export function toJson<T>(value: T): Json<T> {
     if (value == null) {

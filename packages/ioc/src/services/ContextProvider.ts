@@ -1,8 +1,6 @@
 import { defineService } from '../Service.js';
 
-/**
- *
- */
+/** Service that provides a request-scoped key-value store for sharing data within a context. */
 export const ContextProvider = defineService({
     name: 'ContextProvider',
     setup() {

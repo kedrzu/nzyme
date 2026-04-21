@@ -11,9 +11,7 @@ const transitionProps = {
     fade: Boolean,
 };
 
-/**
- *
- */
+/** Directional slide transition component with optional fade. */
 export const TransitionSlide = defineTransition({
     name: 'TransitionSlide',
     props: transitionProps,

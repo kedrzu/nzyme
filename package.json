@@ -11,17 +11,13 @@
         "packages/*"
     ],
     "scripts": {
-        "build": "bun build:esm && bun build:cjs",
-        "build:esm": "tsc --build",
-        "build:cjs": "nzyme build cjs",
-        "build:turbo": "turbo run build:esm build:cjs",
         "clean": "del \"**/dist\" \"**/dist-cjs\" \"**/.turbo\" \"**/.tsbuildinfo\" \"**/*.tsbuildinfo\" \"!**/node_modules/**\"",
         "coverage": "vitest run --coverage",
         "dev": "bun && bun monorepo && bun watch",
         "groundup": "bun && bun clean &&bun setup && bun build",
         "monorepo": "nzyme monorepo",
         "release": "nx release --yes",
-        "setup": "turbo run build:esm --filter=@nzyme/cli && bun monorepo",
+        "setup": "turbo run build --filter=@nzyme/cli && bun monorepo",
         "test": "vitest run",
         "update": "bun upgrade-interactive",
         "update:self": "bun set version berry",

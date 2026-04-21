@@ -12,27 +12,21 @@ export function parseQuery(querystring: string | null | undefined): QueryParamsS
 export function parseQuery(
     querystring: string | null | undefined,
     options: {
-        /**
-         *
-         */
+        /** When false, only the first value for each key is kept. */
         multiple: false;
     },
 ): QueryParamsSimple;
 export function parseQuery(
     querystring: string | null | undefined,
     options: {
-        /**
-         *
-         */
+        /** When true, duplicate keys produce arrays of values. */
         multiple: true;
     },
 ): QueryParams;
 export function parseQuery(
     querystring: string | null | undefined,
     options?: {
-        /**
-         *
-         */
+        /** Whether to allow multiple values for the same key. */
         multiple: boolean;
     },
 ): QueryParams {

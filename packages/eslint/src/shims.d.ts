@@ -5,13 +5,6 @@ declare module 'eslint-plugin-workspaces' {
     export default plugin;
 }
 
-declare module 'eslint-plugin-monorepo' {
-    import type { ESLint } from 'eslint';
-
-    const plugin: ESLint.Plugin;
-    export default plugin;
-}
-
 declare module 'eslint-plugin-import' {
     import type { ESLint } from 'eslint';
 
@@ -29,13 +22,9 @@ declare module 'eslint-plugin-import' {
 declare module 'eslint-plugin-package-json' {
     import type { ESLint } from 'eslint';
 
-    export /**
-     *
-     */
-    const configs: {
-        /**
-         *
-         */
+    /** Available ESLint configs from the package-json plugin. */
+    export const configs: {
+        /** The recommended config for package.json linting. */
         recommended: ESLint.Config;
     };
 }

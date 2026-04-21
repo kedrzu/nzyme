@@ -3,22 +3,20 @@ import type {
     Infer,
     Schema,
     SchemaAny,
-    SchemaOptionsBase,
-    SchemaOptionsSimplify,
     SchemaMeta,
     SchemaOptions,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
     SchemaProto,
 } from '../Schema.js';
 import { coerce } from '../utils/coerce.js';
 import { serialize } from '../utils/serialize.js';
 
 /**
- *
+ * Options for defining a tuple schema.
  */
 export type TupleOptions<T extends Schema[] = Schema[]> = {
-    /**
-     *
-     */
+    /** Ordered array of schemas, one per tuple element */
     of: T;
 };
 
@@ -29,9 +27,7 @@ export type TupleOptions<T extends Schema[] = Schema[]> = {
  */
 export type TupleSchema<O extends SchemaOptionsBase<TupleOptions> = SchemaOptionsBase<TupleOptions>> = ForceName &
     Schema<TupleValue<O['of']>, O> & {
-        /**
-         *
-         */
+        /** Ordered array of element schemas for this tuple */
         of: O['of'];
     };
 
@@ -54,7 +50,7 @@ type TupleSchemaBase = {
         TOptional extends boolean | undefined = undefined,
         TMeta extends SchemaMeta | undefined = undefined,
     >(
-        options: SchemaOptionsBase & SchemaOptions<TupleValue<S>, TNullable, TOptional, TMeta, TupleOptions<S>>,
+        options: SchemaOptions<TupleValue<S>, TNullable, TOptional, TMeta, TupleOptions<S>> & SchemaOptionsBase,
     ): TupleSchema<SchemaOptionsSimplify<TNullable, TOptional, TMeta, TupleOptions<S>>>;
 
     /** Creates a tuple schema with schemas for elements */

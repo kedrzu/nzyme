@@ -25,33 +25,32 @@
         "dist"
     ],
     "scripts": {
-        "typecheck": "tsc --noEmit --project tsconfig.check.json",
-        "lint": "prettier ./src --write && bun typecheck && eslint . --fix --cache",
-        "build:esm": "tsc --build ./tsconfig.esm.json"
+        "build": "tsc --build tsconfig.esm.json",
+        "lint": "eslint . --fix --cache",
+        "prettify": "prettier ./src --write > /dev/null"
     },
     "dependencies": {
-        "@eslint/js": "9.39.2",
-        "@typescript-eslint/parser": "8.55.0",
-        "eslint": "9.39.2",
+        "@eslint/js": "10.0.1",
+        "@typescript-eslint/parser": "8.57.2",
+        "eslint": "10.1.0",
         "eslint-config-prettier": "10.1.8",
         "eslint-plugin-import": "2.32.0",
-        "eslint-plugin-jsdoc": "62.5.0",
-        "eslint-plugin-monorepo": "0.3.2",
-        "eslint-plugin-package-json": "0.88.2",
-        "eslint-plugin-perfectionist": "5.4.0",
+        "eslint-plugin-jsdoc": "62.8.0",
+        "eslint-plugin-package-json": "0.91.0",
+        "eslint-plugin-perfectionist": "5.7.0",
         "eslint-plugin-react": "7.37.5",
-        "eslint-plugin-vue": "10.7.0",
-        "eslint-plugin-workspaces": "0.11.1",
-        "globals": "17.3.0",
-        "jsonc-eslint-parser": "2.4.2",
-        "typescript-eslint": "8.55.0",
+        "eslint-plugin-vue": "10.8.0",
+        "eslint-plugin-workspaces": "0.12.1",
+        "globals": "17.4.0",
+        "jsonc-eslint-parser": "3.1.0",
+        "typescript-eslint": "8.57.2",
         "vue-eslint-parser": "10.4.0"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "0.14.0",
-        "@types/node": "25.2.3",
+        "@types/node": "^25.5.0",
         "prettier": "3.8.1",
-        "typescript": "5.9.3"
+        "typescript": "6.0.2"
     },
     "publishConfig": {
         "access": "public"

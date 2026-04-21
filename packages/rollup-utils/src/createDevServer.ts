@@ -9,13 +9,9 @@ import { createEventEmitter } from '@nzyme/utils/createEventEmitter.js';
 import { createPromise } from '@nzyme/utils/createPromise.js';
 import { formatElapsedMs } from '@nzyme/utils/formatElapsedMs.js';
 
-/**
- *
- */
+/** Options for creating a development server. */
 export interface DevServerOptions {
-    /**
-     *
-     */
+    /** Path to the worker script file to run. */
     file: string;
 
     /**
@@ -25,9 +21,7 @@ export interface DevServerOptions {
     maxRetries?: number;
 }
 
-/**
- *
- */
+/** The return type of createDevServer, providing middleware and server control methods. */
 export type DevServer = ReturnType<typeof createDevServer>;
 
 /**
@@ -89,8 +83,8 @@ export function createDevServer(options: DevServerOptions) {
             },
         });
 
-        worker.stdout.pipe(process.stdout);
-        worker.stderr.pipe(process.stderr);
+        worker.stdout?.pipe(process.stdout);
+        worker.stderr?.pipe(process.stderr);
 
         worker.on('error', err => {
             console.error(err);

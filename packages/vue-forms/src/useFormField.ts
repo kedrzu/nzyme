@@ -1,11 +1,11 @@
-import type { Ref } from 'vue';
-import { computed, onScopeDispose, ref, toRef, watch, watchEffect } from 'vue';
-
 import { arrayRemove } from '@nzyme/utils/array/arrayRemove.js';
 import { makeRef } from '@nzyme/vue-utils/reactivity/makeRef.js';
 import { reactive } from '@nzyme/vue-utils/reactivity/reactive.js';
 import { useDataSource } from '@nzyme/vue-utils/useDataSource.js';
+import type { Ref } from 'vue';
+import { computed, onScopeDispose, ref, toRef, watchEffect } from 'vue';
 
+import { showErrorsOnBlurBehavior } from './behaviors/showErrorsOnBlurBahavior.js';
 import type {
     FormField,
     FormModel,
@@ -256,7 +256,7 @@ function createValidatorStateSync<T>(
     const show = ref(false);
 
     watchEffect(refresh);
-    createValidatorBehavior(validator, value, focused, show);
+    createValidatorBehavior(validator, { value, focused, show });
 
     return reactive<FormValidatorState>({
         error,
@@ -297,7 +297,7 @@ function createValidatorStateAsync<T>(
 
     const show = ref(false);
 
-    createValidatorBehavior(validator, value, focused, show);
+    createValidatorBehavior(validator, { value, focused, show });
 
     return reactive<FormValidatorState>({
         error: toRef(error, 'value'),
@@ -310,44 +310,12 @@ function createValidatorStateAsync<T>(
     });
 }
 
-function createValidatorBehavior<T>(
-    validator: FormValidator<T>,
-    value: Readonly<Ref<T>>,
-    focused: Readonly<Ref<boolean>>,
-    show: Ref<boolean>,
-) {
+function createValidatorBehavior<T>(validator: FormValidator<T>, ctx: FormValidatorBehaviorContext<T>) {
     if (validator.behavior) {
-        const ctx = reactive<FormValidatorBehaviorContext<T>>({
-            value,
-            focused,
-            show,
-        });
-
         validator.behavior(ctx as FormValidatorBehaviorContext<NonNullable<T>>);
-        return;
+    } else {
+        showErrorsOnBlurBehavior(ctx);
     }
-
-    // Default validator behavior
-
-    let valueChanged = false;
-
-    watch(value, () => {
-        valueChanged = true;
-        if (focused.value) {
-            show.value = false;
-        }
-    });
-
-    watch(focused, focusedValue => {
-        if (!focusedValue && valueChanged) {
-            show.value = true;
-            valueChanged = false;
-        }
-    });
-
-    watch(show, () => {
-        valueChanged = false;
-    });
 }
 
 function normalizeErrors(error: FormValidationResult) {

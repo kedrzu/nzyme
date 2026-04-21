@@ -1,7 +1,7 @@
 import { provide } from 'vue';
 
-import { injectionKey } from './injectionKey.js';
 import type { VueContainer } from './createContainer.js';
+import { injectionKey } from './injectionKey.js';
 
 /**
  * Provide a container to the current component.

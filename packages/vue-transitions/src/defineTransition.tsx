@@ -1,3 +1,6 @@
+import type { SomeObject } from '@nzyme/types/Object.js';
+import type { ClassProp } from '@nzyme/vue-utils/classProp.js';
+import { defineProp } from '@nzyme/vue-utils/defineProp.js';
 import { computed, defineComponent, h, Transition, TransitionGroup } from 'vue';
 import type {
     ComponentObjectPropsOptions,
@@ -5,10 +8,6 @@ import type {
     TransitionGroupProps as TransitionGroupPropsVue,
     TransitionProps as TransitionPropsVue,
 } from 'vue';
-
-import type { SomeObject } from '@nzyme/types/Object.js';
-import type { ClassProp } from '@nzyme/vue-utils/classProp.js';
-import { defineProp } from '@nzyme/vue-utils/defineProp.js';
 
 import { onAfterTransition } from './utils/onAfterTransition.js';
 import { onBeforeTransition } from './utils/onBeforeTransition.js';
@@ -32,17 +31,11 @@ export type TransitionGroupProps = Omit<TransitionGroupPropsVue, 'css' | 'name' 
      */
     duration?: number;
 };
-/**
- *
- */
+/** Options for rendering the transition as a TransitionGroup. */
 export interface TransitionGroupOptions {
-    /**
-     *
-     */
+    /** HTML tag for the TransitionGroup wrapper element. */
     tag?: string;
-    /**
-     *
-     */
+    /** CSS class(es) applied to the TransitionGroup wrapper. */
     class?: ClassProp;
 }
 

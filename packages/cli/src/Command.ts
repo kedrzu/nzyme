@@ -8,29 +8,19 @@ import { PrettyCliLoggerTransport } from '@nzyme/logging/PrettyCliLoggerTranspor
 import { createEventEmitter } from '@nzyme/utils/createEventEmitter.js';
 import { getClassName } from '@nzyme/utils/getClassName.js';
 
-/**
- *
- */
+/** Clipanion command context extended with an IoC container. */
 export interface CommandContext extends BaseContext {
-    /**
-     *
-     */
+    /** The IoC container available to all commands. */
     container: Container;
 }
 
-/**
- *
- */
+/** Scope identifier for command-level IoC container isolation. */
 export const CommandScope = defineScope('command');
 
-/**
- *
- */
+/** A Clipanion command class with the CommandContext. */
 export type CommandClass = ClipanionCommandClass<CommandContext>;
 
-/**
- *
- */
+/** Base class for CLI commands with IoC container, logging, and lifecycle events. */
 export abstract class Command extends ClipanionCommand<CommandContext> {
     /**
      * Event emitter for the before run event
@@ -53,9 +43,7 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
         return this.cleanupEvent.event;
     }
 
-    /**
-     *
-     */
+    /** The command's scoped IoC container. Throws if accessed before setup. */
     public get container(): Container {
         if (!this.#container) {
             throw new Error('Not initialized yet');
@@ -64,9 +52,7 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
         return this.#container;
     }
 
-    /**
-     *
-     */
+    /** The command's logger instance. Throws if accessed before setup. */
     public get logger(): Logger {
         if (!this.#logger) {
             throw new Error('Not initialized yet');
@@ -82,9 +68,7 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
     #container: Container | null = null;
     #logger: Logger | null = null;
 
-    /**
-     *
-     */
+    /** Runs the command lifecycle: setup, beforeRun, run, afterRun, cleanup. */
     override async execute() {
         await this.setup();
         try {
@@ -97,9 +81,7 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
         }
     }
 
-    /**
-     *
-     */
+    /** Logs the error and exits the process with code 1. */
     override async catch(error: unknown) {
         if (this.#logger) {
             this.#logger.error('❌ Command execution failed', { error });

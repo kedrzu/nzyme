@@ -1,11 +1,11 @@
-import { jsdoc, packageJson, typescript, common } from './src/index.js';
+import { common, jsdoc, packageJson, typescript } from './src/index.js';
 
 export default [
     //
     ...common(),
     ...typescript({
+        rootDir: import.meta.dirname,
         target: 'node',
-        project: ['./tsconfig.json', './tsconfig.check.json'],
         internalImports: ['@nzyme/*'],
     }),
     ...jsdoc(),

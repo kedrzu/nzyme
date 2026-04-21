@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 
 import { createContainer } from './Container.js';
 import { defineScope } from './ContainerScope.js';

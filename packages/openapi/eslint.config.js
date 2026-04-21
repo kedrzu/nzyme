@@ -6,7 +6,7 @@ export default [
     globalIgnores(['./tests/schema.d.ts']),
     ...common(),
     ...typescript({
-        project: ['./tsconfig.json', './tsconfig.check.json'],
+        rootDir: import.meta.dirname,
         internalImports: ['@nzyme/*'],
     }),
     ...jsdoc(),

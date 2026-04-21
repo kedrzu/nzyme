@@ -6,13 +6,7 @@ import { pathExists } from 'fs-extra';
 import { getEnvFilePath } from './getEnvFilePath.js';
 import type { EnvFilePathOptions } from './getEnvFilePath.js';
 
-/**
- * Reads environment variables from a file.
- */
-
-/**
- *
- */
+/** Reads and parses environment variables from a dotenv file, returning an empty object if the file does not exist. */
 export async function readEnvVariables(options: EnvFilePathOptions): Promise<Record<string, string>> {
     const filePath = getEnvFilePath(options);
 

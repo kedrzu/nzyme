@@ -6,17 +6,11 @@ import * as ts from 'typescript';
  * Parsed TypeScript interface or type alias from a .type.ts file
  */
 export interface ParsedTypeDefinition {
-    /**
-     *
-     */
+    /** The name of the interface or type alias */
     name: string;
-    /**
-     *
-     */
+    /** The TypeScript AST node for the declaration */
     node: ts.InterfaceDeclaration | ts.TypeAliasDeclaration;
-    /**
-     *
-     */
+    /** Associated JSDoc comment, if present */
     jsDoc?: ts.JSDoc;
 }
 
@@ -24,13 +18,9 @@ export interface ParsedTypeDefinition {
  * Result of parsing a TypeScript type file
  */
 export interface ParseTypeFileResult {
-    /**
-     *
-     */
+    /** The parsed TypeScript source file AST */
     sourceFile: ts.SourceFile;
-    /**
-     *
-     */
+    /** All interface and type alias definitions found in the file */
     definitions: ParsedTypeDefinition[];
 }
 

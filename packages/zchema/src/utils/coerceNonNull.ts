@@ -1,7 +1,10 @@
-import type { Schema, SchemaProto, InferNonNull, SchemaContext } from '../Schema.js';
-import { lazyResolve } from '../schemas/lazy.js';
+import type { InferNonNull, Schema, SchemaContext, SchemaProto } from '../Schema.js';
 import { DEFAULT_SCHEMA_CONTEXT } from '../Schema.js';
+import { lazyResolve } from '../schemas/lazy.js';
 
+/**
+ * Coerces a value to match the schema, always returning a non-null result by using defaults.
+ */
 export function coerceNonNull<S extends Schema>(
     schema: S,
     value?: unknown,

@@ -1,9 +1,8 @@
-import type { FunctionalComponent } from 'vue';
-import { h } from 'vue';
-
 import { assignProps } from '@nzyme/utils/assignProps.js';
 import { defineProps } from '@nzyme/vue-utils/defineProps.js';
 import { useProps } from '@nzyme/vue-utils/useProps.js';
+import type { FunctionalComponent } from 'vue';
+import { h } from 'vue';
 
 import { defineFormField } from './defineFormField.js';
 
@@ -16,9 +15,7 @@ const SELECT_PROPS = defineProps({
     tabindex: Number,
 });
 
-/**
- *
- */
+/** Select input composable providing a form field and its render component. */
 export const useSelectInput = assignProps(setupSelectInput, {
     props: SELECT_PROPS,
     emits: SELECT_FIELD.emits,
@@ -34,8 +31,7 @@ function setupSelectInput() {
     const SelectInput: FunctionalComponent = (_, ctx) => {
         return (
             <select
-                aria-label={props.label}
-                aria-readonly={props.readonly}
+                aria-label={props.label || props.placeholder}
                 aria-required={props.required}
                 autocomplete={props.autocomplete}
                 disabled={props.disabled}

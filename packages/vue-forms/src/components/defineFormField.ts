@@ -1,11 +1,10 @@
-import { computed, reactive, ref, useModel } from 'vue';
-import type { ExtractPropTypes, PropType, Ref } from 'vue';
-
 import { scrollToTopElement } from '@nzyme/dom-utils/scrollToTopElement.js';
 import { injectContext } from '@nzyme/vue-utils/context.js';
 import { defineProp } from '@nzyme/vue-utils/defineProp.js';
 import { onEventEmitter } from '@nzyme/vue-utils/onEventEmitter.js';
 import { useInstanceProxy } from '@nzyme/vue-utils/useInstance.js';
+import { computed, reactive, ref, useModel } from 'vue';
+import type { ExtractPropTypes, PropType, Ref } from 'vue';
 
 import { FormContext } from '../FormContext.js';
 import type { FormField as FormFieldModel } from '../types.js';
@@ -59,9 +58,7 @@ export function defineFormField<T>(type?: PropType<T | null | undefined>) {
     };
 }
 
-/**
- *
- */
+/** Creates Vue prop definitions for a form field component. */
 export function formFieldProps<T>(type?: PropType<T | null | undefined>) {
     return {
         modelValue: { type: type as PropType<T | null | undefined> },
@@ -80,9 +77,7 @@ export function formFieldProps<T>(type?: PropType<T | null | undefined>) {
     };
 }
 
-/**
- *
- */
+/** Creates Vue emit definitions for a form field component. */
 export function formFieldEmits<T>() {
     return {
         'update:modelValue': undefined as unknown as (value: T) => boolean,
@@ -91,9 +86,7 @@ export function formFieldEmits<T>() {
     };
 }
 
-/**
- *
- */
+/** Initializes a form field with reactive value, validation errors, and focus tracking. */
 export function createFormField<T>(options: FormFieldOptions<T>) {
     const props = options.props;
     const vm = useInstanceProxy();

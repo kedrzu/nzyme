@@ -3,6 +3,7 @@ import * as path from 'path';
 import { outputFile } from 'fs-extra/esm';
 import { lookup as mimeLookup } from 'mime-types';
 import { defineNuxtModule } from 'nuxt/kit';
+import type { NuxtModule } from 'nuxt/schema';
 import type { Connect } from 'vite';
 
 type FileContent = (() => string | Promise<string>) | string;
@@ -14,7 +15,7 @@ type PublicFilesModuleOptions = {
 /**
  * This module is used to output files to the output directory.
  */
-export function outputFilesModule(options: PublicFilesModuleOptions) {
+export function outputFilesModule(options: PublicFilesModuleOptions): NuxtModule {
     return defineNuxtModule({
         setup(_opts, nuxt) {
             const rootDir = nuxt.options.rootDir;
@@ -28,6 +29,7 @@ export function outputFilesModule(options: PublicFilesModuleOptions) {
                 }
             });
 
+            // @ts-expect-error nitro hooks are not typed in NuxtHooks anymore
             nuxt.hook('nitro:build:public-assets', async () => {
                 for (const [fileName, fileContent] of Object.entries(options)) {
                     const content = await resolveFileContent(fileContent);

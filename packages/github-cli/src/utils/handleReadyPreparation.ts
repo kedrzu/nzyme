@@ -4,8 +4,10 @@ import { simpleGit } from 'simple-git';
 
 import type { Logger } from '@nzyme/logging/Logger.js';
 
+import { assertNoConflicts } from './assertNoConflicts.js';
 import type { UnpushedCommitsResult } from './checkUnpushedCommits.js';
 import type { GitStatusInfo } from './getGitStatusInfo.js';
+import { pushWithUpstream } from './pushWithUpstream.js';
 
 /**
  * Handle the preparation phase before marking a PR as ready for review.
@@ -24,28 +26,32 @@ export async function handleReadyPreparation(
     // Step 1: Show unpushed commits if any
     if (unpushedCommits.hasUnpushedCommits) {
         logger.info(
-            `⚠️  You have ${chalk.yellow(unpushedCommits.commitsCount.toString())} unpushed commit${
+            `   ${chalk.yellow(unpushedCommits.commitsCount.toString())} unpushed commit${
                 unpushedCommits.commitsCount === 1 ? '' : 's'
             }:`,
         );
 
-        // Show the commit messages
         for (const message of unpushedCommits.commitMessages.slice(0, 5)) {
-            logger.info(`   • ${chalk.gray(message)}`);
+            logger.info(`      • ${chalk.gray(message)}`);
         }
 
         if (unpushedCommits.commitMessages.length > 5) {
-            logger.info(`   ... and ${unpushedCommits.commitMessages.length - 5} more`);
+            logger.info(`      ... and ${unpushedCommits.commitMessages.length - 5} more`);
         }
     }
 
-    // Step 2: Handle uncommitted changes
+    // Step 2: Check for conflicts before committing
+    if (statusInfo.changes.conflicted > 0) {
+        await assertNoConflicts({ git, repoDisplayName: 'main repository', operation: 'merge', logger });
+    }
+
+    // Step 3: Handle uncommitted changes
     if (statusInfo.hasUncommittedChanges) {
         const hasStagedFiles = statusInfo.changes.staged > 0;
         const hasUnstagedFiles = statusInfo.totalChanges > statusInfo.changes.staged;
 
         logger.info(
-            `📝 Found ${chalk.yellow(statusInfo.totalChanges.toString())} uncommitted change${
+            `   ${chalk.yellow(statusInfo.totalChanges.toString())} uncommitted change${
                 statusInfo.totalChanges === 1 ? '' : 's'
             }: ${chalk.yellow(statusInfo.changeDescription)}`,
         );
@@ -67,20 +73,17 @@ export async function handleReadyPreparation(
                 },
             });
             commitMessage = response.commitMessage;
-        } else {
-            logger.info(`✅ Auto-committing changes with message: "${chalk.cyan(commitMessage)}" (--yes flag)`);
         }
 
         // Add unstaged changes to staging if there are any
         if (hasUnstagedFiles) {
-            logger.info(`📦 Adding all changes to staging...`);
             await git.add('.');
         } else if (hasStagedFiles) {
-            logger.info(`📦 Using already staged files...`);
+            // Using already staged files
         }
 
         // Commit the changes
-        logger.info(`💾 Committing changes with message: "${chalk.cyan(commitMessage)}"`);
+        logger.info(`   Committing: "${chalk.cyan(commitMessage)}"`);
         await git.commit(commitMessage.trim());
         newCommitCreated = true;
     }
@@ -89,11 +92,11 @@ export async function handleReadyPreparation(
     if (unpushedCommits.hasUnpushedCommits || newCommitCreated) {
         const totalCommitsToPush = unpushedCommits.commitsCount + (newCommitCreated ? 1 : 0);
         logger.info(
-            `🚀 Pushing ${chalk.yellow(totalCommitsToPush.toString())} commit${totalCommitsToPush === 1 ? '' : 's'}...`,
+            `   Pushing ${chalk.yellow(totalCommitsToPush.toString())} commit${totalCommitsToPush === 1 ? '' : 's'}...`,
         );
-        await git.push();
-        logger.info(`✅ Successfully pushed all commits`);
+        await pushWithUpstream(git);
+        logger.info(`   ${chalk.green('✓')} Pushed successfully`);
     } else if (!statusInfo.hasUncommittedChanges) {
-        logger.info(`✅ Repository is clean - no commits to push or changes to commit`);
+        logger.info(`   Already up to date`);
     }
 }

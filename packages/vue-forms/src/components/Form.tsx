@@ -1,40 +1,33 @@
+import type { EventEmitterAny } from '@nzyme/utils/createEventEmitter.js';
+import { classProp } from '@nzyme/vue-utils/classProp.js';
+import { provideContext } from '@nzyme/vue-utils/context.js';
+import { onEventEmitter } from '@nzyme/vue-utils/onEventEmitter.js';
+import { onTrigger } from '@nzyme/vue-utils/onTrigger.js';
+import { defineSlots } from '@nzyme/vue-utils/slots.js';
 import css from '#css/form.module.css';
 import { computed, defineComponent, h } from 'vue';
 import type { PropType } from 'vue';
 
-import type { EventEmitter } from '@nzyme/utils/createEventEmitter.js';
-import { classProp } from '@nzyme/vue-utils/classProp.js';
-import { defineSlots } from '@nzyme/vue-utils/slots.js';
-import { onEventEmitter } from '@nzyme/vue-utils/onEventEmitter.js';
-import { onTrigger } from '@nzyme/vue-utils/onTrigger.js';
-import { provideContext } from '@nzyme/vue-utils/context.js';
-
 import { FormContext } from '../FormContext.js';
 
-/**
- *
- */
+/** Form component that manages submission state and validation. */
 export const Form = defineComponent({
     // eslint-disable-next-line vue/no-reserved-component-names
     name: 'Form',
     props: {
         pendingClass: classProp,
-        submitEvent: {} as PropType<EventEmitter<any>>,
+        submitEvent: Object as PropType<EventEmitterAny>,
         submitTrigger: Boolean,
     },
-    emits: ['submit'],
+    emits: {
+        submit: (event: Event) => !!event,
+    },
     slots: defineSlots<{
-        /**
-         *
-         */
+        /** Default slot exposing form state and submit action. */
         default: {
-            /**
-             *
-             */
+            /** Whether the form submission is in progress. */
             pending: boolean;
-            /**
-             *
-             */
+            /** Triggers form submission. */
             submit: FormContext['submit'];
         };
     }>(),

@@ -47,7 +47,7 @@ export async function fetchEndpoint<TParams, TResult>(
 
     const url = request.query ? withQuery(request.url, request.query) : request.url;
     // Clone the response to avoid "Other side closed error"
-    const response = (await fetch(url, request)).clone();
+    const response = (await fetch(url, request)).clone() as Response;
 
     if (endpoint.response) {
         return await endpoint.response(response, params.params);

@@ -2,10 +2,10 @@ import { defineSchema } from '../defineSchema.js';
 import type {
     Infer,
     Schema,
-    SchemaOptionsBase,
-    SchemaOptionsSimplify,
     SchemaMeta,
     SchemaOptions,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
     SchemaProto,
 } from '../Schema.js';
 import { serialize } from '../utils/serialize.js';
@@ -27,14 +27,12 @@ export type UnionSchema<O extends SchemaOptionsBase<UnionOptions> = SchemaOption
     UnionValue<O>,
     O
 > & {
-    /**
-     *
-     */
+    /** Array of member schemas that form this union */
     of: O['of'];
 };
 
 /**
- *
+ * Inferred value type for a union schema, which is the union of all member schema values.
  */
 export type UnionValue<O extends UnionOptions> = Infer<O['of'][number]>;
 

@@ -249,9 +249,6 @@ export class MonorepoCommand extends Command {
             }
         }
 
-        let esmResult: string | null = null;
-        let cjsResult: string | null = null;
-
         const tsconfig = await this.loadTsConfigForPackage(pkg);
         if (!tsconfig) {
             return {
@@ -262,7 +259,9 @@ export class MonorepoCommand extends Command {
 
         const isComposite = isCompositePackage(tsconfig);
 
-        esmResult = await this.saveTsReferences({
+        let cjsResult: string | null = null;
+
+        const esmResult = await this.saveTsReferences({
             cwd: pkg.path,
             fileName: 'tsconfig.json',
             extends: tsconfig.path,

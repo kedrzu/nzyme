@@ -3,10 +3,10 @@ import { identity } from '@nzyme/utils/functions/identity.js';
 import { defineSchema } from '../defineSchema.js';
 import type {
     Schema,
-    SchemaOptionsBase,
-    SchemaOptionsSimplify,
     SchemaMeta,
     SchemaOptions,
+    SchemaOptionsBase,
+    SchemaOptionsSimplify,
     SchemaProto,
 } from '../Schema.js';
 

@@ -1,14 +1,11 @@
-import { defineAsyncComponent, defineComponent, getCurrentInstance, h, onBeforeUnmount, watch } from 'vue';
-import type { RenderFunction } from 'vue';
-
 import { isBrowser } from '@nzyme/dom-utils/isBrowser.js';
 import { cancelIdleCallback, requestIdleCallback } from '@nzyme/dom-utils/requestIdleCallback.js';
 import { createPromise } from '@nzyme/utils/createPromise.js';
 import { defineProp } from '@nzyme/vue-utils/defineProp.js';
+import { defineAsyncComponent, defineComponent, getCurrentInstance, h, onBeforeUnmount, watch } from 'vue';
+import type { RenderFunction } from 'vue';
 
-/**
- *
- */
+/** Defers hydration of SSR content until triggered by idle callback, visibility, or a prop change. */
 export const LazyHydrate = defineComponent({
     name: 'LazyHydrate',
     props: {

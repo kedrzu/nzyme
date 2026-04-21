@@ -1,7 +1,6 @@
+import { makeRef } from '@nzyme/vue-utils/reactivity/makeRef.js';
 import { watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
-
-import { makeRef } from '@nzyme/vue-utils/reactivity/makeRef.js';
 
 import { defineValidator } from '../defineValidator.js';
 import type { FormValidationContext, FormValidationResult } from '../types.js';
@@ -63,25 +62,19 @@ export function requiredValidator<T>(options: RequiredValidatorOptions<T> = {}) 
 
             return l.required(ctx.lang);
         },
-        behavior: ctx => {
-            watch(
-                () => ctx.value,
-                () => {
-                    if (ctx.focused) {
-                        ctx.show = true;
-                    }
-                },
-            );
+        behavior: ({ value, focused, show }) => {
+            watch(value, () => {
+                if (focused.value) {
+                    show.value = true;
+                }
+            });
 
             if (!lazy) {
-                watch(
-                    () => ctx.focused,
-                    focusedValue => {
-                        if (!focusedValue) {
-                            ctx.show = true;
-                        }
-                    },
-                );
+                watch(focused, focusedValue => {
+                    if (!focusedValue) {
+                        show.value = true;
+                    }
+                });
             }
         },
     });

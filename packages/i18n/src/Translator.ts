@@ -4,9 +4,7 @@ import { defineService } from '@nzyme/ioc/Service.js';
 import { LanguageContext } from './LanguageContext.js';
 import { translateToString } from './translateToString.js';
 
-/**
- *
- */
+/** A function that resolves translations for the current language context. */
 export interface Translator {
     /**
      * Translate a key.
@@ -19,9 +17,7 @@ export interface Translator {
     <T>(translation: Translation<T>, params: T): string;
 }
 
-/**
- *
- */
+/** Injectable service that translates using the current language from LanguageContext. */
 export const Translator = defineService({
     name: 'Translator',
     deps: {

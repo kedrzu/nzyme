@@ -1,11 +1,10 @@
-import type { AsYouType, CountryCode } from 'libphonenumber-js';
-import { h, onMounted, ref, watch } from 'vue';
-import type { PropType } from 'vue';
-
 import { assignProps } from '@nzyme/utils/assignProps.js';
 import { isDigit } from '@nzyme/utils/string/isDigit.js';
 import { defineProps } from '@nzyme/vue-utils/defineProps.js';
 import { useProps } from '@nzyme/vue-utils/useProps.js';
+import type { AsYouType, CountryCode } from 'libphonenumber-js';
+import { h, onMounted, ref, watch } from 'vue';
+import type { PropType } from 'vue';
 
 import { defineFormField } from './defineFormField.js';
 
@@ -25,9 +24,7 @@ const PHONE_PROPS = defineProps({
     readonly: Boolean,
 });
 
-/**
- *
- */
+/** Phone input composable with international formatting via libphonenumber-js. */
 export const usePhoneInput = assignProps(setupPhoneInput, {
     props: PHONE_PROPS,
     emits: PHONE_FIELD.emits,
@@ -99,6 +96,9 @@ function setupPhoneInput() {
         }
 
         if (!formatter) {
+            if (field.value !== value) {
+                field.value = value;
+            }
             input.value = value;
             return;
         }

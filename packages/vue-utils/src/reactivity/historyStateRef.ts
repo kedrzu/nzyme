@@ -51,7 +51,6 @@ export function historyStateRef<T>(options: HistoryStateRefDefault<T> & HistoryS
 export function historyStateRef<T>(
     options: HistoryStateRefNoDefault & HistoryStateRefOptions,
 ): HistoryStateRef<T | null>;
-
 /**
  * Creates a reactive reference that automatically synchronizes its value with browser history state.
  * The value persists across browser navigation (back/forward) and page reloads within the same session.

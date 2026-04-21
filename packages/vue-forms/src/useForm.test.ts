@@ -1,8 +1,7 @@
-import { beforeEach, expect, test } from 'vitest';
-import { createApp, effectScope, ref } from 'vue';
-
 import { LanguageContext } from '@nzyme/i18n/LanguageContext.js';
 import { createContainer } from '@nzyme/vue-ioc/createContainer.js';
+import { beforeEach, expect, test } from 'bun:test';
+import { createApp, effectScope, ref } from 'vue';
 
 import type { FormValidator } from './types.js';
 import { useForm } from './useForm.js';

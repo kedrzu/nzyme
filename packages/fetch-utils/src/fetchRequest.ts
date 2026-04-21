@@ -39,5 +39,5 @@ export async function fetchRequest(request: FetchRequest): Promise<Response> {
 
     await assertResponse(response);
     // Clone the response to avoid "Other side closed error"
-    return response.clone();
+    return response.clone() as Response;
 }

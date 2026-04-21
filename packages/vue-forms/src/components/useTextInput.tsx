@@ -1,10 +1,9 @@
-import { h } from 'vue';
-import type { InputHTMLAttributes } from 'vue';
-
 import { assignProps } from '@nzyme/utils/assignProps.js';
 import { defineProps } from '@nzyme/vue-utils/defineProps.js';
 import { useEmit } from '@nzyme/vue-utils/useEmit.js';
 import { useProps } from '@nzyme/vue-utils/useProps.js';
+import { h, ref } from 'vue';
+import type { InputHTMLAttributes } from 'vue';
 
 import { defineFormField } from './defineFormField.js';
 
@@ -24,9 +23,7 @@ const TEXT_INPUT_EMITS = {
     keydown: undefined as unknown as (event: KeyboardEvent) => boolean,
 };
 
-/**
- *
- */
+/** Text input composable providing a form field and its render component. */
 export const useTextInput = assignProps(setupTextInput, {
     props: TEXT_INPUT_PROPS,
     emits: TEXT_INPUT_EMITS,
@@ -39,15 +36,18 @@ function setupTextInput() {
     const props = useProps(TEXT_INPUT_PROPS);
     const field = TEXT_INPUT_FIELD.create({ props });
     const emit = useEmit(TEXT_INPUT_EMITS);
+    const input = ref<HTMLInputElement | null>(null);
 
     return {
         field,
+        input,
         TextInput,
     };
 
     function TextInput(attrs: InputHTMLAttributes) {
         return (
             <input
+                ref={input}
                 {...attrs}
                 aria-label={props.label}
                 aria-readonly={props.readonly}

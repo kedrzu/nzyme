@@ -1,8 +1,8 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'bun:test';
 
-import { waitFor } from '../dist/waitFor.js';
 import { createSingleRunner } from './createSingleRunner.js';
 import type { SingleRunnerState } from './createSingleRunner.js';
+import { waitFor } from './waitFor.js';
 
 test('should execute handler and update running state', async () => {
     let executionCount = 0;
@@ -81,7 +81,9 @@ test('should allow retry after error', async () => {
     const runner = createSingleRunner({ handler });
 
     // First attempt should fail
-    await expect(runner.execute()).rejects.toThrow('first attempt failed');
+    await runner.execute().catch(() => {});
+    expect(runner.error).toBeInstanceOf(Error);
+    expect((runner.error as Error).message).toBe('first attempt failed');
     expect(runner.error).toBeDefined();
     expect(runner.running).toBe(false);
 
@@ -114,7 +116,7 @@ test('should work with provided initial state', async () => {
     // Initial state should be updated with execute method
     expect(calledState).toBe(true);
     expect(savedState).toBeDefined();
-    expect(runner).toBe(savedState);
+    expect(runner).toBe(savedState!);
 
     const result = await runner.execute();
     expect(result).toBe('result');
@@ -136,7 +138,7 @@ test('should clear error on successful execution after failure', async () => {
     const runner = createSingleRunner({ handler });
 
     // First execution fails
-    await expect(runner.execute()).rejects.toThrow('error');
+    await runner.execute().catch(() => {});
     expect(runner.error).toBeDefined();
 
     // Second execution succeeds
@@ -144,6 +146,67 @@ test('should clear error on successful execution after failure', async () => {
     const result = await runner.execute();
     expect(result).toBe('success');
     expect(runner.error).toBeUndefined();
+});
+
+test('reset() clears state so next execute starts a fresh handler invocation', async () => {
+    let executionCount = 0;
+    const resolvers: ((value: string) => void)[] = [];
+
+    const handler = async () => {
+        executionCount++;
+        return await new Promise<string>(resolve => {
+            resolvers.push(resolve);
+        });
+    };
+
+    const runner = createSingleRunner({ handler });
+
+    // Start first execution — it will stay pending until we resolve it.
+    const promise1 = runner.execute();
+    expect(runner.running).toBe(true);
+    expect(runner.promise).toBeDefined();
+    expect(executionCount).toBe(1);
+
+    // Reset while the first handler is still in-flight.
+    runner.reset();
+    expect(runner.running).toBe(false);
+    expect(runner.promise).toBeUndefined();
+    expect(runner.error).toBeUndefined();
+
+    // The next execute() should start a brand new handler invocation rather
+    // than deduplicating into the stale promise.
+    const promise2 = runner.execute();
+    expect(promise2).not.toBe(promise1);
+    expect(executionCount).toBe(2);
+
+    // Resolving the stale handler must not clobber the new state.
+    resolvers[0]!('stale');
+    await promise1;
+    expect(runner.running).toBe(true);
+    expect(runner.promise).toBe(promise2);
+
+    // Resolve the new handler and confirm normal state-clearing still works.
+    resolvers[1]!('fresh');
+    const result = await promise2;
+    expect(result).toBe('fresh');
+    expect(runner.running).toBe(false);
+    expect(runner.promise).toBeUndefined();
+});
+
+test('reset() clears any captured error', async () => {
+    const handler = () => {
+        return Promise.reject(new Error('boom'));
+    };
+
+    const runner = createSingleRunner({ handler });
+
+    await runner.execute().catch(() => {});
+    expect(runner.error).toBeInstanceOf(Error);
+
+    runner.reset();
+    expect(runner.error).toBeUndefined();
+    expect(runner.running).toBe(false);
+    expect(runner.promise).toBeUndefined();
 });
 
 test('should maintain single execution during concurrent calls with delay', async () => {

@@ -29,9 +29,9 @@
         "bin"
     ],
     "scripts": {
-        "typecheck": "tsc --noEmit --project tsconfig.check.json",
-        "lint": "prettier ./src --write && bun typecheck && eslint . --fix --cache",
-        "build:esm": "tsc --build ./tsconfig.esm.json"
+        "build": "tsc --build tsconfig.esm.json",
+        "lint": "eslint . --fix --cache",
+        "prettify": "prettier ./src --write > /dev/null"
     },
     "dependencies": {
         "@nzyme/i18n-compiler": "0.14.0",
@@ -44,26 +44,26 @@
         "chalk": "5.6.2",
         "chokidar": "5.0.0",
         "clipanion": "4.0.0-rc.4",
-        "comment-json": "4.5.1",
+        "comment-json": "4.6.2",
         "compare-versions": "6.1.1",
         "depcheck": "1.4.7",
         "enquirer": "2.4.1",
         "execa": "9.6.1",
-        "fs-extra": "11.3.3",
+        "fs-extra": "11.3.4",
         "latest-version": "9.0.0",
         "lodash.merge": "4.6.2",
         "source-map-support": "0.5.21",
-        "type-fest": "5.4.4"
+        "type-fest": "5.5.0"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",
         "@nzyme/tsconfig": "0.14.0",
         "@types/lodash.merge": "4.6.9",
-        "@types/node": "25.2.3",
+        "@types/node": "25.5.0",
         "@types/source-map-support": "0.5.10",
-        "eslint": "9.39.2",
+        "eslint": "10.1.0",
         "prettier": "3.8.1",
-        "typescript": "5.9.3"
+        "typescript": "6.0.2"
     },
     "engines": {
         "node": ">=20"

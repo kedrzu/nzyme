@@ -1,9 +1,8 @@
-import { h, onMounted, ref, watch } from 'vue';
-import type { HTMLAttributes } from 'vue';
-
 import { assignProps } from '@nzyme/utils/assignProps.js';
 import { defineProps } from '@nzyme/vue-utils/defineProps.js';
 import { useProps } from '@nzyme/vue-utils/useProps.js';
+import { h, nextTick, onMounted, ref, watch } from 'vue';
+import type { HTMLAttributes } from 'vue';
 
 import { defineFormField } from './defineFormField.js';
 
@@ -16,9 +15,7 @@ const TEXT_AREA_PROPS = defineProps({
     tabindex: Number,
 });
 
-/**
- *
- */
+/** Auto-resizing textarea composable providing a form field and its render component. */
 export const useTextArea = assignProps(setupTextArea, {
     props: TEXT_AREA_PROPS,
     emits: TEXT_AREA_FIELD.emits,
@@ -30,38 +27,41 @@ export const useTextArea = assignProps(setupTextArea, {
 function setupTextArea() {
     const props = useProps(TEXT_AREA_PROPS);
     const field = TEXT_AREA_FIELD.create({ props });
-    const textarea = ref<HTMLTextAreaElement>();
+    const input = ref<HTMLTextAreaElement>();
 
     onMounted(updateValue);
     watch(() => field.value, updateValue);
 
     return {
         field,
+        input,
         TextArea,
     };
 
-    function updateValue() {
-        if (!textarea.value) {
+    async function updateValue() {
+        if (!input.value) {
             return;
         }
 
-        textarea.value.value = field.value || '';
-        updateHeight();
+        input.value.value = field.value || '';
+        await updateHeight();
     }
 
-    function updateHeight() {
-        if (!textarea.value) {
+    async function updateHeight() {
+        await nextTick();
+
+        if (!input.value) {
             return;
         }
 
-        textarea.value.style.height = '0';
-        textarea.value.style.height = textarea.value.scrollHeight + 'px';
+        input.value.style.height = '0';
+        input.value.style.height = input.value.scrollHeight + 'px';
     }
 
     function onInput(event: Event) {
         const target = event.target as HTMLTextAreaElement;
         field.value = target.value;
-        updateHeight();
+        void updateHeight();
     }
 
     function TextArea(attrs: HTMLAttributes) {
@@ -78,7 +78,7 @@ function setupTextArea() {
                 onInput={onInput}
                 placeholder={props.placeholder}
                 readonly={props.readonly}
-                ref={textarea}
+                ref={input}
                 rows={1}
                 tabindex={props.tabindex}
                 title={props.label}

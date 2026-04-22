@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 import { defineContext, injectContext, provideContext } from './context.js';
 import { reactive } from './reactivity/reactive.js';
@@ -204,5 +204,10 @@ export function useLoadingContext(opts: LoadingContextOptions = {}): LoadingCont
     });
 
     provideContext(LoadingContextSymbol, context);
+
+    onMounted(() => {
+        setTimeout(checkLoadedOnce, 50);
+    });
+
     return context;
 }

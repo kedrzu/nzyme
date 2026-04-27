@@ -1,14 +1,22 @@
 {
     "name": "@nzyme/vue-forms",
     "version": "0.14.0",
+    "license": "MIT",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
     },
-    "license": "MIT",
-    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
-    "sideEffects": false,
+    "files": [
+        "src"
+    ],
     "type": "module",
+    "sideEffects": false,
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "imports": {
+        "#css/*": "./css/*"
+    },
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
@@ -31,18 +39,13 @@
             "default": "./src/*.tsx"
         }
     },
-    "imports": {
-        "#css/*": "./css/*"
+    "publishConfig": {
+        "access": "public"
     },
-    "main": "./src/index.ts",
-    "types": "./src/index.ts",
-    "files": [
-        "src"
-    ],
     "scripts": {
         "build": "tsc --build tsconfig.esm.json",
         "lint": "eslint . --fix --cache",
-        "prettify": "prettier ./src --write > /dev/null"
+        "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
         "@nzyme/dom-utils": "0.14.0",
@@ -67,14 +70,11 @@
         "@nzyme/eslint": "0.14.0",
         "@nzyme/tsconfig": "0.14.0",
         "@nzyme/vue-ioc": "0.14.0",
-        "@types/bun": "^1.3.11",
+        "@types/bun": "^1.3.13",
         "@types/node": "25.5.0",
         "eslint": "10.1.0",
-        "prettier": "3.8.1",
+        "oxfmt": "0.46.0",
         "typescript": "6.0.2",
         "vite": "7.3.1"
-    },
-    "publishConfig": {
-        "access": "public"
     }
 }

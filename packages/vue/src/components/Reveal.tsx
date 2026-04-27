@@ -50,7 +50,11 @@ export const Reveal = defineComponent({
             return (
                 <div
                     class={css.reveal}
-                    style={{ '--reveal-duration': props.duration != null ? `${props.duration}ms` : undefined } as CSSProperties}
+                    style={
+                        {
+                            '--reveal-duration': props.duration != null ? `${props.duration}ms` : undefined,
+                        } as CSSProperties
+                    }
                 >
                     <div class={css.reveal_inner}>
                         <Transition

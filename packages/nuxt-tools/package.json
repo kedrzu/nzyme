@@ -1,14 +1,20 @@
 {
     "name": "@nzyme/nuxt-tools",
     "version": "0.14.0",
+    "license": "MIT",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
     },
-    "license": "MIT",
-    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
-    "sideEffects": false,
+    "files": [
+        "dist"
+    ],
     "type": "module",
+    "sideEffects": false,
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
     "exports": {
         ".": {
             "default": "./dist/index.js",
@@ -21,16 +27,10 @@
             "default": "./dist/*.js"
         }
     },
-    "main": "./dist/index.js",
-    "module": "./dist/index.mjs",
-    "types": "./dist/index.d.ts",
-    "files": [
-        "dist"
-    ],
     "scripts": {
         "build": "tsc --build tsconfig.esm.json",
         "lint": "eslint . --fix --cache",
-        "prettify": "prettier ./src --write > /dev/null"
+        "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
         "@types/fs-extra": "11.0.4",
@@ -44,7 +44,7 @@
         "@nzyme/eslint": "0.14.0",
         "@nzyme/tsconfig": "0.14.0",
         "eslint": "10.1.0",
-        "prettier": "3.8.1",
+        "oxfmt": "0.46.0",
         "typescript": "6.0.2"
     }
 }

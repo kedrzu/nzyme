@@ -25,7 +25,14 @@ export interface TypescriptOptions {
 /** Creates an ESLint config for TypeScript projects with type-checking, import sorting, and code style rules. */
 export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
     const config: Linter.Config = {
-        ignores: ['dist/**/*', 'node_modules/**/*', 'eslint.config.js', 'eslint.config.ts', 'package.json', '**/*.loc.ts'],
+        ignores: [
+            'dist/**/*',
+            'node_modules/**/*',
+            'eslint.config.js',
+            'eslint.config.ts',
+            'package.json',
+            '**/*.loc.ts',
+        ],
         plugins: {
             workspaces,
             import: importPlugin,

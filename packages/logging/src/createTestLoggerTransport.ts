@@ -1,7 +1,7 @@
 import type { LoggerObject } from './Logger.js';
 import type { LoggerLevel } from './LoggerLevel.js';
-import { consoleLog  } from './LoggerTransport.js';
-import type {LoggerTransport} from './LoggerTransport.js';
+import { consoleLog } from './LoggerTransport.js';
+import type { LoggerTransport } from './LoggerTransport.js';
 
 /** A log entry captured during test execution. */
 export interface CapturedLog {

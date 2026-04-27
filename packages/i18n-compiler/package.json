@@ -2,14 +2,19 @@
     "name": "@nzyme/i18n-compiler",
     "version": "0.14.0",
     "private": true,
+    "license": "MIT",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
     },
-    "license": "MIT",
-    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
-    "sideEffects": false,
+    "files": [
+        "dist"
+    ],
     "type": "module",
+    "sideEffects": false,
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
@@ -22,11 +27,9 @@
             "default": "./dist/*.js"
         }
     },
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "files": [
-        "dist"
-    ],
+    "publishConfig": {
+        "access": "public"
+    },
     "scripts": {
         "build": "tsc --build tsconfig.esm.json",
         "lint": "eslint . --fix --cache",
@@ -48,8 +51,5 @@
         "eslint": "10.1.0",
         "prettier": "3.8.1",
         "typescript": "6.0.2"
-    },
-    "publishConfig": {
-        "access": "public"
     }
 }

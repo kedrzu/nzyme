@@ -117,10 +117,14 @@ async function displayPrSummary(params: {
     // Submodule PRs
     const submodules = await getSubmoduleInfo();
     for (const sub of submodules) {
-        if (!isTaskBranch(sub.currentBranch)) {continue;}
+        if (!isTaskBranch(sub.currentBranch)) {
+            continue;
+        }
 
         const urlMatch = sub.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
-        if (!urlMatch?.[1] || !urlMatch[2]) {continue;}
+        if (!urlMatch?.[1] || !urlMatch[2]) {
+            continue;
+        }
 
         const subConfig: GithubConfig = {
             owner: urlMatch[1],

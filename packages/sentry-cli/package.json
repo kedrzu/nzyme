@@ -2,14 +2,19 @@
     "name": "@nzyme/sentry-cli",
     "version": "0.14.0",
     "private": true,
+    "license": "MIT",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
     },
-    "license": "MIT",
-    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
-    "sideEffects": false,
+    "files": [
+        "dist"
+    ],
     "type": "module",
+    "sideEffects": false,
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
@@ -22,11 +27,9 @@
             "default": "./dist/*.js"
         }
     },
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "files": [
-        "dist"
-    ],
+    "publishConfig": {
+        "access": "public"
+    },
     "dependencies": {
         "@nzyme/cli": "0.14.0",
         "@nzyme/github-cli": "0.14.0",
@@ -43,15 +46,12 @@
         "prettier": "3.8.1",
         "typescript": "6.0.2"
     },
-    "publishConfig": {
-        "access": "public"
-    },
-    "nzyme": {
-        "cjs": true
-    },
     "depcheck": {
         "ignoreDeps": [
             "typescript"
         ]
+    },
+    "nzyme": {
+        "cjs": true
     }
 }

@@ -1,14 +1,20 @@
 {
     "name": "@nzyme/nuxt-tools",
     "version": "0.14.0",
+    "license": "MIT",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
     },
-    "license": "MIT",
-    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
-    "sideEffects": false,
+    "files": [
+        "dist"
+    ],
     "type": "module",
+    "sideEffects": false,
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
     "exports": {
         ".": {
             "default": "./dist/index.js",
@@ -21,12 +27,6 @@
             "default": "./dist/*.js"
         }
     },
-    "main": "./dist/index.js",
-    "module": "./dist/index.mjs",
-    "types": "./dist/index.d.ts",
-    "files": [
-        "dist"
-    ],
     "scripts": {
         "build": "tsc --build tsconfig.esm.json",
         "lint": "eslint . --fix --cache",

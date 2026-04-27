@@ -1,14 +1,19 @@
 {
     "name": "@nzyme/openapi",
     "version": "0.14.0",
+    "license": "MIT",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
     },
-    "license": "MIT",
-    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
-    "sideEffects": false,
+    "files": [
+        "dist"
+    ],
     "type": "module",
+    "sideEffects": false,
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
@@ -21,11 +26,9 @@
             "default": "./dist/*.js"
         }
     },
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "files": [
-        "dist"
-    ],
+    "publishConfig": {
+        "access": "public"
+    },
     "scripts": {
         "codegen": "openapi-typescript https://petstore3.swagger.io/api/v3/openapi.json -o ./tests/schema.d.ts",
         "build": "tsc --build tsconfig.esm.json",
@@ -48,15 +51,12 @@
         "prettier": "3.8.1",
         "typescript": "6.0.2"
     },
-    "publishConfig": {
-        "access": "public"
-    },
-    "nzyme": {
-        "cjs": true
-    },
     "depcheck": {
         "ignoreDeps": [
             "openapi-typescript"
         ]
+    },
+    "nzyme": {
+        "cjs": true
     }
 }

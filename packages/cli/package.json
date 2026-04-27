@@ -1,12 +1,19 @@
 {
     "name": "@nzyme/cli",
     "version": "0.14.0",
+    "license": "MIT",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/kedrzu/nzyme.git"
     },
-    "license": "MIT",
-    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "bin": {
+        "nzyme": "bin/cli.js"
+    },
+    "files": [
+        "dist",
+        "bin"
+    ],
     "type": "module",
     "exports": {
         ".": {
@@ -21,13 +28,9 @@
             "default": "./dist/*.js"
         }
     },
-    "bin": {
-        "nzyme": "bin/cli.js"
+    "publishConfig": {
+        "access": "public"
     },
-    "files": [
-        "dist",
-        "bin"
-    ],
     "scripts": {
         "build": "tsc --build tsconfig.esm.json",
         "lint": "eslint . --fix --cache",
@@ -67,8 +70,5 @@
     },
     "engines": {
         "node": ">=20"
-    },
-    "publishConfig": {
-        "access": "public"
     }
 }

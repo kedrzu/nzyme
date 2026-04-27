@@ -2,24 +2,29 @@
     "name": "@nzyme/tsconfig",
     "version": "0.14.0",
     "license": "MIT",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"
     },
-    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
-    "type": "module",
-    "publishConfig": {
-        "access": "public"
-    },
     "files": [
         "*.json"
     ],
+    "type": "module",
     "sideEffects": false,
+    "publishConfig": {
+        "access": "public"
+    },
     "dependencies": {
         "typescript-plugin-css-modules": "5.2.0",
         "typescript-vue-plugin": "1.8.27",
         "vite": "7.3.1",
         "vue": "3.5.30"
+    },
+    "devDependencies": {
+        "eslint": "10.1.0",
+        "prettier": "3.8.1",
+        "typescript": "6.0.2"
     },
     "depcheck": {
         "ignoreDeps": [
@@ -28,10 +33,5 @@
             "vite",
             "vue"
         ]
-    },
-    "devDependencies": {
-        "eslint": "10.1.0",
-        "prettier": "3.8.1",
-        "typescript": "6.0.2"
     }
 }

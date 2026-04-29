@@ -25,7 +25,7 @@
         "access": "public"
     },
     "scripts": {
-        "build": "tsc --build tsconfig.esm.json",
+        "build": "tsgo --build tsconfig.esm.json",
         "lint": "eslint . --fix --cache",
         "format": "oxfmt ./src > /dev/null"
     },
@@ -40,9 +40,9 @@
         "@nzyme/eslint": "0.14.0",
         "@nzyme/tsconfig": "0.14.0",
         "@types/node": "25.5.0",
+        "@typescript/native-preview": "^7.0.0-dev.20260428.1",
         "eslint": "10.1.0",
         "oxfmt": "0.46.0",
-        "typescript": "6.0.2",
         "vite": "7.3.1"
     }
 }

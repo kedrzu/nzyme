@@ -33,7 +33,7 @@
     "scripts": {
         "build": "tsc --build tsconfig.esm.json",
         "lint": "eslint . --fix --cache",
-        "prettify": "prettier ./src --write > /dev/null"
+        "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
         "@nzyme/i18n-core": "0.14.0",
@@ -49,7 +49,7 @@
         "@types/bun": "^1.3.11",
         "@types/node": "25.5.0",
         "eslint": "10.1.0",
-        "prettier": "3.8.1",
+        "oxfmt": "0.46.0",
         "typescript": "6.0.2"
     }
 }

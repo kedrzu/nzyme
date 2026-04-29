@@ -34,7 +34,7 @@
     "scripts": {
         "build": "tsc --build tsconfig.esm.json",
         "lint": "eslint . --fix --cache",
-        "prettify": "prettier ./src --write > /dev/null"
+        "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
         "@nzyme/i18n-compiler": "0.14.0",
@@ -65,7 +65,7 @@
         "@types/node": "25.5.0",
         "@types/source-map-support": "0.5.10",
         "eslint": "10.1.0",
-        "prettier": "3.8.1",
+        "oxfmt": "0.46.0",
         "typescript": "6.0.2"
     },
     "engines": {

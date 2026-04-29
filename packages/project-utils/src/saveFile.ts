@@ -2,7 +2,7 @@ import { readFile } from 'fs/promises';
 
 import { ESLint } from 'eslint';
 import { outputFile, pathExists } from 'fs-extra';
-import { format, resolveConfig } from 'prettier';
+import { format } from 'oxfmt';
 
 import { getProjectRoot } from './getProjectRoot.js';
 
@@ -10,7 +10,7 @@ import { getProjectRoot } from './getProjectRoot.js';
 let eslintInstance: ESLint | undefined;
 
 /**
- * Save a file with ESLint fixes and prettier formatting.
+ * Save a file with ESLint fixes and oxfmt formatting.
  */
 export async function saveFile(path: string, content: string): Promise<void> {
     // Run ESLint first to fix code issues
@@ -26,11 +26,10 @@ export async function saveFile(path: string, content: string): Promise<void> {
         console.error(`Failed to lint ${path}`, error);
     }
 
-    // Then run Prettier for formatting
-    const config = await resolveConfig(path);
-
+    // Then run oxfmt for formatting
     try {
-        content = await format(content, { ...config, filepath: path });
+        const result = await format(path, content);
+        content = result.code;
     } catch (error) {
         console.error(`Failed to format ${path}`, error);
     }

@@ -54,6 +54,16 @@ export interface PulumiBeforeDeployContext extends PulumiContext {
 }
 
 /**
+ * Info about a stack that failed to deploy.
+ */
+export interface StackDeployFailure {
+    /** The stack that failed. */
+    stack: StackDefinition;
+    /** The error that caused the failure. */
+    error: unknown;
+}
+
+/**
  * Context for the Pulumi after deploy command.
  */
 export interface PulumiAfterDeployContext extends PulumiContext {
@@ -65,6 +75,11 @@ export interface PulumiAfterDeployContext extends PulumiContext {
      * Stacks that failed to deploy.
      */
     stacksFailed: StackDefinition[];
+    /**
+     * Detailed failure info for stacks that failed to deploy,
+     * including the stack definition and the error that caused the failure.
+     */
+    stackFailures: StackDeployFailure[];
 }
 
 /**
@@ -451,10 +466,13 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
 
             await Promise.allSettled(stacksDeploying.values());
 
+            const stackFailures = [...stacksFailed.entries()].map(([stack, error]) => ({ stack, error }));
+
             await options.afterDeploy?.({
                 command: this,
                 stacksDeployed: [...stacksDeployed],
                 stacksFailed: [...stacksFailed.keys()],
+                stackFailures,
             });
 
             if (stacksFailed.size > 0) {

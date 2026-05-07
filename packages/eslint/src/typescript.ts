@@ -1,6 +1,5 @@
 import js from '@eslint/js';
 import type { Linter } from 'eslint';
-import prettier from 'eslint-config-prettier';
 import importPlugin from 'eslint-plugin-import';
 import perfectionist from 'eslint-plugin-perfectionist';
 import workspaces from 'eslint-plugin-workspaces';
@@ -151,7 +150,6 @@ export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
         extends: [
             js.configs.recommended,
             ...tseslint.configs.recommendedTypeChecked,
-            prettier,
             perfectionist.configs['recommended-natural'],
         ],
 

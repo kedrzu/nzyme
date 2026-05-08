@@ -1,13 +1,17 @@
+import { readFileSync } from 'fs';
 import { readFile } from 'fs/promises';
+import { resolve } from 'path';
 
 import { ESLint } from 'eslint';
 import { outputFile, pathExists } from 'fs-extra';
 import { format } from 'oxfmt';
+import type { FormatConfig } from 'oxfmt';
 
 import { getProjectRoot } from './getProjectRoot.js';
 
 // Single ESLint instance for the entire project
 let eslintInstance: ESLint | undefined;
+let oxfmtConfig: FormatConfig | undefined;
 
 /**
  * Save a file with ESLint fixes and oxfmt formatting.
@@ -28,7 +32,7 @@ export async function saveFile(path: string, content: string): Promise<void> {
 
     // Then run oxfmt for formatting
     try {
-        const result = await format(path, content);
+        const result = await format(path, content, getOxfmtConfig());
         content = result.code;
     } catch (error) {
         console.error(`Failed to format ${path}`, error);
@@ -61,4 +65,26 @@ function getEslintInstance(): ESLint {
     });
 
     return eslintInstance;
+}
+
+/**
+ * Load oxfmt formatting config from the project's .oxfmtrc.json.
+ * The programmatic format() API doesn't auto-discover config files,
+ * so we load and cache it manually.
+ */
+function getOxfmtConfig(): FormatConfig {
+    if (oxfmtConfig) {
+        return oxfmtConfig;
+    }
+
+    try {
+        const configPath = resolve(getProjectRoot(), '.oxfmtrc.json');
+        const raw = JSON.parse(readFileSync(configPath, 'utf-8')) as Record<string, unknown>;
+        const { ignorePatterns: _, overrides: __, ...config } = raw;
+        oxfmtConfig = config as FormatConfig;
+    } catch {
+        oxfmtConfig = {};
+    }
+
+    return oxfmtConfig;
 }

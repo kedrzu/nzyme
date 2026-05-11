@@ -30,7 +30,7 @@
         "access": "public"
     },
     "scripts": {
-        "codegen": "openapi-typescript https://petstore3.swagger.io/api/v3/openapi.json -o ./tests/schema.d.ts",
+        "schema": "openapi-typescript https://petstore3.swagger.io/api/v3/openapi.json -o ./tests/schema.d.ts",
         "build": "tsgo --build tsconfig.esm.json",
         "lint": "eslint . --fix --cache",
         "format": "oxfmt ./src > /dev/null"

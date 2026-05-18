@@ -1,10 +1,5 @@
-import {
-    DeleteObjectsCommand,
-    type DeleteObjectsCommandOutput,
-    ListObjectsV2Command,
-    ListObjectVersionsCommand,
-    S3Client,
-} from '@aws-sdk/client-s3';
+import { DeleteObjectsCommand, ListObjectsV2Command, ListObjectVersionsCommand, S3Client } from '@aws-sdk/client-s3';
+import type { DeleteObjectsCommandOutput } from '@aws-sdk/client-s3';
 
 import type { Logger } from '@nzyme/logging/Logger.js';
 

@@ -35,7 +35,7 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "fast-xml-parser": "5.5.9"
+        "fast-xml-parser": "5.8.0"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",

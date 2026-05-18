@@ -37,8 +37,8 @@
     "dependencies": {
         "@nzyme/types": "0.14.0",
         "@nzyme/xml-utils": "0.14.0",
-        "fast-xml-parser": "5.5.9",
-        "ufo": "1.6.3"
+        "fast-xml-parser": "5.8.0",
+        "ufo": "1.6.4"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",

@@ -13,24 +13,24 @@
         "@nzyme/utils": "0.14.0",
         "@nzyme/vue-ioc": "0.14.0",
         "@nzyme/vue-utils": "0.14.0",
-        "@primevue/nuxt-module": "4.5.4",
+        "@primevue/nuxt-module": "4.5.5",
         "@primevue/themes": "4.5.4",
         "crossws": "0.3.5",
-        "dexie": "4.3.0",
+        "dexie": "4.4.2",
         "lucide-vue-next": "1.0.0",
         "nuxt": "4.4.6",
         "primeicons": "7.0.0",
-        "primevue": "4.5.4",
-        "vue": "3.5.30",
+        "primevue": "4.5.5",
+        "vue": "3.5.34",
         "vue-json-pretty": "2.6.0",
-        "vue-router": "^5.0.4"
+        "vue-router": "^5.0.7"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",
         "eslint": "10.1.0",
         "oxfmt": "0.46.0",
-        "typescript": "6.0.2",
-        "vue-tsc": "^3.2.6"
+        "typescript": "6.0.3",
+        "vue-tsc": "^3.3.0"
     },
     "depcheck": {
         "ignoreDeps": [

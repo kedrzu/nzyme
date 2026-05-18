@@ -39,8 +39,8 @@
         "@nzyme/i18n-core": "0.14.0",
         "@nzyme/project-utils": "0.14.0",
         "@nzyme/utils": "0.14.0",
-        "vitest": "4.1.1",
-        "yaml": "2.8.3"
+        "vitest": "4.1.6",
+        "yaml": "2.9.0"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",

@@ -42,8 +42,8 @@
         "@nzyme/types": "0.14.0",
         "@nzyme/utils": "0.14.0",
         "@standard-schema/spec": "1.1.0",
-        "ufo": "1.6.3",
-        "vitest": "4.1.1"
+        "ufo": "1.6.4",
+        "vitest": "4.1.6"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",

@@ -31,7 +31,7 @@
         "access": "public"
     },
     "dependencies": {
-        "@linear/sdk": "78.0.0",
+        "@linear/sdk": "84.0.0",
         "@nzyme/cli": "0.14.0",
         "@nzyme/github-cli": "0.14.0",
         "@nzyme/logging": "0.14.0",

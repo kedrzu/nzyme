@@ -36,8 +36,8 @@
     },
     "dependencies": {
         "@nzyme/utils": "0.14.0",
-        "@slack/types": "2.20.1",
-        "@slack/web-api": "7.15.0"
+        "@slack/types": "2.21.1",
+        "@slack/web-api": "7.16.0"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",

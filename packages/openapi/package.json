@@ -39,7 +39,7 @@
         "@nzyme/fetch-utils": "0.14.0",
         "@nzyme/types": "0.14.0",
         "@nzyme/utils": "0.14.0",
-        "ufo": "1.6.3",
+        "ufo": "1.6.4",
         "undici-types": "7.24.5"
     },
     "devDependencies": {

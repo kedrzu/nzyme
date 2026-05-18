@@ -1,4 +1,10 @@
-import { DeleteObjectsCommand, ListObjectsV2Command, ListObjectVersionsCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+    DeleteObjectsCommand,
+    type DeleteObjectsCommandOutput,
+    ListObjectsV2Command,
+    ListObjectVersionsCommand,
+    S3Client,
+} from '@aws-sdk/client-s3';
 
 import type { Logger } from '@nzyme/logging/Logger.js';
 
@@ -39,7 +45,7 @@ async function deleteAllObjects(s3Client: S3Client, bucket: string) {
 
         const objects = listResponse.Contents;
         if (objects && objects.length > 0) {
-            await s3Client.send(
+            const deleteResponse = await s3Client.send(
                 new DeleteObjectsCommand({
                     Bucket: bucket,
                     Delete: {
@@ -47,6 +53,7 @@ async function deleteAllObjects(s3Client: S3Client, bucket: string) {
                     },
                 }),
             );
+            throwIfDeleteErrors(bucket, deleteResponse.Errors);
             deleted += objects.length;
         }
 
@@ -73,7 +80,7 @@ async function deleteAllVersions(s3Client: S3Client, bucket: string) {
         const entries = [...(listResponse.Versions ?? []), ...(listResponse.DeleteMarkers ?? [])];
 
         if (entries.length > 0) {
-            await s3Client.send(
+            const deleteResponse = await s3Client.send(
                 new DeleteObjectsCommand({
                     Bucket: bucket,
                     Delete: {
@@ -84,6 +91,7 @@ async function deleteAllVersions(s3Client: S3Client, bucket: string) {
                     },
                 }),
             );
+            throwIfDeleteErrors(bucket, deleteResponse.Errors);
             deleted += entries.length;
         }
 
@@ -97,4 +105,16 @@ async function deleteAllVersions(s3Client: S3Client, bucket: string) {
     } while (keyMarker || versionIdMarker);
 
     return deleted;
+}
+
+function throwIfDeleteErrors(bucket: string, errors: DeleteObjectsCommandOutput['Errors']) {
+    if (!errors || errors.length === 0) {
+        return;
+    }
+
+    const summary = errors
+        .map(err => `${err.Key}${err.VersionId ? `@${err.VersionId}` : ''}: ${err.Code} ${err.Message}`)
+        .join('; ');
+
+    throw new Error(`Failed to delete ${errors.length} object(s) from bucket ${bucket}: ${summary}`);
 }

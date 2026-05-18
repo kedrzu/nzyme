@@ -1,4 +1,4 @@
-import { DeleteObjectsCommand, ListObjectsV2Command, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectsCommand, ListObjectsV2Command, ListObjectVersionsCommand, S3Client } from '@aws-sdk/client-s3';
 
 import type { Logger } from '@nzyme/logging/Logger.js';
 
@@ -8,31 +8,93 @@ export interface EmptyS3BucketOptions {
     bucket: string;
     /** Optional logger for reporting progress. */
     logger?: Logger;
+    /** If true, deletes all object versions and delete markers (required for versioned buckets). */
+    versioned?: boolean;
 }
 
 /** Deletes all objects from an S3 bucket. */
 export async function emptyS3Bucket(options: EmptyS3BucketOptions) {
     const s3Client = new S3Client({});
     const logger = options.logger;
+    const bucket = options.bucket;
 
-    // List all objects in the bucket
-    const listResponse = await s3Client.send(
-        new ListObjectsV2Command({
-            Bucket: options.bucket,
-        }),
-    );
+    const deleted = options.versioned
+        ? await deleteAllVersions(s3Client, bucket)
+        : await deleteAllObjects(s3Client, bucket);
 
-    if (listResponse.Contents && listResponse.Contents.length > 0) {
-        // Delete all objects in the bucket
-        await s3Client.send(
-            new DeleteObjectsCommand({
-                Bucket: options.bucket,
-                Delete: {
-                    Objects: listResponse.Contents.map(obj => ({ Key: obj.Key as string })),
-                },
+    logger?.info(`Successfully emptied bucket ${bucket} - ${deleted} objects deleted.`);
+}
+
+async function deleteAllObjects(s3Client: S3Client, bucket: string) {
+    let deleted = 0;
+    let continuationToken: string | undefined;
+
+    do {
+        const listResponse = await s3Client.send(
+            new ListObjectsV2Command({
+                Bucket: bucket,
+                ContinuationToken: continuationToken,
             }),
         );
-    }
 
-    logger?.info(`Successfully emptied bucket ${options.bucket} - ${listResponse.Contents?.length} objects deleted.`);
+        const objects = listResponse.Contents;
+        if (objects && objects.length > 0) {
+            await s3Client.send(
+                new DeleteObjectsCommand({
+                    Bucket: bucket,
+                    Delete: {
+                        Objects: objects.map(obj => ({ Key: obj.Key as string })),
+                    },
+                }),
+            );
+            deleted += objects.length;
+        }
+
+        continuationToken = listResponse.IsTruncated ? listResponse.NextContinuationToken : undefined;
+    } while (continuationToken);
+
+    return deleted;
+}
+
+async function deleteAllVersions(s3Client: S3Client, bucket: string) {
+    let deleted = 0;
+    let keyMarker: string | undefined;
+    let versionIdMarker: string | undefined;
+
+    do {
+        const listResponse = await s3Client.send(
+            new ListObjectVersionsCommand({
+                Bucket: bucket,
+                KeyMarker: keyMarker,
+                VersionIdMarker: versionIdMarker,
+            }),
+        );
+
+        const entries = [...(listResponse.Versions ?? []), ...(listResponse.DeleteMarkers ?? [])];
+
+        if (entries.length > 0) {
+            await s3Client.send(
+                new DeleteObjectsCommand({
+                    Bucket: bucket,
+                    Delete: {
+                        Objects: entries.map(entry => ({
+                            Key: entry.Key as string,
+                            VersionId: entry.VersionId as string,
+                        })),
+                    },
+                }),
+            );
+            deleted += entries.length;
+        }
+
+        if (listResponse.IsTruncated) {
+            keyMarker = listResponse.NextKeyMarker;
+            versionIdMarker = listResponse.NextVersionIdMarker;
+        } else {
+            keyMarker = undefined;
+            versionIdMarker = undefined;
+        }
+    } while (keyMarker || versionIdMarker);
+
+    return deleted;
 }

@@ -67,8 +67,9 @@ async function deleteAllVersions(s3Client: S3Client, bucket: string) {
     let deleted = 0;
     let keyMarker: string | undefined;
     let versionIdMarker: string | undefined;
+    let isTruncated = true;
 
-    do {
+    while (isTruncated) {
         const listResponse = await s3Client.send(
             new ListObjectVersionsCommand({
                 Bucket: bucket,
@@ -95,14 +96,10 @@ async function deleteAllVersions(s3Client: S3Client, bucket: string) {
             deleted += entries.length;
         }
 
-        if (listResponse.IsTruncated) {
-            keyMarker = listResponse.NextKeyMarker;
-            versionIdMarker = listResponse.NextVersionIdMarker;
-        } else {
-            keyMarker = undefined;
-            versionIdMarker = undefined;
-        }
-    } while (keyMarker || versionIdMarker);
+        isTruncated = listResponse.IsTruncated ?? false;
+        keyMarker = listResponse.NextKeyMarker;
+        versionIdMarker = listResponse.NextVersionIdMarker;
+    }
 
     return deleted;
 }

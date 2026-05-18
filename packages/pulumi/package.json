@@ -43,8 +43,8 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "@aws-sdk/client-s3": "3.1015.0",
-        "@aws-sdk/credential-provider-node": "3.972.25",
+        "@aws-sdk/client-s3": "3.1048.0",
+        "@aws-sdk/credential-provider-node": "3.972.42",
         "@babel/core": "7.29.0",
         "@babel/plugin-syntax-import-attributes": "7.28.6",
         "@babel/preset-env": "7.29.2",
@@ -55,9 +55,9 @@
         "@nzyme/rollup-utils": "0.14.0",
         "@nzyme/types": "0.14.0",
         "@nzyme/utils": "0.14.0",
-        "@pulumi/aws": "7.23.0",
-        "@pulumi/pulumi": "3.227.0",
-        "@pulumi/random": "4.19.1",
+        "@pulumi/aws": "7.30.0",
+        "@pulumi/pulumi": "3.239.0",
+        "@pulumi/random": "4.20.0",
         "@rollup/plugin-babel": "7.0.0",
         "@rollup/plugin-commonjs": "29.0.2",
         "@rollup/plugin-json": "6.1.0",

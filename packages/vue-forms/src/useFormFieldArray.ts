@@ -122,7 +122,7 @@ export function useFormFieldArray<T>(
         { immediate: true },
     );
 
-    return fields as FormField[];
+    return fields;
 }
 
 function getFactory(

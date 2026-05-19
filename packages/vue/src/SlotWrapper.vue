@@ -12,6 +12,11 @@ interface SlotWrapperProps {
 const props = defineProps<SlotWrapperProps>();
 
 const render = () => {
+  // `props.props` is `T | undefined` (because the prop itself is optional), but
+  // `slot` accepts `T`. Crossing `undefined` to `T` here is the documented
+  // contract — slots that pass no props rely on the implementation to ignore
+  // the argument.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   const nodes = props.slot?.(props.props as T);
   const tag = props.tag ?? 'div';
 

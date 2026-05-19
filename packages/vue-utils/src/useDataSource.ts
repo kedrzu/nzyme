@@ -128,7 +128,7 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
     const behavior = opts.behavior;
     const loadRef = shallowRef(behavior !== 'lazy');
     const defaultRef = makeRef(opts.default);
-    const dataRef: Ref<TResult | undefined> = isRef(opts.data) ? opts.data : (shallowRef() as Ref<TResult | undefined>);
+    const dataRef: Ref<TResult | undefined> = isRef(opts.data) ? opts.data : shallowRef();
     const dataCallback = isRef(opts.data) ? null : opts.data;
     const paramsRef = makeRef(opts.params);
     const dirtyRef = ref(false);
@@ -148,7 +148,7 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
                 return defaultRef.value as TDefault;
             }
 
-            return data as TResult;
+            return data;
         },
         set: (value: TDefault | TResult) => {
             dataRef.value = value;
@@ -280,7 +280,7 @@ function getDebounceOptions(
     }
 
     if (typeof debounce === 'number') {
-        return { time: debounce, leading: true, trailing: true } as Required<DataSourceDebounceOptions>;
+        return { time: debounce, leading: true, trailing: true };
     }
 
     return {

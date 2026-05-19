@@ -215,7 +215,7 @@ export function storageRef<T>(
         (StorageRefOptionsCustom<T> | StorageRefOptionsJson | StorageRefOptionsRaw),
 ): StorageRef<T | null> {
     const key = options.key;
-    const serialize = options.serialize ?? (options.json ? JSON.stringify : (identity as (value: T) => string));
+    const serialize = options.serialize ?? (options.json ? JSON.stringify : identity);
     const deserialize = options.deserialize ?? ((options.json ? JSON.parse : identity) as (value: string) => T);
     const storage = getStorage(options.storage);
 

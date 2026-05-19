@@ -254,7 +254,7 @@ test('handles complex nested structures', () => {
 
 test('works with symbol keys', () => {
     const symbolKey = Symbol('test');
-    const parent = ref({ [symbolKey]: 'value' } as { [symbolKey]: string });
+    const parent = ref({ [symbolKey]: 'value' });
     const nested = nestedRef(parent, symbolKey);
 
     expect(nested.value).toBe('value');

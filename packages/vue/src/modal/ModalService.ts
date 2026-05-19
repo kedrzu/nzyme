@@ -78,7 +78,7 @@ export const ModalService = defineService({
             modal.controller = reactive<Controller>({
                 open,
                 done: done as Controller['done'],
-                close: close as Controller['close'],
+                close: close,
             });
 
             modal.component = defineComponent({

@@ -61,12 +61,6 @@ export function typescript(options: TypescriptOptions = {}): Linter.Config[] {
             ],
             '@typescript-eslint/consistent-type-imports': 'error',
             '@typescript-eslint/no-import-type-side-effects': 'error',
-            // The auto-fix is too aggressive: it removes `as` casts on object
-            // literals that narrow `number` to a status-code union (e.g.
-            // `{ status: 503 } as ActorServerResponse`) and casts on
-            // index-access whose narrowing is not visible to the rule. Removing
-            // them produces real TS errors at compile time.
-            '@typescript-eslint/no-unnecessary-type-assertion': 'off',
             // '@typescript-eslint/explicit-member-accessibility': 'warn',
             'workspaces/no-relative-imports': 'error',
             'workspaces/no-absolute-imports': 'error',

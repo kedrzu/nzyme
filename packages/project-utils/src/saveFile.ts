@@ -81,7 +81,7 @@ function getOxfmtConfig(): FormatConfig {
         const configPath = resolve(getProjectRoot(), '.oxfmtrc.json');
         const raw = JSON.parse(readFileSync(configPath, 'utf-8')) as Record<string, unknown>;
         const { ignorePatterns: _, overrides: __, ...config } = raw;
-        oxfmtConfig = config as FormatConfig;
+        oxfmtConfig = config;
     } catch {
         oxfmtConfig = {};
     }

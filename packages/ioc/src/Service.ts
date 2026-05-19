@@ -164,7 +164,7 @@ export function defineService<T, TExtend extends T = T, TDeps extends Dependenci
     const service: Service = {
         [INJECTABLE_SYMBOL]: SERVICE_SYMBOL,
         name,
-        implements: options.implements as Interface,
+        implements: options.implements,
         scope: options.scope,
         deps: options.deps ?? {},
         resolve: (container, caller) => resolution(service, container, caller),

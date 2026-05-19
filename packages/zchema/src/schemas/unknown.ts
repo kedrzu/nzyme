@@ -30,7 +30,7 @@ declare class ForceName {}
 const proto: SchemaProto<unknown> = {
     coerce: identity,
     serialize: identity,
-    check(value): value is unknown {
+    check(_value): _value is unknown {
         return true;
     },
     default: () => null,

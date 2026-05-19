@@ -65,7 +65,7 @@
         "@types/node": "25.5.0",
         "@types/source-map-support": "0.5.10",
         "@typescript/native-preview": "^7.0.0-dev.20260428.1",
-        "eslint": "10.1.0",
+        "eslint": "10.4.0",
         "oxfmt": "0.50.0"
     },
     "engines": {

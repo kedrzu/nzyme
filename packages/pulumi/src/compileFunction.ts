@@ -82,7 +82,7 @@ export function compileFunction(options: CompileFunctionOptions) {
         });
 
         worker.on('error', err => {
-            reject(err as Error);
+            reject(err instanceof Error ? err : new Error(String(err)));
             void worker.terminate();
         });
 

@@ -12,7 +12,6 @@ interface SlotWrapperProps {
 const props = defineProps<SlotWrapperProps>();
 
 const render = () => {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   const nodes = props.slot?.(props.props as T);
   const tag = props.tag ?? 'div';
 

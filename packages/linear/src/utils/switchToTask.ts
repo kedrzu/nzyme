@@ -74,9 +74,6 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
     // Check if task is in terminal state and handle accordingly
     await handleTerminalState(issueData, logger);
 
-    // Move task to "In Progress" if it's in backlog/todo/triage
-    await startTaskIfNotStarted(issueData, logger);
-
     // Handle task assignment and search for existing PR in parallel
     logger.info(`🔍 Searching for existing GitHub PR...`);
     const [, existingPr] = await Promise.all([
@@ -186,6 +183,11 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
         logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(result.pr.html_url))}`);
         logger.info(`🎉 Successfully created and checked out new branch for ${chalk.bold(issueId)}`);
     }
+
+    // Move task to "In Progress" if it's in backlog/todo/triage.
+    // Deferred until after checkout/create work has committed so we don't
+    // transition the Linear state when the user cancels or a later step throws.
+    await startTaskIfNotStarted(issueData, logger);
 
     // Show task URL for reference
     logger.info(`🔗 Linear task: ${chalk.underline(issueData.url)}`);

@@ -62,6 +62,7 @@ export async function startTaskIfNotStarted(
 
         logger.info(`✅ Task state changed to "${chalk.green(inProgressState.name)}"`);
     } catch (error) {
-        logger.warn(`⚠️  Failed to move task to "In Progress": ${(error as Error).message}`);
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error(`⚠️  Failed to move task to "In Progress": ${message}`);
     }
 }

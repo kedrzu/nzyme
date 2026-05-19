@@ -48,7 +48,7 @@
         "@types/node": "25.5.0",
         "@typescript/native-preview": "^7.0.0-dev.20260428.1",
         "eslint": "10.1.0",
-        "oxfmt": "0.46.0"
+        "oxfmt": "0.50.0"
     },
     "nzyme": {
         "cjs": true

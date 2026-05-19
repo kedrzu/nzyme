@@ -44,7 +44,7 @@
         "eslint": "10.1.0",
         "execa": "9.6.1",
         "fs-extra": "11.3.5",
-        "oxfmt": "0.46.0",
+        "oxfmt": "0.50.0",
         "parse-gitignore": "2.0.0",
         "pkg-types": "2.3.1"
     },

@@ -3,6 +3,8 @@ import chalk from 'chalk';
 
 import type { Logger } from '@nzyme/logging/Logger.js';
 
+import { findInProgressState } from './findInProgressState.js';
+
 /**
  * Move a Linear task to "In Progress" when starting work on it.
  *
@@ -38,14 +40,7 @@ export async function startTaskIfNotStarted(
             return;
         }
 
-        const workflowStates = await team.states();
-
-        const inProgressState = workflowStates.nodes.find(
-            state =>
-                state.type === 'started' ||
-                state.name.toLowerCase() === 'in progress' ||
-                state.name.toLowerCase() === 'inprogress',
-        );
+        const inProgressState = await findInProgressState(team);
 
         if (!inProgressState) {
             logger.warn('⚠️  Could not find "In Progress" state in the team workflow');

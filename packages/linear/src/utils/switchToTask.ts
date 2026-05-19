@@ -16,6 +16,7 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 import { handleTaskAssignment } from './handleTaskAssignment.js';
 import { handleTerminalState } from './handleTerminalState.js';
 import { reopenLinearTask } from './reopenLinearTask.js';
+import { startTaskIfNotStarted } from './startTaskIfNotStarted.js';
 
 /**
  * Parameters for switching to a task.
@@ -72,6 +73,9 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
 
     // Check if task is in terminal state and handle accordingly
     await handleTerminalState(issueData, logger);
+
+    // Move task to "In Progress" if it's in backlog/todo/triage
+    await startTaskIfNotStarted(issueData, logger);
 
     // Handle task assignment and search for existing PR in parallel
     logger.info(`🔍 Searching for existing GitHub PR...`);

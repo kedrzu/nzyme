@@ -33,7 +33,8 @@ interface HandleMergeConflictParams {
 
 /**
  * Handle a merge or rebase conflict by detecting conflicted files,
- * logging a formatted error, aborting the operation, and throwing.
+ * logging a formatted error, and throwing. Leaves the repository in the
+ * conflicted state so the user can resolve conflicts manually.
  *
  * Should be called in a catch block after a merge/rebase operation fails.
  * If the error is not a conflict, the original error is re-thrown as-is.
@@ -58,19 +59,6 @@ export async function handleMergeConflict(params: HandleMergeConflictParams, err
     logConflictedFiles({ conflictedFiles, logger });
 
     logger.error('');
-
-    // Abort the failed operation
-    try {
-        if (operation === 'rebase') {
-            await git.rebase(['--abort']);
-        } else {
-            await git.merge(['--abort']);
-        }
-        logger.info(`   ${chalk.gray(`${operation === 'rebase' ? 'Rebase' : 'Merge'} aborted.`)}`);
-    } catch {
-        // Abort may fail if git is in a weird state - ignore
-    }
-
     logger.error(`   ${chalk.yellow('Please resolve the conflicts manually and try again.')}`);
     logger.error('');
 

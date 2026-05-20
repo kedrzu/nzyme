@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { parseStackTrace, type StackFrame } from '@nzyme/utils/parseStackTrace.js';
+import { toJsonString } from '@nzyme/utils/toJsonString.js';
 import { computed } from 'vue';
 
 /**
@@ -121,7 +122,7 @@ function formatValue(value: unknown): string {
   if (typeof value === 'string') return `"${value}"`;
   if (typeof value === 'object') {
     try {
-      return JSON.stringify(value, null, 2);
+      return toJsonString(value, 2);
     } catch {
       return String(value);
     }

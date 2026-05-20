@@ -7,5 +7,5 @@
  * @__NO_SIDE_EFFECTS__
  */
 export function filterNotNull<T>(array: readonly (T | null | undefined)[]): T[] {
-    return array.filter(x => x != null) as T[];
+    return array.filter(x => x != null);
 }

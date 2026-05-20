@@ -112,5 +112,5 @@ export function defineFactory<
         setup: deps => {
             return (...args: P) => options.setup(deps, ...args);
         },
-    }) as Factory<TExtend, P, TDeps>;
+    });
 }

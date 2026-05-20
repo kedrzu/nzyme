@@ -131,7 +131,7 @@ export function useBrowserTabStatus(options: BrowserTabStatusOptions = {}) {
         if (!pingUrl) {
             return;
         }
-        steadyTimer = window.setInterval(executeSteadyPing as () => void, steadyPingIntervalMs);
+        steadyTimer = window.setInterval(() => void executeSteadyPing(), steadyPingIntervalMs);
     }
 
     async function executeSteadyPing() {

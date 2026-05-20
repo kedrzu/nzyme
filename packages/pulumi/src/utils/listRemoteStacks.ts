@@ -202,9 +202,7 @@ async function fetchStackDetails(s3Client: S3Client, bucketName: string, objectK
     let resourceCount = 0;
     if (latest.resources) {
         const resources = latest.resources as unknown[];
-        resourceCount = Array.isArray(resources)
-            ? resources.length
-            : Object.keys(resources as Record<string, unknown>).length;
+        resourceCount = Array.isArray(resources) ? resources.length : Object.keys(resources).length;
     }
 
     // Extract deployment information

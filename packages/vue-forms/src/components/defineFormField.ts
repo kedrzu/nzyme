@@ -149,7 +149,7 @@ export function createFormField<T>(options: FormFieldOptions<T>) {
         }
 
         if (props.field) {
-            props.field.value = value as T;
+            props.field.value = value;
         }
 
         model.value = value;

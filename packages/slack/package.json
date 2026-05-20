@@ -36,15 +36,15 @@
     },
     "dependencies": {
         "@nzyme/utils": "0.14.0",
-        "@slack/types": "2.20.1",
-        "@slack/web-api": "7.15.0"
+        "@slack/types": "2.21.1",
+        "@slack/web-api": "7.16.0"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",
         "@nzyme/tsconfig": "0.14.0",
         "@typescript/native-preview": "^7.0.0-dev.20260428.1",
-        "eslint": "10.1.0",
-        "oxfmt": "0.46.0"
+        "eslint": "10.4.0",
+        "oxfmt": "0.50.0"
     },
     "nzyme": {
         "cjs": true

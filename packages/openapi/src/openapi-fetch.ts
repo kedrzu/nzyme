@@ -87,7 +87,7 @@ export function createOpenApiFetch<Paths>(config: OpenApiFetchConfig = {}) {
 
         // Add query parameters
         if (query) {
-            url = withQuery(url, query as Record<string, boolean | number | string | undefined>);
+            url = withQuery(url, query);
         }
 
         // Prepare headers

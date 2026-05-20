@@ -24,7 +24,7 @@ export type IntegerSchema<O extends SchemaOptionsBase = SchemaOptionsBase> = Sch
 const proto: SchemaProto<number> = {
     coerce: v => Math.ceil(Number(v)),
     serialize: identity,
-    check: Number.isInteger as (value: unknown) => value is number,
+    check: Number.isInteger,
     default: () => 0,
 };
 

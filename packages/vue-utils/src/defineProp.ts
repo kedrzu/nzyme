@@ -148,5 +148,5 @@ export function defineProp<T>(opts: PropOptionsOptional<T>): PropOptionsOptional
  * @__NO_SIDE_EFFECTS__
  */
 export function defineProp<T>(optsOrType?: unknown): PropOptions<T> {
-    return (optsOrType || {}) as PropOptions<T>;
+    return optsOrType || {};
 }

@@ -12,5 +12,5 @@ export function omitProps<T extends object, K extends keyof T>(target: T, props:
     for (const prop of props) {
         delete result[prop];
     }
-    return result as Omit<T, K>;
+    return result;
 }

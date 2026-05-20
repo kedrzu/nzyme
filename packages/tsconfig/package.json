@@ -22,9 +22,9 @@
         "vue": "3.5.33"
     },
     "devDependencies": {
-        "eslint": "10.1.0",
-        "oxfmt": "0.46.0",
-        "typescript": "6.0.2"
+        "eslint": "10.4.0",
+        "oxfmt": "0.50.0",
+        "typescript": "6.0.3"
     },
     "depcheck": {
         "ignoreDeps": [

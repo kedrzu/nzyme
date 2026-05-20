@@ -39,7 +39,7 @@
         "@nzyme/fetch-utils": "0.14.0",
         "@nzyme/types": "0.14.0",
         "@nzyme/utils": "0.14.0",
-        "ufo": "1.6.3",
+        "ufo": "1.6.4",
         "undici-types": "7.24.5"
     },
     "devDependencies": {
@@ -47,9 +47,9 @@
         "@nzyme/tsconfig": "0.14.0",
         "@types/bun": "^1.3.13",
         "@typescript/native-preview": "^7.0.0-dev.20260428.1",
-        "eslint": "10.1.0",
+        "eslint": "10.4.0",
         "openapi-typescript": "7.13.0",
-        "oxfmt": "0.46.0"
+        "oxfmt": "0.50.0"
     },
     "depcheck": {
         "ignoreDeps": [

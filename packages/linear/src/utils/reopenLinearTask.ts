@@ -4,6 +4,8 @@ import chalk from 'chalk';
 import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
+import { findInProgressState } from './findInProgressState.js';
+
 /**
  * Reopen a Linear task by changing its state to "In Progress" or similar.
  */
@@ -23,15 +25,7 @@ export async function reopenLinearTask(linearClient: LinearClient, issueId: stri
         throw new UsageError('Could not find team for this issue');
     }
 
-    const workflowStates = await team.states();
-
-    // Look for "In Progress" or similar state
-    const inProgressState = workflowStates.nodes.find(
-        state =>
-            state.name.toLowerCase() === 'in progress' ||
-            state.name.toLowerCase() === 'inprogress' ||
-            state.type === 'started',
-    );
+    const inProgressState = await findInProgressState(team);
 
     if (!inProgressState) {
         throw new UsageError('Could not find "In Progress" state in the team workflow');

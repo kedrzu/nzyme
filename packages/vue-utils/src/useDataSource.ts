@@ -77,6 +77,15 @@ export interface DataSourceOptions<TParams, TResult, TDefault extends TResult | 
      * Callback that runs after data is loaded successfully
      */
     readonly onLoad?: (result: TResult, params: TParams) => unknown;
+
+    /**
+     * Callback that runs when the loader rejects.
+     * When provided, the error is delivered here instead of being re-thrown from
+     * `get()`/`reload()`, so callers can handle errors without wrapping every
+     * access site in try/catch. The reactive `error` prop on the returned data
+     * source is still populated regardless.
+     */
+    readonly onError?: (error: unknown, params: TParams) => unknown;
 }
 
 /**
@@ -97,6 +106,13 @@ export interface DataSource<TResult, TDefault extends TResult | undefined = unde
      * Whether the data has been loaded at least once
      */
     readonly loaded: boolean;
+
+    /**
+     * The latest error thrown by the loader, or `null` when the most recent
+     * load succeeded (or no load has happened yet). Always populated on
+     * failure, regardless of whether `onError` is provided.
+     */
+    readonly error: unknown;
 
     /**
      * Get the current data, loading it if necessary
@@ -136,6 +152,7 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
     const effectScope = getCurrentScope();
 
     const pendingRef = ref<Promise<TResult> | null>(null);
+    const errorRef = shallowRef<unknown>(null);
 
     const debounceOptions = getDebounceOptions(opts.debounce);
     const debouncedLoad = debounceOptions ? debounce(loadData, debounceOptions.time, debounceOptions) : loadData;
@@ -168,6 +185,7 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
         value,
         pending: computed(() => pendingRef.value),
         loaded: computed(() => loadedRef.value),
+        error: computed(() => errorRef.value),
         get,
         reload,
         clear,
@@ -210,6 +228,7 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
 
         pendingRef.value = null;
         dataRef.value = undefined;
+        errorRef.value = null;
         if (behavior === 'lazy') {
             loadRef.value = false;
         }
@@ -248,9 +267,25 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
             dataRef.value = result;
             dirtyRef.value = false;
             loadedRef.value = true;
+            errorRef.value = null;
             if (dataCallback) {
                 dataCallback(result);
             }
+        } catch (error) {
+            errorRef.value = error;
+
+            const onError = opts.onError;
+            if (!onError) {
+                throw error;
+            }
+
+            if (effectScope) {
+                effectScope.run(() => onError(error, params as TParams));
+            } else {
+                onError(error, params as TParams);
+            }
+
+            return undefined as unknown as TResult;
         } finally {
             // we need to check if this is really the same request we started
             // because in the meantime some other request might start

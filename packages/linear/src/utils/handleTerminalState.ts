@@ -5,6 +5,8 @@ import enquirer from 'enquirer';
 import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
+import { findInProgressState } from './findInProgressState.js';
+
 /**
  * Handle terminal state logic - ask user if they want to change state to "In Progress".
  * @param linearClient Linear client instance
@@ -63,14 +65,7 @@ export async function handleTerminalState(
             throw new UsageError('Could not find team for this issue');
         }
 
-        const workflowStates = await team.states();
-
-        const inProgressState = workflowStates.nodes.find(
-            state =>
-                state.name.toLowerCase() === 'in progress' ||
-                state.name.toLowerCase() === 'inprogress' ||
-                state.type === 'started',
-        );
+        const inProgressState = await findInProgressState(team);
 
         if (!inProgressState) {
             throw new UsageError('Could not find "In Progress" state in the team workflow');

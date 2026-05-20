@@ -16,6 +16,7 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 import { handleTaskAssignment } from './handleTaskAssignment.js';
 import { handleTerminalState } from './handleTerminalState.js';
 import { reopenLinearTask } from './reopenLinearTask.js';
+import { startTaskIfNotStarted } from './startTaskIfNotStarted.js';
 
 /**
  * Parameters for switching to a task.
@@ -182,6 +183,11 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
         logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(result.pr.html_url))}`);
         logger.info(`🎉 Successfully created and checked out new branch for ${chalk.bold(issueId)}`);
     }
+
+    // Move task to "In Progress" if it's in backlog/todo/triage.
+    // Deferred until after checkout/create work has committed so we don't
+    // transition the Linear state when the user cancels or a later step throws.
+    await startTaskIfNotStarted(issueData, logger);
 
     // Show task URL for reference
     logger.info(`🔗 Linear task: ${chalk.underline(issueData.url)}`);

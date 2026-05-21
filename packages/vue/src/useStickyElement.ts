@@ -10,6 +10,8 @@ import { useIntervalFn } from '@vueuse/core';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 
+import { isElementScrollable } from './useScrollableContainer.js';
+
 /**
  * Position of the sticky element.
  */
@@ -145,25 +147,6 @@ export function useStickyElement(options: StickyElementOptions) {
 
         // Default to window if no scrollable container found
         return window;
-    }
-
-    function isElementScrollable(element: Element): boolean {
-        if (!(element instanceof HTMLElement)) {
-            return false;
-        }
-
-        const styles = getComputedStyle(element);
-        const hasVerticalScrollbar = element.scrollHeight > element.clientHeight;
-
-        // Check if overflow allows scrolling
-        const overflowY = styles.overflowY;
-        const overflow = styles.overflow;
-
-        const canScrollVertically =
-            (overflowY === 'scroll' || overflowY === 'auto' || overflow === 'scroll' || overflow === 'auto') &&
-            hasVerticalScrollbar;
-
-        return canScrollVertically;
     }
 
     function updateScroll() {

@@ -13,10 +13,13 @@ import type { Team, WorkflowState } from '@linear/sdk';
 export async function findInProgressState(team: Team): Promise<WorkflowState | undefined> {
     const workflowStates = await team.states();
 
-    return workflowStates.nodes.find(
-        state =>
-            state.name.toLowerCase() === 'in progress' ||
-            state.name.toLowerCase() === 'inprogress' ||
-            state.type === 'started',
+    const byName = workflowStates.nodes.find(
+        state => state.name.toLowerCase() === 'in progress' || state.name.toLowerCase() === 'inprogress',
     );
+
+    if (byName) {
+        return byName;
+    }
+
+    return workflowStates.nodes.find(state => state.type === 'started');
 }

@@ -28,6 +28,15 @@ interface GeneratedValueState<T> {
 }
 
 /**
+ * Shape of the inputs passed to `diff` by Pulumi's dynamic-provider runtime. Contains the
+ * serialized closure under the reserved `__provider` key alongside any other declared inputs.
+ */
+interface GeneratedValueDiffInputs {
+    /** Pulumi-managed serialized provider closure. */
+    __provider?: string;
+}
+
+/**
  * Provider implementation for GeneratedValue dynamic resource
  */
 class GeneratedValueProvider<T> implements pulumi.dynamic.ResourceProvider {
@@ -73,13 +82,23 @@ class GeneratedValueProvider<T> implements pulumi.dynamic.ResourceProvider {
     }
 
     /**
-     * Called to determine if the resource needs to be updated. Always returns no changes.
+     * Called to determine if the resource needs to be updated. Reports a change only when
+     * the captured provider closure (`__provider`) differs — e.g. when the user edited the
+     * `generate` function or its dependencies. That triggers an `update`, which returns the
+     * existing value unchanged, so the generated value is preserved while Pulumi rewrites
+     * the stored inputs (including `__provider`) to match the current program. Without this,
+     * the stored closure would be pinned to whatever it was at creation time and could not
+     * recover from environment changes (e.g. a captured module path becoming unreachable).
      */
-    diff(_id: string, _olds: GeneratedValueState<T>, _news: unknown): Promise<pulumi.dynamic.DiffResult> {
-        // Never report changes to prevent regeneration
-        return Promise.resolve({
-            changes: false,
-        });
+    diff(
+        _id: string,
+        olds: GeneratedValueDiffInputs,
+        news: GeneratedValueDiffInputs,
+    ): Promise<pulumi.dynamic.DiffResult> {
+        if (olds.__provider !== news.__provider) {
+            return Promise.resolve({ changes: true });
+        }
+        return Promise.resolve({ changes: false });
     }
 }
 

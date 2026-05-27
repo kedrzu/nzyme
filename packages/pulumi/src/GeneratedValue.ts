@@ -90,7 +90,11 @@ class GeneratedValueProvider<T> implements pulumi.dynamic.ResourceProvider {
      * the stored closure would be pinned to whatever it was at creation time and could not
      * recover from environment changes (e.g. a captured module path becoming unreachable).
      */
-    diff(_id: string, olds: GeneratedValueDiffInputs, news: GeneratedValueDiffInputs): Promise<pulumi.dynamic.DiffResult> {
+    diff(
+        _id: string,
+        olds: GeneratedValueDiffInputs,
+        news: GeneratedValueDiffInputs,
+    ): Promise<pulumi.dynamic.DiffResult> {
         if (olds.__provider !== news.__provider) {
             return Promise.resolve({ changes: true });
         }

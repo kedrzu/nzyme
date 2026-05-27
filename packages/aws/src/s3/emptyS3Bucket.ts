@@ -11,11 +11,13 @@ export interface EmptyS3BucketOptions {
     logger?: Logger;
     /** If true, deletes all object versions and delete markers (required for versioned buckets). */
     versioned?: boolean;
+    /** Optional S3 client to use. Defaults to a new client with ambient AWS config. */
+    s3Client?: S3Client;
 }
 
 /** Deletes all objects from an S3 bucket. */
 export async function emptyS3Bucket(options: EmptyS3BucketOptions) {
-    const s3Client = new S3Client({});
+    const s3Client = options.s3Client ?? new S3Client({});
     const logger = options.logger;
     const bucket = options.bucket;
 

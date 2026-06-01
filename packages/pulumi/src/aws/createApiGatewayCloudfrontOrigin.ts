@@ -14,6 +14,12 @@ export interface ApiGatewayCloudfrontOriginOptions {
      * The API Gateway URL.
      */
     apiUrl: pulumi.Input<string>;
+    /**
+     * Custom headers injected by CloudFront on every origin request. CloudFront overrides any
+     * viewer-supplied header of the same name, so these cannot be spoofed by clients — useful for a
+     * shared origin secret that lets the origin reject requests not arriving through CloudFront.
+     */
+    customHeaders?: CloudfrontOriginProps['customHeaders'];
 }
 
 /**
@@ -31,6 +37,7 @@ export function createApiGatewayCloudfrontOrigin(options: ApiGatewayCloudfrontOr
             originProtocolPolicy: 'https-only',
             originSslProtocols: ['TLSv1.2'],
         },
+        customHeaders: options.customHeaders,
     };
 
     return origin;

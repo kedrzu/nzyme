@@ -71,13 +71,17 @@ export function createMiddleware(options: CreateMiddlewareOptions): RequestListe
     }
 
     function getIp(req: IncomingMessage) {
+        // Behind a load balancer the trustworthy client IP is the LAST x-forwarded-for entry (the
+        // one the LB appends); the leftmost entries are client-supplied and can be spoofed. If a
+        // second proxy is ever added in front, switch to an explicit trusted-hop count.
         const xForwardedFor = req.headers['x-forwarded-for'];
-        if (Array.isArray(xForwardedFor)) {
-            return xForwardedFor[0];
-        }
-
-        if (xForwardedFor) {
-            return xForwardedFor;
+        const forwardedHeader = Array.isArray(xForwardedFor) ? xForwardedFor[xForwardedFor.length - 1] : xForwardedFor;
+        if (forwardedHeader) {
+            const parts = forwardedHeader.split(',');
+            const last = parts[parts.length - 1]?.trim();
+            if (last) {
+                return last;
+            }
         }
 
         return req.socket.remoteAddress;

@@ -40,10 +40,13 @@ export interface SwitchDetachedSubmoduleToBaseBranchParams {
  * Parking the submodule on a real, up-to-date branch keeps that gitlink merge a clean
  * fast-forward.
  *
- * Safety: this only switches when the detached commit is already contained in `origin/<base>`,
- * i.e. the submodule merely tracks the base branch and has no unpushed work that a branch
- * switch could orphan. Anything else is left untouched. The caller is expected to have fetched
- * the submodule beforehand so `origin/<base>` is up to date.
+ * Safety: this only switches when (a) the detached commit is already contained in `origin/<base>`,
+ * i.e. the submodule merely tracks the base branch with no unpushed work that switching could
+ * orphan, AND (b) any existing local base branch is itself fully contained in `origin/<base>`,
+ * so resetting it to the remote tip discards nothing. If a local base branch carries unpushed
+ * commits, the submodule is left detached rather than silently rewinding that branch. Anything
+ * else is left untouched. The caller is expected to have fetched the submodule beforehand so
+ * `origin/<base>` is up to date.
  *
  * @returns `true` if the submodule was switched onto the base branch, `false` if it was left as-is.
  */
@@ -68,9 +71,23 @@ export async function switchDetachedSubmoduleToBaseBranch(
         return false;
     }
 
+    // `-B` below force-resets any existing local base branch to the remote tip. The detached-HEAD
+    // check above only proves the current HEAD is safe — not that an existing local branch is. If a
+    // local base branch exists with commits not on the remote (unpushed work), resetting it would
+    // orphan them, so we leave the submodule detached instead.
+    if (
+        (await refExists(git, `refs/heads/${baseBranch}`)) &&
+        !(await isContainedIn(git, baseBranch, remoteBaseBranch))
+    ) {
+        logger.warn(
+            `   ⚠️  ${repoDisplayName}: local ${chalk.cyan(baseBranch)} has unpushed commits — leaving detached`,
+        );
+        return false;
+    }
+
     // Create/reset the local base branch to the latest remote tip and check it out.
-    // The working tree is clean and HEAD is an ancestor of the remote tip, so this is a
-    // loss-free fast-forward onto a real branch.
+    // The working tree is clean, HEAD is an ancestor of the remote tip, and any existing local
+    // base branch is fully contained in the remote, so this is a loss-free fast-forward.
     await git.checkout(['-B', baseBranch, remoteBaseBranch]);
     logger.info(
         `   ${chalk.green('✓')} ${repoDisplayName}: switched detached HEAD → ${chalk.cyan(baseBranch)} (latest)`,

@@ -172,8 +172,9 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     for (const synced of syncedSubmodules) {
         const subGit = simpleGit({ baseDir: synced.submodule.path });
         if (mainNeedsIntegration) {
-            // Full all-refs fetch guarantees every gitlink commit replayed by the main repo is local.
-            fetchPromises.push(fetchAllSafe(subGit));
+            // Full all-refs fetch guarantees every gitlink commit replayed by the main repo is local;
+            // swallow errors (no remote / offline). The second .then arg resolves the rejection to void.
+            fetchPromises.push(subGit.fetch('origin').then(() => {}, () => {}));
         } else {
             // Targeted fetch: only this submodule's current branch (null/detached → fetchSafe no-ops)
             // and the base branch are needed for Phase 4-6.
@@ -273,19 +274,6 @@ async function fetchSafe(git: SimpleGit, remote: string, branch: string | null |
         await git.fetch(remote, branch);
     } catch {
         // Remote branch may not exist yet - ignore
-    }
-}
-
-/**
- * Fetch all branches from origin, ignoring errors (no remote / offline).
- * Used for submodules so every gitlink commit referenced by the superproject is available
- * locally before any history operation that has to merge those gitlinks.
- */
-async function fetchAllSafe(git: SimpleGit): Promise<void> {
-    try {
-        await git.fetch('origin');
-    } catch {
-        // No remote or offline - ignore
     }
 }
 

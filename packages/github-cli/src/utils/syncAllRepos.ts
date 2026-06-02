@@ -12,6 +12,7 @@ import { handleMergeConflict } from './handleMergeConflict.js';
 import { isTaskBranch } from './isTaskBranch.js';
 import { pushSubmoduleUpdates } from './pushSubmoduleUpdates.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
+import { switchDetachedSubmoduleToBaseBranch } from './switchDetachedSubmoduleToBaseBranch.js';
 
 /**
  * Parameters for synchronizing all repositories.
@@ -47,6 +48,11 @@ export interface SyncedSubmoduleInfo {
      * Whether this submodule is on a task branch.
      */
     isOnTaskBranch: boolean;
+
+    /**
+     * Whether this submodule is in a detached HEAD state (pinned to a commit, not on a branch).
+     */
+    isDetached: boolean;
 }
 
 /**
@@ -77,8 +83,8 @@ export interface SyncAllReposResult {
 /**
  * Synchronize all repositories (main + submodules):
  * 1. Auto-commit pending changes in all repos (no prompting)
- * 2. Fetch all repos in parallel
- * 3. Rebase current branches (task branches: rebase; non-task: pull/ff)
+ * 2. Fetch all repos in parallel (submodules fetched in full so every gitlink commit is local)
+ * 3. Rebase current branches (task branches: rebase; detached: switch onto base; non-task: pull/ff)
  * 4. Fast-forward base branch in main + task-branch submodules
  * 5. Merge base branch into task-branch submodules + push
  * 6. Commit & push all submodule reference updates (from rebase, pull, or merge)
@@ -86,7 +92,11 @@ export interface SyncAllReposResult {
  */
 export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllReposResult> {
     const { baseBranch, logger, defaultCommitMessage = 'Work in progress' } = params;
-    const mainGit = simpleGit();
+    // Disable submodule recursion for main-repo history operations: we manage every submodule's
+    // working tree explicitly below. Left on, git would try to auto-fetch submodule gitlink commits
+    // by SHA during rebase/merge — which real remotes reject — and check out submodule trees at
+    // unexpected times, both of which produce spurious submodule conflicts.
+    const mainGit = simpleGit({ config: ['submodule.recurse=false'] });
 
     // === Phase 1: Detect submodules ===
     const submoduleInfos = await getSubmoduleInfo();
@@ -94,6 +104,7 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     const syncedSubmodules: SyncedSubmoduleInfo[] = submoduleInfos.map(sub => ({
         submodule: sub,
         isOnTaskBranch: isTaskBranch(sub.currentBranch),
+        isDetached: sub.detached,
     }));
 
     // === Phase 2: Auto-commit pending changes ===
@@ -140,13 +151,15 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     fetchPromises.push(fetchSafe(mainGit, 'origin', mainBranch));
     fetchPromises.push(fetchSafe(mainGit, 'origin', baseBranch));
 
-    // Fetch each submodule
+    // Fetch each submodule in full. This MUST happen before the main repo is rebased/merged
+    // below: those operations replay commits whose gitlinks may point at submodule commits the
+    // local submodule has not seen yet. If such a commit is missing, git's three-way gitlink
+    // merge fails with "commits not present" and raises a spurious submodule conflict even when
+    // the gitlinks are trivially fast-forwardable. A full `git fetch origin` (all branches, not
+    // just the current/base one) guarantees every referenced commit is available locally.
     for (const synced of syncedSubmodules) {
         const subGit = simpleGit({ baseDir: synced.submodule.path });
-        fetchPromises.push(fetchSafe(subGit, 'origin', synced.submodule.currentBranch));
-        if (synced.isOnTaskBranch) {
-            fetchPromises.push(fetchSafe(subGit, 'origin', baseBranch));
-        }
+        fetchPromises.push(fetchAllSafe(subGit));
     }
 
     await Promise.all(fetchPromises);
@@ -164,10 +177,20 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     // Each submodule
     for (const synced of syncedSubmodules) {
         const subGit = simpleGit({ baseDir: synced.submodule.path });
+        const subName = chalk.magenta(synced.submodule.name);
         if (synced.isOnTaskBranch) {
-            await rebaseAndPushCurrentBranch(subGit, logger, chalk.magenta(synced.submodule.name));
+            await rebaseAndPushCurrentBranch(subGit, logger, subName);
+        } else if (synced.isDetached) {
+            // Park detached submodules on the (up-to-date) base branch so the upcoming gitlink
+            // merges in the main repo stay clean fast-forwards. Already fetched in Phase 3.
+            await switchDetachedSubmoduleToBaseBranch({
+                git: subGit,
+                baseBranch,
+                logger,
+                repoDisplayName: subName,
+            });
         } else {
-            await pullCurrentBranch(subGit, logger, chalk.magenta(synced.submodule.name));
+            await pullCurrentBranch(subGit, logger, subName);
         }
     }
 
@@ -230,6 +253,19 @@ async function fetchSafe(git: SimpleGit, remote: string, branch: string | null |
         await git.fetch(remote, branch);
     } catch {
         // Remote branch may not exist yet - ignore
+    }
+}
+
+/**
+ * Fetch all branches from origin, ignoring errors (no remote / offline).
+ * Used for submodules so every gitlink commit referenced by the superproject is available
+ * locally before any history operation that has to merge those gitlinks.
+ */
+async function fetchAllSafe(git: SimpleGit): Promise<void> {
+    try {
+        await git.fetch('origin');
+    } catch {
+        // No remote or offline - ignore
     }
 }
 

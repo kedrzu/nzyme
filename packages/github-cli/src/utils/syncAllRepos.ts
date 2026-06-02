@@ -83,7 +83,9 @@ export interface SyncAllReposResult {
 /**
  * Synchronize all repositories (main + submodules):
  * 1. Auto-commit pending changes in all repos (no prompting)
- * 2. Fetch all repos in parallel (submodules fetched in full so every gitlink commit is local)
+ * 2. Fetch all repos in parallel (submodules fetched in full only when the main repo will integrate
+ *    remote commits, so every replayed gitlink is local; otherwise each submodule fetches just its
+ *    current + base branch)
  * 3. Rebase current branches (task branches: rebase; detached: switch onto base; non-task: pull/ff)
  * 4. Fast-forward base branch in main + task-branch submodules
  * 5. Merge base branch into task-branch submodules + push
@@ -145,21 +147,39 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     logger.info(chalk.bold('📡 Fetching all repositories...'));
 
     const mainBranch = (await mainGit.status()).current;
+
+    // Fetch the main repo's current + base branch first (cheap, single-branch fetches): we need
+    // them locally to decide whether the main repo will integrate remote commits below.
+    await Promise.all([fetchSafe(mainGit, 'origin', mainBranch), fetchSafe(mainGit, 'origin', baseBranch)]);
+
+    // Decide how aggressively to fetch submodules. A full all-refs submodule fetch is only required
+    // when the main repo actually integrates remote commits, because those operations replay/merge
+    // main-repo commits whose gitlinks may point at submodule commits the local submodule has not
+    // seen yet. If such a commit is missing, git's three-way gitlink merge fails with "commits not
+    // present" and raises a spurious submodule conflict even when the gitlinks are trivially
+    // fast-forwardable. The main repo integrates remote commits when:
+    //   - origin/<mainBranch> is ahead of local <mainBranch> (Phase 4 rebase), OR
+    //   - origin/<base> is ahead of <mainBranch> (Phase 7 base merge).
+    // When neither holds, no foreign gitlinks get replayed, so each submodule only needs its own
+    // current branch (for the rebase/pull/detached-parking in Phase 4) plus the base branch (for the
+    // Phase 5/6 fast-forward + merge) — a much cheaper targeted fetch on large submodules.
+    const mainNeedsIntegration =
+        (await countCommitsAhead(mainGit, mainBranch, `origin/${mainBranch}`)) > 0 ||
+        (await countCommitsAhead(mainGit, mainBranch, `origin/${baseBranch}`)) > 0;
+
     const fetchPromises: Promise<void>[] = [];
 
-    // Fetch main repo: current branch + base branch
-    fetchPromises.push(fetchSafe(mainGit, 'origin', mainBranch));
-    fetchPromises.push(fetchSafe(mainGit, 'origin', baseBranch));
-
-    // Fetch each submodule in full. This MUST happen before the main repo is rebased/merged
-    // below: those operations replay commits whose gitlinks may point at submodule commits the
-    // local submodule has not seen yet. If such a commit is missing, git's three-way gitlink
-    // merge fails with "commits not present" and raises a spurious submodule conflict even when
-    // the gitlinks are trivially fast-forwardable. A full `git fetch origin` (all branches, not
-    // just the current/base one) guarantees every referenced commit is available locally.
     for (const synced of syncedSubmodules) {
         const subGit = simpleGit({ baseDir: synced.submodule.path });
-        fetchPromises.push(fetchAllSafe(subGit));
+        if (mainNeedsIntegration) {
+            // Full all-refs fetch guarantees every gitlink commit replayed by the main repo is local.
+            fetchPromises.push(fetchAllSafe(subGit));
+        } else {
+            // Targeted fetch: only this submodule's current branch (null/detached → fetchSafe no-ops)
+            // and the base branch are needed for Phase 4-6.
+            fetchPromises.push(fetchSafe(subGit, 'origin', synced.submodule.currentBranch));
+            fetchPromises.push(fetchSafe(subGit, 'origin', baseBranch));
+        }
     }
 
     await Promise.all(fetchPromises);
@@ -266,6 +286,24 @@ async function fetchAllSafe(git: SimpleGit): Promise<void> {
         await git.fetch('origin');
     } catch {
         // No remote or offline - ignore
+    }
+}
+
+/**
+ * Count how many commits `to` is ahead of `from` (i.e. commits in `to` not in `from`),
+ * mirroring the `rev-list --count` checks used by rebaseAndPushCurrentBranch / mergeBaseIntoCurrent.
+ * Returns 0 when either ref is missing (e.g. the remote branch does not exist yet).
+ */
+async function countCommitsAhead(git: SimpleGit, from: string | null | undefined, to: string): Promise<number> {
+    if (!from) {
+        return 0;
+    }
+    try {
+        const result = await git.raw(['rev-list', '--count', `${from}..${to}`]);
+        return parseInt(result.trim(), 10);
+    } catch {
+        // One of the refs (typically the remote ref) does not exist yet - treat as 0-ahead.
+        return 0;
     }
 }
 

@@ -174,7 +174,12 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
         if (mainNeedsIntegration) {
             // Full all-refs fetch guarantees every gitlink commit replayed by the main repo is local;
             // swallow errors (no remote / offline). The second .then arg resolves the rejection to void.
-            fetchPromises.push(subGit.fetch('origin').then(() => {}, () => {}));
+            fetchPromises.push(
+                subGit.fetch('origin').then(
+                    () => {},
+                    () => {},
+                ),
+            );
         } else {
             // Targeted fetch: only this submodule's current branch (null/detached → fetchSafe no-ops)
             // and the base branch are needed for Phase 4-6.

@@ -2,22 +2,13 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, expect, test } from 'bun:test';
 import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
-import type { Logger } from '@nzyme/logging/Logger.js';
+import { createTestLogger } from '@nzyme/logging';
 
 import { switchDetachedSubmoduleToBaseBranch } from './switchDetachedSubmoduleToBaseBranch.js';
-
-function createMockLogger(): Logger {
-    return {
-        error: mock(() => {}),
-        info: mock(() => {}),
-        warn: mock(() => {}),
-        debug: mock(() => {}),
-    } as unknown as Logger;
-}
 
 /**
  * Build a tiny git repo with a bare origin holding a `main` base branch with two commits,
@@ -48,110 +39,108 @@ async function setupRepo(root: string): Promise<{ work: SimpleGit; baseTip: stri
     return { work: workGit, baseTip, baseFirst };
 }
 
-describe('switchDetachedSubmoduleToBaseBranch', () => {
-    let root: string;
+let root: string;
 
-    beforeEach(() => {
-        root = mkdtempSync(join(tmpdir(), 'switch-detached-'));
+beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'switch-detached-'));
+});
+
+afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+});
+
+test('switches a detached submodule onto the base branch at the latest commit', async () => {
+    const { work, baseTip, baseFirst } = await setupRepo(root);
+    const { logger } = createTestLogger('switchDetachedSubmoduleToBaseBranch');
+
+    // Detach HEAD at an older base commit, as a superproject gitlink would pin it.
+    await work.checkout([baseFirst]);
+    expect((await work.status()).detached).toBe(true);
+
+    const switched = await switchDetachedSubmoduleToBaseBranch({
+        git: work,
+        baseBranch: 'main',
+        logger,
+        repoDisplayName: 'sub',
     });
 
-    afterEach(() => {
-        rmSync(root, { recursive: true, force: true });
+    expect(switched).toBe(true);
+
+    const status = await work.status();
+    expect(status.detached).toBe(false);
+    expect(status.current).toBe('main');
+    // Fast-forwarded to the latest base commit.
+    expect((await work.revparse(['HEAD'])).trim()).toBe(baseTip);
+});
+
+test('leaves the submodule detached when HEAD has commits not on the base branch', async () => {
+    const { work } = await setupRepo(root);
+    const { logger, logs } = createTestLogger('switchDetachedSubmoduleToBaseBranch');
+
+    // Detach and create a commit that is not part of origin/main.
+    await work.checkout(['main']);
+    await work.checkout(['--detach']);
+    await work.commit('local-only', [], { '--allow-empty': null });
+    const orphanRisk = (await work.revparse(['HEAD'])).trim();
+
+    const switched = await switchDetachedSubmoduleToBaseBranch({
+        git: work,
+        baseBranch: 'main',
+        logger,
+        repoDisplayName: 'sub',
     });
 
-    test('switches a detached submodule onto the base branch at the latest commit', async () => {
-        const { work, baseTip, baseFirst } = await setupRepo(root);
-        const logger = createMockLogger();
+    expect(switched).toBe(false);
+    const status = await work.status();
+    expect(status.detached).toBe(true);
+    // The unique commit is still checked out — nothing was orphaned.
+    expect((await work.revparse(['HEAD'])).trim()).toBe(orphanRisk);
+    expect(logs.some(l => l.level === 'warn')).toBe(true);
+});
 
-        // Detach HEAD at an older base commit, as a superproject gitlink would pin it.
-        await work.checkout([baseFirst]);
-        expect((await work.status()).detached).toBe(true);
+test('leaves the submodule detached when the local base branch has unpushed commits', async () => {
+    const { work, baseFirst } = await setupRepo(root);
+    const { logger, logs } = createTestLogger('switchDetachedSubmoduleToBaseBranch');
 
-        const switched = await switchDetachedSubmoduleToBaseBranch({
-            git: work,
-            baseBranch: 'main',
-            logger,
-            repoDisplayName: 'sub',
-        });
+    // Someone worked directly on local `main`, advancing it past origin/main with an
+    // unpushed commit, before the superproject pinned a commit and detached HEAD.
+    await work.checkout(['main']);
+    await work.commit('local-unpushed', [], { '--allow-empty': null });
+    const unpushed = (await work.revparse(['main'])).trim();
 
-        expect(switched).toBe(true);
+    // Now detach HEAD at a commit that IS contained in origin/main, so the detached-HEAD
+    // safety check alone would pass and force-reset local `main`, orphaning the unpushed commit.
+    await work.checkout([baseFirst]);
+    expect((await work.status()).detached).toBe(true);
 
-        const status = await work.status();
-        expect(status.detached).toBe(false);
-        expect(status.current).toBe('main');
-        // Fast-forwarded to the latest base commit.
-        expect((await work.revparse(['HEAD'])).trim()).toBe(baseTip);
+    const switched = await switchDetachedSubmoduleToBaseBranch({
+        git: work,
+        baseBranch: 'main',
+        logger,
+        repoDisplayName: 'sub',
     });
 
-    test('leaves the submodule detached when HEAD has commits not on the base branch', async () => {
-        const { work } = await setupRepo(root);
-        const logger = createMockLogger();
+    expect(switched).toBe(false);
+    // Local `main` still points at the unpushed commit — it was NOT reset to origin/main.
+    expect((await work.revparse(['main'])).trim()).toBe(unpushed);
+    // The submodule is left detached rather than discarding the unpushed work.
+    expect((await work.status()).detached).toBe(true);
+    expect(logs.some(l => l.level === 'warn')).toBe(true);
+});
 
-        // Detach and create a commit that is not part of origin/main.
-        await work.checkout(['main']);
-        await work.checkout(['--detach']);
-        await work.commit('local-only', [], { '--allow-empty': null });
-        const orphanRisk = (await work.revparse(['HEAD'])).trim();
+test('leaves the submodule as-is when the base branch is missing on the remote', async () => {
+    const { work, baseFirst } = await setupRepo(root);
+    const { logger } = createTestLogger('switchDetachedSubmoduleToBaseBranch');
 
-        const switched = await switchDetachedSubmoduleToBaseBranch({
-            git: work,
-            baseBranch: 'main',
-            logger,
-            repoDisplayName: 'sub',
-        });
+    await work.checkout([baseFirst]);
 
-        expect(switched).toBe(false);
-        const status = await work.status();
-        expect(status.detached).toBe(true);
-        // The unique commit is still checked out — nothing was orphaned.
-        expect((await work.revparse(['HEAD'])).trim()).toBe(orphanRisk);
-        expect(logger.warn).toHaveBeenCalled();
+    const switched = await switchDetachedSubmoduleToBaseBranch({
+        git: work,
+        baseBranch: 'nonexistent-base',
+        logger,
+        repoDisplayName: 'sub',
     });
 
-    test('leaves the submodule detached when the local base branch has unpushed commits', async () => {
-        const { work, baseFirst } = await setupRepo(root);
-        const logger = createMockLogger();
-
-        // Someone worked directly on local `main`, advancing it past origin/main with an
-        // unpushed commit, before the superproject pinned a commit and detached HEAD.
-        await work.checkout(['main']);
-        await work.commit('local-unpushed', [], { '--allow-empty': null });
-        const unpushed = (await work.revparse(['main'])).trim();
-
-        // Now detach HEAD at a commit that IS contained in origin/main, so the detached-HEAD
-        // safety check alone would pass and force-reset local `main`, orphaning the unpushed commit.
-        await work.checkout([baseFirst]);
-        expect((await work.status()).detached).toBe(true);
-
-        const switched = await switchDetachedSubmoduleToBaseBranch({
-            git: work,
-            baseBranch: 'main',
-            logger,
-            repoDisplayName: 'sub',
-        });
-
-        expect(switched).toBe(false);
-        // Local `main` still points at the unpushed commit — it was NOT reset to origin/main.
-        expect((await work.revparse(['main'])).trim()).toBe(unpushed);
-        // The submodule is left detached rather than discarding the unpushed work.
-        expect((await work.status()).detached).toBe(true);
-        expect(logger.warn).toHaveBeenCalled();
-    });
-
-    test('leaves the submodule as-is when the base branch is missing on the remote', async () => {
-        const { work, baseFirst } = await setupRepo(root);
-        const logger = createMockLogger();
-
-        await work.checkout([baseFirst]);
-
-        const switched = await switchDetachedSubmoduleToBaseBranch({
-            git: work,
-            baseBranch: 'nonexistent-base',
-            logger,
-            repoDisplayName: 'sub',
-        });
-
-        expect(switched).toBe(false);
-        expect((await work.status()).detached).toBe(true);
-    });
+    expect(switched).toBe(false);
+    expect((await work.status()).detached).toBe(true);
 });

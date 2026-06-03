@@ -12,6 +12,18 @@ import type { RpcErrorData } from './types/RpcError.js';
 import { createJsonResponse } from './utils/createJsonResponse.js';
 
 /**
+ * A hook invoked before a request is routed to its handler.
+ *
+ * Returning an {@link HttpResponse} short-circuits the router: routing, not-found handling,
+ * authorization and the endpoint handler are all skipped and the returned response is sent as-is.
+ * Returning `undefined` lets the request proceed normally. Use it for cross-cutting pre-routing
+ * concerns (e.g. rejecting requests that did not arrive through a trusted edge).
+ */
+export type RouterBeforeRequest = (
+    request: HttpRequest,
+) => HttpResponse | Promise<HttpResponse | undefined> | undefined;
+
+/**
  * Events emitted by the API router during request processing.
  */
 export interface RouterEvents {
@@ -67,6 +79,12 @@ export interface RouterOptions {
      * @default '/'
      */
     basePath?: string;
+
+    /**
+     * Optional hook invoked before each request is routed. Returning an {@link HttpResponse}
+     * short-circuits the router and sends that response instead of dispatching to a handler.
+     */
+    beforeRequest?: RouterBeforeRequest;
 }
 
 /**
@@ -94,6 +112,13 @@ export function createRouter(options: RouterOptions): Router {
 
     async function execute(request: HttpRequest): Promise<HttpResponse> {
         try {
+            if (options.beforeRequest) {
+                const override = await options.beforeRequest(request);
+                if (override) {
+                    return override;
+                }
+            }
+
             const endpointName = request.path.startsWith(basePath) ? request.path.slice(basePath.length) : request.path;
             const handler = handlers.get(endpointName);
             const httpContext = httpContextProvider.setRequest(request);

@@ -12,6 +12,7 @@ import type { Flatten, SomeObject } from '@nzyme/types/Object.js';
 import { createMemo } from '@nzyme/utils/createMemo.js';
 import { toPascalCase } from '@nzyme/utils/string/caseUtils.js';
 
+import type { StackPlacement } from './StackPlacement.js';
 import { unwrapStackOutput } from './utils/unwrapStackOutput.js';
 
 const STACK_SYMBOL = Symbol('Stack');
@@ -48,6 +49,12 @@ export interface StackOptions<
      * Name of the stack.
      */
     name: string;
+
+    /**
+     * Placement of the stack — its Pulumi stack name and provider region. When omitted, the stack
+     * deploys under its {@link name} with the shared default region (single-region behavior).
+     */
+    placement?: StackPlacement;
 
     /**
      * Dependencies of the stack.
@@ -122,6 +129,12 @@ export interface Stack<TOutput extends StackOutput = StackOutput> {
     name: string;
 
     /**
+     * AWS region for this stack's default provider (from its placement). Undefined falls back to the
+     * shared config region.
+     */
+    region?: string;
+
+    /**
      * Whether the stack is enabled.
      */
     enabled: boolean;
@@ -183,6 +196,11 @@ export interface StackDefinition<
      * Name of the stack.
      */
     stackName: string;
+
+    /**
+     * Placement this stack was generated from (Pulumi coordinates + region), if any.
+     */
+    placement?: StackPlacement;
 
     /**
      * Whether the stack is enabled.
@@ -250,7 +268,12 @@ export function defineStack<
 >(options: StackOptions<TDeps, TOutput, TBuild>) {
     const enabled = options.enabled ?? true;
     const preventDestroy = options.preventDestroy ?? false;
-    const serviceName = `Stack:${toPascalCase(options.name)}`;
+    const placement = options.placement;
+    // Identity (IoC service + Pulumi stack name) derives from the placement's stackName, so two
+    // placements of the same logical stack never collide. `options.name` stays the logical/basis name.
+    const stackName = placement?.stackName ?? options.name;
+    const region = placement?.region;
+    const serviceName = `Stack:${toPascalCase(stackName)}`;
     type Deps = Override<TDeps, { logger: Injectable<Logger> }>;
     const depsDef = { ...options.deps, logger: Logger } as Deps;
 
@@ -259,10 +282,10 @@ export function defineStack<
         deps: depsDef,
         setup(depsInput) {
             const deps = depsInput as ResolveDeps<TDeps> & { logger: Logger };
-            const name = options.name;
             let buildResult: TBuild;
             const stack: Stack<TOutput> = {
-                name,
+                name: stackName,
+                region,
                 enabled,
                 preventDestroy,
                 logger: deps.logger,
@@ -300,7 +323,8 @@ export function defineStack<
         ...service,
         enabled,
         preventDestroy,
-        stackName: options.name,
+        stackName,
+        placement,
         [STACK_SYMBOL]: true,
         ref: () =>
             defineInjectable({
@@ -324,7 +348,9 @@ function createStackReference<TDeps extends Dependencies, TOutput extends StackO
 ): StackReference<TOutput> {
     const ref = createMemo(() => {
         const org = pulumi.getOrganization();
-        const project = pulumi.getProject();
+        // A placement may target a different Pulumi project (reserved for future cross-zone isolation);
+        // otherwise the reference resolves within the consumer's own project.
+        const project = stack.placement?.project ?? pulumi.getProject();
         const path = `${org}/${project}/${stack.stackName}`;
         return new pulumi.StackReference(path);
     });

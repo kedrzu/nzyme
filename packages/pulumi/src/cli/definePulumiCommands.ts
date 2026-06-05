@@ -22,6 +22,7 @@ import { previewStack } from '../previewStack.js';
 import type { PulumiConfig } from '../PulumiConfig.js';
 import { refreshStack } from '../refreshStack.js';
 import { listRemoteStacks } from '../utils/listRemoteStacks.js';
+import { matchStackName } from '../utils/matchStackName.js';
 
 /**
  * Context for the Pulumi commands.
@@ -327,6 +328,14 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
             description: 'Skip specific stacks from being deployed (can be used multiple times)',
         });
 
+        global = Option.Boolean('--global', {
+            description: 'Select only global stacks (shorthand for the *-global pattern)',
+        });
+
+        region = Option.Array('--region', [], {
+            description: 'Select only stacks in the given region(s) (shorthand for *-<region>)',
+        });
+
         skipResources = Option.Boolean('--skip-resources,-sr', {
             description: 'Skip resource deployment and only execute afterDeploy with previously deployed outputs',
         });
@@ -340,7 +349,7 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
 
             const stacks = resolveStacks({
                 ...options,
-                stackNames: this.stacks,
+                stackNames: expandStackPatterns(this.stacks, { global: this.global, regions: this.region }),
                 recursive: this.recursive,
                 skip: this.skip,
                 logger: this.logger,
@@ -567,6 +576,14 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
             description: 'Skip specific stacks from being previewed (can be used multiple times)',
         });
 
+        global = Option.Boolean('--global', {
+            description: 'Select only global stacks (shorthand for the *-global pattern)',
+        });
+
+        region = Option.Array('--region', [], {
+            description: 'Select only stacks in the given region(s) (shorthand for *-<region>)',
+        });
+
         override async run() {
             await options.beforeEach?.({ command: this });
 
@@ -574,7 +591,7 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
 
             const stacks = resolveStacks({
                 ...options,
-                stackNames: this.stacks,
+                stackNames: expandStackPatterns(this.stacks, { global: this.global, regions: this.region }),
                 skip: this.skip,
                 logger: this.logger,
             });
@@ -1004,30 +1021,23 @@ function filterStacks(options: ResolveStacksOptions): Set<StackDefinition> {
     const matchedPatterns = new Set<string>();
 
     for (const pattern of options.stackNames) {
-        const isWildcard = pattern.includes('+');
-
-        // Convert + to .+ for regex matching, escape other special regex chars
-        const regex = isWildcard
-            ? new RegExp(`^${pattern.replace(/[.*?^${}()|[\]\\]/g, '\\$&').replace(/\+/g, '.+')}$`)
-            : null;
-
         for (const stack of options.stacks) {
             if (stacks.has(stack)) {
                 continue;
             }
 
-            const matches = regex ? regex.test(stack.stackName) : stack.stackName === pattern;
-
-            if (matches) {
-                matchedPatterns.add(pattern);
-
-                if (!stack.enabled) {
-                    options.logger.warn(`Stack ${stack.stackName} is disabled.`);
-                    continue;
-                }
-
-                stacks.add(stack);
+            if (!matchStackName(pattern, stack.stackName)) {
+                continue;
             }
+
+            matchedPatterns.add(pattern);
+
+            if (!stack.enabled) {
+                options.logger.warn(`Stack ${stack.stackName} is disabled.`);
+                continue;
+            }
+
+            stacks.add(stack);
         }
     }
 
@@ -1038,6 +1048,24 @@ function filterStacks(options: ResolveStacksOptions): Set<StackDefinition> {
     }
 
     return stacks;
+}
+
+/**
+ * Expand convenience flags (`--global`, `--region`) into stack-name glob patterns, appended to any
+ * explicit stack names. `--global` → `*-global`; each `--region <r>` → `*-<r>`.
+ * @__NO_SIDE_EFFECTS__
+ */
+function expandStackPatterns(names: string[], options: { global?: boolean; regions?: string[] }): string[] {
+    const patterns = [...names];
+    if (options.global) {
+        patterns.push('*-global');
+    }
+
+    for (const region of options.regions ?? []) {
+        patterns.push(`*-${region}`);
+    }
+
+    return patterns;
 }
 
 function getCommandPaths(options: PulumiCommandsOptions, command: string) {

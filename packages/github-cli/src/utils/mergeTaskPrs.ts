@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import enquirer from 'enquirer';
-import { simpleGit } from 'simple-git';
 
 import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging/Logger.js';
@@ -10,6 +9,7 @@ import { convertPrToReady } from './convertPrToReady.js';
 import type { GithubClient } from './createGithubClient.js';
 import { countUnresolvedReviewThreads } from './countUnresolvedReviewThreads.js';
 import { findMatchingPr, findMergedPr } from './findMatchingPr.js';
+import { getCurrentBranch } from './getCurrentBranch.js';
 import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { mergePullRequestSquash } from './mergePullRequestSquash.js';
@@ -102,6 +102,9 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
         checkPollTimeoutMs,
     } = params;
 
+    // Capture the branch we start on so we can confirm we stay on it (no local switch — see below).
+    const currentBranch = await getCurrentBranch();
+
     // === Discover the main PR first (guard before touching anything) ===
     const mainPr = await findMatchingPr(githubClient, githubConfig, issueId);
     if (!mainPr) {
@@ -160,7 +163,9 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
     }
 
     // === Refresh the main branch so gitlinks point at the merged submodule commits ===
-    await refreshMainAfterSubmoduleMerge({
+    // The returned SHA is the commit we just pushed; the main PR's checks are gated on it so a
+    // stale PR head (pre-push) does not surface the previous commit's failing checks.
+    const refreshedMainHeadSha = await refreshMainAfterSubmoduleMerge({
         refreshedSubmodulePaths: submoduleTargets.map(target => target.path),
         baseBranch,
         logger,
@@ -190,15 +195,19 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
         logger,
         intervalMs: checkPollIntervalMs,
         timeoutMs: checkPollTimeoutMs,
+        expectedHeadSha: refreshedMainHeadSha,
     });
     await mergePullRequestSquash(githubClient, githubConfig, mainPr.number);
     logger.info(`   ${chalk.green('✓')} Squash-merged main repository PR`);
 
-    // === Land on an up-to-date base branch ===
-    await landOnBaseBranch(baseBranch, logger);
-
+    // Stay on the current branch: the merge is done entirely via the GitHub API, and switching to
+    // the base branch locally would fail under git worktrees (the base branch is checked out in
+    // another worktree). GitHub may have deleted the remote branch on merge — that is fine.
     logger.info('');
-    logger.info(`🎉 Merged task ${chalk.bold(issueId)} (squash). You are now on ${chalk.cyan(baseBranch)}.`);
+    logger.info(
+        `🎉 Merged task ${chalk.bold(issueId)} (squash). Staying on ${chalk.cyan(currentBranch)} ` +
+            `(merged via the GitHub API — no local branch switch).`,
+    );
 }
 
 /**
@@ -344,20 +353,4 @@ async function ensureNotDraft(params: EnsureNotDraftParams): Promise<void> {
 
     logger.info(`🚀 Converting ${label} PR ${chalk.gray(`#${prNumber}`)} from draft to ready...`);
     await convertPrToReady(githubClient, config, prNumber);
-}
-
-/**
- * Check out the base branch and fast-forward it, so the developer lands on an up-to-date base after
- * the merges. Non-fatal: the merges are already done, so a failure here is only a warning.
- */
-async function landOnBaseBranch(baseBranch: string, logger: Logger): Promise<void> {
-    const git = simpleGit({ config: ['submodule.recurse=false'] });
-    try {
-        await git.checkout(baseBranch);
-        await git.pull('origin', baseBranch, { '--ff-only': null });
-        logger.info(`   ${chalk.green('✓')} Checked out ${chalk.cyan(baseBranch)} and pulled latest`);
-    } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        logger.warn(`   ⚠️  Could not switch to ${chalk.cyan(baseBranch)}: ${message}`);
-    }
 }

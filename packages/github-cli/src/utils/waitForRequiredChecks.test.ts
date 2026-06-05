@@ -23,6 +23,8 @@ interface CommitStatus {
 interface ClientState {
     /** mergeable_state values returned by successive pulls.get calls (last one repeats). */
     mergeableStates: string[];
+    /** head.sha values returned by successive pulls.get calls (last one repeats). Defaults to 'sha-1'. */
+    headShas?: string[];
     /** check_runs returned by successive checks.listForRef calls (last one repeats). */
     checkRuns?: CheckRun[][];
     /** combined.statuses returned by successive getCombinedStatusForRef calls (last one repeats). */
@@ -45,9 +47,10 @@ function createClient(state: ClientState): GithubClient {
             pulls: {
                 get() {
                     const mergeableState = pick(state.mergeableStates, getCall, 'clean');
+                    const headSha = pick(state.headShas, getCall, 'sha-1');
                     getCall++;
                     return Promise.resolve({
-                        data: { mergeable_state: mergeableState, head: { sha: 'sha-1' } },
+                        data: { mergeable_state: mergeableState, head: { sha: headSha } },
                     });
                 },
             },
@@ -158,5 +161,88 @@ test('throws after the timeout while a check is still pending', async () => {
 
     await expect(
         waitForRequiredChecks({ client, config: CONFIG, prNumber: 1, logger, intervalMs: 0, timeoutMs: 0 }),
+    ).rejects.toBeInstanceOf(UsageError);
+});
+
+test('ignores the stale head SHA and resolves once GitHub reports the expected commit', async () => {
+    const { logger } = createTestLogger('waitForRequiredChecks');
+    // First poll reports the previous commit (which carried a failing check); the gate must skip it
+    // entirely (no check evaluation) and wait for the expected commit, whose checks pass.
+    const client = createClient({
+        mergeableStates: ['blocked', 'unstable'],
+        headShas: ['old-sha', 'new-sha'],
+        checkRuns: [[{ name: 'submodules-merged', status: 'completed', conclusion: 'success' }]],
+    });
+
+    await waitForRequiredChecks({
+        client,
+        config: CONFIG,
+        prNumber: 1,
+        logger,
+        intervalMs: 0,
+        expectedHeadSha: 'new-sha',
+    });
+});
+
+test('aborts on a failing check once the expected head SHA is reported', async () => {
+    const { logger } = createTestLogger('waitForRequiredChecks');
+    const client = createClient({
+        mergeableStates: ['blocked'],
+        headShas: ['new-sha'],
+        checkRuns: [[{ name: 'submodules-merged', status: 'completed', conclusion: 'failure' }]],
+    });
+
+    await expect(
+        waitForRequiredChecks({
+            client,
+            config: CONFIG,
+            prNumber: 1,
+            logger,
+            intervalMs: 0,
+            expectedHeadSha: 'new-sha',
+        }),
+    ).rejects.toBeInstanceOf(UsageError);
+});
+
+test('throws after the timeout when the expected head SHA never registers', async () => {
+    const { logger } = createTestLogger('waitForRequiredChecks');
+    const client = createClient({
+        mergeableStates: ['clean'],
+        headShas: ['old-sha'],
+    });
+
+    await expect(
+        waitForRequiredChecks({
+            client,
+            config: CONFIG,
+            prNumber: 1,
+            logger,
+            intervalMs: 0,
+            timeoutMs: 0,
+            expectedHeadSha: 'new-sha',
+        }),
+    ).rejects.toBeInstanceOf(UsageError);
+});
+
+test('with expectedHeadSha set, does not pass on clean + zero checks (suppresses no-CI escape)', async () => {
+    const { logger } = createTestLogger('waitForRequiredChecks');
+    // Head SHA matches and mergeable_state is clean, but no checks have registered yet. Because a
+    // freshly-pushed commit is expected to run CI, the gate must keep waiting rather than pass — so
+    // it eventually times out instead of resolving.
+    const client = createClient({
+        mergeableStates: ['clean'],
+        headShas: ['new-sha'],
+    });
+
+    await expect(
+        waitForRequiredChecks({
+            client,
+            config: CONFIG,
+            prNumber: 1,
+            logger,
+            intervalMs: 0,
+            timeoutMs: 0,
+            expectedHeadSha: 'new-sha',
+        }),
     ).rejects.toBeInstanceOf(UsageError);
 });

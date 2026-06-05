@@ -46,8 +46,11 @@ export interface RefreshMainAfterSubmoduleMergeParams {
  *
  * Idempotent: re-running parks submodules already on base and pushes nothing new when the gitlinks
  * already match.
+ *
+ * @returns The main task branch HEAD SHA after refreshing — the commit the main PR's checks should
+ * be gated on (see {@link waitForRequiredChecks}'s `expectedHeadSha`).
  */
-export async function refreshMainAfterSubmoduleMerge(params: RefreshMainAfterSubmoduleMergeParams): Promise<void> {
+export async function refreshMainAfterSubmoduleMerge(params: RefreshMainAfterSubmoduleMergeParams): Promise<string> {
     const { refreshedSubmodulePaths, baseBranch, submoduleBaseBranch = baseBranch, logger } = params;
 
     // Disable submodule recursion for main-repo history ops (mirrors syncAllRepos) so git does not try
@@ -79,6 +82,9 @@ export async function refreshMainAfterSubmoduleMerge(params: RefreshMainAfterSub
         await pushWithUpstream(mainGit);
         logger.info(`   ${chalk.green('✓')} Pushed base merge to main repository`);
     }
+
+    // Report the resulting HEAD so the caller can gate the main PR's checks on this exact commit.
+    return (await mainGit.revparse(['HEAD'])).trim();
 }
 
 /**

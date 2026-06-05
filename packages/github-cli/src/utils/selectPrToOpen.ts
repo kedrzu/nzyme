@@ -7,6 +7,7 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
 import { findMatchingPr } from './findMatchingPr.js';
+import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 
 /**
@@ -96,21 +97,10 @@ export async function selectPrToOpen(params: SelectPrToOpenParams): Promise<PrIn
     const submodules = await getSubmoduleInfo();
     if (submodules.length > 0) {
         for (const submodule of submodules) {
-            const urlMatch = submodule.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
-            if (!urlMatch) {
+            const submoduleConfig = getSubmoduleGithubConfig(submodule.url, githubConfig.token);
+            if (!submoduleConfig) {
                 continue;
             }
-
-            const [, owner, repo] = urlMatch;
-            if (!owner || !repo) {
-                continue;
-            }
-
-            const submoduleConfig: GithubConfig = {
-                owner,
-                repo: repo.replace(/\.git$/, ''),
-                token: githubConfig.token,
-            };
 
             try {
                 const submodulePr = await findMatchingPr(githubClient, submoduleConfig, issueId);

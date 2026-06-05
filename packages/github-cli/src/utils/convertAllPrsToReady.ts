@@ -6,6 +6,7 @@ import type { GithubConfig } from '../GithubConfig.js';
 import { convertPrToReady } from './convertPrToReady.js';
 import type { GithubClient } from './createGithubClient.js';
 import { findMatchingPr } from './findMatchingPr.js';
+import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 
 /**
@@ -66,25 +67,13 @@ export async function convertAllPrsToReady(params: ConvertAllPrsToReadyParams): 
 
         for (const submodule of submodules) {
             // Parse the submodule URL to get owner and repo for GitHub config
-            const urlMatch = submodule.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
-            if (!urlMatch) {
+            const submoduleConfig = getSubmoduleGithubConfig(submodule.url, githubConfig.token);
+            if (!submoduleConfig) {
                 logger.warn(
                     `⚠️  Could not parse GitHub URL for submodule ${chalk.magenta(submodule.name)}: ${chalk.yellow(submodule.url)}`,
                 );
                 continue;
             }
-
-            const [, owner, repo] = urlMatch;
-            if (!owner || !repo) {
-                logger.warn(`⚠️  Could not extract owner/repo from URL for submodule ${chalk.magenta(submodule.name)}`);
-                continue;
-            }
-
-            const submoduleConfig: GithubConfig = {
-                owner,
-                repo: repo.replace(/\.git$/, ''),
-                token: githubConfig.token,
-            };
 
             try {
                 // Find PR for this submodule

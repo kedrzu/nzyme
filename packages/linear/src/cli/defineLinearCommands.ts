@@ -517,10 +517,12 @@ function defineTaskMergeCommand(options: LinearCommandsOptions) {
             details:
                 'Squash-merges the current task via the GitHub API. Submodule PRs are merged first, then the ' +
                 'main repository branch is refreshed so its submodule references point at the merged commits, ' +
-                'and finally the main repository PR is squash-merged. Before merging it summarises every PR ' +
-                'with its unresolved review-comment count and asks for confirmation, waits for required checks ' +
-                'to pass, and prompts to convert any draft PR to ready. With --yes the confirmation and draft ' +
-                'prompts are skipped (drafts are converted automatically).',
+                'and finally the main repository PR is squash-merged. It aborts if any submodule has ' +
+                'uncommitted changes. Before merging it summarises every PR with its URL and unresolved ' +
+                'review-comment count, asking for confirmation only when some PR still has unresolved comments ' +
+                '(otherwise it merges automatically). It waits for required checks to pass and prompts to ' +
+                'convert any draft PR to ready. With --yes the confirmation and draft prompts are skipped ' +
+                '(drafts are converted automatically).',
             examples: [
                 ['Merge current task with confirmation', 'task merge'],
                 ['Merge current task without prompts', 'task merge --yes'],

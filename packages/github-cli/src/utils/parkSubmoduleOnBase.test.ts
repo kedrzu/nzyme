@@ -56,10 +56,13 @@ test('parks a submodule whose HEAD is a non-ancestor task commit onto the base t
     const { work, baseTip } = await setupRepo(root);
     const { logger } = createTestLogger('parkSubmoduleOnBase');
 
-    // Simulate the post-squash state: HEAD detached at a task commit that is NOT an ancestor of
-    // origin/main (a squash merge breaks the ancestry link).
-    await work.checkout(['--detach']);
+    // Simulate the post-squash state: a task branch whose tip is NOT an ancestor of origin/main
+    // (a squash merge breaks the ancestry link) but is pushed to origin, then checked out detached
+    // (how a submodule sits after the superproject pins it to that commit).
+    await work.checkoutLocalBranch('task');
     await work.commit('task-work', [], { '--allow-empty': null });
+    await work.push(['-u', 'origin', 'task']);
+    await work.checkout(['--detach']);
     expect((await work.status()).detached).toBe(true);
 
     await parkSubmoduleOnBase({ git: work, baseBranch: 'main', logger, repoDisplayName: 'sub' });
@@ -68,6 +71,25 @@ test('parks a submodule whose HEAD is a non-ancestor task commit onto the base t
     expect(status.detached).toBe(false);
     expect(status.current).toBe('main');
     expect((await work.revparse(['HEAD'])).trim()).toBe(baseTip);
+});
+
+test('aborts when HEAD holds commits that are neither on base nor pushed to any remote', async () => {
+    const { work } = await setupRepo(root);
+    const { logger } = createTestLogger('parkSubmoduleOnBase');
+
+    // Detached HEAD on a commit that is NOT an ancestor of origin/main and exists on no remote
+    // branch — force-resetting onto base would orphan it, so the guard must refuse.
+    await work.checkout(['--detach']);
+    await work.commit('local-only-work', [], { '--allow-empty': null });
+    const before = (await work.revparse(['HEAD'])).trim();
+
+    await expect(
+        parkSubmoduleOnBase({ git: work, baseBranch: 'main', logger, repoDisplayName: 'sub' }),
+    ).rejects.toBeInstanceOf(UsageError);
+
+    // HEAD is unchanged — nothing was reset and the commit is still reachable.
+    expect((await work.revparse(['HEAD'])).trim()).toBe(before);
+    expect((await work.status()).detached).toBe(true);
 });
 
 test('aborts and leaves the submodule untouched when the working tree is dirty', async () => {

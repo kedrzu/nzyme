@@ -72,6 +72,23 @@ export async function parkSubmoduleOnBase(params: ParkSubmoduleOnBaseParams): Pr
         );
     }
 
+    // Final guard before the force-reset: protect commits reachable only from the current HEAD.
+    // The checks above only cover the working tree and the local base branch — they do NOT see
+    // commits that live solely under a detached HEAD (or a non-base current branch tip). If HEAD
+    // points at work that is neither already on origin/<base> NOR pushed to any remote branch, the
+    // `checkout -B` below would orphan it with no ref (recoverable only via reflog) = silent loss.
+    //
+    // The legitimate post-squash-merge case still passes: the task tip is not an ancestor of
+    // origin/<base> (squash breaks ancestry), but the original task branch is pushed, so HEAD is
+    // contained in a remote-tracking branch and this guard does not fire.
+    if (!(await isContainedIn(git, 'HEAD', `origin/${baseBranch}`)) && !(await isOnAnyRemoteBranch(git, 'HEAD'))) {
+        throw new UsageError(
+            `Submodule ${repoDisplayName} has commits on its current HEAD that are not on ` +
+                `origin/${baseBranch} and not pushed to any remote branch — refusing to reset it onto ` +
+                `${baseBranch} (those commits would be lost). Push or branch them and try again.`,
+        );
+    }
+
     await git.checkout(['-B', baseBranch, `origin/${baseBranch}`]);
     logger.info(`   ${chalk.green('✓')} Parked ${repoDisplayName} on ${chalk.cyan(baseBranch)}`);
 }
@@ -102,6 +119,35 @@ async function hasUnpushedBaseCommits(git: SimpleGit, branch: string): Promise<b
     try {
         const result = await git.raw(['rev-list', '--count', `origin/${branch}..${branch}`]);
         return parseInt(result.trim(), 10) > 0;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Whether `commit` is contained in `ref`, i.e. it is an ancestor of (or equal to) it.
+ * Uses a rev-list count instead of `merge-base --is-ancestor`, whose exit-1 ("not an ancestor")
+ * is silently swallowed by simple-git and would otherwise read as success.
+ */
+async function isContainedIn(git: SimpleGit, commit: string, ref: string): Promise<boolean> {
+    try {
+        const out = await git.raw(['rev-list', '--count', `${ref}..${commit}`]);
+        return parseInt(out.trim(), 10) === 0;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Whether `commit` is reachable from at least one remote-tracking branch (`refs/remotes/*`).
+ * Used to confirm that work on the current HEAD is safely pushed before a force-reset that would
+ * otherwise orphan it. `git branch -r --contains` lists the remote branches containing the commit,
+ * so a non-empty result means the commit is preserved on some remote.
+ */
+async function isOnAnyRemoteBranch(git: SimpleGit, commit: string): Promise<boolean> {
+    try {
+        const out = await git.raw(['branch', '-r', '--contains', commit]);
+        return out.trim().length > 0;
     } catch {
         return false;
     }

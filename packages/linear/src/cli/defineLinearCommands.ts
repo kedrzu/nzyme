@@ -10,6 +10,7 @@ import { convertAllPrsToReady } from '@nzyme/github-cli/utils/convertAllPrsToRea
 import { createGithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';
 import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
+import { mergeTaskPrs } from '@nzyme/github-cli/utils/mergeTaskPrs.js';
 import { pushChanges } from '@nzyme/github-cli/utils/pushChanges.js';
 import { openPrInBrowser } from '@nzyme/github-cli/utils/selectPrToOpen.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
@@ -89,6 +90,7 @@ export function defineLinearCommands(options: LinearCommandsOptions): CommandCla
         defineTaskPushCommand(options),
         defineTaskReadyCommand(options),
         defineTaskRefreshCommand(options),
+        defineTaskMergeCommand(options),
         defineTaskListCommand(options),
         defineTaskOpenCommand(options),
         defineTaskPrCommand(options),
@@ -500,6 +502,68 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to refresh task: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
+}
+
+function defineTaskMergeCommand(options: LinearCommandsOptions) {
+    return class TaskMergeCommand extends Command {
+        static override paths = getCommandPaths(options, 'merge');
+        static override usage = Command.Usage({
+            category: 'Linear',
+            description: 'Squash-merge the current task PRs (submodules first, then main repo)',
+            details:
+                'Squash-merges the current task via the GitHub API. Submodule PRs are merged first, then the ' +
+                'main repository branch is refreshed so its submodule references point at the merged commits, ' +
+                'and finally the main repository PR is squash-merged. Before merging it summarises every PR ' +
+                'with its unresolved review-comment count and asks for confirmation, waits for required checks ' +
+                'to pass, and prompts to convert any draft PR to ready. With --yes the confirmation and draft ' +
+                'prompts are skipped (drafts are converted automatically).',
+            examples: [
+                ['Merge current task with confirmation', 'task merge'],
+                ['Merge current task without prompts', 'task merge --yes'],
+            ],
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip the confirmation and draft-conversion prompts',
+        });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            const githubConfig = await getGithubConfig(options);
+
+            try {
+                // Get current branch
+                const currentBranch = await getCurrentBranch();
+                this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
+
+                // Extract task ID from branch name
+                const taskId = extractTaskIdFromBranch(currentBranch);
+                this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
+
+                // Get base branch
+                const baseBranches = await getBaseBranches(options);
+                const baseBranch = baseBranches[0] ?? 'main';
+
+                // Create GitHub client
+                const githubClient = createGithubClient(githubConfig);
+
+                // Squash-merge submodules first, refresh main, then squash-merge main
+                await mergeTaskPrs({
+                    githubClient,
+                    githubConfig,
+                    issueId: taskId,
+                    baseBranch,
+                    logger: this.logger,
+                    autoYes: this.yes,
+                });
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to merge task: ${errorMessage}`);
                 throw error;
             }
         }

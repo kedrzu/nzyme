@@ -11,6 +11,7 @@ import { ensureRepositoryReady } from './ensureRepositoryReady.js';
 import { findAllMatchingPrs } from './findMatchingPr.js';
 import { getCurrentBranch } from './getCurrentBranch.js';
 import type { SubmoduleInfo } from './getSubmoduleInfo.js';
+import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { isTaskBranch } from './isTaskBranch.js';
 
@@ -185,25 +186,12 @@ async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promi
     }
 
     // Parse the submodule URL to get owner and repo for GitHub config
-    const urlMatch = submodule.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
-    if (!urlMatch) {
+    const submoduleConfig = getSubmoduleGithubConfig(submodule.url, githubConfig.token);
+    if (!submoduleConfig) {
         const errorMessage = `Could not parse GitHub URL for submodule: ${submodule.url}`;
         logger.error(`   ${subName}: ${errorMessage}`);
         throw new UsageError(errorMessage);
     }
-
-    const [, owner, repo] = urlMatch;
-    if (!owner || !repo) {
-        const errorMessage = `Could not extract owner/repo from URL: ${submodule.url}`;
-        logger.error(`   ${subName}: ${errorMessage}`);
-        throw new UsageError(errorMessage);
-    }
-
-    const submoduleConfig: GithubConfig = {
-        owner,
-        repo: repo.replace(/\.git$/, ''),
-        token: githubConfig.token,
-    };
 
     // Check if the submodule PR was already merged
     const currentSubmoduleBranch = targetBranch;

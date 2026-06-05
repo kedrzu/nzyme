@@ -8,6 +8,7 @@ import { checkUnpushedCommits } from './checkUnpushedCommits.js';
 import type { GithubClient } from './createGithubClient.js';
 import { findMatchingPr } from './findMatchingPr.js';
 import { getGitStatusInfo } from './getGitStatusInfo.js';
+import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { handleReadyPreparation } from './handleReadyPreparation.js';
 import { handleSubmoduleReadyPreparation } from './handleSubmoduleReadyPreparation.js';
@@ -121,16 +122,11 @@ async function displayPrSummary(params: {
             continue;
         }
 
-        const urlMatch = sub.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
-        if (!urlMatch?.[1] || !urlMatch[2]) {
+        const subConfig = getSubmoduleGithubConfig(sub.url, githubConfig.token);
+        if (!subConfig) {
             continue;
         }
 
-        const subConfig: GithubConfig = {
-            owner: urlMatch[1],
-            repo: urlMatch[2].replace(/\.git$/, ''),
-            token: githubConfig.token,
-        };
         const subPr = await findMatchingPr(githubClient, subConfig, issueId);
         if (subPr) {
             logger.info(`   ${chalk.magenta(sub.name)}: ${chalk.blueBright(chalk.underline(subPr.html_url))}`);

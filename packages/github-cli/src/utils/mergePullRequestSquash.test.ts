@@ -8,12 +8,7 @@ import { mergePullRequestSquash } from './mergePullRequestSquash.js';
 
 const CONFIG: GithubConfig = { owner: 'acme', repo: 'widgets', token: 'ghp_test' };
 
-interface MergeCall {
-    owner: string;
-    repo: string;
-    pull_number: number;
-    merge_method: string;
-}
+type MergeCall = Parameters<GithubClient['rest']['pulls']['merge']>[0];
 
 function createClient(impl: (params: MergeCall) => Promise<void>): { client: GithubClient; calls: MergeCall[] } {
     const calls: MergeCall[] = [];
@@ -37,12 +32,14 @@ test('merges with merge_method squash and the correct owner/repo/number', async 
     await mergePullRequestSquash(client, CONFIG, 42);
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]).toEqual({
+
+    const expected: MergeCall = {
         owner: 'acme',
         repo: 'widgets',
         pull_number: 42,
         merge_method: 'squash',
-    });
+    };
+    expect(calls[0]).toEqual(expected);
 });
 
 test('maps a GitHub API rejection to a UsageError', async () => {

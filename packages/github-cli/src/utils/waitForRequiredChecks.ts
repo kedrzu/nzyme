@@ -53,20 +53,51 @@ const DEFAULT_TIMEOUT_MS = 1_200_000;
 const FAILING_CONCLUSIONS = new Set(['failure', 'timed_out', 'cancelled', 'action_required', 'stale']);
 
 /**
- * Block until a pull request's required checks have passed, then return.
+ * The aggregate state of every check run and commit status on a head SHA.
+ */
+interface ChecksState {
+    /**
+     * Names of failed check runs / commit statuses (failing conclusion or `failure`/`error` state).
+     */
+    failed: string[];
+
+    /**
+     * Whether any check run / commit status is still pending or in progress.
+     */
+    pending: boolean;
+
+    /**
+     * Total number of check runs + commit statuses observed for the head SHA.
+     */
+    total: number;
+}
+
+/**
+ * Block until a pull request's checks have all passed, then return.
  *
- * `mergeable_state` is the primary gate (it already reflects branch-protection / required checks),
- * which avoids needing branch-protection admin scope to enumerate "required" checks:
- * - `clean` / `unstable` → mergeable, return (GitHub permits merging `unstable`, where only
- *   non-required checks are failing/pending).
+ * The gate is driven by the actual check runs and commit statuses on the head SHA (not by
+ * `mergeable_state` alone), so it never lets a merge proceed while a check is failing or still
+ * pending — including non-required checks that `mergeable_state === 'unstable'` would otherwise wave
+ * through. This avoids needing branch-protection admin scope to enumerate "required" checks.
+ *
+ * On every poll iteration, after the conflict/refresh aborts below, all check runs
+ * ({@link GithubClient.rest.checks.listForRef}) and commit statuses
+ * ({@link GithubClient.rest.repos.getCombinedStatusForRef}) for the head SHA are enumerated, then:
+ * - If ANY check/status has a failing conclusion/state → abort immediately, naming the failed checks.
+ * - Else if ANY check/status is still pending/in progress → keep polling (do not proceed).
+ * - Else (all present checks completed and none failing) → success, return.
+ *
+ * `mergeable_state` short-circuits only for states unrelated to checks:
  * - `dirty` → conflicts with base, abort.
  * - `behind` → head is behind base, abort with a `task refresh` hint.
- * - `blocked` with a failed check-run/commit status → a required check failed, abort.
- * - `blocked` / `unknown` / pending otherwise → keep polling until the timeout.
+ *
+ * Edge case — no checks at all: a head SHA may legitimately have zero check runs and zero commit
+ * statuses (e.g. a repo with no CI). To avoid hanging until the timeout, `mergeable_state === 'clean'`
+ * is treated as the signal that there is genuinely nothing pending, so the gate passes. Any other
+ * `mergeable_state` with no checks reported keeps polling (the checks may not have registered yet).
  *
  * The PR is re-fetched every iteration so a push that changes the head SHA (e.g. the post-submodule
- * refresh commit) is observed rather than raced. The subsequent merge call remains the authoritative
- * gate for anything `mergeable_state` cannot express (e.g. a missing required review).
+ * refresh commit) is observed rather than raced. A timeout reached while still pending throws.
  */
 export async function waitForRequiredChecks(params: WaitForRequiredChecksParams): Promise<void> {
     const {
@@ -98,15 +129,19 @@ export async function waitForRequiredChecks(params: WaitForRequiredChecksParams)
             throw new UsageError(`PR #${prNumber} is behind its base branch — run \`task refresh\` and try again.`);
         }
 
-        if (mergeableState === 'clean' || mergeableState === 'unstable') {
-            logger.info(`   ${chalk.green('✓')} Checks passed for PR ${chalk.gray(`#${prNumber}`)}`);
-            return;
+        const checks = await getChecksState(client, config, headSha);
+
+        // Any failed check is a hard stop, regardless of mergeable_state.
+        if (checks.failed.length > 0) {
+            throw new UsageError(`PR #${prNumber} has failing checks: ${checks.failed.join(', ')}`);
         }
 
-        // blocked / unknown / pending: surface a hard required-check failure immediately, otherwise wait.
-        const failedChecks = await getFailedChecks(client, config, headSha);
-        if (mergeableState === 'blocked' && failedChecks.length > 0) {
-            throw new UsageError(`PR #${prNumber} has failing required checks: ${failedChecks.join(', ')}`);
+        // No failures: pass only when nothing is pending. With no checks reported, `clean` means
+        // there is genuinely nothing to wait for (e.g. a repo with no CI); anything else keeps polling.
+        const allChecksSettled = !checks.pending && (checks.total > 0 || mergeableState === 'clean');
+        if (allChecksSettled) {
+            logger.info(`   ${chalk.green('✓')} Checks passed for PR ${chalk.gray(`#${prNumber}`)}`);
+            return;
         }
 
         if (Date.now() >= deadline) {
@@ -122,10 +157,14 @@ export async function waitForRequiredChecks(params: WaitForRequiredChecksParams)
 }
 
 /**
- * Collect the names of failed check-runs and failing commit statuses for a ref.
+ * Enumerate every check run and commit status on a ref, collecting failures and whether any are
+ * still pending. This is the gate: a merge may proceed only when nothing is failing and nothing is
+ * pending.
  */
-async function getFailedChecks(client: GithubClient, config: GithubConfig, ref: string): Promise<string[]> {
+async function getChecksState(client: GithubClient, config: GithubConfig, ref: string): Promise<ChecksState> {
     const failed: string[] = [];
+    let pending = false;
+    let total = 0;
 
     const { data: checks } = await client.rest.checks.listForRef({
         owner: config.owner,
@@ -134,7 +173,10 @@ async function getFailedChecks(client: GithubClient, config: GithubConfig, ref: 
     });
 
     for (const run of checks.check_runs) {
-        if (run.status === 'completed' && run.conclusion && FAILING_CONCLUSIONS.has(run.conclusion)) {
+        total++;
+        if (run.status !== 'completed') {
+            pending = true;
+        } else if (run.conclusion && FAILING_CONCLUSIONS.has(run.conclusion)) {
             failed.push(run.name);
         }
     }
@@ -145,16 +187,14 @@ async function getFailedChecks(client: GithubClient, config: GithubConfig, ref: 
         ref,
     });
 
-    if (combined.state === 'failure' || combined.state === 'error') {
-        for (const status of combined.statuses) {
-            if (status.state === 'failure' || status.state === 'error') {
-                failed.push(status.context);
-            }
-        }
-        if (failed.length === 0) {
-            failed.push('commit status');
+    for (const status of combined.statuses) {
+        total++;
+        if (status.state === 'failure' || status.state === 'error') {
+            failed.push(status.context);
+        } else if (status.state === 'pending') {
+            pending = true;
         }
     }
 
-    return failed;
+    return { failed, pending, total };
 }

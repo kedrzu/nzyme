@@ -519,10 +519,11 @@ function defineTaskMergeCommand(options: LinearCommandsOptions) {
                 'main repository branch is refreshed so its submodule references point at the merged commits, ' +
                 'and finally the main repository PR is squash-merged. It aborts if any submodule has ' +
                 'uncommitted changes. Before merging it summarises every PR with its URL and unresolved ' +
-                'review-comment count, asking for confirmation only when some PR still has unresolved comments ' +
-                '(otherwise it merges automatically). It waits for required checks to pass and prompts to ' +
-                'convert any draft PR to ready. With --yes the confirmation and draft prompts are skipped ' +
-                '(drafts are converted automatically).',
+                'review-comment count. When some PR still has unresolved comments it asks for confirmation ' +
+                'and prompts to convert any draft PR to ready; when everything is resolved it merges ' +
+                'automatically, auto-converting drafts without prompting. Required checks are always waited ' +
+                'for before each merge. With --yes the confirmation and draft prompts are skipped (drafts are ' +
+                'converted automatically).',
             examples: [
                 ['Merge current task with confirmation', 'task merge'],
                 ['Merge current task without prompts', 'task merge --yes'],

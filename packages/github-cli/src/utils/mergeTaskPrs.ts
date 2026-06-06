@@ -127,7 +127,9 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
     const submoduleTargets = await discoverSubmoduleTargets(githubClient, githubConfig, issueId, logger);
 
     // === Confirmation summary ===
-    await confirmMerge({
+    // When there is nothing to inspect (no unresolved comments) the merge proceeds non-interactively,
+    // including auto-converting any draft PR — we still wait for required checks before each merge.
+    const skipDraftPrompts = await confirmMerge({
         githubClient,
         mainConfig: githubConfig,
         mainPr,
@@ -152,7 +154,7 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
             prNumber: target.openPr.number,
             isDraft: target.openPr.draft,
             label: `Submodule ${target.name}`,
-            autoYes,
+            autoYes: skipDraftPrompts,
             logger,
         });
         await waitForRequiredChecks({
@@ -190,7 +192,7 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
         prNumber: mainPr.number,
         isDraft: freshMainPr.draft,
         label: 'Main repository',
-        autoYes,
+        autoYes: skipDraftPrompts,
         logger,
     });
     await waitForRequiredChecks({
@@ -289,8 +291,12 @@ interface ConfirmMergeParams {
  * unresolved review threads before merging over them, so it is shown only when at least one PR has
  * unresolved comments (and never with `autoYes`). When everything is resolved the merge proceeds
  * automatically. Throws {@link UsageError} if the user declines.
+ *
+ * @returns `true` when the rest of the merge should run non-interactively (because of `autoYes`, or
+ * because there were no unresolved comments to inspect) — callers use this to also auto-convert any
+ * draft PR instead of prompting. `false` when the user was prompted and confirmed.
  */
-async function confirmMerge(params: ConfirmMergeParams): Promise<void> {
+async function confirmMerge(params: ConfirmMergeParams): Promise<boolean> {
     const { githubClient, mainConfig, mainPr, submoduleTargets, autoYes, logger } = params;
 
     logger.info('');
@@ -323,14 +329,15 @@ async function confirmMerge(params: ConfirmMergeParams): Promise<void> {
     logger.info(`      ${chalk.blueBright(chalk.underline(mainPr.html_url))}`);
 
     if (autoYes) {
-        return;
+        return true;
     }
 
-    // All review comments resolved → nothing to inspect, so merge without prompting.
+    // All review comments resolved → nothing to inspect, so merge without prompting (and let the
+    // caller auto-convert any draft PR too).
     if (totalUnresolved === 0) {
         logger.info('');
         logger.info(chalk.green('✅ All review comments resolved — merging automatically.'));
-        return;
+        return true;
     }
 
     logger.info('');
@@ -344,6 +351,8 @@ async function confirmMerge(params: ConfirmMergeParams): Promise<void> {
         logger.info('Aborted — no PRs were merged.');
         throw new UsageError('Merge cancelled by user.');
     }
+
+    return false;
 }
 
 /**

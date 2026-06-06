@@ -11,6 +11,12 @@ export interface EmptyS3BucketOptions {
     logger?: Logger;
     /** If true, deletes all object versions and delete markers (required for versioned buckets). */
     versioned?: boolean;
+    /**
+     * If true, sets `BypassGovernanceRetention` on the delete requests so object versions still under an
+     * Object Lock **GOVERNANCE** retention can be removed. Requires the caller to hold
+     * `s3:BypassGovernanceRetention`. Has no effect on COMPLIANCE-mode locks (those are never bypassable).
+     */
+    bypassGovernanceRetention?: boolean;
     /** Optional S3 client to use. Defaults to a new client with ambient AWS config. */
     s3Client?: S3Client;
 }
@@ -21,14 +27,16 @@ export async function emptyS3Bucket(options: EmptyS3BucketOptions) {
     const logger = options.logger;
     const bucket = options.bucket;
 
+    const bypassGovernanceRetention = options.bypassGovernanceRetention;
+
     const deleted = options.versioned
-        ? await deleteAllVersions(s3Client, bucket)
-        : await deleteAllObjects(s3Client, bucket);
+        ? await deleteAllVersions(s3Client, bucket, bypassGovernanceRetention)
+        : await deleteAllObjects(s3Client, bucket, bypassGovernanceRetention);
 
     logger?.info(`Successfully emptied bucket ${bucket} - ${deleted} objects deleted.`);
 }
 
-async function deleteAllObjects(s3Client: S3Client, bucket: string) {
+async function deleteAllObjects(s3Client: S3Client, bucket: string, bypassGovernanceRetention?: boolean) {
     let deleted = 0;
     let continuationToken: string | undefined;
 
@@ -45,6 +53,7 @@ async function deleteAllObjects(s3Client: S3Client, bucket: string) {
             const deleteResponse = await s3Client.send(
                 new DeleteObjectsCommand({
                     Bucket: bucket,
+                    BypassGovernanceRetention: bypassGovernanceRetention,
                     Delete: {
                         Objects: objects.map(obj => ({ Key: obj.Key as string })),
                     },
@@ -60,7 +69,7 @@ async function deleteAllObjects(s3Client: S3Client, bucket: string) {
     return deleted;
 }
 
-async function deleteAllVersions(s3Client: S3Client, bucket: string) {
+async function deleteAllVersions(s3Client: S3Client, bucket: string, bypassGovernanceRetention?: boolean) {
     let deleted = 0;
     let keyMarker: string | undefined;
     let versionIdMarker: string | undefined;
@@ -81,6 +90,7 @@ async function deleteAllVersions(s3Client: S3Client, bucket: string) {
             const deleteResponse = await s3Client.send(
                 new DeleteObjectsCommand({
                     Bucket: bucket,
+                    BypassGovernanceRetention: bypassGovernanceRetention,
                     Delete: {
                         Objects: entries.map(entry => ({
                             Key: entry.Key as string,

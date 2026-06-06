@@ -118,11 +118,18 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
         throw new UsageError(`No open GitHub PR found for task ${chalk.bold(issueId)} in the main repository.`);
     }
 
+    // === Guard: every submodule must be clean ===
+    // The merge runs entirely via the GitHub API against already-pushed commits, so any uncommitted
+    // submodule changes would be silently left out of the merged result — fail loudly instead.
+    await assertSubmodulesClean(logger);
+
     // === Discover task submodules (open or already-merged PRs) ===
     const submoduleTargets = await discoverSubmoduleTargets(githubClient, githubConfig, issueId, logger);
 
     // === Confirmation summary ===
-    await confirmMerge({
+    // When there is nothing to inspect (no unresolved comments) the merge proceeds non-interactively,
+    // including auto-converting any draft PR — we still wait for required checks before each merge.
+    const skipDraftPrompts = await confirmMerge({
         githubClient,
         mainConfig: githubConfig,
         mainPr,
@@ -147,7 +154,7 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
             prNumber: target.openPr.number,
             isDraft: target.openPr.draft,
             label: `Submodule ${target.name}`,
-            autoYes,
+            autoYes: skipDraftPrompts,
             logger,
         });
         await waitForRequiredChecks({
@@ -185,7 +192,7 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
         prNumber: mainPr.number,
         isDraft: freshMainPr.draft,
         label: 'Main repository',
-        autoYes,
+        autoYes: skipDraftPrompts,
         logger,
     });
     await waitForRequiredChecks({
@@ -243,6 +250,30 @@ async function discoverSubmoduleTargets(
 }
 
 /**
+ * Abort the merge if any submodule has uncommitted changes. The merge is performed via the GitHub
+ * API against already-pushed commits, so local uncommitted submodule work would be silently left out
+ * of the merged result — fail loudly so the user can commit/push (or discard) it first.
+ */
+async function assertSubmodulesClean(logger: Logger): Promise<void> {
+    const submodules = await getSubmoduleInfo();
+    const dirty = submodules.filter(submodule => submodule.hasChanges);
+
+    if (dirty.length === 0) {
+        return;
+    }
+
+    logger.error('❌ Cannot merge — the following submodules have uncommitted changes:');
+    for (const submodule of dirty) {
+        logger.error(`   ${chalk.magenta(submodule.name)} ${chalk.gray(`(${submodule.path})`)}`);
+    }
+
+    throw new UsageError(
+        `${dirty.length} submodule${dirty.length === 1 ? '' : 's'} ${dirty.length === 1 ? 'has' : 'have'} ` +
+            `uncommitted changes. Commit, push, or discard them (e.g. \`task push\`) and try again.`,
+    );
+}
+
+/**
  * Parameters for {@link confirmMerge}.
  */
 interface ConfirmMergeParams {
@@ -255,22 +286,33 @@ interface ConfirmMergeParams {
 }
 
 /**
- * Log the merge plan (every PR + its unresolved-review-comment count) and, unless `autoYes`, prompt
- * the user to confirm. Throws {@link UsageError} if the user declines.
+ * Log the merge plan — every PR, its clickable URL, and its unresolved-review-comment count — then
+ * decide whether to prompt. The confirmation only exists to give the user a chance to inspect
+ * unresolved review threads before merging over them, so it is shown only when at least one PR has
+ * unresolved comments (and never with `autoYes`). When everything is resolved the merge proceeds
+ * automatically. Throws {@link UsageError} if the user declines.
+ *
+ * @returns `true` when the rest of the merge should run non-interactively (because of `autoYes`, or
+ * because there were no unresolved comments to inspect) — callers use this to also auto-convert any
+ * draft PR instead of prompting. `false` when the user was prompted and confirmed.
  */
-async function confirmMerge(params: ConfirmMergeParams): Promise<void> {
+async function confirmMerge(params: ConfirmMergeParams): Promise<boolean> {
     const { githubClient, mainConfig, mainPr, submoduleTargets, autoYes, logger } = params;
 
     logger.info('');
     logger.info(chalk.bold('📋 The following PRs will be squash-merged (submodules first):'));
 
+    let totalUnresolved = 0;
+
     for (const target of submoduleTargets) {
         if (target.openPr) {
             const unresolved = await countUnresolvedReviewThreads(githubClient, target.config, target.openPr.number);
+            totalUnresolved += unresolved;
             logger.info(
                 `   ${chalk.magenta(target.name)} ${chalk.gray(`#${target.openPr.number}`)} ${target.openPr.title} ` +
                     formatUnresolved(unresolved),
             );
+            logger.info(`      ${chalk.blueBright(chalk.underline(target.openPr.html_url))}`);
         } else {
             logger.info(
                 `   ${chalk.magenta(target.name)} ${chalk.gray('(PR already merged — will refresh reference)')}`,
@@ -279,25 +321,38 @@ async function confirmMerge(params: ConfirmMergeParams): Promise<void> {
     }
 
     const mainUnresolved = await countUnresolvedReviewThreads(githubClient, mainConfig, mainPr.number);
+    totalUnresolved += mainUnresolved;
     logger.info(
         `   ${chalk.cyan(mainConfig.repo)} ${chalk.gray(`#${mainPr.number}`)} ${mainPr.title} ` +
             formatUnresolved(mainUnresolved),
     );
+    logger.info(`      ${chalk.blueBright(chalk.underline(mainPr.html_url))}`);
 
     if (autoYes) {
-        return;
+        return true;
     }
 
+    // All review comments resolved → nothing to inspect, so merge without prompting (and let the
+    // caller auto-convert any draft PR too).
+    if (totalUnresolved === 0) {
+        logger.info('');
+        logger.info(chalk.green('✅ All review comments resolved — merging automatically.'));
+        return true;
+    }
+
+    logger.info('');
     const { proceed } = await enquirer.prompt<{ proceed: boolean }>({
         type: 'confirm',
         name: 'proceed',
-        message: 'Squash-merge these PRs?',
+        message: 'Some PRs have unresolved comments. Squash-merge these PRs?',
     });
 
     if (!proceed) {
         logger.info('Aborted — no PRs were merged.');
         throw new UsageError('Merge cancelled by user.');
     }
+
+    return false;
 }
 
 /**

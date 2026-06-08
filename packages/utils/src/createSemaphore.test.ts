@@ -76,15 +76,20 @@ test('hands a released permit directly to the next waiter in FIFO order', async 
 test('releases the permit when the operation throws', async () => {
     const semaphore = createSemaphore(1);
 
-    await expect(
-        semaphore.run(async () => {
+    let caught: unknown;
+    try {
+        await semaphore.run(async () => {
             await waitFor(0);
             throw new Error('boom');
-        }),
-    ).rejects.toThrow('boom');
+        });
+    } catch (error) {
+        caught = error;
+    }
+    expect(caught).toBeInstanceOf(Error);
+    expect((caught as Error).message).toBe('boom');
 
     // A subsequent operation must still acquire a permit (no leak).
-    const result = await semaphore.run(async () => 'recovered');
+    const result = await semaphore.run(() => Promise.resolve('recovered'));
     expect(result).toBe('recovered');
 });
 

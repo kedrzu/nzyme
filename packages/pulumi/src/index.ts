@@ -1,4 +1,5 @@
 export * from './AwsConfig.js';
+export * from './BoundDefineStack.js';
 export * from './cancelStack.js';
 export * from './compileCloudFrontFunction.js';
 export * from './compileFunction.js';

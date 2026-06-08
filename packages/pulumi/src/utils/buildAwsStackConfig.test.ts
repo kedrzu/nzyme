@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import { buildAwsStackConfig } from './buildAwsStackConfig.js';
 
 describe('buildAwsStackConfig', () => {
-    test('per-stack placement region overrides the shared awsConfig region (the multi-region pivot)', () => {
+    test('per-stack region overrides the shared awsConfig region (the multi-region pivot)', () => {
         const config = buildAwsStackConfig({
             awsConfig: { region: 'eu-central-1' },
             region: 'us-east-1',
@@ -12,7 +12,7 @@ describe('buildAwsStackConfig', () => {
         expect(config['aws:region']).toBe('us-east-1');
     });
 
-    test('falls back to the awsConfig region when there is no placement region', () => {
+    test('falls back to the awsConfig region when there is no per-stack region', () => {
         const config = buildAwsStackConfig({ awsConfig: { region: 'eu-central-1' } });
 
         expect(config['aws:region']).toBe('eu-central-1');

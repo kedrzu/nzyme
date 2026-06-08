@@ -8,7 +8,7 @@ import type { StackDefinition, StackOutput, StackReference } from './defineStack
 
 /**
  * Fan-in helper: turn a map of stacks (e.g. one per region) into a single injectable that resolves to
- * a map of their {@link StackReference}s. Used when one stack depends on *every* placement of another
+ * a map of their {@link StackReference}s. Used when one stack depends on *every* instance of another
  * — e.g. a global edge stack that reads all regional API endpoints. The returned injectable depends on
  * each stack's `ref()`, so the deploy scheduler orders the consumer after all of them.
  * @__NO_SIDE_EFFECTS__

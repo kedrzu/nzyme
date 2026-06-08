@@ -23,7 +23,7 @@ export async function createOrSelectStack<TOutput extends StackOutput>(stack: St
     const nodeModulesDir = path.resolve(pulumiPkgPath, '..', '..');
     envVars.NODE_PATH = envVars.NODE_PATH ? `${nodeModulesDir}${path.delimiter}${envVars.NODE_PATH}` : nodeModulesDir;
 
-    // Per-stack region comes from the stack's placement and overrides the shared awsConfig.region.
+    // Per-stack region comes from the stack's `region` option and overrides the shared awsConfig.region.
     const stackConfig = buildAwsStackConfig({ awsConfig: config.awsConfig, region: stack.region });
     const pulumiHome = config.pulumiHome ?? path.join(cwd, '.pulumi');
 

@@ -9,13 +9,13 @@ import { refAll } from './refAll.js';
 test('refAll exposes one dependency per stack (so the scheduler orders the consumer after all of them)', () => {
     const stacks: Record<string, StackDefinition> = {
         'eu-central-1': defineStack({
-            name: 'api',
-            placement: { stackName: 'api-eu-central-1', region: 'eu-central-1' },
+            name: 'api-eu-central-1',
+            region: 'eu-central-1',
             resources: () => ({}),
         }),
         'us-east-1': defineStack({
-            name: 'api',
-            placement: { stackName: 'api-us-east-1', region: 'us-east-1' },
+            name: 'api-us-east-1',
+            region: 'us-east-1',
             resources: () => ({}),
         }),
     };

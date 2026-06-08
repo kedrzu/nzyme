@@ -13,7 +13,7 @@ export interface BuildAwsStackConfigOptions {
     awsConfig?: AwsConfig;
 
     /**
-     * Per-stack region from the stack's placement. When set it overrides {@link AwsConfig.region},
+     * Per-stack region from the stack's `region` option. When set it overrides {@link AwsConfig.region},
      * so each generated stack deploys to its own region's default provider even though every stack in
      * a CLI run shares the same `awsConfig` and the same ambient `AWS_REGION`.
      */
@@ -22,9 +22,9 @@ export interface BuildAwsStackConfigOptions {
 
 /**
  * Builds the `aws:*` Pulumi stack-config entries for a single stack from the shared AWS config plus
- * the per-stack placement region. The placement region is authoritative: `@pulumi/aws` resolves the
- * provider region as `config "region" ?? AWS_REGION`, so writing `aws:region` here directs each stack
- * to its placement region regardless of the ambient `AWS_REGION` env var.
+ * the per-stack region. The per-stack region is authoritative: `@pulumi/aws` resolves the provider
+ * region as `config "region" ?? AWS_REGION`, so writing `aws:region` here directs each stack to its
+ * own region regardless of the ambient `AWS_REGION` env var.
  * @__NO_SIDE_EFFECTS__
  */
 export function buildAwsStackConfig(
@@ -52,7 +52,7 @@ export function buildAwsStackConfig(
         }
     }
 
-    // Per-stack placement region wins over the shared default region.
+    // Per-stack region wins over the shared default region.
     if (options.region) {
         stackConfig['aws:region'] = options.region;
     }

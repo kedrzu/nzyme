@@ -12,7 +12,6 @@ import type { Flatten, SomeObject } from '@nzyme/types/Object.js';
 import { createMemo } from '@nzyme/utils/createMemo.js';
 import { toPascalCase } from '@nzyme/utils/string/caseUtils.js';
 
-import type { StackPlacement } from './StackPlacement.js';
 import { unwrapStackOutput } from './utils/unwrapStackOutput.js';
 
 const STACK_SYMBOL = Symbol('Stack');
@@ -46,15 +45,24 @@ export interface StackOptions<
     TBuild = void,
 > {
     /**
-     * Name of the stack.
+     * Full Pulumi stack name, unique within the project (e.g. `database-eu-central-1`, `dns-global`).
+     * Drives both the IoC service identity and the Pulumi stack name. App-level factories build the
+     * region-suffixed / `-global` name and pass it here; single-region stacks pass a bare name.
      */
     name: string;
 
     /**
-     * Placement of the stack — its Pulumi stack name and provider region. When omitted, the stack
-     * deploys under its {@link name} with the shared default region (single-region behavior).
+     * AWS region for this stack's default provider — written as `aws:region` in the stack config. When
+     * omitted, the stack uses the shared default region (single-region behavior).
      */
-    placement?: StackPlacement;
+    region?: string;
+
+    /**
+     * Pulumi project for this stack. Optional — defaults to the single project in
+     * {@link PulumiConfig.project}. Reserved for future per-residency-zone project/account isolation
+     * and cross-project references; not used today.
+     */
+    project?: string;
 
     /**
      * Dependencies of the stack.
@@ -129,8 +137,8 @@ export interface Stack<TOutput extends StackOutput = StackOutput> {
     name: string;
 
     /**
-     * AWS region for this stack's default provider (from its placement). Undefined falls back to the
-     * shared config region.
+     * AWS region for this stack's default provider (from the `region` option). Undefined falls back to
+     * the shared config region.
      */
     region?: string;
 
@@ -198,9 +206,10 @@ export interface StackDefinition<
     stackName: string;
 
     /**
-     * Placement this stack was generated from (Pulumi coordinates + region), if any.
+     * Pulumi project this stack belongs to, if not the default. Reserved for future cross-project
+     * references; resolves the {@link StackReference} path when set.
      */
-    placement?: StackPlacement;
+    project?: string;
 
     /**
      * Whether the stack is enabled.
@@ -268,11 +277,11 @@ export function defineStack<
 >(options: StackOptions<TDeps, TOutput, TBuild>) {
     const enabled = options.enabled ?? true;
     const preventDestroy = options.preventDestroy ?? false;
-    const placement = options.placement;
-    // Identity (IoC service + Pulumi stack name) derives from the placement's stackName, so two
-    // placements of the same logical stack never collide. `options.name` stays the logical/basis name.
-    const stackName = placement?.stackName ?? options.name;
-    const region = placement?.region;
+    // Identity (IoC service + Pulumi stack name) derives from the full `name`, so two instances of the
+    // same logical stack (e.g. per region) never collide — the app-level factory bakes the region into
+    // the name it passes here.
+    const stackName = options.name;
+    const region = options.region;
     const serviceName = `Stack:${toPascalCase(stackName)}`;
     type Deps = Override<TDeps, { logger: Injectable<Logger> }>;
     const depsDef = { ...options.deps, logger: Logger } as Deps;
@@ -324,7 +333,7 @@ export function defineStack<
         enabled,
         preventDestroy,
         stackName,
-        placement,
+        project: options.project,
         [STACK_SYMBOL]: true,
         ref: () =>
             defineInjectable({
@@ -348,9 +357,9 @@ function createStackReference<TDeps extends Dependencies, TOutput extends StackO
 ): StackReference<TOutput> {
     const ref = createMemo(() => {
         const org = pulumi.getOrganization();
-        // A placement may target a different Pulumi project (reserved for future cross-zone isolation);
+        // A stack may target a different Pulumi project (reserved for future cross-zone isolation);
         // otherwise the reference resolves within the consumer's own project.
-        const project = stack.placement?.project ?? pulumi.getProject();
+        const project = stack.project ?? pulumi.getProject();
         const path = `${org}/${project}/${stack.stackName}`;
         return new pulumi.StackReference(path);
     });

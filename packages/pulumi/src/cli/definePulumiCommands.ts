@@ -22,7 +22,7 @@ import { previewStack } from '../previewStack.js';
 import type { PulumiConfig } from '../PulumiConfig.js';
 import { refreshStack } from '../refreshStack.js';
 import { listRemoteStacks } from '../utils/listRemoteStacks.js';
-import { matchStackName } from '../utils/matchStackName.js';
+import { filterStacks } from './filterStacks.js';
 
 /**
  * Context for the Pulumi commands.
@@ -992,44 +992,6 @@ function resolveStacks(options: ResolveStacksOptions) {
 
     if (options.skip && options.skip.length > 0) {
         return stacks.filter(stack => !options.skip!.includes(stack.stackName));
-    }
-
-    return stacks;
-}
-
-function filterStacks(options: ResolveStacksOptions): Set<StackDefinition> {
-    if (options.stackNames.length === 0) {
-        return new Set(options.stacks.filter(s => s.enabled));
-    }
-
-    const stacks: Set<StackDefinition> = new Set();
-    const matchedPatterns = new Set<string>();
-
-    for (const pattern of options.stackNames) {
-        for (const stack of options.stacks) {
-            if (stacks.has(stack)) {
-                continue;
-            }
-
-            if (!matchStackName(pattern, stack.stackName)) {
-                continue;
-            }
-
-            matchedPatterns.add(pattern);
-
-            if (!stack.enabled) {
-                options.logger.warn(`Stack ${stack.stackName} is disabled.`);
-                continue;
-            }
-
-            stacks.add(stack);
-        }
-    }
-
-    // Check for patterns that didn't match any stack
-    const unmatchedPatterns = options.stackNames.filter(p => !matchedPatterns.has(p));
-    if (unmatchedPatterns.length > 0) {
-        throw new UsageError(`Pattern(s) ${unmatchedPatterns.join(', ')} did not match any stacks.`);
     }
 
     return stacks;

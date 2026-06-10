@@ -17,6 +17,11 @@ export interface EmptyS3BucketOptions {
      * `s3:BypassGovernanceRetention`. Has no effect on COMPLIANCE-mode locks (those are never bypassable).
      */
     bypassGovernanceRetention?: boolean;
+    /**
+     * If true, returns silently instead of throwing when the bucket does not exist (`NoSuchBucket`).
+     * Useful when emptying a bucket before destroying a stack where the bucket may already be gone.
+     */
+    ignoreMissingBucket?: boolean;
     /** Optional S3 client to use. Defaults to a new client with ambient AWS config. */
     s3Client?: S3Client;
 }
@@ -29,11 +34,25 @@ export async function emptyS3Bucket(options: EmptyS3BucketOptions) {
 
     const bypassGovernanceRetention = options.bypassGovernanceRetention;
 
-    const deleted = options.versioned
-        ? await deleteAllVersions(s3Client, bucket, bypassGovernanceRetention)
-        : await deleteAllObjects(s3Client, bucket, bypassGovernanceRetention);
+    try {
+        const deleted = options.versioned
+            ? await deleteAllVersions(s3Client, bucket, bypassGovernanceRetention)
+            : await deleteAllObjects(s3Client, bucket, bypassGovernanceRetention);
 
-    logger?.info(`Successfully emptied bucket ${bucket} - ${deleted} objects deleted.`);
+        logger?.info(`Successfully emptied bucket ${bucket} - ${deleted} objects deleted.`);
+    } catch (error) {
+        if (options.ignoreMissingBucket && isNoSuchBucketError(error)) {
+            logger?.info(`Bucket ${bucket} does not exist - nothing to empty.`);
+            return;
+        }
+
+        throw error;
+    }
+}
+
+/** Returns true if the error is an S3 `NoSuchBucket` error (the bucket does not exist). */
+function isNoSuchBucketError(error: unknown) {
+    return error instanceof Error && error.name === 'NoSuchBucket';
 }
 
 async function deleteAllObjects(s3Client: S3Client, bucket: string, bypassGovernanceRetention?: boolean) {

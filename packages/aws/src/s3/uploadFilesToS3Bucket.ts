@@ -37,6 +37,12 @@ export interface UploadFilesOptions {
      */
     logger?: Logger;
     /**
+     * AWS region of the destination bucket. Required when the bucket does not live in the ambient
+     * `AWS_REGION` — e.g. global/edge app buckets pinned to `us-east-1`. Without it the SDK uses the
+     * ambient region and S3 answers cross-region requests with `PermanentRedirect`.
+     */
+    region?: string;
+    /**
      * A function to rename the files.
      */
     rename?: (key: string) => string;
@@ -62,7 +68,7 @@ type Filter = (key: string) => boolean;
  */
 export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
     const logger = options.logger;
-    const s3Client = new S3Client();
+    const s3Client = new S3Client({ region: options.region });
     const client = new S3SyncClient({
         client: s3Client,
     });

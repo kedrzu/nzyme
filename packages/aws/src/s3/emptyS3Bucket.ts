@@ -22,13 +22,19 @@ export interface EmptyS3BucketOptions {
      * Useful when emptying a bucket before destroying a stack where the bucket may already be gone.
      */
     ignoreMissingBucket?: boolean;
+    /**
+     * AWS region of the bucket. Required when the bucket does not live in the ambient `AWS_REGION` —
+     * e.g. global/edge app buckets pinned to `us-east-1` — otherwise S3 answers with `PermanentRedirect`.
+     * Ignored when {@link s3Client} is supplied.
+     */
+    region?: string;
     /** Optional S3 client to use. Defaults to a new client with ambient AWS config. */
     s3Client?: S3Client;
 }
 
 /** Deletes all objects from an S3 bucket. */
 export async function emptyS3Bucket(options: EmptyS3BucketOptions) {
-    const s3Client = options.s3Client ?? new S3Client({});
+    const s3Client = options.s3Client ?? new S3Client({ region: options.region });
     const logger = options.logger;
     const bucket = options.bucket;
 

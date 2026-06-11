@@ -45,9 +45,24 @@ export interface StackOptions<
     TBuild = void,
 > {
     /**
-     * Name of the stack.
+     * Full Pulumi stack name, unique within the project (e.g. `database-eu-central-1`, `dns-global`).
+     * Drives both the IoC service identity and the Pulumi stack name. App-level factories build the
+     * region-suffixed / `-global` name and pass it here; single-region stacks pass a bare name.
      */
     name: string;
+
+    /**
+     * AWS region for this stack's default provider — written as `aws:region` in the stack config. When
+     * omitted, the stack uses the shared default region (single-region behavior).
+     */
+    region?: string;
+
+    /**
+     * Pulumi project for this stack. Optional — defaults to the single project in
+     * {@link PulumiConfig.project}. Reserved for future per-residency-zone project/account isolation
+     * and cross-project references; not used today.
+     */
+    project?: string;
 
     /**
      * Dependencies of the stack.
@@ -122,6 +137,12 @@ export interface Stack<TOutput extends StackOutput = StackOutput> {
     name: string;
 
     /**
+     * AWS region for this stack's default provider (from the `region` option). Undefined falls back to
+     * the shared config region.
+     */
+    region?: string;
+
+    /**
      * Whether the stack is enabled.
      */
     enabled: boolean;
@@ -183,6 +204,12 @@ export interface StackDefinition<
      * Name of the stack.
      */
     stackName: string;
+
+    /**
+     * Pulumi project this stack belongs to, if not the default. Reserved for future cross-project
+     * references; resolves the {@link StackReference} path when set.
+     */
+    project?: string;
 
     /**
      * Whether the stack is enabled.
@@ -250,7 +277,12 @@ export function defineStack<
 >(options: StackOptions<TDeps, TOutput, TBuild>) {
     const enabled = options.enabled ?? true;
     const preventDestroy = options.preventDestroy ?? false;
-    const serviceName = `Stack:${toPascalCase(options.name)}`;
+    // Identity (IoC service + Pulumi stack name) derives from the full `name`, so two instances of the
+    // same logical stack (e.g. per region) never collide — the app-level factory bakes the region into
+    // the name it passes here.
+    const stackName = options.name;
+    const region = options.region;
+    const serviceName = `Stack:${toPascalCase(stackName)}`;
     type Deps = Override<TDeps, { logger: Injectable<Logger> }>;
     const depsDef = { ...options.deps, logger: Logger } as Deps;
 
@@ -259,10 +291,10 @@ export function defineStack<
         deps: depsDef,
         setup(depsInput) {
             const deps = depsInput as ResolveDeps<TDeps> & { logger: Logger };
-            const name = options.name;
             let buildResult: TBuild;
             const stack: Stack<TOutput> = {
-                name,
+                name: stackName,
+                region,
                 enabled,
                 preventDestroy,
                 logger: deps.logger,
@@ -300,7 +332,8 @@ export function defineStack<
         ...service,
         enabled,
         preventDestroy,
-        stackName: options.name,
+        stackName,
+        project: options.project,
         [STACK_SYMBOL]: true,
         ref: () =>
             defineInjectable({
@@ -324,7 +357,9 @@ function createStackReference<TDeps extends Dependencies, TOutput extends StackO
 ): StackReference<TOutput> {
     const ref = createMemo(() => {
         const org = pulumi.getOrganization();
-        const project = pulumi.getProject();
+        // A stack may target a different Pulumi project (reserved for future cross-zone isolation);
+        // otherwise the reference resolves within the consumer's own project.
+        const project = stack.project ?? pulumi.getProject();
         const path = `${org}/${project}/${stack.stackName}`;
         return new pulumi.StackReference(path);
     });

@@ -14,6 +14,7 @@ export * from './directives/vShow.js';
 export * from './directives/vUid.js';
 export * from './directives/vVisible.js';
 export * from './isVNodeEmpty.js';
+export * from './mapScopedArray.js';
 export * from './navigateToUrl.js';
 export * from './onElementScroll.js';
 export * from './onEventEmitter.js';

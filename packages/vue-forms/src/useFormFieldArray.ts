@@ -1,6 +1,5 @@
-import { reactive } from '@nzyme/vue-utils/reactivity/reactive.js';
-import { computed, effectScope, watch } from 'vue';
-import type { EffectScope } from 'vue';
+import { mapScopedArray } from '@nzyme/vue-utils/mapScopedArray.js';
+import { computed } from 'vue';
 
 import type { FormField, FormModel, FormValidator } from './types.js';
 import { useFormField } from './useFormField.js';
@@ -11,12 +10,6 @@ import { useFormField } from './useFormField.js';
  * @template V - Return type of the factory function
  */
 type FormFieldFactory<T = unknown, V = unknown> = (field: FormModel<T>, index: number) => V;
-
-const SCOPE = Symbol('EffectScope');
-
-interface FieldWithScope extends FormField {
-    [SCOPE]: EffectScope;
-}
 
 /**
  * Creates a reactive array of form fields from a form with array value.
@@ -97,32 +90,14 @@ export function useFormFieldArray<T>(
     form: FormModel<unknown[]>,
     validatorsOrFactory: FormFieldFactory<unknown, T> | FormValidator<unknown>[] | undefined,
 ): FormField[] {
-    const fields = reactive<FieldWithScope[]>([]);
     const factory = getFactory(form, validatorsOrFactory);
 
-    watch(
-        () => form.value?.length,
-        (newLength = 0, oldLength = 0) => {
-            if (newLength > oldLength) {
-                for (let i = oldLength; i < newLength; i++) {
-                    const scope = effectScope();
-                    const field = scope.run(() => factory(i)) as FieldWithScope;
-                    field[SCOPE] = scope;
-
-                    fields.push(field);
-                }
-            } else if (newLength < oldLength) {
-                for (let i = oldLength - 1; i >= newLength; i--) {
-                    fields[i]![SCOPE].stop();
-                }
-
-                fields.length = newLength;
-            }
-        },
-        { immediate: true },
+    // The factory builds each field's value from `form` by index, so item value
+    // reactivity comes from `useFormField`, not from the array snapshot.
+    return mapScopedArray(
+        () => form.value,
+        (_item, index) => factory(index) as FormField,
     );
-
-    return fields;
 }
 
 function getFactory(

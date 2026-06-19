@@ -170,6 +170,10 @@ function setupButton() {
                     return h(
                         'a',
                         {
+                            // Spread fallthrough attrs (e.g. `tid`, aria-*) like the button/external-link
+                            // paths do, so internal links keep the same attributes — `href`/`onClick`
+                            // below intentionally override any incoming values.
+                            ...attrs,
                             href,
                             onClick: (event: Event) => onClick(event, navigate),
                             disabled: disabled.value || undefined,

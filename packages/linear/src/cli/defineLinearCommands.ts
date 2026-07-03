@@ -183,10 +183,14 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                 ['Start work on task by ID', 'task SIG-123'],
                 ['Start work on task by ID without prefix', 'task 123'],
                 ['Start work on task by URL', 'task https://linear.app/sig/issue/SIG-123/some-task'],
+                ['Start work branching from a specific branch', 'task SIG-123 --branch develop'],
             ],
         });
 
         taskIdentifier = Option.String({ required: true });
+        branch = Option.String('--branch', {
+            description: 'Base branch to create the new branch from (defaults to the configured base branch, e.g. main)',
+        });
 
         override async run() {
             await options.beforeEach?.();
@@ -218,6 +222,7 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                     githubConfig,
                     logger: this.logger,
                     baseBranches,
+                    branch: this.branch,
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -247,6 +252,9 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
 
         title = Option.String({ required: false });
         projectId = Option.String('--project, -p', { required: false });
+        branch = Option.String('--branch', {
+            description: 'Base branch to create the new branch from (defaults to the configured base branch, e.g. main)',
+        });
 
         override async run() {
             await options.beforeEach?.();
@@ -326,6 +334,7 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
                     githubConfig,
                     logger: this.logger,
                     baseBranches,
+                    branch: this.branch,
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -590,6 +599,9 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
         unassigned = Option.Boolean('--unassigned,-u', false, {
             description: 'Include unassigned tasks',
         });
+        branch = Option.String('--branch', {
+            description: 'Base branch to create the new branch from (defaults to the configured base branch, e.g. main)',
+        });
 
         override async run() {
             await options.beforeEach?.();
@@ -810,6 +822,7 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                     githubConfig,
                     logger: this.logger,
                     baseBranches,
+                    branch: this.branch,
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';

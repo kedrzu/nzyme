@@ -1,10 +1,7 @@
 import chalk from 'chalk';
-import enquirer from 'enquirer';
 import { simpleGit } from 'simple-git';
 
 import type { Logger } from '@nzyme/logging/Logger.js';
-
-import { getCurrentBranch } from './getCurrentBranch.js';
 
 /**
  * Result of branch selection operation.
@@ -31,9 +28,11 @@ export interface BranchSelectionResult {
  */
 export interface BranchSelectionParams {
     /**
-     * Available base branches to choose from.
+     * The base branch to start the new branch from (e.g. 'main').
+     * New task branches always start from the up-to-date remote tip of this branch,
+     * regardless of the currently checked-out branch.
      */
-    baseBranches: string[];
+    branch: string;
 
     /**
      * Task/issue ID for stashing.
@@ -44,98 +43,29 @@ export interface BranchSelectionParams {
      * Logger instance.
      */
     logger: Logger;
-
-    /**
-     * Optional existing PR to extract base branch from.
-     */
-    existingPr?: {
-        base: {
-            ref: string;
-        };
-    };
 }
 
 /**
- * Handle branch selection when multiple base branches are available.
- * For new tasks: shows current branch + all base branches
- * For existing tasks: uses PR base branch for sync, but still allows selection for new branches
+ * Prepare the starting point for a new task branch.
+ *
+ * Always branches from the up-to-date remote tip of the given base branch
+ * (e.g. `origin/main`) rather than the currently checked-out branch, stashing
+ * any uncommitted changes first so they can be re-applied on the new branch.
  */
 export async function handleBranchSelection(params: BranchSelectionParams): Promise<BranchSelectionResult> {
-    const { baseBranches, taskId, logger, existingPr } = params;
+    const { branch, taskId, logger } = params;
 
-    // If there's an existing PR, use its base branch for syncing
-    if (existingPr) {
-        logger.info(`🎯 Using PR base branch: ${chalk.cyan(existingPr.base.ref)}`);
-        return {
-            selectedBaseBranch: existingPr.base.ref,
-        };
-    }
-
-    const currentBranch = await getCurrentBranch();
-
-    // Build list of branch options
-    const branchOptions: Array<{ message: string; name: string; value: string }> = [];
-
-    // Add all base branches
-    for (const baseBranch of baseBranches) {
-        const isCurrent = currentBranch === baseBranch;
-        const label = isCurrent ? `${baseBranch} (current, base branch)` : `${baseBranch} (base branch)`;
-        const color = isCurrent ? chalk.green : chalk.cyan;
-
-        branchOptions.push({
-            message: color(label),
-            name: baseBranch,
-            value: baseBranch,
-        });
-    }
-
-    // Add current branch if it's not one of the base branches
-    if (!baseBranches.includes(currentBranch)) {
-        branchOptions.push({
-            message: `${chalk.yellow(currentBranch)} (current branch)`,
-            name: 'current',
-            value: currentBranch,
-        });
-    }
-
-    // If only one option and it's the current branch, no need to prompt
-    if (branchOptions.length === 1 && branchOptions[0]?.value === currentBranch) {
-        return {
-            selectedBaseBranch: currentBranch,
-        };
-    }
-
-    // Ask user which branch to start from
-    const { branchChoice } = await enquirer.prompt<{ branchChoice: string }>({
-        type: 'select',
-        name: 'branchChoice',
-        message: 'Which branch do you want to start the new branch from?',
-        choices: branchOptions,
-    });
-
-    const selectedBranch = branchChoice;
-
-    // If user selected current branch, no need to switch
-    if (selectedBranch === currentBranch) {
-        logger.info(`🌿 Starting new branch from current branch: ${chalk.cyan(currentBranch)}`);
-        return {
-            selectedBaseBranch: selectedBranch,
-        };
-    }
-
-    // User wants to start from a different branch
-    logger.info(`🌿 Starting new branch from: ${chalk.cyan(selectedBranch)}`);
+    logger.info(`🌿 Starting new branch from: ${chalk.cyan(branch)}`);
 
     const git = simpleGit();
 
-    // Check if there are uncommitted changes
+    // Stash uncommitted changes before switching branches so nothing is lost.
     const status = await git.status();
     const hasChanges = status.files.length > 0;
 
     let stashName: string | undefined;
 
     if (hasChanges) {
-        // Stash changes before switching branches
         stashName = `task-${taskId}-stash`;
         logger.info(`📦 Stashing uncommitted changes as: ${chalk.cyan(stashName)}`);
 
@@ -143,14 +73,14 @@ export async function handleBranchSelection(params: BranchSelectionParams): Prom
         logger.info(`✅ Changes stashed successfully`);
     }
 
-    // Fetch latest changes for selected branch
-    logger.info(`🔄 Fetching latest changes for ${chalk.cyan(selectedBranch)}`);
-    await git.fetch('origin', selectedBranch);
+    // Fetch the base branch so the new branch is cut from an up-to-date remote tip.
+    logger.info(`🔄 Fetching latest changes for ${chalk.cyan(branch)}`);
+    await git.fetch('origin', branch);
 
     return {
-        selectedBaseBranch: selectedBranch,
+        selectedBaseBranch: branch,
         stashName,
-        startPoint: `origin/${selectedBranch}`,
+        startPoint: `origin/${branch}`,
     };
 }
 

@@ -68,6 +68,7 @@ export * from './isFunction.js';
 export * from './isPlainObject.js';
 export * from './map.js';
 export * from './mapObject.js';
+export * from './maxOptional.js';
 export * from './Nullable.js';
 export * from './omitProps.js';
 export * from './parseBigint.js';

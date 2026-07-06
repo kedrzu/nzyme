@@ -51,8 +51,16 @@ export interface SwitchToSentryIssueParams {
 
     /**
      * Base branches to use when creating new branches.
+     * The first entry is used as the default base to branch from (e.g. 'main').
      */
     baseBranches: string[];
+
+    /**
+     * Explicit base branch to create the new branch from.
+     * When provided, overrides {@link baseBranches} and the new branch is cut
+     * from the up-to-date remote tip of this branch instead of the default.
+     */
+    branch?: string;
 
     /**
      * Branch prefix to use when creating new branches.
@@ -74,6 +82,7 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
         githubConfig,
         logger,
         baseBranches,
+        branch,
         branchPrefix = 'bug',
     } = params;
 
@@ -116,11 +125,11 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
         // No open PR found - check if there's a merged PR and handle reopen flow
         logger.info(`📝 No open PR found. Checking for merged PRs...`);
 
-        if (baseBranches.length === 0) {
+        // Branch from the explicitly requested branch, otherwise the default base (e.g. main).
+        const selectedBaseBranch = branch ?? baseBranches[0];
+        if (!selectedBaseBranch) {
             throw new UsageError('No base branches configured');
         }
-
-        const selectedBaseBranch = baseBranches[0]!;
 
         // Check for merged PRs and handle reopen flow (for Sentry, we don't reopen the issue)
         const reopenResult = await handleMergedPrReopen({
@@ -148,7 +157,7 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
 
         // Handle branch selection and stashing if needed
         const branchResult: BranchSelectionResult = await handleBranchSelection({
-            baseBranches,
+            branch: selectedBaseBranch,
             taskId: issueData.shortId,
             logger,
         });

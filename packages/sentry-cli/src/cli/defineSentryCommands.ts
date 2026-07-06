@@ -194,10 +194,14 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
                 ['Start work on issue by ID', 'issue MYPROJECT-123'],
                 ['Start work on issue by number', 'issue 123'],
                 ['Start work on issue by URL', 'issue https://sentry.io/organizations/myorg/issues/12345/'],
+                ['Start work branching from a specific branch', 'issue MYPROJECT-123 --branch develop'],
             ],
         });
 
         issueIdentifier = Option.String({ required: true });
+        branch = Option.String('--branch', {
+            description: 'Base branch to create the new branch from (defaults to the configured base branch, e.g. main)',
+        });
 
         override async run() {
             await options.beforeEach?.();
@@ -228,6 +232,7 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
                     githubConfig,
                     logger: this.logger,
                     baseBranches,
+                    branch: this.branch,
                     branchPrefix: sentryConfig.branchPrefix,
                 });
             } catch (error) {

@@ -1,5 +1,6 @@
 /**
  * Converts a value to a JSON string, with special handling for BigInt, Set, and Map types.
+ * @util
  * @template T - The type of the value to convert
  * @param value - The value to convert to JSON
  * @param space - Optional number or string to use for indentation

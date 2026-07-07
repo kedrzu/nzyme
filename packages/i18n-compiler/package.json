@@ -2,6 +2,7 @@
     "name": "@nzyme/i18n-compiler",
     "version": "0.14.0",
     "private": true,
+    "description": "Compiles .loc.yaml translations to .loc.ts",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

@@ -5,6 +5,7 @@ import SparkMd5 from 'spark-md5';
  *
  * Uses the spark-md5 library for browser-compatible MD5 hash generation.
  *
+ * @util
  * @param data - The string data to hash
  * @returns Hexadecimal MD5 hash string
  */

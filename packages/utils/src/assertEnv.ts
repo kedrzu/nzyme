@@ -1,5 +1,6 @@
 /**
  * Assert that an environment variable is set.
+ * @util
  * @param key - The name of the environment variable.
  * @param env - The environment variables to check.
  * @returns The value of the environment variable.

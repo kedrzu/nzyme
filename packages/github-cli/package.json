@@ -2,6 +2,7 @@
     "name": "@nzyme/github-cli",
     "version": "0.14.0",
     "private": true,
+    "description": "GitHub CLI integration",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

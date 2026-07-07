@@ -4,6 +4,7 @@ let scrollBarWidth: number;
  * Gets the width of the browser's scrollbar in pixels.
  * This is useful for calculating layout adjustments when scrollbars appear or disappear.
  * The result is cached for subsequent calls.
+ * @util
  *
  * @returns The width of the scrollbar in pixels
  */

@@ -29,6 +29,7 @@ export interface MoneyFormatter {
 
 /**
  * Format money
+ * @util
  */
 export function formatMoney(money: Money, options?: FormatMoneyOptions): string {
     return getFormatter(money[1])(money[0], options);

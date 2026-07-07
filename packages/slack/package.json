@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/slack",
     "version": "0.14.0",
+    "description": "Slack API client",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

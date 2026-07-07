@@ -1,6 +1,7 @@
 /**
  * Returns the total height of an element's children.
  * Calculates the maximum bottom position of all children, even if the parent element has overflow.
+ * @util
  *
  * @param element The parent HTML element whose children's height to measure
  * @returns The maximum height in pixels needed to contain all children

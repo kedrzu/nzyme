@@ -10,6 +10,7 @@ type PromiseObjectResult<T> = Promise<{
 /**
  * Works like `Promise.all` but for objects instead of arrays.
  * Resolves all promises in an object and returns a new object with the resolved values.
+ * @util
  *
  * @template T - The type of the object containing promises
  * @param promises - An object containing promises to resolve

@@ -17,6 +17,7 @@ export interface DownloadFileOptions {
 
 /**
  * Triggers a file download in the browser.
+ * @util
  *
  * @param options - The download options
  */

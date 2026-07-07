@@ -189,7 +189,8 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
 
         taskIdentifier = Option.String({ required: true });
         branch = Option.String('--branch', {
-            description: 'Base branch to create the new branch from (defaults to the configured base branch, e.g. main)',
+            description:
+                'Base branch to create the new branch from (defaults to the configured base branch, e.g. main)',
         });
 
         override async run() {
@@ -253,7 +254,8 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
         title = Option.String({ required: false });
         projectId = Option.String('--project, -p', { required: false });
         branch = Option.String('--branch', {
-            description: 'Base branch to create the new branch from (defaults to the configured base branch, e.g. main)',
+            description:
+                'Base branch to create the new branch from (defaults to the configured base branch, e.g. main)',
         });
 
         override async run() {
@@ -600,7 +602,8 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
             description: 'Include unassigned tasks',
         });
         branch = Option.String('--branch', {
-            description: 'Base branch to create the new branch from (defaults to the configured base branch, e.g. main)',
+            description:
+                'Base branch to create the new branch from (defaults to the configured base branch, e.g. main)',
         });
 
         override async run() {

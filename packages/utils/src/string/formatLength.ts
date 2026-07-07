@@ -14,6 +14,7 @@ const KILOMETER = 1000 * 1000;
 
 /**
  * Formats a length value in meters to a human-readable string with appropriate unit.
+ * @util
  *
  * @param meters - The length value in meters
  * @returns A formatted string with the length and appropriate unit
@@ -21,6 +22,7 @@ const KILOMETER = 1000 * 1000;
 export function formatLength(meters: number | null | undefined): string;
 /**
  * Formats a length value in the specified unit to a human-readable string.
+ * @util
  *
  * @param value - The length value
  * @param unit - The unit of the input value
@@ -29,6 +31,7 @@ export function formatLength(meters: number | null | undefined): string;
 export function formatLength(value: number | null | undefined, unit: LengthUnit): string;
 /**
  * Formats a length value to a human-readable string, automatically choosing the most appropriate unit.
+ * @util
  *
  * @param value - The length value
  * @param unit - Optional unit of the input value (defaults to meters)

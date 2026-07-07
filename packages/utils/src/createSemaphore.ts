@@ -18,6 +18,7 @@ export interface Semaphore {
  * Permits are handed directly from a finishing operation to the next waiter
  * (FIFO), so a released permit is never momentarily "available" while callers
  * are queued — this avoids a thundering-herd re-check of the counter.
+ * @util
  *
  * @param limit - Maximum number of operations allowed to run concurrently.
  *   Must be a positive integer; non-finite or non-positive values throw.

@@ -30,6 +30,7 @@ type WithLength = {
 
 /**
  * Validator that checks if the value has at least the specified length
+ * @util
  * @param minLength - The minimum length to check against.
  * @param options - Options for the validator.
  * @returns A validator function.

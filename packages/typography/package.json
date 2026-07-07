@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/typography",
     "version": "0.14.0",
+    "description": "Markdown parsing/rendering utilities",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

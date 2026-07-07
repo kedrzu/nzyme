@@ -1,5 +1,6 @@
 /**
  * Waits until the condition is true.
+ * @util
  * @param condition - The condition to wait for.
  * @param intervalMs - The interval in milliseconds to check the condition.
  * @returns A promise that resolves when the condition is true.

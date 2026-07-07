@@ -17,6 +17,7 @@ export type ConvertCaseOptions = {
 
 /**
  * Capitalize the first letter of a string.
+ * @util
  */
 export function capitalizeFirstLetter(str: string): string {
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
@@ -24,6 +25,7 @@ export function capitalizeFirstLetter(str: string): string {
 
 /**
  * Convert a string to a specific case format.
+ * @util
  */
 export function convertCase(str: string, options: ConvertCaseOptions): string {
     if (str.length === 0) {
@@ -54,6 +56,7 @@ export function convertCase(str: string, options: ConvertCaseOptions): string {
 
 /**
  * Convert a string to camelCase (e.g., "hello world" -> "helloWorld")
+ * @util
  */
 export function toCamelCase(str: string): string {
     return convertCase(str, {
@@ -70,6 +73,7 @@ export function toCamelCase(str: string): string {
 
 /**
  * Convert a string to kebab-case (e.g., "hello world" -> "hello-world")
+ * @util
  */
 export function toKebabCase(str: string): string {
     return convertCase(str, {
@@ -80,6 +84,7 @@ export function toKebabCase(str: string): string {
 
 /**
  * Convert a string to PascalCase (e.g., "hello world" -> "HelloWorld")
+ * @util
  */
 export function toPascalCase(str: string): string {
     return convertCase(str, {
@@ -90,6 +95,7 @@ export function toPascalCase(str: string): string {
 
 /**
  * Convert a string to snake_case (e.g., "hello world" -> "hello_world")
+ * @util
  */
 export function toSnakeCase(str: string): string {
     return convertCase(str, {
@@ -100,6 +106,7 @@ export function toSnakeCase(str: string): string {
 
 /**
  * Convert a string to Title Case (e.g., "hello world" -> "Hello World")
+ * @util
  */
 export function toTitleCase(str: string): string {
     return convertCase(str, {

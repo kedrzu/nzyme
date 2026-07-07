@@ -1,6 +1,7 @@
 /**
  * Creates a stopwatch to measure elapsed time.
  * Uses high-resolution timing via performance.now().
+ * @util
  *
  * @returns An object with methods to measure and format elapsed time
  *

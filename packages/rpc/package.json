@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/rpc",
     "version": "0.14.0",
+    "description": "RPC endpoint framework (defineEndpoint, client/server transport)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

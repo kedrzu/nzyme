@@ -3,6 +3,7 @@ const regex = /{\s*(\w*)\s*}/gi;
 /**
  * Formats a string template by replacing placeholders with corresponding values from a parameters object.
  * Placeholders are in the format {key}, where key is a property name in the parameters object.
+ * @util
  *
  * @param template - The string template containing placeholders
  * @param params - An object containing values to replace placeholders with

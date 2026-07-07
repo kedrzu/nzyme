@@ -2,6 +2,7 @@
     "name": "@nzyme/sentry-cli",
     "version": "0.14.0",
     "private": true,
+    "description": "Sentry CLI integration",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

@@ -1,5 +1,6 @@
 /**
  * Finds and removes the first element from an array that satisfies a predicate.
+ * @util
  *
  * @template T - The type of elements in the array
  * @param array - The array to search and remove from

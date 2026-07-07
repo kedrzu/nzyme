@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/openapi",
     "version": "0.14.0",
+    "description": "Typed fetch client utilities for OpenAPI schemas",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

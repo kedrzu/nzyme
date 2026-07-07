@@ -1,6 +1,7 @@
 /**
  * Creates a promise that never resolves.
  * This can be useful for creating infinite waits or preventing a promise chain from completing.
+ * @util
  *
  * @returns A promise that never resolves
  *

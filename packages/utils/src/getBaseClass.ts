@@ -3,6 +3,7 @@ import type { AbstractConstructor } from '@nzyme/types/Constructors.js';
 /**
  * Gets the base class (parent class) of a given constructor.
  * This is useful for traversing the inheritance chain of classes.
+ * @util
  *
  * @param ctor - The constructor to get the base class of
  * @returns The constructor of the base class, or undefined if there is no base class

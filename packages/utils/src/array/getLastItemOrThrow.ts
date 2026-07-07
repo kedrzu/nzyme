@@ -6,6 +6,7 @@ import type { Immutable } from '@nzyme/types/Immutable.js';
  * @template T - The type of elements in the array
  * @param array - The array to get the last element from
  * @returns The last element of the array
+ * @util
  * @throws Error if the array is empty
  * @__NO_SIDE_EFFECTS__
  */
@@ -16,6 +17,7 @@ export function getLastItemOrThrow<T>(array: T[]): T;
  * @template T - The type of elements in the array
  * @param array - The array to get the last element from
  * @returns The last element of the array
+ * @util
  * @throws Error if the array is empty
  * @__NO_SIDE_EFFECTS__
  */

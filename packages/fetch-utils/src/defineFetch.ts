@@ -17,7 +17,7 @@ export interface FetchOptions<TParams, TResult> {
 /**
  * Creates a typed fetch function with specified request and response handling.
  * Use this to define reusable fetch operations with consistent typing.
- *
+ * @util
  * @param fetch - The fetch configuration object
  * @returns The provided fetch configuration for use in HTTP requests
  * @__NO_SIDE_EFFECTS__

@@ -14,7 +14,7 @@ export interface EndpointFormUrlEncodedRequest<T = unknown> extends OmitProps<Fe
 /**
  * Creates a fetch request with form URL encoded body.
  * Automatically sets the appropriate Content-Type header and converts the body to URLSearchParams.
- *
+ * @util
  * @param request - The request configuration with form data
  * @returns A FetchRequest configured for form URL encoded submission
  */

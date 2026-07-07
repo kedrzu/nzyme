@@ -1,5 +1,6 @@
 /**
  * Counts the number of elements in an iterable that satisfy a predicate.
+ * @util
  *
  * @template T1 - The type of elements in the iterable
  * @param array - The iterable to count elements from

@@ -15,6 +15,7 @@ type ChangeTracker<T> = T & {
 /**
  * Retrieves the changes made to a tracked object.
  * Returns null if no changes have been made.
+ * @util
  *
  * @template T - The type of the tracked object
  * @param obj - The tracked object created by {@link trackObjectChanges}
@@ -27,6 +28,7 @@ export function getObjectChanges<T>(obj: ChangeTracker<T>) {
 /**
  * Creates a proxy around an object that tracks all property changes.
  * The changes can be retrieved using {@link getObjectChanges}.
+ * @util
  *
  * @template T - The type of the object to track
  * @param entity - The object to track changes for

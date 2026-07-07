@@ -1,5 +1,6 @@
 /**
  * Splits an array into chunks of a specified size.
+ * @util
  *
  * @template T - The type of elements in the array
  * @param array - The array to split into chunks

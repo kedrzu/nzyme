@@ -3,6 +3,7 @@ import type { SomeObject } from '@nzyme/types/Object.js';
 /**
  * Returns an array of the object's own enumerable property key-value pairs, properly typed.
  * This is a type-safe alternative to Object.entries().
+ * @util
  *
  * @template T - The type of the object
  * @param object - The object whose enumerable properties are to be returned

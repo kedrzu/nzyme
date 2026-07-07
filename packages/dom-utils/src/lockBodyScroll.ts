@@ -12,6 +12,7 @@ let currentOverflow = '';
  * Locks the body scroll to prevent page scrolling, typically used for modals and overlays.
  * Handles multiple lock requests by tracking the lock count, ensuring that the scroll remains
  * locked until all locks are released. Compensates for scrollbar width to prevent layout shifts.
+ * @util
  *
  * @returns A cleanup function that unlocks the scroll when called. Must be called to release the lock.
  */

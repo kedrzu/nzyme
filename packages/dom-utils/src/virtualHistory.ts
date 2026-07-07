@@ -38,6 +38,7 @@ const uid = randomString(16);
 /**
  * Registers a callback to be executed when the user navigates back in browser history.
  * Creates a virtual history entry that doesn't actually change the URL.
+ * @util
  *
  * @param callback Function to execute when the user navigates back to this point
  * @returns A handle object that can be used to cancel the callback

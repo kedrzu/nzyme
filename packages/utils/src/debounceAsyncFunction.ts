@@ -6,6 +6,7 @@ interface DebounceAsyncFunctionOptions {
  * Creates a debounced version of an async function.
  * Ensures that only one instance of the function is running at a time.
  * If called while a previous call is still pending, returns the pending promise.
+ * @util
  *
  * @template R - The return type of the async function
  * @param fn - The async function to debounce

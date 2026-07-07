@@ -38,7 +38,7 @@ interface SimpleRequest extends BaseRequest {
 /**
  * Performs a fetch request with JSON handling for both request and response.
  * Automatically handles query parameters, JSON serialization, and common status codes.
- *
+ * @util
  * @param request - The request configuration
  * @returns A promise that resolves to the parsed JSON response, or null for 204 responses
  * @throws {FetchError} If the response status is not ok

@@ -25,7 +25,7 @@ interface FetchClientInput {
 /**
  * Creates a type-safe fetch client from a raw implementation.
  * The client can be used to execute endpoints with proper type checking.
- *
+ * @util
  * @param client - The raw fetch client implementation
  * @returns A typed fetch client for executing endpoints
  * @__NO_SIDE_EFFECTS__

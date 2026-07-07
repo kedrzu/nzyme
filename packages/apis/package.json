@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/apis",
     "version": "0.14.0",
+    "description": "Shipping carrier API clients and types (DHL, HERE Maps, InPost)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

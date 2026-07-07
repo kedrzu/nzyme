@@ -30,6 +30,7 @@ type WithLength = {
 
 /**
  * Validator that checks if the value has at most the specified length
+ * @util
  * @param maxLength - The maximum length to check against.
  * @param options - Options for the validator.
  * @returns A validator function.

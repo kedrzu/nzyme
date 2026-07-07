@@ -32,6 +32,7 @@ export interface MaxValidatorOptions<T extends Comparable> {
 
 /**
  * Validator that checks if the value is less than or equal to the maximum value.
+ * @util
  * @param maxValue - The maximum value to check against.
  * @param options - Options for the validator.
  * @returns A validator function.

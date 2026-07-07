@@ -7,6 +7,7 @@ export type PromiseWrapper<T> = ReturnType<typeof createPromise<T>>;
 /**
  * Creates a promise with its resolve and reject functions exposed.
  * This is useful when you need to resolve or reject a promise from outside its executor.
+ * @util
  *
  * @template T - The type of value the promise will resolve with
  * @returns An object containing:

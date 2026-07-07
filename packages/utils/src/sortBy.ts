@@ -17,6 +17,7 @@ export type SortOrder = 'asc' | 'desc';
  * Sorts an array based on a value extracted from each item.
  * Supports sorting by strings (with case sensitivity options) and numbers.
  * Null/undefined values are sorted to the beginning.
+ * @util
  *
  * @template T - The type of items in the array
  * @param array - The array to sort

@@ -1,5 +1,6 @@
 /**
  * Sets a JSON-serializable value in localStorage.
+ * @util
  * @param key The localStorage key to store the value under
  * @param value The value to store (will be JSON-serialized)
  */
@@ -14,6 +15,7 @@ export function localStorageSetJson<T>(key: string, value: T) {
 
 /**
  * Retrieves and parses a JSON value from localStorage.
+ * @util
  * @param key The localStorage key to retrieve
  * @returns The parsed value, or null if the key doesn't exist or localStorage is unavailable
  */

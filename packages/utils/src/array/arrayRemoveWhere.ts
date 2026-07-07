@@ -1,5 +1,6 @@
 /**
  * Removes all elements from an array that satisfy a predicate.
+ * @util
  *
  * @template T - The type of elements in the array
  * @param array - The array to remove elements from

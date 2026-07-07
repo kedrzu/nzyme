@@ -2,6 +2,7 @@ import type { Money } from './Money.js';
 
 /**
  * Multiply money by a number
+ * @util
  * @param money - The money value
  * @param multiplier - The multiplier
  * @returns The result of the multiplication
@@ -13,6 +14,7 @@ export function moneyTimes(money: Money, multiplier: number): Money {
 
 /**
  * Divide money by a number
+ * @util
  * @param money - The money value
  * @param divisor - The divisor
  * @returns The result of the division
@@ -24,6 +26,7 @@ export function moneyDivide(money: Money, divisor: number): Money {
 
 /**
  * Add two money values
+ * @util
  * @param money1 - The first money value
  * @param money2 - The second money value
  * @returns The result of the addition
@@ -36,6 +39,7 @@ export function moneyPlus(money1: Money, money2: Money): Money {
 
 /**
  * Sum an array of money values
+ * @util
  * @param money - The array of money values
  * @returns The result of the sum
  * @__NO_SIDE_EFFECTS__
@@ -66,6 +70,7 @@ export function moneySum(money: (Money | null | undefined)[]): Money | null {
 
 /**
  * Subtract two money values
+ * @util
  * @throws {Error} If the currencies do not match
  * @param money1 - The first money value
  * @param money2 - The second money value
@@ -79,6 +84,7 @@ export function moneyMinus(money1: Money, money2: Money): Money {
 
 /**
  * Negate a money value
+ * @util
  * @param money - The money value
  * @returns The result of the negation
  * @__NO_SIDE_EFFECTS__
@@ -89,6 +95,7 @@ export function moneyNegative(money: Money): Money {
 
 /**
  * Calculate the percentage of a money value
+ * @util
  * @param money - The money value
  * @param percentage - The percentage
  * @returns The result of the percentage calculation
@@ -100,6 +107,7 @@ export function moneyPercentage(money: Money, percentage: number): Money {
 
 /**
  * Get the maximum of two money values
+ * @util
  * @param money1 - The first money value
  * @param money2 - The second money value
  * @returns The maximum of the two money values
@@ -112,6 +120,7 @@ export function moneyMax(money1: Money, money2: Money): Money {
 
 /**
  * Get the minimum of two money values
+ * @util
  * @param money1 - The first money value
  * @param money2 - The second money value
  * @returns The minimum of the two money values
@@ -124,6 +133,7 @@ export function moneyMin(money1: Money, money2: Money): Money {
 
 /**
  * Get a money value with zero amount
+ * @util
  * @param money - The money value
  * @returns The money value with zero amount
  * @__NO_SIDE_EFFECTS__
@@ -134,6 +144,7 @@ export function moneyZero(money: Money): Money {
 
 /**
  * Assert that two money values have the same currency
+ * @util
  * @param money1 - The first money value
  * @param money2 - The second money value
  * @throws {Error} If the currencies do not match

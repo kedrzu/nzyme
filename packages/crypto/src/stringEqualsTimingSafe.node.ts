@@ -7,6 +7,7 @@ import { timingSafeEqual } from 'node:crypto';
  * the comparison takes the same amount of time regardless of where the
  * difference occurs in the strings.
  *
+ * @util
  * @param a - First string to compare
  * @param b - Second string to compare
  * @returns true if strings are identical, false otherwise

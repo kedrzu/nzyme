@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/logging-ui",
     "private": true,
+    "description": "Standalone Nuxt app for viewing and browsing ingested logs",
     "type": "module",
     "scripts": {
         "dev": "nuxt dev",

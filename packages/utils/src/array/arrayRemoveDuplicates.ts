@@ -1,5 +1,6 @@
 /**
  * Removes duplicates from an array based on a key function.
+ * @util
  *
  * @template T - The type of elements in the array
  * @param array - The array to remove duplicates from

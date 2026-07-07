@@ -15,7 +15,7 @@ export interface EndpointXmlRequest extends Omit<FetchRequest, 'body'> {
 /**
  * Creates a fetch request with XML body.
  * Automatically sets the appropriate Content-Type header and serializes the XML element to a string.
- *
+ * @util
  * @param request - The request configuration with XML data
  * @returns A FetchRequest configured for XML submission
  */

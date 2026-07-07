@@ -1,7 +1,10 @@
 /** Represents a value that may be an XML element, a raw string, or null. */
 export type MaybeXmlValue<T> = string | T | null;
 
-/** Normalizes an ambiguous XML value, returning the element or null if it is a string or missing. */
+/**
+ * Normalizes an ambiguous XML value, returning the element or null if it is a string or missing.
+ * @util
+ */
 export function normalizeXmlObject<T>(value: MaybeXmlValue<T>) {
     if (!value || typeof value === 'string') {
         return null;

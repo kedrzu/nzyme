@@ -1,5 +1,6 @@
 /**
  * Creates a new iterable by applying a mapping function to each element of the input iterable.
+ * @util
  *
  * @template T1 - The type of elements in the input iterable
  * @template T2 - The type of elements in the output iterable

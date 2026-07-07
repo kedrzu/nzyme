@@ -14,7 +14,7 @@ export interface EndpointJsonRequest<T = unknown> extends OmitProps<FetchRequest
 /**
  * Creates a fetch request with JSON body.
  * Automatically sets the appropriate Content-Type header and serializes the body as JSON.
- *
+ * @util
  * @param request - The request configuration with JSON data
  * @returns A FetchRequest configured for JSON submission
  */

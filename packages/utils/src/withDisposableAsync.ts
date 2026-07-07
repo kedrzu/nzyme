@@ -1,6 +1,7 @@
 /**
  * Wraps an object with an asynchronous dispose method.
  * If the object already has a dispose method, it will be called before the new dispose method.
+ * @util
  * @param obj - The object to wrap
  * @param dispose - The dispose method to call when the object is disposed
  * @returns The wrapped object

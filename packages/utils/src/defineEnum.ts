@@ -11,6 +11,7 @@ export type Enum<T extends string[]> = T & {
 /**
  * Creates a type-safe enum from an array of string values.
  * The resulting enum can be accessed both as an array and as an object.
+ * @util
  *
  * @template T - The type of the enum values array
  * @param values - Array of string values to create the enum from

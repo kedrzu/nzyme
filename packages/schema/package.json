@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/schema",
     "version": "0.14.0",
+    "description": "Runtime schema + TypeScript AST parsing",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

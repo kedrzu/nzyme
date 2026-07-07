@@ -1,5 +1,6 @@
 /**
  * Prepends a prefix to a value with a separator, if the prefix is provided.
+ * @util
  *
  * @param value - The base value to prefix.
  * @param prefix - The optional prefix to prepend.

@@ -1,6 +1,7 @@
 /**
  * Decorator that caches the result of a getter property.
  * The getter is called only once per instance, and subsequent accesses return the cached value.
+ * @util
  *
  * @param _target - The class prototype
  * @param _methodName - The name of the property

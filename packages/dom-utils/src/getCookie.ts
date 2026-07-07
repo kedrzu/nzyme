@@ -1,5 +1,6 @@
 /**
  * Gets the value of a cookie if available.
+ * @util
  *
  * @param name - The name of the cookie
  * @returns The value of the cookie if available, undefined otherwise

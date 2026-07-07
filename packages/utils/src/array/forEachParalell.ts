@@ -13,6 +13,7 @@ type ForEachParalellParams<T> = {
 /**
  * Executes a callback function for each element in an array in parallel, with a specified level of concurrency.
  * The callback can return a Promise or void, and returning false from the callback will stop the iteration.
+ * @util
  *
  * @template T - The type of elements in the array
  * @param array - The array to iterate over

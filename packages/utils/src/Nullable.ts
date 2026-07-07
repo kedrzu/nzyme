@@ -8,6 +8,7 @@ export type Nullable<T, TNullable extends boolean> = TNullable extends false ? T
 
 /**
  * Creates a nullable value.
+ * @util
  *
  * @template T - The type of the value
  * @template TNullable - Whether the value can be null or undefined

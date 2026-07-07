@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/rollup-utils",
     "version": "0.14.0",
+    "description": "Rollup build utilities",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

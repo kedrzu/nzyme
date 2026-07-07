@@ -200,7 +200,8 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
 
         issueIdentifier = Option.String({ required: true });
         branch = Option.String('--branch', {
-            description: 'Base branch to create the new branch from (defaults to the configured base branch, e.g. main)',
+            description:
+                'Base branch to create the new branch from (defaults to the configured base branch, e.g. main)',
         });
 
         override async run() {

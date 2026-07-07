@@ -40,6 +40,7 @@ export type CancelablePromise<T> = Cancelable & Promise<T>;
 /**
  * Type guard to check if a promise is cancelable.
  * Returns true if the promise has a cancel method.
+ * @util
  *
  * @template T - The type of value the promise resolves to
  * @param promise - The promise to check
@@ -61,6 +62,7 @@ export function isCancelablePromise<T>(promise: Promise<T>): promise is Cancelab
  * Makes a promise cancelable by adding a cancel method.
  * When canceled, the cancel callback is called.
  * The original promise remains unchanged.
+ * @util
  *
  * @template T - The type of value the promise resolves to
  * @param promise - The promise to make cancelable

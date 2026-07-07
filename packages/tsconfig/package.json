@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/tsconfig",
     "version": "0.14.0",
+    "description": "Shared base TypeScript configuration",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

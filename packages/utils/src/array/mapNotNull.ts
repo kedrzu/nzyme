@@ -1,5 +1,6 @@
 /**
  * Maps elements of an iterable to a new array, filtering out null and undefined values.
+ * @util
  *
  * @template T1 - The type of elements in the input iterable
  * @template T2 - The type of elements in the output array

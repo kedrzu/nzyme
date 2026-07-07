@@ -6,6 +6,7 @@ import type { DurationISO } from '@nzyme/types/Date.js';
 /**
  * Parses an ISO 8601 duration string (e.g., 'P1Y2M3DT4H5M6S') or a string into a date-fns Duration object.
  * Supports years, months, days, hours, minutes, and seconds.
+ * @util
  *
  * @param duration - The ISO 8601 duration string or string to parse.
  * @returns The parsed Duration object with properties for each unit.

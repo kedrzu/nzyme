@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/node-utils",
     "version": "0.14.0",
+    "description": "Node.js runtime utilities",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

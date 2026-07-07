@@ -32,6 +32,7 @@ export interface ExponentialBackoff {
  * Creates an exponential backoff controller for retry logic.
  *
  * The delay is calculated as: `min(baseDelay * power^retries, maxDelay)` with ±10% jitter.
+ * @util
  *
  * @example
  * ```typescript

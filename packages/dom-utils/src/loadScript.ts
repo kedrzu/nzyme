@@ -18,6 +18,7 @@ type ScriptCache = {
 /**
  * Loads a JavaScript file into the page by creating a script tag.
  * If the script was already loaded, returns the existing Promise without loading it again.
+ * @util
  *
  * @param url The URL of the script to load
  * @param options Additional options for loading the script

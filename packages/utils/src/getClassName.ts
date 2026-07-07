@@ -3,6 +3,7 @@ import type { AbstractConstructor } from '@nzyme/types/Constructors.js';
 /**
  * Gets the name of an object's class.
  * Works with both class instances and constructor functions.
+ * @util
  *
  * @param obj - The object or constructor to get the class name of
  * @returns The name of the class, or undefined if it cannot be determined

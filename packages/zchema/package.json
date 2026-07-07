@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/zchema",
     "version": "0.14.0",
+    "description": "Zod-like runtime schema definitions",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

@@ -7,6 +7,7 @@ const FILENAME_MESSAGE = () => 'Invalid filename';
 
 /**
  * Creates a validator that checks if a string is a valid filename (no prohibited characters).
+ * @util
  */
 export function filename(options: ValidatorOptions<string>): Validator<string | null | undefined> {
     return defineValidator({
@@ -17,6 +18,7 @@ export function filename(options: ValidatorOptions<string>): Validator<string | 
 
 /**
  * Checks whether a string contains only valid filename characters.
+ * @util
  */
 export function isFilenameValid(value: string): boolean {
     return FILENAME_REGEX.test(value);

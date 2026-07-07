@@ -1,6 +1,7 @@
 /**
  * Extracts the top-level domain (TLD) from a domain string.
  * For example, extracts 'example.com' from 'subdomain.example.com'.
+ * @util
  *
  * @param domain - The domain string to extract the TLD from
  * @returns The top-level domain, or null if no valid TLD is found

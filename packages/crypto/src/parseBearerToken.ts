@@ -5,6 +5,7 @@ const prefix = 'Bearer ';
  *
  * Removes the 'Bearer ' prefix if present and returns the actual token value.
  *
+ * @util
  * @param token - The Bearer token string from an Authorization header
  * @returns The extracted token value without the 'Bearer ' prefix
  */

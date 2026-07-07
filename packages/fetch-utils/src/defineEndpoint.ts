@@ -24,7 +24,7 @@ export interface EndpointResponse<T> {
 /**
  * Creates a typed endpoint configuration for making HTTP requests.
  * Use this to define reusable API endpoints with consistent request and response handling.
- *
+ * @util
  * @param endpoint - The endpoint configuration object
  * @returns The provided endpoint configuration for use in HTTP requests
  * @__NO_SIDE_EFFECTS__

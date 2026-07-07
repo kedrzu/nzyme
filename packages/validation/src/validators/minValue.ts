@@ -32,6 +32,7 @@ export interface MinValidatorOptions<T extends Comparable> {
 
 /**
  * Validator that checks if the value is greater than or equal to the minimum value.
+ * @util
  * @param minValue - The minimum value to check against.
  * @param options - Options for the validator.
  * @returns A validator function.

@@ -2,6 +2,7 @@
  * Formats a duration in milliseconds to a human-readable string.
  * Uses milliseconds for durations under 1 second, seconds otherwise.
  * Values are truncated (floored) rather than rounded for exact duration display.
+ * @util
  *
  * @param ms - Duration in milliseconds
  * @returns Formatted duration string

@@ -1,5 +1,6 @@
 /**
  * Compares two strings for equality, ignoring case differences.
+ * @util
  *
  * @param a - The first string to compare
  * @param b - The second string to compare

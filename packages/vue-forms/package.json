@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/vue-forms",
     "version": "0.14.0",
+    "description": "Vue form state and validation (useForm, useFormFields)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

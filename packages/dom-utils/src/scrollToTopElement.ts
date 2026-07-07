@@ -32,6 +32,7 @@ const scrollToElement = debounce(() => {
  * Scrolls to the given element with smooth animation.
  * When called multiple times for different elements in quick succession,
  * it will identify the element closest to the top of the viewport and scroll to it.
+ * @util
  *
  * @param el The element to scroll into view
  */

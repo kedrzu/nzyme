@@ -1,6 +1,7 @@
 /**
  * Asserts that a value is not null or undefined.
  * Throws an error if the value is null or undefined.
+ * @util
  *
  * @template T - The type of the value being asserted
  * @param value - The value to check for null/undefined
@@ -22,6 +23,7 @@ export function assert(value: unknown, message?: string): asserts value {
 /**
  * Asserts that a value is equal to an expected value.
  * Throws an error if the values are not equal.
+ * @util
  *
  * @template T - The type of the value being compared
  * @template E - The type of the expected value (must extend T)
@@ -45,6 +47,7 @@ export function assertEquals<T, E extends T = T>(value: T, expected: E, message?
 /**
  * Asserts that a value is truthy (not false, 0, "", null, undefined, or NaN).
  * Throws an error if the value is falsy.
+ * @util
  *
  * @param value - The value to check for truthiness
  * @param message - Optional custom error message
@@ -65,6 +68,7 @@ export function assertTruthy(value: unknown, message?: string): asserts value {
 /**
  * Asserts that a value is not null or undefined and returns it.
  * Throws an error if the value is null or undefined.
+ * @util
  *
  * @template T - The type of the value being asserted
  * @param value - The value to check for null/undefined

@@ -1,5 +1,6 @@
 /**
  * Shuffles the elements of an array in place using the Fisher-Yates algorithm.
+ * @util
  *
  * @template T - The type of elements in the array
  * @param array - The array to shuffle

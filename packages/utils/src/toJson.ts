@@ -52,6 +52,7 @@ export type JsonOrDefault<T> = Json<T> | T;
  * - Objects have their properties recursively converted
  * - Functions are converted to undefined
  * - null and undefined are both converted to null
+ * @util
  *
  * @template T - The type of the value to convert
  * @param value - The value to convert to JSON-serializable form

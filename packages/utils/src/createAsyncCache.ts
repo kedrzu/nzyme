@@ -21,6 +21,7 @@ export interface AsyncCacheOptions<TArg, TValue, TKey = TArg> {
  * Creates an async cache that stores values based on a key derived from an argument.
  * Values are computed asynchronously on demand and cached for future use.
  * Concurrent requests for the same key are deduplicated.
+ * @util
  *
  * @template TArg - The type of the argument used to look up values
  * @template TValue - The type of the cached values

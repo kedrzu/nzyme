@@ -1,5 +1,6 @@
 /**
  * A function that does nothing. It can be called with any arguments and returns undefined.
+ * @util
  *
  * @param args - Any arguments (ignored)
  * @returns

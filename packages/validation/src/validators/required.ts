@@ -15,6 +15,7 @@ export type RequiredValidatorParams<T> = {
 
 /**
  * Creates a validator that ensures a value is present and non-empty.
+ * @util
  */
 export function required<T>(params?: RequiredValidatorParams<T>): Validator<T | null | undefined> {
     const message = params && params.message;

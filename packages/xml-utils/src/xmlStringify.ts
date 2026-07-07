@@ -14,6 +14,7 @@ const builder = new XMLBuilder({
 /**
  * Converts a JavaScript object to an XML string.
  *
+ * @util
  * @param xml - The object to convert to XML
  * @returns The XML string representation
  * @__NO_SIDE_EFFECTS__

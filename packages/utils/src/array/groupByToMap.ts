@@ -1,5 +1,6 @@
 /**
  * Groups array elements into a Map using a key function.
+ * @util
  *
  * @template T - The type of elements in the array
  * @template K - The type of keys used for grouping (string or number)

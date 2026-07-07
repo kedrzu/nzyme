@@ -23,6 +23,7 @@ export interface SetCookieOptions {
 
 /**
  * Stores the language in a cookie.
+ * @util
  *
  * @param language - The language code to store
  */

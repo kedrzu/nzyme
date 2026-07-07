@@ -15,6 +15,7 @@ export interface CacheOptions<TArg, TValue, TKey = TArg> {
 /**
  * Creates a cache that stores values based on a key derived from an argument.
  * Values are computed on demand and cached for future use.
+ * @util
  *
  * @template TArg - The type of the argument used to look up values
  * @template TValue - The type of the cached values

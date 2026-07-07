@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/nuxt-tools",
     "version": "0.14.0",
+    "description": "Nuxt build tools and modules",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

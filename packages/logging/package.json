@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/logging",
     "version": "0.14.0",
+    "description": "Structured logging framework",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

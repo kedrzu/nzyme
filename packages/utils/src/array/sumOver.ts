@@ -1,5 +1,6 @@
 /**
  * Calculates the sum of values extracted from each element of an iterable.
+ * @util
  *
  * @template T1 - The type of elements in the input iterable
  * @param array - The iterable to sum over

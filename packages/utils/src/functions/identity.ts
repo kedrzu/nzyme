@@ -1,5 +1,6 @@
 /**
  * Returns the input value unchanged.
+ * @util
  *
  * @template TIn - The type of the input value
  * @template TOut - The type of the output value

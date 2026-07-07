@@ -37,6 +37,7 @@ export type StackFrame = StackFrameFunction | StackFrameRaw | StackFrameSimple;
 
 /**
  * Parses a stack trace string into structured frames.
+ * @util
  *
  * @param stack - The stack trace string to parse
  * @returns An array of parsed stack frames

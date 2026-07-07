@@ -2,6 +2,7 @@ let isMobile: boolean | undefined;
 
 /**
  * Used to check if the device is probably a mobile device.
+ * @util
  */
 export function isProbablyMobile() {
     if (isMobile !== undefined) {

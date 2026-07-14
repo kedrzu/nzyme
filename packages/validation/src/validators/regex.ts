@@ -15,6 +15,7 @@ export type RegexValidatorOptions = {
 
 /**
  * Creates a validator that tests a string against a regular expression.
+ * @util
  */
 export function regex(options: RegexValidatorOptions): Validator<string | null | undefined> {
     const { regex, message } = options;

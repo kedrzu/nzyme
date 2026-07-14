@@ -49,8 +49,16 @@ export interface SwitchToTaskParams {
 
     /**
      * Base branches to use when creating new branches.
+     * The first entry is used as the default base to branch from (e.g. 'main').
      */
     baseBranches: string[];
+
+    /**
+     * Explicit base branch to create the new branch from.
+     * When provided, overrides {@link baseBranches} and the new branch is cut
+     * from the up-to-date remote tip of this branch instead of the default.
+     */
+    branch?: string;
 }
 
 /**
@@ -58,7 +66,7 @@ export interface SwitchToTaskParams {
  * This contains the common logic used by both "task start" and "task new" commands.
  */
 export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
-    const { issueId, linearClient, githubClient, githubConfig, logger, baseBranches } = params;
+    const { issueId, linearClient, githubClient, githubConfig, logger, baseBranches, branch } = params;
 
     logger.info(`🔍 Looking for Linear task: ${chalk.bold(issueId)}`);
 
@@ -105,11 +113,11 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
         // No open PR found - check if there's a merged PR and handle reopen flow
         logger.info(`📝 No open PR found. Checking for merged PRs...`);
 
-        if (baseBranches.length === 0) {
+        // Branch from the explicitly requested branch, otherwise the default base (e.g. main).
+        const selectedBaseBranch = branch ?? baseBranches[0];
+        if (!selectedBaseBranch) {
             throw new UsageError('No base branches configured');
         }
-
-        const selectedBaseBranch = baseBranches[0]!;
 
         // Get project information for PR title
         const project = await issueData.project;
@@ -142,7 +150,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
 
         // Handle branch selection and stashing if needed
         const branchResult: BranchSelectionResult = await handleBranchSelection({
-            baseBranches,
+            branch: selectedBaseBranch,
             taskId: issueId,
             logger,
         });

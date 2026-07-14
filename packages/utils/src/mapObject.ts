@@ -3,6 +3,7 @@ import type { ValueOf } from '@nzyme/types/Common.js';
 /**
  * Creates a new object by mapping each property of the input object through a transformation function.
  * Only properties with defined values are processed.
+ * @util
  *
  * @template T - The type of the input object
  * @template TTo - The type of the output object properties

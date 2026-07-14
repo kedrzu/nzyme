@@ -1,5 +1,6 @@
 /**
  * Join lines into a single string.
+ * @util
  * @param lines - Lines to join.
  * @returns Joined lines.
  * @__NO_SIDE_EFFECTS__

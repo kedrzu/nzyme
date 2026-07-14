@@ -2,6 +2,7 @@ import type { QueryParams, QueryParamsSimple } from './queryTypes.js';
 
 /**
  * Parses a URL query string into an object.
+ * @util
  *
  * @param querystring - The query string to parse (with or without leading '?')
  * @param options - Configuration options for parsing

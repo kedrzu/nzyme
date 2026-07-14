@@ -1,5 +1,6 @@
 /**
  * Checks if an item is included in an array. This is a type guard function.
+ * @util
  *
  * @template T - The type of elements in the array
  * @param array - The array to check

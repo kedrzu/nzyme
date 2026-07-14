@@ -61,6 +61,7 @@ type EventFunction<P extends unknown[], R = unknown> = (...args: P) => R;
 
 /**
  * Creates a new event emitter instance with emit functionality.
+ * @util
  * @template TEvent - The type of event data that will be emitted (defaults to void)
  * @returns An object containing the event emitter and emit functions
  * @example

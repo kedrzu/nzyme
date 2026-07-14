@@ -42,6 +42,7 @@ export interface LruCache<K, V> {
 /**
  * Creates an LRU cache backed by a Map.
  * Map preserves insertion order — delete+set moves an entry to the end (most recent).
+ * @util
  *
  * @__NO_SIDE_EFFECTS__
  */

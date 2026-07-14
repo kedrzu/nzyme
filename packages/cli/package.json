@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/cli",
     "version": "0.14.0",
+    "description": "CLI framework (clipanion-based Command base)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

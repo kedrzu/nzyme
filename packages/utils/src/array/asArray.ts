@@ -2,6 +2,7 @@
  * Converts a value to an array. If the value is already an array, it is returned as is.
  * If the value is null or undefined, an empty array is returned. Otherwise, the value
  * is wrapped in a single-element array.
+ * @util
  *
  * @template T - The type of elements in the array
  * @param o - The value to convert to an array

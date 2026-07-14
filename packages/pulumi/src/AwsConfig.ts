@@ -5,7 +5,9 @@ import type * as aws from '@pulumi/aws';
  */
 export interface AwsConfig {
     /**
-     * Region.
+     * Default/backend region. Used as the workspace fallback region and for the state-bucket S3 client
+     * (see `listRemoteStacks`); the per-stack deploy region comes from each stack's `region` option and
+     * overrides this. Often unset outside LocalStack, where the provider resolves region from the env.
      */
     region: aws.Region;
 

@@ -15,6 +15,7 @@ export type NavigateToUrlResult = 'BLOCKED_OR_UNKNOWN' | 'NEW_WINDOW_LIKELY';
 
 /**
  * Navigates to a URL and returns a Promise that resolves when the navigation is complete.
+ * @util
  *
  * @param url - The URL to navigate to
  * @param options - Additional options for navigation

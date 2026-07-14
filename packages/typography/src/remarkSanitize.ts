@@ -3,7 +3,7 @@ import { newlineToBreak } from 'mdast-util-newline-to-break';
 import type { Plugin } from 'unified';
 import { visit } from 'unist-util-visit';
 
-import { fixOrphans } from './fixOrphans.js';
+import { sanitizeText } from './sanitizeText.js';
 
 /**
  * A unified plugin that postprocesses the markdown AST by:
@@ -47,37 +47,4 @@ function unwrapRedundantParagraphs(nodes: RootContent[]): RootContent[] {
     }
 
     return nodes;
-}
-
-const multiWhiteSpaceRegex = /[\s\uFEFF\xA0]+/gmu;
-const hyphensInWordRegex = /[\p{L}\p{N}](-)[\p{L}\p{N}]/gmu;
-const underscoreBetweenWordsRegex = /(\w)_(\w)/gmu;
-
-/**
- * Sanitizes text
- *
- * @__NO_SIDE_EFFECTS__
- */
-function sanitizeText(text: string) {
-    // if text does not contain any spaces it may be some ID
-    if (text.indexOf(' ') < 0) {
-        return text;
-    }
-
-    // collapse multiple white-spaces into single space
-    text = text.replace(multiWhiteSpaceRegex, ' ');
-    // replace hhyphens with their non-breakable version
-    // [\p{L}\p{N}] matches all unicode letters and numbers
-    text = text.replace(hyphensInWordRegex, match => {
-        return match.replace('-', '‑');
-    });
-
-    // Replace underscores between words with non-breakable space
-    text = text.replace(underscoreBetweenWordsRegex, (_match, first, second) => {
-        return first + '\xa0' + second;
-    });
-
-    text = fixOrphans(text);
-
-    return text;
 }

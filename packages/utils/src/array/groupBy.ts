@@ -1,5 +1,6 @@
 /**
  * Groups elements of an array by a key derived from each element.
+ * @util
  *
  * @template T - The type of elements in the array
  * @template K - The type of the grouping key (must be number or string)

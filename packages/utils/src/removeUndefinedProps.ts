@@ -3,6 +3,7 @@ import type { DefinedProperties } from '@nzyme/types/Properties.js';
 /**
  * Removes properties that are undefined from an object.
  * Modifies the input object in place.
+ * @util
  *
  * @deprecated Use {@link skipUndefinedProps} instead
  * @template T - The type of the object
@@ -29,6 +30,7 @@ export function removeUndefinedProps<T extends object>(obj: T): T {
 /**
  * Creates a new object containing only the defined properties of the input object.
  * Does not modify the input object.
+ * @util
  *
  * @template T - The type of the object
  * @param obj - The object to filter

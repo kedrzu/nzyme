@@ -1,5 +1,6 @@
 /**
  * Removes the first occurrence of an item from an array.
+ * @util
  *
  * @template T - The type of elements in the array
  * @param array - The array to remove the item from

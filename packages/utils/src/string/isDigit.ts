@@ -1,5 +1,6 @@
 /**
  * Checks if a string represents a single digit character (0-9).
+ * @util
  *
  * @param c - The string to check
  * @returns True if the string is a single digit character, false otherwise

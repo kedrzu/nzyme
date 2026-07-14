@@ -33,6 +33,7 @@ export interface AsyncQueue<T> {
 /**
  * Creates an async queue that processes items with configurable concurrency.
  * Items are processed with the specified concurrency limit in the order they were enqueued.
+ * @util
  *
  * @template T - The type of items to be processed
  * @param options - Configuration options for the queue

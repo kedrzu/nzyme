@@ -16,6 +16,7 @@ interface Getter<TFrom, TValue> {
  *
  * Note: The cache is stored directly on the object, so it will persist as long as the object exists.
  * If the object is modified after the first call, the cached value will not be updated.
+ * @util
  *
  * @template TFrom - The type of the object to get the value from
  * @template TValue - The type of the value to get

@@ -1,5 +1,6 @@
 /**
  * Creates a function that returns the input value unchanged.
+ * @util
  *
  * @template T - The type of the input value
  * @param value - The value to return

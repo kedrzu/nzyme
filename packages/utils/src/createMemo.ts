@@ -31,6 +31,7 @@ type MemoAsyncInner<T> = {
 /**
  * Creates a memoized function that caches its result.
  * The value is computed only once and then cached until cleared.
+ * @util
  *
  * @template T - The type of the memoized value
  * @param factory - Function that computes the value to memoize
@@ -75,6 +76,7 @@ export function createMemo<T>(factory: () => T) {
 /**
  * Creates an async memoized function that caches its result.
  * The value is computed only once and then cached until cleared.
+ * @util
  *
  * @template T - The type of the memoized value
  * @param factory - Async function that computes the value to memoize

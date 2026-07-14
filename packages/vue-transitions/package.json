@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/vue-transitions",
     "version": "0.14.0",
+    "description": "Vue transition components",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

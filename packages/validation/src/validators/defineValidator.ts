@@ -21,6 +21,7 @@ export type ValidatorOptions<T> = {
 
 /**
  * Creates a reusable validator that skips null/undefined values and returns an error message on failure.
+ * @util
  * @__NO_SIDE_EFFECTS__
  */
 export function defineValidator<T>(options: DefineValidatorOptions<T>): Validator<T | null | undefined> {

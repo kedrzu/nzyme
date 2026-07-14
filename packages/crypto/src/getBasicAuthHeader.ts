@@ -4,6 +4,7 @@
  * Formats the user and password as a base64-encoded string in the format
  * required for HTTP Basic Authentication.
  *
+ * @util
  * @param params - Object containing user and password
  * @param params.password - Password for authentication
  * @param params.user - Username or login

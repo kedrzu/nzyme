@@ -1,5 +1,6 @@
 /**
  * Omits the specified properties from the target object.
+ * @util
  *
  * @param target - The object to omit properties from.
  * @param props - The properties to omit.

@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/pulumi",
     "version": "0.14.0",
+    "description": "Pulumi infrastructure-as-code helpers",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

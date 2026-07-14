@@ -1,5 +1,6 @@
 /**
  * Creates an object from an iterable by mapping each element to a key-value pair.
+ * @util
  *
  * @template T - The type of elements in the input iterable
  * @template K - The type of keys in the resulting object (must extend string)

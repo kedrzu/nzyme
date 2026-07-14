@@ -9,6 +9,7 @@ import type { GithubConfig } from '../GithubConfig.js';
 import { checkoutBranch } from './checkoutBranch.js';
 import type { GithubClient } from './createGithubClient.js';
 import { findMatchingPr } from './findMatchingPr.js';
+import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { handlePullWithRebase } from './handlePullWithRebase.js';
 
@@ -264,16 +265,13 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
     const { submodule, taskId, githubClient, githubConfig, logger, baseBranch } = params;
 
     // Parse the submodule URL to get owner and repo
-    const urlMatch = submodule.url.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
-    if (!urlMatch) {
+    const submoduleGithubConfig = getSubmoduleGithubConfig(submodule.url, githubConfig.token);
+    if (!submoduleGithubConfig) {
         logger.info(
             `⏭️  Skipping submodule ${chalk.magenta(submodule.name)}: not a GitHub repository or could not parse URL`,
         );
         return;
     }
-
-    const submoduleOwner = urlMatch[1]!;
-    const submoduleRepo = urlMatch[2]!;
 
     const submoduleGit = simpleGit({ baseDir: submodule.path });
 
@@ -281,13 +279,6 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
     if (baseBranch) {
         await fetchAndFastForwardSubmoduleBaseBranch(submoduleGit, submodule.name, baseBranch, logger);
     }
-
-    // Create a GitHub config for this submodule
-    const submoduleGithubConfig: GithubConfig = {
-        ...githubConfig,
-        owner: submoduleOwner,
-        repo: submoduleRepo,
-    };
 
     // Find if there's a PR for this task in the submodule
     logger.info(`🔍 Looking for PR in submodule ${chalk.magenta(submodule.name)}...`);

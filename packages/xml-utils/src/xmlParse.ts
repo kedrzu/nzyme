@@ -15,6 +15,7 @@ const parser = new XMLParser({
 /**
  * Parses an XML string into a JavaScript object.
  *
+ * @util
  * @param xml - The XML string to parse
  * @returns The parsed XML as a JavaScript object
  * @__NO_SIDE_EFFECTS__

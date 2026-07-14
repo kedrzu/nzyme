@@ -1,6 +1,7 @@
 /**
  * Generates a random floating-point number within a specified range
  *
+ * @util
  * @param min - The minimum value (inclusive)
  * @param max - The maximum value (exclusive)
  * @returns A random number between min (inclusive) and max (exclusive)

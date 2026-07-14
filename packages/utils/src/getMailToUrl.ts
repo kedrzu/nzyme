@@ -15,6 +15,7 @@ type MailToOptions = {
 /**
  * Creates a mailto: URL with the specified email and options.
  * Properly encodes all parameters for use in a URL.
+ * @util
  *
  * @param email - The email address to send to
  * @param options - Additional email parameters

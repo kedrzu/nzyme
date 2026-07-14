@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/vue-i18n",
     "version": "0.14.0",
+    "description": "Vue i18n integration (useTranslate)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

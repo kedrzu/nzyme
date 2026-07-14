@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/fetch-utils",
     "version": "0.14.0",
+    "description": "Fetch/HTTP client utilities",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

@@ -7,6 +7,7 @@ import { waitFor } from '@nzyme/utils/waitFor.js';
 
 import type { Stack, StackOutput } from './defineStack.js';
 import type { PulumiConfig } from './PulumiConfig.js';
+import { buildAwsStackConfig } from './utils/buildAwsStackConfig.js';
 
 /**
  * Creates or selects a stack.
@@ -22,31 +23,13 @@ export async function createOrSelectStack<TOutput extends StackOutput>(stack: St
     const nodeModulesDir = path.resolve(pulumiPkgPath, '..', '..');
     envVars.NODE_PATH = envVars.NODE_PATH ? `${nodeModulesDir}${path.delimiter}${envVars.NODE_PATH}` : nodeModulesDir;
 
-    const stackConfig: Record<string, automation.StackSettingsConfigValue> = {};
+    // Per-stack region comes from the stack's `region` option and overrides the shared awsConfig.region.
+    const stackConfig = buildAwsStackConfig({ awsConfig: config.awsConfig, region: stack.region });
     const pulumiHome = config.pulumiHome ?? path.join(cwd, '.pulumi');
 
     const pulumiCommand = await automation.PulumiCommand.install({
         root: pulumiHome,
     });
-
-    if (config.awsConfig) {
-        for (const [key, value] of Object.entries(config.awsConfig)) {
-            if (typeof value === 'string') {
-                stackConfig[`aws:${key}`] = value;
-            } else if (typeof value === 'boolean') {
-                stackConfig[`aws:${key}`] = value.toString();
-            }
-        }
-
-        if (config.awsConfig?.endpoints) {
-            const endpoints: Record<string, string>[] = [];
-            for (const [service, endpoint] of Object.entries(config.awsConfig.endpoints)) {
-                endpoints.push({ [service]: endpoint as string });
-            }
-
-            stackConfig['aws:endpoints'] = endpoints;
-        }
-    }
 
     if (config.namingPattern) {
         stackConfig['pulumi:autonaming'] = { pattern: config.namingPattern };

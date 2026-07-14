@@ -2,6 +2,7 @@ import type { Translation } from '@nzyme/i18n-core/Translation.js';
 
 /**
  * Translate a key.
+ * @util
  */
 export function translateToString(translation: Translation, lang: string): string;
 /**

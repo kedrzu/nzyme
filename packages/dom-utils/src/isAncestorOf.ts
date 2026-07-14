@@ -1,5 +1,6 @@
 /**
  * Checks if one element is an ancestor (parent, grandparent, etc.) of another element.
+ * @util
  *
  * @param ancestor The potential ancestor element to check
  * @param element The descendant element to check against

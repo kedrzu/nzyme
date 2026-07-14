@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/dom-utils",
     "version": "0.14.0",
+    "description": "DOM utility functions",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

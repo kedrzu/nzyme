@@ -1,5 +1,6 @@
 /**
  * Creates a promise that resolves after the specified number of milliseconds.
+ * @util
  *
  * @param ms - Number of milliseconds to wait
  * @returns A promise that resolves after the specified delay

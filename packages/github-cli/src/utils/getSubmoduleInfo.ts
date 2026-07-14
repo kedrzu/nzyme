@@ -26,8 +26,16 @@ export interface SubmoduleInfo {
 
     /**
      * Current branch of the submodule.
+     * Undefined when the submodule is in a detached HEAD state (see {@link detached}).
      */
     currentBranch?: string;
+
+    /**
+     * Whether the submodule is in a detached HEAD state (not on any local branch).
+     * Submodules are commonly detached because the superproject pins them to a specific
+     * commit (the gitlink) rather than a branch.
+     */
+    detached: boolean;
 
     /**
      * Number of unpushed commits in the submodule.
@@ -77,8 +85,11 @@ export async function getSubmoduleInfo(): Promise<SubmoduleInfo[]> {
                 // Get submodule URL
                 const url = await git.raw(['config', '--file', '.gitmodules', '--get', `submodule.${path}.url`]);
 
-                // Get current branch
-                const currentBranch = status.current || undefined;
+                // Get current branch. In a detached HEAD state simple-git reports `current`
+                // as the literal "HEAD", which is not a usable branch name, so normalize it
+                // to undefined and surface the detached state explicitly instead.
+                const detached = status.detached;
+                const currentBranch = detached ? undefined : status.current || undefined;
 
                 // Check for unpushed commits
                 let unpushedCommitsCount = 0;
@@ -109,6 +120,7 @@ export async function getSubmoduleInfo(): Promise<SubmoduleInfo[]> {
                     url: url.trim(),
                     hasChanges,
                     currentBranch,
+                    detached,
                     unpushedCommitsCount,
                     hasRemoteBranch,
                 });

@@ -1,5 +1,6 @@
 /**
  * Creates a new iterable that yields all elements from the first iterable followed by all elements from the second iterable.
+ * @util
  *
  * @template T - The type of elements in the iterables
  * @param a - The first iterable

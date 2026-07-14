@@ -20,6 +20,7 @@ type BasicAuthParams = {
  * Compares the credentials extracted from the token with the expected login
  * and password using timing-safe comparison to prevent timing attacks.
  *
+ * @util
  * @param params - Object containing expected credentials and token to validate
  * @returns true if credentials match, false otherwise or if token is missing
  */

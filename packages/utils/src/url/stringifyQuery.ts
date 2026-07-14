@@ -2,6 +2,7 @@ import type { QueryParams } from './queryTypes.js';
 
 /**
  * Converts a query parameters object into a URL query string.
+ * @util
  *
  * @param params - The query parameters to convert
  * @returns A URL query string (with leading '?' if not empty)

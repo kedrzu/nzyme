@@ -51,6 +51,8 @@ export type { PushSubmoduleUpdatesParams, PushSubmoduleUpdatesResult } from './u
 export * from './utils/pushWithUpstream.js';
 export * from './utils/selectPrToOpen.js';
 export type { OpenPrInBrowserParams, PrInfo, SelectPrToOpenParams } from './utils/selectPrToOpen.js';
+export * from './utils/switchDetachedSubmoduleToBaseBranch.js';
+export type { SwitchDetachedSubmoduleToBaseBranchParams } from './utils/switchDetachedSubmoduleToBaseBranch.js';
 export * from './utils/syncAllRepos.js';
 export type { SyncAllReposParams, SyncAllReposResult, SyncedSubmoduleInfo } from './utils/syncAllRepos.js';
 export * from './utils/syncBaseBranch.js';

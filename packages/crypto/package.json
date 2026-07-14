@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/crypto",
     "version": "0.14.0",
+    "description": "Cryptography helpers (hashing, UUID, encryption)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

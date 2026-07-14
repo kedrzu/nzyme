@@ -26,6 +26,7 @@ export const CHARS_BASE36 = CHARS_NUMBERS + CHARS_LOWERCASE;
 /**
  * Generates a random string of specified length using provided character set
  *
+ * @util
  * @param length - The length of the random string to generate
  * @param characters - Character set to use for generating the random string (defaults to Base36)
  * @returns A random string of the specified length

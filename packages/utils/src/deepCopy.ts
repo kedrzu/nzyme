@@ -5,6 +5,7 @@
  * - Symbols are not copied
  * - Circular references are not supported
  * - Special objects like Date, RegExp, etc. are converted to plain objects
+ * @util
  *
  * @template T - The type of the value to copy
  * @param value - The value to copy

@@ -18,6 +18,7 @@ type BearerTokenParams = {
  * Extracts the token value from the provided Bearer token string and compares it
  * with the expected token using timing-safe comparison to prevent timing attacks.
  *
+ * @util
  * @param params - Object containing the provided token and expected token
  * @returns true if tokens match, false otherwise or if no token is provided
  */

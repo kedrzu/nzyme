@@ -29,7 +29,7 @@ export interface FetchRequest extends RequestInit {
 /**
  * Executes a fetch request with the provided configuration.
  * Automatically handles query parameter serialization and response validation.
- *
+ * @util
  * @param request - The request configuration
  * @returns A cloned Response object after validation
  */

@@ -1,5 +1,6 @@
 /**
  * Returns the first element of an array if the input is an array, otherwise returns the input value.
+ * @util
  *
  * @template T - The type of the value or array elements
  * @param item - The value or array to get a single item from

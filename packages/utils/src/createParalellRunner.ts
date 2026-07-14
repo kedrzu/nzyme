@@ -13,6 +13,7 @@ type ParalelllRunnerOptions = {
 /**
  * Creates a parallel runner that executes a handler function in multiple concurrent threads.
  * The runner can be started, stopped, and waited for completion.
+ * @util
  *
  * @param options - Configuration for the parallel runner
  * @returns An object with `start`, `stop`, and `wait` methods

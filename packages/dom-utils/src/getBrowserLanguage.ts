@@ -2,6 +2,7 @@
  * Gets the preferred language from browser languages based on available languages.
  * Falls back to the first available language if no match is found.
  * Caches the result for performance.
+ * @util
  *
  * @param availableLanguages - Array of available languages from the provider
  * @returns The best matching language code

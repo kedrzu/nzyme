@@ -1,5 +1,6 @@
 /**
  * Maps a value to a new value using a mapping function.
+ * @util
  *
  * @template T - The type of the input value
  * @template R - The type of the output value

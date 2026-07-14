@@ -11,6 +11,7 @@ export interface WithTimeoutOptions {
 /**
  * Wraps a promise with a timeout.
  * If the promise times out, the error is thrown.
+ * @util
  * @param promise - The promise to wrap.
  * @param timeout - The timeout in milliseconds.
  * @param options - The options for the withTimeout function.

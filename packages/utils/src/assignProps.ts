@@ -3,6 +3,7 @@
  * This is a type-safe version of Object.assign that preserves the type information.
  * Unlike Object.assign, this function ensures that the returned type is a proper intersection
  * of the target and source types.
+ * @util
  *
  * @template T - The type of the target object
  * @template P - The type of the properties to assign (must be a record of string keys)

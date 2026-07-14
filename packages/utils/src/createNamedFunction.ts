@@ -1,6 +1,7 @@
 /**
  * Creates a function with a specific name.
  * This is useful for debugging and stack traces, as the function will appear with the given name.
+ * @util
  *
  * @template F - The type of the function to create
  * @param name - The name to give the function

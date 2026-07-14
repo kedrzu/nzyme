@@ -4,6 +4,7 @@ import isEqual from 'fast-deep-equal';
  * Performs a deep equality comparison between two values.
  * Uses lodash's isEqual function for comprehensive comparison.
  * Handles arrays, objects, dates, and other complex types.
+ * @util
  *
  * @param a - First value to compare
  * @param b - Second value to compare

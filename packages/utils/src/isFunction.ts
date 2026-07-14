@@ -1,6 +1,7 @@
 /**
  * Checks if a value is a function.
  * This is a type guard that narrows the type to Function.
+ * @util
  *
  * @param value - The value to check
  * @returns True if the value is a function, false otherwise

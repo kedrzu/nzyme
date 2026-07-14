@@ -1,4 +1,5 @@
 export * from './AwsConfig.js';
+export * from './BoundDefineStack.js';
 export * from './cancelStack.js';
 export * from './compileCloudFrontFunction.js';
 export * from './compileFunction.js';
@@ -10,8 +11,10 @@ export * from './GeneratedValue.js';
 export * from './getStackOutputs.js';
 export * from './installStack.js';
 export * from './login.js';
+export * from './mapStacks.js';
 export * from './previewStack.js';
 export * from './PulumiConfig.js';
+export * from './refAll.js';
 export * from './refreshStack.js';
 export * from './types.js';
 export * from './utils/filterPulumiInput.js';

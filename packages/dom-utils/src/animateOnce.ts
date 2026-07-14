@@ -1,5 +1,6 @@
 /**
  * Animates an element once by adding and removing a class.
+ * @util
  * @param element - The element to animate.
  * @param animationClass - The class to add and remove.
  */

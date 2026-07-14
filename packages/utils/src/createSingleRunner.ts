@@ -44,6 +44,7 @@ export interface CreateSingleRunnerOptions<TReturn> {
 
 /**
  * Creates a single runner that ensures only one execution at a time
+ * @util
  * @param options Configuration options
  * @returns State object with execute method
  */

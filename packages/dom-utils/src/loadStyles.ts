@@ -14,6 +14,7 @@ export interface LoadStylesOptions {
  * Loads a CSS stylesheet from a URL into the document head.
  * If the stylesheet has already been loaded, returns the existing Promise.
  * Provides cross-browser compatibility for stylesheet loading events.
+ * @util
  *
  * @param url The URL of the stylesheet to load
  * @param options Additional options for loading the stylesheet

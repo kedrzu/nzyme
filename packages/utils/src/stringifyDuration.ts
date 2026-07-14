@@ -6,6 +6,7 @@ import type { DurationISO } from '@nzyme/types/Date.js';
  * Converts a date-fns Duration object to an ISO 8601 duration string (e.g., 'P1Y2M3DT4H5M6S').
  * Only years, months, days, hours, minutes, and seconds are supported.
  * If weeks are present, they are converted to days (1 week = 7 days).
+ * @util
  *
  * @param duration - The duration object to stringify
  * @returns The ISO 8601 duration string

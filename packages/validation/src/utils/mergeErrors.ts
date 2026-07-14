@@ -3,6 +3,7 @@ import { concatKeys } from './concatKeys.js';
 
 /**
  * Merges a validation result into an existing errors object, grouping messages by key path.
+ * @util
  */
 export function mergeErrors(errors: ValidationErrors, result: ValidationResult, key: number | string = '') {
     if (result == null) {

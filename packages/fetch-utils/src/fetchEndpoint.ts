@@ -25,7 +25,7 @@ export interface FetchEndpointParams<TParams> {
 /**
  * Executes a fetch request for a configured endpoint.
  * Handles URL joining, header merging, and response processing.
- *
+ * @util
  * @param endpoint - The endpoint configuration to execute
  * @param params - Parameters for the endpoint request
  * @returns A promise that resolves to the processed response

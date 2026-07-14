@@ -1,6 +1,7 @@
 {
     "name": "@nzyme/utils",
     "version": "0.14.0",
+    "description": "Framework low-level utilities (arrays, strings, dates, async, guards)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {

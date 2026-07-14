@@ -6,6 +6,7 @@ let os: OS | StringNonLiteral | undefined;
 
 /**
  * Returns the operating system of the browser.
+ * @util
  */
 export function getOS() {
     if (os !== undefined) {

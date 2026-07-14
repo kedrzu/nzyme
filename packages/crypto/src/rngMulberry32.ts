@@ -4,6 +4,7 @@
  * This is a simple, fast generator with good statistical properties.
  * It can be used when deterministic random sequences are needed.
  *
+ * @util
  * @param seed - A 32-bit integer seed value to initialize the generator
  * @returns A function that returns a pseudo-random number between 0 and 1 when called
  * @see https://stackoverflow.com/a/47593316/2202583

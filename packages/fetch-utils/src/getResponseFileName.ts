@@ -1,6 +1,6 @@
 /**
  * Extracts filename from the Content-Disposition header of a Response.
- *
+ * @util
  * @param response - The Response object to extract filename from
  * @returns The filename if found in Content-Disposition header, null otherwise
  *

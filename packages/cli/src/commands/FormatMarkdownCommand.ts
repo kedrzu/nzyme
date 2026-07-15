@@ -1,0 +1,228 @@
+import fs from 'fs/promises';
+import * as path from 'path';
+
+import chalk from 'chalk';
+import type { Break, Link, Parents, Text } from 'mdast';
+import type { Info, State } from 'mdast-util-to-markdown';
+import { defaultHandlers } from 'mdast-util-to-markdown';
+import { remark } from 'remark';
+import remarkFrontmatter from 'remark-frontmatter';
+import remarkGfm from 'remark-gfm';
+
+import { isFileIgnored } from '@nzyme/project-utils/isFileIgnored.js';
+import { forEachParalell } from '@nzyme/utils/array/forEachParalell.js';
+
+import { Command } from '../Command.js';
+import { Option } from '../index.js';
+
+const MARKDOWN_REGEX = /\.mdx?$/;
+
+/** Bounded parallelism for file processing — high throughput without opening a handle per file. */
+const CONCURRENCY = 20;
+
+/**
+ * Text handler that keeps remark's structural escaping (list markers, emphasis, pipes)
+ * but drops its over-eager escaping of characters that cannot start a construct in these
+ * docs: `_` and `~` (with single-tilde strikethrough disabled below, neither forms an
+ * inline construct) and `[` / `]` (bracketed prose like `[file:line]` or `[HIGH/LOW]` —
+ * a bare `[x]` is only a link with a `(url)` or a reference definition, and skills use
+ * neither). remark otherwise escapes every one of these (`AGENT_PROMPT` → `AGENT\_PROMPT`,
+ * `[file:line]` → `\[file:line]`), which mutates identifiers, breaks literal grep of the
+ * source, and adds backslash tokens — the exact opposite of the goal. Removing only these
+ * escapes is idempotent; anything structural (emphasis `*`) keeps its escape.
+ *
+ * The escaped dot is also dropped, EXCEPT after a digit. remark escapes a dot for two
+ * reasons: the ordered-list guard (`<digit>.` at a break) — structural, kept — and the
+ * gfm-autolink-literal `www.` guard (`[Ww].`), which fires on any dot after a `w`/`W`
+ * (`CODE_REVIEW.md` → `CODE_REVIEW\.md`) and is pure noise here.
+ */
+function unescapeProse(node: Text, _parent: unknown, state: State, info: Info): string {
+    return state
+        .safe(node.value, info)
+        .replace(/\\([_~[\]])/g, '$1')
+        .replace(/(?<!\d)\\\./g, '.');
+}
+
+/**
+ * Link handler that emits a bare literal autolink instead of wrapping it. gfm-autolink-literal
+ * parses bare URLs/emails into link nodes, and the default stringifier then emits noise:
+ * `http://localhost:6006` → `<http://localhost:6006>`, `a@b.com` → `<a@b.com>`, and
+ * `www.foo.com` → `[www.foo.com](http://www.foo.com)`. When a link is exactly such an autolink —
+ * a single text child, no title, and a URL that is just the text (optionally with a `mailto:` /
+ * `http(s)://` scheme) — return the raw text so it stays bare. This renders identically (gfm
+ * re-links it) and is idempotent. Everything else defers to the default handler.
+ */
+function unwrapAutolink(node: Link, parent: Parents | undefined, state: State, info: Info): string {
+    const [child, ...rest] = node.children;
+    if (!node.title && rest.length === 0 && child?.type === 'text') {
+        const text = child.value;
+        if (
+            node.url === text ||
+            node.url === `mailto:${text}` ||
+            node.url === `http://${text}` ||
+            node.url === `https://${text}`
+        ) {
+            return text;
+        }
+    }
+    return defaultHandlers.link(node, parent, state, info);
+}
+
+/**
+ * Hard-break handler: emit the invisible two-space form instead of the default visible `\`.
+ * Delegates to the default handler first so unsafe scopes (table cells, headings — where a raw
+ * newline is illegal) still collapse to a space. Only the real backslash break is rewritten, and
+ * it is `info.before`-aware: if the preceding text already ends in spaces, emit only enough to
+ * total two, so `word \` (one stray source space) canonicalises to exactly `word␣␣` in a single
+ * pass rather than `word␣␣␣` (idempotency would otherwise need two passes).
+ */
+function twoSpaceBreak(node: Break, parent: Parents | undefined, state: State, info: Info): string {
+    const rendered = defaultHandlers.break(node, parent, state, info);
+    if (rendered !== '\\\n') {
+        return rendered;
+    }
+    const trailingSpaces = (/ *$/.exec(info.before) ?? [''])[0].length;
+    return ' '.repeat(Math.max(0, 2 - trailingSpaces)) + '\n';
+}
+
+/**
+ * remark-stringify settings tuned to minimise tokens: compact (unaligned) GFM tables,
+ * single-space list indentation, `-` bullets/rules, and prose-preserving handlers (no escaping
+ * noise, bare URLs, invisible hard breaks). No prose re-wrapping — remark preserves author line
+ * breaks by default.
+ */
+const STRINGIFY_SETTINGS = {
+    bullet: '-',
+    listItemIndent: 'one',
+    rule: '-',
+    fences: true,
+    tightDefinitions: true,
+    handlers: { text: unescapeProse, link: unwrapAutolink, break: twoSpaceBreak },
+} as const;
+
+/**
+ * A remark pipeline that round-trips YAML frontmatter verbatim and renders GFM tables
+ * without alignment padding — the padding oxfmt adds is the dominant token cost.
+ */
+const processor = remark()
+    .use(remarkFrontmatter, ['yaml'])
+    .use(remarkGfm, { tablePipeAlign: false, tableCellPadding: false, singleTilde: false })
+    .data('settings', STRINGIFY_SETTINGS);
+
+/**
+ * Token-minimising markdown formatter. Reserialises markdown files (or every `.md`/`.mdx`
+ * file under the given directories) through remark with compact GFM tables — the opposite
+ * of an aligning formatter like oxfmt/prettier. Reusable across projects; point it at any
+ * markdown that should stay small (e.g. agent skill files).
+ */
+export class FormatMarkdownCommand extends Command {
+    static override paths = [['format-markdown']];
+
+    static override usage = Command.Usage({
+        category: 'Format',
+        description: 'Format markdown for minimal tokens (compact GFM tables)',
+        details: `
+            Reserialises markdown through remark with un-padded GFM tables and single-space
+            list indentation. Arguments are files or directories; directories are walked
+            recursively for .md/.mdx files (gitignored paths are skipped). With no arguments
+            the current working directory is used. Pass --exclude to skip a file or directory
+            (e.g. generated/scraped docs or a nested submodule); repeatable. By default only a
+            summary count is printed; pass --verbose to log every file formatted/reformatted.
+        `,
+        examples: [
+            ['Format the whole repo', 'nzyme format-markdown .'],
+            [
+                'Skip generated docs and a submodule',
+                'nzyme format-markdown . --exclude nzyme --exclude packages/scraped-docs',
+            ],
+            ['Check without writing', 'nzyme format-markdown --check docs'],
+            ['List each file formatted', 'nzyme format-markdown --verbose docs'],
+        ],
+    });
+
+    check = Option.Boolean('--check,-c', {
+        description: 'Do not write; exit non-zero if any file would change',
+    });
+
+    verbose = Option.Boolean('--verbose,-v', {
+        description: 'Log each file formatted/reformatted (default: summary count only)',
+    });
+
+    exclude = Option.Array('--exclude,-e', [], {
+        description: 'File or directory to skip (repeatable)',
+    });
+
+    inputs = Option.Rest();
+
+    cwd = process.cwd();
+
+    /**
+     *
+     */
+    override async run() {
+        const inputs = this.inputs.length > 0 ? this.inputs : ['.'];
+        const excluded = new Set(this.exclude.map(entry => this.toAbsolute(entry)));
+
+        const files: string[] = [];
+        for (const input of inputs) {
+            await this.collectFiles(this.toAbsolute(input), excluded, files);
+        }
+
+        let changed = 0;
+        await forEachParalell(files, {
+            concurrency: CONCURRENCY,
+            callback: async file => {
+                const source = await fs.readFile(file, 'utf-8');
+                const formatted = String(await processor.process(source));
+
+                if (formatted === source) {
+                    return;
+                }
+
+                changed++;
+                if (this.check) {
+                    if (this.verbose) {
+                        const relative = path.relative(this.cwd, file);
+                        this.logger.warn(`Would reformat ${chalk.yellow(relative)}`);
+                    }
+                } else {
+                    await fs.writeFile(file, formatted);
+                    if (this.verbose) {
+                        const relative = path.relative(this.cwd, file);
+                        this.logger.info(`Formatted ${chalk.green(relative)}`);
+                    }
+                }
+            },
+        });
+
+        if (this.check && changed > 0) {
+            this.logger.error(`${changed} markdown file(s) are not formatted`);
+            return 1;
+        }
+
+        this.logger.info(
+            `${this.check ? 'Checked' : 'Formatted'} ${files.length} markdown file(s), ${changed} changed`,
+        );
+        return 0;
+    }
+
+    private async collectFiles(target: string, excluded: Set<string>, results: string[]) {
+        if (excluded.has(target) || isFileIgnored(target) === true) {
+            return;
+        }
+
+        const stats = await fs.stat(target);
+        if (stats.isDirectory()) {
+            const entries = await fs.readdir(target, { withFileTypes: true });
+            for (const entry of entries) {
+                await this.collectFiles(path.join(target, entry.name), excluded, results);
+            }
+        } else if (stats.isFile() && MARKDOWN_REGEX.test(target)) {
+            results.push(target);
+        }
+    }
+
+    private toAbsolute(file: string) {
+        return path.isAbsolute(file) ? file : path.join(this.cwd, file);
+    }
+}

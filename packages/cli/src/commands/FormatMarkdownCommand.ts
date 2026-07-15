@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import * as path from 'path';
 
 import chalk from 'chalk';
-import type { Break, Link, Parents, Text } from 'mdast';
+import type { Break, Link, Parents, Root, Text } from 'mdast';
 import type { Info, State } from 'mdast-util-to-markdown';
 import { defaultHandlers } from 'mdast-util-to-markdown';
 import { remark } from 'remark';
@@ -20,6 +20,32 @@ const MARKDOWN_REGEX = /\.mdx?$/;
 /** Bounded parallelism for file processing — high throughput without opening a handle per file. */
 const CONCURRENCY = 20;
 
+/** Parse-only pipeline used to check whether dropping an escape would re-form a construct. */
+const inertnessChecker = remark().use(remarkGfm, { singleTilde: false });
+
+/**
+ * Returns the plain text of `markdown` iff it parses to nothing but literal text — a single
+ * paragraph whose children are all text nodes. Returns null the moment any inline construct
+ * appears (emphasis, strong, link, autolink, html, inline code, a decoded entity, …), because
+ * that means an escape we removed was actually load-bearing. The caller compares the result to
+ * the node's original value: equal → the un-escape is inert (safe); otherwise → keep the escape.
+ */
+function literalTextOrNull(markdown: string): string | null {
+    const root: Root = inertnessChecker.parse(markdown);
+    const [block, ...rest] = root.children;
+    if (rest.length > 0 || block?.type !== 'paragraph') {
+        return null;
+    }
+    let text = '';
+    for (const child of block.children) {
+        if (child.type !== 'text') {
+            return null;
+        }
+        text += child.value;
+    }
+    return text;
+}
+
 /**
  * Text handler that keeps remark's structural escaping (list markers, emphasis, pipes)
  * but drops its over-eager escaping of characters that cannot start a construct in these
@@ -28,19 +54,37 @@ const CONCURRENCY = 20;
  * a bare `[x]` is only a link with a `(url)` or a reference definition, and skills use
  * neither). remark otherwise escapes every one of these (`AGENT_PROMPT` → `AGENT\_PROMPT`,
  * `[file:line]` → `\[file:line]`), which mutates identifiers, breaks literal grep of the
- * source, and adds backslash tokens — the exact opposite of the goal. Removing only these
- * escapes is idempotent; anything structural (emphasis `*`) keeps its escape.
+ * source, and adds backslash tokens — the exact opposite of the goal.
  *
  * The escaped dot is also dropped, EXCEPT after a digit. remark escapes a dot for two
  * reasons: the ordered-list guard (`<digit>.` at a break) — structural, kept — and the
  * gfm-autolink-literal `www.` guard (`[Ww].`), which fires on any dot after a `w`/`W`
  * (`CODE_REVIEW.md` → `CODE_REVIEW\.md`) and is pure noise here.
+ *
+ * Finally, `& < @ *` are un-escaped too — but only when it is provably inert. remark escapes
+ * these defensively (`Q&A` → `Q\&A`, `Map<connId,` → `Map\<connId,`, `svgo@3` → `svgo\@3`, a
+ * literal `**heading: **` whose trailing space blocks the closing delimiter → `\*\*heading: \*\*`),
+ * yet the mdast never re-formed a construct from them — otherwise they would be emphasis /
+ * html / link nodes, not text. We drop each of the four escapes independently and re-parse:
+ * only if the result is still exactly the same literal text (`literalTextOrNull`) is it kept
+ * un-escaped. This preserves every escape that IS load-bearing — `\*italic\*` (re-forms
+ * emphasis), `\&amp;` (re-forms an entity), `\<div>` (re-forms an html tag), `\user@host.com`
+ * (re-forms an email autolink) — while stripping the noise. Per-character so a load-bearing
+ * escape does not keep its inert neighbours escaped. Never changes rendered output; idempotent.
  */
 function unescapeProse(node: Text, _parent: unknown, state: State, info: Info): string {
-    return state
+    let out = state
         .safe(node.value, info)
         .replace(/\\([_~[\]])/g, '$1')
         .replace(/(?<!\d)\\\./g, '.');
+
+    for (const char of ['&', '<', '@', '*']) {
+        const candidate = out.split(`\\${char}`).join(char);
+        if (candidate !== out && literalTextOrNull(candidate) === node.value) {
+            out = candidate;
+        }
+    }
+    return out;
 }
 
 /**

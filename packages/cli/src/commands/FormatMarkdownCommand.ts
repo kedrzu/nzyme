@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import * as path from 'path';
 
 import chalk from 'chalk';
-import type { Break, Link, Parents, Root, Text } from 'mdast';
+import type { Break, Link, Parents } from 'mdast';
 import type { Info, State } from 'mdast-util-to-markdown';
 import { defaultHandlers } from 'mdast-util-to-markdown';
 import { remark } from 'remark';
@@ -20,71 +20,73 @@ const MARKDOWN_REGEX = /\.mdx?$/;
 /** Bounded parallelism for file processing — high throughput without opening a handle per file. */
 const CONCURRENCY = 20;
 
-/** Parse-only pipeline used to check whether dropping an escape would re-form a construct. */
-const inertnessChecker = remark().use(remarkGfm, { singleTilde: false });
+/** Parse-only pipeline used to check whether dropping an escape changes document structure. */
+const structureChecker = remark().use(remarkFrontmatter, ['yaml']).use(remarkGfm, { singleTilde: false });
 
 /**
- * Returns the plain text of `markdown` iff it parses to nothing but literal text — a single
- * paragraph whose children are all text nodes. Returns null the moment any inline construct
- * appears (emphasis, strong, link, autolink, html, inline code, a decoded entity, …), because
- * that means an escape we removed was actually load-bearing. The caller compares the result to
- * the node's original value: equal → the un-escape is inert (safe); otherwise → keep the escape.
+ * Removes backslashes that do not affect how the complete document parses. Checking the whole
+ * document keeps surrounding delimiters in view and covers escapes emitted outside text nodes,
+ * such as image destinations and line-start punctuation.
+ * @__NO_SIDE_EFFECTS__
  */
-function literalTextOrNull(markdown: string): string | null {
-    const root: Root = inertnessChecker.parse(markdown);
-    const [block, ...rest] = root.children;
-    if (rest.length > 0 || block?.type !== 'paragraph') {
-        return null;
+function removeInertEscapes(markdown: string): string {
+    const expectedStructure = markdownStructure(markdown);
+    let result = markdown;
+
+    const escapedCharacters = new Set<string>();
+    for (const match of markdown.matchAll(/\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g)) {
+        escapedCharacters.add(match[0]);
     }
-    let text = '';
-    for (const child of block.children) {
-        if (child.type !== 'text') {
-            return null;
+    for (const escaped of escapedCharacters) {
+        const candidate = result.split(escaped).join(escaped.slice(1));
+        if (candidate !== result && markdownStructure(candidate) === expectedStructure) {
+            result = candidate;
         }
-        text += child.value;
     }
-    return text;
+
+    const escapePositions: number[] = [];
+    for (const match of result.matchAll(/\\[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/g)) {
+        if (match.index != null) {
+            escapePositions.push(match.index);
+        }
+    }
+
+    return removeEscapeGroup(result, escapePositions);
+
+    function removeEscapeGroup(current: string, positions: number[]): string {
+        if (positions.length === 0) {
+            return current;
+        }
+
+        let candidate = '';
+        let copiedThrough = 0;
+        for (const position of positions) {
+            candidate += current.slice(copiedThrough, position);
+            copiedThrough = position + 1;
+        }
+        candidate += current.slice(copiedThrough);
+
+        if (markdownStructure(candidate) === expectedStructure) {
+            return candidate;
+        }
+        if (positions.length === 1) {
+            return current;
+        }
+
+        const midpoint = Math.ceil(positions.length / 2);
+        const afterRight = removeEscapeGroup(current, positions.slice(midpoint));
+        return removeEscapeGroup(afterRight, positions.slice(0, midpoint));
+    }
 }
 
 /**
- * Text handler that keeps remark's structural escaping (list markers, emphasis, pipes)
- * but drops its over-eager escaping of characters that cannot start a construct in these
- * docs: `_` and `~` (with single-tilde strikethrough disabled below, neither forms an
- * inline construct) and `[` / `]` (bracketed prose like `[file:line]` or `[HIGH/LOW]` —
- * a bare `[x]` is only a link with a `(url)` or a reference definition, and skills use
- * neither). remark otherwise escapes every one of these (`AGENT_PROMPT` → `AGENT\_PROMPT`,
- * `[file:line]` → `\[file:line]`), which mutates identifiers, breaks literal grep of the
- * source, and adds backslash tokens — the exact opposite of the goal.
- *
- * The escaped dot is also dropped, EXCEPT after a digit. remark escapes a dot for two
- * reasons: the ordered-list guard (`<digit>.` at a break) — structural, kept — and the
- * gfm-autolink-literal `www.` guard (`[Ww].`), which fires on any dot after a `w`/`W`
- * (`CODE_REVIEW.md` → `CODE_REVIEW\.md`) and is pure noise here.
- *
- * Finally, `& < @ *` are un-escaped too — but only when it is provably inert. remark escapes
- * these defensively (`Q&A` → `Q\&A`, `Map<connId,` → `Map\<connId,`, `svgo@3` → `svgo\@3`, a
- * literal `**heading: **` whose trailing space blocks the closing delimiter → `\*\*heading: \*\*`),
- * yet the mdast never re-formed a construct from them — otherwise they would be emphasis /
- * html / link nodes, not text. We drop each of the four escapes independently and re-parse:
- * only if the result is still exactly the same literal text (`literalTextOrNull`) is it kept
- * un-escaped. This preserves every escape that IS load-bearing — `\*italic\*` (re-forms
- * emphasis), `\&amp;` (re-forms an entity), `\<div>` (re-forms an html tag), `\user@host.com`
- * (re-forms an email autolink) — while stripping the noise. Per-character so a load-bearing
- * escape does not keep its inert neighbours escaped. Never changes rendered output; idempotent.
+ * Serializes an mdast tree without source positions so equivalent parses compare identically.
+ * @__NO_SIDE_EFFECTS__
  */
-function unescapeProse(node: Text, _parent: unknown, state: State, info: Info): string {
-    let out = state
-        .safe(node.value, info)
-        .replace(/\\([_~[\]])/g, '$1')
-        .replace(/(?<!\d)\\\./g, '.');
-
-    for (const char of ['&', '<', '@', '*']) {
-        const candidate = out.split(`\\${char}`).join(char);
-        if (candidate !== out && literalTextOrNull(candidate) === node.value) {
-            out = candidate;
-        }
-    }
-    return out;
+function markdownStructure(markdown: string): string {
+    return JSON.stringify(structureChecker.parse(markdown), (key, value: unknown) =>
+        key === 'position' ? undefined : value,
+    );
 }
 
 /**
@@ -141,7 +143,7 @@ const STRINGIFY_SETTINGS = {
     rule: '-',
     fences: true,
     tightDefinitions: true,
-    handlers: { text: unescapeProse, link: unwrapAutolink, break: twoSpaceBreak },
+    handlers: { link: unwrapAutolink, break: twoSpaceBreak },
 } as const;
 
 /**
@@ -217,7 +219,8 @@ export class FormatMarkdownCommand extends Command {
             concurrency: CONCURRENCY,
             callback: async file => {
                 const source = await fs.readFile(file, 'utf-8');
-                const formatted = String(await processor.process(source));
+                const safelyFormatted = String(await processor.process(source));
+                const formatted = safelyFormatted === source ? source : removeInertEscapes(safelyFormatted);
 
                 if (formatted === source) {
                     return;

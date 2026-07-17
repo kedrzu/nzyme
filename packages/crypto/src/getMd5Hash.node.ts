@@ -11,5 +11,6 @@ import { createHash } from 'crypto';
  * @returns Hexadecimal MD5 hash string
  */
 export function getMd5Hash(data: BinaryLike): string {
-    return createHash('md5').update(data).digest('hex');
+    const hashData = typeof data === 'string' || ArrayBuffer.isView(data) ? data : new Uint8Array(data);
+    return createHash('md5').update(hashData).digest('hex');
 }

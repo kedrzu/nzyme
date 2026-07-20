@@ -1,5 +1,5 @@
 import { $ } from 'execa';
-import type { ExecaScriptMethod, Options } from 'execa';
+import type { ExecaScriptMethod, StdoutStderrOption } from 'execa';
 
 /**
  * The options for the CLI process.
@@ -15,9 +15,9 @@ export type CreateCliOptions = {
     env?: NodeJS.ProcessEnv;
 
     /** Where to redirect stderr output. */
-    stderr?: Options['stderr'];
+    stderr?: StdoutStderrOption;
     /** Where to redirect stdout output. */
-    stdout?: Options['stdout'];
+    stdout?: StdoutStderrOption;
 };
 
 /**

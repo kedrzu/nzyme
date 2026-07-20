@@ -41,16 +41,16 @@
         "@nzyme/types": "0.14.0",
         "@nzyme/utils": "0.14.0",
         "ufo": "1.6.4",
-        "undici-types": "7.24.5"
+        "undici-types": "8.7.0"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",
         "@nzyme/tsconfig": "0.14.0",
         "@types/bun": "^1.3.13",
-        "@typescript/native-preview": "^7.0.0-dev.20260428.1",
-        "eslint": "10.4.0",
+        "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+        "eslint": "10.7.0",
         "openapi-typescript": "7.13.0",
-        "oxfmt": "0.50.0"
+        "oxfmt": "0.59.0"
     },
     "depcheck": {
         "ignoreDeps": [

@@ -7,6 +7,7 @@ export type * from './Date.js';
 export type * from './Decorators.js';
 export type * from './Dictionary.js';
 export type * from './EmptyObject.js';
+export type * from './Fetch.js';
 export type * from './FunctionOnly.js';
 export type * from './FunctionParams.js';
 export type * from './Immutable.js';

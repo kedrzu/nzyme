@@ -2,6 +2,7 @@ import { joinURL, withQuery } from 'ufo';
 import type { BodyInit } from 'undici-types';
 
 import type { HttpMethod } from '@nzyme/fetch-utils/HttpMethod.js';
+import type { Fetch } from '@nzyme/types/Fetch.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
 import type { ContentTypeOf, OpenApiFetchOptions, OpenApiFetchResponse, OperationOf } from './types.js';
@@ -23,7 +24,7 @@ export interface OpenApiFetchConfig {
     /** Default headers to include in all requests */
     headers?: Record<string, string | undefined>;
     /** Custom fetch implementation */
-    fetch?: (input: string | Request | URL, init?: RequestInit) => Promise<Response>;
+    fetch?: Fetch;
 }
 
 /**

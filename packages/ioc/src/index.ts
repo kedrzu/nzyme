@@ -4,6 +4,7 @@ export * from './Container.js';
 export * from './ContainerScope.js';
 export * from './defineEnvVariable.js';
 export * from './Factory.js';
+export * from './Fetch.js';
 export * from './helpers/callerName.js';
 export * from './helpers/constValue.js';
 export * from './helpers/EnvVariables.js';

@@ -16,21 +16,28 @@ export const LazyHydrate = defineComponent({
     emits: ['hydrated'],
     setup(props, ctx) {
         const instance = getCurrentInstance()!;
-        let hydrated = !isBrowser() || props.whenTriggered || !instance.vnode.el;
-
-        if (hydrated) {
-            return render;
-        }
-
-        const cleanups: (() => void)[] = [];
         const asyncRender = createPromise<RenderFunction>();
 
         // Async component, that is resolved when hydrated.
         // This way vue will wait for the component to be hydrated before rendering it.
+        //
+        // The boundary has to be created on SSR as well, even though there is nothing to defer
+        // there. `useId()` derives its prefix from the number of async boundaries created in the
+        // parent scope, so a boundary created only in the browser shifts every id rendered after it
+        // and breaks hydration.
         const component = defineAsyncComponent({
             loader: () => asyncRender.promise,
             suspensible: false,
         });
+
+        let hydrated = !isBrowser() || props.whenTriggered || !instance.vnode.el;
+
+        if (hydrated) {
+            asyncRender.resolve(render);
+            return () => h(component);
+        }
+
+        const cleanups: (() => void)[] = [];
 
         const hydrate = () => {
             if (hydrated) {

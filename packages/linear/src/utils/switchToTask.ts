@@ -13,9 +13,11 @@ import { handleMergedPrReopen } from '@nzyme/github-cli/utils/handleMergedPrReop
 import { syncBaseBranch } from '@nzyme/github-cli/utils/syncBaseBranch.js';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
+import type { TaskSwitchedHook } from '../cli/TaskSwitchedHook.js';
 import { handleTaskAssignment } from './handleTaskAssignment.js';
 import { handleTerminalState } from './handleTerminalState.js';
 import { reopenLinearTask } from './reopenLinearTask.js';
+import { runTaskSwitchedHook } from './runTaskSwitchedHook.js';
 import { startTaskIfNotStarted } from './startTaskIfNotStarted.js';
 
 /**
@@ -59,6 +61,12 @@ export interface SwitchToTaskParams {
      * from the up-to-date remote tip of this branch instead of the default.
      */
     branch?: string;
+
+    /**
+     * Called after the task has been successfully switched to.
+     * Failures are logged and never fail the switch.
+     */
+    onTaskSwitched?: TaskSwitchedHook;
 }
 
 /**
@@ -66,7 +74,7 @@ export interface SwitchToTaskParams {
  * This contains the common logic used by both "task start" and "task new" commands.
  */
 export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
-    const { issueId, linearClient, githubClient, githubConfig, logger, baseBranches, branch } = params;
+    const { issueId, linearClient, githubClient, githubConfig, logger, baseBranches, branch, onTaskSwitched } = params;
 
     logger.info(`🔍 Looking for Linear task: ${chalk.bold(issueId)}`);
 
@@ -142,6 +150,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
         if (reopenResult.reopened) {
             // Task was reopened with new version - we're done
             logger.info(`🔗 Linear task: ${chalk.underline(issueData.url)}`);
+            await runTaskSwitchedHook(onTaskSwitched, { issueId, title: issueData.title, logger });
             return;
         }
 
@@ -196,6 +205,8 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
     // Deferred until after checkout/create work has committed so we don't
     // transition the Linear state when the user cancels or a later step throws.
     await startTaskIfNotStarted(issueData, logger);
+
+    await runTaskSwitchedHook(onTaskSwitched, { issueId, title: issueData.title, logger });
 
     // Show task URL for reference
     logger.info(`🔗 Linear task: ${chalk.underline(issueData.url)}`);

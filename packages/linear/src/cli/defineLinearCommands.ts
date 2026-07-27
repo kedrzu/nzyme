@@ -22,6 +22,7 @@ import { formatProjectStatus } from '../utils/formatProjectStatus.js';
 import { getNonCompleteProjects } from '../utils/getProjects.js';
 import { parseTaskIdentifier } from '../utils/parseTaskIdentifier.js';
 import { switchToTask } from '../utils/switchToTask.js';
+import type { TaskSwitchedHook } from './TaskSwitchedHook.js';
 
 /**
  * Configuration for Linear API access.
@@ -61,6 +62,12 @@ export interface LinearCommandsOptions {
      * The function to call before each command.
      */
     beforeEach?: () => Promise<void>;
+
+    /**
+     * Called after a command has successfully switched to a task.
+     * Failures are logged and never fail the command.
+     */
+    onTaskSwitched?: TaskSwitchedHook;
 
     /**
      * The base branch(es) to use when creating new branches.
@@ -224,6 +231,7 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                     logger: this.logger,
                     baseBranches,
                     branch: this.branch,
+                    onTaskSwitched: options.onTaskSwitched,
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -337,6 +345,7 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
                     logger: this.logger,
                     baseBranches,
                     branch: this.branch,
+                    onTaskSwitched: options.onTaskSwitched,
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -826,6 +835,7 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
                     logger: this.logger,
                     baseBranches,
                     branch: this.branch,
+                    onTaskSwitched: options.onTaskSwitched,
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';

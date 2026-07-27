@@ -74,8 +74,7 @@ export interface SwitchToTaskParams {
  * This contains the common logic used by both "task start" and "task new" commands.
  */
 export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
-    const { issueId, linearClient, githubClient, githubConfig, logger, baseBranches, branch, onTaskSwitched } =
-        params;
+    const { issueId, linearClient, githubClient, githubConfig, logger, baseBranches, branch, onTaskSwitched } = params;
 
     logger.info(`🔍 Looking for Linear task: ${chalk.bold(issueId)}`);
 

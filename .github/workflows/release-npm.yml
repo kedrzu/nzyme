@@ -36,7 +36,12 @@ jobs:
 
       - run: bun install
       - run: bun run setup
-      - run: bun run build
+      # @nzyme/logging-ui is excluded: it is a private, unpublished dev-tool app whose Nuxt
+      # deps (h3, vue-json-pretty styles) are under-declared, so it only builds when hoisting
+      # rescues it inside a consuming monorepo. Pre-existing and unrelated to orchestration;
+      # nothing depends on it. Every published package is still built here — and the test step
+      # needs those dist outputs.
+      - run: bun run build --exclude=@nzyme/logging-ui
       # `bun run test` (not `bun test`) — `test` is a bun builtin; the bare form would ignore the script.
       - run: bun run test
 

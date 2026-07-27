@@ -19,7 +19,7 @@
         "monorepo": "nzyme monorepo",
         "release": "nx release --yes",
         "setup": "nx run @nzyme/cli:build && bun monorepo",
-        "test": "bun test ./packages/*/src/**/*.test.ts",
+        "test": "bun test ./packages/*/src",
         "update": "bun upgrade-interactive",
         "update:self": "bun set version berry",
         "watch": "tsgo --build --watch"
@@ -32,6 +32,8 @@
         "@nzyme/cli": "0.14.0",
         "@swc-node/register": "1.10.10",
         "@swc/core": "1.12.6",
+        "@types/bun": "^1.3.13",
+        "@types/node": "^26.1.1",
         "@typescript/native-preview": "^7.0.0-dev.20260428.1",
         "del-cli": "6.0.0",
         "eslint": "9.29.0",

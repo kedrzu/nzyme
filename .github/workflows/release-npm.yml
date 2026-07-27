@@ -30,24 +30,23 @@ jobs:
           git merge --no-ff origin/main -m "chore: release new version"
           git push
 
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: latest
+          bun-version: latest
 
-      - run: yarn install
-        env:
-          YARN_ENABLE_IMMUTABLE_INSTALLS: false
-      - run: yarn setup
-      - run: yarn build
-      - run: yarn test
+      - run: bun install
+      - run: bun run setup
+      - run: bun run build
+      # `bun run test` (not `bun test`) — `test` is a bun builtin; the bare form would ignore the script.
+      - run: bun run test
 
-      - run: yarn release
+      - run: bun run release
         if: ${{ inputs.dry_run != true }}
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: yarn release --dry-run
+      - run: bun run release --dry-run
         if: ${{ inputs.dry_run }}
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

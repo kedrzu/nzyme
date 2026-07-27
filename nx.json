@@ -1,16 +1,28 @@
 {
     "$schema": "./node_modules/nx/schemas/nx-schema.json",
+    "tui": {
+        "enabled": false
+    },
     "targetDefaults": {
-        "eslint": {
-            "dependsOn": ["^eslint"]
-        },
         "build": {
+            "cache": true,
+            "outputs": ["{projectRoot}/dist"],
             "dependsOn": ["^build"]
+        },
+        "dev": {
+            "cache": false,
+            "continuous": true
+        },
+        "watch": {
+            "cache": false,
+            "continuous": true
         }
     },
     "release": {
         "projects": ["packages/*"],
-        "releaseTagPattern": "v{version}",
+        "releaseTag": {
+            "pattern": "v{version}"
+        },
         "version": {
             "conventionalCommits": true
         },

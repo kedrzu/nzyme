@@ -10,7 +10,6 @@ dist/
 # Eslint cache
 .eslintcache
 
-.turbo
 .env
 .nzyme
 

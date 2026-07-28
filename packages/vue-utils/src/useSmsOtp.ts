@@ -32,18 +32,31 @@ export function useSmsOtp(options: UseSmsOtpOptions) {
             return;
         }
 
-        abortController = new AbortController();
+        const controller = new AbortController();
+        abortController = controller;
 
-        const otp = await navigator.credentials.get({
-            otp: { transport: ['sms'] },
-            signal: abortController.signal,
-        });
+        try {
+            const otp = await navigator.credentials.get({
+                otp: { transport: ['sms'] },
+                signal: controller.signal,
+            });
 
-        if (otp && 'code' in otp && typeof otp.code === 'string') {
-            options.onSuccess(otp.code);
+            if (otp && 'code' in otp && typeof otp.code === 'string') {
+                options.onSuccess(otp.code);
+            }
+        } catch (error) {
+            // Aborting the request rejects the pending get(), which happens on every unmount or
+            // disable while listening. Nothing awaits init(), so rethrowing here would surface as
+            // an unhandled rejection rather than a real failure.
+            if (!controller.signal.aborted) {
+                throw error;
+            }
+        } finally {
+            // Only clear the shared handle if a later init() has not already replaced it.
+            if (abortController === controller) {
+                abortController = undefined;
+            }
         }
-
-        abortController = undefined;
     }
 
     function abort() {

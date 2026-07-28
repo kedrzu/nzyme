@@ -31,7 +31,6 @@
     },
     "scripts": {
         "build": "tsgo --build tsconfig.esm.json",
-        "lint": "eslint . --fix --cache",
         "format": "oxfmt ./src > /dev/null"
     },
     "devDependencies": {

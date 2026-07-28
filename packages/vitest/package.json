@@ -35,7 +35,6 @@
     "scripts": {
         "build": "tsgo --build tsconfig.esm.json",
         "typecheck": "tsgo --noEmit --project tsconfig.check.json",
-        "lint": "eslint . --fix --cache",
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {

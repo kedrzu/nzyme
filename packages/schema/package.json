@@ -34,7 +34,6 @@
         "access": "public"
     },
     "scripts": {
-        "lint": "eslint . --fix --cache",
         "format": "oxfmt ./src > /dev/null",
         "test": "vitest run"
     },

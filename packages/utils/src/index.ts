@@ -32,7 +32,6 @@ export * from './assert.js';
 export * from './assertEnv.js';
 export * from './assignProps.js';
 export * from './cachedGetter.js';
-export * from './cachedProp.js';
 export * from './call.js';
 export * from './Cancelable.js';
 export * from './CancelError.js';

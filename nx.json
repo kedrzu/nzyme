@@ -1,13 +1,81 @@
 {
     "$schema": "./node_modules/nx/schemas/nx-schema.json",
+    "parallel": 5,
     "tui": {
         "enabled": false
+    },
+    "plugins": [
+        {
+            "plugin": "@nx/eslint/plugin",
+            "options": {
+                "targetName": "lint"
+            },
+            "include": ["packages/**/*"],
+            "exclude": ["packages/github-cli/**/*", "packages/linear/**/*", "packages/sentry-cli/**/*"]
+        }
+    ],
+    "namedInputs": {
+        "default": ["{projectRoot}/**/*", "sharedGlobals"],
+        "sharedGlobals": [
+            "{workspaceRoot}/package.json",
+            "{workspaceRoot}/bun.lock",
+            "{workspaceRoot}/nx.json",
+            "{workspaceRoot}/tsconfig.json"
+        ],
+        "production": [
+            "default",
+            "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?",
+            "!{projectRoot}/**/__snapshots__/**",
+            "!{projectRoot}/**/*.snap"
+        ],
+        "localEnvironment": [
+            {
+                "env": "ENV"
+            },
+            "{workspaceRoot}/.worktree"
+        ]
     },
     "targetDefaults": {
         "build": {
             "cache": true,
-            "outputs": ["{projectRoot}/dist"],
+            "inputs": ["production", "^production", "localEnvironment"],
+            "outputs": [
+                "{projectRoot}/dist",
+                "{projectRoot}/dist-cjs",
+                "{projectRoot}/.output",
+                "{projectRoot}/storybook-static",
+                "{projectRoot}/*.tsbuildinfo"
+            ],
             "dependsOn": ["^build"]
+        },
+        "prep": {
+            "cache": true,
+            "inputs": ["default", "^default", "localEnvironment"],
+            "outputs": ["{projectRoot}/.nuxt"]
+        },
+        "typecheck": {
+            "cache": true,
+            "inputs": ["default", "^default", "localEnvironment"],
+            "dependsOn": ["prep"]
+        },
+        "lint": {
+            "cache": true,
+            "inputs": [
+                "default",
+                "^default",
+                "{workspaceRoot}/packages/tsconfig/**/*",
+                "{workspaceRoot}/tools/eslint-rules/**/*",
+                {
+                    "runtime": "eslint --version"
+                }
+            ],
+            "options": {
+                "cache": true
+            }
+        },
+        "test:stories": {
+            "cache": true,
+            "inputs": ["default", "^default", "localEnvironment"]
         },
         "dev": {
             "cache": false,

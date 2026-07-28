@@ -1,7 +1,0 @@
-$ eslint . --fix --cache
-
-/Users/kedrzu/.paseo/worktrees/22dk1knh/big-hippo/nzyme/packages/cli/src/commands/FormatMarkdownCommand.ts
-  206:1  warning  No empty blocks  jsdoc/no-blank-blocks
-
-✖ 1 problem (0 errors, 1 warning)
-

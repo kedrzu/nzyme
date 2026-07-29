@@ -6,6 +6,7 @@ import { Option, UsageError } from '@nzyme/cli';
 import type { CommandClass } from '@nzyme/cli/Command.js';
 import { Command } from '@nzyme/cli/Command.js';
 import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
+import { GitMergeConflictError } from '@nzyme/github-cli/utils/GitMergeConflictError.js';
 import { convertAllPrsToReady } from '@nzyme/github-cli/utils/convertAllPrsToReady.js';
 import { createGithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';
 import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
@@ -234,6 +235,18 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                     onTaskSwitched: options.onTaskSwitched,
                 });
             } catch (error) {
+                if (error instanceof GitMergeConflictError) {
+                    // The branch is checked out and the task is marked as started - only the base
+                    // branch sync is left unfinished, so point at how to complete it.
+                    this.logger.error(
+                        `❌ Switched to task ${chalk.bold(this.taskIdentifier)}, but syncing with the base branch conflicted`,
+                    );
+                    this.logger.info(
+                        `💡 Resolve the conflicts, commit them, then run ${chalk.cyan('task refresh')} to finish the sync`,
+                    );
+                    throw error;
+                }
+
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(
                     `❌ Failed to start work on task ${chalk.bold(this.taskIdentifier)}: ${errorMessage}`,

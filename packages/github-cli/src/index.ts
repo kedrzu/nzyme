@@ -55,5 +55,3 @@ export * from './utils/switchDetachedSubmoduleToBaseBranch.js';
 export type { SwitchDetachedSubmoduleToBaseBranchParams } from './utils/switchDetachedSubmoduleToBaseBranch.js';
 export * from './utils/syncAllRepos.js';
 export type { SyncAllReposParams, SyncAllReposResult, SyncedSubmoduleInfo } from './utils/syncAllRepos.js';
-export * from './utils/syncBaseBranch.js';
-export type { SyncBaseBranchResult } from './utils/syncBaseBranch.js';

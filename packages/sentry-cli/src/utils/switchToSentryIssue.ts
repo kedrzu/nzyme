@@ -9,7 +9,7 @@ import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { applyStashedChanges, handleBranchSelection } from '@nzyme/github-cli/utils/handleBranchSelection.js';
 import type { BranchSelectionResult } from '@nzyme/github-cli/utils/handleBranchSelection.js';
 import { handleMergedPrReopen } from '@nzyme/github-cli/utils/handleMergedPrReopen.js';
-import { syncBaseBranch } from '@nzyme/github-cli/utils/syncBaseBranch.js';
+import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { SentryApiClient } from './createSentryClient.js';
@@ -115,10 +115,11 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
             baseBranch: existingPr.base.ref,
         });
 
-        // Sync with PR's base branch after checkout
+        // Sync all repos with the PR's base branch after checkout. Uses the same pipeline as
+        // "task refresh" so conflicts are detected and reported identically in both commands.
         const prBaseBranch = existingPr.base.ref;
         logger.info(`🔄 Synchronizing with PR base branch ${chalk.cyan(prBaseBranch)}`);
-        await syncBaseBranch(prBaseBranch, logger);
+        await syncAllRepos({ baseBranch: prBaseBranch, logger });
 
         logger.info(`🎉 Successfully checked out existing branch for ${chalk.bold(issueData.shortId)}`);
     } else {

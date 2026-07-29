@@ -10,7 +10,7 @@ import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { applyStashedChanges, handleBranchSelection } from '@nzyme/github-cli/utils/handleBranchSelection.js';
 import type { BranchSelectionResult } from '@nzyme/github-cli/utils/handleBranchSelection.js';
 import { handleMergedPrReopen } from '@nzyme/github-cli/utils/handleMergedPrReopen.js';
-import { syncBaseBranch } from '@nzyme/github-cli/utils/syncBaseBranch.js';
+import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { TaskSwitchedHook } from '../cli/TaskSwitchedHook.js';
@@ -87,6 +87,17 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
 
     logger.info(`📝 Found task: ${chalk.green(issueData.title)}`);
 
+    /**
+     * Mark the task as being worked on: move it to "In Progress" and notify the host project
+     * (e.g. to rename its workspace). Called as soon as the branch is in place, because from that
+     * point on the working copy IS on the task - a later failure (typically a base branch merge
+     * conflict) still leaves the user on the task branch and must not skip this.
+     */
+    async function markTaskStarted() {
+        await startTaskIfNotStarted(issueData, logger);
+        await runTaskSwitchedHook(onTaskSwitched, { issueId, title: issueData.title, logger });
+    }
+
     // Check if task is in terminal state and handle accordingly
     await handleTerminalState(issueData, logger);
 
@@ -111,10 +122,14 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
             baseBranch: existingPr.base.ref,
         });
 
-        // Sync with PR's base branch after checkout
+        // The branch is checked out - we are on the task now, even if the sync below conflicts.
+        await markTaskStarted();
+
+        // Sync all repos with the PR's base branch after checkout. Uses the same pipeline as
+        // "task refresh" so conflicts are detected and reported identically in both commands.
         const prBaseBranch = existingPr.base.ref;
         logger.info(`🔄 Synchronizing with PR base branch ${chalk.cyan(prBaseBranch)}`);
-        await syncBaseBranch(prBaseBranch, logger);
+        await syncAllRepos({ baseBranch: prBaseBranch, logger });
 
         logger.info(`🎉 Successfully checked out existing branch for ${chalk.bold(issueId)}`);
     } else {
@@ -150,6 +165,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
         if (reopenResult.reopened) {
             // Task was reopened with new version - we're done
             logger.info(`🔗 Linear task: ${chalk.underline(issueData.url)}`);
+            // Reopening already put the task into a working state, so only notify the host project.
             await runTaskSwitchedHook(onTaskSwitched, { issueId, title: issueData.title, logger });
             return;
         }
@@ -199,14 +215,11 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
         logger.info(`✅ Created draft PR: ${chalk.blue(result.pr.title)} (#${result.pr.number})`);
         logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(result.pr.html_url))}`);
         logger.info(`🎉 Successfully created and checked out new branch for ${chalk.bold(issueId)}`);
+
+        // Deferred until the branch and PR have been created so we don't transition the Linear
+        // state when the user cancels or an earlier step throws.
+        await markTaskStarted();
     }
-
-    // Move task to "In Progress" if it's in backlog/todo/triage.
-    // Deferred until after checkout/create work has committed so we don't
-    // transition the Linear state when the user cancels or a later step throws.
-    await startTaskIfNotStarted(issueData, logger);
-
-    await runTaskSwitchedHook(onTaskSwitched, { issueId, title: issueData.title, logger });
 
     // Show task URL for reference
     logger.info(`🔗 Linear task: ${chalk.underline(issueData.url)}`);

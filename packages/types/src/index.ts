@@ -11,6 +11,7 @@ export type * from './Fetch.js';
 export type * from './FunctionOnly.js';
 export type * from './FunctionParams.js';
 export type * from './Immutable.js';
+export type * from './JsonValue.js';
 export type * from './KeysDeep.js';
 export type * from './Literals.js';
 export type * from './Object.js';

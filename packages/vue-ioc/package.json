@@ -38,7 +38,7 @@
         "@nzyme/ioc": "0.14.0",
         "@nzyme/logging": "0.14.0",
         "@nzyme/types": "0.14.0",
-        "vue": "3.5.40"
+        "vue": "3.5.41"
     },
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",

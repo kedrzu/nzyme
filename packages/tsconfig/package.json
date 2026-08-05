@@ -24,7 +24,7 @@
     },
     "devDependencies": {
         "eslint": "10.8.0",
-        "oxfmt": "0.59.0",
+        "oxfmt": "0.62.0",
         "typescript": "6.0.3"
     },
     "depcheck": {

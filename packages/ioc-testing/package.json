@@ -41,9 +41,9 @@
     "devDependencies": {
         "@nzyme/eslint": "0.14.0",
         "@nzyme/tsconfig": "0.14.0",
-        "@types/node": "^26.1.1",
+        "@types/node": "^26.1.2",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-        "eslint": "10.7.0",
+        "eslint": "10.8.0",
         "oxfmt": "0.59.0"
     },
     "nzyme": {

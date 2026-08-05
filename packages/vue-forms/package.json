@@ -60,7 +60,7 @@
         "@nzyme/vue-utils": "0.14.0",
         "@vueuse/core": "14.3.0",
         "imask": "7.6.1",
-        "libphonenumber-js": "1.13.9",
+        "libphonenumber-js": "1.13.10",
         "postal-codes-js": "2.5.2",
         "vue": "3.5.40",
         "vue-imask": "7.6.1",

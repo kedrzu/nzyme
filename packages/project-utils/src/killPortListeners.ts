@@ -1,5 +1,8 @@
 import { execa } from 'execa';
 
+import { waitFor } from '@nzyme/utils/waitFor.js';
+import { withTimeout } from '@nzyme/utils/withTimeout.js';
+
 import { lsofListenArgs } from './lsofListenArgs.js';
 
 /** A process found listening on a port. */
@@ -126,13 +129,21 @@ function signal(pid: number, sig: NodeJS.Signals): SignalResult {
 }
 
 /** Poll until the port has no listeners or the timeout elapses; returns whether it became free. */
-async function waitForPortFree(port: number, timeoutMs: number): Promise<boolean> {
-    const deadline = Date.now() + timeoutMs;
-    while (Date.now() < deadline) {
-        if ((await findListeners(port)).length === 0) {
-            return true;
-        }
-        await new Promise<void>(resolve => setTimeout(resolve, 100));
-    }
-    return (await findListeners(port)).length === 0;
+function waitForPortFree(port: number, timeoutMs: number): Promise<boolean> {
+    return withTimeout({
+        timeoutMs,
+        operation: async signal => {
+            while (!signal.aborted) {
+                if ((await findListeners(port)).length === 0) {
+                    return true;
+                }
+                await waitFor(100);
+            }
+
+            // Unreachable in practice: the deadline settles the call before the loop observes the abort.
+            return false;
+        },
+        // One last look — the port may have been freed during the final poll interval.
+        onTimeout: async () => (await findListeners(port)).length === 0,
+    });
 }

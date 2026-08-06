@@ -1,6 +1,7 @@
 import { onScopeDispose, ref } from 'vue';
 
 import { isBrowser } from '@nzyme/dom-utils/isBrowser.js';
+import { withTimeout } from '@nzyme/utils/withTimeout.js';
 
 /**
  * The status of the browser tab.
@@ -78,17 +79,22 @@ export function useBrowserTabStatus(options: BrowserTabStatusOptions = {}) {
             return navigator.onLine !== false; // fallback only
         }
 
+        abortPing?.abort();
+        abortPing = new AbortController();
+
         try {
-            abortPing?.abort();
-            abortPing = new AbortController();
-            const timeout = setTimeout(() => abortPing?.abort(), pingTimeoutMs);
-            const res = await fetch(pingUrl, {
-                method: 'GET',
-                cache: 'no-store',
+            const res = await withTimeout({
+                operation: signal =>
+                    fetch(pingUrl, {
+                        method: 'GET',
+                        cache: 'no-store',
+                        signal,
+                        credentials: 'omit',
+                    }),
+                timeoutMs: pingTimeoutMs,
                 signal: abortPing.signal,
-                credentials: 'omit',
             });
-            clearTimeout(timeout);
+
             return res.ok;
         } catch {
             return false;

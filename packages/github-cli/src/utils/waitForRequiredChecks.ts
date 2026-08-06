@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging/Logger.js';
 import { waitFor } from '@nzyme/utils/waitFor.js';
+import { withTimeout } from '@nzyme/utils/withTimeout.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
@@ -129,71 +130,81 @@ export async function waitForRequiredChecks(params: WaitForRequiredChecksParams)
         expectedHeadSha,
     } = params;
 
-    const deadline = Date.now() + timeoutMs;
+    // Whatever the loop was last waiting on, phrased for the timeout. Kept up to date at each
+    // point the loop decides to keep polling, so the deadline can explain itself from outside.
+    let waitingOn = `PR #${prNumber} checks (mergeable_state: unknown). It may be waiting on a required review.`;
 
-    for (;;) {
-        const { data: pr } = await client.rest.pulls.get({
-            owner: config.owner,
-            repo: config.repo,
-            pull_number: prNumber,
-        });
+    await withTimeout({
+        timeoutMs,
+        // Bounding the whole loop rather than checking `Date.now()` between iterations also covers a
+        // GitHub request that stalls: an unresponsive API call can no longer hang the gate forever.
+        operation: async signal => {
+            while (!signal.aborted) {
+                const { data: pr } = await client.rest.pulls.get({
+                    owner: config.owner,
+                    repo: config.repo,
+                    pull_number: prNumber,
+                });
 
-        const mergeableState = pr.mergeable_state;
-        const headSha = pr.head.sha;
+                const mergeableState = pr.mergeable_state;
+                const headSha = pr.head.sha;
 
-        // Gate on the just-pushed commit: until GitHub reports it as the head, the PR still carries
-        // the previous commit's checks, so do not evaluate (or fail on) them — keep polling.
-        if (expectedHeadSha && headSha !== expectedHeadSha) {
-            if (Date.now() >= deadline) {
-                throw new UsageError(
-                    `Timed out after ${Math.round(timeoutMs / 1000)}s waiting for PR #${prNumber} to register the ` +
-                        `latest commit (expected ${expectedHeadSha.slice(0, 7)}, GitHub still reports ` +
-                        `${headSha.slice(0, 7)}).`,
+                // Gate on the just-pushed commit: until GitHub reports it as the head, the PR still
+                // carries the previous commit's checks, so do not evaluate (or fail on) them — keep polling.
+                if (expectedHeadSha && headSha !== expectedHeadSha) {
+                    waitingOn =
+                        `PR #${prNumber} to register the latest commit (expected ` +
+                        `${expectedHeadSha.slice(0, 7)}, GitHub still reports ${headSha.slice(0, 7)}).`;
+                    logger.info(
+                        `   ⏳ Waiting for GitHub to register the latest commit on PR ${chalk.gray(`#${prNumber}`)}...`,
+                    );
+                    await waitFor(intervalMs);
+                    continue;
+                }
+
+                if (mergeableState === 'dirty') {
+                    throw new UsageError(
+                        `PR #${prNumber} has conflicts with its base branch — resolve them and try again.`,
+                    );
+                }
+
+                if (mergeableState === 'behind') {
+                    throw new UsageError(
+                        `PR #${prNumber} is behind its base branch — run \`task refresh\` and try again.`,
+                    );
+                }
+
+                const checks = await getChecksState(client, config, headSha);
+
+                // Any failed check is a hard stop, regardless of mergeable_state.
+                if (checks.failed.length > 0) {
+                    throw new UsageError(`PR #${prNumber} has failing checks: ${checks.failed.join(', ')}`);
+                }
+
+                // No failures: pass only when nothing is pending. With no checks reported, `clean` means
+                // there is genuinely nothing to wait for (e.g. a repo with no CI); anything else keeps polling.
+                // For a freshly-pushed commit (expectedHeadSha set) CI is expected, so suppress that escape
+                // hatch and wait for at least one check to appear before passing.
+                const noCiClean = mergeableState === 'clean' && !expectedHeadSha;
+                const allChecksSettled = !checks.pending && (checks.total > 0 || noCiClean);
+                if (allChecksSettled) {
+                    logger.info(`   ${chalk.green('✓')} Checks passed for PR ${chalk.gray(`#${prNumber}`)}`);
+                    return;
+                }
+
+                waitingOn =
+                    `PR #${prNumber} checks (mergeable_state: ${mergeableState ?? 'unknown'}). ` +
+                    `It may be waiting on a required review.`;
+                logger.info(
+                    `   ⏳ Waiting for checks on PR ${chalk.gray(`#${prNumber}`)} (${mergeableState ?? 'unknown'})...`,
                 );
+                await waitFor(intervalMs);
             }
-            logger.info(
-                `   ⏳ Waiting for GitHub to register the latest commit on PR ${chalk.gray(`#${prNumber}`)}...`,
-            );
-            await waitFor(intervalMs);
-            continue;
-        }
-
-        if (mergeableState === 'dirty') {
-            throw new UsageError(`PR #${prNumber} has conflicts with its base branch — resolve them and try again.`);
-        }
-
-        if (mergeableState === 'behind') {
-            throw new UsageError(`PR #${prNumber} is behind its base branch — run \`task refresh\` and try again.`);
-        }
-
-        const checks = await getChecksState(client, config, headSha);
-
-        // Any failed check is a hard stop, regardless of mergeable_state.
-        if (checks.failed.length > 0) {
-            throw new UsageError(`PR #${prNumber} has failing checks: ${checks.failed.join(', ')}`);
-        }
-
-        // No failures: pass only when nothing is pending. With no checks reported, `clean` means
-        // there is genuinely nothing to wait for (e.g. a repo with no CI); anything else keeps polling.
-        // For a freshly-pushed commit (expectedHeadSha set) CI is expected, so suppress that escape
-        // hatch and wait for at least one check to appear before passing.
-        const noCiClean = mergeableState === 'clean' && !expectedHeadSha;
-        const allChecksSettled = !checks.pending && (checks.total > 0 || noCiClean);
-        if (allChecksSettled) {
-            logger.info(`   ${chalk.green('✓')} Checks passed for PR ${chalk.gray(`#${prNumber}`)}`);
-            return;
-        }
-
-        if (Date.now() >= deadline) {
-            throw new UsageError(
-                `Timed out after ${Math.round(timeoutMs / 1000)}s waiting for PR #${prNumber} checks ` +
-                    `(mergeable_state: ${mergeableState ?? 'unknown'}). It may be waiting on a required review.`,
-            );
-        }
-
-        logger.info(`   ⏳ Waiting for checks on PR ${chalk.gray(`#${prNumber}`)} (${mergeableState ?? 'unknown'})...`);
-        await waitFor(intervalMs);
-    }
+        },
+        onTimeout: () => {
+            throw new UsageError(`Timed out after ${Math.round(timeoutMs / 1000)}s waiting for ${waitingOn}`);
+        },
+    });
 }
 
 /**

@@ -20,11 +20,11 @@
         "typescript-plugin-css-modules": "5.2.0",
         "typescript-vue-plugin": "1.8.27",
         "vite": "7.3.6",
-        "vue": "3.5.40"
+        "vue": "3.5.41"
     },
     "devDependencies": {
-        "eslint": "10.7.0",
-        "oxfmt": "0.59.0",
+        "eslint": "10.8.0",
+        "oxfmt": "0.62.0",
         "typescript": "6.0.3"
     },
     "depcheck": {

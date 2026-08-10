@@ -6,7 +6,7 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
-import { findMatchingPr } from './findMatchingPr.js';
+import { findMatchingPr, findTaskPrs } from './findMatchingPr.js';
 import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 
@@ -80,10 +80,10 @@ export async function selectPrToOpen(params: SelectPrToOpenParams): Promise<PrIn
 
     const availablePrs: PrInfo[] = [];
 
-    // Check main repository PR
-    const mainPr = await findMatchingPr(githubClient, githubConfig, issueId);
+    // Check main repository PRs — a stacked task has one per node, offered bottom to top.
+    const mainPrs = await findTaskPrs(githubClient, githubConfig, issueId);
 
-    if (mainPr) {
+    for (const mainPr of mainPrs) {
         availablePrs.push({
             repoName: githubConfig.repo,
             displayType: 'repository',

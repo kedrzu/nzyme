@@ -1,5 +1,7 @@
+import { UsageError } from '@nzyme/cli';
+
 import type { GithubConfig } from '../GithubConfig.js';
-import { extractBranchVersion, getBaseBranchName } from './branchVersionHelpers.js';
+import { extractBranchVersion, extractNodeIndex, getBaseBranchName } from './branchVersionHelpers.js';
 import type { GithubClient } from './createGithubClient.js';
 
 /**
@@ -19,6 +21,71 @@ export function findMatchingPr(
     issueId: string,
 ): Promise<Awaited<ReturnType<typeof client.rest.pulls.list>>['data'][0] | null> {
     return findBestMatchingPr(client, config, issueId);
+}
+
+/**
+ * Find every open pull request belonging to an issue, ordered bottom to top by stack position.
+ *
+ * A task normally has exactly one open PR; it has several only once it has been split into a stack,
+ * where each node's branch carries the same issue ID plus a `--sN` suffix.
+ * @__NO_SIDE_EFFECTS__
+ */
+export async function findTaskPrs(client: GithubClient, config: GithubConfig, issueId: string): Promise<GitHubPR[]> {
+    const allMatchingPrs = await findAllMatchingPrs(client, config, issueId);
+    const openPrs = allMatchingPrs.filter(pr => pr.state === 'open' && !pr.merged_at);
+
+    return openPrs.sort((a, b) => extractNodeIndex(a.head.ref) - extractNodeIndex(b.head.ref));
+}
+
+/**
+ * Find the open pull request whose head is exactly this branch.
+ *
+ * Use this when the question is "does the branch I am on already have a PR" rather than "which PR
+ * belongs to this task" — with a stack the task owns several, so the issue ID alone cannot answer it.
+ * @__NO_SIDE_EFFECTS__
+ */
+export async function findPrForBranch(
+    client: GithubClient,
+    config: GithubConfig,
+    issueId: string,
+    branchName: string,
+): Promise<GitHubPR | null> {
+    const openPrs = await findTaskPrs(client, config, issueId);
+    return openPrs.find(pr => pr.head.ref === branchName) ?? null;
+}
+
+/**
+ * Resolve the one pull request a command should act on.
+ *
+ * With a single open PR this returns it whatever branch you are standing on — the long-standing
+ * behavior, and the reason an unstacked task is completely unaffected by stacks existing. Only when
+ * a task has several open PRs does the current branch decide, because "the PR for SIG-123" stops
+ * being a well-defined thing: picking the most recently updated one, as the old lookup did, would
+ * silently push to or merge the wrong node.
+ */
+export async function resolveNodePr(
+    client: GithubClient,
+    config: GithubConfig,
+    issueId: string,
+    currentBranch: string,
+): Promise<GitHubPR | null> {
+    const openPrs = await findTaskPrs(client, config, issueId);
+
+    if (openPrs.length <= 1) {
+        return openPrs[0] ?? null;
+    }
+
+    const currentPr = openPrs.find(pr => pr.head.ref === currentBranch);
+    if (currentPr) {
+        return currentPr;
+    }
+
+    const nodes = openPrs.map(pr => `  #${pr.number} ${pr.head.ref}`).join('\n');
+    throw new UsageError(
+        `Task ${issueId} has ${openPrs.length} open pull requests, but branch "${currentBranch}" is none of them:\n` +
+            `${nodes}\n` +
+            'Check out the node you want to act on first.',
+    );
 }
 
 /**

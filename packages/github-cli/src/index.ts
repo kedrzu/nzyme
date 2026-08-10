@@ -51,7 +51,13 @@ export type { PushSubmoduleUpdatesParams, PushSubmoduleUpdatesResult } from './u
 export * from './utils/pushWithUpstream.js';
 export * from './utils/selectPrToOpen.js';
 export type { OpenPrInBrowserParams, PrInfo, SelectPrToOpenParams } from './utils/selectPrToOpen.js';
+export * from './utils/stacksApi.js';
+export type { MergeAsyncStatus, PullRequestStack, StackPullRequest } from './utils/stacksApi.js';
 export * from './utils/switchDetachedSubmoduleToBaseBranch.js';
 export type { SwitchDetachedSubmoduleToBaseBranchParams } from './utils/switchDetachedSubmoduleToBaseBranch.js';
+export * from './utils/cascadeRebaseStack.js';
+export type { CascadeRebaseStackParams } from './utils/cascadeRebaseStack.js';
 export * from './utils/syncAllRepos.js';
 export type { SyncAllReposParams, SyncAllReposResult, SyncedSubmoduleInfo } from './utils/syncAllRepos.js';
+export * from './utils/syncStackNodesFromRemote.js';
+export type { SyncStackNodesFromRemoteParams } from './utils/syncStackNodesFromRemote.js';

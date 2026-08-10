@@ -6,7 +6,7 @@ import type { GithubConfig } from '../GithubConfig.js';
 import { checkCurrentPrMerged } from './checkCurrentPrMerged.js';
 import { checkUnpushedCommits } from './checkUnpushedCommits.js';
 import type { GithubClient } from './createGithubClient.js';
-import { findMatchingPr } from './findMatchingPr.js';
+import { findMatchingPr, findTaskPrs } from './findMatchingPr.js';
 import { getGitStatusInfo } from './getGitStatusInfo.js';
 import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
@@ -107,12 +107,16 @@ async function displayPrSummary(params: {
     logger.info('');
     logger.info(chalk.bold('🔗 Pull requests'));
 
-    // Main repo PR
-    const mainPr = await findMatchingPr(githubClient, githubConfig, issueId);
-    if (mainPr) {
-        logger.info(`   main: ${chalk.blueBright(chalk.underline(mainPr.html_url))}`);
-    } else {
+    // Main repo PRs — a stacked task has one per node, listed bottom to top.
+    const mainPrs = await findTaskPrs(githubClient, githubConfig, issueId);
+    if (mainPrs.length === 0) {
         logger.info(`   main: no PR found`);
+    } else if (mainPrs.length === 1) {
+        logger.info(`   main: ${chalk.blueBright(chalk.underline(mainPrs[0]!.html_url))}`);
+    } else {
+        mainPrs.forEach((pr, index) => {
+            logger.info(`   main (${index + 1}/${mainPrs.length}): ${chalk.blueBright(chalk.underline(pr.html_url))}`);
+        });
     }
 
     // Submodule PRs

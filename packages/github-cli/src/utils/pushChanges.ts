@@ -3,7 +3,8 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
 import { createGithubClient } from './createGithubClient.js';
-import { findMatchingPr } from './findMatchingPr.js';
+import { findMatchingPr, resolveNodePr } from './findMatchingPr.js';
+import { getCurrentBranch } from './getCurrentBranch.js';
 import { handlePushPreparation } from './handlePushPreparation.js';
 import { syncAllRepos } from './syncAllRepos.js';
 
@@ -69,8 +70,10 @@ export async function pushChanges(params: PushChangesParams): Promise<PushChange
     // Create GitHub client
     const githubClient = createGithubClient(githubConfig);
 
-    // Check if PR exists and is in review
-    const pr = await findMatchingPr(githubClient, githubConfig, issueId);
+    // Check if PR exists and is in review. Resolved against the current branch so that on a stacked
+    // task this is the node being pushed, not some other node of the same task.
+    const currentBranch = await getCurrentBranch();
+    const pr = await resolveNodePr(githubClient, githubConfig, issueId, currentBranch);
     const prInReview = pr ? !pr.draft : false;
 
     // Handle preparation (submodules and main repo)

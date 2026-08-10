@@ -2,10 +2,13 @@ import { describe, expect, test } from 'bun:test';
 
 import {
     areSameBranchVersions,
+    buildNodeBranchName,
     determineNextVersion,
     extractBranchVersion,
+    extractNodeIndex,
     getBaseBranchName,
     incrementBranchVersion,
+    stripNodeSuffix,
 } from './branchVersionHelpers.js';
 
 describe('extractBranchVersion', () => {
@@ -41,6 +44,51 @@ describe('getBaseBranchName', () => {
 
     test('preserves branch name with similar pattern but not at end', () => {
         expect(getBaseBranchName('sig-123-v2-feature')).toBe('sig-123-v2-feature');
+    });
+});
+
+describe('stack node suffix', () => {
+    test('extractNodeIndex returns 1 for an unstacked branch', () => {
+        expect(extractNodeIndex('sig-123-feature')).toBe(1);
+        expect(extractNodeIndex('sig-123-feature--v2')).toBe(1);
+    });
+
+    test('extractNodeIndex reads the position from the suffix', () => {
+        expect(extractNodeIndex('sig-123-feature--s2')).toBe(2);
+        expect(extractNodeIndex('sig-123-feature--v2--s10')).toBe(10);
+    });
+
+    test('buildNodeBranchName leaves the bottom node unsuffixed', () => {
+        expect(buildNodeBranchName('sig-123-feature', 1)).toBe('sig-123-feature');
+        expect(buildNodeBranchName('sig-123-feature--s3', 1)).toBe('sig-123-feature');
+    });
+
+    test('buildNodeBranchName appends the position and keeps the version', () => {
+        expect(buildNodeBranchName('sig-123-feature', 2)).toBe('sig-123-feature--s2');
+        expect(buildNodeBranchName('sig-123-feature--v2', 3)).toBe('sig-123-feature--v2--s3');
+    });
+
+    test('buildNodeBranchName replaces an existing node suffix instead of nesting it', () => {
+        expect(buildNodeBranchName('sig-123-feature--s2', 3)).toBe('sig-123-feature--s3');
+    });
+
+    test('stripNodeSuffix keeps the version suffix', () => {
+        expect(stripNodeSuffix('sig-123-feature--v2--s3')).toBe('sig-123-feature--v2');
+    });
+
+    test('getBaseBranchName strips both suffixes so every node of a task groups together', () => {
+        expect(getBaseBranchName('sig-123-feature--s2')).toBe('sig-123-feature');
+        expect(getBaseBranchName('sig-123-feature--v2--s3')).toBe('sig-123-feature');
+    });
+
+    test('extractBranchVersion reads through the node suffix', () => {
+        expect(extractBranchVersion('sig-123-feature--v2--s3')).toBe(2);
+        expect(extractBranchVersion('sig-123-feature--s3')).toBe(1);
+    });
+
+    test('a branch containing --s digits mid-name is not treated as a node', () => {
+        expect(extractNodeIndex('sig-123--s2-feature')).toBe(1);
+        expect(getBaseBranchName('sig-123--s2-feature')).toBe('sig-123--s2-feature');
     });
 });
 

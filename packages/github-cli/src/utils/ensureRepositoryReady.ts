@@ -11,7 +11,7 @@ import { assertNoConflicts } from './assertNoConflicts.js';
 import { checkUnpushedCommits } from './checkUnpushedCommits.js';
 import { createDraftPr } from './createDraftPr.js';
 import type { GithubClient } from './createGithubClient.js';
-import { findMatchingPr } from './findMatchingPr.js';
+import { findPrForBranch } from './findMatchingPr.js';
 import { getGitStatusInfo } from './getGitStatusInfo.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
 
@@ -202,20 +202,21 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
     }
 
     // Step 5: Ensure PR exists (or create it)
-    const existingPr = await findMatchingPr(githubClient, githubConfig, issueId);
+    const currentStatus = await git.status();
+    const currentBranch = currentStatus.current;
+    if (!currentBranch) {
+        throw new UsageError('Could not determine current branch name');
+    }
+
+    // Matched on the branch rather than on the issue ID: a stacked task has one PR per node, all
+    // carrying the same issue ID, so only the branch identifies the PR this repository needs.
+    const existingPr = await findPrForBranch(githubClient, githubConfig, issueId, currentBranch);
 
     if (existingPr) {
         logger.info(
             `   ${displayName}: PR exists - ${chalk.blue(existingPr.title)} ${chalk.gray(`#${existingPr.number}`)}`,
         );
         return;
-    }
-
-    // No PR exists, create one
-    const currentStatus = await git.status();
-    const currentBranch = currentStatus.current;
-    if (!currentBranch) {
-        throw new UsageError('Could not determine current branch name');
     }
 
     let prTitle = generatePrTitle(issueId);

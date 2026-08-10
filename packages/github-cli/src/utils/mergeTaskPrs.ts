@@ -6,7 +6,7 @@ import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
-import { cascadeRebaseStack } from './cascadeRebaseStack.js';
+import { cascadeStack } from './cascadeStack.js';
 import { convertPrToReady } from './convertPrToReady.js';
 import type { GithubClient } from './createGithubClient.js';
 import { countUnresolvedReviewThreads } from './countUnresolvedReviewThreads.js';
@@ -233,10 +233,10 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
     });
 
     // === Restack: nodes above the bottom must carry the refreshed gitlinks ===
-    // Only needed when the refresh actually added a commit to the bottom node; cascadeRebaseStack
+    // Only needed when the refresh actually added a commit to the bottom node; cascadeStack
     // skips nodes that already build on their parent's tip, so this is cheap when it did not.
     if (stackNodes) {
-        await cascadeRebaseStack({ branches: stackNodes.map(node => node.head.ref), logger });
+        await cascadeStack({ branches: stackNodes.map(node => node.head.ref), logger });
     }
 
     // === Merge the main PR(s) (re-fetch for fresh draft/SHA state) ===

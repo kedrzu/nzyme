@@ -14,8 +14,8 @@ import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
 import { mergeTaskPrs } from '@nzyme/github-cli/utils/mergeTaskPrs.js';
 import { pushChanges } from '@nzyme/github-cli/utils/pushChanges.js';
 import { openPrInBrowser } from '@nzyme/github-cli/utils/selectPrToOpen.js';
+import { logStackConflictGuidance, refreshStack } from '@nzyme/github-cli/utils/refreshStack.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
-import { syncStackNodesFromRemote } from '@nzyme/github-cli/utils/syncStackNodesFromRemote.js';
 
 import { createLinearClient } from '../utils/createLinearClient.js';
 import { createLinearIssue } from '../utils/createLinearIssue.js';
@@ -583,20 +583,27 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                 }
 
                 const baseBranch = baseBranches[0]!;
-                this.logger.info(`🔄 Refreshing task ${chalk.bold(taskId)} with base branch ${chalk.cyan(baseBranch)}`);
 
-                // A stacked task's branches may have been rewritten on the server — by a lower node
-                // merging, or by a "Rebase stack". Adopt those rewrites before the ordinary sync,
-                // which would otherwise replay the superseded commits back on top of them.
                 const githubConfig = await getGithubConfig(options);
                 const taskPrs = await findTaskPrs(createGithubClient(githubConfig), githubConfig, taskId);
 
+                // A stacked task is refreshed as a whole: the trunk goes into the bottom node and
+                // travels up from there. Refreshing only the node you happen to stand on would both
+                // miss the conflict (the trunk meets the stack at the bottom) and, on an upper node,
+                // pull the trunk into a diff that is measured against the node below it.
                 if (taskPrs.length > 1) {
-                    await syncStackNodesFromRemote({
+                    await refreshStack({
                         branches: taskPrs.map(pr => pr.head.ref),
+                        trunk: baseBranch,
                         logger: this.logger,
                     });
+
+                    this.logger.info('');
+                    this.logger.info(`🎉 Refreshed the whole stack of ${chalk.bold(taskPrs.length.toString())} nodes`);
+                    return;
                 }
+
+                this.logger.info(`🔄 Refreshing task ${chalk.bold(taskId)} with base branch ${chalk.cyan(baseBranch)}`);
 
                 // Sync all repos: auto-commit, fetch, rebase/pull, ff base, merge base, push
                 const syncResult = await syncAllRepos({
@@ -615,6 +622,13 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                     this.logger.info(`✅ Task branch is already up to date with ${chalk.cyan(baseBranch)}`);
                 }
             } catch (error) {
+                if (error instanceof GitMergeConflictError && error.stackContext) {
+                    // The generic conflict report already listed the files; this adds the part only
+                    // the stack knows — which node owns the fix and what still has to follow it.
+                    logStackConflictGuidance(error, this.logger);
+                    throw error;
+                }
+
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to refresh task: ${errorMessage}`);
                 throw error;
@@ -683,6 +697,14 @@ function defineTaskMergeCommand(options: LinearCommandsOptions) {
                     autoYes: this.yes,
                 });
             } catch (error: unknown) {
+                if (error instanceof GitMergeConflictError && error.stackContext) {
+                    // The restack that precedes a stack merge conflicts in the same way a refresh
+                    // does, and needs the same answer — so say the same thing rather than a bare
+                    // "failed to merge".
+                    logStackConflictGuidance(error, this.logger);
+                    throw error;
+                }
+
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to merge task: ${errorMessage}`);
                 throw error;

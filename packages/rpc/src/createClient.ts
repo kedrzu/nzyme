@@ -73,7 +73,10 @@ export function createClient<O = void>(clientOptions: CreateClientOptions<O>): R
             if (response.headers.get('content-type')?.includes('application/json')) {
                 const data = (await response.json()) as RpcErrorData;
 
-                console.error({ input, data });
+                // No console output here: `input` is the request payload, which on a domain client
+                // carries whatever the endpoint takes, and a raw `console.*` bypasses the caller's
+                // logger and any redaction wrapped around it. The thrown `RpcError` already carries
+                // `data`, so the caller decides what to record and through which sink.
                 throw new RpcError(response, data);
             }
 

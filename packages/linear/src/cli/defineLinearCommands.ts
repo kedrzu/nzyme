@@ -13,6 +13,7 @@ import { findMatchingPr, findTaskPrs, resolveNodePr } from '@nzyme/github-cli/ut
 import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
 import { mergeTaskPrs } from '@nzyme/github-cli/utils/mergeTaskPrs.js';
 import { pushChanges } from '@nzyme/github-cli/utils/pushChanges.js';
+import { returnToBranch } from '@nzyme/github-cli/utils/returnToBranch.js';
 import { openPrInBrowser } from '@nzyme/github-cli/utils/selectPrToOpen.js';
 import { logStackConflictGuidance, refreshStack } from '@nzyme/github-cli/utils/refreshStack.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
@@ -648,15 +649,14 @@ function defineTaskMergeCommand(options: LinearCommandsOptions) {
             details:
                 'Squash-merges the current task via the GitHub API. Submodule PRs are merged first, then the ' +
                 'main repository branch is refreshed so its submodule references point at the merged commits, ' +
-                'and finally the main repository PR is squash-merged. It aborts if any submodule has ' +
-                'uncommitted changes. Before merging it summarises every PR with its URL and unresolved ' +
-                'review-comment count. When some PR still has unresolved comments it asks for confirmation ' +
-                'and prompts to convert any draft PR to ready; when everything is resolved it merges ' +
-                'automatically, auto-converting drafts without prompting. Required checks are always waited ' +
-                'for before each merge. With --yes the confirmation and draft prompts are skipped (drafts are ' +
-                'converted automatically). When the task is a stack, the whole chain is merged in one atomic ' +
-                'operation — one squash commit per node, in stack order — after the nodes have been restacked ' +
-                'onto the refreshed submodule references.',
+                'and finally the main repository PR is squash-merged. It aborts if the main repository or any ' +
+                'submodule has uncommitted changes. Before merging it summarises every PR with its URL, draft ' +
+                'state and unresolved review-comment count, and asks for confirmation — every run, not only ' +
+                'when something is unresolved. Confirming also converts any draft PR to ready. Required checks ' +
+                'are always waited for before each merge. With --yes the confirmation is skipped. When the task ' +
+                'is a stack, the whole chain is merged in one atomic operation — one squash commit per node, in ' +
+                'stack order — after the nodes have been restacked onto the refreshed submodule references; it ' +
+                'runs from any node, checking out the bottom one itself and returning you afterwards.',
             examples: [
                 ['Merge current task with confirmation', 'task merge'],
                 ['Merge current task without prompts', 'task merge --yes'],
@@ -689,15 +689,21 @@ function defineTaskMergeCommand(options: LinearCommandsOptions) {
                 // Create GitHub client
                 const githubClient = createGithubClient(githubConfig);
 
-                // Squash-merge submodules first, refresh main, then squash-merge main
-                await mergeTaskPrs({
-                    githubClient,
-                    githubConfig,
-                    issueId: taskId,
-                    baseBranch,
-                    logger: this.logger,
-                    autoYes: this.yes,
-                });
+                // Squash-merge submodules first, refresh main, then squash-merge main. A stacked task
+                // is merged from its bottom node, which `mergeTaskPrs` checks out itself — so put the
+                // user back on the branch they invoked this from, whether it succeeded or not.
+                try {
+                    await mergeTaskPrs({
+                        githubClient,
+                        githubConfig,
+                        issueId: taskId,
+                        baseBranch,
+                        logger: this.logger,
+                        autoYes: this.yes,
+                    });
+                } finally {
+                    await returnToBranch(currentBranch, this.logger);
+                }
             } catch (error: unknown) {
                 if (error instanceof GitMergeConflictError && error.stackContext) {
                     // The restack that precedes a stack merge conflicts in the same way a refresh

@@ -49,6 +49,7 @@ export type { PushChangesParams, PushChangesResult } from './utils/pushChanges.j
 export * from './utils/pushSubmoduleUpdates.js';
 export type { PushSubmoduleUpdatesParams, PushSubmoduleUpdatesResult } from './utils/pushSubmoduleUpdates.js';
 export * from './utils/pushWithUpstream.js';
+export * from './utils/returnToBranch.js';
 export * from './utils/selectPrToOpen.js';
 export type { OpenPrInBrowserParams, PrInfo, SelectPrToOpenParams } from './utils/selectPrToOpen.js';
 export * from './utils/stacksApi.js';

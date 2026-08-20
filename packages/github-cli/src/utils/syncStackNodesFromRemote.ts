@@ -3,6 +3,9 @@ import { simpleGit } from 'simple-git';
 
 import type { Logger } from '@nzyme/logging/Logger.js';
 
+import { countCommits } from './countCommits.js';
+import { ensureLocalBranch } from './ensureLocalBranch.js';
+
 /**
  * Parameters for {@link syncStackNodesFromRemote}.
  */
@@ -27,8 +30,9 @@ export interface SyncStackNodesFromRemoteParams {
  * remote and pushes — would replay those dead commits straight back on top.
  *
  * A node with no unpushed work of its own is simply reset to the remote. A node that does have local
- * commits is left alone and reported, because discarding unpushed work is never the right thing to
- * do quietly.
+ * commits — or, for the checked-out node, an uncommitted working tree — is left alone and reported,
+ * because discarding unpushed work is never the right thing to do quietly. Callers are expected to
+ * auto-commit first; the working-tree check is the last line of defence in front of a `reset --hard`.
  */
 export async function syncStackNodesFromRemote(params: SyncStackNodesFromRemoteParams): Promise<void> {
     const { branches, logger } = params;
@@ -43,6 +47,10 @@ export async function syncStackNodesFromRemote(params: SyncStackNodesFromRemoteP
 
     for (const branch of branches) {
         const remoteRef = `origin/${branch}`;
+
+        // A node nobody checked out here has no local branch to compare against, which is the
+        // ordinary state for every node above the checked-out one.
+        await ensureLocalBranch(git, branch);
 
         const [localAhead, remoteAhead] = await Promise.all([
             countCommits(git, `${remoteRef}..${branch}`),
@@ -64,6 +72,17 @@ export async function syncStackNodesFromRemote(params: SyncStackNodesFromRemoteP
         }
 
         if (branch === currentBranch) {
+            const dirtyFiles = await countDirtyFiles(git);
+
+            if (dirtyFiles > 0) {
+                logger.warn(
+                    `   ⚠️  ${chalk.cyan(branch)} has ${chalk.yellow(dirtyFiles.toString())} uncommitted change${
+                        dirtyFiles === 1 ? '' : 's'
+                    } and the remote moved — leaving it alone. ` + `Commit them before adopting the remote's history.`,
+                );
+                continue;
+            }
+
             await git.raw(['reset', '--hard', remoteRef]);
         } else {
             // No checkout needed to move a branch that is not the one in the working tree.
@@ -79,13 +98,14 @@ export async function syncStackNodesFromRemote(params: SyncStackNodesFromRemoteP
 }
 
 /**
- * Count commits in a revision range, treating a missing ref as zero.
+ * Count the tracked files a `reset --hard` would overwrite.
+ *
+ * Scoped to exactly what the reset destroys: untracked files survive it, and a submodule whose own
+ * working tree is dirty is not the outer repository's uncommitted work — counting either would
+ * refuse the reset over content that was never at risk.
  */
-async function countCommits(git: ReturnType<typeof simpleGit>, range: string): Promise<number> {
-    try {
-        const result = await git.raw(['rev-list', '--count', range]);
-        return parseInt(result.trim(), 10);
-    } catch {
-        return 0;
-    }
+async function countDirtyFiles(git: ReturnType<typeof simpleGit>): Promise<number> {
+    const status = await git.raw(['status', '--porcelain', '--untracked-files=no', '--ignore-submodules=all']);
+
+    return status.split('\n').filter(line => line.trim().length > 0).length;
 }

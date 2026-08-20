@@ -4,6 +4,8 @@ import { simpleGit } from 'simple-git';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import { assertNoConflicts } from './assertNoConflicts.js';
+import { countCommits } from './countCommits.js';
+import { ensureLocalBranch } from './ensureLocalBranch.js';
 import { GitMergeConflictError } from './GitMergeConflictError.js';
 import { handleMergeConflict } from './handleMergeConflict.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
@@ -62,7 +64,15 @@ export async function cascadeStack(params: CascadeStackParams): Promise<void> {
             const parentBranch = branches[index - 1]!;
             const nodeBranch = branches[index]!;
 
-            const behind = await countCommitsMissing(git, nodeBranch, parentBranch);
+            // A node above the one the worktree actually checked out has no local branch yet — its
+            // branch was created remotely by `stackTask` and never materialised here. Ensuring both
+            // sides exist locally before counting means the count below reflects their real history
+            // instead of erroring on an absent ref, and the DWIM checkout further down always has a
+            // remote-tracking branch to create from.
+            await ensureLocalBranch(git, parentBranch);
+            await ensureLocalBranch(git, nodeBranch);
+
+            const behind = await countCommits(git, `${nodeBranch}..${parentBranch}`);
             if (behind === 0) {
                 logger.info(`   ${chalk.cyan(nodeBranch)}: already up to date with ${chalk.cyan(parentBranch)}`);
                 continue;
@@ -124,22 +134,5 @@ async function rethrowWithStackPosition(
             });
         }
         throw error;
-    }
-}
-
-/**
- * Count commits present in `ancestor` but missing from `branch` — zero means the branch already
- * builds on the current tip of its parent.
- */
-async function countCommitsMissing(
-    git: ReturnType<typeof simpleGit>,
-    branch: string,
-    ancestor: string,
-): Promise<number> {
-    try {
-        const result = await git.raw(['rev-list', '--count', `${branch}..${ancestor}`]);
-        return parseInt(result.trim(), 10);
-    } catch {
-        return 0;
     }
 }

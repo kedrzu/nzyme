@@ -3,7 +3,7 @@
  * the bottom. The bottom node carries no suffix, so a task that never gets stacked keeps exactly
  * the branch name it has always had.
  */
-const NODE_SUFFIX_PATTERN = /--s\d+$/;
+const NODE_SUFFIX_PATTERN = /--s(\d+)$/;
 
 /**
  * Suffix marking a re-opened task's branch version: `--v2` is the second attempt at the task.
@@ -25,7 +25,7 @@ export function stripNodeSuffix(branchName: string): string {
  * @__NO_SIDE_EFFECTS__
  */
 export function extractNodeIndex(branchName: string): number {
-    const nodeMatch = branchName.match(/--s(\d+)$/);
+    const nodeMatch = branchName.match(NODE_SUFFIX_PATTERN);
     if (!nodeMatch) {
         return 1;
     }

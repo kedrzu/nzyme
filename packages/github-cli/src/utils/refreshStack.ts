@@ -53,17 +53,20 @@ export async function refreshStack(params: RefreshStackParams): Promise<void> {
         `🧱 Refreshing a stack of ${chalk.bold(branches.length.toString())} nodes against ${chalk.cyan(trunk)}`,
     );
 
+    // Commit before anything touches history, not after. Two steps below are hostile to an
+    // uncommitted working tree: the remote sync hard-resets the checked-out node when the server
+    // rewrote it, and dropping to the bottom node would carry the changes onto a node they were not
+    // written for. `syncAllRepos` auto-commits too, but only once both have already happened — far
+    // too late. Committing here lands the work on the node it belongs to and leaves that later
+    // auto-commit with nothing to do.
+    await autoCommitChanges({ logger, git, repoDisplayName: startingBranch ?? 'main repository' });
+
     // The stack's branches may have been rewritten on the server — by a lower node merging, or by a
     // "Rebase stack". Adopt those rewrites first, or the sync below replays superseded commits.
     await syncStackNodesFromRemote({ branches, logger });
 
     try {
         if (startingBranch !== bottomBranch) {
-            // Commit before switching, not after. `syncAllRepos` would auto-commit too, but it runs
-            // on the bottom node — so anything still in the working tree would land on a node that
-            // is not the one it was written for.
-            await autoCommitChanges({ logger, git, repoDisplayName: startingBranch ?? 'main repository' });
-
             logger.info(`↩️  Dropping to the bottom node ${chalk.cyan(bottomBranch)} to take in ${chalk.cyan(trunk)}`);
             await git.checkout(bottomBranch);
         }

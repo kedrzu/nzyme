@@ -4,6 +4,8 @@ import { simpleGit } from 'simple-git';
 
 import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging/Logger.js';
+import { waitFor } from '@nzyme/utils/waitFor.js';
+import { withTimeout } from '@nzyme/utils/withTimeout.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import { cascadeStack } from './cascadeStack.js';
@@ -93,6 +95,9 @@ interface SubmoduleTarget {
  *
  * Resume-safe: a submodule whose PR was already merged in a prior (partial) run is still refreshed,
  * and a task whose main PR is already merged exits cleanly.
+ *
+ * A stacked task must be merged from its bottom node: that is the only node this refreshes locally,
+ * and the merge is gated on the commit the refresh produces.
  */
 export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
     const {
@@ -137,6 +142,7 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
     }
 
     const mainPr = stackNodes ? stackNodes[stackNodes.length - 1]! : mainPrs[0]!;
+    const bottomNode = stackNodes?.[0];
 
     // === Guard: every submodule must be clean ===
     // The merge runs entirely via the GitHub API against already-pushed commits, so any uncommitted
@@ -145,6 +151,22 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
 
     // === Discover task submodules (open or already-merged PRs) ===
     const submoduleTargets = await discoverSubmoduleTargets(githubClient, githubConfig, issueId, logger);
+
+    // === Guard: a stacked merge runs from its bottom node ===
+    // Everything the merge does locally happens on the checked-out branch: the refresh below merges
+    // the base branch into it (and re-points submodule gitlinks), and the commit that produces is
+    // what the bottom node's check gate waits for. Standing anywhere else would land the base merge
+    // inside another node's own diff and then wait out the timeout for a commit the bottom node
+    // never gets — so this holds whether or not the task touches submodules.
+    if (bottomNode && currentBranch !== bottomNode.head.ref) {
+        const submoduleNote =
+            submoduleTargets.length > 0 ? ' and re-points its submodule references at the merged commits' : '';
+        throw new UsageError(
+            `Merging a stack must run from its bottom node (${chalk.cyan(bottomNode.head.ref)}): that is the ` +
+                `node the merge refreshes from ${chalk.cyan(baseBranch)}${submoduleNote}, and whose checks are ` +
+                `gated on the commit that refresh produces. Run ${chalk.cyan(`task ${issueId} --node 1`)} first.`,
+        );
+    }
 
     // === Guard: a stacked task keeps its submodule work in the bottom node ===
     // Everything above the bottom is squashed against a base that already carries the merged
@@ -155,15 +177,6 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
             submodulePaths: submoduleTargets.map(target => target.path),
             logger,
         });
-
-        if (currentBranch !== stackNodes[0]!.head.ref) {
-            throw new UsageError(
-                `Merging a stack that touches submodules must run from its bottom node ` +
-                    `(${chalk.cyan(stackNodes[0]!.head.ref)}), because that is the node whose submodule ` +
-                    `references get re-pointed at the merged commits. Run ` +
-                    `${chalk.cyan(`task ${issueId} --node 1`)} first.`,
-            );
-        }
     }
 
     if (stackNodes) {
@@ -298,6 +311,7 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
             nodeCount: stackNodes.length,
             logger,
             intervalMs: checkPollIntervalMs,
+            timeoutMs: checkPollTimeoutMs,
         });
         logger.info(`   ${chalk.green('✓')} Squash-merged ${chalk.bold(stackNodes.length.toString())} stacked PRs`);
     } else {
@@ -411,37 +425,83 @@ interface WaitForStackMergeParams {
     uuid: string;
     nodeCount: number;
     logger: Logger;
+
+    /**
+     * Delay between polls, in milliseconds.
+     * @default 5000
+     */
     intervalMs?: number;
+
+    /**
+     * Maximum time to wait before giving up, in milliseconds.
+     * @default 1200000
+     */
+    timeoutMs?: number;
 }
+
+const DEFAULT_STACK_MERGE_INTERVAL_MS = 5_000;
+const DEFAULT_STACK_MERGE_TIMEOUT_MS = 1_200_000;
 
 /**
  * Poll an asynchronous stack merge until GitHub reports it landed, was queued, or failed.
+ *
+ * Bounded by a deadline: `pending` is a legitimate transient state, but it is also what a stack
+ * blocked on a review that nobody leaves — or a status string this client does not model — reports
+ * forever, and the status payload is untyped so neither is distinguishable at runtime. An
+ * unattended `task merge --yes` must fail with a diagnosis rather than poll until someone kills it.
  */
 async function waitForStackMerge(params: WaitForStackMergeParams): Promise<void> {
-    const { githubClient, githubConfig, prNumber, uuid, nodeCount, logger, intervalMs = 5000 } = params;
+    const {
+        githubClient,
+        githubConfig,
+        prNumber,
+        uuid,
+        nodeCount,
+        logger,
+        intervalMs = DEFAULT_STACK_MERGE_INTERVAL_MS,
+        timeoutMs = DEFAULT_STACK_MERGE_TIMEOUT_MS,
+    } = params;
 
-    for (;;) {
-        const { status, message } = await getMergeAsyncStatus(githubClient, githubConfig, prNumber, uuid);
+    // The last status GitHub reported, so the deadline can name what it was stuck on.
+    let lastStatus = 'pending';
 
-        if (status === 'merged') {
-            return;
-        }
+    await withTimeout({
+        timeoutMs,
+        // Bounding the whole loop rather than checking elapsed time between iterations also covers a
+        // GitHub request that stalls: an unresponsive API call can no longer hang the wait forever.
+        operation: async signal => {
+            while (!signal.aborted) {
+                const { status, message } = await getMergeAsyncStatus(githubClient, githubConfig, prNumber, uuid);
 
-        if (status === 'enqueued') {
-            logger.info(`   ${chalk.green('✓')} Stack enqueued in the merge queue — it will land there.`);
-            return;
-        }
+                if (status === 'merged') {
+                    return;
+                }
 
-        if (status === 'failed') {
+                if (status === 'enqueued') {
+                    logger.info(`   ${chalk.green('✓')} Stack enqueued in the merge queue — it will land there.`);
+                    return;
+                }
+
+                if (status === 'failed') {
+                    throw new UsageError(
+                        `GitHub could not merge the stack of ${nodeCount} PRs: ${message ?? 'no reason given'}. ` +
+                            'Nothing was merged — the stack merge is atomic.',
+                    );
+                }
+
+                lastStatus = status;
+                logger.info(`   Waiting for GitHub to land the stack (${status})...`);
+                await waitFor(intervalMs);
+            }
+        },
+        onTimeout: () => {
             throw new UsageError(
-                `GitHub could not merge the stack of ${nodeCount} PRs: ${message ?? 'no reason given'}. ` +
-                    'Nothing was merged — the stack merge is atomic.',
+                `Timed out after ${Math.round(timeoutMs / 1000)}s waiting for GitHub to land the stack of ` +
+                    `${nodeCount} PRs via PR #${prNumber} (last reported status: ${lastStatus}). It may be ` +
+                    'waiting on a required review or a merge queue that has not drained — nothing was merged.',
             );
-        }
-
-        logger.info(`   Waiting for GitHub to land the stack...`);
-        await new Promise(resolve => setTimeout(resolve, intervalMs));
-    }
+        },
+    });
 }
 
 /**

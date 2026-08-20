@@ -85,6 +85,27 @@ describe('cascadeStack', () => {
         }
     });
 
+    test('carries a new bottom commit to a node whose branch was never checked out locally', async () => {
+        const git = simpleGit(repo);
+
+        // The common `merge/SKILL.md` flow: the worktree only ever checked out the bottom node, so
+        // `top`'s branch exists on the remote (`stackTask` creates it there) but has no local
+        // counterpart here — exactly the case that used to read as "already up to date" and skip.
+        await git.checkout('bottom');
+        await git.raw(['branch', '-D', 'top']);
+
+        await Bun.write(join(repo, 'new.txt'), 'added later\n');
+        await git.add('.');
+        await git.commit('later work on bottom');
+        await git.push();
+
+        await cascadeStack({ branches: ['bottom', 'mid', 'top'], logger });
+
+        // `top` picked up the change even though it had to be created locally from `origin/top` first.
+        const missing = await git.raw(['rev-list', '--count', 'top..bottom']);
+        expect(missing.trim()).toBe('0');
+    });
+
     test('leaves the caller on the branch they started from', async () => {
         const git = simpleGit(repo);
 

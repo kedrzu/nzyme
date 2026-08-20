@@ -34,30 +34,42 @@ export interface ConvertAllPrsToReadyParams {
     logger: Logger;
 
     /**
-     * The main repository PR number.
+     * Main-repository pull requests to take out of draft, bottom to top. An ordinary task has one;
+     * a stacked task has one per node, and all of them leave draft together — the human reviews the
+     * chain, not whichever node the CLI happened to be standing on.
      */
-    mainPrNumber: number;
-
-    /**
-     * Whether the main PR is currently a draft.
-     */
-    mainPrIsDraft: boolean | undefined;
-
-    /**
-     * URL of the main PR.
-     */
-    mainPrUrl: string;
+    mainPrs: ReadyTargetPr[];
 }
 
 /**
- * Convert all PRs (main and submodules) to ready for review.
+ * A pull request this function may take out of draft.
+ */
+export interface ReadyTargetPr {
+    /**
+     * Pull request number.
+     */
+    number: number;
+
+    /**
+     * Whether it is currently a draft. Absent is treated as "not a draft", matching the API type.
+     */
+    draft?: boolean;
+
+    /**
+     * Pull request URL, for the log.
+     */
+    html_url: string;
+}
+
+/**
+ * Convert all of a task's PRs — every main-repository node and every submodule — to ready for review.
  * This function handles:
  * - Converting submodule PRs from draft to ready
- * - Converting main PR from draft to ready (if needed)
+ * - Converting each main-repository PR from draft to ready (if needed)
  * - Logging status for all PRs
  */
 export async function convertAllPrsToReady(params: ConvertAllPrsToReadyParams): Promise<void> {
-    const { githubClient, githubConfig, issueId, logger, mainPrNumber, mainPrIsDraft, mainPrUrl } = params;
+    const { githubClient, githubConfig, issueId, logger, mainPrs } = params;
 
     // Convert submodule PRs to ready
     const submodules = await getSubmoduleInfo();
@@ -107,15 +119,20 @@ export async function convertAllPrsToReady(params: ConvertAllPrsToReadyParams): 
         }
     }
 
-    // Convert main PR from draft to ready
+    // Convert every main-repository PR from draft to ready, bottom to top
     logger.info('');
-    if (!mainPrIsDraft) {
-        logger.info(`🎉 PR ${chalk.gray(`#${mainPrNumber}`)} is already ready for review!`);
-        logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(mainPrUrl))}`);
-    } else {
-        logger.info('🚀 Converting main PR from draft to ready for review...');
-        await convertPrToReady(githubClient, githubConfig, mainPrNumber);
-        logger.info(`🎉 Successfully converted PR ${chalk.gray(`#${mainPrNumber}`)} to ready for review!`);
-        logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(mainPrUrl))}`);
+    if (mainPrs.length > 1) {
+        logger.info(`🧱 ${chalk.bold(mainPrs.length.toString())} stacked PRs to mark ready (bottom → top)`);
+    }
+
+    for (const mainPr of mainPrs) {
+        if (!mainPr.draft) {
+            logger.info(`🎉 PR ${chalk.gray(`#${mainPr.number}`)} is already ready for review!`);
+        } else {
+            logger.info(`🚀 Converting PR ${chalk.gray(`#${mainPr.number}`)} from draft to ready for review...`);
+            await convertPrToReady(githubClient, githubConfig, mainPr.number);
+            logger.info(`🎉 Successfully converted PR ${chalk.gray(`#${mainPr.number}`)} to ready for review!`);
+        }
+        logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(mainPr.html_url))}`);
     }
 }

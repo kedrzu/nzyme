@@ -524,25 +524,27 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                     defaultCommitMessage: 'Ready for review',
                 });
 
-                // Find PR for converting to ready (re-fetch if push didn't find one)
+                // Every node leaves draft, not just the one we are standing on: the human reviews the
+                // whole chain, and a node left in draft reads as unfinished work. `findTaskPrs`
+                // already returns them bottom to top, and an ordinary task simply has one.
+                const taskPrs = await findTaskPrs(githubClient, githubConfig, taskId);
                 const readyPr = pr ?? (await resolveNodePr(githubClient, githubConfig, taskId, currentBranch));
+                const mainPrs = taskPrs.length > 0 ? taskPrs : readyPr ? [readyPr] : [];
 
-                if (!readyPr) {
+                if (mainPrs.length === 0) {
                     throw new UsageError(
                         `No GitHub PR found for task ${chalk.bold(taskId)}. ` +
                             `Make sure you have created a PR for this task first using "task ${chalk.bold(taskId)}".`,
                     );
                 }
 
-                // Convert all PRs (main and submodules) to ready
+                // Convert all PRs (every main-repository node and the submodules) to ready
                 await convertAllPrsToReady({
                     githubClient,
                     githubConfig,
                     issueId: taskId,
                     logger: this.logger,
-                    mainPrNumber: readyPr.number,
-                    mainPrIsDraft: readyPr.draft,
-                    mainPrUrl: readyPr.html_url,
+                    mainPrs,
                 });
             } catch (error: unknown) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';

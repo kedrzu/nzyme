@@ -16,6 +16,26 @@ import { getGitStatusInfo } from './getGitStatusInfo.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
 
 /**
+ * Count the commits `branch` carries beyond `baseBranch`.
+ *
+ * Returns `null` when the base cannot be resolved locally — the remote-tracking ref may simply not
+ * be fetched — so a caller can tell "nothing to do" apart from "could not tell", and only the first
+ * of those is grounds for skipping work.
+ */
+async function countCommitsAhead(git: SimpleGit, baseBranch: string, branch: string): Promise<number | null> {
+    for (const base of [`origin/${baseBranch}`, baseBranch]) {
+        try {
+            const count = await git.raw(['rev-list', '--count', `${base}..${branch}`]);
+            return parseInt(count.trim(), 10);
+        } catch {
+            // Unresolvable ref — try the next candidate.
+        }
+    }
+
+    return null;
+}
+
+/**
  * Parameters for ensuring a repository is ready.
  */
 export interface EnsureRepositoryReadyParams {
@@ -216,6 +236,16 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
         logger.info(
             `   ${displayName}: PR exists - ${chalk.blue(existingPr.title)} ${chalk.gray(`#${existingPr.number}`)}`,
         );
+        return;
+    }
+
+    // A pull request needs something to contain. A repository sitting on the task's branch with no
+    // commits beyond the base — the ordinary case for a submodule when only the main repository
+    // changed — would otherwise reach `pulls.create` and come back with GitHub's "No commits
+    // between", which reads as a broken tool rather than as nothing to do.
+    const commitsAhead = await countCommitsAhead(git, baseBranch, currentBranch);
+    if (commitsAhead === 0) {
+        logger.info(`   ${displayName}: no commits beyond ${chalk.cyan(baseBranch)} — nothing to open a PR for`);
         return;
     }
 

@@ -701,6 +701,18 @@ async function confirmMerge(params: ConfirmMergeParams): Promise<void> {
         notes.push(`${drafts} draft${drafts === 1 ? '' : 's'} to convert`);
     }
 
+    // A prompt is a gate only where someone can answer it. Driven by an agent there is no terminal,
+    // and enquirer waits forever rather than taking the default — so this says so instead of hanging.
+    // `--yes` is how the human's answer travels into an unattended run; it is not a way for a caller
+    // to decide on their behalf that nothing needed looking at.
+    if (!process.stdin.isTTY) {
+        throw new UsageError(
+            `Merging ${prCount === 1 ? 'this pull request' : `these ${prCount} pull requests`} needs a yes, and ` +
+                `there is no terminal to ask in. Re-run it yourself, or pass ${chalk.cyan('--yes')} — which means ` +
+                `the human already agreed to this merge, not that nothing looked worth checking.`,
+        );
+    }
+
     logger.info('');
     const { proceed } = await enquirer.prompt<{ proceed: boolean }>({
         type: 'confirm',

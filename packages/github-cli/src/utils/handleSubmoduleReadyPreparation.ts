@@ -5,7 +5,7 @@ import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
-import { determineNextVersion } from './branchVersionHelpers.js';
+import { determineNextVersion, stripNodeSuffix } from './branchVersionHelpers.js';
 import type { GithubClient } from './createGithubClient.js';
 import { ensureRepositoryReady } from './ensureRepositoryReady.js';
 import { findAllMatchingPrs } from './findMatchingPr.js';
@@ -85,9 +85,10 @@ interface HandleSingleSubmoduleParams {
     baseBranch: string;
 
     /**
-     * Current branch name from main repository.
+     * Branch the submodule should track — the main repository's branch with any stack-node suffix
+     * removed, so every node of a chain converges on one submodule branch.
      */
-    mainRepoBranch: string;
+    taskBranch: string;
 
     /**
      * Whether to skip prompts and automatically commit with default message.
@@ -139,8 +140,11 @@ export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleRea
         logger.info(`   ${chalk.magenta(submodule.name)}: ${details.join(', ')}`);
     }
 
-    // Get the current branch name from main repo to use as template
-    const mainRepoBranch = await getCurrentBranch();
+    // The submodule tracks the TASK's branch, not the node's. A stacked task's main branch carries a
+    // `--sN` suffix; reusing it verbatim here forks a second submodule branch at the same commit as
+    // the first, and the PR that would be opened for it has no commits between head and base. A
+    // submodule has one branch and one pull request per task, whatever shape the chain above it has.
+    const taskBranch = stripNodeSuffix(await getCurrentBranch());
 
     // Process each submodule
     for (const submodule of submodulesToProcess) {
@@ -151,37 +155,37 @@ export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleRea
             issueId,
             logger,
             baseBranch,
-            mainRepoBranch,
+            taskBranch,
             autoYes,
         });
     }
 }
 
 async function handleSingleSubmodule(params: HandleSingleSubmoduleParams): Promise<void> {
-    const { submodule, githubClient, githubConfig, issueId, logger, baseBranch, mainRepoBranch, autoYes } = params;
+    const { submodule, githubClient, githubConfig, issueId, logger, baseBranch, taskBranch, autoYes } = params;
 
     const submoduleGit = simpleGit({ baseDir: submodule.path });
     const subName = chalk.magenta(submodule.name);
 
-    // Ensure we're on the correct branch (same as main repo if possible)
-    let targetBranch = mainRepoBranch;
+    // Ensure we're on the correct branch (the task's, shared by every node of a stack)
+    let targetBranch = taskBranch;
     let branchSwitchFailed = false;
 
-    if (submodule.currentBranch !== mainRepoBranch) {
+    if (submodule.currentBranch !== taskBranch) {
         try {
             const branches = await submoduleGit.branchLocal();
 
-            if (branches.all.includes(mainRepoBranch)) {
-                await submoduleGit.checkout(mainRepoBranch);
+            if (branches.all.includes(taskBranch)) {
+                await submoduleGit.checkout(taskBranch);
             } else {
-                await submoduleGit.checkoutLocalBranch(mainRepoBranch);
+                await submoduleGit.checkoutLocalBranch(taskBranch);
             }
-            logger.info(`   ${subName}: checked out ${chalk.cyan(mainRepoBranch)}`);
+            logger.info(`   ${subName}: checked out ${chalk.cyan(taskBranch)}`);
         } catch (error) {
-            logger.warn(`   ${subName}: could not checkout ${chalk.cyan(mainRepoBranch)}: ${(error as Error).message}`);
+            logger.warn(`   ${subName}: could not checkout ${chalk.cyan(taskBranch)}: ${(error as Error).message}`);
             logger.info(`   ${subName}: continuing with ${chalk.cyan(submodule.currentBranch || 'unknown')}`);
             branchSwitchFailed = true;
-            targetBranch = submodule.currentBranch || mainRepoBranch;
+            targetBranch = submodule.currentBranch || taskBranch;
         }
     }
 

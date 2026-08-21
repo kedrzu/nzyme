@@ -49,9 +49,18 @@ export type { PushChangesParams, PushChangesResult } from './utils/pushChanges.j
 export * from './utils/pushSubmoduleUpdates.js';
 export type { PushSubmoduleUpdatesParams, PushSubmoduleUpdatesResult } from './utils/pushSubmoduleUpdates.js';
 export * from './utils/pushWithUpstream.js';
+export * from './utils/returnToBranch.js';
 export * from './utils/selectPrToOpen.js';
 export type { OpenPrInBrowserParams, PrInfo, SelectPrToOpenParams } from './utils/selectPrToOpen.js';
+export * from './utils/stacksApi.js';
+export type { MergeAsyncStatus, PullRequestStack, StackPullRequest } from './utils/stacksApi.js';
 export * from './utils/switchDetachedSubmoduleToBaseBranch.js';
 export type { SwitchDetachedSubmoduleToBaseBranchParams } from './utils/switchDetachedSubmoduleToBaseBranch.js';
+export * from './utils/cascadeStack.js';
+export type { CascadeStackParams } from './utils/cascadeStack.js';
+export * from './utils/refreshStack.js';
+export type { RefreshStackParams } from './utils/refreshStack.js';
 export * from './utils/syncAllRepos.js';
 export type { SyncAllReposParams, SyncAllReposResult, SyncedSubmoduleInfo } from './utils/syncAllRepos.js';
+export * from './utils/syncStackNodesFromRemote.js';
+export type { SyncStackNodesFromRemoteParams } from './utils/syncStackNodesFromRemote.js';

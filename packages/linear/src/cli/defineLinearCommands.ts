@@ -9,11 +9,15 @@ import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
 import { GitMergeConflictError } from '@nzyme/github-cli/utils/GitMergeConflictError.js';
 import { convertAllPrsToReady } from '@nzyme/github-cli/utils/convertAllPrsToReady.js';
 import { createGithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';
-import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
+import { findMatchingPr, findTaskPrs, resolveNodePr } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
 import { mergeTaskPrs } from '@nzyme/github-cli/utils/mergeTaskPrs.js';
+import { orderStackNodes } from '@nzyme/github-cli/utils/orderStackNodes.js';
 import { pushChanges } from '@nzyme/github-cli/utils/pushChanges.js';
+import { returnToBranch } from '@nzyme/github-cli/utils/returnToBranch.js';
 import { openPrInBrowser } from '@nzyme/github-cli/utils/selectPrToOpen.js';
+import { logStackConflictGuidance, refreshStack } from '@nzyme/github-cli/utils/refreshStack.js';
+import { findStackForPr } from '@nzyme/github-cli/utils/stacksApi.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
 
 import { createLinearClient } from '../utils/createLinearClient.js';
@@ -22,6 +26,7 @@ import { extractTaskIdFromBranch } from '../utils/extractTaskIdFromBranch.js';
 import { formatProjectStatus } from '../utils/formatProjectStatus.js';
 import { getNonCompleteProjects } from '../utils/getProjects.js';
 import { parseTaskIdentifier } from '../utils/parseTaskIdentifier.js';
+import { stackTask } from '../utils/stackTask.js';
 import { switchToTask } from '../utils/switchToTask.js';
 import type { TaskSwitchedHook } from './TaskSwitchedHook.js';
 
@@ -95,6 +100,7 @@ export function defineLinearCommands(options: LinearCommandsOptions): CommandCla
         defineTaskInfoCommand(options),
         defineTaskStartCommand(options),
         defineTaskNewCommand(options),
+        defineTaskStackCommand(options),
         defineTaskPushCommand(options),
         defineTaskReadyCommand(options),
         defineTaskRefreshCommand(options),
@@ -140,11 +146,11 @@ function defineTaskInfoCommand(options: LinearCommandsOptions) {
                     Promise.resolve(createGithubClient(githubConfig)),
                 ]);
 
-                // Get task details and search for PR in parallel
-                this.logger.info('🔍 Fetching task details and searching for associated PR...');
-                const [issueData, pr] = await Promise.all([
+                // Get task details and search for PRs in parallel
+                this.logger.info('🔍 Fetching task details and searching for associated PRs...');
+                const [issueData, prs] = await Promise.all([
                     linearClient.issue(taskId),
-                    findMatchingPr(githubClient, githubConfig, taskId),
+                    findTaskPrs(githubClient, githubConfig, taskId),
                 ]);
 
                 if (!issueData) {
@@ -160,14 +166,23 @@ function defineTaskInfoCommand(options: LinearCommandsOptions) {
                 this.logger.info(`🔗 Task URL: ${chalk.underline(issueData.url)}`);
                 this.logger.info(`🌿 Branch Name: ${chalk.cyan(currentBranch)}`);
 
-                if (pr) {
-                    this.logger.info(`📎 PR: ${chalk.blue(pr.title)} ${chalk.gray(`(#${pr.number})`)}`);
-                    this.logger.info(`📎 PR URL: ${chalk.blueBright(chalk.underline(pr.html_url))}`);
-                    this.logger.info(
-                        `📊 PR Status: ${pr.draft ? chalk.yellow('Draft') : chalk.green('Ready for review')}`,
-                    );
-                } else {
+                if (prs.length === 0) {
                     this.logger.info(`📎 PR: ${chalk.gray('No PR found for this task')}`);
+                } else {
+                    if (prs.length > 1) {
+                        this.logger.info(`🧱 Stack: ${chalk.bold(prs.length.toString())} pull requests (bottom → top)`);
+                    }
+
+                    for (const [index, pr] of prs.entries()) {
+                        const label = prs.length > 1 ? `📎 PR ${index + 1}/${prs.length}` : '📎 PR';
+                        const status = pr.draft ? chalk.yellow('Draft') : chalk.green('Ready for review');
+                        const marker = pr.head.ref === currentBranch ? chalk.cyan(' ★') : '';
+
+                        this.logger.info(
+                            `${label}: ${chalk.blue(pr.title)} ${chalk.gray(`(#${pr.number})`)} — ${status}${marker}`,
+                        );
+                        this.logger.info(`   ${chalk.blueBright(chalk.underline(pr.html_url))}`);
+                    }
                 }
 
                 this.logger.info('');
@@ -192,6 +207,7 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                 ['Start work on task by ID without prefix', 'task 123'],
                 ['Start work on task by URL', 'task https://linear.app/sig/issue/SIG-123/some-task'],
                 ['Start work branching from a specific branch', 'task SIG-123 --branch develop'],
+                ['Check out the bottom node of a stacked task', 'task SIG-123 --node 1'],
             ],
         });
 
@@ -199,6 +215,9 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
         branch = Option.String('--branch', {
             description:
                 'Base branch to create the new branch from (defaults to the configured base branch, e.g. main)',
+        });
+        node = Option.String('--node', {
+            description: 'For a stacked task, the 1-based node to check out (defaults to the top node)',
         });
 
         override async run() {
@@ -232,6 +251,7 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                     logger: this.logger,
                     baseBranches,
                     branch: this.branch,
+                    node: parseNodeOption(this.node),
                     onTaskSwitched: options.onTaskSwitched,
                 });
             } catch (error) {
@@ -369,6 +389,58 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
     };
 }
 
+function defineTaskStackCommand(options: LinearCommandsOptions) {
+    return class TaskStackCommand extends Command {
+        static override paths = getCommandPaths(options, 'stack');
+        static override usage = Command.Usage({
+            category: 'Linear',
+            description: 'Stack another pull request on top of the current one',
+            details:
+                'Creates the next node of a stacked chain: a branch forked from the current node, a draft PR based ' +
+                'on it, and the GitHub stack tying them together (created on the first extra node). The task keeps ' +
+                'one Linear issue — Linear links every PR whose branch carries the issue ID and waits for all of ' +
+                'them to merge, so nodes need no sub-issues. Requires the current node to be committed and pushed, ' +
+                'so the new node forks from a complete parent.',
+            examples: [
+                ['Stack a node on top of the current one', 'task stack "API endpoints"'],
+                ['Split schema work from the UI that consumes it', 'task stack "Patient list UI"'],
+            ],
+        });
+
+        nodeTitle = Option.String({ required: true });
+
+        override async run() {
+            await options.beforeEach?.();
+
+            const [linearConfig, githubConfig] = await Promise.all([
+                getLinearConfig(options),
+                getGithubConfig(options),
+            ]);
+
+            try {
+                const currentBranch = await getCurrentBranch();
+                this.logger.info(`📍 Current branch: ${chalk.cyan(currentBranch)}`);
+
+                const taskId = extractTaskIdFromBranch(currentBranch);
+                this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
+
+                await stackTask({
+                    issueId: taskId,
+                    nodeTitle: this.nodeTitle,
+                    linearClient: createLinearClient(linearConfig),
+                    githubClient: createGithubClient(githubConfig),
+                    githubConfig,
+                    logger: this.logger,
+                });
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                this.logger.error(`❌ Failed to stack a new node: ${errorMessage}`);
+                throw error;
+            }
+        }
+    };
+}
+
 function defineTaskPushCommand(options: LinearCommandsOptions) {
     return class TaskPushCommand extends Command {
         static override paths = getCommandPaths(options, 'push');
@@ -455,25 +527,27 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                     defaultCommitMessage: 'Ready for review',
                 });
 
-                // Find PR for converting to ready (re-fetch if push didn't find one)
-                const readyPr = pr ?? (await findMatchingPr(githubClient, githubConfig, taskId));
+                // Every node leaves draft, not just the one we are standing on: the human reviews the
+                // whole chain, and a node left in draft reads as unfinished work. `findTaskPrs`
+                // already returns them bottom to top, and an ordinary task simply has one.
+                const taskPrs = await findTaskPrs(githubClient, githubConfig, taskId);
+                const readyPr = pr ?? (await resolveNodePr(githubClient, githubConfig, taskId, currentBranch));
+                const mainPrs = taskPrs.length > 0 ? taskPrs : readyPr ? [readyPr] : [];
 
-                if (!readyPr) {
+                if (mainPrs.length === 0) {
                     throw new UsageError(
                         `No GitHub PR found for task ${chalk.bold(taskId)}. ` +
                             `Make sure you have created a PR for this task first using "task ${chalk.bold(taskId)}".`,
                     );
                 }
 
-                // Convert all PRs (main and submodules) to ready
+                // Convert all PRs (every main-repository node and the submodules) to ready
                 await convertAllPrsToReady({
                     githubClient,
                     githubConfig,
                     issueId: taskId,
                     logger: this.logger,
-                    mainPrNumber: readyPr.number,
-                    mainPrIsDraft: readyPr.draft,
-                    mainPrUrl: readyPr.html_url,
+                    mainPrs,
                 });
             } catch (error: unknown) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -514,6 +588,41 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                 }
 
                 const baseBranch = baseBranches[0]!;
+
+                const githubConfig = await getGithubConfig(options);
+                const githubClient = createGithubClient(githubConfig);
+                const taskPrs = await findTaskPrs(githubClient, githubConfig, taskId);
+
+                // A stacked task is refreshed as a whole: the trunk goes into the bottom node and
+                // travels up from there. Refreshing only the node you happen to stand on would both
+                // miss the conflict (the trunk meets the stack at the bottom) and, on an upper node,
+                // pull the trunk into a diff that is measured against the node below it.
+                // Which node feeds which is GitHub's stack record to answer, exactly as it is for the
+                // merge — the cascade pushes every node it touches, so guessing the order from the
+                // `--sN` suffix would push one PR's whole diff into an unrelated one. A lone PR has
+                // no stack to look up and comes back `null`, which is the ordinary unstacked path.
+                const stack =
+                    taskPrs.length > 1 ? await findStackForPr(githubClient, githubConfig, taskPrs[0]!.number) : null;
+
+                const nodes = orderStackNodes({
+                    prs: taskPrs,
+                    stack,
+                    issueId: taskId,
+                    reason: 'Refreshing merges each one into the next, so it needs the stack to know which order that is.',
+                });
+
+                if (nodes) {
+                    await refreshStack({
+                        branches: nodes.map(pr => pr.head.ref),
+                        trunk: baseBranch,
+                        logger: this.logger,
+                    });
+
+                    this.logger.info('');
+                    this.logger.info(`🎉 Refreshed the whole stack of ${chalk.bold(nodes.length.toString())} nodes`);
+                    return;
+                }
+
                 this.logger.info(`🔄 Refreshing task ${chalk.bold(taskId)} with base branch ${chalk.cyan(baseBranch)}`);
 
                 // Sync all repos: auto-commit, fetch, rebase/pull, ff base, merge base, push
@@ -533,6 +642,13 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                     this.logger.info(`✅ Task branch is already up to date with ${chalk.cyan(baseBranch)}`);
                 }
             } catch (error) {
+                if (error instanceof GitMergeConflictError && error.stackContext) {
+                    // The generic conflict report already listed the files; this adds the part only
+                    // the stack knows — which node owns the fix and what still has to follow it.
+                    logStackConflictGuidance(error, this.logger);
+                    throw error;
+                }
+
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to refresh task: ${errorMessage}`);
                 throw error;
@@ -550,16 +666,18 @@ function defineTaskMergeCommand(options: LinearCommandsOptions) {
             details:
                 'Squash-merges the current task via the GitHub API. Submodule PRs are merged first, then the ' +
                 'main repository branch is refreshed so its submodule references point at the merged commits, ' +
-                'and finally the main repository PR is squash-merged. It aborts if any submodule has ' +
-                'uncommitted changes. Before merging it summarises every PR with its URL and unresolved ' +
-                'review-comment count. When some PR still has unresolved comments it asks for confirmation ' +
-                'and prompts to convert any draft PR to ready; when everything is resolved it merges ' +
-                'automatically, auto-converting drafts without prompting. Required checks are always waited ' +
-                'for before each merge. With --yes the confirmation and draft prompts are skipped (drafts are ' +
-                'converted automatically).',
+                'and finally the main repository PR is squash-merged. It aborts if the main repository or any ' +
+                'submodule has uncommitted changes. Before merging it summarises every PR with its URL, draft ' +
+                'state and unresolved review-comment count, and asks for confirmation — every run, not only ' +
+                'when something is unresolved. Confirming also converts any draft PR to ready. Required checks ' +
+                'are always waited for before each merge. With --yes the confirmation is skipped. When the task ' +
+                'is a stack, the whole chain is merged in one atomic operation — one squash commit per node, in ' +
+                'stack order — after the nodes have been restacked onto the refreshed submodule references; it ' +
+                'runs from any node, checking out the bottom one itself and returning you afterwards.',
             examples: [
                 ['Merge current task with confirmation', 'task merge'],
                 ['Merge current task without prompts', 'task merge --yes'],
+                ['Merge a whole stacked chain', 'task merge'],
             ],
         });
 
@@ -588,16 +706,30 @@ function defineTaskMergeCommand(options: LinearCommandsOptions) {
                 // Create GitHub client
                 const githubClient = createGithubClient(githubConfig);
 
-                // Squash-merge submodules first, refresh main, then squash-merge main
-                await mergeTaskPrs({
-                    githubClient,
-                    githubConfig,
-                    issueId: taskId,
-                    baseBranch,
-                    logger: this.logger,
-                    autoYes: this.yes,
-                });
+                // Squash-merge submodules first, refresh main, then squash-merge main. A stacked task
+                // is merged from its bottom node, which `mergeTaskPrs` checks out itself — so put the
+                // user back on the branch they invoked this from, whether it succeeded or not.
+                try {
+                    await mergeTaskPrs({
+                        githubClient,
+                        githubConfig,
+                        issueId: taskId,
+                        baseBranch,
+                        logger: this.logger,
+                        autoYes: this.yes,
+                    });
+                } finally {
+                    await returnToBranch(currentBranch, this.logger);
+                }
             } catch (error: unknown) {
+                if (error instanceof GitMergeConflictError && error.stackContext) {
+                    // The restack that precedes a stack merge conflicts in the same way a refresh
+                    // does, and needs the same answer — so say the same thing rather than a bare
+                    // "failed to merge".
+                    logStackConflictGuidance(error, this.logger);
+                    throw error;
+                }
+
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.error(`❌ Failed to merge task: ${errorMessage}`);
                 throw error;
@@ -952,6 +1084,22 @@ function defineTaskPrCommand(options: LinearCommandsOptions) {
             }
         }
     };
+}
+
+/**
+ * Parse the `--node` option into a 1-based stack position.
+ */
+function parseNodeOption(node: string | undefined): number | undefined {
+    if (node === undefined) {
+        return undefined;
+    }
+
+    const parsed = Number(node);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new UsageError(`--node must be a positive integer, got "${node}"`);
+    }
+
+    return parsed;
 }
 
 function getCommandPaths(options: LinearCommandsOptions, ...commands: string[]) {

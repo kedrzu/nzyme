@@ -3,7 +3,9 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
 import { createGithubClient } from './createGithubClient.js';
-import { findMatchingPr } from './findMatchingPr.js';
+import type { GitHubPR } from './findMatchingPr.js';
+import { resolveNodePr } from './findMatchingPr.js';
+import { getCurrentBranch } from './getCurrentBranch.js';
 import { handlePushPreparation } from './handlePushPreparation.js';
 import { syncAllRepos } from './syncAllRepos.js';
 
@@ -49,7 +51,7 @@ export interface PushChangesResult {
     /**
      * The matching PR, if found.
      */
-    pr: Awaited<ReturnType<typeof findMatchingPr>>;
+    pr: GitHubPR | null;
 }
 
 /**
@@ -59,21 +61,35 @@ export interface PushChangesResult {
 export async function pushChanges(params: PushChangesParams): Promise<PushChangesResult> {
     const { githubConfig, issueId, logger, baseBranch, defaultCommitMessage } = params;
 
+    // Create GitHub client
+    const githubClient = createGithubClient(githubConfig);
+
+    // Resolve the PR before syncing, because the PR is what says which branch this one sits on.
+    // Resolved against the current branch so that on a stacked task this is the node being pushed,
+    // not some other node of the same task.
+    const currentBranch = await getCurrentBranch();
+    const pr = await resolveNodePr(githubClient, githubConfig, issueId, currentBranch);
+    const prInReview = pr ? !pr.draft : false;
+
+    // Sync against the branch this PR actually targets — the parent node for a stacked task, and the
+    // trunk for everything else (including every unstacked task, where it is the same `main` as
+    // before). Merging the trunk straight into an upper node would make the trunk's commits read as
+    // that node's own work, since its diff is measured against the node below it.
+    const syncBaseBranch = pr?.base.ref ?? baseBranch;
+
     // Sync all repos: auto-commit, fetch, rebase/pull, fast-forward base
     await syncAllRepos({
-        baseBranch,
+        baseBranch: syncBaseBranch,
         logger,
         defaultCommitMessage,
     });
 
-    // Create GitHub client
-    const githubClient = createGithubClient(githubConfig);
-
-    // Check if PR exists and is in review
-    const pr = await findMatchingPr(githubClient, githubConfig, issueId);
-    const prInReview = pr ? !pr.draft : false;
-
-    // Handle preparation (submodules and main repo)
+    // Deliberately the trunk `baseBranch`, not `syncBaseBranch`: this flows into the submodule PR base
+    // (ensureRepositoryReady), and the submodule always tracks one unsuffixed branch per task
+    // (handleSubmoduleReadyPreparation's `stripNodeSuffix`), never a node-suffixed one. Passing
+    // `syncBaseBranch` here would, for the second stack node, hand it the same branch name as the
+    // submodule itself — making the "commits ahead" check diff the submodule branch against itself,
+    // read 0, and silently skip opening its PR.
     await handlePushPreparation({
         githubClient,
         githubConfig,

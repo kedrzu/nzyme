@@ -11,9 +11,29 @@ import { assertNoConflicts } from './assertNoConflicts.js';
 import { checkUnpushedCommits } from './checkUnpushedCommits.js';
 import { createDraftPr } from './createDraftPr.js';
 import type { GithubClient } from './createGithubClient.js';
-import { findMatchingPr } from './findMatchingPr.js';
+import { findPrForBranch } from './findMatchingPr.js';
 import { getGitStatusInfo } from './getGitStatusInfo.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
+
+/**
+ * Count the commits `branch` carries beyond `baseBranch`.
+ *
+ * Returns `null` when the base cannot be resolved locally — the remote-tracking ref may simply not
+ * be fetched — so a caller can tell "nothing to do" apart from "could not tell", and only the first
+ * of those is grounds for skipping work.
+ */
+async function countCommitsAhead(git: SimpleGit, baseBranch: string, branch: string): Promise<number | null> {
+    for (const base of [`origin/${baseBranch}`, baseBranch]) {
+        try {
+            const count = await git.raw(['rev-list', '--count', `${base}..${branch}`]);
+            return parseInt(count.trim(), 10);
+        } catch {
+            // Unresolvable ref — try the next candidate.
+        }
+    }
+
+    return null;
+}
 
 /**
  * Parameters for ensuring a repository is ready.
@@ -202,7 +222,15 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
     }
 
     // Step 5: Ensure PR exists (or create it)
-    const existingPr = await findMatchingPr(githubClient, githubConfig, issueId);
+    const currentStatus = await git.status();
+    const currentBranch = currentStatus.current;
+    if (!currentBranch) {
+        throw new UsageError('Could not determine current branch name');
+    }
+
+    // Matched on the branch rather than on the issue ID: a stacked task has one PR per node, all
+    // carrying the same issue ID, so only the branch identifies the PR this repository needs.
+    const existingPr = await findPrForBranch(githubClient, githubConfig, issueId, currentBranch);
 
     if (existingPr) {
         logger.info(
@@ -211,11 +239,14 @@ export async function ensureRepositoryReady(params: EnsureRepositoryReadyParams)
         return;
     }
 
-    // No PR exists, create one
-    const currentStatus = await git.status();
-    const currentBranch = currentStatus.current;
-    if (!currentBranch) {
-        throw new UsageError('Could not determine current branch name');
+    // A pull request needs something to contain. A repository sitting on the task's branch with no
+    // commits beyond the base — the ordinary case for a submodule when only the main repository
+    // changed — would otherwise reach `pulls.create` and come back with GitHub's "No commits
+    // between", which reads as a broken tool rather than as nothing to do.
+    const commitsAhead = await countCommitsAhead(git, baseBranch, currentBranch);
+    if (commitsAhead === 0) {
+        logger.info(`   ${displayName}: no commits beyond ${chalk.cyan(baseBranch)} — nothing to open a PR for`);
+        return;
     }
 
     let prTitle = generatePrTitle(issueId);

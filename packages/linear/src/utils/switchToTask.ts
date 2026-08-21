@@ -6,7 +6,7 @@ import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
 import { checkoutExistingBranch } from '@nzyme/github-cli/utils/checkoutExistingBranch.js';
 import { createBranchAndPr } from '@nzyme/github-cli/utils/createBranchAndPr.js';
 import type { GithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';
-import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
+import { findTaskPrs } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { applyStashedChanges, handleBranchSelection } from '@nzyme/github-cli/utils/handleBranchSelection.js';
 import type { BranchSelectionResult } from '@nzyme/github-cli/utils/handleBranchSelection.js';
 import { handleMergedPrReopen } from '@nzyme/github-cli/utils/handleMergedPrReopen.js';
@@ -67,6 +67,12 @@ export interface SwitchToTaskParams {
      * Failures are logged and never fail the switch.
      */
     onTaskSwitched?: TaskSwitchedHook;
+
+    /**
+     * 1-based stack position to check out when the task has been split into a stack.
+     * Defaults to the top node, which is where work continues.
+     */
+    node?: number;
 }
 
 /**
@@ -74,7 +80,8 @@ export interface SwitchToTaskParams {
  * This contains the common logic used by both "task start" and "task new" commands.
  */
 export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
-    const { issueId, linearClient, githubClient, githubConfig, logger, baseBranches, branch, onTaskSwitched } = params;
+    const { issueId, linearClient, githubClient, githubConfig, logger, baseBranches, branch, onTaskSwitched, node } =
+        params;
 
     logger.info(`🔍 Looking for Linear task: ${chalk.bold(issueId)}`);
 
@@ -101,12 +108,17 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
     // Check if task is in terminal state and handle accordingly
     await handleTerminalState(issueData, logger);
 
-    // Handle task assignment and search for existing PR in parallel
+    // Handle task assignment and search for existing PRs in parallel
     logger.info(`🔍 Searching for existing GitHub PR...`);
-    const [, existingPr] = await Promise.all([
+    const [, openPrs] = await Promise.all([
         handleTaskAssignment(linearClient, issueData, logger),
-        findMatchingPr(githubClient, githubConfig, issueId),
+        findTaskPrs(githubClient, githubConfig, issueId),
     ]);
+
+    // A task normally has one PR. Once it has been split into a stack it has one per node, and the
+    // switch has to say which node it lands on: the top by default, because that is where work
+    // continues, or an explicit position when hopping down the stack to amend a lower node.
+    const existingPr = selectNode(openPrs, node, issueId, logger);
 
     if (existingPr) {
         // Checkout existing PR branch
@@ -223,4 +235,38 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
 
     // Show task URL for reference
     logger.info(`🔗 Linear task: ${chalk.underline(issueData.url)}`);
+}
+
+/**
+ * Pick which of a task's open pull requests to check out.
+ *
+ * With zero or one PR this is the answer it has always been, so an unstacked task behaves exactly as
+ * before. With several, the stack is printed — knowing where you landed matters when a task spans
+ * more than one PR — and `node` selects a position, defaulting to the top.
+ */
+function selectNode(
+    openPrs: Awaited<ReturnType<typeof findTaskPrs>>,
+    node: number | undefined,
+    issueId: string,
+    logger: Logger,
+): Awaited<ReturnType<typeof findTaskPrs>>[number] | null {
+    if (openPrs.length <= 1) {
+        return openPrs[0] ?? null;
+    }
+
+    logger.info(`🧱 Task ${chalk.bold(issueId)} is a stack of ${chalk.bold(openPrs.length.toString())} PRs:`);
+    openPrs.forEach((pr, index) => {
+        logger.info(`   ${index + 1}. ${chalk.cyan(pr.head.ref)} ${chalk.gray(`(#${pr.number})`)} → ${pr.base.ref}`);
+    });
+
+    if (node === undefined) {
+        return openPrs[openPrs.length - 1]!;
+    }
+
+    const selected = openPrs[node - 1];
+    if (!selected) {
+        throw new UsageError(`Task ${issueId} has ${openPrs.length} nodes — ${node} is not one of them.`);
+    }
+
+    return selected;
 }

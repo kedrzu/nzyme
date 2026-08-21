@@ -349,9 +349,7 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                     githubConfig,
                     issueId,
                     logger: this.logger,
-                    mainPrNumber: readyPr.number,
-                    mainPrIsDraft: readyPr.draft,
-                    mainPrUrl: readyPr.html_url,
+                    mainPrs: [readyPr],
                 });
             } catch (error: unknown) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';

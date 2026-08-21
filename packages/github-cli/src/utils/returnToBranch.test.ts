@@ -4,17 +4,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { simpleGit } from 'simple-git';
 
+import { createTestLogger } from '@nzyme/logging';
+
 import { returnToBranch } from './returnToBranch.js';
 
-/**
- * Silent logger — these tests assert on git state, not on output.
- */
-const logger = {
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-    debug: () => {},
-} as unknown as Parameters<typeof returnToBranch>[1];
+const { logger } = createTestLogger('returnToBranch');
 
 let repo: string;
 let cwd: string;
@@ -104,6 +98,6 @@ describe('returnToBranch', () => {
         // An uncommitted change that the checkout would have to clobber.
         await Bun.write(join(repo, 'shared.txt'), 'uncommitted\n');
 
-        await expect(returnToBranch('top', logger)).resolves.toBeUndefined();
+        expect(await returnToBranch('top', logger)).toBeUndefined();
     });
 });

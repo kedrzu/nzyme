@@ -43,12 +43,20 @@ export interface CascadeStackParams {
  *
  * Idempotent: a node that already contains its parent's tip is skipped, so re-running after
  * resolving a conflict simply continues from where it stopped.
+ *
+ * @returns Each node branch this run pushed, mapped to the head SHA it pushed for it. That is the
+ * commit a merge of that node would land, and the only thing that knows it: GitHub's PR object lags
+ * a push by seconds and keeps reporting the pre-cascade head, so a caller gating on checks has to
+ * pin them to this instead. A node left untouched is absent rather than reported at its local tip —
+ * nothing here pushed it, so its local tip is no evidence of what the remote holds.
  */
-export async function cascadeStack(params: CascadeStackParams): Promise<void> {
+export async function cascadeStack(params: CascadeStackParams): Promise<Map<string, string>> {
     const { branches, logger } = params;
 
+    const pushedHeads = new Map<string, string>();
+
     if (branches.length < 2) {
-        return;
+        return pushedHeads;
     }
 
     // Submodule recursion off for the same reason as syncAllRepos: git would otherwise try to fetch
@@ -100,6 +108,7 @@ export async function cascadeStack(params: CascadeStackParams): Promise<void> {
             );
 
             await pushWithUpstream(git);
+            pushedHeads.set(nodeBranch, await git.revparse([nodeBranch]));
             logger.info(`   ${chalk.green('✓')} Updated and pushed ${chalk.cyan(nodeBranch)}`);
         }
     } finally {
@@ -112,6 +121,8 @@ export async function cascadeStack(params: CascadeStackParams): Promise<void> {
             await git.checkout(originalBranch);
         }
     }
+
+    return pushedHeads;
 }
 
 /**

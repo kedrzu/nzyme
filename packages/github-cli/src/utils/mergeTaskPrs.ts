@@ -13,20 +13,16 @@ import { convertPrToReady } from './convertPrToReady.js';
 import { ensureLocalBranch } from './ensureLocalBranch.js';
 import type { GithubClient } from './createGithubClient.js';
 import { countUnresolvedReviewThreads } from './countUnresolvedReviewThreads.js';
+import type { GitHubPR } from './findMatchingPr.js';
 import { findMatchingPr, findMergedPr, findTaskPrs } from './findMatchingPr.js';
 import { getCurrentBranch } from './getCurrentBranch.js';
 import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { mergePullRequestSquash } from './mergePullRequestSquash.js';
+import { orderStackNodes } from './orderStackNodes.js';
 import { refreshMainAfterSubmoduleMerge } from './refreshMainAfterSubmoduleMerge.js';
-import type { PullRequestStack } from './stacksApi.js';
 import { findStackForPr, getMergeAsyncStatus, mergeStackAsync } from './stacksApi.js';
 import { waitForRequiredChecks } from './waitForRequiredChecks.js';
-
-/**
- * A GitHub pull request as returned by the REST list/get endpoints.
- */
-type PullRequest = NonNullable<Awaited<ReturnType<typeof findMatchingPr>>>;
 
 /**
  * Parameters for {@link mergeTaskPrs}.
@@ -83,7 +79,7 @@ interface SubmoduleTarget {
     /**
      * The open PR to squash-merge in this run, if any.
      */
-    openPr: PullRequest | null;
+    openPr: GitHubPR | null;
 }
 
 /**
@@ -132,17 +128,9 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
 
     // A task with several open PRs is a stack; GitHub's own stack record is what orders it, because
     // it is the thing that decides how the merge cascades. Several PRs with no stack behind them is
-    // not something to guess at.
+    // not something to guess at, and `orderStackNodes` refuses rather than guessing.
     const stack = await findStackForPr(githubClient, githubConfig, mainPrs[0]!.number);
-    const stackNodes = stack ? orderNodes(mainPrs, stack) : null;
-
-    if (!stackNodes && mainPrs.length > 1) {
-        const prs = mainPrs.map(pr => `  #${pr.number} ${pr.head.ref}`).join('\n');
-        throw new UsageError(
-            `Task ${chalk.bold(issueId)} has ${mainPrs.length} open pull requests that are not a stack:\n${prs}\n` +
-                'Stack them (`task stack`) or close the ones that should not merge.',
-        );
-    }
+    const stackNodes = orderStackNodes({ prs: mainPrs, stack, issueId });
 
     const mainPr = stackNodes ? stackNodes[stackNodes.length - 1]! : mainPrs[0]!;
     const bottomNode = stackNodes?.[0];
@@ -253,14 +241,22 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
     // === Restack: nodes above the bottom must carry the refreshed gitlinks ===
     // Only needed when the refresh actually added a commit to the bottom node; cascadeStack
     // skips nodes that already build on their parent's tip, so this is cheap when it did not.
-    if (stackNodes) {
-        await cascadeStack({ branches: stackNodes.map(node => node.head.ref), logger });
-    }
+    const expectedHeads = stackNodes
+        ? await cascadeStack({ branches: stackNodes.map(node => node.head.ref), logger })
+        : new Map<string, string>();
 
     // === Merge the main PR(s) (re-fetch for fresh draft/SHA state) ===
     logger.info('');
 
     const nodesToMerge = stackNodes ?? [mainPr];
+
+    // `expectedHeads` now holds every head this run pushed, keyed by branch: the restack's on each
+    // node above the bottom, and — added here — the gitlink refresh's on the bottom node itself. Each
+    // node's check gate is pinned to its entry, because `pulls.get` lags a push by seconds and keeps
+    // reporting the pre-push head — whose green checks are the previous run's results, on a commit
+    // that is not the one about to merge. A node the restack had nothing to carry into stays absent:
+    // nothing pushed it, so there is no fresh commit to wait for and what GitHub reports is current.
+    expectedHeads.set(nodesToMerge[0]!.head.ref, refreshedMainHeadSha);
 
     for (const node of nodesToMerge) {
         const { data: freshPr } = await githubClient.rest.pulls.get({
@@ -286,9 +282,7 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
             logger,
             intervalMs: checkPollIntervalMs,
             timeoutMs: checkPollTimeoutMs,
-            // Only the bottom node's head is the commit the gitlink refresh just pushed; the nodes
-            // above were rewritten by the restack and carry their own fresh heads.
-            expectedHeadSha: node === nodesToMerge[0] ? refreshedMainHeadSha : undefined,
+            expectedHeadSha: expectedHeads.get(node.head.ref),
         });
     }
 
@@ -307,7 +301,12 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
             pull_number: topNode.number,
         });
 
-        const uuid = await mergeStackAsync(githubClient, githubConfig, topNode.number, freshTopPr.head.sha);
+        // Merge the head we pushed rather than the one GitHub reports — the gate above already waited
+        // for that commit to register, so asking again can only re-introduce the lag. `freshTopPr` is
+        // the answer only for a top node this run never pushed, where nothing can be stale.
+        const topHeadSha = expectedHeads.get(topNode.head.ref) ?? freshTopPr.head.sha;
+
+        const uuid = await mergeStackAsync(githubClient, githubConfig, topNode.number, topHeadSha);
         await waitForStackMerge({
             githubClient,
             githubConfig,
@@ -330,34 +329,6 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
     // local ones survive, which is what lets the caller put the user back where they started.
     logger.info('');
     logger.info(`🎉 Merged task ${chalk.bold(issueId)} (squash), via the GitHub API.`);
-}
-
-/**
- * Order the task's open pull requests the way GitHub's stack record orders them.
- *
- * The `--sN` branch suffix is only a naming convention; the stack is the authority on what merges
- * into what, so the merge follows it. Returns `null` when the stack does not describe a chain of
- * this task's open PRs — merging then has no well-defined order.
- * @__NO_SIDE_EFFECTS__
- */
-function orderNodes(mainPrs: PullRequest[], stack: PullRequestStack): PullRequest[] | null {
-    const byNumber = new Map(mainPrs.map(pr => [pr.number, pr]));
-    const ordered: PullRequest[] = [];
-
-    for (const stacked of stack.pullRequests) {
-        if (stacked.mergedAt || stacked.state === 'closed') {
-            continue;
-        }
-
-        const pr = byNumber.get(stacked.number);
-        if (!pr) {
-            return null;
-        }
-
-        ordered.push(pr);
-    }
-
-    return ordered.length === mainPrs.length ? ordered : null;
 }
 
 /**
@@ -387,6 +358,13 @@ async function assertSubmodulesOnlyInBottomNode(params: AssertSubmodulesOnlyInBo
     for (let index = 1; index < branches.length; index++) {
         const parentBranch = branches[index - 1]!;
         const nodeBranch = branches[index]!;
+
+        // This guard runs before anything materialises the upper nodes — only the bottom one has
+        // been checked out by now — and a node branch that exists solely on `origin` is the normal
+        // state, not an error. Resolving both sides first means the diff describes their real
+        // history instead of failing on an absent ref with git's raw "ambiguous argument".
+        await ensureLocalBranch(git, parentBranch);
+        await ensureLocalBranch(git, nodeBranch);
 
         const changed = await git.raw([
             'diff',
@@ -631,7 +609,7 @@ interface ConfirmMergeParams {
     /**
      * Main-repository PRs to merge, bottom to top — one entry unless the task is a stack.
      */
-    mainPrs: PullRequest[];
+    mainPrs: GitHubPR[];
     submoduleTargets: SubmoduleTarget[];
     autoYes: boolean;
     logger: Logger;

@@ -4,18 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { simpleGit } from 'simple-git';
 
+import { createTestLogger } from '@nzyme/logging';
+
 import { GitMergeConflictError } from './GitMergeConflictError.js';
 import { cascadeStack } from './cascadeStack.js';
 
-/**
- * Silent logger — these tests assert on git state, not on output.
- */
-const logger = {
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-    debug: () => {},
-} as unknown as Parameters<typeof cascadeStack>[0]['logger'];
+const { logger } = createTestLogger('cascadeStack');
 
 let repo: string;
 let origin: string;
@@ -75,13 +69,20 @@ describe('cascadeStack', () => {
         await git.commit('later work on bottom');
         await git.push();
 
-        await cascadeStack({ branches: ['bottom', 'mid', 'top'], logger });
+        const pushedHeads = await cascadeStack({ branches: ['bottom', 'mid', 'top'], logger });
 
         // Every node now contains the bottom's new commit — that is exactly what GitHub requires of
         // a stack, and what makes each node's diff show only its own layer.
         for (const branch of ['mid', 'top']) {
             const missing = await git.raw(['rev-list', '--count', `${branch}..bottom`]);
             expect(missing.trim()).toBe('0');
+        }
+
+        // The merge gate pins each node's checks to these, so they have to be the commits that
+        // actually reached the remote — and `bottom`, which this never pushed, must not claim one.
+        expect([...pushedHeads.keys()]).toEqual(['mid', 'top']);
+        for (const [branch, sha] of pushedHeads) {
+            expect(sha).toBe(await git.revparse([`origin/${branch}`]));
         }
     });
 
@@ -125,9 +126,12 @@ describe('cascadeStack', () => {
         const git = simpleGit(repo);
         const before = await git.raw(['rev-parse', 'mid', 'top']);
 
-        await cascadeStack({ branches: ['bottom', 'mid', 'top'], logger });
+        const pushedHeads = await cascadeStack({ branches: ['bottom', 'mid', 'top'], logger });
 
         expect(await git.raw(['rev-parse', 'mid', 'top'])).toBe(before);
+        // Nothing was pushed, so nothing is reported — a caller gating on a head this never sent
+        // would wait out its timeout for a commit GitHub was never going to report.
+        expect(pushedHeads.size).toBe(0);
     });
 
     test('a single-node stack is a no-op', async () => {

@@ -12,10 +12,12 @@ import { createGithubClient } from '@nzyme/github-cli/utils/createGithubClient.j
 import { findMatchingPr, findTaskPrs, resolveNodePr } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
 import { mergeTaskPrs } from '@nzyme/github-cli/utils/mergeTaskPrs.js';
+import { orderStackNodes } from '@nzyme/github-cli/utils/orderStackNodes.js';
 import { pushChanges } from '@nzyme/github-cli/utils/pushChanges.js';
 import { returnToBranch } from '@nzyme/github-cli/utils/returnToBranch.js';
 import { openPrInBrowser } from '@nzyme/github-cli/utils/selectPrToOpen.js';
 import { logStackConflictGuidance, refreshStack } from '@nzyme/github-cli/utils/refreshStack.js';
+import { findStackForPr } from '@nzyme/github-cli/utils/stacksApi.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
 
 import { createLinearClient } from '../utils/createLinearClient.js';
@@ -588,21 +590,36 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                 const baseBranch = baseBranches[0]!;
 
                 const githubConfig = await getGithubConfig(options);
-                const taskPrs = await findTaskPrs(createGithubClient(githubConfig), githubConfig, taskId);
+                const githubClient = createGithubClient(githubConfig);
+                const taskPrs = await findTaskPrs(githubClient, githubConfig, taskId);
 
                 // A stacked task is refreshed as a whole: the trunk goes into the bottom node and
                 // travels up from there. Refreshing only the node you happen to stand on would both
                 // miss the conflict (the trunk meets the stack at the bottom) and, on an upper node,
                 // pull the trunk into a diff that is measured against the node below it.
-                if (taskPrs.length > 1) {
+                // Which node feeds which is GitHub's stack record to answer, exactly as it is for the
+                // merge — the cascade pushes every node it touches, so guessing the order from the
+                // `--sN` suffix would push one PR's whole diff into an unrelated one. A lone PR has
+                // no stack to look up and comes back `null`, which is the ordinary unstacked path.
+                const stack =
+                    taskPrs.length > 1 ? await findStackForPr(githubClient, githubConfig, taskPrs[0]!.number) : null;
+
+                const nodes = orderStackNodes({
+                    prs: taskPrs,
+                    stack,
+                    issueId: taskId,
+                    reason: 'Refreshing merges each one into the next, so it needs the stack to know which order that is.',
+                });
+
+                if (nodes) {
                     await refreshStack({
-                        branches: taskPrs.map(pr => pr.head.ref),
+                        branches: nodes.map(pr => pr.head.ref),
                         trunk: baseBranch,
                         logger: this.logger,
                     });
 
                     this.logger.info('');
-                    this.logger.info(`🎉 Refreshed the whole stack of ${chalk.bold(taskPrs.length.toString())} nodes`);
+                    this.logger.info(`🎉 Refreshed the whole stack of ${chalk.bold(nodes.length.toString())} nodes`);
                     return;
                 }
 

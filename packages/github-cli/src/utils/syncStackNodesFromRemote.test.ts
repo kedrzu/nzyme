@@ -4,17 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { simpleGit } from 'simple-git';
 
-import { syncStackNodesFromRemote } from './syncStackNodesFromRemote.js';
+import { createTestLogger } from '@nzyme/logging';
 
-/**
- * Silent logger — these tests assert on git state, not on output.
- */
-const logger = {
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-    debug: () => {},
-} as unknown as Parameters<typeof syncStackNodesFromRemote>[0]['logger'];
+import { syncStackNodesFromRemote } from './syncStackNodesFromRemote.js';
 
 let repo: string;
 let cwd: string;
@@ -68,6 +60,7 @@ afterEach(async () => {
 describe('syncStackNodesFromRemote', () => {
     test('keeps uncommitted work on the checked-out node instead of resetting onto the remote', async () => {
         const git = simpleGit(repo);
+        const { logger } = createTestLogger('syncStackNodesFromRemote');
         const before = (await git.revparse('HEAD')).trim();
 
         await Bun.write(join(repo, 'work.txt'), 'half an hour of uncommitted edits\n');
@@ -80,6 +73,7 @@ describe('syncStackNodesFromRemote', () => {
 
     test('adopts the remote when the working tree is clean', async () => {
         const git = simpleGit(repo);
+        const { logger } = createTestLogger('syncStackNodesFromRemote');
 
         await syncStackNodesFromRemote({ branches: ['bottom'], logger });
 

@@ -85,8 +85,24 @@ export async function syncStackNodesFromRemote(params: SyncStackNodesFromRemoteP
 
             await git.raw(['reset', '--hard', remoteRef]);
         } else {
-            // No checkout needed to move a branch that is not the one in the working tree.
-            await git.raw(['update-ref', `refs/heads/${branch}`, `refs/remotes/origin/${branch}`]);
+            // `branch -f` moves a branch that is not the one in the working tree without a checkout —
+            // and, unlike `update-ref`, refuses when that branch is checked out in a sibling worktree of
+            // this same clone, which shares refs with every worktree. Silently moving another
+            // worktree's HEAD out from under it is exactly the data loss this guards against.
+            try {
+                await git.raw(['branch', '-f', branch, remoteRef]);
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                if (!message.includes('used by worktree')) {
+                    throw error;
+                }
+
+                logger.warn(
+                    `   ⚠️  ${chalk.cyan(branch)} is checked out in another worktree and the remote moved — ` +
+                        `leaving it alone. Sync it from that worktree instead.`,
+                );
+                continue;
+            }
         }
 
         logger.info(

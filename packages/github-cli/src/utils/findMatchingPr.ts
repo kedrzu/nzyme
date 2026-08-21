@@ -6,8 +6,11 @@ import type { GithubClient } from './createGithubClient.js';
 
 /**
  * GitHub PR type from Octokit.
+ *
+ * Exported so callers can name what these functions return instead of re-deriving it from their
+ * signatures — a `ReturnType<typeof ...>` chain breaks the moment one of them is renamed.
  */
-type GitHubPR = Awaited<ReturnType<GithubClient['rest']['pulls']['list']>>['data'][0];
+export type GitHubPR = Awaited<ReturnType<GithubClient['rest']['pulls']['list']>>['data'][0];
 
 /**
  * Find a matching open GitHub PR for an issue.

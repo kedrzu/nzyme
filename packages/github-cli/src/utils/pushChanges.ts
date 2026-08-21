@@ -3,7 +3,8 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
 import { createGithubClient } from './createGithubClient.js';
-import { findMatchingPr, resolveNodePr } from './findMatchingPr.js';
+import type { GitHubPR } from './findMatchingPr.js';
+import { resolveNodePr } from './findMatchingPr.js';
 import { getCurrentBranch } from './getCurrentBranch.js';
 import { handlePushPreparation } from './handlePushPreparation.js';
 import { syncAllRepos } from './syncAllRepos.js';
@@ -50,7 +51,7 @@ export interface PushChangesResult {
     /**
      * The matching PR, if found.
      */
-    pr: Awaited<ReturnType<typeof findMatchingPr>>;
+    pr: GitHubPR | null;
 }
 
 /**
@@ -83,13 +84,18 @@ export async function pushChanges(params: PushChangesParams): Promise<PushChange
         defaultCommitMessage,
     });
 
-    // Handle preparation (submodules and main repo)
+    // Deliberately the trunk `baseBranch`, not `syncBaseBranch`: this flows into the submodule PR base
+    // (ensureRepositoryReady), and the submodule always tracks one unsuffixed branch per task
+    // (handleSubmoduleReadyPreparation's `stripNodeSuffix`), never a node-suffixed one. Passing
+    // `syncBaseBranch` here would, for the second stack node, hand it the same branch name as the
+    // submodule itself — making the "commits ahead" check diff the submodule branch against itself,
+    // read 0, and silently skip opening its PR.
     await handlePushPreparation({
         githubClient,
         githubConfig,
         issueId,
         logger,
-        baseBranch: syncBaseBranch,
+        baseBranch,
         autoYes: true,
         prInReview,
         defaultCommitMessage,

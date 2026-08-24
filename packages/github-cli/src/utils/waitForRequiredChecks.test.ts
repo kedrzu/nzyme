@@ -13,6 +13,7 @@ interface CheckRun {
     name: string;
     status: string;
     conclusion: string | null;
+    check_suite?: { id: number };
 }
 
 interface CommitStatus {
@@ -244,5 +245,58 @@ test('with expectedHeadSha set, does not pass on clean + zero checks (suppresses
             timeoutMs: 0,
             expectedHeadSha: 'new-sha',
         }),
+    ).rejects.toBeInstanceOf(UsageError);
+});
+
+test('ignores a cancelled check run superseded by a newer suite of the same name', async () => {
+    const { logger } = createTestLogger('waitForRequiredChecks');
+    // What a `ready_for_review` re-run leaves behind: `concurrency` cancelled the first Build and
+    // both runs stay pinned to the same head SHA.
+    const client = createClient({
+        mergeableStates: ['unstable'],
+        checkRuns: [
+            [
+                { name: 'Build', status: 'completed', conclusion: 'success', check_suite: { id: 200 } },
+                { name: 'Build', status: 'completed', conclusion: 'cancelled', check_suite: { id: 100 } },
+            ],
+        ],
+    });
+
+    await waitForRequiredChecks({ client, config: CONFIG, prNumber: 1, logger, intervalMs: 0 });
+});
+
+test('keeps waiting when the superseding run of a cancelled check is still in progress', async () => {
+    const { logger } = createTestLogger('waitForRequiredChecks');
+    const client = createClient({
+        mergeableStates: ['blocked', 'unstable'],
+        checkRuns: [
+            [
+                { name: 'Build', status: 'in_progress', conclusion: null, check_suite: { id: 200 } },
+                { name: 'Build', status: 'completed', conclusion: 'cancelled', check_suite: { id: 100 } },
+            ],
+            [
+                { name: 'Build', status: 'completed', conclusion: 'success', check_suite: { id: 200 } },
+                { name: 'Build', status: 'completed', conclusion: 'cancelled', check_suite: { id: 100 } },
+            ],
+        ],
+    });
+
+    await waitForRequiredChecks({ client, config: CONFIG, prNumber: 1, logger, intervalMs: 0 });
+});
+
+test('throws when the newest suite of a check run is the cancelled one', async () => {
+    const { logger } = createTestLogger('waitForRequiredChecks');
+    const client = createClient({
+        mergeableStates: ['blocked'],
+        checkRuns: [
+            [
+                { name: 'Build', status: 'completed', conclusion: 'cancelled', check_suite: { id: 200 } },
+                { name: 'Build', status: 'completed', conclusion: 'success', check_suite: { id: 100 } },
+            ],
+        ],
+    });
+
+    await expect(
+        waitForRequiredChecks({ client, config: CONFIG, prNumber: 1, logger, intervalMs: 0 }),
     ).rejects.toBeInstanceOf(UsageError);
 });

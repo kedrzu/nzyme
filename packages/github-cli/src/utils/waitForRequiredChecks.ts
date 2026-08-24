@@ -94,8 +94,9 @@ interface ChecksState {
  * pending — including non-required checks that `mergeable_state === 'unstable'` would otherwise wave
  * through. This avoids needing branch-protection admin scope to enumerate "required" checks.
  *
- * On every poll iteration, after the conflict/refresh aborts below, all check runs
- * ({@link GithubClient.rest.checks.listForRef}) and commit statuses
+ * On every poll iteration, after the conflict/refresh aborts below, all current check runs
+ * ({@link GithubClient.rest.checks.listForRef}, minus the superseded ones — see
+ * {@link dropSupersededCheckRuns}) and commit statuses
  * ({@link GithubClient.rest.repos.getCombinedStatusForRef}) for the head SHA are enumerated, then:
  * - If ANY check/status has a failing conclusion/state → abort immediately, naming the failed checks.
  * - Else if ANY check/status is still pending/in progress → keep polling (do not proceed).
@@ -208,9 +209,9 @@ export async function waitForRequiredChecks(params: WaitForRequiredChecksParams)
 }
 
 /**
- * Enumerate every check run and commit status on a ref, collecting failures and whether any are
- * still pending. This is the gate: a merge may proceed only when nothing is failing and nothing is
- * pending.
+ * Enumerate every current check run and commit status on a ref, collecting failures and whether any
+ * are still pending. This is the gate: a merge may proceed only when nothing is failing and nothing
+ * is pending.
  */
 async function getChecksState(client: GithubClient, config: GithubConfig, ref: string): Promise<ChecksState> {
     const failed: string[] = [];
@@ -223,7 +224,7 @@ async function getChecksState(client: GithubClient, config: GithubConfig, ref: s
         ref,
     });
 
-    for (const run of checks.check_runs) {
+    for (const run of dropSupersededCheckRuns(checks.check_runs)) {
         total++;
         if (run.status !== 'completed') {
             pending = true;
@@ -248,4 +249,41 @@ async function getChecksState(client: GithubClient, config: GithubConfig, ref: s
     }
 
     return { failed, pending, total };
+}
+
+/**
+ * Drop the check runs a newer run of the same name has already replaced on this SHA.
+ *
+ * One commit can carry several runs of the same workflow: a second `pull_request` event — such as
+ * the `ready_for_review` this gate's own caller triggers by un-drafting the PR — starts a fresh run,
+ * and a `concurrency` group with `cancel-in-progress` cancels the first. Both check runs stay
+ * attached to that SHA forever, so the cancelled one reads as a failing `Build` sitting next to the
+ * green `Build` that replaced it, and the gate refuses a PR whose checks actually passed. GitHub's
+ * own `filter=latest` does not cover this: it de-duplicates within a check suite, and the two runs
+ * are in different suites.
+ *
+ * Suites are kept or dropped whole rather than picking the newest run per name, so a matrix job
+ * emitting several same-named runs in one suite survives intact. Suite ids grow over time, so the
+ * highest id carrying a given name is that name's current suite. A run with no suite cannot be
+ * superseded and is always kept.
+ */
+function dropSupersededCheckRuns<T extends { name: string; check_suite?: { id: number } | null }>(runs: T[]): T[] {
+    const currentSuiteByName = new Map<string, number>();
+
+    for (const run of runs) {
+        const suiteId = run.check_suite?.id;
+        if (suiteId === undefined) {
+            continue;
+        }
+
+        const currentSuiteId = currentSuiteByName.get(run.name);
+        if (currentSuiteId === undefined || suiteId > currentSuiteId) {
+            currentSuiteByName.set(run.name, suiteId);
+        }
+    }
+
+    return runs.filter(run => {
+        const suiteId = run.check_suite?.id;
+        return suiteId === undefined || currentSuiteByName.get(run.name) === suiteId;
+    });
 }

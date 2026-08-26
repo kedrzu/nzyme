@@ -4,16 +4,6 @@
     "tui": {
         "enabled": false
     },
-    "plugins": [
-        {
-            "plugin": "@nx/eslint/plugin",
-            "options": {
-                "targetName": "lint"
-            },
-            "include": ["packages/**/*"],
-            "exclude": ["packages/github-cli/**/*", "packages/linear/**/*", "packages/sentry-cli/**/*"]
-        }
-    ],
     "namedInputs": {
         "default": ["{projectRoot}/**/*", "sharedGlobals"],
         "sharedGlobals": [
@@ -57,21 +47,6 @@
             "cache": true,
             "inputs": ["default", "^default", "localEnvironment"],
             "dependsOn": ["prep"]
-        },
-        "lint": {
-            "cache": true,
-            "inputs": [
-                "default",
-                "^default",
-                "{workspaceRoot}/packages/tsconfig/**/*",
-                "{workspaceRoot}/tools/eslint-rules/**/*",
-                {
-                    "runtime": "eslint --version"
-                }
-            ],
-            "options": {
-                "cache": true
-            }
         },
         "test:stories": {
             "cache": true,

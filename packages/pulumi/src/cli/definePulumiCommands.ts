@@ -978,6 +978,9 @@ function resolveStacks(options: ResolveStacksOptions) {
     const stacksSet = filterStacks(options);
 
     if (options.recursive) {
+        // The spread is a snapshot on purpose: the loop body calls `stacksSet.add(dep)`, and
+        // iterating the live set would also visit entries added while iterating.
+        // oxlint-disable-next-line unicorn/no-useless-spread
         for (const stack of [...stacksSet]) {
             const deps = getAllDeps(stack);
             for (const dep of deps) {

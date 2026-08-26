@@ -314,8 +314,8 @@ async function rebaseAndPushCurrentBranch(git: SimpleGit, logger: Logger, repoDi
     }
 
     // Check if remote has commits we don't have
-    let remoteAhead = 0;
-    let localAhead = 0;
+    let remoteAhead: number;
+    let localAhead: number;
     try {
         const remoteResult = await git.raw(['rev-list', '--count', `${currentBranch}..origin/${currentBranch}`]);
         remoteAhead = parseInt(remoteResult.trim(), 10);
@@ -369,7 +369,7 @@ async function pullCurrentBranch(git: SimpleGit, logger: Logger, repoDisplayName
     }
 
     // Check if remote has commits we don't have
-    let commitsAhead = 0;
+    let commitsAhead: number;
     try {
         const result = await git.raw(['rev-list', '--count', `${branch}..origin/${branch}`]);
         commitsAhead = parseInt(result.trim(), 10);
@@ -436,7 +436,7 @@ async function mergeBaseIntoSubmodules(
         const currentBranch = sub.currentBranch!;
 
         // Check if remote base branch is ahead of current branch
-        let commitsAhead = 0;
+        let commitsAhead: number;
         try {
             const result = await subGit.raw(['rev-list', '--count', `${currentBranch}..${remoteBaseBranch}`]);
             commitsAhead = parseInt(result.trim(), 10);
@@ -488,7 +488,7 @@ async function mergeBaseIntoCurrent(
         return { wasAhead: false, commitsAhead: 0, merged: false };
     }
 
-    let commitsAhead = 0;
+    let commitsAhead: number;
     try {
         const result = await git.raw(['rev-list', '--count', `${currentBranch}..${remoteBaseBranch}`]);
         commitsAhead = parseInt(result.trim(), 10);

@@ -44,7 +44,7 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions) {
         }
 
         if (server) {
-            void server.middleware(req, res, next);
+            server.middleware(req, res, next);
         } else {
             next();
         }
@@ -93,7 +93,7 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions) {
      */
     function newServer() {
         // Stop the current server
-        void server?.stop();
+        server?.stop();
 
         const newServer = createDevServer({ file: outputFile });
         server = newServer;

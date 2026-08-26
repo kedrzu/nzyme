@@ -44,7 +44,7 @@ const rollupResult = await rollup({
                 if (/^@aws-sdk\/.*/.test(module)) {
                     return false;
                 }
-                if (/^aws-sdk/.test(module)) {
+                if (module.startsWith('aws-sdk')) {
                     return false;
                 }
 

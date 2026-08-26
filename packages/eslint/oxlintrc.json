@@ -1,0 +1,98 @@
+{
+    // Shared rule preset. Rules only — no paths: ignore patterns and per-package overrides are
+    // repo-specific and belong in each repo's root `.oxlintrc.json`.
+    //
+    // The rule set mirrors what ESLint enforced before the oxlint migration: the `correctness`
+    // category covers 57 of those rules, the explicit entries below cover the remaining 38.
+    "plugins": ["typescript", "unicorn", "oxc", "import", "promise"],
+    "categories": {
+        "correctness": "error"
+    },
+    "rules": {
+        "curly": "error",
+        // Mirrors the pre-migration ESLint options: a leading underscore marks a binding as
+        // deliberately unused, in every position including catch parameters.
+        "no-unused-vars": [
+            "error",
+            {
+                "args": "all",
+                "argsIgnorePattern": "^_",
+                "caughtErrors": "all",
+                "caughtErrorsIgnorePattern": "^_",
+                "destructuredArrayIgnorePattern": "^_",
+                "varsIgnorePattern": "^_"
+            }
+        ],
+        "no-array-constructor": "error",
+        "no-case-declarations": "error",
+        "no-empty": "error",
+        "no-fallthrough": "error",
+        "no-prototype-builtins": "error",
+        "no-regex-spaces": "error",
+        "no-unexpected-multiline": "error",
+        "no-useless-assignment": "error",
+        "no-var": "error",
+        "prefer-const": "error",
+        "prefer-rest-params": "error",
+        "prefer-spread": "error",
+        "preserve-caught-error": "error",
+
+        "typescript/ban-ts-comment": "error",
+        "typescript/consistent-type-imports": "error",
+        "typescript/no-empty-object-type": "error",
+        "typescript/no-explicit-any": "error",
+        "typescript/no-import-type-side-effects": "error",
+        "typescript/no-misused-promises": "error",
+        "typescript/no-namespace": "error",
+        "typescript/no-require-imports": "error",
+        "typescript/no-unnecessary-type-assertion": "error",
+        "typescript/no-unnecessary-type-constraint": "error",
+        "typescript/no-unsafe-argument": "error",
+        "typescript/no-unsafe-assignment": "error",
+        "typescript/no-unsafe-call": "error",
+        "typescript/no-unsafe-enum-comparison": "error",
+        "typescript/no-unsafe-function-type": "error",
+        "typescript/no-unsafe-member-access": "error",
+        "typescript/no-unsafe-return": "error",
+        "typescript/only-throw-error": "error",
+        "typescript/prefer-promise-reject-errors": "error",
+        // The type-aware variant supersedes the base `require-await`, which the typescript-eslint
+        // docs prescribe disabling: the base rule cannot see that a function returns a promise
+        // without awaiting it, and reports the same locations a second time.
+        "typescript/require-await": "error",
+        "typescript/restrict-plus-operands": "error",
+
+        "import/consistent-type-specifier-style": "error",
+        "import/newline-after-import": "error",
+        "import/no-duplicates": "error",
+
+        // Reports every computed access into a namespace import. That is exactly how generated
+        // `.loc` translation modules are consumed (`l[key]`), so the rule is noise here.
+        "import/namespace": "off",
+        // Fires only on string-array sorts in tests, where the default lexicographic order is the
+        // intended one. `ignoreStringArrays` is accepted by the schema but has no effect in
+        // oxlint's implementation, so there is no way to keep the numeric-sort protection alone.
+        "typescript/require-array-sort-compare": "off"
+    },
+    "overrides": [
+        {
+            // Test doubles legitimately break both of these rules, and following either one would
+            // make the tests worse rather than better.
+            //
+            // `require-await`: a mock implementing an async contract — `fetchImpl?: (url: string)
+            // => Promise<Response>` — must be `async` to return a promise at all, whether or not
+            // its body awaits anything.
+            //
+            // `await-thenable`: `bun-types` types every `expect(...).rejects` / `.resolves` matcher
+            // as returning `void`, and at runtime they return `undefined`, so the rule is right
+            // that the `await` is a no-op today. The `await` stays anyway — it is what bun's own
+            // docs prescribe, and it is what keeps these assertions correct if bun ever types the
+            // matchers as promises. Dropping it would make those tests silently vacuous that day.
+            "files": ["**/*.test.ts", "**/*.spec.ts"],
+            "rules": {
+                "typescript/await-thenable": "off",
+                "typescript/require-await": "off"
+            }
+        }
+    ]
+}

@@ -1,7 +1,7 @@
 {
     "name": "@nzyme/eslint",
     "version": "0.14.0",
-    "description": "Shared ESLint configuration (framework)",
+    "description": "Shared Vue ESLint config and oxlint rule preset (framework)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {
@@ -9,7 +9,8 @@
         "url": "https://github.com/kedrzu/nzyme.git"
     },
     "files": [
-        "dist"
+        "dist",
+        "oxlintrc.json"
     ],
     "type": "module",
     "sideEffects": false,
@@ -33,19 +34,9 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "@eslint/js": "10.0.1",
         "@typescript-eslint/parser": "8.66.0",
         "eslint": "10.8.0",
-        "eslint-plugin-import": "2.32.0",
-        "eslint-plugin-jsdoc": "63.3.3",
-        "eslint-plugin-package-json": "1.6.3",
-        "eslint-plugin-perfectionist": "5.10.1",
-        "eslint-plugin-react": "7.37.5",
         "eslint-plugin-vue": "10.10.0",
-        "eslint-plugin-workspaces": "0.12.1",
-        "globals": "17.9.0",
-        "jsonc-eslint-parser": "3.2.0",
-        "typescript-eslint": "8.66.0",
         "vue-eslint-parser": "10.4.1"
     },
     "devDependencies": {

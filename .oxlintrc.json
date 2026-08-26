@@ -1,0 +1,68 @@
+{
+    "$schema": "./node_modules/oxlint/configuration_schema.json",
+    // Rules live in the shared preset; this file adds only what is specific to this repo's layout.
+    // Referenced by relative path rather than through `node_modules`, because when nzyme is checked
+    // out as a submodule its dependencies are hoisted to the parent workspace and `nzyme/node_modules`
+    // does not exist.
+    "extends": ["./packages/eslint/oxlintrc.json"],
+    "ignorePatterns": [
+        "**/dist/**",
+        "**/dist-cjs/**",
+        "**/.output/**",
+        "**/.nuxt/**",
+        "**/node_modules/**",
+        "**/*.loc.ts",
+        "**/*.loc.js",
+        "packages/cli/bin/**",
+        "packages/i18n/cli/**",
+        "packages/i18n-compiler/tests/**",
+        "packages/openapi/tests/schema.d.ts",
+        "packages/pulumi/src/shims.d.ts",
+        // Private Nuxt dev tool. Its tsconfig extends a generated `.nuxt/tsconfig.json` that only
+        // exists after `nuxt prepare`, which nothing in this repo wires up, so type-aware linting
+        // cannot resolve it. It was not linted before the oxlint migration either.
+        "packages/logging-ui/**"
+    ],
+    "overrides": [
+        {
+            // Both packages build types out of intentionally empty object types.
+            "files": ["packages/schema/**", "packages/zchema/**"],
+            "rules": { "typescript/no-empty-object-type": "off" }
+        },
+        {
+            // Packages that import `.vue` single-file components. Neither tsgo nor tsgolint can
+            // resolve SFC module types — `packages/ui` is deliberately kept out of the root tsconfig
+            // solution for exactly that reason — so every value crossing a `.vue` import boundary
+            // degrades to `any`/error-typed and the `no-unsafe-*` family reports the tooling gap
+            // rather than real unsafety. The pre-migration ESLint config disabled the same five
+            // rules for the same packages.
+            "files": [
+                "packages/vue/**",
+                "packages/vue-forms/**",
+                "packages/vue-utils/**",
+                "packages/vue-i18n/**",
+                "packages/vue-ioc/**",
+                "packages/vue-transitions/**"
+            ],
+            "rules": {
+                "typescript/no-unsafe-argument": "off",
+                "typescript/no-unsafe-assignment": "off",
+                "typescript/no-unsafe-call": "off",
+                "typescript/no-unsafe-member-access": "off",
+                "typescript/no-unsafe-return": "off"
+            }
+        },
+        {
+            // CLI wrappers over untyped `gh`/`git`/API output. Enforcing the `no-unsafe-*` family
+            // here would mean asserting types onto data we deliberately treat as unknown.
+            "files": ["packages/github-cli/**", "packages/linear/**", "packages/sentry-cli/**"],
+            "rules": {
+                "typescript/no-unsafe-argument": "off",
+                "typescript/no-unsafe-assignment": "off",
+                "typescript/no-unsafe-call": "off",
+                "typescript/no-unsafe-member-access": "off",
+                "typescript/no-unsafe-return": "off"
+            }
+        }
+    ]
+}

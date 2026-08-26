@@ -143,12 +143,16 @@ export function lazyResolve(schema: Schema): Schema {
 
     const unwrapped = schema.of();
 
+    // `Schema` is a type alias over an intersection, not a class (`Schema.ts:40`), so neither
+    // spread below has a prototype to lose.
+    /* oxlint-disable typescript/no-misused-spread */
     const override: Schema = {
         ...unwrapped,
         ...schema,
         proto: unwrapped.proto,
         type: unwrapped.type,
     };
+    /* oxlint-enable typescript/no-misused-spread */
 
     Object.assign(schema, override);
     return schema;

@@ -18,7 +18,7 @@ export function isVNodeEmpty(node: VNodeChild): boolean {
     }
 
     if (Array.isArray(node)) {
-        return node.length === 0 || node.every(isVNodeEmpty);
+        return node.every(isVNodeEmpty);
     }
 
     switch (node.type) {

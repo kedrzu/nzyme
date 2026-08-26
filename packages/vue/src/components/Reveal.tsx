@@ -117,7 +117,7 @@ export const Reveal = defineComponent({
         function forceRepaint(el: HTMLElement) {
             // Force repaint to make sure the
             // animation is triggered correctly.
-            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+            // oxlint-disable-next-line no-unused-expressions
             getComputedStyle(el).height;
         }
     },

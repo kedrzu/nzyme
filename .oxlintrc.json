@@ -5,14 +5,12 @@
     // out as a submodule its dependencies are hoisted to the parent workspace and `nzyme/node_modules`
     // does not exist.
     "extends": ["./packages/eslint/oxlintrc.json"],
+    // Oxlint already skips gitignored paths on its own, so only what no `.gitignore` covers is
+    // listed here.
     "ignorePatterns": [
-        "**/dist/**",
+        // No `.gitignore` lists `dist-cjs` (only `dist`).
         "**/dist-cjs/**",
-        "**/.output/**",
-        "**/.nuxt/**",
-        "**/node_modules/**",
-        // Generated from `.loc.yaml`; emitted as both extensions.
-        "**/*.loc.ts",
+        // Generated from `.loc.yaml`; only the `.ts` output is gitignored, the `.js` is not.
         "**/*.loc.js",
         // Everything else a generator writes carries the `.gen` infix, so generated trees never have
         // to be listed here file by file. A finding in such a file belongs to the generator.

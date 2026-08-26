@@ -31,7 +31,7 @@
         "access": "public"
     },
     "scripts": {
-        "schema": "openapi-typescript https://petstore3.swagger.io/api/v3/openapi.json -o ./tests/schema.d.ts",
+        "schema": "openapi-typescript https://petstore3.swagger.io/api/v3/openapi.json -o ./tests/schema.gen.d.ts",
         "build": "tsgo --build tsconfig.esm.json",
         "format": "oxfmt ./src > /dev/null"
     },

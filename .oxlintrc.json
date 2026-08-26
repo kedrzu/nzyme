@@ -11,13 +11,16 @@
         "**/.output/**",
         "**/.nuxt/**",
         "**/node_modules/**",
+        // Generated from `.loc.yaml`; emitted as both extensions.
         "**/*.loc.ts",
         "**/*.loc.js",
-        "packages/cli/bin/**",
-        "packages/i18n/cli/**",
+        // Everything else a generator writes carries the `.gen` infix, so generated trees never have
+        // to be listed here file by file. A finding in such a file belongs to the generator.
+        "**/*.gen.ts",
+        "**/*.gen.d.ts",
+        // Expected-output fixtures: `compileTranslationFile.test.ts` asserts the compiler's output is
+        // byte-identical to these files, so any lint fix applied here would break the test it feeds.
         "packages/i18n-compiler/tests/**",
-        "packages/openapi/tests/schema.d.ts",
-        "packages/pulumi/src/shims.d.ts",
         // Private Nuxt dev tool. Its tsconfig extends a generated `.nuxt/tsconfig.json` that only
         // exists after `nuxt prepare`, which nothing in this repo wires up, so type-aware linting
         // cannot resolve it. It was not linted before the oxlint migration either.
@@ -30,12 +33,13 @@
             "rules": { "typescript/no-empty-object-type": "off" }
         },
         {
-            // Packages that import `.vue` single-file components. Neither tsgo nor tsgolint can
-            // resolve SFC module types — `packages/ui` is deliberately kept out of the root tsconfig
-            // solution for exactly that reason — so every value crossing a `.vue` import boundary
-            // degrades to `any`/error-typed and the `no-unsafe-*` family reports the tooling gap
-            // rather than real unsafety. The pre-migration ESLint config disabled the same five
-            // rules for the same packages.
+            // Vue integration packages. Their `no-unsafe-*` findings come from types this repo does
+            // not own: Vue's own reactivity and component types resolve to `any` at several
+            // boundaries (`computedAsync`, `useEmitAsProps`), the `*.vue` ambient shims these
+            // packages ship declare SFCs as `DefineComponent<{}, {}, any>`, and JSX over third-party
+            // Vue components (`vue-imask`) yields error-typed values. The family therefore reports
+            // the upstream typing gap rather than real unsafety here. The pre-migration ESLint
+            // config disabled the same five rules for the same packages, via `vue()`.
             "files": [
                 "packages/vue/**",
                 "packages/vue-forms/**",
@@ -44,18 +48,6 @@
                 "packages/vue-ioc/**",
                 "packages/vue-transitions/**"
             ],
-            "rules": {
-                "typescript/no-unsafe-argument": "off",
-                "typescript/no-unsafe-assignment": "off",
-                "typescript/no-unsafe-call": "off",
-                "typescript/no-unsafe-member-access": "off",
-                "typescript/no-unsafe-return": "off"
-            }
-        },
-        {
-            // CLI wrappers over untyped `gh`/`git`/API output. Enforcing the `no-unsafe-*` family
-            // here would mean asserting types onto data we deliberately treat as unknown.
-            "files": ["packages/github-cli/**", "packages/linear/**", "packages/sentry-cli/**"],
             "rules": {
                 "typescript/no-unsafe-argument": "off",
                 "typescript/no-unsafe-assignment": "off",

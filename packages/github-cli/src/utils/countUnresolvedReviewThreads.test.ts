@@ -15,9 +15,9 @@ interface Page {
 function createClient(pages: Page[]): GithubClient {
     let call = 0;
     return {
-        async graphql() {
+        graphql() {
             const page = pages[call++]!;
-            return {
+            return Promise.resolve({
                 repository: {
                     pullRequest: {
                         reviewThreads: {
@@ -26,7 +26,7 @@ function createClient(pages: Page[]): GithubClient {
                         },
                     },
                 },
-            };
+            });
         },
     } as unknown as GithubClient;
 }

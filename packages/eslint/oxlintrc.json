@@ -73,26 +73,5 @@
         // intended one. `ignoreStringArrays` is accepted by the schema but has no effect in
         // oxlint's implementation, so there is no way to keep the numeric-sort protection alone.
         "typescript/require-array-sort-compare": "off"
-    },
-    "overrides": [
-        {
-            // Test doubles legitimately break both of these rules, and following either one would
-            // make the tests worse rather than better.
-            //
-            // `require-await`: a mock implementing an async contract — `fetchImpl?: (url: string)
-            // => Promise<Response>` — must be `async` to return a promise at all, whether or not
-            // its body awaits anything.
-            //
-            // `await-thenable`: `bun-types` types every `expect(...).rejects` / `.resolves` matcher
-            // as returning `void`, and at runtime they return `undefined`, so the rule is right
-            // that the `await` is a no-op today. The `await` stays anyway — it is what bun's own
-            // docs prescribe, and it is what keeps these assertions correct if bun ever types the
-            // matchers as promises. Dropping it would make those tests silently vacuous that day.
-            "files": ["**/*.test.ts", "**/*.spec.ts"],
-            "rules": {
-                "typescript/await-thenable": "off",
-                "typescript/require-await": "off"
-            }
-        }
-    ]
+    }
 }

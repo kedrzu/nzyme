@@ -92,12 +92,6 @@
         // on someone else's `@deprecated` tag would turn an upstream release into our outage.
         "typescript/no-deprecated": "warn",
         "typescript/no-unnecessary-type-arguments": "error",
-        // Warn, not error. The rule is right — a type parameter used once in a signature is a
-        // disguised `unknown`, and callers who pass one get the type they asked for with no evidence
-        // behind it. But the mechanical fix only moves the cast to the call sites, and the honest fix
-        // is an API change (a typed key for `ContextProvider.get`, a parse step for `xmlParse`). That
-        // is design work, so this stays visible instead of blocking the build.
-        "typescript/no-unnecessary-type-parameters": "warn",
         "typescript/use-unknown-in-catch-callback-variable": "error",
         "typescript/no-unnecessary-boolean-literal-compare": "error",
         "typescript/no-unnecessary-template-expression": "error",
@@ -171,6 +165,15 @@
         // TypeScript keeps those in separate namespaces, so the only thing the rule bought was
         // renaming `<Layout>` to `<LayoutComponent>` in three templates.
         "import/no-named-as-default": "off",
+
+        // Off, not warn. The rule is right that a type parameter used once in a signature binds
+        // nothing — `xmlParse<T>(…) as T` and `ContextProvider.get<T>(key)` hand back whatever the
+        // caller asked for with no evidence behind it. But removing the parameter only moves the
+        // cast to the call sites; the honest fix gives the generic real evidence (return `unknown`
+        // and validate, or take a `ZodType<T>`), and that is an API migration across ~12 functions,
+        // not a lint pass. Left off rather than as a permanent warning so the linter keeps meaning
+        // "this is yours, now".
+        "typescript/no-unnecessary-type-parameters": "off",
 
         // `dataset` lives on `HTMLElement`, but plenty of DOM code legitimately holds only an
         // `Element` — `IntersectionObserverEntry.target` is typed that way, and the chat event

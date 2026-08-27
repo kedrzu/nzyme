@@ -19,7 +19,7 @@ const builder = new XMLBuilder({
  * @returns The XML string representation
  * @__NO_SIDE_EFFECTS__
  */
-export function xmlStringify<T = XmlElement>(xml: T) {
+export function xmlStringify(xml: XmlElement) {
     const xmlString = builder.build(xml);
     return '<?xml version="1.0" encoding="utf-8" ?>\n' + xmlString;
 }

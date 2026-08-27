@@ -54,7 +54,7 @@ export function parseMarkdownStream(options: ParseMarkdownStreamOptions) {
     return root;
 }
 
-function transformNode<T extends RootContent>(node: T, end: number): RootContent {
+function transformNode(node: RootContent, end: number): RootContent {
     const position = node.position;
     if (position) {
         position.end.offset = (position.end.offset ?? 0) + end;

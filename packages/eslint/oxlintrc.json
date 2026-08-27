@@ -91,6 +91,14 @@
         // replacement often sits in a third-party package on its own schedule. Blocking the build
         // on someone else's `@deprecated` tag would turn an upstream release into our outage.
         "typescript/no-deprecated": "warn",
+        "typescript/no-unnecessary-type-arguments": "error",
+        // Warn, not error. The rule is right — a type parameter used once in a signature is a
+        // disguised `unknown`, and callers who pass one get the type they asked for with no evidence
+        // behind it. But the mechanical fix only moves the cast to the call sites, and the honest fix
+        // is an API change (a typed key for `ContextProvider.get`, a parse step for `xmlParse`). That
+        // is design work, so this stays visible instead of blocking the build.
+        "typescript/no-unnecessary-type-parameters": "warn",
+        "typescript/use-unknown-in-catch-callback-variable": "error",
         "typescript/no-unnecessary-boolean-literal-compare": "error",
         "typescript/no-unnecessary-template-expression": "error",
         "typescript/no-unnecessary-type-conversion": "error",
@@ -218,7 +226,7 @@
             // (`import css from './Button.vue?vue&type=style&…&lang.module.scss'`). That is the
             // documented way to get scoped styles, not the accidental self-reference the rule hunts.
             "files": ["**/*.vue"],
-            "rules": { "import/no-self-import": "off" }
+            "rules": { "import/no-self-import": "off", "import/no-cycle": "off" }
         },
         {
             // In a declaration file an empty import is not dead code — it is what makes the file a

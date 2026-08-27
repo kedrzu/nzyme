@@ -19,7 +19,7 @@ interface EventBusSingle<T> {
 }
 
 interface EventBusVoid {
-    on(fct: EventCallback<void>): void;
+    on(fct: EventCallback): void;
     emit(): void;
 }
 

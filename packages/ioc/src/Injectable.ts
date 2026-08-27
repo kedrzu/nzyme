@@ -87,9 +87,7 @@ export function defineInjectable<T extends Injectable>(
 /**
  * @__NO_SIDE_EFFECTS__
  */
-export function defineInjectable(
-    optionsOrResolve: InjectableOptions<unknown> | InjectableResolve<unknown>,
-): Injectable<unknown> {
+export function defineInjectable(optionsOrResolve: InjectableOptions<unknown> | InjectableResolve): Injectable {
     if (typeof optionsOrResolve === 'function') {
         return {
             resolve: optionsOrResolve,

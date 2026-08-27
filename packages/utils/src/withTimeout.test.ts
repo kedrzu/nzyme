@@ -101,7 +101,7 @@ test('aborts the operation signal with a TimeoutError reason', async () => {
     const promise = withTimeout({
         operation: signal => {
             operationSignal = signal;
-            return createPromise<void>().promise;
+            return createPromise().promise;
         },
         timeoutMs: 100,
         onTimeout: () => {},
@@ -193,7 +193,7 @@ test('forwards an abort of the caller signal to the operation signal', async () 
     const promise = withTimeout({
         operation: signal => {
             operationSignal = signal;
-            return createPromise<void>().promise;
+            return createPromise().promise;
         },
         timeoutMs: 100,
         signal: controller.signal,

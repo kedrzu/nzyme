@@ -26,7 +26,6 @@ export function assert(value: unknown, message?: string): asserts value {
  * @util
  *
  * @template T - The type of the value being compared
- * @template E - The type of the expected value (must extend T)
  * @param value - The value to check
  * @param expected - The expected value
  * @param message - Optional custom error message
@@ -38,7 +37,7 @@ export function assert(value: unknown, message?: string): asserts value {
  * assertEquals(value, 6); // Throws error
  * ```
  */
-export function assertEquals<T, E extends T = T>(value: T, expected: E, message?: string): asserts value is T {
+export function assertEquals<T>(value: T, expected: T, message?: string): asserts value is T {
     if (value !== expected) {
         throw new Error(message ?? `Value is not equal to ${String(expected)}.`);
     }

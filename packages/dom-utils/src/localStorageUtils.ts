@@ -4,7 +4,7 @@
  * @param key The localStorage key to store the value under
  * @param value The value to store (will be JSON-serialized)
  */
-export function localStorageSetJson<T>(key: string, value: T) {
+export function localStorageSetJson(key: string, value: unknown) {
     if (typeof localStorage === 'undefined') {
         return;
     }

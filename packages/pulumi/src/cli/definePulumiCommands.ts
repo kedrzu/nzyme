@@ -437,7 +437,7 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                             await options.afterDeployStack?.({ command: this, stack });
                             stacksDeployed.add(stack);
                         })
-                        .catch(e => {
+                        .catch((e: unknown) => {
                             stacksDeploying.delete(stack);
                             stacksDeployed.delete(stack);
                             stacksFailed.set(stack, e);

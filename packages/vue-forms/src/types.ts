@@ -13,7 +13,7 @@ export interface FormBase<T = unknown> {
     /**
      * Parent form
      */
-    readonly form: FormModel<unknown>;
+    readonly form: FormModel;
 
     /**
      * Whether the form is valid.

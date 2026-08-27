@@ -23,7 +23,7 @@ export type SortOrder = 'asc' | 'desc';
  * @param array - The array to sort
  * @param value - Function that extracts the value to sort by from each item
  * @param options - Optional sorting configuration
- * @returns The sorted array (mutates the input array)
+ * @returns A new sorted array; the input is left untouched
  *
  * @example
  * ```typescript
@@ -42,11 +42,11 @@ export type SortOrder = 'asc' | 'desc';
  * // Result: [{ name: 'Charlie'... }, { name: 'Bob'... }, { name: 'Alice'... }]
  * ```
  */
-export function sortBy<T>(array: T[], value: (item: T) => unknown, options?: SortOptions) {
+export function sortBy<T>(array: readonly T[], value: (item: T) => unknown, options?: SortOptions) {
     const orderDesc = options?.order === 'desc';
     const ignoreCase = options?.ignoreCase || false;
 
-    return array.sort((a, b) => {
+    return array.toSorted((a, b) => {
         let first = value(orderDesc ? b : a);
         let second = value(orderDesc ? a : b);
 
@@ -57,7 +57,7 @@ export function sortBy<T>(array: T[], value: (item: T) => unknown, options?: Sor
             }
 
             return (first as string).localeCompare(second as string);
-        } else if (first == second) {
+        } else if (first === second) {
             return 0;
         } else if (first == null) {
             return -1;

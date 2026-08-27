@@ -17,7 +17,7 @@ const scrollToElement = debounce(() => {
                 options: options,
             };
         }
-    }).sort((e1, e2) => e1.top - e2.top)[0];
+    }).toSorted((e1, e2) => e1.top - e2.top)[0];
 
     top?.el?.scrollIntoView({
         behavior: 'smooth',

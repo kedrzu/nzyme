@@ -43,7 +43,7 @@ export function packageJsonPlugin(options: PackageJsonPluginOptions = {}): Plugi
             const packages = [
                 ...getPackagesFromBundle(bundle),
                 ...Object.keys(localPackageJson?.dependencies ?? {}),
-            ].sort();
+            ].toSorted();
 
             const packagesSet = new Set(packages);
             const dependencies = await getPackagesWithVersions(packagesSet);

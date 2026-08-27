@@ -111,7 +111,7 @@ export async function handleMergedPrReopen(params: HandleMergedPrReopenParams): 
 
     // Found merged or closed PR(s) - determine the next branch name
     const allClosedPrs = [...mergedPrs, ...closedPrs];
-    const mostRecentClosedPr = allClosedPrs.sort((a, b) => {
+    const mostRecentClosedPr = allClosedPrs.toSorted((a, b) => {
         const dateA = a.merged_at || a.closed_at || '1970-01-01';
         const dateB = b.merged_at || b.closed_at || '1970-01-01';
         return new Date(dateB).getTime() - new Date(dateA).getTime();

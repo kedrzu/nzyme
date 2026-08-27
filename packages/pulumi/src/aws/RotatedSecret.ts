@@ -126,7 +126,7 @@ export class RotatedSecret extends pulumi.ComponentResource {
         const history = pulumi.secret(
             pulumi.all([secret.id, version.secretString]).apply(async ([secretId, secretString]) => {
                 const versionsOutput = await aws.secretsmanager.getSecretVersions({ secretId }, { parent: this });
-                const versions = versionsOutput.versions.sort(
+                const versions = versionsOutput.versions.toSorted(
                     (a, b) => new Date(a.createdTime).getTime() - new Date(b.createdTime).getTime(),
                 );
 

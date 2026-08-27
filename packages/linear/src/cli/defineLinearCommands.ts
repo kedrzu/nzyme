@@ -805,7 +805,7 @@ function defineTaskListCommand(options: LinearCommandsOptions) {
 
                 // Sort tasks by priority (descending - higher priority first)
                 // Linear priority: 0 = No priority, 1 = Urgent, 2 = High, 3 = Medium, 4 = Low
-                const sortedIssues = issues.sort((a, b) => {
+                const sortedIssues = issues.toSorted((a, b) => {
                     // Treat 0 (no priority) as lowest priority
                     const priorityA = a.priority === 0 ? 5 : a.priority;
                     const priorityB = b.priority === 0 ? 5 : b.priority;

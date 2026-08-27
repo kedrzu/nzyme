@@ -784,7 +784,7 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
             const stacksToDestroy: StackDefinition[] = [];
             const protectedStacks: StackDefinition[] = [];
 
-            for (const stack of [...stacks].reverse()) {
+            for (const stack of stacks.toReversed()) {
                 const stackResolved = this.container.resolve(stack);
                 if (stackResolved.preventDestroy) {
                     protectedStacks.push(stack);

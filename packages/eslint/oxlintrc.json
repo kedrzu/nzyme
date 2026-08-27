@@ -11,6 +11,10 @@
     },
     "rules": {
         "curly": "error",
+        // `x == null` is the idiomatic "null or undefined" check and is deliberately kept; without
+        // the carve-out the rule reports 375 of them and buries the handful of real loose
+        // comparisons.
+        "eqeqeq": ["error", "always", { "null": "ignore" }],
         // Mirrors the pre-migration ESLint options: a leading underscore marks a binding as
         // deliberately unused, in every position including catch parameters.
         "no-unused-vars": [
@@ -151,6 +155,8 @@
         // becomes a second argument. All 21 findings here were named single-parameter mappers
         // (`map(deserializeEvent)`, `filter(isReservedOption)`), so the rule only turned readable
         // point-free code into `x => f(x)` noise.
+        "unicorn/no-array-reverse": "error",
+        "unicorn/no-array-sort": "error",
         "unicorn/no-array-callback-reference": "off",
         // Meant to stop `delete` from destroying a typed object's shape, but it cannot tell that
         // apart from a delete on a genuine dictionary — and every finding here was the latter

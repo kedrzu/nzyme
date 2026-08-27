@@ -100,7 +100,6 @@
         "unicorn/no-array-fill-with-reference-type": "error",
         "unicorn/no-hex-escape": "error",
         "unicorn/no-immediate-mutation": "error",
-        "unicorn/no-instanceof-builtins": "error",
         "unicorn/no-negation-in-equality-check": "error",
         "unicorn/no-typeof-undefined": "error",
         "unicorn/no-unnecessary-array-splice-count": "error",
@@ -110,7 +109,6 @@
         "unicorn/prefer-code-point": "error",
         "unicorn/prefer-date-now": "error",
         "unicorn/prefer-dom-node-append": "error",
-        "unicorn/prefer-dom-node-dataset": "error",
         "unicorn/prefer-dom-node-remove": "error",
         "unicorn/prefer-import-meta-properties": "error",
         "unicorn/prefer-math-min-max": "error",
@@ -140,6 +138,18 @@
         // using one there is a `ReferenceError` at load plus a 503 on every request. A lookup rule
         // that cannot see the target runtime is not worth one micro-optimisation.
         "unicorn/prefer-set-has": "off",
+
+        // `dataset` lives on `HTMLElement`, but plenty of DOM code legitimately holds only an
+        // `Element` — `IntersectionObserverEntry.target` is typed that way, and the chat event
+        // observer reads `data-seq` off it. The rule's rewrite does not compile there, and the
+        // guard it would need buys nothing over `getAttribute`.
+        "unicorn/prefer-dom-node-dataset": "off",
+        // Its one finding is `modal instanceof Function` in `ModalService`, where `ModalComponent<C>`
+        // is `(() => Promise<{ default: C }>) | C | Promise<{ default: C }>`. `typeof x === 'function'`
+        // narrows that union to include `C & Function`, which is not callable, so the rewrite only
+        // compiles with a cast added — the wrong direction for a rule about cross-realm safety that
+        // does not apply to a same-realm dynamic import.
+        "unicorn/no-instanceof-builtins": "off",
 
         // Targets `xs.map(x => ({ ...x, extra }))`, the idiomatic immutable update. Its replacement
         // is less readable for an allocation count that is the same order either way, and none of

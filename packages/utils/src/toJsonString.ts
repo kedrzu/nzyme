@@ -25,6 +25,8 @@ function serializeValue(_key: unknown, value: unknown) {
             return value;
         case 'function':
             return undefined;
+        default:
+            break;
     }
 
     if (value instanceof Set) {

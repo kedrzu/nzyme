@@ -43,6 +43,11 @@ export function blockToMarkdown(block: KnownBlock): string | undefined {
             if ('slack_file' in block && 'url' in block.slack_file) {
                 return `![${title}](${block.slack_file.url})`;
             }
+
+            return undefined;
         }
+
+        default:
+            return undefined;
     }
 }

@@ -93,6 +93,7 @@
         "typescript/no-deprecated": "warn",
         "typescript/no-unnecessary-type-arguments": "error",
         "typescript/use-unknown-in-catch-callback-variable": "error",
+        "typescript/switch-exhaustiveness-check": ["error", { "considerDefaultExhaustiveForUnions": true }],
         "typescript/no-unnecessary-boolean-literal-compare": "error",
         "typescript/no-unnecessary-template-expression": "error",
         "typescript/no-unnecessary-type-conversion": "error",

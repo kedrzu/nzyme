@@ -112,6 +112,8 @@ export function toJson<T>(value: T): Json<T> {
 
             return result as Json<T>;
         }
+        default:
+            break;
     }
 
     return value as Json<T>;

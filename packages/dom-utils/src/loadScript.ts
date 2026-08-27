@@ -40,7 +40,7 @@ export function loadScript(url: string, options?: LoadScriptOptions) {
             scriptTag.remove();
             // Remove pending promise from cache
             if (cache[url] === promise) {
-                Reflect.deleteProperty(cache, url);
+                delete cache[url];
             }
 
             reject(new Error(`Failed to load script: ${url}`, { cause: e }));

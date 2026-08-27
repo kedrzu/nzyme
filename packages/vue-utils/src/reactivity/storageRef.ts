@@ -277,7 +277,7 @@ export function storageRef<T>(
         if (value == null) {
             storage.removeItem(key);
         } else if ((value as StorageValue<T>)[skipWrite]) {
-            Reflect.deleteProperty(value, skipWrite);
+            delete (value as StorageValue<T>)[skipWrite];
         } else {
             storage.setItem(key, serialize(value));
         }

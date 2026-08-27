@@ -5,6 +5,7 @@ import type { Writable } from '@nzyme/types/Common.js';
 import { arrayRemove } from '@nzyme/utils/array/arrayRemove.js';
 import { CancelError } from '@nzyme/utils/CancelError.js';
 import { createPromise } from '@nzyme/utils/createPromise.js';
+import { isFunction } from '@nzyme/utils/isFunction.js';
 import { provideContext } from '@nzyme/vue-utils/context.js';
 import { onKeyUp } from '@nzyme/vue-utils/onKeyUp.js';
 import { reactive } from '@nzyme/vue-utils/reactivity/reactive.js';
@@ -139,12 +140,22 @@ export const ModalService = defineService({
             modals.value.forEach(m => m.controller.close());
         }
 
+        /**
+         * A `ModalComponent` is the component itself, a promise of its module, or a function that
+         * loads it. Vue components can themselves be functions, so callability alone cannot tell a
+         * functional component from a loader — this predicate states the contract `open()` documents
+         * (a callable modal is the loader) in one named place instead of at every call site.
+         */
+        function isModalComponentLoader<C>(modal: ModalComponent<C>): modal is () => Promise<{ default: C }> {
+            return isFunction(modal);
+        }
+
         function unwrapModalComponent<C>(modal: ModalComponent<C>): Promise<Component> {
             if (modal instanceof Promise) {
                 return modal.then(view => view.default as Component);
             }
 
-            if (modal instanceof Function) {
+            if (isModalComponentLoader(modal)) {
                 return modal().then(view => view.default as Component);
             }
 

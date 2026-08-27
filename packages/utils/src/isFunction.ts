@@ -1,19 +1,29 @@
+/** Any callable value, written so it accepts every function shape without widening to `Function`. */
+type AnyFunction = (...args: never[]) => unknown;
+
 /**
- * Checks if a value is a function.
- * This is a type guard that narrows the type to Function.
+ * Checks whether a value is callable.
+ *
+ * Prefer this over `value instanceof Function`, which only holds for functions created in the same
+ * JS realm — it silently returns `false` for one that crossed a `node:vm` context, a worker or an
+ * iframe. Prefer it over a bare `typeof value === 'function'` too: on a union this narrows to the
+ * union's callable members instead of intersecting the whole union with `Function`.
  * @util
  *
  * @param value - The value to check
- * @returns True if the value is a function, false otherwise
+ * @returns True if the value is callable
  *
  * @example
  * ```typescript
  * isFunction(() => {}); // true
- * isFunction(function() {}); // true
  * isFunction('not a function'); // false
+ *
+ * declare const x: (() => number) | string;
+ * if (isFunction(x)) {
+ *     x(); // narrowed to `() => number`
+ * }
  * ```
  */
-// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-export function isFunction(value: unknown): value is Function {
+export function isFunction<T>(value: T): value is Extract<T, AnyFunction> {
     return typeof value === 'function';
 }

@@ -104,7 +104,7 @@ export function determineNextVersion(baseBranchName: string, existingBranches: s
     // Find all versions of this branch
     const versions = existingBranches
         .filter(branch => getBaseBranchName(branch) === baseName)
-        .map(branch => extractBranchVersion(branch));
+        .map(extractBranchVersion);
 
     if (versions.length === 0) {
         // No existing versions, use the base name as v1

@@ -87,7 +87,10 @@
         "radix": "error",
         "symbol-description": "error",
 
-        "typescript/no-dynamic-delete": "error",
+        // Warn, not error: a deprecation is advice about the future, not a defect today, and the
+        // replacement often sits in a third-party package on its own schedule. Blocking the build
+        // on someone else's `@deprecated` tag would turn an upstream release into our outage.
+        "typescript/no-deprecated": "warn",
         "typescript/no-unnecessary-boolean-literal-compare": "error",
         "typescript/no-unnecessary-template-expression": "error",
         "typescript/no-unnecessary-type-conversion": "error",
@@ -96,12 +99,14 @@
 
         "unicorn/consistent-assert": "error",
         "unicorn/no-abusive-eslint-disable": "error",
-        "unicorn/no-array-callback-reference": "error",
         "unicorn/no-array-fill-with-reference-type": "error",
         "unicorn/no-hex-escape": "error",
+        // `instanceof Function` only holds within one JS realm — it is false for a function that
+        // crossed a `node:vm` context, a worker or an iframe. `isFunction` from `@nzyme/utils` is
+        // the realm-safe check and narrows a union to its callable members.
+        "unicorn/no-instanceof-builtins": "error",
         "unicorn/no-immediate-mutation": "error",
         "unicorn/no-negation-in-equality-check": "error",
-        "unicorn/no-typeof-undefined": "error",
         "unicorn/no-unnecessary-array-splice-count": "error",
         "unicorn/no-useless-switch-case": "error",
         "unicorn/prefer-add-event-listener": "error",
@@ -123,7 +128,6 @@
         "promise/no-promise-in-callback": "error",
 
         "import/no-empty-named-blocks": "error",
-        "import/no-named-as-default": "error",
         "import/no-named-as-default-member": "error",
         "import/no-self-import": "error",
 
@@ -139,18 +143,31 @@
         // that cannot see the target runtime is not worth one micro-optimisation.
         "unicorn/prefer-set-has": "off",
 
+        // Exists for `xs.map(Number)` and `xs.map(parseInt)`, where the index `map` also passes
+        // becomes a second argument. All 21 findings here were named single-parameter mappers
+        // (`map(deserializeEvent)`, `filter(isReservedOption)`), so the rule only turned readable
+        // point-free code into `x => f(x)` noise.
+        "unicorn/no-array-callback-reference": "off",
+        // Meant to stop `delete` from destroying a typed object's shape, but it cannot tell that
+        // apart from a delete on a genuine dictionary — and every finding here was the latter
+        // (`process.env`, `globalThis`, `Record<string, string>` dependency maps). Its suggested
+        // `Reflect.deleteProperty` is strictly more obscure for the same effect.
+        "typescript/no-dynamic-delete": "off",
+        // Rewrites `typeof x === 'undefined'` to `x === undefined`, which throws `ReferenceError`
+        // for a global that may not be declared at all. Its only finding was `getCookieBot`, whose
+        // whole purpose is to answer whether the Cookiebot script ever loaded.
+        "unicorn/no-typeof-undefined": "off",
+        // Fires when a default import shares a name with a named export, but does not distinguish a
+        // type from a value. `layout/Layout` exports `type Layout` alongside the component default;
+        // TypeScript keeps those in separate namespaces, so the only thing the rule bought was
+        // renaming `<Layout>` to `<LayoutComponent>` in three templates.
+        "import/no-named-as-default": "off",
+
         // `dataset` lives on `HTMLElement`, but plenty of DOM code legitimately holds only an
         // `Element` — `IntersectionObserverEntry.target` is typed that way, and the chat event
         // observer reads `data-seq` off it. The rule's rewrite does not compile there, and the
         // guard it would need buys nothing over `getAttribute`.
         "unicorn/prefer-dom-node-dataset": "off",
-        // Its one finding is `modal instanceof Function` in `ModalService`, where `ModalComponent<C>`
-        // is `(() => Promise<{ default: C }>) | C | Promise<{ default: C }>`. `typeof x === 'function'`
-        // narrows that union to include `C & Function`, which is not callable, so the rewrite only
-        // compiles with a cast added — the wrong direction for a rule about cross-realm safety that
-        // does not apply to a same-realm dynamic import.
-        "unicorn/no-instanceof-builtins": "off",
-
         // Targets `xs.map(x => ({ ...x, extra }))`, the idiomatic immutable update. Its replacement
         // is less readable for an allocation count that is the same order either way, and none of
         // the seven sites is a hot path (a logger call, two tests, an Effect promise, a computed

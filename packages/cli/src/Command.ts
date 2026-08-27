@@ -81,12 +81,17 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
         }
     }
 
-    /** Logs the error and exits the process with code 1. */
-    override async catch(error: unknown) {
+    /**
+     * Logs the error and exits the process with code 1.
+     * Parameter is intentionally not named `error`/`err` — that shape makes
+     * eslint-plugin-promise's `no-promise-in-callback` heuristic mistake this override for a
+     * Node-style error-first callback and flag the `Promise.resolve()` below.
+     */
+    override async catch(commandError: unknown) {
         if (this.#logger) {
-            this.#logger.error('❌ Command execution failed', { error });
+            this.#logger.error('❌ Command execution failed', { error: commandError });
         } else {
-            console.error('❌ Command execution failed', { error });
+            console.error('❌ Command execution failed', { error: commandError });
         }
 
         await Promise.resolve();

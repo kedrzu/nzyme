@@ -48,7 +48,7 @@ export function defineContext<TParams extends unknown[], TContext>(
     return {
         name,
         setup: context || (identity as unknown as ContextConstructor<TParams, TContext>),
-        symbol: Symbol(),
+        symbol: Symbol(name),
     };
 }
 

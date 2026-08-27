@@ -144,7 +144,7 @@ export class RotatedSecret extends pulumi.ComponentResource {
                     }),
                 );
 
-                if (!secrets.find(v => v === secretString) && secretString) {
+                if (!secrets.some(v => v === secretString) && secretString) {
                     secrets.unshift(secretString);
                 }
 

@@ -135,7 +135,7 @@ type StorageRefOptionsJson = StorageRefOptions & {
     serialize?: undefined;
 };
 
-const skipWrite = Symbol();
+const skipWrite = Symbol('skipWrite');
 type StorageValue<T> = T & { [skipWrite]?: true };
 
 /**
@@ -277,7 +277,7 @@ export function storageRef<T>(
         if (value == null) {
             storage.removeItem(key);
         } else if ((value as StorageValue<T>)[skipWrite]) {
-            delete (value as StorageValue<T>)[skipWrite];
+            Reflect.deleteProperty(value, skipWrite);
         } else {
             storage.setItem(key, serialize(value));
         }

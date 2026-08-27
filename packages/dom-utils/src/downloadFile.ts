@@ -34,7 +34,7 @@ export function downloadFile(options: DownloadFileOptions): void {
 
     document.body.append(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
 
     setTimeout(() => URL.revokeObjectURL(url), 100);
 }

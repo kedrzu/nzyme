@@ -80,7 +80,7 @@ function setupPhoneInput() {
 
     async function initFormatter() {
         const { AsYouType } = await import('libphonenumber-js');
-        const country = props.country as CountryCode;
+        const country = props.country!;
         formatter = new AsYouType(country);
         updatePhone();
     }

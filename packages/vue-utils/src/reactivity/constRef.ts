@@ -24,8 +24,6 @@ export function constRef<T>(value: T): Readonly<Ref<T>> {
         get() {
             return value;
         },
-        set() {
-            return;
-        },
+        set() {},
     }));
 }

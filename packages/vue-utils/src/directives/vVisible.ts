@@ -52,7 +52,7 @@ export const vVisible: ObjectDirective<VVisibleElement> = {
         }
     },
     updated(el, { value, oldValue }, { transition }) {
-        if (!value === !oldValue) {
+        if (Boolean(value) === Boolean(oldValue)) {
             return;
         }
         if (transition) {

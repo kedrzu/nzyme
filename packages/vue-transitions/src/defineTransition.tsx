@@ -82,7 +82,7 @@ export function defineTransition<TProps extends ComponentObjectPropsOptions = So
         props: {
             ...TRANSITION_PROPS,
             // Undefined here breaks prop inference
-            ...(def.props as TProps),
+            ...def.props!,
         },
         setup(props: ExtractPropTypes<typeof TRANSITION_PROPS>, ctx) {
             const classes = computed(() => {

@@ -144,7 +144,7 @@ export const ModalService = defineService({
                 return modal.then(view => view.default as Component);
             }
 
-            if (modal instanceof Function) {
+            if (typeof modal === 'function') {
                 return modal().then(view => view.default as Component);
             }
 

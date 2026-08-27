@@ -166,23 +166,23 @@ export function createWebsocketLoggerTransport(options: WebsocketLoggerTransport
         try {
             ws = new WebSocket(url);
 
-            ws.onopen = () => {
+            ws.addEventListener('open', () => {
                 connected = true;
                 connecting = false;
                 backoff.reset();
                 flushBuffer();
-            };
+            });
 
-            ws.onclose = () => {
+            ws.addEventListener('close', () => {
                 connected = false;
                 connecting = false;
                 ws = null;
                 scheduleReconnect();
-            };
+            });
 
-            ws.onerror = () => {
+            ws.addEventListener('error', () => {
                 // Error will be followed by close event
-            };
+            });
         } catch {
             connecting = false;
             scheduleReconnect();

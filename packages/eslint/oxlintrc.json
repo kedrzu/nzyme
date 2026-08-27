@@ -98,7 +98,6 @@
         "unicorn/no-abusive-eslint-disable": "error",
         "unicorn/no-array-callback-reference": "error",
         "unicorn/no-array-fill-with-reference-type": "error",
-        "unicorn/no-document-cookie": "error",
         "unicorn/no-hex-escape": "error",
         "unicorn/no-immediate-mutation": "error",
         "unicorn/no-instanceof-builtins": "error",
@@ -108,7 +107,6 @@
         "unicorn/no-useless-switch-case": "error",
         "unicorn/prefer-add-event-listener": "error",
         "unicorn/prefer-array-some": "error",
-        "unicorn/prefer-blob-reading-methods": "error",
         "unicorn/prefer-code-point": "error",
         "unicorn/prefer-date-now": "error",
         "unicorn/prefer-dom-node-append": "error",
@@ -116,12 +114,9 @@
         "unicorn/prefer-dom-node-remove": "error",
         "unicorn/prefer-import-meta-properties": "error",
         "unicorn/prefer-math-min-max": "error",
-        "unicorn/prefer-math-trunc": "error",
-        "unicorn/prefer-native-coercion-functions": "error",
         "unicorn/prefer-node-protocol": "error",
         "unicorn/prefer-number-properties": "error",
         "unicorn/prefer-type-error": "error",
-        "unicorn/require-post-message-target-origin": "error",
 
         "oxc/no-accumulating-spread": "error",
         "oxc/no-map-spread": "error",
@@ -146,6 +141,36 @@
         // that cannot see the target runtime is not worth one micro-optimisation.
         "unicorn/prefer-set-has": "off",
 
+        // Targets `xs.map(x => ({ ...x, extra }))`, the idiomatic immutable update. Its replacement
+        // is less readable for an allocation count that is the same order either way, and none of
+        // the seven sites is a hot path (a logger call, two tests, an Effect promise, a computed
+        // over search results). `no-accumulating-spread`, which catches the genuinely quadratic
+        // `reduce` form, stays on.
+        "oxc/no-map-spread": "off",
+
+        // Contradicts `unicorn/no-array-callback-reference`, which we keep: it wants
+        // `xs.map(x => String(x))` collapsed to `xs.map(String)`, and that is exactly the form the
+        // other rule exists to prevent (the callback also receives the index and the array). The
+        // safer of the two wins.
+        "unicorn/prefer-native-coercion-functions": "off",
+
+        // Matches any `.postMessage(...)` by name, but the rule is about the browser's
+        // `window.postMessage`, where a missing target origin lets any origin read the message.
+        // All seven findings are `node:worker_threads` `Worker`/`parentPort.postMessage` (no such
+        // parameter exists in that API) and Slack's `chat.postMessage`.
+        "unicorn/require-post-message-target-origin": "off",
+        // `seed | 0` in `rngMulberry32` wraps into signed 32-bit range, which is the point;
+        // `Math.trunc` truncates without wrapping, so the rewrite changes the generator's output
+        // for out-of-range seeds.
+        "unicorn/prefer-math-trunc": "off",
+        // Matches `readAsText` by name. The only finding is `AdmZip`'s own `zip.readAsText()` —
+        // no `Blob` and no `FileReader` anywhere near it.
+        "unicorn/prefer-blob-reading-methods": "off",
+        // Its alternative is the Cookie Store API, which is async and unsupported in Safari and
+        // Firefox. `dom-utils`' `setCookie` is a synchronous helper, so the rule has no reachable
+        // fix here.
+        "unicorn/no-document-cookie": "off",
+
         // Deletes the empty `export {};` that marks a file as an ESM module rather than a global
         // script, and autofixes it silently. Both findings are that marker: `@nzyme/aws`'s package
         // entry point and the `e2e/endpoints.ts` consumed via `import * as e2eHandlers`. Unlike
@@ -161,6 +186,13 @@
         "typescript/require-array-sort-compare": "off"
     },
     "overrides": [
+        {
+            // A Vue SFC references its own file to pull in the compiled CSS module
+            // (`import css from './Button.vue?vue&type=style&…&lang.module.scss'`). That is the
+            // documented way to get scoped styles, not the accidental self-reference the rule hunts.
+            "files": ["**/*.vue"],
+            "rules": { "import/no-self-import": "off" }
+        },
         {
             // In a declaration file an empty import is not dead code — it is what makes the file a
             // module, without which its `declare global` block stops augmenting anything. Removing

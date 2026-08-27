@@ -8,7 +8,7 @@
  * @returns The removed element, or undefined if no element satisfied the predicate
  */
 export function findAndRemove<T>(array: T[], predicate: (item: T) => boolean): T | undefined {
-    const index = array.findIndex(predicate);
+    const index = array.findIndex(item => predicate(item));
     if (index < 0) {
         return undefined;
     }

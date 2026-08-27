@@ -48,7 +48,7 @@ interface Getter<TFrom, TValue> {
  * ```
  */
 export function cachedGetter<TFrom, TValue>(getter: Getter<TFrom, TValue>): Getter<TFrom, TValue> {
-    const symbol = Symbol();
+    const symbol = Symbol('cachedGetter');
 
     return from => {
         const cache = from as Record<symbol, TValue>;

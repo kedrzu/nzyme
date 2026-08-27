@@ -118,13 +118,13 @@ export class DepcheckCommand extends Command {
             toWrite.push(`\n  🗑️  Unused dependencies:`);
             for (const dep of result.dependencies) {
                 if (this.fix) {
-                    delete dependencies[dep];
+                    Reflect.deleteProperty(dependencies, dep);
                     toWrite.push(`  ${chalk.green('✅ ' + dep)} (removed)`);
                     hasChanges = true;
                 } else if (this.interactive) {
                     const action = await this.promptAction(dep, 'unused', false);
                     if (action === 'remove') {
-                        delete dependencies[dep];
+                        Reflect.deleteProperty(dependencies, dep);
                         toWrite.push(`  ${chalk.green('✅ ' + dep)} (removed)`);
                         hasChanges = true;
                     } else if (action === 'ignore') {
@@ -144,13 +144,13 @@ export class DepcheckCommand extends Command {
             toWrite.push(`\n  🗑️  Unused dev dependencies:`);
             for (const dep of result.devDependencies) {
                 if (this.fix) {
-                    delete devDependencies[dep];
+                    Reflect.deleteProperty(devDependencies, dep);
                     toWrite.push(`  ${chalk.green('✅ ' + dep)} (removed)`);
                     hasChanges = true;
                 } else if (this.interactive) {
                     const action = await this.promptAction(dep, 'unused', true);
                     if (action === 'remove') {
-                        delete devDependencies[dep];
+                        Reflect.deleteProperty(devDependencies, dep);
                         toWrite.push(`  ${chalk.green('✅ ' + dep)} (removed)`);
                         hasChanges = true;
                     } else if (action === 'ignore') {
@@ -171,13 +171,13 @@ export class DepcheckCommand extends Command {
             for (const dep in result.missing) {
                 if (dep === pkg.packageJson.name) {
                     if (this.fix && deps[dep]) {
-                        delete devDependencies[dep];
+                        Reflect.deleteProperty(devDependencies, dep);
                         toWrite.push(`  ${chalk.green('✅ ' + dep)} (removed self reference)`);
                         hasChanges = true;
                     } else if (this.interactive) {
                         const action = await this.promptAction(dep, 'unused', true);
                         if (action === 'remove') {
-                            delete devDependencies[dep];
+                            Reflect.deleteProperty(devDependencies, dep);
                             toWrite.push(`  ${chalk.green('✅ ' + dep)} (removed self reference)`);
                             hasChanges = true;
                         } else {
@@ -256,8 +256,8 @@ export class DepcheckCommand extends Command {
 
         if (hasChanges) {
             // Make sure there are no self references
-            delete dependencies[pkg.packageJson.name!];
-            delete devDependencies[pkg.packageJson.name!];
+            Reflect.deleteProperty(dependencies, pkg.packageJson.name!);
+            Reflect.deleteProperty(devDependencies, pkg.packageJson.name!);
 
             // Save the updated package.json using saveFile
             await saveFile(`${pkg.path}/package.json`, JSON.stringify(pkg.packageJson, null, 2));

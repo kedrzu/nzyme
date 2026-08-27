@@ -16,7 +16,7 @@ export function moneyParse(value: string, currency: Currency) {
     value = value.replace(/\s*/g, '');
 
     const parsed = Number.parseFloat(value);
-    if (isNaN(parsed)) {
+    if (Number.isNaN(parsed)) {
         return null;
     }
 

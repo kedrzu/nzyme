@@ -174,7 +174,7 @@ export function useStickyElement(options: StickyElementOptions) {
                     return false;
                 }
 
-                const stickyOffset = Number.parseInt(styles.bottom);
+                const stickyOffset = Number.parseInt(styles.bottom, 10);
                 const currentOffset = containerRect.bottom - elementRect.bottom;
 
                 return currentOffset <= stickyOffset;
@@ -185,7 +185,7 @@ export function useStickyElement(options: StickyElementOptions) {
                     return false;
                 }
 
-                const stickyOffset = Number.parseInt(styles.top);
+                const stickyOffset = Number.parseInt(styles.top, 10);
                 const currentOffset = elementRect.top - containerRect.top - containerRect.paddingTop;
 
                 return currentOffset <= stickyOffset;
@@ -227,8 +227,8 @@ export function useStickyElement(options: StickyElementOptions) {
         return {
             top: rect.top,
             bottom: rect.bottom,
-            paddingTop: Number.parseInt(styles.paddingTop),
-            paddingBottom: Number.parseInt(styles.paddingBottom),
+            paddingTop: Number.parseInt(styles.paddingTop, 10),
+            paddingBottom: Number.parseInt(styles.paddingBottom, 10),
             scrollTop: Math.round(container.scrollTop),
             scrollBottom: Math.floor(container.scrollHeight - container.scrollTop - container.offsetHeight),
         };

@@ -20,7 +20,7 @@ import type { DefinedProperties } from '@nzyme/types/Properties.js';
 export function removeUndefinedProps<T extends object>(obj: T): T {
     for (const prop in obj) {
         if (obj[prop] === undefined) {
-            delete obj[prop];
+            Reflect.deleteProperty(obj, prop);
         }
     }
 

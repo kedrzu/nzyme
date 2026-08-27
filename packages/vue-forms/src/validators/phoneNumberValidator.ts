@@ -50,7 +50,7 @@ async function validatePhoneNumber(value: string) {
 
     try {
         const number = parsePhoneNumberWithError(value);
-        return !!number.country && !!number.isValid();
+        return !!number.country && number.isValid();
     } catch {
         return false;
     }

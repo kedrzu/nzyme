@@ -6,7 +6,7 @@
  */
 export function slackMention(memberId: string | string[]): string {
     if (Array.isArray(memberId)) {
-        return memberId.map(formatMention).join(', ');
+        return memberId.map(id => formatMention(id)).join(', ');
     }
 
     return formatMention(memberId);

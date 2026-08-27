@@ -61,7 +61,7 @@ export function defineFormField<T>(type?: PropType<T | null | undefined>) {
 /** Creates Vue prop definitions for a form field component. */
 export function formFieldProps<T>(type?: PropType<T | null | undefined>) {
     return {
-        modelValue: { type: type as PropType<T | null | undefined> },
+        modelValue: { type: type! },
         field: defineProp<
             | FormFieldModel<T>
             | FormFieldModel<T | null>

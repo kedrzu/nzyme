@@ -6,7 +6,7 @@ import chalk from 'chalk';
 import { watch } from 'chokidar';
 import { Option } from 'clipanion';
 import * as json from 'comment-json';
-import fsExtra from 'fs-extra/esm';
+import { pathExists } from 'fs-extra/esm';
 import merge from 'lodash.merge';
 import type { TsConfigJson } from 'type-fest';
 
@@ -371,7 +371,7 @@ function getRelativePath(fromPath: string, toPath: string) {
 
 async function loadTsConfigCore(filePath: string) {
     try {
-        if (!(await fsExtra.pathExists(filePath))) {
+        if (!(await pathExists(filePath))) {
             return null;
         }
 
@@ -395,7 +395,7 @@ async function loadTsConfigCore(filePath: string) {
                 break;
             }
 
-            if (!(await fsExtra.pathExists(extendsPath))) {
+            if (!(await pathExists(extendsPath))) {
                 break;
             }
 

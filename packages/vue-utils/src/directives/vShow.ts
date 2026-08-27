@@ -45,7 +45,7 @@ export const vShow: ObjectDirective<VShowElement> = {
         }
     },
     updated(el, { value, oldValue }, { transition }) {
-        if (!value === !oldValue) {
+        if (Boolean(value) === Boolean(oldValue)) {
             return;
         }
         if (transition) {

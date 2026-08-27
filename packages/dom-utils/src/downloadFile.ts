@@ -32,7 +32,7 @@ export function downloadFile(options: DownloadFileOptions): void {
     link.download = filename;
     link.style.display = 'none';
 
-    document.body.appendChild(link);
+    document.body.append(link);
     link.click();
     document.body.removeChild(link);
 

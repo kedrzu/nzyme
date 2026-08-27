@@ -1,4 +1,4 @@
-import * as path from 'path';
+import * as path from 'node:path';
 
 import { outputFile } from 'fs-extra/esm';
 import { lookup as mimeLookup } from 'mime-types';

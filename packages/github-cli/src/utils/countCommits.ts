@@ -13,5 +13,5 @@ import type { simpleGit } from 'simple-git';
 export async function countCommits(git: ReturnType<typeof simpleGit>, range: string): Promise<number> {
     const result = await git.raw(['rev-list', '--count', range]);
 
-    return parseInt(result.trim(), 10);
+    return Number.parseInt(result.trim(), 10);
 }

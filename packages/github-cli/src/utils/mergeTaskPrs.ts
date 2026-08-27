@@ -181,7 +181,7 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
         stackNodes.forEach((node, index) => {
             logger.info(
                 `   ${index + 1}. ${chalk.cyan(node.head.ref)} ${chalk.gray(`#${node.number}`)}` +
-                    `${node.draft ? chalk.yellow(' (draft)') : ''}`,
+                    node.draft ? chalk.yellow(' (draft)') : '',
             );
         });
     }

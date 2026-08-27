@@ -29,7 +29,7 @@ export function extractNodeIndex(branchName: string): number {
     if (!nodeMatch) {
         return 1;
     }
-    return parseInt(nodeMatch[1]!, 10);
+    return Number.parseInt(nodeMatch[1]!, 10);
 }
 
 /**
@@ -54,7 +54,7 @@ export function extractBranchVersion(branchName: string): number {
     if (!versionMatch) {
         return 1; // Default version
     }
-    return parseInt(versionMatch[1]!, 10);
+    return Number.parseInt(versionMatch[1]!, 10);
 }
 
 /**

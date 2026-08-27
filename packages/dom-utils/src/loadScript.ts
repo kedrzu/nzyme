@@ -46,7 +46,7 @@ export function loadScript(url: string, options?: LoadScriptOptions) {
             reject(new Error(`Failed to load script: ${url}`, { cause: e }));
         };
 
-        doc.body.appendChild(scriptTag);
+        doc.body.append(scriptTag);
     });
 
     cache[url] = promise;

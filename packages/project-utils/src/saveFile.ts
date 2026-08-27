@@ -1,6 +1,6 @@
-import { readFileSync } from 'fs';
-import { readFile } from 'fs/promises';
-import { resolve } from 'path';
+import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 
 import { outputFile, pathExists } from 'fs-extra';
 import { format } from 'oxfmt';

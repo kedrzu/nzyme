@@ -116,7 +116,7 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions) {
  */
 function getOutputFile(options: RollupWatchOptions) {
     if (typeof options.input !== 'string') {
-        throw new Error('Input must be single file');
+        throw new TypeError('Input must be single file');
     }
 
     if (!options.output) {
@@ -124,7 +124,7 @@ function getOutputFile(options: RollupWatchOptions) {
     }
 
     if (Array.isArray(options.output)) {
-        throw new Error('Output must be single file');
+        throw new TypeError('Output must be single file');
     }
 
     if (typeof options.output.file === 'string') {

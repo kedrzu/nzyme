@@ -1,12 +1,11 @@
-import { readdirSync, readFileSync } from 'fs';
-import { basename, join, resolve } from 'path';
-import { fileURLToPath } from 'url';
+import { readdirSync, readFileSync } from 'node:fs';
+import { basename, join, resolve } from 'node:path';
 
 import { expect, test } from 'bun:test';
 
 import { compileTranslationFile } from './compileTranslationFile.js';
 
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const __dirname = import.meta.dirname;
 const TESTS_FIXTURES_DIR = resolve(__dirname, '../tests');
 
 /**

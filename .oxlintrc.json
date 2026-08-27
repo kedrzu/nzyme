@@ -26,11 +26,6 @@
     ],
     "overrides": [
         {
-            // Both packages build types out of intentionally empty object types.
-            "files": ["packages/schema/**", "packages/zchema/**"],
-            "rules": { "typescript/no-empty-object-type": "off" }
-        },
-        {
             // Vue integration packages. Their `no-unsafe-*` findings come from types this repo does
             // not own: Vue's own reactivity and component types resolve to `any` at several
             // boundaries (`computedAsync`, `useEmitAsProps`), the `*.vue` ambient shims these

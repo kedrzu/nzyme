@@ -1,6 +1,6 @@
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import path from 'path';
+import path from 'node:path';
 
 import chalk from 'chalk';
 import { watch } from 'chokidar';
@@ -422,7 +422,7 @@ async function loadTsConfigCore(filePath: string) {
         return result;
     } catch (error: unknown) {
         if (error instanceof Error) {
-            throw new Error(`Failed to process ${filePath}: ${error.message}`, { cause: error });
+            throw new TypeError(`Failed to process ${filePath}: ${error.message}`, { cause: error });
         }
 
         throw new Error(`Failed to process ${filePath}`, { cause: error });

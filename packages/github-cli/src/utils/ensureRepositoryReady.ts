@@ -26,7 +26,7 @@ async function countCommitsAhead(git: SimpleGit, baseBranch: string, branch: str
     for (const base of [`origin/${baseBranch}`, baseBranch]) {
         try {
             const count = await git.raw(['rev-list', '--count', `${base}..${branch}`]);
-            return parseInt(count.trim(), 10);
+            return Number.parseInt(count.trim(), 10);
         } catch {
             // Unresolvable ref — try the next candidate.
         }

@@ -118,7 +118,7 @@ async function hasUnpushedBaseCommits(git: SimpleGit, branch: string): Promise<b
 
     try {
         const result = await git.raw(['rev-list', '--count', `origin/${branch}..${branch}`]);
-        return parseInt(result.trim(), 10) > 0;
+        return Number.parseInt(result.trim(), 10) > 0;
     } catch {
         return false;
     }
@@ -132,7 +132,7 @@ async function hasUnpushedBaseCommits(git: SimpleGit, branch: string): Promise<b
 async function isContainedIn(git: SimpleGit, commit: string, ref: string): Promise<boolean> {
     try {
         const out = await git.raw(['rev-list', '--count', `${ref}..${commit}`]);
-        return parseInt(out.trim(), 10) === 0;
+        return Number.parseInt(out.trim(), 10) === 0;
     } catch {
         return false;
     }

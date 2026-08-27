@@ -110,7 +110,7 @@ async function mergeBaseIntoMainIfBehind(
     let commitsAhead: number;
     try {
         const result = await mainGit.raw(['rev-list', '--count', `${currentBranch}..${remoteBase}`]);
-        commitsAhead = parseInt(result.trim(), 10);
+        commitsAhead = Number.parseInt(result.trim(), 10);
     } catch {
         commitsAhead = 0;
     }

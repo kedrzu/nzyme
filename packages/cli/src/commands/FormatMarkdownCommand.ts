@@ -1,5 +1,5 @@
-import fs from 'fs/promises';
-import * as path from 'path';
+import fs from 'node:fs/promises';
+import * as path from 'node:path';
 
 import chalk from 'chalk';
 import type { Break, Link, Parents } from 'mdast';

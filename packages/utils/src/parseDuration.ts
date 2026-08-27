@@ -15,7 +15,7 @@ import type { DurationISO } from '@nzyme/types/Date.js';
  */
 export function parseDuration(duration: DurationISO | StringNonLiteral): Duration {
     if (typeof duration !== 'string') {
-        throw new Error('Duration must be a string');
+        throw new TypeError('Duration must be a string');
     }
     // ISO 8601 duration regex: PnYnMnDTnHnMnS
     const regex = /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/;

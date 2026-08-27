@@ -301,24 +301,24 @@ export class DepcheckCommand extends Command {
                 ? [
                       {
                           name: 'remove',
-                          message: `${chalk.red('Remove from dependencies')}`,
+                          message: chalk.red('Remove from dependencies'),
                           value: 'remove',
                       },
                       {
                           name: 'ignore',
-                          message: `${chalk.blue('Add to ignore list')}`,
+                          message: chalk.blue('Add to ignore list'),
                           value: 'ignore',
                       },
                       {
                           name: 'skip',
-                          message: `${chalk.yellow('Skip for now')}`,
+                          message: chalk.yellow('Skip for now'),
                           value: 'skip',
                       },
                   ]
                 : [
-                      { name: 'add-dep', message: `${chalk.green('Add as dependency')}`, value: 'add-dep' },
-                      { name: 'add-dev', message: `${chalk.blue('Add as dev dependency')}`, value: 'add-dev' },
-                      { name: 'skip', message: `${chalk.yellow('Skip')}`, value: 'skip' },
+                      { name: 'add-dep', message: chalk.green('Add as dependency'), value: 'add-dep' },
+                      { name: 'add-dev', message: chalk.blue('Add as dev dependency'), value: 'add-dev' },
+                      { name: 'skip', message: chalk.yellow('Skip'), value: 'skip' },
                   ];
 
         const { action } = await enquirer.prompt<{ action: string }>({

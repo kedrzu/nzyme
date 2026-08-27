@@ -55,7 +55,7 @@ export async function checkUnpushedCommits(git: SimpleGit = simpleGit()): Promis
         // Get commits that are in current branch but not in remote branch
         try {
             const result = await git.raw(['rev-list', '--count', `${remoteRef}..${currentBranch}`]);
-            const commitsCount = parseInt(result.trim(), 10);
+            const commitsCount = Number.parseInt(result.trim(), 10);
 
             if (commitsCount === 0) {
                 return {

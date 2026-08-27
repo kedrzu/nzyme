@@ -33,13 +33,13 @@ export function loadStyles(url: string, options?: LoadStylesOptions) {
         css.type = 'text/css';
         css.href = url;
 
-        if (typeof css.onload != 'undefined') {
+        if (css.onload !== undefined) {
             css.onload = () => resolve();
             css.onerror = (_event, _source, _lineno, _colno, err) => {
                 doc.head.removeChild(css);
                 reject(err ?? new Error(`Failed to load styles from ${url}`));
             };
-            doc.head.appendChild(css);
+            doc.head.append(css);
         } else {
             // A hack for cross-browser support.
             // Some older browsers do not support onload event,
@@ -51,8 +51,8 @@ export function loadStyles(url: string, options?: LoadStylesOptions) {
             };
             img.src = url;
 
-            doc.head.appendChild(css);
-            doc.body.appendChild(img);
+            doc.head.append(css);
+            doc.body.append(img);
         }
     });
 }

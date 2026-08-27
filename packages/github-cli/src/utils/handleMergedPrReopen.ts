@@ -150,11 +150,11 @@ export async function handleMergedPrReopen(params: HandleMergedPrReopenParams): 
         choices: [
             {
                 name: 'reopen',
-                message: `${chalk.green('Reopen task and create new versioned branch')}`,
+                message: chalk.green('Reopen task and create new versioned branch'),
             },
             {
                 name: 'cancel',
-                message: `${chalk.red('Cancel')}`,
+                message: chalk.red('Cancel'),
             },
         ],
     });

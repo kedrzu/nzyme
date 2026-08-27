@@ -105,7 +105,7 @@ export async function getSubmoduleInfo(): Promise<SubmoduleInfo[]> {
                             '--count',
                             `${remoteRef}..${currentBranch}`,
                         ]);
-                        unpushedCommitsCount = parseInt(result.trim(), 10);
+                        unpushedCommitsCount = Number.parseInt(result.trim(), 10);
                     } catch {
                         // Remote branch doesn't exist
                         hasRemoteBranch = false;

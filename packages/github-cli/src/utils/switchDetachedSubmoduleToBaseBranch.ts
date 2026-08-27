@@ -116,7 +116,7 @@ async function refExists(git: SimpleGit, ref: string): Promise<boolean> {
 async function isContainedIn(git: SimpleGit, commit: string, branch: string): Promise<boolean> {
     try {
         const out = await git.raw(['rev-list', '--count', `${branch}..${commit}`]);
-        return parseInt(out.trim(), 10) === 0;
+        return Number.parseInt(out.trim(), 10) === 0;
     } catch {
         return false;
     }

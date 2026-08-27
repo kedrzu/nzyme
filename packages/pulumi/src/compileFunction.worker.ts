@@ -1,6 +1,6 @@
-import { createHash } from 'crypto';
-import * as path from 'path';
-import { parentPort, workerData } from 'worker_threads';
+import { createHash } from 'node:crypto';
+import * as path from 'node:path';
+import { parentPort, workerData } from 'node:worker_threads';
 
 import { babel } from '@rollup/plugin-babel';
 import commonjs from '@rollup/plugin-commonjs';

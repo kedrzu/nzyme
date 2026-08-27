@@ -29,19 +29,19 @@ function getOSCore() {
         return navigator.userAgentData.platform;
     }
 
-    if (/Mac/.test(platform)) {
+    if (platform.includes('Mac')) {
         return 'macOS';
     }
-    if (/Win/.test(platform)) {
+    if (platform.includes('Win')) {
         return 'Windows';
     }
-    if (/Linux/.test(platform)) {
+    if (platform.includes('Linux')) {
         return 'Linux';
     }
     if (/iPhone|iPad|iPod/.test(userAgent)) {
         return 'iOS';
     }
-    if (/Android/.test(userAgent)) {
+    if (userAgent.includes('Android')) {
         return 'Android';
     }
 

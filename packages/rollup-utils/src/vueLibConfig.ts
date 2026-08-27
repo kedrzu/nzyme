@@ -46,7 +46,7 @@ export function vueLibConfig(options: VueLibConfigOptions) {
             rollupOptions: {
                 input: options.entry,
                 external(id) {
-                    if (/node_modules/.test(id)) {
+                    if (id.includes('node_modules')) {
                         return true;
                     }
 

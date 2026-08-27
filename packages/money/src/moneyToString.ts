@@ -9,5 +9,5 @@ export function moneyToString(money: Money) {
     const [amount, currency] = money;
     const { fractionDigits } = CURRENCIES[currency];
     const multiplier = 10 ** fractionDigits;
-    return `${(amount / multiplier).toFixed(fractionDigits)}`;
+    return (amount / multiplier).toFixed(fractionDigits);
 }

@@ -1,4 +1,4 @@
-import type { IncomingMessage, RequestListener, ServerResponse } from 'http';
+import type { IncomingMessage, RequestListener, ServerResponse } from 'node:http';
 
 import type { NextFunction } from 'connect';
 import { parsePath, parseQuery } from 'ufo';

@@ -15,7 +15,7 @@ export function fixOrphans(text: string) {
             .replace(spaceAfterShortWordRegex, (_search, whitespace: string, word: string) => {
                 // replace spaces between short words with a non-breakable space
                 // do not swap it with any other character!
-                return whitespace + word + '\xa0';
+                return whitespace + word + '\u00a0';
             })
             // roll back the operation if following word has 12 or more letters
             .replace(longWordRegex, (_search, group: string) => {

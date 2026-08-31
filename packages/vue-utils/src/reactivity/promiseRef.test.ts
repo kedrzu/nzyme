@@ -85,7 +85,9 @@ test('handles race condition - last promise wins', async () => {
 
     // Resolve first promise after second one was set
     resolveFirst!('first');
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise(resolve => {
+        setTimeout(resolve, 10);
+    });
 
     // First promise should not update the value since second promise is pending
     expect(ref.value).toBeUndefined();
@@ -108,7 +110,9 @@ test('clears pending when value is set directly', async () => {
     expect(ref.value).toBe('manual');
 
     // Wait for Vue's watch to trigger
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise(resolve => {
+        setTimeout(resolve, 0);
+    });
     expect(ref.pending).toBeNull();
 });
 
@@ -260,11 +264,15 @@ test('multiple rapid updates only apply last one', async () => {
 
     // Resolve in reverse order
     resolve1!(1);
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise(resolve => {
+        setTimeout(resolve, 10);
+    });
     expect(ref.value).toBeUndefined();
 
     resolve2!(2);
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise(resolve => {
+        setTimeout(resolve, 10);
+    });
     expect(ref.value).toBeUndefined();
 
     resolve3!(3);

@@ -22,12 +22,12 @@ export function phoneNumberValidator(options: PhoneNumberValidatorOptions = {}) 
         validate: async (value, ctx) => {
             const phone = value?.toString();
             if (!phone?.trim()) {
-                return;
+                return undefined;
             }
 
             const isValid = await validatePhoneNumber(phone);
             if (isValid) {
-                return;
+                return undefined;
             }
 
             if (options.message) {

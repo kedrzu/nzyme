@@ -12,5 +12,7 @@
  * ```
  */
 export function waitForever(): Promise<never> {
-    return new Promise<never>(() => void 0);
+    return new Promise<never>(() => {
+        void 0;
+    });
 }

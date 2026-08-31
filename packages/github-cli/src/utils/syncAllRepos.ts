@@ -176,8 +176,8 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
             // swallow errors (no remote / offline). The second .then arg resolves the rejection to void.
             fetchPromises.push(
                 subGit.fetch('origin').then(
-                    () => {},
-                    () => {},
+                    () => undefined,
+                    () => undefined,
                 ),
             );
         } else {

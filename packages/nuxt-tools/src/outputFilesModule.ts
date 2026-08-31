@@ -54,6 +54,7 @@ function createMiddleware(fileName: string, fileContent: FileContent): Connect.N
 
             res.write(content);
             res.end();
+            return undefined;
         });
     };
 }

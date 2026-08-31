@@ -22,11 +22,11 @@ export function regex(options: RegexValidatorOptions): Validator<string | null |
 
     return (value, ctx) => {
         if (value == null) {
-            return;
+            return undefined;
         }
 
         if (pattern.test(value)) {
-            return;
+            return undefined;
         }
 
         return message({ ...ctx, value });

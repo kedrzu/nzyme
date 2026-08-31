@@ -15,4 +15,6 @@ export function arrayRemoveFirst<T>(array: T[], predicate: (item: T) => boolean)
             return item;
         }
     }
+
+    return undefined;
 }

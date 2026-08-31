@@ -49,11 +49,11 @@ export function requiredValidator<T>(options: RequiredValidatorOptions<T> = {}) 
         validate: (value, ctx) => {
             const required = condition?.value ?? true;
             if (!required) {
-                return;
+                return undefined;
             }
 
             if (validate(value, ctx)) {
-                return;
+                return undefined;
             }
 
             if (options.message) {

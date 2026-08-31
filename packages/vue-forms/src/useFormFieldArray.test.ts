@@ -465,7 +465,9 @@ test('useFormFieldArray works with async validators', async () => {
         const asyncValidator: FormValidator<string> = {
             async: true,
             validate: async v => {
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await new Promise(resolve => {
+                    setTimeout(resolve, 10);
+                });
                 return v ? null : 'Required';
             },
         };

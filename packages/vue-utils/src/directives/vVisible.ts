@@ -83,6 +83,8 @@ export const vVisible: ObjectDirective<VVisibleElement> = {
         if (!value) {
             return { style: { visibility: 'hidden' } };
         }
+
+        return undefined;
     },
 };
 

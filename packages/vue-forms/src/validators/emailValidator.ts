@@ -23,11 +23,11 @@ export function emailValidator(options: EmailValidatorOptions = {}) {
         async: false,
         validate: (value, ctx) => {
             if (!value?.trim()) {
-                return;
+                return undefined;
             }
 
             if (isEmailValid(value)) {
-                return;
+                return undefined;
             }
 
             if (options.message) {

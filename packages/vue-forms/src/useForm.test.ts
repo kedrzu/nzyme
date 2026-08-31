@@ -197,7 +197,9 @@ test('useForm validate runs all validations in parallel', async () => {
             async: true,
             validate: async () => {
                 callOrder.push(1);
-                await new Promise(resolve => setTimeout(resolve, 50));
+                await new Promise(resolve => {
+                    setTimeout(resolve, 50);
+                });
                 callOrder.push(2);
                 return null;
             },
@@ -207,7 +209,9 @@ test('useForm validate runs all validations in parallel', async () => {
             async: true,
             validate: async () => {
                 callOrder.push(3);
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await new Promise(resolve => {
+                    setTimeout(resolve, 10);
+                });
                 callOrder.push(4);
                 return null;
             },

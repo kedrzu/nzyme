@@ -120,6 +120,7 @@ export function promiseRef<T>(promiseOrValue?: Promise<T | undefined> | T) {
                     runWatch = false;
                     valueRef.value = result;
                     promiseHolder.value = null;
+                    return result;
                 } finally {
                     runWatch = true;
                 }

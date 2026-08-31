@@ -82,6 +82,7 @@
         // config is still an explicit list; the final shape moves them under `categories`.
         "no-alert": "error",
         "no-shadow": "error",
+        "no-promise-executor-return": "error",
         "no-inner-declarations": "error",
         "no-loop-func": "error",
         "no-unmodified-loop-condition": "error",
@@ -99,6 +100,7 @@
         "typescript/no-unnecessary-type-arguments": "error",
         "typescript/use-unknown-in-catch-callback-variable": "error",
         "typescript/switch-exhaustiveness-check": ["error", { "considerDefaultExhaustiveForUnions": true }],
+        "typescript/consistent-return": "error",
         "typescript/no-unnecessary-boolean-literal-compare": "error",
         "typescript/no-unnecessary-template-expression": "error",
         "typescript/no-unnecessary-type-conversion": "error",
@@ -133,6 +135,7 @@
         "oxc/no-map-spread": "error",
 
         "promise/catch-or-return": "error",
+        "promise/always-return": "error",
         "promise/no-promise-in-callback": "error",
 
         "import/no-empty-named-blocks": "error",

@@ -245,7 +245,7 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
     // function used to load the data
     async function loadData() {
         if (!loadRef.value) {
-            return;
+            return undefined;
         }
 
         const pending = pendingRef.value;

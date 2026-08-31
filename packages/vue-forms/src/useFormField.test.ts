@@ -604,7 +604,9 @@ test('useFormField async validator validates asynchronously', async () => {
         const validator: FormValidator<string> = {
             async: true,
             validate: async () => {
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await new Promise(resolve => {
+                    setTimeout(resolve, 10);
+                });
                 return 'Async error';
             },
         };
@@ -624,7 +626,9 @@ test('useFormField async validator returns true when validation passes', async (
         const validator: FormValidator<string> = {
             async: true,
             validate: async () => {
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await new Promise(resolve => {
+                    setTimeout(resolve, 10);
+                });
                 return null;
             },
         };
@@ -648,7 +652,9 @@ test('useFormField mixed sync and async validators work together', async () => {
         const asyncValidator: FormValidator<string> = {
             async: true,
             validate: async () => {
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await new Promise(resolve => {
+                    setTimeout(resolve, 10);
+                });
                 return 'Async error';
             },
         };
@@ -682,7 +688,9 @@ test('useFormField validate fails fast on sync errors but still runs async', asy
             async: true,
             validate: async () => {
                 asyncCalled();
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await new Promise(resolve => {
+                    setTimeout(resolve, 10);
+                });
                 return 'Async error';
             },
         };

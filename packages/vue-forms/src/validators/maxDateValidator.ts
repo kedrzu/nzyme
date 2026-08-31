@@ -40,7 +40,7 @@ export function maxDateValidator(options: MaxDateValidatorOptions) {
         async: false,
         validate: (value, ctx) => {
             if (!(value instanceof Date)) {
-                return;
+                return undefined;
             }
 
             const max = maxDate.value;
@@ -48,7 +48,7 @@ export function maxDateValidator(options: MaxDateValidatorOptions) {
             const valid = exclusive.value ? value < max : value <= max;
 
             if (valid) {
-                return;
+                return undefined;
             }
 
             if (options.message) {

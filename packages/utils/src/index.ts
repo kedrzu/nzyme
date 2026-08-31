@@ -29,6 +29,7 @@ export * from './array/shuffleArray.js';
 export * from './array/splitIntoChunks.js';
 export * from './array/sumOver.js';
 export * from './assert.js';
+export * from './assertNever.js';
 export * from './assertEnv.js';
 export * from './assignProps.js';
 export * from './cachedGetter.js';

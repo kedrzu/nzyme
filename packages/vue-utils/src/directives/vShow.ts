@@ -69,6 +69,8 @@ export const vShow: ObjectDirective<VShowElement> = {
         if (!value) {
             return { style: { display: 'none' } };
         }
+
+        return undefined;
     },
 };
 

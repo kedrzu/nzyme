@@ -43,12 +43,12 @@ export function minLength<T extends WithLength>(
 
     return (value, ctx) => {
         if (value == null) {
-            return;
+            return undefined;
         }
 
         const valid = value.length >= limit;
         if (valid) {
-            return;
+            return undefined;
         }
 
         if (message) {

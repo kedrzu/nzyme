@@ -20,4 +20,6 @@ export function extractErrorData(error: unknown) {
             cause: error.cause,
         };
     }
+
+    return undefined;
 }

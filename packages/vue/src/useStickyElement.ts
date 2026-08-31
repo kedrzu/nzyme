@@ -1,4 +1,5 @@
 import { isBrowser } from '@nzyme/dom-utils/isBrowser.js';
+import { assertNever } from '@nzyme/utils/assertNever.js';
 import { waitFor } from '@nzyme/utils/waitFor.js';
 import { onElementScroll } from '@nzyme/vue-utils/onElementScroll.js';
 import { onWindowResize } from '@nzyme/vue-utils/onWindowResize.js';
@@ -166,8 +167,9 @@ export function useStickyElement(options: StickyElementOptions) {
 
         const containerRect = getContainerRect();
         const elementRect = el.getBoundingClientRect();
+        const currentPosition = position.value;
 
-        switch (position.value) {
+        switch (currentPosition) {
             case 'bottom': {
                 if (containerRect.scrollBottom === 0) {
                     // not sticky if we are on the bottom
@@ -190,6 +192,8 @@ export function useStickyElement(options: StickyElementOptions) {
 
                 return currentOffset <= stickyOffset;
             }
+            default:
+                return assertNever(currentPosition, 'Unhandled sticky element position');
         }
     }
 

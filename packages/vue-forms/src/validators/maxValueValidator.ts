@@ -41,13 +41,13 @@ export function maxValueValidator(options: MaxValueValidatorOptions) {
         async: false,
         validate: (value, ctx) => {
             if (value == null) {
-                return;
+                return undefined;
             }
 
             const max = maxValue.value;
             const valid = exclusive.value ? value < max : value <= max;
             if (valid) {
-                return;
+                return undefined;
             }
 
             if (options.message) {

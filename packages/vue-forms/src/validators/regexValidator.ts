@@ -31,11 +31,11 @@ export function regexValidator(options: RegexValidatorOptions) {
         async: false,
         validate: (value, ctx) => {
             if (!value) {
-                return;
+                return undefined;
             }
 
             if (regex.value.test(value)) {
-                return;
+                return undefined;
             }
 
             if (options.message) {

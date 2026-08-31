@@ -40,11 +40,11 @@ export function minDateValidator(options: MinDateValidatorOptions) {
         async: false,
         validate: (value, ctx) => {
             if (value == null) {
-                return;
+                return undefined;
             }
 
             if (!(value instanceof Date)) {
-                return;
+                return undefined;
             }
 
             const min = minDate.value;
@@ -52,7 +52,7 @@ export function minDateValidator(options: MinDateValidatorOptions) {
             const valid = exclusive.value ? value > min : value >= min;
 
             if (valid) {
-                return;
+                return undefined;
             }
 
             if (options.message) {

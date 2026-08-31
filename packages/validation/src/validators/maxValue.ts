@@ -70,12 +70,12 @@ export function maxValue<T extends Comparable>(
 
     return (value, ctx) => {
         if (value == null) {
-            return;
+            return undefined;
         }
 
         const valid = exclusive ? value < max : value <= max;
         if (valid) {
-            return;
+            return undefined;
         }
 
         if (message) {

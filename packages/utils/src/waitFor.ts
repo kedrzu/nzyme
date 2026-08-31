@@ -12,5 +12,7 @@
  * ```
  */
 export function waitFor<T = void>(ms?: number, result?: T) {
-    return new Promise<T>(resolve => setTimeout(() => resolve(result as T), ms));
+    return new Promise<T>(resolve => {
+        setTimeout(() => resolve(result as T), ms);
+    });
 }

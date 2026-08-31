@@ -17,6 +17,7 @@ export function CommonPlugin(app: App) {
             }
 
             console.error(event.reason);
+            return undefined;
         };
     }
 

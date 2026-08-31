@@ -34,6 +34,7 @@ export function devServerStart(options: DevServerOptions) {
         server.listen(resolvedPort, () => {
             console.info(`Server listening on ${chalk.green(`http://localhost:${resolvedPort}`)}`);
         });
+        return undefined;
     });
 
     return {

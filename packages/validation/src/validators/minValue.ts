@@ -70,12 +70,12 @@ export function minValue<T extends Comparable>(
 
     return (value, ctx) => {
         if (value == null) {
-            return;
+            return undefined;
         }
 
         const valid = exclusive ? value > min : value >= min;
         if (valid) {
-            return;
+            return undefined;
         }
 
         if (message) {

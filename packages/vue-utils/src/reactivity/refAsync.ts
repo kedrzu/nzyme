@@ -70,6 +70,7 @@ export function refAsync<T>(promise: (() => Promise<T>) | Promise<T>): RefAsync<
 
     void promise.then(result => {
         reference.value = result;
+        return undefined;
     });
 
     return reference;

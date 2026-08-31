@@ -62,7 +62,7 @@ export function minValue<T extends Comparable>(
  * @returns A validator function.
  */
 export function minValue<T extends Comparable>(
-    minValue: T,
+    min: T,
     options?: MinValidatorOptions<T>,
 ): Validator<T | null | undefined> {
     const exclusive = options?.exclusive ?? false;
@@ -70,18 +70,18 @@ export function minValue<T extends Comparable>(
 
     return (value, ctx) => {
         if (value == null) {
-            return;
+            return undefined;
         }
 
-        const valid = exclusive ? value > minValue : value >= minValue;
+        const valid = exclusive ? value > min : value >= min;
         if (valid) {
-            return;
+            return undefined;
         }
 
         if (message) {
-            return message({ ...ctx, minValue, value });
+            return message({ ...ctx, minValue: min, value });
         }
 
-        return `Minimum value is ${String(minValue)}`;
+        return `Minimum value is ${String(min)}`;
     };
 }

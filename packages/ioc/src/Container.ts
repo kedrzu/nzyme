@@ -143,7 +143,8 @@ export function createContainer(options?: ContainerOptions) {
     const parent = options?.parent;
     const scope = options?.scope;
     const resolve = options?.resolve ?? ((service, source) => service.resolve(container, source));
-    const createChild = options?.createChild ?? (scope => createContainer({ parent: container, scope }));
+    const createChild =
+        options?.createChild ?? (childScope => createContainer({ parent: container, scope: childScope }));
 
     const container: Container = {
         [CONTAINER_SYMBOL]: true,

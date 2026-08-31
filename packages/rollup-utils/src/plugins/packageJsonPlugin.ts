@@ -1,6 +1,6 @@
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { exists } from 'fs-extra';
 import type { OutputBundle, Plugin } from 'rollup';
@@ -43,7 +43,7 @@ export function packageJsonPlugin(options: PackageJsonPluginOptions = {}): Plugi
             const packages = [
                 ...getPackagesFromBundle(bundle),
                 ...Object.keys(localPackageJson?.dependencies ?? {}),
-            ].sort();
+            ].toSorted();
 
             const packagesSet = new Set(packages);
             const dependencies = await getPackagesWithVersions(packagesSet);
@@ -143,9 +143,9 @@ export function packageJsonPlugin(options: PackageJsonPluginOptions = {}): Plugi
         while (depDir && path.basename(depDir) !== 'node_modules') {
             const packageJsonPath = path.join(depDir, 'package.json');
 
-            const packageJson = await readPackageJson(packageJsonPath);
-            if (packageJson?.version) {
-                return packageJson.version;
+            const depPackageJson = await readPackageJson(packageJsonPath);
+            if (depPackageJson?.version) {
+                return depPackageJson.version;
             }
 
             depDir = path.dirname(depDir);
@@ -183,7 +183,7 @@ export function packageJsonPlugin(options: PackageJsonPluginOptions = {}): Plugi
             return null;
         }
 
-        const packageJson = await fs.readFile(packageJsonPath, 'utf8');
-        return JSON.parse(packageJson) as PackageJson;
+        const packageJsonContent = await fs.readFile(packageJsonPath, 'utf8');
+        return JSON.parse(packageJsonContent) as PackageJson;
     }
 }

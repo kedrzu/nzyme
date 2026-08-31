@@ -1,4 +1,4 @@
-import * as path from 'path';
+import * as path from 'node:path';
 
 /** Options for resolving the path to an environment file. */
 export interface EnvFilePathOptions {

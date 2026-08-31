@@ -35,18 +35,18 @@ export function loadScript(url: string, options?: LoadScriptOptions) {
         const scriptTag = doc.createElement('script');
 
         scriptTag.src = url;
-        scriptTag.onload = () => resolve();
-        scriptTag.onerror = e => {
-            doc.body.removeChild(scriptTag);
+        scriptTag.addEventListener('load', () => resolve());
+        scriptTag.addEventListener('error', e => {
+            scriptTag.remove();
             // Remove pending promise from cache
             if (cache[url] === promise) {
                 delete cache[url];
             }
 
             reject(new Error(`Failed to load script: ${url}`, { cause: e }));
-        };
+        });
 
-        doc.body.appendChild(scriptTag);
+        doc.body.append(scriptTag);
     });
 
     cache[url] = promise;

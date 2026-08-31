@@ -66,7 +66,7 @@ export async function syncStackNodesFromRemote(params: SyncStackNodesFromRemoteP
             logger.warn(
                 `   ⚠️  ${chalk.cyan(branch)} has ${chalk.yellow(localAhead.toString())} unpushed commit${
                     localAhead === 1 ? '' : 's'
-                } and the remote moved — leaving it alone. ` + `Push or rebase it yourself before merging the stack.`,
+                } and the remote moved — leaving it alone. Push or rebase it yourself before merging the stack.`,
             );
             continue;
         }
@@ -78,7 +78,7 @@ export async function syncStackNodesFromRemote(params: SyncStackNodesFromRemoteP
                 logger.warn(
                     `   ⚠️  ${chalk.cyan(branch)} has ${chalk.yellow(dirtyFiles.toString())} uncommitted change${
                         dirtyFiles === 1 ? '' : 's'
-                    } and the remote moved — leaving it alone. ` + `Commit them before adopting the remote's history.`,
+                    } and the remote moved — leaving it alone. Commit them before adopting the remote's history.`,
                 );
                 continue;
             }

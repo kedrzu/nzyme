@@ -159,7 +159,7 @@ describe('cascadeStack', () => {
         await git.commit('mid claims shared.txt');
         await git.push();
 
-        const error = await cascadeStack({ branches: ['bottom', 'mid', 'top'], logger }).catch(e => e as unknown);
+        const error = await cascadeStack({ branches: ['bottom', 'mid', 'top'], logger }).catch((e: unknown) => e);
 
         expect(error).toBeInstanceOf(GitMergeConflictError);
         const conflict = error as GitMergeConflictError;

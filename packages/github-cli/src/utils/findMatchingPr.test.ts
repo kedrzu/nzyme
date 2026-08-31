@@ -117,7 +117,7 @@ describe('resolveNodePr', () => {
             { number: 2, title: '[SIG-123] Thing — API', branch: 'sig-123-thing--s2' },
         ]);
 
-        expect(resolveNodePr(client, CONFIG, 'SIG-123', 'main')).rejects.toThrow(UsageError);
+        await expect(resolveNodePr(client, CONFIG, 'SIG-123', 'main')).rejects.toThrow(UsageError);
     });
 });
 

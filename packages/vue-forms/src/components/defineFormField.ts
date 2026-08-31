@@ -61,7 +61,7 @@ export function defineFormField<T>(type?: PropType<T | null | undefined>) {
 /** Creates Vue prop definitions for a form field component. */
 export function formFieldProps<T>(type?: PropType<T | null | undefined>) {
     return {
-        modelValue: { type: type as PropType<T | null | undefined> },
+        modelValue: { type: type! },
         field: defineProp<
             | FormFieldModel<T>
             | FormFieldModel<T | null>
@@ -101,14 +101,14 @@ export function createFormField<T>(options: FormFieldOptions<T>) {
     const focused = ref(false);
 
     const errors = computed(() => {
-        const errors = Array.isArray(props.errors) ? props.errors.slice() : props.errors ? [props.errors] : [];
+        const mergedErrors = Array.isArray(props.errors) ? props.errors.slice() : props.errors ? [props.errors] : [];
 
         const field = props.field;
         if (field?.errors) {
-            errors.push(...field.errors);
+            mergedErrors.push(...field.errors);
         }
 
-        return errors;
+        return mergedErrors;
     });
 
     const ok = computed(() => {
@@ -142,19 +142,19 @@ export function createFormField<T>(options: FormFieldOptions<T>) {
         return field ? field.value : model.value;
     }
 
-    function setValue(value: FormFieldValue<T>) {
+    function setValue(newValue: FormFieldValue<T>) {
         const current = getValue();
-        if (value === current) {
+        if (newValue === current) {
             return;
         }
 
         if (props.field) {
-            props.field.value = value;
+            props.field.value = newValue;
         }
 
-        model.value = value;
+        model.value = newValue;
 
-        vm.$emit('update:modelValue', value);
+        vm.$emit('update:modelValue', newValue);
     }
 
     function scrollToError() {

@@ -167,8 +167,8 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
 
             return data;
         },
-        set: (value: TDefault | TResult) => {
-            dataRef.value = value;
+        set: (newValue: TDefault | TResult) => {
+            dataRef.value = newValue;
         },
     });
 
@@ -245,7 +245,7 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
     // function used to load the data
     async function loadData() {
         if (!loadRef.value) {
-            return;
+            return undefined;
         }
 
         const pending = pendingRef.value;
@@ -308,19 +308,19 @@ export function useDataSource<TParams, TResult, TDefault extends TResult | undef
 }
 
 function getDebounceOptions(
-    debounce: number | DataSourceDebounceOptions | undefined,
+    debounceConfig: number | DataSourceDebounceOptions | undefined,
 ): Required<DataSourceDebounceOptions> | undefined {
-    if (!debounce) {
+    if (!debounceConfig) {
         return undefined;
     }
 
-    if (typeof debounce === 'number') {
-        return { time: debounce, leading: true, trailing: true };
+    if (typeof debounceConfig === 'number') {
+        return { time: debounceConfig, leading: true, trailing: true };
     }
 
     return {
-        time: debounce.time,
-        leading: debounce.leading ?? true,
-        trailing: debounce.trailing ?? true,
+        time: debounceConfig.time,
+        leading: debounceConfig.leading ?? true,
+        trailing: debounceConfig.trailing ?? true,
     };
 }

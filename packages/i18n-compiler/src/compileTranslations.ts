@@ -145,8 +145,8 @@ export function compileTranslations(yaml: string): TranslationResult {
             typeImports.push('PluralTranslation');
 
             // Add specific pluralization function and type imports based on usage
-            for (const pluralization of result.pluralizations) {
-                imports.push(pluralization);
+            for (const pluralizationName of result.pluralizations) {
+                imports.push(pluralizationName);
             }
         }
 

@@ -37,7 +37,7 @@ export async function findTaskPrs(client: GithubClient, config: GithubConfig, is
     const allMatchingPrs = await findAllMatchingPrs(client, config, issueId);
     const openPrs = allMatchingPrs.filter(pr => pr.state === 'open' && !pr.merged_at);
 
-    return openPrs.sort((a, b) => extractNodeIndex(a.head.ref) - extractNodeIndex(b.head.ref));
+    return openPrs.toSorted((a, b) => extractNodeIndex(a.head.ref) - extractNodeIndex(b.head.ref));
 }
 
 /**
@@ -112,7 +112,7 @@ export async function findMergedPr(
     }
 
     // Return the most recently merged PR
-    const sorted = mergedPrs.sort((a, b) => {
+    const sorted = mergedPrs.toSorted((a, b) => {
         const dateA = a.merged_at ? new Date(a.merged_at) : new Date(0);
         const dateB = b.merged_at ? new Date(b.merged_at) : new Date(0);
         return dateB.getTime() - dateA.getTime();
@@ -205,7 +205,7 @@ export async function findBestMatchingPr(
     // For each base branch, pick the PR with highest version
     const bestPrs: GitHubPR[] = [];
     for (const prs of prsByBaseBranch.values()) {
-        const sorted = prs.sort((a, b) => {
+        const sorted = prs.toSorted((a, b) => {
             const versionA = extractBranchVersion(a.head.ref);
             const versionB = extractBranchVersion(b.head.ref);
             return versionB - versionA; // Descending order
@@ -219,7 +219,7 @@ export async function findBestMatchingPr(
     }
 
     // Multiple best PRs from different base branches - return most recently updated
-    const sorted = bestPrs.sort((a, b) => {
+    const sorted = bestPrs.toSorted((a, b) => {
         const dateA = new Date(a.updated_at);
         const dateB = new Date(b.updated_at);
         return dateB.getTime() - dateA.getTime();

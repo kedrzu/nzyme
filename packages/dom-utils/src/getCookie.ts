@@ -8,7 +8,7 @@
  */
 export function getCookie(name: string): string | undefined {
     if (typeof document === 'undefined') {
-        return;
+        return undefined;
     }
 
     const cookies = document.cookie.split(';');
@@ -18,4 +18,6 @@ export function getCookie(name: string): string | undefined {
             return value;
         }
     }
+
+    return undefined;
 }

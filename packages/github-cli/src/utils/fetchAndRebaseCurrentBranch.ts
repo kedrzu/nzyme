@@ -64,10 +64,10 @@ export async function fetchAndRebaseCurrentBranch(
     }
 
     // Check if there are commits on origin that we don't have
-    let commitsAhead = 0;
+    let commitsAhead: number;
     try {
         const result = await git.raw(['rev-list', '--count', `${currentBranch}..origin/${currentBranch}`]);
-        commitsAhead = parseInt(result.trim(), 10);
+        commitsAhead = Number.parseInt(result.trim(), 10);
     } catch {
         // Remote branch may not exist yet
         commitsAhead = 0;

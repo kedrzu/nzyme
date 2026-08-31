@@ -80,7 +80,7 @@ async function deleteAllObjects(s3Client: S3Client, bucket: string, bypassGovern
                     Bucket: bucket,
                     BypassGovernanceRetention: bypassGovernanceRetention,
                     Delete: {
-                        Objects: objects.map(obj => ({ Key: obj.Key as string })),
+                        Objects: objects.map(obj => ({ Key: obj.Key! })),
                     },
                 }),
             );
@@ -118,8 +118,8 @@ async function deleteAllVersions(s3Client: S3Client, bucket: string, bypassGover
                     BypassGovernanceRetention: bypassGovernanceRetention,
                     Delete: {
                         Objects: entries.map(entry => ({
-                            Key: entry.Key as string,
-                            VersionId: entry.VersionId as string,
+                            Key: entry.Key!,
+                            VersionId: entry.VersionId!,
                         })),
                     },
                 }),

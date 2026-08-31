@@ -114,10 +114,10 @@ export function defineEnvVariable(
 ) {
     const defaultValue = options?.default as EnvVariableOptionsDefault['default'];
 
-    return defineInjectable<EnvVariable<string, boolean, unknown>>({
+    return defineInjectable<EnvVariable>({
         name,
         deps: DEPS,
-        required: options?.required ?? (defaultValue ? false : true),
+        required: options?.required ?? !defaultValue,
         parse: options?.parse,
         resolve,
         default: defaultValue ? (typeof defaultValue === 'function' ? defaultValue : () => defaultValue) : undefined,

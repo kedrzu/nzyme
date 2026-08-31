@@ -113,5 +113,5 @@ test('mapScopedArray stops item scopes when the parent scope stops', () => {
 
     scope.stop();
 
-    expect([...disposed].sort()).toEqual([1, 2]);
+    expect(disposed.toSorted()).toEqual([1, 2]);
 });

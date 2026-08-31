@@ -22,7 +22,7 @@ export function required<T>(params?: RequiredValidatorParams<T>): Validator<T | 
 
     return (value, ctx) => {
         if (isValueNonEmpty(value)) {
-            return;
+            return undefined;
         }
 
         if (message) {

@@ -36,25 +36,25 @@ type WithLength = {
  * @returns A validator function.
  */
 export function minLength<T extends WithLength>(
-    minLength: number,
+    limit: number,
     options?: MinLengthValidatorOptions<T>,
 ): Validator<T | null | undefined> {
     const message = options?.message;
 
     return (value, ctx) => {
         if (value == null) {
-            return;
+            return undefined;
         }
 
-        const valid = value.length >= minLength;
+        const valid = value.length >= limit;
         if (valid) {
-            return;
+            return undefined;
         }
 
         if (message) {
-            return message({ ...ctx, minLength, value });
+            return message({ ...ctx, minLength: limit, value });
         }
 
-        return `Minimum length is ${minLength}`;
+        return `Minimum length is ${limit}`;
     };
 }

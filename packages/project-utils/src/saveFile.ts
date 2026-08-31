@@ -1,36 +1,23 @@
-import { readFileSync } from 'fs';
-import { readFile } from 'fs/promises';
-import { resolve } from 'path';
+import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 
-import { ESLint } from 'eslint';
 import { outputFile, pathExists } from 'fs-extra';
 import { format } from 'oxfmt';
 import type { FormatConfig } from 'oxfmt';
 
 import { getProjectRoot } from './getProjectRoot.js';
 
-// Single ESLint instance for the entire project
-let eslintInstance: ESLint | undefined;
 let oxfmtConfig: FormatConfig | undefined;
 
 /**
- * Save a file with ESLint fixes and oxfmt formatting.
+ * Save a file with oxfmt formatting.
+ *
+ * Generated output is no longer passed through a linter's autofix: oxlint has no programmatic
+ * lint-text API, and silently autofixing generated code would only hide a problem that belongs in
+ * the generator. Anything a generator emits is linted like the rest of the repo.
  */
 export async function saveFile(path: string, content: string): Promise<void> {
-    // Run ESLint first to fix code issues
-    try {
-        const eslint = getEslintInstance();
-
-        // ESLint resolves config based on filePath, not cwd
-        const results = await eslint.lintText(content, { filePath: path });
-        if (results.length > 0 && results[0] && results[0].output !== undefined) {
-            content = results[0].output;
-        }
-    } catch (error) {
-        console.error(`Failed to lint ${path}`, error);
-    }
-
-    // Then run oxfmt for formatting
     try {
         const result = await format(path, content, getOxfmtConfig());
         content = result.code;
@@ -48,23 +35,6 @@ export async function saveFile(path: string, content: string): Promise<void> {
     }
 
     await outputFile(path, content, { encoding: 'utf8' });
-}
-
-/**
- * Get or create the single ESLint instance for the project.
- * Uses the project root as cwd, allowing ESLint to resolve configs per-file.
- */
-function getEslintInstance(): ESLint {
-    if (eslintInstance) {
-        return eslintInstance;
-    }
-
-    eslintInstance = new ESLint({
-        cwd: getProjectRoot(),
-        fix: true,
-    });
-
-    return eslintInstance;
 }
 
 /**

@@ -1,4 +1,4 @@
-import * as fs from 'fs/promises';
+import * as fs from 'node:fs/promises';
 
 import { parse } from 'dotenv';
 import { pathExists } from 'fs-extra';

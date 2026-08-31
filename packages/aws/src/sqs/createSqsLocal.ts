@@ -58,7 +58,7 @@ export function createSqsLocal(options: QueueLocalOptions): QueueLocal {
             queue.push(messages);
         }
 
-        void dispatch();
+        dispatch();
         return Promise.resolve();
     }
 

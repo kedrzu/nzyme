@@ -14,7 +14,7 @@ export function getChildrenHeight(element: HTMLElement) {
             continue;
         }
 
-        const marginBottom = parseInt(getComputedStyle(child).marginBottom, 10);
+        const marginBottom = Number.parseInt(getComputedStyle(child).marginBottom, 10);
         const bottom = child.offsetHeight + child.offsetTop + marginBottom;
 
         if (bottom > height) {

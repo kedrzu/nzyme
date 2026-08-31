@@ -141,6 +141,5 @@ function onPopState(event: PopStateEvent) {
 }
 
 function getStateIndex(state: VirtualHistoryState | null) {
-    const index = state?.virtualHistory?.index || 0;
-    return Number(index);
+    return state?.virtualHistory?.index || 0;
 }

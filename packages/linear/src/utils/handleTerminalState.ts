@@ -42,12 +42,12 @@ export async function handleTerminalState(
             choices: [
                 {
                     name: 'proceed',
-                    message: `${chalk.green('Change status to "In Progress" and proceed')}`,
+                    message: chalk.green('Change status to "In Progress" and proceed'),
                     value: 'proceed',
                 },
                 {
                     name: 'cancel',
-                    message: `${chalk.red('Cancel and do not switch to this task')}`,
+                    message: chalk.red('Cancel and do not switch to this task'),
                     value: 'cancel',
                 },
             ],

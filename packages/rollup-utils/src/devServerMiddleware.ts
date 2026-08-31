@@ -44,7 +44,7 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions) {
         }
 
         if (server) {
-            void server.middleware(req, res, next);
+            server.middleware(req, res, next);
         } else {
             next();
         }
@@ -93,18 +93,18 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions) {
      */
     function newServer() {
         // Stop the current server
-        void server?.stop();
+        server?.stop();
 
-        const newServer = createDevServer({ file: outputFile });
-        server = newServer;
+        const devServer = createDevServer({ file: outputFile });
+        server = devServer;
 
-        newServer.events.stopped.on(() => {
-            if (server === newServer) {
+        devServer.events.stopped.on(() => {
+            if (server === devServer) {
                 server = undefined;
             }
         });
 
-        return newServer;
+        return devServer;
     }
 }
 
@@ -116,7 +116,7 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions) {
  */
 function getOutputFile(options: RollupWatchOptions) {
     if (typeof options.input !== 'string') {
-        throw new Error('Input must be single file');
+        throw new TypeError('Input must be single file');
     }
 
     if (!options.output) {
@@ -124,7 +124,7 @@ function getOutputFile(options: RollupWatchOptions) {
     }
 
     if (Array.isArray(options.output)) {
-        throw new Error('Output must be single file');
+        throw new TypeError('Output must be single file');
     }
 
     if (typeof options.output.file === 'string') {

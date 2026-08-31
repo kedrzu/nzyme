@@ -302,8 +302,8 @@ export function defineStack<
                     const output = options.resources.call(stack, deps, buildResult);
                     return output || {};
                 },
-                outputs: async (stack: automation.Stack) => {
-                    return unwrapStackOutput<TOutput>(await stack.outputs());
+                outputs: async (automationStack: automation.Stack) => {
+                    return unwrapStackOutput<TOutput>(await automationStack.outputs());
                 },
                 build: async (ctx: StackBuildContext) => {
                     if (options.build) {

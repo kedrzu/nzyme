@@ -19,7 +19,7 @@ interface EventBusSingle<T> {
 }
 
 interface EventBusVoid {
-    on(fct: EventCallback<void>): void;
+    on(fct: EventCallback): void;
     emit(): void;
 }
 
@@ -60,8 +60,8 @@ export function useEventBus(event?: string): EventBus | EventBusSingle<unknown> 
         return bus;
     } else {
         const bus: EventBus = {
-            on<T = void>(event: string, fct: EventCallback<T>) {
-                onEvent(event, fct, vm != null);
+            on<T = void>(eventName: string, fct: EventCallback<T>) {
+                onEvent(eventName, fct, vm != null);
             },
             emit,
         };

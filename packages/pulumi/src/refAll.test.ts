@@ -23,7 +23,7 @@ test('refAll exposes one dependency per stack (so the scheduler orders the consu
 
     const all = refAll(stacks);
 
-    expect(getObjectKeys(all.deps ?? {}).sort()).toEqual(['eu-central-1', 'us-east-1']);
+    expect(getObjectKeys(all.deps ?? {}).toSorted()).toEqual(['eu-central-1', 'us-east-1']);
 });
 
 test('refAll resolves to a reference map keyed by stack, each entry the reference for that exact stack', () => {
@@ -50,7 +50,7 @@ test('refAll resolves to a reference map keyed by stack, each entry the referenc
 
     // Exactly the expected keys, nothing extra, nothing missing.
     const expectedKeys: string[] = ['eu-central-1', 'us-east-1'];
-    expect(getObjectKeys(resolved).sort()).toEqual(expectedKeys);
+    expect(getObjectKeys(resolved).toSorted()).toEqual(expectedKeys);
 
     // Each key maps to the StackReference of *that* stack, not a wrong/empty/swapped value.
     const euRef: StackReference | undefined = resolved['eu-central-1'];

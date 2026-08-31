@@ -1,0 +1,59 @@
+{
+    "$schema": "./node_modules/oxlint/configuration_schema.json",
+    // Rules live in the shared preset; this file adds only what is specific to this repo's layout.
+    // Referenced by relative path rather than through `node_modules`, because when nzyme is checked
+    // out as a submodule its dependencies are hoisted to the parent workspace and `nzyme/node_modules`
+    // does not exist.
+    "extends": ["./packages/eslint/oxlintrc.json"],
+    // Oxlint already skips gitignored paths on its own, so only what no `.gitignore` covers is
+    // listed here.
+    "ignorePatterns": [
+        // No `.gitignore` lists `dist-cjs` (only `dist`).
+        "**/dist-cjs/**",
+        // Generated from `.loc.yaml`; only the `.ts` output is gitignored, the `.js` is not.
+        "**/*.loc.js",
+        // Everything else a generator writes carries the `.gen` infix, so generated trees never have
+        // to be listed here file by file. A finding in such a file belongs to the generator.
+        "**/*.gen.ts",
+        "**/*.gen.d.ts",
+        // Expected-output fixtures: `compileTranslationFile.test.ts` asserts the compiler's output is
+        // byte-identical to these files, so any lint fix applied here would break the test it feeds.
+        "packages/i18n-compiler/tests/**",
+        // Private Nuxt dev tool. Its tsconfig extends a generated `.nuxt/tsconfig.json` that only
+        // exists after `nuxt prepare`, which nothing in this repo wires up, so type-aware linting
+        // cannot resolve it. It was not linted before the oxlint migration either.
+        "packages/logging-ui/**"
+    ],
+    "overrides": [
+        {
+            // Pulumi declares infrastructure by constructing resources for their side effect —
+            // `new aws.Route53Record(...)` is the whole point and its value is often unused.
+            "files": ["packages/pulumi/**"],
+            "rules": { "no-new": "off" }
+        },
+        {
+            // Vue integration packages. Their `no-unsafe-*` findings come from types this repo does
+            // not own: Vue's own reactivity and component types resolve to `any` at several
+            // boundaries (`computedAsync`, `useEmitAsProps`), the `*.vue` ambient shims these
+            // packages ship declare SFCs as `DefineComponent<{}, {}, any>`, and JSX over third-party
+            // Vue components (`vue-imask`) yields error-typed values. The family therefore reports
+            // the upstream typing gap rather than real unsafety here. The pre-migration ESLint
+            // config disabled the same five rules for the same packages, via `vue()`.
+            "files": [
+                "packages/vue/**",
+                "packages/vue-forms/**",
+                "packages/vue-utils/**",
+                "packages/vue-i18n/**",
+                "packages/vue-ioc/**",
+                "packages/vue-transitions/**"
+            ],
+            "rules": {
+                "typescript/no-unsafe-argument": "off",
+                "typescript/no-unsafe-assignment": "off",
+                "typescript/no-unsafe-call": "off",
+                "typescript/no-unsafe-member-access": "off",
+                "typescript/no-unsafe-return": "off"
+            }
+        }
+    ]
+}

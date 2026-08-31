@@ -176,8 +176,8 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
             // swallow errors (no remote / offline). The second .then arg resolves the rejection to void.
             fetchPromises.push(
                 subGit.fetch('origin').then(
-                    () => {},
-                    () => {},
+                    () => undefined,
+                    () => undefined,
                 ),
             );
         } else {
@@ -293,7 +293,7 @@ async function countCommitsAhead(git: SimpleGit, from: string | null | undefined
     }
     try {
         const result = await git.raw(['rev-list', '--count', `${from}..${to}`]);
-        return parseInt(result.trim(), 10);
+        return Number.parseInt(result.trim(), 10);
     } catch {
         // One of the refs (typically the remote ref) does not exist yet - treat as 0-ahead.
         return 0;
@@ -314,14 +314,14 @@ async function rebaseAndPushCurrentBranch(git: SimpleGit, logger: Logger, repoDi
     }
 
     // Check if remote has commits we don't have
-    let remoteAhead = 0;
-    let localAhead = 0;
+    let remoteAhead: number;
+    let localAhead: number;
     try {
         const remoteResult = await git.raw(['rev-list', '--count', `${currentBranch}..origin/${currentBranch}`]);
-        remoteAhead = parseInt(remoteResult.trim(), 10);
+        remoteAhead = Number.parseInt(remoteResult.trim(), 10);
 
         const localResult = await git.raw(['rev-list', '--count', `origin/${currentBranch}..${currentBranch}`]);
-        localAhead = parseInt(localResult.trim(), 10);
+        localAhead = Number.parseInt(localResult.trim(), 10);
     } catch {
         // Remote branch may not exist yet - push to create it
         await pushWithUpstream(git);
@@ -369,10 +369,10 @@ async function pullCurrentBranch(git: SimpleGit, logger: Logger, repoDisplayName
     }
 
     // Check if remote has commits we don't have
-    let commitsAhead = 0;
+    let commitsAhead: number;
     try {
         const result = await git.raw(['rev-list', '--count', `${branch}..origin/${branch}`]);
-        commitsAhead = parseInt(result.trim(), 10);
+        commitsAhead = Number.parseInt(result.trim(), 10);
     } catch {
         // Remote branch may not exist
         return;
@@ -436,10 +436,10 @@ async function mergeBaseIntoSubmodules(
         const currentBranch = sub.currentBranch!;
 
         // Check if remote base branch is ahead of current branch
-        let commitsAhead = 0;
+        let commitsAhead: number;
         try {
             const result = await subGit.raw(['rev-list', '--count', `${currentBranch}..${remoteBaseBranch}`]);
-            commitsAhead = parseInt(result.trim(), 10);
+            commitsAhead = Number.parseInt(result.trim(), 10);
         } catch {
             commitsAhead = 0;
         }
@@ -488,10 +488,10 @@ async function mergeBaseIntoCurrent(
         return { wasAhead: false, commitsAhead: 0, merged: false };
     }
 
-    let commitsAhead = 0;
+    let commitsAhead: number;
     try {
         const result = await git.raw(['rev-list', '--count', `${currentBranch}..${remoteBaseBranch}`]);
-        commitsAhead = parseInt(result.trim(), 10);
+        commitsAhead = Number.parseInt(result.trim(), 10);
     } catch {
         return { wasAhead: false, commitsAhead: 0, merged: false };
     }

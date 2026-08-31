@@ -34,11 +34,6 @@
         "scope": "typescript",
         "body": ["import $0 from \"@/components/$0.vue\";"],
     },
-    "ImportSchema": {
-        "prefix": "import schema",
-        "scope": "typescript",
-        "body": ["import * as z from \"@nzyme/zchema\";"],
-    },
     "ExportNamedFunction": {
         "prefix": "enf",
         "scope": "typescript",

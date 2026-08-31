@@ -133,7 +133,7 @@ export function useFormField(form: FormModel, params: FormFieldBasicParams | For
     const validators = params.validators?.map(validator => createValidatorState(validator, value, focused, form)) || [];
 
     const errors = computed(() => {
-        const errors: string[] = [];
+        const fieldErrors: string[] = [];
         for (const validator of validators) {
             if (!validator.show) {
                 continue;
@@ -141,11 +141,11 @@ export function useFormField(form: FormModel, params: FormFieldBasicParams | For
 
             const error = validator.error;
             if (error) {
-                errors.push(error);
+                fieldErrors.push(error);
             }
         }
 
-        return errors;
+        return fieldErrors;
     });
 
     const fields = reactive<FormField[]>([]);

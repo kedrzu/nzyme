@@ -37,7 +37,7 @@ export interface Logger {
  * A logger function that sets a context value.
  */
 export interface LoggerContextFunction {
-    <T extends object>(name: string, ctx: T | null | undefined): void;
+    (name: string, ctx: object | null | undefined): void;
 }
 
 /**

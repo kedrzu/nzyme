@@ -76,7 +76,7 @@ export async function stackTask(params: StackTaskParams): Promise<void> {
         throw new UsageError(
             `Branch ${chalk.cyan(currentBranch)} has ${
                 statusInfo.hasUncommittedChanges ? 'uncommitted changes' : 'unpushed commits'
-            }. ` + `Run ${chalk.cyan('task push')} first so the new node forks from a complete parent.`,
+            }. Run ${chalk.cyan('task push')} first so the new node forks from a complete parent.`,
         );
     }
 

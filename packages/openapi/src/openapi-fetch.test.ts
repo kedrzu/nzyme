@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import type { paths } from '../tests/schema.js';
+import type { paths } from '../tests/schema.gen.js';
 import { createOpenApiFetch } from './openapi-fetch.js';
 
 // Mock fetch function

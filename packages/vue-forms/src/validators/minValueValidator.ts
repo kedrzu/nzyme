@@ -40,14 +40,14 @@ export function minValueValidator(options: MinValueValidatorOptions) {
         async: false,
         validate: (value, ctx) => {
             if (value == null) {
-                return;
+                return undefined;
             }
 
             const min = minValue.value;
             const valid = exclusive.value ? value > min : value >= min;
 
             if (valid) {
-                return;
+                return undefined;
             }
 
             if (options.message) {

@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 
 import * as aws from '@pulumi/aws';
 import * as pulumi from '@pulumi/pulumi';
@@ -126,16 +126,16 @@ export class RotatedSecret extends pulumi.ComponentResource {
         const history = pulumi.secret(
             pulumi.all([secret.id, version.secretString]).apply(async ([secretId, secretString]) => {
                 const versionsOutput = await aws.secretsmanager.getSecretVersions({ secretId }, { parent: this });
-                const versions = versionsOutput.versions.sort(
+                const versions = versionsOutput.versions.toSorted(
                     (a, b) => new Date(a.createdTime).getTime() - new Date(b.createdTime).getTime(),
                 );
 
                 const secrets = await Promise.all(
-                    versions.slice(0, historySize).map(async version => {
+                    versions.slice(0, historySize).map(async versionInfo => {
                         const result = await aws.secretsmanager.getSecretVersion(
                             {
                                 secretId,
-                                versionId: version.versionId,
+                                versionId: versionInfo.versionId,
                             },
                             { parent: this },
                         );
@@ -144,15 +144,15 @@ export class RotatedSecret extends pulumi.ComponentResource {
                     }),
                 );
 
-                if (!secrets.find(v => v === secretString) && secretString) {
+                if (!secrets.some(v => v === secretString) && secretString) {
                     secrets.unshift(secretString);
                 }
 
                 // Map to object with 8-char MD5 hash keys
                 const historyMap: Record<string, string> = {};
-                for (const secret of secrets) {
-                    const hash = createHash('md5').update(secret).digest('hex').substring(0, 8);
-                    historyMap[hash] = secret;
+                for (const secretEntry of secrets) {
+                    const hash = createHash('md5').update(secretEntry).digest('hex').substring(0, 8);
+                    historyMap[hash] = secretEntry;
                 }
 
                 return historyMap;

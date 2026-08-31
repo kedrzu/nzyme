@@ -197,7 +197,7 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
 
         position.startX = x;
         position.startY = y;
-        position.startTimestamp = new Date().valueOf();
+        position.startTimestamp = Date.now();
         position.startTarget = target;
 
         isPressing.value = true;
@@ -259,7 +259,7 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
         isPressing.value = false;
 
         const deltaX = x - (position.startX ?? 0);
-        const deltaTime = new Date().valueOf() - (position.startTimestamp ?? 0);
+        const deltaTime = Date.now() - (position.startTimestamp ?? 0);
 
         const swipeMaxTime = 200;
         const swipeMinDistance = 15;

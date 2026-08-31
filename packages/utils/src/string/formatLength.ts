@@ -1,3 +1,5 @@
+import { assertNever } from '../assertNever.js';
+
 /**
  * Length unit for formatting measurements
  */
@@ -80,5 +82,7 @@ function normalizeLength(value: number, unit: LengthUnit) {
             return value * METER;
         case 'mm':
             return value;
+        default:
+            return assertNever(unit, 'Unhandled length unit');
     }
 }

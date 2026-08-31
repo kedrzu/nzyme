@@ -24,7 +24,6 @@ const render = () => {
   // but `Object.entries` widens to a `Record<string, unknown>` view that doesn't
   // preserve the mapped-key relation. Crossing back to `T` at the API boundary
   // here is intentional.
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   return props.t(lang(), params as T);
 };
 </script>

@@ -3,10 +3,17 @@ import pluginVue from 'eslint-plugin-vue';
 import { defineConfig } from 'eslint/config';
 import vueParser from 'vue-eslint-parser';
 
-/** Creates an ESLint config for Vue 3 single-file components with TypeScript parser. */
+/**
+ * Creates an ESLint config for Vue components.
+ *
+ * ESLint runs only for Vue rules — everything else is oxlint's. The file list covers `.tsx` as well
+ * as `.vue`, because render-function components live in `.tsx` and Vue rules apply to them too.
+ * No type information is used: no `projectService`, no `tsconfigRootDir`, so this config is
+ * completely decoupled from the repo's tsconfig layout.
+ */
 export function vue() {
     return defineConfig({
-        files: ['**/*.vue', '**/*.ts', '**/*.tsx'],
+        files: ['**/*.vue', '**/*.tsx'],
         extends: [pluginVue.configs['flat/recommended']],
         rules: {
             'vue/multi-word-component-names': 'off',
@@ -28,11 +35,6 @@ export function vue() {
             'vue/singleline-html-element-content-newline': 'off',
             'vue/mustache-interpolation-spacing': 'off',
             'vue/first-attribute-linebreak': 'off',
-            '@typescript-eslint/no-unsafe-member-access': 'off',
-            '@typescript-eslint/no-unsafe-assignment': 'off',
-            '@typescript-eslint/no-unsafe-argument': 'off',
-            '@typescript-eslint/no-unsafe-return': 'off',
-            '@typescript-eslint/no-unsafe-call': 'off',
         },
         languageOptions: {
             parser: vueParser,

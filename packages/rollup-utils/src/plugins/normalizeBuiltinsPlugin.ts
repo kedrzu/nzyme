@@ -8,6 +8,8 @@ export function normalizeBuiltinsPlugin(): Plugin {
             if (source.startsWith('node:')) {
                 return { id: source.slice(5), external: true };
             }
+
+            return undefined;
         },
     };
 }

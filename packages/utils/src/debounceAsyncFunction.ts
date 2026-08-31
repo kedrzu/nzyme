@@ -47,9 +47,9 @@ export function debounceAsyncFunction<P extends unknown[], R>(
             pending = undefined;
 
             if (trailing && waiting !== undefined) {
-                const args = waiting;
+                const trailingArgs = waiting;
                 waiting = undefined;
-                void debounced(...args);
+                void debounced(...trailingArgs);
             }
         });
 

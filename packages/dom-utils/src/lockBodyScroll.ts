@@ -22,7 +22,7 @@ export function lockBodyScroll() {
         currentPaddingRight = document.body.style.paddingRight;
         currentOverflow = document.body.style.overflow;
 
-        const computedPaddingRight = parseFloat(getComputedStyle(document.body).paddingRight);
+        const computedPaddingRight = Number.parseFloat(getComputedStyle(document.body).paddingRight);
 
         document.body.style.overflow = 'hidden';
         // When we disable body scroll padding is added to body

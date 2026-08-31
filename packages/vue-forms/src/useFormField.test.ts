@@ -1,4 +1,5 @@
 import { LanguageContext } from '@nzyme/i18n/LanguageContext.js';
+import { waitFor } from '@nzyme/utils/waitFor.js';
 import { createContainer } from '@nzyme/vue-ioc/createContainer.js';
 import { beforeEach, expect, test, vi } from 'bun:test';
 import { createApp, effectScope, nextTick, ref } from 'vue';
@@ -417,9 +418,9 @@ test('useFormField custom behavior overrides default behavior', async () => {
         const validator: FormValidator<string> = {
             async: false,
             validate: () => 'Error',
-            behavior: ctx => {
+            behavior: behaviorCtx => {
                 // Always show errors
-                ctx.show.value = true;
+                behaviorCtx.show.value = true;
             },
         };
 
@@ -563,8 +564,8 @@ test('useFormField validator receives correct context', () => {
 
         const validator: FormValidator<string> = {
             async: false,
-            validate: (_v, ctx) => {
-                receivedCtx = ctx;
+            validate: (_v, validationCtx) => {
+                receivedCtx = validationCtx;
                 return null;
             },
         };
@@ -604,7 +605,7 @@ test('useFormField async validator validates asynchronously', async () => {
         const validator: FormValidator<string> = {
             async: true,
             validate: async () => {
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await waitFor(10);
                 return 'Async error';
             },
         };
@@ -624,7 +625,7 @@ test('useFormField async validator returns true when validation passes', async (
         const validator: FormValidator<string> = {
             async: true,
             validate: async () => {
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await waitFor(10);
                 return null;
             },
         };
@@ -648,7 +649,7 @@ test('useFormField mixed sync and async validators work together', async () => {
         const asyncValidator: FormValidator<string> = {
             async: true,
             validate: async () => {
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await waitFor(10);
                 return 'Async error';
             },
         };
@@ -682,7 +683,7 @@ test('useFormField validate fails fast on sync errors but still runs async', asy
             async: true,
             validate: async () => {
                 asyncCalled();
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await waitFor(10);
                 return 'Async error';
             },
         };

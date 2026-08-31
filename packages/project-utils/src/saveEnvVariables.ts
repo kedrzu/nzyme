@@ -27,7 +27,7 @@ export async function saveEnvVariables(options: SaveEnvVariablesOptions) {
     const env = await getEnvVariablesToSave(options);
 
     let envContent = '';
-    for (const key of Object.keys(env).sort()) {
+    for (const key of Object.keys(env).toSorted()) {
         const value = escapeEnvValue(env[key]);
         envContent += `${key}=${value}\n`;
     }

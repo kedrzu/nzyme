@@ -16,7 +16,7 @@ export const InpostPointGet = defineEndpoint({
         }
 
         const json = (await response.json()) as InpostPointData;
-        if (json.status.toString() === '404') {
+        if (json.status === '404') {
             return null;
         }
 

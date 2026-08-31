@@ -1,13 +1,12 @@
 /**
  * Converts a value to a JSON string, with special handling for BigInt, Set, and Map types.
  * @util
- * @template T - The type of the value to convert
  * @param value - The value to convert to JSON
  * @param space - Optional number or string to use for indentation
  * @returns A JSON string representation of the value
  * @throws {TypeError} If the value contains circular references
  */
-export function toJsonString<T>(value: T, space?: number | string): string {
+export function toJsonString(value: unknown, space?: number | string): string {
     if (value == null) {
         return 'null';
     }
@@ -26,6 +25,8 @@ function serializeValue(_key: unknown, value: unknown) {
             return value;
         case 'function':
             return undefined;
+        default:
+            break;
     }
 
     if (value instanceof Set) {

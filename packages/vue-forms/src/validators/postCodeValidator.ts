@@ -34,12 +34,12 @@ export function postCodeValidator(options: PostCodeValidatorOptions) {
             const countryCode = country.value;
 
             if (!postcode || !countryCode) {
-                return;
+                return undefined;
             }
 
             const isValid = await validatePostCode(postcode, countryCode);
             if (isValid) {
-                return;
+                return undefined;
             }
 
             if (options.message) {

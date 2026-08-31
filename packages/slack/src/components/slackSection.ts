@@ -33,7 +33,7 @@ export function slackSection(options: SlackSection): SectionBlock {
         fields: options.fields
             ? mapNotNull(options.fields, field => {
                   if (!field) {
-                      return;
+                      return undefined;
                   }
 
                   return {

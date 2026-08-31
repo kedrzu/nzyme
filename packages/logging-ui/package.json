@@ -27,8 +27,6 @@
         "vue-router": "^5.2.0"
     },
     "devDependencies": {
-        "@nzyme/eslint": "0.14.0",
-        "eslint": "10.8.0",
         "oxfmt": "0.62.0",
         "typescript": "6.0.3",
         "vue-tsc": "^3.3.9"

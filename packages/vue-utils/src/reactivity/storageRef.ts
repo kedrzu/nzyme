@@ -135,7 +135,7 @@ type StorageRefOptionsJson = StorageRefOptions & {
     serialize?: undefined;
 };
 
-const skipWrite = Symbol();
+const skipWrite = Symbol('skipWrite');
 type StorageValue<T> = T & { [skipWrite]?: true };
 
 /**

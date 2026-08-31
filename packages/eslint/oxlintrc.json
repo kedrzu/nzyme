@@ -1,0 +1,280 @@
+{
+    // Shared rule preset. No repo layout — ignore patterns and per-package overrides describe a
+    // particular repo's directories and belong in each repo's root `.oxlintrc.json`. An override
+    // keyed on a file KIND (`**/*.d.ts`) is not layout: it holds in any repo, so it lives here.
+    "plugins": ["typescript", "unicorn", "oxc", "import", "promise"],
+    // Categories rather than a hand-kept list: a new oxlint rule in any of these arrives on its own,
+    // and the rules below record only what we decided against and why. `nursery` stays out — those
+    // are unstable by definition, which is a reason on the risk side rather than the cost side.
+    "categories": {
+        "correctness": "error",
+        "suspicious": "error",
+        "perf": "error",
+        "pedantic": "error",
+        "restriction": "error"
+    },
+    // Only two kinds of entry belong here: a rule the categories do not carry, and a rule whose
+    // options have to be spelled out. Everything else was removed after `oxlint --print-config`
+    // showed the effective rule set unchanged with it gone — 279 rules before and after.
+    "rules": {
+        "curly": "error",
+        // `x == null` is the idiomatic "null or undefined" check and is deliberately kept; without
+        // the carve-out the rule reports 375 of them and buries the handful of real loose
+        // comparisons.
+        "eqeqeq": ["error", "always", { "null": "ignore" }],
+        // Mirrors the pre-migration ESLint options: a leading underscore marks a binding as
+        // deliberately unused, in every position including catch parameters.
+        "no-unused-vars": [
+            "error",
+            {
+                "args": "all",
+                "argsIgnorePattern": "^_",
+                "caughtErrors": "all",
+                "caughtErrorsIgnorePattern": "^_",
+                "destructuredArrayIgnorePattern": "^_",
+                "varsIgnorePattern": "^_"
+            }
+        ],
+        "no-useless-assignment": "error",
+        "prefer-const": "error",
+        "prefer-rest-params": "error",
+        "prefer-spread": "error",
+
+        "typescript/consistent-type-imports": "error",
+        // The type-aware variant supersedes the base `require-await`, which the typescript-eslint
+        // docs prescribe disabling: the base rule cannot see that a function returns a promise
+        // without awaiting it, and reports the same locations a second time.
+
+        // Rules with zero violations in this repo. They cost no fix and from here on they block the
+        // class of bug from coming back — a rule that finds nothing is a reason to enable it, not to
+        // skip it.
+        "typescript/prefer-find": "error",
+
+        // Step 2 — findings whose fix has no interpretation to choose. Grouped here while the
+        // config is still an explicit list; the final shape moves them under `categories`.
+
+        // Warn, not error: a deprecation is advice about the future, not a defect today, and the
+        // replacement often sits in a third-party package on its own schedule. Blocking the build
+        // on someone else's `@deprecated` tag would turn an upstream release into our outage.
+        "typescript/no-deprecated": "warn",
+        "typescript/switch-exhaustiveness-check": ["error", { "considerDefaultExhaustiveForUnions": true }],
+
+        // `instanceof Function` only holds within one JS realm — it is false for a function that
+        // crossed a `node:vm` context, a worker or an iframe. `isFunction` from `@nzyme/utils` is
+        // the realm-safe check and narrows a union to its callable members.
+
+        "import/consistent-type-specifier-style": "error",
+        "import/newline-after-import": "error",
+        "import/no-duplicates": "error",
+
+        // Its autofix rewrites an array literal into `new Set([...])` with no regard for the
+        // runtime. The single finding in this repo was `ALLOWED_ORIGINS` in
+        // `packages/file-gateway/src/getFileGatewayCorsOrigin.ts`, which carries a comment stating
+        // that the CloudFront Functions `cloudfront-js-2.0` runtime does not expose `Set` and that
+        // using one there is a `ReferenceError` at load plus a 503 on every request. A lookup rule
+        // that cannot see the target runtime is not worth one micro-optimisation.
+        "unicorn/prefer-set-has": "off",
+
+        // Exists for `xs.map(Number)` and `xs.map(parseInt)`, where the index `map` also passes
+        // becomes a second argument. All 21 findings here were named single-parameter mappers
+        // (`map(deserializeEvent)`, `filter(isReservedOption)`), so the rule only turned readable
+        // point-free code into `x => f(x)` noise.
+        "unicorn/no-array-callback-reference": "off",
+        // Meant to stop `delete` from destroying a typed object's shape, but it cannot tell that
+        // apart from a delete on a genuine dictionary — and every finding here was the latter
+        // (`process.env`, `globalThis`, `Record<string, string>` dependency maps). Its suggested
+        // `Reflect.deleteProperty` is strictly more obscure for the same effect.
+        "typescript/no-dynamic-delete": "off",
+        // Rewrites `typeof x === 'undefined'` to `x === undefined`, which throws `ReferenceError`
+        // for a global that may not be declared at all. Its only finding was `getCookieBot`, whose
+        // whole purpose is to answer whether the Cookiebot script ever loaded.
+        "unicorn/no-typeof-undefined": "off",
+        // Fires when a default import shares a name with a named export, but does not distinguish a
+        // type from a value. `layout/Layout` exports `type Layout` alongside the component default;
+        // TypeScript keeps those in separate namespaces, so the only thing the rule bought was
+        // renaming `<Layout>` to `<LayoutComponent>` in three templates.
+        "import/no-named-as-default": "off",
+
+        // Off, not warn. The rule is right that a type parameter used once in a signature binds
+        // nothing — `xmlParse<T>(…) as T` and `ContextProvider.get<T>(key)` hand back whatever the
+        // caller asked for with no evidence behind it. But removing the parameter only moves the
+        // cast to the call sites; the honest fix gives the generic real evidence (return `unknown`
+        // and validate, or take a `ZodType<T>`), and that is an API migration across ~12 functions,
+        // not a lint pass. Left off rather than as a permanent warning so the linter keeps meaning
+        // "this is yours, now".
+        "typescript/no-unnecessary-type-parameters": "off",
+
+        // `dataset` lives on `HTMLElement`, but plenty of DOM code legitimately holds only an
+        // `Element` — `IntersectionObserverEntry.target` is typed that way, and the chat event
+        // observer reads `data-seq` off it. The rule's rewrite does not compile there, and the
+        // guard it would need buys nothing over `getAttribute`.
+        "unicorn/prefer-dom-node-dataset": "off",
+        // Targets `xs.map(x => ({ ...x, extra }))`, the idiomatic immutable update. Its replacement
+        // is less readable for an allocation count that is the same order either way, and none of
+        // the seven sites is a hot path (a logger call, two tests, an Effect promise, a computed
+        // over search results). `no-accumulating-spread`, which catches the genuinely quadratic
+        // `reduce` form, stays on.
+        "oxc/no-map-spread": "off",
+
+        // Wants `xs.map(x => String(x))` collapsed to `xs.map(String)`. That is the shape
+        // `no-array-callback-reference` exists to prevent, because the callback also receives the
+        // index — `['1','7','11'].map(Number)` happens to be fine but `.map(parseInt)` is not. We
+        // dropped that rule for being noisy on named mappers, which is not a reason to start
+        // actively producing the form it warned about.
+        "unicorn/prefer-native-coercion-functions": "off",
+
+        // Matches any `.postMessage(...)` by name, but the rule is about the browser's
+        // `window.postMessage`, where a missing target origin lets any origin read the message.
+        // All seven findings are `node:worker_threads` `Worker`/`parentPort.postMessage` (no such
+        // parameter exists in that API) and Slack's `chat.postMessage`.
+        "unicorn/require-post-message-target-origin": "off",
+        // `seed | 0` in `rngMulberry32` wraps into signed 32-bit range, which is the point;
+        // `Math.trunc` truncates without wrapping, so the rewrite changes the generator's output
+        // for out-of-range seeds.
+        "unicorn/prefer-math-trunc": "off",
+        // Matches `readAsText` by name. The only finding is `AdmZip`'s own `zip.readAsText()` —
+        // no `Blob` and no `FileReader` anywhere near it.
+        "unicorn/prefer-blob-reading-methods": "off",
+        // Its alternative is the Cookie Store API, which is async and unsupported in Safari and
+        // Firefox. `dom-utils`' `setCookie` is a synchronous helper, so the rule has no reachable
+        // fix here.
+        "unicorn/no-document-cookie": "off",
+
+        // Deletes the empty `export {};` that marks a file as an ESM module rather than a global
+        // script, and autofixes it silently. Both findings are that marker: `@nzyme/aws`'s package
+        // entry point and the `e2e/endpoints.ts` consumed via `import * as e2eHandlers`. Unlike
+        // `import/no-empty-named-blocks` below this one cannot be narrowed to declaration files —
+        // both sites are ordinary `.ts`.
+        "unicorn/require-module-specifiers": "off",
+
+        // ─── Rejected: conflicts with how this repo is written ────────────────────────────────
+        // Each of these is a coherent rule that argues with a decision already made here, so the
+        // finding count is not the point — enabling any of them would mean rewriting the codebase
+        // to a different house style.
+        "no-use-before-define": "off",
+        "no-undefined": "off",
+        "no-void": "off",
+        "no-plusplus": "off",
+        "no-bitwise": "off",
+        "no-empty-function": "off",
+        "no-underscore-dangle": "off",
+        "no-await-in-loop": "off",
+        "class-methods-use-this": "off",
+        "typescript/explicit-function-return-type": "off",
+        "typescript/explicit-module-boundary-types": "off",
+        "typescript/explicit-member-accessibility": "off",
+        "typescript/strict-boolean-expressions": "off",
+        "typescript/prefer-readonly-parameter-types": "off",
+        "typescript/promise-function-async": "off",
+        "typescript/no-invalid-void-type": "off",
+        "oxc/no-async-await": "off",
+        "oxc/no-optional-chaining": "off",
+        "oxc/no-rest-spread-properties": "off",
+        "oxc/no-barrel-file": "off",
+        "import/no-default-export": "off",
+        "import/no-relative-parent-imports": "off",
+        "import/no-unassigned-import": "off",
+        "import/unambiguous": "off",
+        "unicorn/consistent-function-scoping": "off",
+        "unicorn/no-process-exit": "off",
+        "unicorn/prefer-module": "off",
+        "unicorn/no-array-for-each": "off",
+        "unicorn/no-array-reduce": "off",
+        "unicorn/import-style": "off",
+        "unicorn/prefer-event-target": "off",
+        "unicorn/prefer-top-level-await": "off",
+
+        // ─── Rejected: a threshold, not a defect ──────────────────────────────────────────────
+        // A number someone picked. A function over the line is not wrong and one under it is not
+        // right, so the rule can only ever be noise or a reason to split code artificially.
+        "max-lines-per-function": "off",
+        "max-lines": "off",
+        "max-depth": "off",
+        "max-classes-per-file": "off",
+        "complexity": "off",
+        "max-nested-callbacks": "off",
+        "import/max-dependencies": "off",
+
+        // ─── Rejected: formatting or phrasing preference ──────────────────────────────────────
+        // These pick one readable spelling over another. `oxfmt` owns formatting here, and none of
+        // them describes a way for code to be wrong.
+        "no-inline-comments": "off",
+        "no-negated-condition": "off",
+        "no-else-return": "off",
+        "unicorn/no-negated-condition": "off",
+        "unicorn/no-lonely-if": "off",
+        "no-lonely-if": "off",
+        "unicorn/escape-case": "off",
+        "unicorn/no-useless-undefined": "off",
+        "unicorn/prefer-string-replace-all": "off",
+        "unicorn/prefer-string-slice": "off",
+        "unicorn/prefer-single-call": "off",
+        "unicorn/prefer-at": "off",
+        "unicorn/prefer-number-coercion": "off",
+        "unicorn/explicit-length-check": "off",
+        "sort-vars": "off",
+        "oxc/branches-sharing-code": "off",
+
+        // ─── Rejected: another rule here already covers it, better ────────────────────────────
+        // `no-eq-null` duplicates `eqeqeq`, whose `null` carve-out is deliberate. `require-await`
+        // has a type-aware variant already on, which the base rule double-reports. `ban-types` was
+        // superseded upstream by `no-restricted-types`. `default-case` asks for a fallback branch on
+        // every switch, where `switch-exhaustiveness-check` asks the sharper question. `no-redeclare`
+        // cannot tell a TypeScript overload set from an accident.
+        "no-eq-null": "off",
+        "require-await": "off",
+        "default-case": "off",
+        "no-redeclare": "off",
+        "require-unicode-regexp": "off",
+        "typescript/ban-types": "off",
+
+        // ─── Not adopted yet — measured, wanted, deferred on volume ───────────────────────────
+        // These are NOT rejected. Each describes a real defect class and each entry carries the
+        // count that is keeping it out, so the decision to adopt is a scheduling one rather than a
+        // fresh investigation. Anything here is a candidate for its own task.
+        // 1723 sites, 313 of them outside tests — `!` to `assert()` across production code.
+        "typescript/no-non-null-assertion": "off",
+        // 1039 sites. The cast rule `CLAUDE.md` is really asking for; too large to land in one pass.
+        "typescript/no-unsafe-type-assertion": "off",
+        // 284 sites. `console` bypasses the structured logger and its PHI filter.
+        "no-console": "off",
+        // 212 sites. `||` where `??` is meant silently swallows `0`, `''` and `false`.
+        "typescript/prefer-nullish-coalescing": "off",
+        // 189 sites. Returning a void expression usually means a mistaken arrow shorthand.
+        "typescript/no-confusing-void-expression": "off",
+        // 122 sites. Without `return await` inside `try`, the stack trace and the `catch` are lost.
+        "typescript/return-await": "off",
+        // 72 sites. Reassigning a parameter hides an aliasing bug on objects.
+        "no-param-reassign": "off",
+        // 31 sites. An async function passed where `void` is expected is a floating promise.
+        "typescript/strict-void-return": "off",
+        // 29 sites. `CLAUDE.md` forbids leaving TODOs; this is how that gets enforced.
+        "no-warning-comments": "off",
+
+        // Reports every computed access into a namespace import. That is exactly how generated
+        // `.loc` translation modules are consumed (`l[key]`), so the rule is noise here.
+        "import/namespace": "off",
+        // Fires only on string-array sorts in tests, where the default lexicographic order is the
+        // intended one. `ignoreStringArrays` is accepted by the schema but has no effect in
+        // oxlint's implementation, so there is no way to keep the numeric-sort protection alone.
+        "typescript/require-array-sort-compare": "off"
+    },
+    "overrides": [
+        {
+            // A Vue SFC references its own file to pull in the compiled CSS module
+            // (`import css from './Button.vue?vue&type=style&…&lang.module.scss'`). That is the
+            // documented way to get scoped styles, not the accidental self-reference the rule hunts.
+            "files": ["**/*.vue"],
+            "rules": { "import/no-self-import": "off", "import/no-cycle": "off" }
+        },
+        {
+            // In a declaration file an empty import is not dead code — it is what makes the file a
+            // module, without which its `declare global` block stops augmenting anything. Removing
+            // `import type {} from '@nzyme/utils'` from `dom-utils/src/shims.d.ts` silently dropped
+            // the `Navigator.userAgentData` augmentation and degraded every consumer to an error
+            // type, with no failure to point at. Ordinary source keeps the rule.
+            "files": ["**/*.d.ts"],
+            "rules": { "import/no-empty-named-blocks": "off" }
+        }
+    ]
+}

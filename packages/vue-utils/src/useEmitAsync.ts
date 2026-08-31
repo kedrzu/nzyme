@@ -173,7 +173,7 @@ export function useEmitAsync() {
         const listeners = instance.vnode.props?.[attrName] as Listener | Listener[] | undefined;
 
         if (!listeners) {
-            return;
+            return undefined;
         }
 
         if (Array.isArray(listeners)) {
@@ -189,5 +189,7 @@ export function useEmitAsync() {
         } else if (typeof listeners === 'function') {
             return listeners(...args);
         }
+
+        return undefined;
     };
 }

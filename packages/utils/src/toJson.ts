@@ -78,7 +78,7 @@ export function toJson<T>(value: T): Json<T> {
     }
 
     if (Array.isArray(value)) {
-        return value.map(toJson) as Json<T>;
+        return value.map((item: unknown) => toJson(item)) as Json<T>;
     }
 
     if (value instanceof Set) {
@@ -112,6 +112,8 @@ export function toJson<T>(value: T): Json<T> {
 
             return result as Json<T>;
         }
+        default:
+            break;
     }
 
     return value as Json<T>;

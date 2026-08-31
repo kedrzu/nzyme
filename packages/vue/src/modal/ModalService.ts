@@ -5,6 +5,7 @@ import type { Writable } from '@nzyme/types/Common.js';
 import { arrayRemove } from '@nzyme/utils/array/arrayRemove.js';
 import { CancelError } from '@nzyme/utils/CancelError.js';
 import { createPromise } from '@nzyme/utils/createPromise.js';
+import { isFunction } from '@nzyme/utils/isFunction.js';
 import { provideContext } from '@nzyme/vue-utils/context.js';
 import { onKeyUp } from '@nzyme/vue-utils/onKeyUp.js';
 import { reactive } from '@nzyme/vue-utils/reactivity/reactive.js';
@@ -65,7 +66,7 @@ export const ModalService = defineService({
             options?: ModalServiceOpenOptions,
         ): Modal<C> {
             type Controller = ModalController<ModalResult<C>>;
-            const open = ref(true);
+            const isOpen = ref(true);
             const modalPromise = createPromise<ModalResult<C>>();
             const modal = modalPromise.promise as Writable<Modal<C>>;
             const historyHandle = onHistoryBack(() => modal.controller.close());
@@ -76,24 +77,24 @@ export const ModalService = defineService({
             modal.id = Symbol('modal');
             modal.props = props ?? ({} as ModalProps<C>);
             modal.controller = reactive<Controller>({
-                open,
+                open: isOpen,
                 done: done as Controller['done'],
                 close: close,
             });
 
             modal.component = defineComponent({
                 async setup() {
-                    provideContext(ModalContext, modal.controller as unknown as ModalController<unknown>);
+                    provideContext(ModalContext, modal.controller as unknown as ModalController);
                     onKeyUp('Escape', handleClose);
 
                     const view = await unwrapModalComponent(component);
 
                     return () => {
-                        const props = {
+                        const vnodeProps = {
                             ...modal.props,
                             modal: modal.controller,
                         };
-                        const vnode = h(view, props);
+                        const vnode = h(view, vnodeProps);
                         if (options?.parent) {
                             vnode.appContext = { ...options.parent.appContext };
                         }
@@ -106,7 +107,7 @@ export const ModalService = defineService({
             modals.value.push(modal as unknown as Modal);
 
             function done(result: ModalResult<C>) {
-                if (!open.value) {
+                if (!isOpen.value) {
                     return;
                 }
 
@@ -115,7 +116,7 @@ export const ModalService = defineService({
             }
 
             function close() {
-                if (!open.value) {
+                if (!isOpen.value) {
                     return;
                 }
 
@@ -124,7 +125,7 @@ export const ModalService = defineService({
             }
 
             function handleClose() {
-                open.value = false;
+                isOpen.value = false;
 
                 // Destroy the modal after a slight delay
                 // This way you can use customized transitions.
@@ -139,12 +140,22 @@ export const ModalService = defineService({
             modals.value.forEach(m => m.controller.close());
         }
 
+        /**
+         * A `ModalComponent` is the component itself, a promise of its module, or a function that
+         * loads it. Vue components can themselves be functions, so callability alone cannot tell a
+         * functional component from a loader — this predicate states the contract `open()` documents
+         * (a callable modal is the loader) in one named place instead of at every call site.
+         */
+        function isModalComponentLoader<C>(modal: ModalComponent<C>): modal is () => Promise<{ default: C }> {
+            return isFunction(modal);
+        }
+
         function unwrapModalComponent<C>(modal: ModalComponent<C>): Promise<Component> {
             if (modal instanceof Promise) {
                 return modal.then(view => view.default as Component);
             }
 
-            if (modal instanceof Function) {
+            if (isModalComponentLoader(modal)) {
                 return modal().then(view => view.default as Component);
             }
 

@@ -29,11 +29,11 @@ export function defineValidator<T>(options: DefineValidatorOptions<T>): Validato
 
     return (value, ctx) => {
         if (value == null) {
-            return;
+            return undefined;
         }
 
         if (validator(value)) {
-            return;
+            return undefined;
         }
 
         if (message) {

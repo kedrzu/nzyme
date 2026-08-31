@@ -1,4 +1,4 @@
-import { existsSync } from 'fs';
+import { existsSync } from 'node:fs';
 import * as path from 'node:path';
 
 import chalk from 'chalk';

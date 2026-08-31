@@ -78,13 +78,13 @@ export function promiseRef<T>(value: T): PromiseRef<T>;
  * ```
  */
 export function promiseRef<T>(promiseOrValue?: Promise<T | undefined> | T) {
-    let promiseRef: Ref<Promise<T | undefined> | null>;
+    let promiseHolder: Ref<Promise<T | undefined> | null>;
     let valueRef: Ref<T | undefined>;
     if (promiseOrValue instanceof Promise) {
-        promiseRef = ref(wrapPromise(promiseOrValue));
+        promiseHolder = ref(wrapPromise(promiseOrValue));
         valueRef = ref(undefined);
     } else {
-        promiseRef = ref(null);
+        promiseHolder = ref(null);
         valueRef = ref(promiseOrValue) as Ref<T | undefined>;
     }
 
@@ -92,13 +92,13 @@ export function promiseRef<T>(promiseOrValue?: Promise<T | undefined> | T) {
 
     Object.defineProperties(valueRef, {
         promise: {
-            get: () => promiseRef.value ?? Promise.resolve(valueRef.value),
+            get: () => promiseHolder.value ?? Promise.resolve(valueRef.value),
             set: (value: Promise<T>) => {
-                promiseRef.value = wrapPromise(value);
+                promiseHolder.value = wrapPromise(value);
             },
         },
         pending: {
-            get: () => promiseRef.value,
+            get: () => promiseHolder.value,
         },
         update: {
             value: update,
@@ -107,7 +107,7 @@ export function promiseRef<T>(promiseOrValue?: Promise<T | undefined> | T) {
 
     watch(valueRef, () => {
         if (runWatch) {
-            promiseRef.value = null;
+            promiseHolder.value = null;
         }
     });
 
@@ -115,11 +115,12 @@ export function promiseRef<T>(promiseOrValue?: Promise<T | undefined> | T) {
 
     function wrapPromise(promise: Promise<T | undefined>) {
         const wrapped = promise.then(result => {
-            if (promiseRef.value === wrapped) {
+            if (promiseHolder.value === wrapped) {
                 try {
                     runWatch = false;
                     valueRef.value = result;
-                    promiseRef.value = null;
+                    promiseHolder.value = null;
+                    return result;
                 } finally {
                     runWatch = true;
                 }
@@ -133,7 +134,7 @@ export function promiseRef<T>(promiseOrValue?: Promise<T | undefined> | T) {
 
     function update(promise: Promise<T | undefined>) {
         const wrapped = wrapPromise(promise);
-        promiseRef.value = wrapped;
+        promiseHolder.value = wrapped;
         return wrapped;
     }
 }

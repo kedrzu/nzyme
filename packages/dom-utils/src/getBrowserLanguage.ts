@@ -10,7 +10,7 @@
  */
 export function getBrowserLanguage<const L extends readonly string[]>(availableLanguages: L): L[number] | undefined {
     if (typeof navigator === 'undefined') {
-        return;
+        return undefined;
     }
 
     const browserLanguages = (navigator.languages || [navigator.language]) as L[number][];
@@ -29,4 +29,6 @@ export function getBrowserLanguage<const L extends readonly string[]>(availableL
             return langCode;
         }
     }
+
+    return undefined;
 }

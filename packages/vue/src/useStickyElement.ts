@@ -1,4 +1,5 @@
 import { isBrowser } from '@nzyme/dom-utils/isBrowser.js';
+import { assertNever } from '@nzyme/utils/assertNever.js';
 import { waitFor } from '@nzyme/utils/waitFor.js';
 import { onElementScroll } from '@nzyme/vue-utils/onElementScroll.js';
 import { onWindowResize } from '@nzyme/vue-utils/onWindowResize.js';
@@ -166,15 +167,16 @@ export function useStickyElement(options: StickyElementOptions) {
 
         const containerRect = getContainerRect();
         const elementRect = el.getBoundingClientRect();
+        const currentPosition = position.value;
 
-        switch (position.value) {
+        switch (currentPosition) {
             case 'bottom': {
                 if (containerRect.scrollBottom === 0) {
                     // not sticky if we are on the bottom
                     return false;
                 }
 
-                const stickyOffset = parseInt(styles.bottom);
+                const stickyOffset = Number.parseInt(styles.bottom, 10);
                 const currentOffset = containerRect.bottom - elementRect.bottom;
 
                 return currentOffset <= stickyOffset;
@@ -185,11 +187,13 @@ export function useStickyElement(options: StickyElementOptions) {
                     return false;
                 }
 
-                const stickyOffset = parseInt(styles.top);
+                const stickyOffset = Number.parseInt(styles.top, 10);
                 const currentOffset = elementRect.top - containerRect.top - containerRect.paddingTop;
 
                 return currentOffset <= stickyOffset;
             }
+            default:
+                return assertNever(currentPosition, 'Unhandled sticky element position');
         }
     }
 
@@ -227,8 +231,8 @@ export function useStickyElement(options: StickyElementOptions) {
         return {
             top: rect.top,
             bottom: rect.bottom,
-            paddingTop: parseInt(styles.paddingTop),
-            paddingBottom: parseInt(styles.paddingBottom),
+            paddingTop: Number.parseInt(styles.paddingTop, 10),
+            paddingBottom: Number.parseInt(styles.paddingBottom, 10),
             scrollTop: Math.round(container.scrollTop),
             scrollBottom: Math.floor(container.scrollHeight - container.scrollTop - container.offsetHeight),
         };

@@ -11,6 +11,8 @@ export function isVNodeEmpty(node: VNodeChild): boolean {
             return node.trim() === '';
         case 'undefined':
             return true;
+        default:
+            break;
     }
 
     if (node === null) {
@@ -18,7 +20,7 @@ export function isVNodeEmpty(node: VNodeChild): boolean {
     }
 
     if (Array.isArray(node)) {
-        return node.length === 0 || node.every(isVNodeEmpty);
+        return node.every(isVNodeEmpty);
     }
 
     switch (node.type) {
@@ -37,7 +39,8 @@ export function isVNodeEmpty(node: VNodeChild): boolean {
                 return node.children.trim() === '';
             }
             return true;
-    }
 
-    return false;
+        default:
+            return false;
+    }
 }

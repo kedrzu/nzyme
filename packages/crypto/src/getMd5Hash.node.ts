@@ -1,5 +1,5 @@
-import type { BinaryLike } from 'crypto';
-import { createHash } from 'crypto';
+import type { BinaryLike } from 'node:crypto';
+import { createHash } from 'node:crypto';
 
 /**
  * Calculates the MD5 hash of the provided data (Node.js implementation)

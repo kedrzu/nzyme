@@ -44,12 +44,12 @@ export function maxLengthValidator<T extends WithLength>(options: MaxLengthValid
         async: false,
         validate: (value, ctx) => {
             if (value == null) {
-                return;
+                return undefined;
             }
 
             const valid = exclusive.value ? value.length < maxLength.value : value.length <= maxLength.value;
             if (valid) {
-                return;
+                return undefined;
             }
 
             if (options.message) {

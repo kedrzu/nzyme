@@ -27,7 +27,7 @@ test('rejects with the operation own error, not a wrapped one', async () => {
     const error = await withTimeout({
         operation: Promise.reject(failure),
         timeoutMs: 1000,
-    }).catch((error: unknown) => error);
+    }).catch((rejectionReason: unknown) => rejectionReason);
 
     expect(error).toBe(failure);
 });
@@ -42,7 +42,7 @@ test('rejects with a TimeoutError carrying the deadline when onTimeout is omitte
 
     jest.advanceTimersByTime(250);
 
-    const error = await promise.catch((error: unknown) => error);
+    const error = await promise.catch((timeoutError: unknown) => timeoutError);
 
     expect(error).toBeInstanceOf(TimeoutError);
     expect((error as TimeoutError).timeoutMs).toBe(250);
@@ -90,7 +90,7 @@ test('rejects with the exact error thrown by onTimeout', async () => {
 
     jest.advanceTimersByTime(100);
 
-    const error = await promise.catch((error: unknown) => error);
+    const error = await promise.catch((onTimeoutError: unknown) => onTimeoutError);
 
     expect(error).toBe(failure);
 });
@@ -101,7 +101,7 @@ test('aborts the operation signal with a TimeoutError reason', async () => {
     const promise = withTimeout({
         operation: signal => {
             operationSignal = signal;
-            return createPromise<void>().promise;
+            return createPromise().promise;
         },
         timeoutMs: 100,
         onTimeout: () => {},
@@ -193,7 +193,7 @@ test('forwards an abort of the caller signal to the operation signal', async () 
     const promise = withTimeout({
         operation: signal => {
             operationSignal = signal;
-            return createPromise<void>().promise;
+            return createPromise().promise;
         },
         timeoutMs: 100,
         signal: controller.signal,
@@ -238,7 +238,7 @@ test('rejects when the operation throws synchronously', async () => {
             throw failure;
         },
         timeoutMs: 100,
-    }).catch((error: unknown) => error);
+    }).catch((thrownError: unknown) => thrownError);
 
     expect(error).toBe(failure);
 });

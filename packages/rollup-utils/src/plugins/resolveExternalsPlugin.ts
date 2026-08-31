@@ -36,7 +36,7 @@ export function resolveExternalsPlugin(): Plugin {
 
             // Relative imports — let Rollup handle them
             if (source.startsWith('.') || source.startsWith('/')) {
-                return;
+                return undefined;
             }
 
             // Already a resolved node_modules path — just mark external
@@ -45,7 +45,7 @@ export function resolveExternalsPlugin(): Plugin {
             }
 
             if (!importer) {
-                return;
+                return undefined;
             }
 
             // Parse the bare specifier into package name and subpath
@@ -55,13 +55,13 @@ export function resolveExternalsPlugin(): Plugin {
             const pkg = findPackage(pkgName, importer);
 
             if (!pkg || !pkg.dir.includes('/node_modules/')) {
-                return;
+                return undefined;
             }
 
             const resolved = resolveEntry(pkg, subpath);
 
             if (!resolved) {
-                return;
+                return undefined;
             }
 
             return { id: resolved, external: true };

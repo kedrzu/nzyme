@@ -42,13 +42,13 @@ export function minLengthValidator<T extends WithLength>(options: MinLengthValid
         async: false,
         validate: (value, ctx) => {
             if (value == null) {
-                return;
+                return undefined;
             }
 
             const valid = exclusive.value ? value.length > minLength.value : value.length >= minLength.value;
 
             if (valid) {
-                return;
+                return undefined;
             }
 
             if (options.message) {

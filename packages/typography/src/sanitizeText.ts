@@ -1,6 +1,6 @@
 import { fixOrphans } from './fixOrphans.js';
 
-const multiWhiteSpaceRegex = /[\s\uFEFF\xA0]+/gmu;
+const multiWhiteSpaceRegex = /[\s\uFEFF\u00A0]+/gmu;
 const hyphensInWordRegex = /[\p{L}\p{N}](-)[\p{L}\p{N}]/gmu;
 const underscoreBetweenWordsRegex = /(\S)_(\S)/gmu;
 
@@ -11,7 +11,7 @@ const underscoreBetweenWordsRegex = /(\S)_(\S)/gmu;
  */
 export function sanitizeText(text: string) {
     // if text does not contain any spaces it may be some ID
-    if (text.indexOf(' ') < 0) {
+    if (!text.includes(' ')) {
         return text;
     }
 
@@ -28,7 +28,7 @@ export function sanitizeText(text: string) {
     // Replace underscores between non-whitespace characters with a non-breakable space.
     // Done last so these explicit markers survive fixOrphans' long-word rollback.
     text = text.replace(underscoreBetweenWordsRegex, (_match, first, second) => {
-        return first + '\xa0' + second;
+        return first + '\u00a0' + second;
     });
 
     return text;

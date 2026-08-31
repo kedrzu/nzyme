@@ -1,4 +1,4 @@
-import { url } from 'inspector';
+import { url } from 'node:inspector';
 
 /**
  * Checks if the Node.js process is running in debug mode

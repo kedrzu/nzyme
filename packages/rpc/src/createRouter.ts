@@ -209,7 +209,7 @@ export function createRouter(options: RouterOptions): Router {
 
     async function parseInput(handler: EndpointHandlerService, request: HttpRequest) {
         if (!handler.endpoint.input) {
-            return;
+            return undefined;
         }
 
         const body = request.body ? parseJson(request.body) : null;

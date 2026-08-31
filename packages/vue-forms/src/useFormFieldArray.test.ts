@@ -1,4 +1,5 @@
 import { LanguageContext } from '@nzyme/i18n/LanguageContext.js';
+import { waitFor } from '@nzyme/utils/waitFor.js';
 import { createContainer } from '@nzyme/vue-ioc/createContainer.js';
 import { beforeEach, expect, test } from 'bun:test';
 import { createApp, effectScope, nextTick } from 'vue';
@@ -465,9 +466,7 @@ test('useFormFieldArray works with async validators', async () => {
         const asyncValidator: FormValidator<string> = {
             async: true,
             validate: async v => {
-                await new Promise(resolve => {
-                    setTimeout(resolve, 10);
-                });
+                await waitFor(10);
                 return v ? null : 'Required';
             },
         };

@@ -86,7 +86,7 @@ export function createMemo<T>(factory: () => T) {
  * ```typescript
  * const expensive = createMemoAsync(async () => {
  *     console.log('Computing...');
- *     await new Promise(resolve => setTimeout(resolve, 1000));
+ *     await waitFor(1000);
  *     return 42;
  * });
  *

@@ -57,6 +57,10 @@ export function sortBy<T>(array: readonly T[], value: (item: T) => unknown, opti
             }
 
             return (first as string).localeCompare(second as string);
+        } else if (first == null && second == null) {
+            // Both nullish sort equal, including a `null` against an `undefined`. Spelled out
+            // because the strict comparison below cannot see them as the same.
+            return 0;
         } else if (first === second) {
             return 0;
         } else if (first == null) {

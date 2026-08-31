@@ -26,6 +26,12 @@
     ],
     "overrides": [
         {
+            // Pulumi declares infrastructure by constructing resources for their side effect —
+            // `new aws.Route53Record(...)` is the whole point and its value is often unused.
+            "files": ["packages/pulumi/**"],
+            "rules": { "no-new": "off" }
+        },
+        {
             // Vue integration packages. Their `no-unsafe-*` findings come from types this repo does
             // not own: Vue's own reactivity and component types resolve to `any` at several
             // boundaries (`computedAsync`, `useEmitAsProps`), the `*.vue` ambient shims these

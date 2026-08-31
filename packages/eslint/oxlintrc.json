@@ -6,9 +6,21 @@
     // The rule set mirrors what ESLint enforced before the oxlint migration: the `correctness`
     // category covers 57 of those rules, the explicit entries below cover the remaining 38.
     "plugins": ["typescript", "unicorn", "oxc", "import", "promise"],
+    // Categories rather than a hand-kept list: a new oxlint rule in any of these arrives on its own,
+    // and the rules below record only what we decided against and why. `nursery` stays out — those
+    // are unstable by definition, which is a reason on the risk side rather than the cost side.
     "categories": {
-        "correctness": "error"
+        "correctness": "error",
+        "suspicious": "error",
+        "perf": "error",
+        "pedantic": "error",
+        "restriction": "error"
     },
+    // The explicit entries below are kept rather than trimmed to whatever the categories do not
+    // already cover. Several carry options that only work spelled out (`eqeqeq`'s `null` carve-out,
+    // `no-unused-vars`' underscore patterns, `switch-exhaustiveness-check`), and for the rest the
+    // redundancy costs a line each while removing one would silently drop a rule if it turned out
+    // not to be a category member — a trade with no upside on the safe side.
     "rules": {
         "curly": "error",
         // `x == null` is the idiomatic "null or undefined" check and is deliberately kept; without
@@ -227,6 +239,109 @@
         // `import/no-empty-named-blocks` below this one cannot be narrowed to declaration files —
         // both sites are ordinary `.ts`.
         "unicorn/require-module-specifiers": "off",
+
+        // ─── Rejected: conflicts with how this repo is written ────────────────────────────────
+        // Each of these is a coherent rule that argues with a decision already made here, so the
+        // finding count is not the point — enabling any of them would mean rewriting the codebase
+        // to a different house style.
+        "no-use-before-define": "off",
+        "no-undefined": "off",
+        "no-void": "off",
+        "no-plusplus": "off",
+        "no-bitwise": "off",
+        "no-empty-function": "off",
+        "no-new": "off",
+        "no-underscore-dangle": "off",
+        "no-await-in-loop": "off",
+        "class-methods-use-this": "off",
+        "typescript/explicit-function-return-type": "off",
+        "typescript/explicit-module-boundary-types": "off",
+        "typescript/explicit-member-accessibility": "off",
+        "typescript/strict-boolean-expressions": "off",
+        "typescript/prefer-readonly-parameter-types": "off",
+        "typescript/promise-function-async": "off",
+        "typescript/no-invalid-void-type": "off",
+        "oxc/no-async-await": "off",
+        "oxc/no-optional-chaining": "off",
+        "oxc/no-rest-spread-properties": "off",
+        "oxc/no-barrel-file": "off",
+        "import/no-default-export": "off",
+        "import/no-relative-parent-imports": "off",
+        "import/no-unassigned-import": "off",
+        "import/unambiguous": "off",
+        "unicorn/consistent-function-scoping": "off",
+        "unicorn/no-process-exit": "off",
+        "unicorn/prefer-module": "off",
+        "unicorn/no-array-for-each": "off",
+        "unicorn/no-array-reduce": "off",
+        "unicorn/import-style": "off",
+        "unicorn/prefer-event-target": "off",
+        "unicorn/prefer-top-level-await": "off",
+
+        // ─── Rejected: a threshold, not a defect ──────────────────────────────────────────────
+        // A number someone picked. A function over the line is not wrong and one under it is not
+        // right, so the rule can only ever be noise or a reason to split code artificially.
+        "max-lines-per-function": "off",
+        "max-lines": "off",
+        "max-depth": "off",
+        "max-classes-per-file": "off",
+        "complexity": "off",
+        "import/max-dependencies": "off",
+
+        // ─── Rejected: formatting or phrasing preference ──────────────────────────────────────
+        // These pick one readable spelling over another. `oxfmt` owns formatting here, and none of
+        // them describes a way for code to be wrong.
+        "no-inline-comments": "off",
+        "no-negated-condition": "off",
+        "no-else-return": "off",
+        "unicorn/no-negated-condition": "off",
+        "unicorn/no-lonely-if": "off",
+        "unicorn/escape-case": "off",
+        "unicorn/no-useless-undefined": "off",
+        "unicorn/prefer-string-replace-all": "off",
+        "unicorn/prefer-string-slice": "off",
+        "unicorn/prefer-single-call": "off",
+        "unicorn/prefer-at": "off",
+        "unicorn/prefer-number-coercion": "off",
+        "unicorn/explicit-length-check": "off",
+        "oxc/branches-sharing-code": "off",
+
+        // ─── Rejected: another rule here already covers it, better ────────────────────────────
+        // `no-eq-null` duplicates `eqeqeq`, whose `null` carve-out is deliberate. `require-await`
+        // has a type-aware variant already on, which the base rule double-reports. `ban-types` was
+        // superseded upstream by `no-restricted-types`. `default-case` asks for a fallback branch on
+        // every switch, where `switch-exhaustiveness-check` asks the sharper question. `no-redeclare`
+        // cannot tell a TypeScript overload set from an accident.
+        "no-eq-null": "off",
+        "require-await": "off",
+        "default-case": "off",
+        "no-redeclare": "off",
+        "require-unicode-regexp": "off",
+        "typescript/ban-types": "off",
+
+        // ─── Not adopted yet — measured, wanted, deferred on volume ───────────────────────────
+        // These are NOT rejected. Each describes a real defect class and each entry carries the
+        // count that is keeping it out, so the decision to adopt is a scheduling one rather than a
+        // fresh investigation. Anything here is a candidate for its own task.
+        // 1723 sites, 313 of them outside tests — `!` to `assert()` across production code.
+        "typescript/no-non-null-assertion": "off",
+        // 1039 sites. The cast rule `CLAUDE.md` is really asking for; too large to land in one pass.
+        "typescript/no-unsafe-type-assertion": "off",
+        // 284 sites. `console` bypasses the structured logger and its PHI filter.
+        "no-console": "off",
+        // 212 sites. `||` where `??` is meant silently swallows `0`, `''` and `false`.
+        "typescript/prefer-nullish-coalescing": "off",
+        // 189 sites. Returning a void expression usually means a mistaken arrow shorthand.
+        "typescript/no-confusing-void-expression": "off",
+        // 122 sites. Without `return await` inside `try`, the stack trace and the `catch` are lost.
+        "typescript/return-await": "off",
+        // 72 sites. Reassigning a parameter hides an aliasing bug on objects.
+        "no-param-reassign": "off",
+        // 31 sites. An async function passed where `void` is expected is a floating promise.
+        "typescript/strict-void-return": "off",
+        // 29 sites. `CLAUDE.md` forbids leaving TODOs; this is how that gets enforced.
+        "no-warning-comments": "off",
+
         // Reports every computed access into a namespace import. That is exactly how generated
         // `.loc` translation modules are consumed (`l[key]`), so the rule is noise here.
         "import/namespace": "off",

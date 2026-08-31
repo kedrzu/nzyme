@@ -95,16 +95,16 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions) {
         // Stop the current server
         server?.stop();
 
-        const newServer = createDevServer({ file: outputFile });
-        server = newServer;
+        const devServer = createDevServer({ file: outputFile });
+        server = devServer;
 
-        newServer.events.stopped.on(() => {
-            if (server === newServer) {
+        devServer.events.stopped.on(() => {
+            if (server === devServer) {
                 server = undefined;
             }
         });
 
-        return newServer;
+        return devServer;
     }
 }
 

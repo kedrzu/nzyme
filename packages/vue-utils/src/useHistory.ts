@@ -49,26 +49,26 @@ function initializeHistory() {
 
     let pushState: History['pushState'];
     let replaceState: History['replaceState'];
-    let history: History | null;
+    let browserHistory: History | null;
 
     if (typeof window !== 'undefined') {
-        history = window.history;
+        browserHistory = window.history;
 
         window.addEventListener('popstate', event => {
             eventPopState.emit({ state: normalizeState(event.state) });
         });
 
         // eslint-disable-next-line @typescript-eslint/unbound-method
-        pushState = history.pushState;
-        history.pushState = (state, title, url) => {
-            pushState.call(history, state, title, url);
+        pushState = browserHistory.pushState;
+        browserHistory.pushState = (state, title, url) => {
+            pushState.call(browserHistory, state, title, url);
             eventPushState.emit({ state: normalizeState(state) });
         };
 
         // eslint-disable-next-line @typescript-eslint/unbound-method
         replaceState = window.history.replaceState;
-        history.replaceState = (state, title, url) => {
-            replaceState.call(history, state, title, url);
+        browserHistory.replaceState = (state, title, url) => {
+            replaceState.call(browserHistory, state, title, url);
             eventReplaceState.emit({ state: normalizeState(state) });
         };
     }
@@ -80,15 +80,15 @@ function initializeHistory() {
             replaceState: eventReplaceState.event,
         },
         getState() {
-            if (!history) {
+            if (!browserHistory) {
                 return null;
             }
 
-            return normalizeState(history.state);
+            return normalizeState(browserHistory.state);
         },
         setState(state: HistoryState) {
             if (replaceState) {
-                replaceState.call(history, state, '');
+                replaceState.call(browserHistory, state, '');
             }
         },
     };

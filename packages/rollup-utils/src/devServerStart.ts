@@ -30,9 +30,9 @@ export function devServerStart(options: DevServerOptions) {
 
     server.use(middleware);
 
-    void port.then(port => {
-        server.listen(port, () => {
-            console.info(`Server listening on ${chalk.green(`http://localhost:${port}`)}`);
+    void port.then(resolvedPort => {
+        server.listen(resolvedPort, () => {
+            console.info(`Server listening on ${chalk.green(`http://localhost:${resolvedPort}`)}`);
         });
     });
 

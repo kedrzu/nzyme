@@ -143,9 +143,9 @@ export function packageJsonPlugin(options: PackageJsonPluginOptions = {}): Plugi
         while (depDir && path.basename(depDir) !== 'node_modules') {
             const packageJsonPath = path.join(depDir, 'package.json');
 
-            const packageJson = await readPackageJson(packageJsonPath);
-            if (packageJson?.version) {
-                return packageJson.version;
+            const depPackageJson = await readPackageJson(packageJsonPath);
+            if (depPackageJson?.version) {
+                return depPackageJson.version;
             }
 
             depDir = path.dirname(depDir);
@@ -183,7 +183,7 @@ export function packageJsonPlugin(options: PackageJsonPluginOptions = {}): Plugi
             return null;
         }
 
-        const packageJson = await fs.readFile(packageJsonPath, 'utf8');
-        return JSON.parse(packageJson) as PackageJson;
+        const packageJsonContent = await fs.readFile(packageJsonPath, 'utf8');
+        return JSON.parse(packageJsonContent) as PackageJson;
     }
 }

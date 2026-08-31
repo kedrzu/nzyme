@@ -230,8 +230,8 @@ describe('transient services', () => {
             deps: {
                 transient,
             },
-            setup({ transient }) {
-                return transient + 'bar';
+            setup({ transient: resolvedTransient }) {
+                return resolvedTransient + 'bar';
             },
         });
 

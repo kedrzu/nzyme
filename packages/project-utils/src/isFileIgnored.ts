@@ -13,8 +13,8 @@ const gitRootCache = new Map<string, string>();
 const projectRoot = getProjectRoot();
 const commonIgnorePaths = ['.git', '.turbo', '.nx', '.yarn', 'node_modules'];
 
-const commonIgnoreSuffixes = commonIgnorePaths.map(path => `/${path}`);
-const commonIgnoreIncludes = commonIgnorePaths.map(path => `/.${path}/`);
+const commonIgnoreSuffixes = commonIgnorePaths.map(ignorePath => `/${ignorePath}`);
+const commonIgnoreIncludes = commonIgnorePaths.map(ignorePath => `/.${ignorePath}/`);
 
 /**
  * Checks if a file or directory path should be ignored by the file system watcher.

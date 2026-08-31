@@ -95,12 +95,12 @@ export async function uploadFilesToS3Bucket(options: UploadFilesOptions) {
             relocations: options.rename ? [options.rename] : undefined,
             commandInput: (input: Partial<GetObjectCommandInput>): Partial<PutObjectCommandInput> => {
                 const key = assertValue(input.Key);
-                const tags = tagsFunction(key);
+                const keyTags = tagsFunction(key);
 
                 return {
                     ContentType: getContentType(options, key),
                     CacheControl: cacheControlFunction(key),
-                    Tagging: tags ? stringifyQuery(tags) : undefined,
+                    Tagging: keyTags ? stringifyQuery(keyTags) : undefined,
                 };
             },
         });

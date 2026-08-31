@@ -66,7 +66,7 @@ export const ModalService = defineService({
             options?: ModalServiceOpenOptions,
         ): Modal<C> {
             type Controller = ModalController<ModalResult<C>>;
-            const open = ref(true);
+            const isOpen = ref(true);
             const modalPromise = createPromise<ModalResult<C>>();
             const modal = modalPromise.promise as Writable<Modal<C>>;
             const historyHandle = onHistoryBack(() => modal.controller.close());
@@ -77,7 +77,7 @@ export const ModalService = defineService({
             modal.id = Symbol('modal');
             modal.props = props ?? ({} as ModalProps<C>);
             modal.controller = reactive<Controller>({
-                open,
+                open: isOpen,
                 done: done as Controller['done'],
                 close: close,
             });
@@ -90,11 +90,11 @@ export const ModalService = defineService({
                     const view = await unwrapModalComponent(component);
 
                     return () => {
-                        const props = {
+                        const vnodeProps = {
                             ...modal.props,
                             modal: modal.controller,
                         };
-                        const vnode = h(view, props);
+                        const vnode = h(view, vnodeProps);
                         if (options?.parent) {
                             vnode.appContext = { ...options.parent.appContext };
                         }
@@ -107,7 +107,7 @@ export const ModalService = defineService({
             modals.value.push(modal as unknown as Modal);
 
             function done(result: ModalResult<C>) {
-                if (!open.value) {
+                if (!isOpen.value) {
                     return;
                 }
 
@@ -116,7 +116,7 @@ export const ModalService = defineService({
             }
 
             function close() {
-                if (!open.value) {
+                if (!isOpen.value) {
                     return;
                 }
 
@@ -125,7 +125,7 @@ export const ModalService = defineService({
             }
 
             function handleClose() {
-                open.value = false;
+                isOpen.value = false;
 
                 // Destroy the modal after a slight delay
                 // This way you can use customized transitions.

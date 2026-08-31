@@ -7,7 +7,7 @@ export function resolveLocalPath(meta: ImportMeta, path: string): string;
 /** Resolves a path relative to the calling module, or returns a curried resolver if no path is given. */
 export function resolveLocalPath(meta: ImportMeta, path?: string) {
     if (path === undefined) {
-        return (path: string) => resolveLocalPath(meta, path);
+        return (relativePath: string) => resolveLocalPath(meta, relativePath);
     }
 
     return fileURLToPath(new URL(path, meta.url));

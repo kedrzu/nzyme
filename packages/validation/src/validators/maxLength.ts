@@ -36,7 +36,7 @@ type WithLength = {
  * @returns A validator function.
  */
 export function maxLength<T extends WithLength>(
-    maxLength: number,
+    limit: number,
     options?: MaxLengthValidatorOptions<T>,
 ): Validator<T | null | undefined> {
     const message = options?.message;
@@ -46,15 +46,15 @@ export function maxLength<T extends WithLength>(
             return;
         }
 
-        const valid = value.length <= maxLength;
+        const valid = value.length <= limit;
         if (valid) {
             return;
         }
 
         if (message) {
-            return message({ ...ctx, maxLength, value });
+            return message({ ...ctx, maxLength: limit, value });
         }
 
-        return `Maximum length is ${maxLength}`;
+        return `Maximum length is ${limit}`;
     };
 }

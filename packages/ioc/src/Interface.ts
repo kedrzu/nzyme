@@ -133,18 +133,18 @@ export function isInterface(value: unknown): value is Interface {
  * @param defaultValue - The default value or injectable to use
  * @returns A new injectable that resolves to T | D
  */
-function defaultValue<T, D>(this: Interface<T>, defaultValue: D | Injectable<D>): Injectable<D | T> {
+function defaultValue<T, D>(this: Interface<T>, fallbackValue: D | Injectable<D>): Injectable<D | T> {
     return {
         [INJECTABLE_SYMBOL]: true,
         name: this.name,
         resolve: (container, caller) => {
             const value = container.get(this);
             if (value === undefined) {
-                if (isInjectable(defaultValue)) {
-                    return defaultValue.resolve(container, caller);
+                if (isInjectable(fallbackValue)) {
+                    return fallbackValue.resolve(container, caller);
                 }
 
-                return defaultValue;
+                return fallbackValue;
             }
 
             if (isInjectable(value)) {

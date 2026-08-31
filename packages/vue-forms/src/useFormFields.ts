@@ -92,12 +92,12 @@ export function useFormFields<T, V extends FormFieldsParams<T>>(form: FormModel<
     for (const key of Object.keys(params) as (keyof T & keyof V & string)[]) {
         const value = computed({
             get: () => form.value?.[key],
-            set: (value: T[keyof T]) => {
+            set: (newValue: T[keyof T]) => {
                 if (form.value == null) {
                     return;
                 }
 
-                form.value[key] = value as (typeof form.value)[typeof key];
+                form.value[key] = newValue as (typeof form.value)[typeof key];
             },
         });
 

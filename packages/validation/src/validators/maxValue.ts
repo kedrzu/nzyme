@@ -62,7 +62,7 @@ export function maxValue(
  * @returns A validator function.
  */
 export function maxValue<T extends Comparable>(
-    maxValue: T,
+    max: T,
     options?: MaxValidatorOptions<T>,
 ): Validator<T | null | undefined> {
     const exclusive = options?.exclusive ?? false;
@@ -73,15 +73,15 @@ export function maxValue<T extends Comparable>(
             return;
         }
 
-        const valid = exclusive ? value < maxValue : value <= maxValue;
+        const valid = exclusive ? value < max : value <= max;
         if (valid) {
             return;
         }
 
         if (message) {
-            return message({ ...ctx, maxValue, value });
+            return message({ ...ctx, maxValue: max, value });
         }
 
-        return `Maximum value is ${String(maxValue)}`;
+        return `Maximum value is ${String(max)}`;
     };
 }

@@ -18,14 +18,14 @@ export type RegexValidatorOptions = {
  * @util
  */
 export function regex(options: RegexValidatorOptions): Validator<string | null | undefined> {
-    const { regex, message } = options;
+    const { regex: pattern, message } = options;
 
     return (value, ctx) => {
         if (value == null) {
             return;
         }
 
-        if (regex.test(value)) {
+        if (pattern.test(value)) {
             return;
         }
 

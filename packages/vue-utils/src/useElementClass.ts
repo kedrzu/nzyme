@@ -66,50 +66,50 @@ export function useElementClass(options: GlobalClassOptions) {
 
     onUnmounted(() => removeClass(elements.value, classes.value));
 
-    function addClass(elements: ElementParam | ElementParam[], classes: ClassParam) {
-        forEachElement(elements, classes, (element, classes) => {
-            element.classList.add(...classes);
+    function addClass(targetElements: ElementParam | ElementParam[], targetClasses: ClassParam) {
+        forEachElement(targetElements, targetClasses, (element, classNames) => {
+            element.classList.add(...classNames);
         });
     }
 
-    function removeClass(elements: ElementParam | ElementParam[], classes: ClassParam) {
-        forEachElement(elements, classes, (element, classes) => {
-            element.classList.remove(...classes);
+    function removeClass(targetElements: ElementParam | ElementParam[], targetClasses: ClassParam) {
+        forEachElement(targetElements, targetClasses, (element, classNames) => {
+            element.classList.remove(...classNames);
         });
     }
 
     function forEachElement(
-        elements: ElementParam | ElementParam[],
-        classes: ClassParam,
+        targetElements: ElementParam | ElementParam[],
+        targetClasses: ClassParam,
         callback: (element: Element, classes: string[]) => void,
     ) {
-        elements = normalizeElements(elements);
-        if (!elements) {
+        targetElements = normalizeElements(targetElements);
+        if (!targetElements) {
             return;
         }
 
-        classes = normalizeClass(classes);
-        if (!classes) {
+        targetClasses = normalizeClass(targetClasses);
+        if (!targetClasses) {
             return;
         }
 
-        for (const element of elements) {
+        for (const element of targetElements) {
             if (element) {
-                callback(element, classes);
+                callback(element, targetClasses);
             }
         }
     }
 
-    function normalizeElements(elements: ElementParam | ElementParam[]) {
-        if (!elements) {
+    function normalizeElements(targetElements: ElementParam | ElementParam[]) {
+        if (!targetElements) {
             return null;
         }
 
-        if (Array.isArray(elements)) {
-            return elements;
+        if (Array.isArray(targetElements)) {
+            return targetElements;
         }
 
-        return [elements];
+        return [targetElements];
     }
 
     function normalizeClass(cls: ClassParam) {

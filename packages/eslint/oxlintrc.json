@@ -81,6 +81,7 @@
         // Step 2 — findings whose fix has no interpretation to choose. Grouped here while the
         // config is still an explicit list; the final shape moves them under `categories`.
         "no-alert": "error",
+        "no-shadow": "error",
         "no-inner-declarations": "error",
         "no-loop-func": "error",
         "no-unmodified-loop-condition": "error",

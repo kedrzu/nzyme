@@ -7,7 +7,10 @@ export function filterPulumiInput<T>(input: pulumi.Input<T[]>): pulumi.Input<Exc
     return pulumi
         .all([input])
         .apply(
-            ([input]) =>
-                (input?.filter(item => item !== false && item != null) ?? []) as Exclude<T, false | null | undefined>[],
+            ([values]) =>
+                (values?.filter(item => item !== false && item != null) ?? []) as Exclude<
+                    T,
+                    false | null | undefined
+                >[],
         );
 }

@@ -148,7 +148,7 @@ export const Carousel = defineComponent({
         function getPages(): CarouselPage[] {
             const elements = Array.from(carouselItemsRef.value?.childNodes || []).filter(e => e instanceof HTMLElement);
 
-            const pages: CarouselPage[] = [
+            const builtPages: CarouselPage[] = [
                 {
                     elementFrom: 0,
                     elementTo: 0,
@@ -157,7 +157,7 @@ export const Carousel = defineComponent({
             ];
 
             if (!elements) {
-                return pages;
+                return builtPages;
             }
 
             for (let i = 0; i < elements.length; i++) {
@@ -167,7 +167,7 @@ export const Carousel = defineComponent({
                 const elementEnd = elementStart + elementWidth;
                 const carouselWidth = width.value;
 
-                let page = pages[pages.length - 1]!;
+                let page = builtPages[builtPages.length - 1]!;
                 let pageStartElement = elements[page.elementFrom]!;
                 let pageStart = pageStartElement.offsetLeft;
                 const pageEnd = pageStart + width.value;
@@ -176,13 +176,13 @@ export const Carousel = defineComponent({
                 const fillsOnPage = elementEnd <= pageEnd + 1;
 
                 if (!fillsOnPage) {
-                    pages.push({
+                    builtPages.push({
                         elementFrom: i,
                         elementTo: i,
                         offset: 0,
                     });
 
-                    page = pages[pages.length - 1]!;
+                    page = builtPages[builtPages.length - 1]!;
                     pageStartElement = elements[page.elementFrom]!;
                     pageStart = pageStartElement.offsetLeft;
                 } else {
@@ -190,7 +190,7 @@ export const Carousel = defineComponent({
                 }
 
                 // only first page is aligned to left
-                const alignLeft = props.alignLeft && pages.length <= 1;
+                const alignLeft = props.alignLeft && builtPages.length <= 1;
                 if (alignLeft) {
                     page.offset = 0;
                 } else {
@@ -199,7 +199,7 @@ export const Carousel = defineComponent({
                 }
             }
 
-            return pages;
+            return builtPages;
         }
 
         function onPan(distance: number) {
@@ -260,7 +260,7 @@ export const Carousel = defineComponent({
         return () => {
             const wrapperSlot = slots.wrapper;
             if (!wrapperSlot) {
-                return <Carousel />;
+                return <CarouselInner />;
             }
 
             return wrapperSlot({
@@ -270,11 +270,11 @@ export const Carousel = defineComponent({
                 moveBy: moveBy,
                 hasNext: hasNext.value,
                 hasPrevious: hasPrevious.value,
-                CarouselInner: Carousel,
+                CarouselInner: CarouselInner,
             });
         };
 
-        function Carousel() {
+        function CarouselInner() {
             return (
                 <div
                     class={[css.carousel, props.class]}

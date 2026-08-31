@@ -417,9 +417,9 @@ test('useFormField custom behavior overrides default behavior', async () => {
         const validator: FormValidator<string> = {
             async: false,
             validate: () => 'Error',
-            behavior: ctx => {
+            behavior: behaviorCtx => {
                 // Always show errors
-                ctx.show.value = true;
+                behaviorCtx.show.value = true;
             },
         };
 
@@ -563,8 +563,8 @@ test('useFormField validator receives correct context', () => {
 
         const validator: FormValidator<string> = {
             async: false,
-            validate: (_v, ctx) => {
-                receivedCtx = ctx;
+            validate: (_v, validationCtx) => {
+                receivedCtx = validationCtx;
                 return null;
             },
         };

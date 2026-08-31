@@ -132,8 +132,8 @@ function signal(pid: number, sig: NodeJS.Signals): SignalResult {
 function waitForPortFree(port: number, timeoutMs: number): Promise<boolean> {
     return withTimeout({
         timeoutMs,
-        operation: async signal => {
-            while (!signal.aborted) {
+        operation: async abortSignal => {
+            while (!abortSignal.aborted) {
                 if ((await findListeners(port)).length === 0) {
                     return true;
                 }

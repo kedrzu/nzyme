@@ -683,13 +683,13 @@ test('useFormFields setter is no-op when form value is null', () => {
 
 test('useFormFields handles form value changing from object to null', async () => {
     await ctx.run(async () => {
-        const form = useForm<TestFormValue | null>({
+        const nullableForm = useForm<TestFormValue | null>({
             name: 'John',
             email: 'john@example.com',
             age: 25,
         });
 
-        const fields = useFormFields(form as FormModel<TestFormValue>, {
+        const fields = useFormFields(nullableForm as FormModel<TestFormValue>, {
             name: null,
             email: null,
         });
@@ -697,7 +697,7 @@ test('useFormFields handles form value changing from object to null', async () =
         expect(fields.name.value).toBe('John');
 
         // Set form value to null
-        form.value = null;
+        nullableForm.value = null;
         await nextTick();
 
         // Field values should now be undefined
@@ -708,9 +708,9 @@ test('useFormFields handles form value changing from object to null', async () =
 
 test('useFormFields handles form value changing from null to object', async () => {
     await ctx.run(async () => {
-        const form = useForm<TestFormValue | null>(null);
+        const nullableForm = useForm<TestFormValue | null>(null);
 
-        const fields = useFormFields(form as FormModel<TestFormValue>, {
+        const fields = useFormFields(nullableForm as FormModel<TestFormValue>, {
             name: null,
             email: null,
         });
@@ -718,7 +718,7 @@ test('useFormFields handles form value changing from null to object', async () =
         expect(fields.name.value).toBeUndefined();
 
         // Set form value to object
-        form.value = {
+        nullableForm.value = {
             name: 'Jane',
             email: 'jane@example.com',
             age: 30,
@@ -765,30 +765,30 @@ test('useFormFields with factory handles null form value', () => {
 
 test('useFormFields handles value toggling between null and object', async () => {
     await ctx.run(async () => {
-        const form = useForm<TestFormValue | null>({
+        const nullableForm = useForm<TestFormValue | null>({
             name: 'Initial',
             email: 'initial@test.com',
             age: 20,
         });
 
-        const fields = useFormFields(form as FormModel<TestFormValue>, {
+        const fields = useFormFields(nullableForm as FormModel<TestFormValue>, {
             name: null,
         });
 
         expect(fields.name.value).toBe('Initial');
 
         // Set to null
-        form.value = null;
+        nullableForm.value = null;
         await nextTick();
         expect(fields.name.value).toBeUndefined();
 
         // Set back to object
-        form.value = { name: 'Updated', email: 'updated@test.com', age: 25 };
+        nullableForm.value = { name: 'Updated', email: 'updated@test.com', age: 25 };
         await nextTick();
         expect(fields.name.value).toBe('Updated');
 
         // Set to null again
-        form.value = null;
+        nullableForm.value = null;
         await nextTick();
         expect(fields.name.value).toBeUndefined();
     });

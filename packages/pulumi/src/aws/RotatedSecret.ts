@@ -131,11 +131,11 @@ export class RotatedSecret extends pulumi.ComponentResource {
                 );
 
                 const secrets = await Promise.all(
-                    versions.slice(0, historySize).map(async version => {
+                    versions.slice(0, historySize).map(async versionInfo => {
                         const result = await aws.secretsmanager.getSecretVersion(
                             {
                                 secretId,
-                                versionId: version.versionId,
+                                versionId: versionInfo.versionId,
                             },
                             { parent: this },
                         );
@@ -150,9 +150,9 @@ export class RotatedSecret extends pulumi.ComponentResource {
 
                 // Map to object with 8-char MD5 hash keys
                 const historyMap: Record<string, string> = {};
-                for (const secret of secrets) {
-                    const hash = createHash('md5').update(secret).digest('hex').substring(0, 8);
-                    historyMap[hash] = secret;
+                for (const secretEntry of secrets) {
+                    const hash = createHash('md5').update(secretEntry).digest('hex').substring(0, 8);
+                    historyMap[hash] = secretEntry;
                 }
 
                 return historyMap;

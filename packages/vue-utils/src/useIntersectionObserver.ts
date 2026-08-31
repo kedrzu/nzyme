@@ -99,8 +99,8 @@ export function useIntersectionObserver(options: UseIntersectionObserverOptions)
         }
 
         const elements = asArray(el);
-        for (const element of elements) {
-            observer.observe(unwrapElement(element) as Element);
+        for (const item of elements) {
+            observer.observe(unwrapElement(item) as Element);
         }
     }
 
@@ -110,8 +110,8 @@ export function useIntersectionObserver(options: UseIntersectionObserverOptions)
         }
 
         const elements = asArray(el);
-        for (const element of elements) {
-            observer.unobserve(unwrapElement(element) as Element);
+        for (const item of elements) {
+            observer.unobserve(unwrapElement(item) as Element);
         }
     }
 

@@ -139,9 +139,9 @@ test('resolve service with command dependency', () => {
         deps: {
             command,
         },
-        setup({ command }) {
+        setup({ command: resolvedCommand }) {
             serviceCount++;
-            return command;
+            return resolvedCommand;
         },
     });
 

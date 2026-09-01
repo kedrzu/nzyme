@@ -45,6 +45,33 @@ export interface RemoteStackInfo {
 }
 
 /**
+ * SDK error `.name` values recognised as an AWS credential-resolution failure.
+ * `CredentialsProviderError` and `TokenProviderError` cover every provider-chain failure thrown by
+ * `@aws-sdk/credential-provider-*` and `@aws-sdk/token-providers` (profile missing, not configured
+ * for SSO, expired token/session, no provider yielded credentials). `ExpiredToken` /
+ * `ExpiredTokenException` / `InvalidClientTokenId` are STS/service-side codes for credentials that
+ * resolved but are dead. Kept generic on purpose — this package is a framework submodule and must
+ * not know about any app's profile naming or environment conventions.
+ */
+const CREDENTIAL_ERROR_NAMES = [
+    'CredentialsProviderError',
+    'TokenProviderError',
+    'ExpiredToken',
+    'ExpiredTokenException',
+    'InvalidClientTokenId',
+];
+
+/**
+ * Recognises the SDK error shapes that mean "credentials failed to resolve or authenticate", as
+ * opposed to an unrelated failure (missing bucket, network blip, malformed key) that should keep
+ * producing today's "no stacks" fallback.
+ * @__NO_SIDE_EFFECTS__
+ */
+export function isCredentialShapedError(error: unknown): error is Error {
+    return error instanceof Error && CREDENTIAL_ERROR_NAMES.includes(error.name);
+}
+
+/**
  * List remote stacks from the S3 backend with detailed information.
  */
 export async function listRemoteStacks(config: PulumiConfig): Promise<RemoteStackInfo[]> {
@@ -67,7 +94,14 @@ export async function listRemoteStacks(config: PulumiConfig): Promise<RemoteStac
 
         return stacksInfo;
     } catch (error) {
-        // If we can't list remote stacks (e.g., no S3 access), return empty array
+        // A credential-resolution failure is not "this backend has no stacks yet" — rethrow it so
+        // the caller can surface it (e.g. as an actionable "run aws sso login" message) instead of
+        // silently returning an empty list that looks identical to a genuinely empty backend.
+        if (isCredentialShapedError(error)) {
+            throw error;
+        }
+
+        // If we can't list remote stacks for any other reason (e.g., no S3 access), return empty array
         console.warn(
             chalk.yellow('Warning: Could not list remote stacks from S3 backend:'),
             error instanceof Error ? error.message : String(error),

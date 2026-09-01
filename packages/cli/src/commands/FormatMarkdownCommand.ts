@@ -90,25 +90,43 @@ function markdownStructure(markdown: string): string {
 }
 
 /**
+ * Whether the bare text alone parses back into exactly the same link, i.e. it is a literal
+ * autolink that gfm-autolink-literal re-links on its own. Asking the parser instead of matching
+ * known schemes is what keeps ordinary links whose text equals their destination — relative paths
+ * like `[README.md](README.md)` or `[#anchor](#anchor)` — from being unwrapped into plain text,
+ * which would destroy them.
+ * @__NO_SIDE_EFFECTS__
+ */
+function isLiteralAutolink(text: string, url: string): boolean {
+    const root = structureChecker.parse(text);
+    const [paragraph, ...blocks] = root.children;
+    if (blocks.length > 0 || paragraph?.type !== 'paragraph') {
+        return false;
+    }
+
+    const [link, ...siblings] = paragraph.children;
+    if (siblings.length > 0 || link?.type !== 'link' || link.url !== url || link.title) {
+        return false;
+    }
+
+    const [child, ...rest] = link.children;
+    return rest.length === 0 && child?.type === 'text' && child.value === text;
+}
+
+/**
  * Link handler that emits a bare literal autolink instead of wrapping it. gfm-autolink-literal
  * parses bare URLs/emails into link nodes, and the default stringifier then emits noise:
  * `http://localhost:6006` → `<http://localhost:6006>`, `a@b.com` → `<a@b.com>`, and
  * `www.foo.com` → `[www.foo.com](http://www.foo.com)`. When a link is exactly such an autolink —
- * a single text child, no title, and a URL that is just the text (optionally with a `mailto:` /
- * `http(s)://` scheme) — return the raw text so it stays bare. This renders identically (gfm
- * re-links it) and is idempotent. Everything else defers to the default handler.
+ * a single text child, no title, and text the parser turns back into this very link — return the
+ * raw text so it stays bare. This renders identically (gfm re-links it) and is idempotent.
+ * Everything else defers to the default handler.
  */
 function unwrapAutolink(node: Link, parent: Parents | undefined, state: State, info: Info): string {
     const [child, ...rest] = node.children;
     if (!node.title && rest.length === 0 && child?.type === 'text') {
-        const text = child.value;
-        if (
-            node.url === text ||
-            node.url === `mailto:${text}` ||
-            node.url === `http://${text}` ||
-            node.url === `https://${text}`
-        ) {
-            return text;
+        if (isLiteralAutolink(child.value, node.url)) {
+            return child.value;
         }
     }
     return defaultHandlers.link(node, parent, state, info);

@@ -19,6 +19,9 @@
         // Expected-output fixtures: `compileTranslationFile.test.ts` asserts the compiler's output is
         // byte-identical to these files, so any lint fix applied here would break the test it feeds.
         "packages/i18n-compiler/tests/**",
+        // Same reason: the CloudFront Function bundle in `pulumi/src/cloudfront/__fixtures__` is the
+        // exact code that ran at the edge, so a lint fix would destroy the regression it proves.
+        "**/__fixtures__/**",
         // Private Nuxt dev tool. Its tsconfig extends a generated `.nuxt/tsconfig.json` that only
         // exists after `nuxt prepare`, which nothing in this repo wires up, so type-aware linting
         // cannot resolve it. It was not linted before the oxlint migration either.

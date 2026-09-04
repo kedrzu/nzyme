@@ -19,10 +19,13 @@ import { normalizeBuiltinsPlugin } from '@nzyme/rollup-utils/plugins/normalizeBu
 import { formatElapsedMs } from '@nzyme/utils/formatElapsedMs.js';
 import { sortBy } from '@nzyme/utils/sortBy.js';
 
+import { cloudFrontCheckRollupPlugin } from './cloudfront/cloudFrontCheckRollupPlugin.js';
+import { cloudFrontFunctionPreset } from './cloudfront/cloudFrontFunctionPreset.js';
 import type { CompileFunctionOptions, CompileFunctionResult } from './compileFunction.js';
 
 const start = performance.now();
 const options = workerData as CompileFunctionOptions;
+const cloudFront = options.target === 'cloudfront';
 
 const outputDir = options.outputDir;
 const fileName = 'index';
@@ -71,7 +74,25 @@ const rollupResult = await rollup({
                 // Sentry has some broken sourcemaps
                 exclude: /@sentry/,
             }),
-        options.nodeVersion != null &&
+        cloudFront &&
+            babel({
+                babelHelpers: 'bundled',
+                // The preset carries its own targets: the CloudFront Functions runtime is an
+                // allowlist, not an engine version, so `targets` cannot express it.
+                presets: [cloudFrontFunctionPreset],
+                plugins: [
+                    [
+                        // Needed for JSON modules
+                        import.meta.resolve('@babel/plugin-syntax-import-attributes'),
+                        {
+                            deprecatedAssertSyntax: true,
+                        },
+                    ],
+                ],
+                sourceMaps: options.sourcemaps,
+            }),
+        !cloudFront &&
+            options.nodeVersion != null &&
             babel({
                 babelHelpers: 'bundled',
                 presets: [[import.meta.resolve('@babel/preset-env')]],
@@ -114,6 +135,9 @@ const rollupResult = await rollup({
                       }
                     : options.minify,
             ),
+        // Rollup 4 runs `renderChunk` in plugin order, so this must stay AFTER the minifier to see
+        // the exact bytes that get uploaded.
+        cloudFront && cloudFrontCheckRollupPlugin(options.inputFile),
     ],
     onwarn: warning => {
         // this warning we can safely ignore

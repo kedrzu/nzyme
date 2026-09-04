@@ -77,8 +77,11 @@ const METHOD_HELPERS: Record<string, CloudFrontMethodHelper> = {
         source: `
             function %%name%%(target, index, value) {
                 if (!Array.isArray(target)) return %%fallback%%(target, "with", [index, value]);
+                var offset = Math.trunc(index) || 0;
+                if (offset < 0) offset += target.length;
+                if (offset < 0 || offset >= target.length) throw new RangeError("Invalid index");
                 var copy = target.slice();
-                copy[index < 0 ? copy.length + index : index] = value;
+                copy[offset] = value;
                 return copy;
             }
         `,

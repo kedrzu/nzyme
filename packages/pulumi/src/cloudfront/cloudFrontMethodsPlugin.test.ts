@@ -22,6 +22,15 @@ test('rewrites array sugar methods to ES5 helpers that behave the same', () => {
     expect(evaluate('Object.hasOwn({ a: 1 }, "a")')).toBe(true);
 });
 
+test('with throws a RangeError for an out-of-range index, matching the real Array.prototype.with', () => {
+    expect(evaluateErrorName('[1, 2, 3].with(5, "x")')).toBe('RangeError');
+    expect(evaluateErrorName('[1, 2, 3].with(-5, "x")')).toBe('RangeError');
+});
+
+test('with truncates a fractional index, matching the real Array.prototype.with', () => {
+    expect(evaluate('[1, 2, 3].with(1.5, "x")')).toEqual([1, 'x', 3]);
+});
+
 test('the source keeps none of the rewritten method names, so the runtime check passes', () => {
     const code = compile('global.handler = function () { return [3, 1, 2].toSorted().at(0); };');
 
@@ -68,6 +77,21 @@ function evaluate(expression: string) {
 
 function evaluateSource(source: string) {
     return vm.runInNewContext(`${compile(source)}\nresult;`, {}) as unknown;
+}
+
+/**
+ * Runs `expression` and returns the `name` of whatever it throws, so a test can assert the error
+ * type (e.g. `RangeError`) without an `instanceof` check across the vm's separate realm.
+ */
+function evaluateErrorName(expression: string) {
+    return evaluateSource(`
+        var result;
+        try {
+            ${expression};
+        } catch (error) {
+            result = error.name;
+        }
+    `);
 }
 
 function compile(code: string) {

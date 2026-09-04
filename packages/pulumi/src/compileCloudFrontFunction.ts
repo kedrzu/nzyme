@@ -27,7 +27,7 @@ export async function compileCloudFrontFunction(options: CloudfrontFunctionOptio
     const result = await compileFunction({
         ...options,
         esm: false,
-        nodeVersion: 5,
+        target: 'cloudfront',
         minify: true,
         sourcemaps: false,
     });

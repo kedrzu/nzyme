@@ -6,9 +6,9 @@ import type { MinifyOptions } from 'terser';
 import { getDirname } from '@nzyme/esm/dirname.js';
 
 /**
- * Options for compiling a function.
+ * Options shared by every compilation target.
  */
-export interface CompileFunctionOptions {
+interface CompileFunctionOptionsBase {
     /**
      * Path to the input file.
      */
@@ -21,10 +21,6 @@ export interface CompileFunctionOptions {
      * Whether to use ESM modules.
      */
     esm?: boolean;
-    /**
-     * Node.js version to compile for.
-     */
-    nodeVersion?: number;
     /**
      * Whether to minify the output. Can be a boolean to use default safe options, or a MinifyOptions object for custom terser settings.
      */
@@ -46,6 +42,34 @@ export interface CompileFunctionOptions {
      */
     stats?: boolean;
 }
+
+/**
+ * Compile for a Node.js runtime — Lambdas and anything else running on Node.
+ */
+export interface CompileNodeFunctionOptions extends CompileFunctionOptionsBase {
+    /**
+     * Node.js version to compile for. Syntax above it is downleveled by `@babel/preset-env`.
+     */
+    nodeVersion?: number;
+    target?: never;
+}
+
+/**
+ * Compile for the CloudFront Functions `cloudfront-js-2.0` runtime.
+ *
+ * Disjoint from {@link CompileNodeFunctionOptions.nodeVersion} on purpose: that runtime is an
+ * allowlist, not an engine version, so no Node version describes it. The target selects a dedicated
+ * Babel preset AND a check of the final bundle against the runtime model.
+ */
+export interface CompileCloudFrontFunctionOptions extends CompileFunctionOptionsBase {
+    target: 'cloudfront';
+    nodeVersion?: never;
+}
+
+/**
+ * Options for compiling a function.
+ */
+export type CompileFunctionOptions = CompileNodeFunctionOptions | CompileCloudFrontFunctionOptions;
 
 /**
  * Result of compiling a function.

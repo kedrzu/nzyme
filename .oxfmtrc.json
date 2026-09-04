@@ -6,7 +6,7 @@
     "trailingComma": "all",
     "endOfLine": "lf",
     "singleAttributePerLine": true,
-    "ignorePatterns": ["dist"],
+    "ignorePatterns": ["dist", "**/__fixtures__/**"],
     "overrides": [
         {
             "files": ["*.yml", "*.yaml", "*.html", "*.vue"],

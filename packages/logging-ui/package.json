@@ -29,7 +29,7 @@
     "devDependencies": {
         "oxfmt": "0.68.0",
         "typescript": "6.0.3",
-        "vue-tsc": "^3.3.9"
+        "vue-tsc": "^3.3.11"
     },
     "depcheck": {
         "ignoreDeps": [

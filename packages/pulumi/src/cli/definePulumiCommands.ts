@@ -209,12 +209,19 @@ function defineListCommand(options: PulumiCommandsOptions) {
 
             // Add local stacks to table
             for (const stack of options.stacks) {
-                const stackResolved = this.container.resolve(stack);
                 const remoteInfo = remoteStacksDetailed.find(remote => remote.name === stack.stackName);
 
-                let stackName = stackResolved.name;
-                if (!stackResolved.enabled) {
+                let stackName = stack.stackName;
+                if (!stack.enabled) {
                     stackName += ` ${chalk.red('[disabled]')}`;
+                } else {
+                    // Resolving a stack resolves its declared dependencies, and a stack may declare an
+                    // environment variable among them — so resolving one that this environment never
+                    // deploys makes `list` demand a secret nothing here would ever use. Name and
+                    // enablement both live on the definition, which is all the table needs, so a
+                    // disabled stack is listed without being resolved. Enabled ones are still resolved,
+                    // because failing to build a stack this environment does deploy is worth knowing.
+                    this.container.resolve(stack);
                 }
 
                 let status = chalk.yellow('Not deployed');

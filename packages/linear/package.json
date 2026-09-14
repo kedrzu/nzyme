@@ -38,7 +38,7 @@
         "@nzyme/logging": "0.14.0",
         "chalk": "6.0.0",
         "enquirer": "2.4.1",
-        "open": "11.0.0"
+        "open": "11.0.3"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "0.14.0",

@@ -40,7 +40,7 @@
         "@nzyme/types": "0.14.0",
         "@nzyme/utils": "0.14.0",
         "ufo": "1.6.4",
-        "undici-types": "8.10.0"
+        "undici-types": "8.10.2"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "0.14.0",

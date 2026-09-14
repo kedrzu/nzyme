@@ -62,9 +62,9 @@
         "imask": "7.6.1",
         "libphonenumber-js": "1.13.13",
         "postal-codes-js": "2.5.2",
-        "vue": "3.5.41",
+        "vue": "3.5.42",
         "vue-imask": "7.6.1",
-        "vue-router": "5.2.0"
+        "vue-router": "5.3.1"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "0.14.0",

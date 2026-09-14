@@ -38,7 +38,7 @@
         "@nzyme/ioc": "0.14.0",
         "@nzyme/logging": "0.14.0",
         "@nzyme/types": "0.14.0",
-        "vue": "3.5.41"
+        "vue": "3.5.42"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "0.14.0",

@@ -20,7 +20,7 @@
         "typescript-plugin-css-modules": "5.2.0",
         "typescript-vue-plugin": "1.8.27",
         "vite": "7.3.6",
-        "vue": "3.5.41"
+        "vue": "3.5.42"
     },
     "devDependencies": {
         "oxfmt": "0.68.0",

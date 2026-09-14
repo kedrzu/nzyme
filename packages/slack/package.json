@@ -36,8 +36,8 @@
     },
     "dependencies": {
         "@nzyme/utils": "0.14.0",
-        "@slack/types": "3.0.0",
-        "@slack/web-api": "8.0.0"
+        "@slack/types": "3.1.0",
+        "@slack/web-api": "8.1.1"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "0.14.0",

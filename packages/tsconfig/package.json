@@ -23,7 +23,7 @@
         "vue": "3.5.41"
     },
     "devDependencies": {
-        "oxfmt": "0.62.0",
+        "oxfmt": "0.68.0",
         "typescript": "6.0.3"
     },
     "depcheck": {

@@ -27,7 +27,7 @@
         "vue-router": "^5.2.0"
     },
     "devDependencies": {
-        "oxfmt": "0.62.0",
+        "oxfmt": "0.68.0",
         "typescript": "6.0.3",
         "vue-tsc": "^3.3.9"
     },

@@ -63,6 +63,12 @@ export interface HandleMergedPrReopenParams {
      * Optional callback to reopen the task in the external system (e.g., Linear).
      */
     onReopenTask?: () => Promise<void>;
+
+    /**
+     * Whether nobody is available to answer a question.
+     * When set, the new branch is cut without asking.
+     */
+    unattended?: boolean;
 }
 
 /**
@@ -84,6 +90,11 @@ export interface HandleMergedPrReopenResult {
  * Check if a task PR was merged or canceled and handle the reopen flow.
  * Prompts the user to reopen the task and creates a new versioned branch if they confirm.
  * Returns information about whether the task was reopened.
+ *
+ * Unattended this proceeds rather than refusing: with every pull request for the task closed, a new
+ * branch is the only way the work can continue at all, and cutting one changes nothing outside git.
+ * Whether the task *should* continue was decided before this point - the caller is responsible for
+ * not arriving here on work that is finished.
  */
 export async function handleMergedPrReopen(params: HandleMergedPrReopenParams): Promise<HandleMergedPrReopenResult> {
     const {
@@ -97,6 +108,7 @@ export async function handleMergedPrReopen(params: HandleMergedPrReopenParams): 
         baseBranch,
         projectName,
         onReopenTask,
+        unattended,
     } = params;
 
     // Check if any PR for this task was merged or closed
@@ -142,30 +154,12 @@ export async function handleMergedPrReopen(params: HandleMergedPrReopenParams): 
     }
     logger.info('');
 
-    // Ask user if they want to reopen
-    const { action } = await enquirer.prompt<{ action: string }>({
-        type: 'select',
-        name: 'action',
-        message: `Task ${chalk.bold(issueId)} PR has been ${statusMessage.toLowerCase()}. What would you like to do?`,
-        choices: [
-            {
-                name: 'reopen',
-                message: chalk.green('Reopen task and create new versioned branch'),
-            },
-            {
-                name: 'cancel',
-                message: chalk.red('Cancel'),
-            },
-        ],
-    });
-
-    if (action === 'cancel') {
-        throw new UsageError('Task switching cancelled by user');
+    if (!unattended) {
+        await confirmReopen(issueId, statusMessage);
     }
 
     // Reopen the task
     logger.info('🔄 Reopening task...');
-
     // Call the callback to reopen in external system if provided
     if (onReopenTask) {
         await onReopenTask();
@@ -210,4 +204,36 @@ export async function handleMergedPrReopen(params: HandleMergedPrReopenParams): 
         reopened: true,
         newBranchName,
     };
+}
+
+/**
+ * Ask whether to cut a new versioned branch, failing with a diagnosis when there is no terminal.
+ */
+async function confirmReopen(issueId: string, statusMessage: string): Promise<void> {
+    if (!process.stdin.isTTY) {
+        throw new UsageError(
+            `Every pull request for ${issueId} has been ${statusMessage.toLowerCase()}, and there is no terminal ` +
+                `to ask whether to start a new one. Run the command yourself to continue this task.`,
+        );
+    }
+
+    const { action } = await enquirer.prompt<{ action: string }>({
+        type: 'select',
+        name: 'action',
+        message: `Task ${chalk.bold(issueId)} PR has been ${statusMessage.toLowerCase()}. What would you like to do?`,
+        choices: [
+            {
+                name: 'reopen',
+                message: chalk.green('Reopen task and create new versioned branch'),
+            },
+            {
+                name: 'cancel',
+                message: chalk.red('Cancel'),
+            },
+        ],
+    });
+
+    if (action === 'cancel') {
+        throw new UsageError('Task switching cancelled by user');
+    }
 }

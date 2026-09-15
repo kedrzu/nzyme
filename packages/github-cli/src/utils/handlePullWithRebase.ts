@@ -32,6 +32,12 @@ export interface HandlePullWithRebaseParams {
      * Context message for user-friendly error display (e.g., 'repository' or 'submodule nzyme').
      */
     contextMessage?: string;
+
+    /**
+     * Whether nobody is available to answer a question.
+     * When set, a diverged branch is reported as cancelled instead of prompting.
+     */
+    unattended?: boolean;
 }
 
 /**
@@ -58,7 +64,7 @@ export interface PullResult {
  * Attempt to pull from remote, offering rebase option if pull fails due to divergent branches.
  */
 export async function handlePullWithRebase(params: HandlePullWithRebaseParams): Promise<PullResult> {
-    const { git, remote, branch, logger, contextMessage = 'repository' } = params;
+    const { git, remote, branch, logger, contextMessage = 'repository', unattended } = params;
 
     try {
         // Attempt normal pull
@@ -80,6 +86,14 @@ export async function handlePullWithRebase(params: HandlePullWithRebaseParams): 
         logger.warn(`⚠️  Cannot pull branch ${chalk.cyan(branch)}: your local branch has diverged from ${remote}`);
         logger.info(`💡 Your local branch and the remote branch have different commits`);
         logger.info('');
+
+        // Rebasing rewrites commits and can stop half-way in a conflict, so the caller decides
+        // rather than this function guessing. Cancelling here surfaces as an error naming the
+        // branch - an agent reads that and can run the rebase itself.
+        if (unattended || !process.stdin.isTTY) {
+            logger.info(`⏭️  Not rebasing ${chalk.cyan(branch)} on its own - leaving the divergence to the caller`);
+            return { success: false, usedRebase: false, cancelled: true };
+        }
 
         // Prompt user for action
         const action = await promptForRebase(branch, contextMessage);

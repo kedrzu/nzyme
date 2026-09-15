@@ -9,7 +9,7 @@ import { findInProgressState } from './findInProgressState.js';
  * Move a Linear task to "In Progress" when starting work on it.
  *
  * No-ops if the task is already started, or in a terminal state (those are
- * handled upstream by `handleTerminalState`, which prompts the user).
+ * handled upstream by `handleTerminalState`, which either asks or refuses).
  * Failures are logged as warnings — assignment/branch work should still proceed.
  */
 export async function startTaskIfNotStarted(
@@ -29,7 +29,7 @@ export async function startTaskIfNotStarted(
 
         // Skip states that don't need an automatic transition:
         // - started: already in progress / in review
-        // - completed / canceled: terminal, handled by handleTerminalState (prompts user)
+        // - completed / canceled: terminal, handled by handleTerminalState (asks, or refuses)
         if (currentState.type === 'started' || currentState.type === 'completed' || currentState.type === 'canceled') {
             return;
         }

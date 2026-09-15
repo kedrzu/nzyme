@@ -43,6 +43,18 @@ export interface LinearConfig {
      * Default team prefix (e.g., 'SIG' for SIG-123).
      */
     defaultPrefix?: string;
+
+    /**
+     * Id of the Linear agent user this process is running as, when it is running as one.
+     *
+     * Identity rather than permission: setting it grants nothing by itself. `task <ID>` stops asking
+     * questions only for an issue that has *also* been delegated to this same agent - so a person
+     * running the command on such an issue still gets every prompt, because their environment does
+     * not claim to be that agent.
+     *
+     * Leave it out and every task switch is fully interactive, which is what a human checkout wants.
+     */
+    agentUserId?: string;
 }
 
 /**
@@ -253,6 +265,7 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                     branch: this.branch,
                     node: parseNodeOption(this.node),
                     onTaskSwitched: options.onTaskSwitched,
+                    agentUserId: linearConfig.agentUserId,
                 });
             } catch (error) {
                 if (error instanceof GitMergeConflictError) {

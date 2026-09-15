@@ -8,17 +8,35 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 import { findInProgressState } from './findInProgressState.js';
 
 /**
+ * Parameters for handling a task in a terminal state.
+ */
+export interface HandleTerminalStateParams {
+    /**
+     * The Linear issue data.
+     */
+    issueData: Awaited<ReturnType<LinearClient['issue']>>;
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+
+    /**
+     * Whether nobody is available to answer a question.
+     * When set, a closed task is refused rather than reopened.
+     */
+    unattended?: boolean;
+}
+
+/**
  * Handle terminal state logic - ask user if they want to change state to "In Progress".
- * @param linearClient Linear client instance
- * @param issueData The Linear issue data
- * @param logger Logger instance
+ * @param params Parameters for handling a task in a terminal state.
  * @returns Promise that resolves when handling is complete
  * @throws Error if user cancels or if state change fails
  */
-export async function handleTerminalState(
-    issueData: Awaited<ReturnType<LinearClient['issue']>>,
-    logger: Logger,
-): Promise<void> {
+export async function handleTerminalState(params: HandleTerminalStateParams): Promise<void> {
+    const { issueData, logger, unattended } = params;
+
     if (!issueData) {
         return;
     }
@@ -33,6 +51,8 @@ export async function handleTerminalState(
         }
 
         logger.info(`⚠️  Task is in terminal state: ${chalk.yellow(currentState.name)}`);
+
+        assertStartable(issueData.identifier, currentState.name, unattended);
 
         // Ask user what to do
         const { action } = await enquirer.prompt<{ action: string }>({
@@ -88,6 +108,33 @@ export async function handleTerminalState(
 
         logger.warn(`⚠️  Failed to handle terminal state: ${(error as Error).message}`);
         throw error;
+    }
+}
+
+/**
+ * Refuse a closed task that nobody can be asked about, saying what to do instead.
+ *
+ * Delegated, this is a deliberate boundary rather than a missing answer: `delegate` is an ordinary
+ * field that survives an issue being closed, so a closed-and-delegated issue is leftover state, not
+ * a request. Reopening one is a human's decision, expressed by moving it back to `Todo` — which is
+ * also the only signal an agent acts on.
+ *
+ * Not delegated, it is the ordinary no-terminal case: the question is real, there is just nobody to
+ * put it to, and hanging on it until someone kills the process helps no one.
+ */
+function assertStartable(identifier: string, stateName: string, unattended: boolean | undefined): void {
+    if (unattended) {
+        throw new UsageError(
+            `Task ${identifier} is ${stateName} and will not be started automatically. ` +
+                `Move it to Todo if the work should happen.`,
+        );
+    }
+
+    if (!process.stdin.isTTY) {
+        throw new UsageError(
+            `Task ${identifier} is ${stateName}, and there is no terminal to ask whether to reopen it. ` +
+                `Move it to Todo first, or run the command yourself.`,
+        );
     }
 }
 

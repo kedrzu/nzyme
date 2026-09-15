@@ -9,6 +9,7 @@ import type { GithubConfig } from '../GithubConfig.js';
 import { checkoutBranch } from './checkoutBranch.js';
 import type { GithubClient } from './createGithubClient.js';
 import { findMatchingPr } from './findMatchingPr.js';
+import { decideDirtyCheckout } from './decideDirtyCheckout.js';
 import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { handlePullWithRebase } from './handlePullWithRebase.js';
@@ -47,6 +48,13 @@ export interface CheckoutExistingBranchParams {
      * When a submodule doesn't have a PR for the task, it will be updated to the latest commit on this branch.
      */
     baseBranch?: string;
+
+    /**
+     * Whether nobody is available to answer a question.
+     * Uncommitted changes are then kept in place when the working tree is already on
+     * {@link branchName}, and the checkout is refused otherwise - see {@link decideDirtyCheckout}.
+     */
+    unattended?: boolean;
 }
 
 /**
@@ -60,6 +68,7 @@ interface CheckoutSubmoduleBranchParams {
     githubConfig: GithubConfig;
     logger: Logger;
     baseBranch?: string;
+    unattended?: boolean;
 }
 
 /**
@@ -77,7 +86,7 @@ export async function checkoutExistingBranch(
             ? { branchName: branchNameOrParams, taskId: taskId!, logger: logger! }
             : branchNameOrParams;
 
-    const { branchName, logger: paramLogger } = params;
+    const { branchName, logger: paramLogger, unattended } = params;
     const git = simpleGit();
 
     try {
@@ -87,7 +96,7 @@ export async function checkoutExistingBranch(
 
         if (!hasChanges) {
             // No uncommitted changes, checkout normally
-            await checkoutBranch(branchName, paramLogger);
+            await checkoutBranch(branchName, paramLogger, unattended);
             await checkoutSubmodules(params);
             return;
         }
@@ -114,6 +123,29 @@ export async function checkoutExistingBranch(
         }
 
         paramLogger.info(`⚠️  You have uncommitted changes: ${chalk.yellow(changeTypes.join(', '))}`);
+
+        // `status` already knows which branch we are on, so deciding this costs no extra git call.
+        const decision = decideDirtyCheckout({
+            currentBranch: status.current,
+            targetBranch: branchName,
+            interactive: process.stdin.isTTY,
+            unattended,
+        });
+
+        if (decision === 'refuse') {
+            throw new UsageError(
+                `Refusing to switch from ${status.current ?? 'a detached HEAD'} to ${branchName} with uncommitted ` +
+                    `changes, because doing so can carry them onto ${branchName} unnoticed. ` +
+                    `Commit or discard them first.`,
+            );
+        }
+
+        if (decision === 'proceed') {
+            paramLogger.info(`✅ Already on ${chalk.cyan(branchName)} - keeping the uncommitted changes in place`);
+            await checkoutBranch(branchName, paramLogger, unattended);
+            await checkoutSubmodules(params);
+            return;
+        }
 
         // Ask user what to do with uncommitted changes
         const { action } = await enquirer.prompt<{ action: string }>({
@@ -143,7 +175,7 @@ export async function checkoutExistingBranch(
             case 'checkout': {
                 // Try to checkout directly - git will handle conflicts
                 paramLogger.info(`🔄 Attempting to checkout ${chalk.cyan(branchName)} with uncommitted changes...`);
-                await checkoutBranch(branchName, paramLogger);
+                await checkoutBranch(branchName, paramLogger, unattended);
                 paramLogger.info(`✅ Successfully checked out ${chalk.cyan(branchName)} with uncommitted changes`);
                 await checkoutSubmodules(params);
                 break;
@@ -158,7 +190,7 @@ export async function checkoutExistingBranch(
                 paramLogger.info(`✅ Changes stashed successfully`);
 
                 // Checkout the branch
-                await checkoutBranch(branchName, paramLogger);
+                await checkoutBranch(branchName, paramLogger, unattended);
 
                 // Checkout submodules before reapplying stash
                 await checkoutSubmodules(params);
@@ -200,6 +232,11 @@ export async function checkoutExistingBranch(
             }
         }
     } catch (error) {
+        if (error instanceof UsageError) {
+            // Already says what went wrong and what resolves it - wrapping it would bury that.
+            throw error;
+        }
+
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         throw new UsageError(`Failed to checkout branch ${branchName}: ${errorMessage}`);
     }
@@ -209,7 +246,7 @@ export async function checkoutExistingBranch(
  * Checkout matching branches in submodules if they exist.
  */
 async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise<void> {
-    const { branchName, taskId, logger, githubClient, githubConfig, baseBranch } = params;
+    const { branchName, taskId, logger, githubClient, githubConfig, baseBranch, unattended } = params;
 
     // Only process submodules if GitHub client and config are provided
     if (!githubClient || !githubConfig) {
@@ -240,6 +277,7 @@ async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise
                     githubConfig,
                     logger,
                     baseBranch,
+                    unattended,
                 });
             } catch (error) {
                 // Log warning but continue with other submodules
@@ -262,7 +300,7 @@ async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise
  * Also fetches and fast-forwards the base branch to keep it up to date.
  */
 async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): Promise<void> {
-    const { submodule, taskId, githubClient, githubConfig, logger, baseBranch } = params;
+    const { submodule, taskId, githubClient, githubConfig, logger, baseBranch, unattended } = params;
 
     // Parse the submodule URL to get owner and repo
     const submoduleGithubConfig = getSubmoduleGithubConfig(submodule.url, githubConfig.token);
@@ -336,10 +374,14 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
             branch: targetBranch,
             logger,
             contextMessage: `submodule ${chalk.magenta(submodule.name)}`,
+            unattended,
         });
 
         if (pullResult.cancelled) {
-            throw new UsageError(`Operation cancelled by user for submodule ${submodule.name}`);
+            throw new UsageError(
+                `${targetBranch} in submodule ${submodule.name} has diverged from origin and was not rebased. ` +
+                    `Reconcile it there (git pull --rebase) and run the command again.`,
+            );
         }
 
         logger.info(`✅ Checked out branch ${chalk.cyan(targetBranch)} in ${chalk.magenta(submodule.name)}`);

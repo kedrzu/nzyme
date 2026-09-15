@@ -20,7 +20,16 @@ export interface CreateDnsValidatedCertificateOptions {
 }
 
 /**
- * Creates a DNS validated certificate.
+ * Creates an ACM certificate, the DNS record that validates it, and the validation itself.
+ *
+ * Returns the ARN from the **validation**, not from the certificate. The two differ in when they
+ * resolve, and only one of them is safe to hand to a consumer: `Certificate.arn` is available the
+ * moment the certificate exists, while it is still `PENDING_VALIDATION`, so a resource built from it
+ * races ACM and fails with `Certificate is not in an ISSUED state` whenever validation loses. That
+ * is a race, so it passes on a slow create and fails on a fast one — observed on an API Gateway
+ * domain name that deployed cleanly once and then failed on the next create of the same stack.
+ * `CertificateValidation.certificateArn` carries the same value but only resolves once ACM has
+ * issued, which is what orders the dependency correctly.
  */
 export function createDnsValidatedCertificate(name: string, options: CreateDnsValidatedCertificateOptions) {
     const certificate = new aws.acm.Certificate(
@@ -44,7 +53,7 @@ export function createDnsValidatedCertificate(name: string, options: CreateDnsVa
     });
 
     // Wait for certificate validation
-    new aws.acm.CertificateValidation(
+    const validation = new aws.acm.CertificateValidation(
         `${name}Validation`,
         {
             certificateArn: certificate.arn,
@@ -53,5 +62,10 @@ export function createDnsValidatedCertificate(name: string, options: CreateDnsVa
         { provider: options.provider },
     );
 
-    return certificate;
+    return {
+        /** ARN of the certificate, resolving only once ACM has issued it. */
+        arn: validation.certificateArn,
+        /** The certificate resource itself, for the rare caller that needs more than the ARN. */
+        certificate,
+    };
 }

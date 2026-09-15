@@ -16,6 +16,7 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 import type { TaskSwitchedHook } from '../cli/TaskSwitchedHook.js';
 import { handleTaskAssignment } from './handleTaskAssignment.js';
 import { handleTerminalState } from './handleTerminalState.js';
+import { isDelegatedToAgent } from './isDelegatedToAgent.js';
 import { reopenLinearTask } from './reopenLinearTask.js';
 import { runTaskSwitchedHook } from './runTaskSwitchedHook.js';
 import { startTaskIfNotStarted } from './startTaskIfNotStarted.js';
@@ -73,6 +74,15 @@ export interface SwitchToTaskParams {
      * Defaults to the top node, which is where work continues.
      */
     node?: number;
+
+    /**
+     * Id of the Linear agent user this process is running as, when it is running as one.
+     *
+     * Identity, not permission: on its own it opens nothing. It only matters for an issue that has
+     * been delegated to this same agent, and it is what keeps a person running the command on such
+     * an issue on the ordinary interactive path.
+     */
+    agentUserId?: string;
 }
 
 /**
@@ -80,8 +90,18 @@ export interface SwitchToTaskParams {
  * This contains the common logic used by both "task start" and "task new" commands.
  */
 export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
-    const { issueId, linearClient, githubClient, githubConfig, logger, baseBranches, branch, onTaskSwitched, node } =
-        params;
+    const {
+        issueId,
+        linearClient,
+        githubClient,
+        githubConfig,
+        logger,
+        baseBranches,
+        branch,
+        onTaskSwitched,
+        node,
+        agentUserId,
+    } = params;
 
     logger.info(`🔍 Looking for Linear task: ${chalk.bold(issueId)}`);
 
@@ -93,6 +113,14 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
     }
 
     logger.info(`📝 Found task: ${chalk.green(issueData.title)}`);
+
+    // Delegated to the agent running this process, every question below has an answer that does not
+    // need asking. Worth a line in the log: it is the difference between two quite different runs.
+    const unattended = isDelegatedToAgent(issueData.delegateId, agentUserId);
+
+    if (unattended) {
+        logger.info(`🤖 Task is delegated to this agent - proceeding without asking anything`);
+    }
 
     /**
      * Mark the task as being worked on: move it to "In Progress" and notify the host project
@@ -106,12 +134,12 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
     }
 
     // Check if task is in terminal state and handle accordingly
-    await handleTerminalState(issueData, logger);
+    await handleTerminalState({ issueData, logger, unattended });
 
     // Handle task assignment and search for existing PRs in parallel
     logger.info(`🔍 Searching for existing GitHub PR...`);
     const [, openPrs] = await Promise.all([
-        handleTaskAssignment(linearClient, issueData, logger),
+        handleTaskAssignment({ linearClient, issueData, logger, unattended }),
         findTaskPrs(githubClient, githubConfig, issueId),
     ]);
 
@@ -132,6 +160,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
             githubClient,
             githubConfig,
             baseBranch: existingPr.base.ref,
+            unattended,
         });
 
         // The branch is checked out - we are on the task now, even if the sync below conflicts.
@@ -169,9 +198,14 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
             issueUrl: issueData.url,
             baseBranch: selectedBaseBranch,
             projectName,
-            onReopenTask: async () => {
-                await reopenLinearTask(linearClient, issueId, logger);
-            },
+            unattended,
+            // Reopening writes the issue's status, and an agent never does: whatever owns state
+            // decides when this task is open, so the agent only cuts the branch and the PR.
+            onReopenTask: unattended
+                ? undefined
+                : async () => {
+                      await reopenLinearTask(linearClient, issueId, logger);
+                  },
         });
 
         if (reopenResult.reopened) {

@@ -7,8 +7,12 @@ import { handlePullWithRebase } from './handlePullWithRebase.js';
 
 /**
  * Checkout a git branch, fetching it from origin if necessary.
+ * @param branchName Branch to check out.
+ * @param logger Logger instance.
+ * @param unattended Whether nobody is available to answer a question. When set, a branch that has
+ * diverged from origin fails instead of prompting for a rebase.
  */
-export async function checkoutBranch(branchName: string, logger: Logger): Promise<void> {
+export async function checkoutBranch(branchName: string, logger: Logger, unattended?: boolean): Promise<void> {
     const git = simpleGit();
 
     try {
@@ -40,10 +44,16 @@ export async function checkoutBranch(branchName: string, logger: Logger): Promis
             branch: branchName,
             logger,
             contextMessage: 'repository',
+            unattended,
         });
 
         if (pullResult.cancelled) {
-            throw new UsageError('Operation cancelled by user');
+            // Routine rather than exceptional - CI pushes to task branches, so this is reached often
+            // enough that the message has to say what happened and what resolves it.
+            throw new UsageError(
+                `${branchName} has diverged from origin/${branchName} and was not rebased. ` +
+                    `Reconcile it (git pull --rebase) and run the command again.`,
+            );
         }
         // If pull failed for other reasons (e.g., branch doesn't exist), continue
         // This is fine for newly created local branches

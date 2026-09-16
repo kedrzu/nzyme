@@ -127,6 +127,9 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
      * (e.g. to rename its workspace). Called as soon as the branch is in place, because from that
      * point on the working copy IS on the task - a later failure (typically a base branch merge
      * conflict) still leaves the user on the task branch and must not skip this.
+     *
+     * Deliberately the same under delegation: the status write is what starting a task means here,
+     * and a command that knows nothing about who invoked it must not have two contracts.
      */
     async function markTaskStarted() {
         await startTaskIfNotStarted(issueData, logger);
@@ -199,13 +202,12 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
             baseBranch: selectedBaseBranch,
             projectName,
             unattended,
-            // Reopening writes the issue's status, and an agent never does: whatever owns state
-            // decides when this task is open, so the agent only cuts the branch and the PR.
-            onReopenTask: unattended
-                ? undefined
-                : async () => {
-                      await reopenLinearTask(linearClient, issueId, logger);
-                  },
+            // Not gated on `unattended`: delegation answers the questions that would block the run,
+            // it does not give the command a second contract. Reopening moves the issue to
+            // "In Progress" exactly as the ordinary start does, for whoever runs it.
+            onReopenTask: async () => {
+                await reopenLinearTask(linearClient, issueId, logger);
+            },
         });
 
         if (reopenResult.reopened) {
@@ -253,9 +255,10 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
             startPoint: branchResult.startPoint,
         });
 
-        // Apply stashed changes if any
-        if (branchResult.stashName) {
-            await applyStashedChanges(branchResult.stashName, logger);
+        // Absent when nothing was stashed, and when the entry could not be re-identified - then it
+        // stays on the shared stack and handleBranchSelection has already said how to recover it.
+        if (branchResult.stash) {
+            await applyStashedChanges(branchResult.stash, logger);
         }
 
         logger.info(`✅ Created draft PR: ${chalk.blue(result.pr.title)} (#${result.pr.number})`);

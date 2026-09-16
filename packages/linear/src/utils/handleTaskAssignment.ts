@@ -26,7 +26,8 @@ export interface HandleTaskAssignmentParams {
 
     /**
      * Whether nobody is available to answer a question.
-     * When set, an issue somebody else owns keeps its owner instead of prompting.
+     * When set, assignment is left alone entirely - whether the issue is already assigned to
+     * someone else or unassigned - instead of prompting or claiming it for the current user.
      */
     unattended?: boolean;
 }
@@ -43,6 +44,14 @@ export async function handleTaskAssignment(params: HandleTaskAssignmentParams): 
     }
 
     try {
+        if (unattended) {
+            // Delegation deliberately keeps a human as the owner, so an unattended run must not
+            // touch assignment at all - not to claim an unassigned issue, and not to resolve an
+            // ownership conflict.
+            logger.info(`✅ Leaving task assignment alone (unattended run)`);
+            return;
+        }
+
         // Get current user and assignee information in parallel
         const [currentUser, assignee] = await Promise.all([linearClient.viewer, issueData.assignee]);
 
@@ -56,13 +65,6 @@ export async function handleTaskAssignment(params: HandleTaskAssignmentParams): 
 
             logger.info(`✅ Task assigned to ${chalk.green(currentUser.displayName)}`);
         } else if (assignee.id !== currentUser.id) {
-            if (unattended) {
-                // Delegation deliberately leaves the human as the assignee, so this is not an
-                // ownership conflict to resolve - it is the normal shape of a delegated issue.
-                logger.info(`✅ Task stays assigned to ${chalk.yellow(assignee.displayName)}`);
-                return;
-            }
-
             assertCanAsk(assignee.displayName);
 
             // Task is assigned to someone else - ask if reassign

@@ -13,6 +13,7 @@ import { decideDirtyCheckout } from './decideDirtyCheckout.js';
 import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { handlePullWithRebase } from './handlePullWithRebase.js';
+import { applyNamedStash, pushNamedStash } from './namedStash.js';
 
 /**
  * Parameters for checking out an existing branch.
@@ -182,12 +183,8 @@ export async function checkoutExistingBranch(
             }
 
             case 'stash': {
-                // Stash changes, checkout, then reapply
-                const stashName = `task-${params.taskId}-existing-branch-stash`;
-                paramLogger.info(`📦 Stashing uncommitted changes as: ${chalk.cyan(stashName)}`);
-
-                await git.stash(['push', '-u', '-m', stashName]);
-                paramLogger.info(`✅ Changes stashed successfully`);
+                // Stash changes, checkout, then reapply.
+                const stash = await pushNamedStash(git, `task-${params.taskId}-existing-branch`, paramLogger);
 
                 // Checkout the branch
                 await checkoutBranch(branchName, paramLogger, unattended);
@@ -195,29 +192,13 @@ export async function checkoutExistingBranch(
                 // Checkout submodules before reapplying stash
                 await checkoutSubmodules(params);
 
-                // Try to reapply the stash
-                try {
-                    paramLogger.info(`📦 Reapplying stashed changes: ${chalk.cyan(stashName)}`);
-                    const stashes = await git.stashList();
-                    const targetStashIndex = stashes.all.findIndex(stash => stash.message.includes(stashName));
-
-                    if (targetStashIndex !== -1) {
-                        await git.stash(['pop', `stash@{${targetStashIndex}}`]);
-                        paramLogger.info(`✅ Stashed changes reapplied successfully`);
-                    } else {
-                        paramLogger.warn(`⚠️  Could not find stash: ${chalk.cyan(stashName)}`);
-                        paramLogger.info(
-                            `💡 You can manually apply it later with: git stash list && git stash apply stash@{N}`,
-                        );
-                    }
-                } catch (error) {
-                    paramLogger.error(
-                        `❌ Failed to reapply stash ${chalk.cyan(stashName)}: ${(error as Error).message}`,
-                    );
-                    paramLogger.info(
-                        `💡 You can manually apply it later with: git stash list && git stash apply stash@{N}`,
-                    );
+                // Absent when the entry could not be re-identified after the push - then it stays on
+                // the shared stack, because applying something we cannot name unambiguously is the
+                // one thing that stack makes unsafe. `pushNamedStash` already said how to recover it.
+                if (stash) {
+                    await applyNamedStash(git, stash, paramLogger);
                 }
+
                 break;
             }
 
@@ -280,6 +261,13 @@ async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise
                     unattended,
                 });
             } catch (error) {
+                if (error instanceof UsageError) {
+                    // A deliberate refusal - the submodule was left untouched on purpose and the caller
+                    // has to decide. Degrading it to a warning would let the run continue into the sync
+                    // step, which rebases the submodule anyway - exactly what the refusal prevents.
+                    throw error;
+                }
+
                 // Log warning but continue with other submodules
                 logger.warn(
                     `⚠️  Failed to checkout branch in submodule ${chalk.magenta(submodule.name)}: ${(error as Error).message}`,
@@ -290,6 +278,11 @@ async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise
 
         logger.info('✅ Finished processing submodules');
     } catch (error) {
+        if (error instanceof UsageError) {
+            // Refusal from the loop above - must not be swallowed here either.
+            throw error;
+        }
+
         // Log warning but don't fail the entire operation
         logger.warn(`⚠️  Could not process submodules: ${(error as Error).message}`);
     }
@@ -327,6 +320,19 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
 
         // Checkout the base branch (already fetched and FF'd above)
         if (baseBranch) {
+            // The reset below is `--hard`, so uncommitted work here would be gone for good: it sits in
+            // no commit and no stash. Dirty means somebody is mid-change in this submodule - leave it
+            // exactly where it is. Reachable without a human since `unattended` skips the prompt.
+            const submoduleStatus = await submoduleGit.status();
+            if (submoduleStatus.files.length > 0) {
+                logger.warn(
+                    `⚠️  Submodule ${chalk.magenta(submodule.name)} has uncommitted changes - keeping them in ` +
+                        `place instead of resetting it to ${chalk.cyan(baseBranch)}. Commit or discard them and ` +
+                        `run the command again to update the submodule.`,
+                );
+                return;
+            }
+
             try {
                 logger.info(
                     `🔄 Checking out ${chalk.cyan(baseBranch)} in submodule ${chalk.magenta(submodule.name)}...`,
@@ -360,6 +366,8 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
     // Checkout the branch in the submodule
     logger.info(`🌿 Checking out branch ${chalk.cyan(targetBranch)} in submodule ${chalk.magenta(submodule.name)}...`);
 
+    let pullResult: Awaited<ReturnType<typeof handlePullWithRebase>>;
+
     try {
         // Fetch latest changes for the task branch from origin
         await submoduleGit.fetch('origin', targetBranch);
@@ -368,7 +376,7 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
         await checkoutLocalBranch(submoduleGit, targetBranch);
 
         // Pull the latest changes
-        const pullResult = await handlePullWithRebase({
+        pullResult = await handlePullWithRebase({
             git: submoduleGit,
             remote: 'origin',
             branch: targetBranch,
@@ -376,20 +384,25 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
             contextMessage: `submodule ${chalk.magenta(submodule.name)}`,
             unattended,
         });
-
-        if (pullResult.cancelled) {
-            throw new UsageError(
-                `${targetBranch} in submodule ${submodule.name} has diverged from origin and was not rebased. ` +
-                    `Reconcile it there (git pull --rebase) and run the command again.`,
-            );
-        }
-
-        logger.info(`✅ Checked out branch ${chalk.cyan(targetBranch)} in ${chalk.magenta(submodule.name)}`);
     } catch (error) {
-        throw new UsageError(
+        // A plain Error, not a UsageError: the caller degrades an operational failure in one submodule
+        // to a warning and moves on. UsageError out of this function means a deliberate refusal.
+        throw new Error(
             `Failed to checkout branch ${targetBranch} in submodule ${submodule.name}: ${(error as Error).message}`,
+            { cause: error },
         );
     }
+
+    // Outside the try on purpose: a refusal is a decision, not a failure, so it must reach the caller
+    // as a UsageError rather than be re-wrapped and walked past.
+    if (pullResult.cancelled) {
+        throw new UsageError(
+            `${targetBranch} in submodule ${submodule.name} has diverged from origin and was not rebased. ` +
+                `Reconcile it there (git pull --rebase) and run the command again.`,
+        );
+    }
+
+    logger.info(`✅ Checked out branch ${chalk.cyan(targetBranch)} in ${chalk.magenta(submodule.name)}`);
 }
 
 /**

@@ -189,9 +189,10 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
             startPoint: branchResult.startPoint,
         });
 
-        // Apply stashed changes if any
-        if (branchResult.stashName) {
-            await applyStashedChanges(branchResult.stashName, logger);
+        // Absent when nothing was stashed, and when the entry could not be re-identified - then it
+        // stays on the shared stack and handleBranchSelection has already said how to recover it.
+        if (branchResult.stash) {
+            await applyStashedChanges(branchResult.stash, logger);
         }
 
         logger.info(`✅ Created draft PR: ${chalk.blue(result.pr.title)} (#${result.pr.number})`);

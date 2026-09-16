@@ -3,6 +3,9 @@ import { simpleGit } from 'simple-git';
 
 import type { Logger } from '@nzyme/logging/Logger.js';
 
+import type { NamedStash } from './namedStash.js';
+import { applyNamedStash, pushNamedStash } from './namedStash.js';
+
 /**
  * Result of branch selection operation.
  */
@@ -13,9 +16,12 @@ export interface BranchSelectionResult {
     selectedBaseBranch: string;
 
     /**
-     * The stash name if changes were stashed.
+     * The stash holding the uncommitted changes, if there were any. Absent when nothing was
+     * stashed, and also when the entry could not be re-identified after the push - in which case
+     * it stays on the stack for the human, because applying something we cannot name is exactly
+     * what the shared stack makes unsafe.
      */
-    stashName?: string;
+    stash?: NamedStash;
 
     /**
      * The point to start the new branch from (e.g. origin/main).
@@ -63,15 +69,7 @@ export async function handleBranchSelection(params: BranchSelectionParams): Prom
     const status = await git.status();
     const hasChanges = status.files.length > 0;
 
-    let stashName: string | undefined;
-
-    if (hasChanges) {
-        stashName = `task-${taskId}-stash`;
-        logger.info(`📦 Stashing uncommitted changes as: ${chalk.cyan(stashName)}`);
-
-        await git.stash(['push', '-u', '-m', stashName]);
-        logger.info(`✅ Changes stashed successfully`);
-    }
+    const stash = hasChanges ? await pushNamedStash(git, `task-${taskId}-${branch}`, logger) : undefined;
 
     // Fetch the base branch so the new branch is cut from an up-to-date remote tip.
     logger.info(`🔄 Fetching latest changes for ${chalk.cyan(branch)}`);
@@ -79,33 +77,15 @@ export async function handleBranchSelection(params: BranchSelectionParams): Prom
 
     return {
         selectedBaseBranch: branch,
-        stashName,
+        stash,
         startPoint: `origin/${branch}`,
     };
 }
 
 /**
- * Apply previously stashed changes after creating a new branch.
+ * Apply changes stashed by {@link handleBranchSelection}, in the same repository root it stashed
+ * them from.
  */
-export async function applyStashedChanges(stashName: string, logger: Logger): Promise<void> {
-    const git = simpleGit();
-
-    try {
-        // Find the stash by name
-        const stashes = await git.stashList();
-        const targetStashIndex = stashes.all.findIndex(stash => stash.message.includes(stashName));
-
-        if (targetStashIndex === -1) {
-            logger.warn(`⚠️  Could not find stash: ${chalk.cyan(stashName)}`);
-            return;
-        }
-
-        // Apply the stash
-        logger.info(`📦 Applying stashed changes: ${chalk.cyan(stashName)}`);
-        await git.stash(['pop', `stash@{${targetStashIndex}}`]);
-        logger.info(`✅ Stashed changes applied successfully`);
-    } catch (error) {
-        logger.error(`❌ Failed to apply stash ${chalk.cyan(stashName)}: ${(error as Error).message}`);
-        logger.info(`💡 You can manually apply it later with: git stash list && git stash apply stash@{N}`);
-    }
+export async function applyStashedChanges(stash: NamedStash, logger: Logger): Promise<void> {
+    await applyNamedStash(simpleGit(), stash, logger);
 }

@@ -44,6 +44,8 @@ export * from './utils/handleReadyPreparation.js';
 export * from './utils/handleSubmoduleReadyPreparation.js';
 export type { HandleSubmoduleReadyPreparationParams } from './utils/handleSubmoduleReadyPreparation.js';
 export * from './utils/isTaskBranch.js';
+export * from './utils/namedStash.js';
+export type { NamedStash } from './utils/namedStash.js';
 export * from './utils/pushChanges.js';
 export type { PushChangesParams, PushChangesResult } from './utils/pushChanges.js';
 export * from './utils/pushSubmoduleUpdates.js';

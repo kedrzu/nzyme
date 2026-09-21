@@ -85,10 +85,6 @@
         // (`process.env`, `globalThis`, `Record<string, string>` dependency maps). Its suggested
         // `Reflect.deleteProperty` is strictly more obscure for the same effect.
         "typescript/no-dynamic-delete": "off",
-        // Rewrites `typeof x === 'undefined'` to `x === undefined`, which throws `ReferenceError`
-        // for a global that may not be declared at all. Its only finding was `getCookieBot`, whose
-        // whole purpose is to answer whether the Cookiebot script ever loaded.
-        "unicorn/no-typeof-undefined": "off",
         // Fires when a default import shares a name with a named export, but does not distinguish a
         // type from a value. `layout/Layout` exports `type Layout` alongside the component default;
         // TypeScript keeps those in separate namespaces, so the only thing the rule bought was

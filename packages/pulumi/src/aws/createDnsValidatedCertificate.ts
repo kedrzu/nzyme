@@ -6,9 +6,20 @@ import type * as pulumi from '@pulumi/pulumi';
  */
 export interface CreateDnsValidatedCertificateOptions {
     /**
-     * The domain name to create the certificate for.
+     * The primary domain to create the certificate for.
+     *
+     * A plain string rather than an input: the names decide how many validation records exist, and a
+     * name that only resolves while the update runs cannot be counted before it.
      */
-    domainName: pulumi.Input<string>;
+    domainName: string;
+    /**
+     * Further names the certificate must cover, such as `*.example.com` next to `example.com`.
+     *
+     * A wildcard is validated against its parent domain, so names that reduce to the same validation
+     * domain share one record instead of getting one each — which is also what keeps Route53 from
+     * being asked for two records with the same name.
+     */
+    subjectAlternativeNames?: string[];
     /**
      * The zone ID to create the validation records in.
      */
@@ -20,7 +31,7 @@ export interface CreateDnsValidatedCertificateOptions {
 }
 
 /**
- * Creates an ACM certificate, the DNS record that validates it, and the validation itself.
+ * Creates an ACM certificate, the DNS records that validate it, and the validation itself.
  *
  * Returns the ARN from the **validation**, not from the certificate. The two differ in when they
  * resolve, and only one of them is safe to hand to a consumer: `Certificate.arn` is available the
@@ -32,34 +43,58 @@ export interface CreateDnsValidatedCertificateOptions {
  * issued, which is what orders the dependency correctly.
  */
 export function createDnsValidatedCertificate(name: string, options: CreateDnsValidatedCertificateOptions) {
+    const subjectAlternativeNames = options.subjectAlternativeNames ?? [];
+
     const certificate = new aws.acm.Certificate(
         name,
         {
             domainName: options.domainName,
+            subjectAlternativeNames: subjectAlternativeNames.length > 0 ? subjectAlternativeNames : undefined,
             validationMethod: 'DNS',
         },
         { provider: options.provider },
     );
 
-    const certfificateValidationOption = certificate.domainValidationOptions[0]!;
+    // Create one DNS validation record per distinct validation domain.
+    const validationRecords = getValidationDomains(options.domainName, subjectAlternativeNames).map(
+        (validationDomain, index) => {
+            const validationOption = certificate.domainValidationOptions.apply(validationOptions => {
+                const match = validationOptions.find(option => option.domainName === validationDomain);
+                if (!match) {
+                    throw new Error(
+                        `ACM returned no validation option for ${validationDomain} on certificate ${name}.`,
+                    );
+                }
 
-    // Create DNS validation records
-    const validationRecord = new aws.route53.Record(`${name}Validation`, {
-        name: certfificateValidationOption.resourceRecordName,
-        type: certfificateValidationOption.resourceRecordType,
-        zoneId: options.zoneId,
-        records: [certfificateValidationOption.resourceRecordValue],
-        ttl: 60,
-    });
+                return match;
+            });
+
+            return new aws.route53.Record(
+                index === 0 ? `${name}-validation` : `${name}-validation-${index}`,
+                {
+                    name: validationOption.resourceRecordName,
+                    type: validationOption.resourceRecordType,
+                    zoneId: options.zoneId,
+                    records: [validationOption.resourceRecordValue],
+                    ttl: 60,
+                },
+                // The first record used to be called `${name}Validation`. Renaming a Pulumi resource
+                // is a create followed by a delete, and Route53 refuses to create a record that
+                // already exists — so the rename is declared as an alias, which remaps the URN
+                // instead of touching DNS. Droppable once every stack has deployed past it.
+                index === 0 ? { aliases: [{ name: `${name}Validation` }] } : undefined,
+            );
+        },
+    );
 
     // Wait for certificate validation
     const validation = new aws.acm.CertificateValidation(
-        `${name}Validation`,
+        `${name}-validation`,
         {
             certificateArn: certificate.arn,
-            validationRecordFqdns: [validationRecord.fqdn],
+            validationRecordFqdns: validationRecords.map(record => record.fqdn),
         },
-        { provider: options.provider },
+        { provider: options.provider, aliases: [{ name: `${name}Validation` }] },
     );
 
     return {
@@ -68,4 +103,25 @@ export function createDnsValidatedCertificate(name: string, options: CreateDnsVa
         /** The certificate resource itself, for the rare caller that needs more than the ARN. */
         certificate,
     };
+}
+
+/**
+ * The distinct domains ACM will ask for a record for, in the order the names were given.
+ *
+ * A wildcard is validated against its parent, so `*.example.com` reduces to `example.com`: a
+ * certificate covering both needs one record, and asking Route53 for two records with the same name
+ * would fail.
+ */
+function getValidationDomains(domainName: string, subjectAlternativeNames: string[]) {
+    const validationDomains: string[] = [];
+
+    for (const name of [domainName, ...subjectAlternativeNames]) {
+        const validationDomain = name.startsWith('*.') ? name.slice(2) : name;
+
+        if (!validationDomains.includes(validationDomain)) {
+            validationDomains.push(validationDomain);
+        }
+    }
+
+    return validationDomains;
 }

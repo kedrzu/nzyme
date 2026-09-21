@@ -7,6 +7,7 @@ export * from './components/slackFieldsSection.js';
 export * from './components/slackHeader.js';
 export * from './components/slackLink.js';
 export * from './components/slackLinkButton.js';
+export * from './components/slackMarkdown.js';
 export * from './components/slackMention.js';
 export * from './components/slackPhone.js';
 export * from './components/slackSection.js';

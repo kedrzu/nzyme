@@ -43,5 +43,5 @@ export function getRadioGroupEmits<T extends Primitive = Primitive>() {
  */
 export function useRadioGroup<T extends Primitive = Primitive>(props: RadioGroupProps<T>) {
     const field = createFormField<T>({ props });
-    provideContext(RadioGroupContext, { field, props: props as RadioGroupProps<Primitive> });
+    provideContext(RadioGroupContext, { field, props: props });
 }

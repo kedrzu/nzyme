@@ -40,7 +40,7 @@
         "@manypkg/find-root": "3.1.0",
         "@nzyme/utils": "0.14.0",
         "chalk": "6.0.0",
-        "dotenv": "17.4.2",
+        "dotenv": "18.0.1",
         "execa": "10.0.1",
         "fs-extra": "11.4.0",
         "oxfmt": "0.68.0",
@@ -50,7 +50,7 @@
     "devDependencies": {
         "@nzyme/tsconfig": "0.14.0",
         "@types/fs-extra": "11.0.4",
-        "@types/node": "26.5.1",
+        "@types/node": "26.6.2",
         "@types/parse-gitignore": "1.0.2",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2"
     }

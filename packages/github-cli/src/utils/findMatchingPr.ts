@@ -62,7 +62,7 @@ export async function findPrForBranch(
  *
  * With a single open PR this returns it whatever branch you are standing on — the long-standing
  * behavior, and the reason an unstacked task is completely unaffected by stacks existing. Only when
- * a task has several open PRs does the current branch decide, because "the PR for SIG-123" stops
+ * a task has several open PRs does the current branch decide, because "the PR for ABC-123" stops
  * being a well-defined thing: picking the most recently updated one, as the old lookup did, would
  * silently push to or merge the wrong node.
  */
@@ -230,7 +230,7 @@ export async function findBestMatchingPr(
 
 /**
  * Create a regex pattern that matches the issue ID only when properly bounded.
- * This prevents SIG-12 from matching SIG-123.
+ * This prevents ABC-12 from matching ABC-123.
  * @__NO_SIDE_EFFECTS__
  */
 export function createIssueIdRegex(issueId: string): RegExp {
@@ -239,7 +239,7 @@ export function createIssueIdRegex(issueId: string): RegExp {
 
     // Create pattern that matches the issue ID with proper boundaries
     // (?:^|[^a-zA-Z0-9]) - starts at beginning or after non-alphanumeric character (treating _ as delimiter)
-    // (?!\d) - negative lookahead: not followed by a digit (prevents SIG-12 matching SIG-123)
+    // (?!\d) - negative lookahead: not followed by a digit (prevents ABC-12 matching ABC-123)
     // (?=[^a-zA-Z0-9]|$) - positive lookahead: followed by non-alphanumeric character or end of string
     const pattern = `(?:^|[^a-zA-Z0-9])${escapedIssueId}(?!\\d)(?=[^a-zA-Z0-9]|$)`;
 

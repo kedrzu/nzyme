@@ -26,7 +26,7 @@ import { startTaskIfNotStarted } from './startTaskIfNotStarted.js';
  */
 export interface SwitchToTaskParams {
     /**
-     * The Linear issue ID (e.g., "SIG-123").
+     * The Linear issue ID (e.g., "ABC-123").
      */
     issueId: string;
 

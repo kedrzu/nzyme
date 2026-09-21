@@ -25,7 +25,7 @@ export interface CheckoutExistingBranchParams {
     branchName: string;
 
     /**
-     * The task ID (e.g., "SIG-123").
+     * The task ID (e.g., "ABC-123").
      */
     taskId: string;
 

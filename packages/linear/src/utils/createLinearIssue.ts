@@ -57,7 +57,7 @@ export async function createLinearIssue(linearClient: LinearClient, params: Crea
         throw new UsageError('Failed to create Linear issue');
     }
 
-    // Return the issue identifier (e.g., "SIG-123")
+    // Return the issue identifier (e.g., "ABC-123")
     const issue = await issuePayload.issue;
     return issue.identifier;
 }

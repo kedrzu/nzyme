@@ -12,7 +12,7 @@ const VERSION_SUFFIX_PATTERN = /--v\d+$/;
 
 /**
  * Strip the stack-node suffix from a branch name.
- * Example: "sig-123-feature--v2--s3" -> "sig-123-feature--v2"
+ * Example: "abc-123-feature--v2--s3" -> "abc-123-feature--v2"
  * @__NO_SIDE_EFFECTS__
  */
 export function stripNodeSuffix(branchName: string): string {
@@ -34,7 +34,7 @@ export function extractNodeIndex(branchName: string): number {
 
 /**
  * Build the branch name for a given stack position, preserving any version suffix.
- * Example: ("sig-123-feature--v2", 3) -> "sig-123-feature--v2--s3"
+ * Example: ("abc-123-feature--v2", 3) -> "abc-123-feature--v2--s3"
  * @__NO_SIDE_EFFECTS__
  */
 export function buildNodeBranchName(branchName: string, nodeIndex: number): string {
@@ -59,7 +59,7 @@ export function extractBranchVersion(branchName: string): number {
 
 /**
  * Get the base branch name without the version and stack-node suffixes.
- * Example: "sig-123-feature--v2--s3" -> "sig-123-feature"
+ * Example: "abc-123-feature--v2--s3" -> "abc-123-feature"
  *
  * Both suffixes are stripped so that every branch belonging to the same task — re-opened versions
  * and stack nodes alike — collapses onto one name. Callers use this to group branches by task.
@@ -95,7 +95,7 @@ export function areSameBranchVersions(branch1: string, branch2: string): boolean
 /**
  * Determine the next version number based on existing branches.
  * Considers all provided branch names and returns the next version.
- * Example: if branches are ["sig-123", "sig-123--v2", "sig-123--v3"], returns "sig-123--v4"
+ * Example: if branches are ["abc-123", "abc-123--v2", "abc-123--v3"], returns "abc-123--v4"
  * @__NO_SIDE_EFFECTS__
  */
 export function determineNextVersion(baseBranchName: string, existingBranches: string[]): string {

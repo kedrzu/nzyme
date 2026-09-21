@@ -2,8 +2,8 @@ import { expect, test } from 'bun:test';
 
 import { decideDirtyCheckout } from './decideDirtyCheckout.js';
 
-const TASK_BRANCH = 'feature/sig-472-unattended';
-const OTHER_BRANCH = 'feature/sig-999-something-else';
+const TASK_BRANCH = 'feature/abc-472-unattended';
+const OTHER_BRANCH = 'feature/abc-999-something-else';
 
 test('a person at a terminal is always asked', () => {
     expect(

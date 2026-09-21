@@ -14,7 +14,7 @@ export function parseTaskIdentifier(identifier: string, defaultPrefix?: string):
         throw new UsageError(`Invalid Linear URL format: ${identifier}`);
     }
 
-    // Handle issue ID with prefix (e.g., SIG-123)
+    // Handle issue ID with prefix (e.g., ABC-123)
     if (/^[A-Z]+-\d+$/.test(identifier)) {
         return identifier;
     }

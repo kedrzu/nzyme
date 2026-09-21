@@ -40,7 +40,7 @@ export interface LinearConfig {
     apiToken: string;
 
     /**
-     * Default team prefix (e.g., 'SIG' for SIG-123).
+     * Default team prefix (e.g., 'ABC' for ABC-123).
      */
     defaultPrefix?: string;
 
@@ -215,11 +215,11 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
             description: 'Start working on a Linear task',
             details: 'Find or create a GitHub PR for a Linear task and checkout the branch',
             examples: [
-                ['Start work on task by ID', 'task SIG-123'],
+                ['Start work on task by ID', 'task ABC-123'],
                 ['Start work on task by ID without prefix', 'task 123'],
-                ['Start work on task by URL', 'task https://linear.app/sig/issue/SIG-123/some-task'],
-                ['Start work branching from a specific branch', 'task SIG-123 --branch develop'],
-                ['Check out the bottom node of a stacked task', 'task SIG-123 --node 1'],
+                ['Start work on task by URL', 'task https://linear.app/abc/issue/ABC-123/some-task'],
+                ['Start work branching from a specific branch', 'task ABC-123 --branch develop'],
+                ['Check out the bottom node of a stacked task', 'task ABC-123 --node 1'],
             ],
         });
 

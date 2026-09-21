@@ -22,7 +22,7 @@ import type { Logger } from '@nzyme/logging/Logger.js';
  */
 export interface StackTaskParams {
     /**
-     * The Linear issue ID (e.g. "SIG-123") the whole stack belongs to.
+     * The Linear issue ID (e.g. "ABC-123") the whole stack belongs to.
      */
     issueId: string;
 

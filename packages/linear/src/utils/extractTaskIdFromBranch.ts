@@ -3,11 +3,11 @@ import { UsageError } from '@nzyme/cli';
 /**
  * Extract task ID from a branch name.
  * Supports various branch naming conventions like:
- * - SIG-123-feature-name
- * - feature/SIG-123-something
- * - feature/sig-123-something
- * - SIG-123
- * - fix/SIG-123
+ * - ABC-123-feature-name
+ * - feature/ABC-123-something
+ * - feature/abc-123-something
+ * - ABC-123
+ * - fix/ABC-123
  * @__NO_SIDE_EFFECTS__
  */
 export function extractTaskIdFromBranch(branchName: string): string {
@@ -18,7 +18,7 @@ export function extractTaskIdFromBranch(branchName: string): string {
     if (!match) {
         throw new UsageError(
             `Could not extract task ID from branch name "${branchName}". ` +
-                'Branch name should contain a Linear task ID (e.g., SIG-123).',
+                'Branch name should contain a Linear task ID (e.g., ABC-123).',
         );
     }
 

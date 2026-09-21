@@ -5,7 +5,7 @@ import type { Logger } from '@nzyme/logging/Logger.js';
  */
 export interface TaskSwitchedInfo {
     /**
-     * The Linear issue ID (e.g., "SIG-123").
+     * The Linear issue ID (e.g., "ABC-123").
      */
     issueId: string;
 

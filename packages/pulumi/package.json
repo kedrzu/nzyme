@@ -45,9 +45,9 @@
     "dependencies": {
         "@aws-sdk/client-s3": "3.1136.0",
         "@aws-sdk/credential-provider-node": "3.972.83",
-        "@babel/core": "8.0.5",
+        "@babel/core": "8.0.6",
         "@babel/plugin-syntax-import-attributes": "7.29.7",
-        "@babel/preset-env": "8.0.5",
+        "@babel/preset-env": "8.0.6",
         "@nzyme/cli": "0.14.0",
         "@nzyme/esm": "0.14.0",
         "@nzyme/ioc": "0.14.0",
@@ -76,7 +76,7 @@
     },
     "devDependencies": {
         "@nzyme/tsconfig": "0.14.0",
-        "@types/node": "26.5.1",
+        "@types/node": "26.6.2",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "oxfmt": "0.68.0"
     },

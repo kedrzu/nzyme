@@ -38,7 +38,7 @@
         "@octokit/rest": "22.0.1",
         "chalk": "6.0.0",
         "enquirer": "2.4.1",
-        "open": "11.0.3",
+        "open": "11.0.4",
         "simple-git": "3.36.0"
     },
     "devDependencies": {

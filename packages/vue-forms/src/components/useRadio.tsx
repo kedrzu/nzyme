@@ -79,6 +79,6 @@ export function useRadio<T extends Primitive = Primitive>(props: RadioProps<T>) 
         }
 
         ctx.field.value = props.value as FormFieldValue<Primitive>;
-        emit('selected', props.value as T);
+        emit('selected', props.value);
     }
 }

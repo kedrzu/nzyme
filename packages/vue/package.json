@@ -45,7 +45,7 @@
         "@vueuse/core": "14.4.0",
         "lodash.debounce": "4.0.8",
         "type-fest": "5.10.0",
-        "vue": "3.5.42"
+        "vue": "3.5.43"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "0.14.0",

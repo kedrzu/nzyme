@@ -1,19 +1,22 @@
 import chalk from 'chalk';
 import enquirer from 'enquirer';
+import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
 import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
+import { assertSubmoduleReady } from './assertSubmoduleReady.js';
 import { checkoutBranch } from './checkoutBranch.js';
 import type { GithubClient } from './createGithubClient.js';
-import { findMatchingPr } from './findMatchingPr.js';
 import { decideDirtyCheckout } from './decideDirtyCheckout.js';
 import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
+import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { handlePullWithRebase } from './handlePullWithRebase.js';
 import { applyNamedStash, pushNamedStash } from './namedStash.js';
+import { resolveSubmoduleBranch } from './resolveSubmoduleBranch.js';
 
 /**
  * Parameters for checking out an existing branch.
@@ -45,15 +48,25 @@ export interface CheckoutExistingBranchParams {
     githubConfig?: GithubConfig;
 
     /**
-     * The base branch to use for submodules without PRs (optional).
-     * When a submodule doesn't have a PR for the task, it will be updated to the latest commit on this branch.
+     * The branch fast-forwarded in each submodule and, when a submodule's gitlink SHA resolves to
+     * a base branch (see {@link baseBranches}), the one it is checked out onto (optional).
      */
     baseBranch?: string;
+
+    /**
+     * The caller project's base branches, used to classify a submodule's resolved branch and to
+     * judge its readiness - see `assertSubmoduleReady`/`resolveSubmoduleBranch`. Supplied by the
+     * caller: this package is generic and must never hardcode a project's own branch naming.
+     * @default []
+     */
+    baseBranches?: string[];
 
     /**
      * Whether nobody is available to answer a question.
      * Uncommitted changes are then kept in place when the working tree is already on
      * {@link branchName}, and the checkout is refused otherwise - see {@link decideDirtyCheckout}.
+     * A submodule that is not safe to move is likewise refused with a `UsageError` rather than
+     * moved - see {@link checkoutSubmoduleBranch}.
      */
     unattended?: boolean;
 }
@@ -62,13 +75,39 @@ export interface CheckoutExistingBranchParams {
  * Parameters for checking out a submodule branch.
  */
 interface CheckoutSubmoduleBranchParams {
-    submodule: Awaited<ReturnType<typeof getSubmoduleInfo>>[0];
-    taskId: string;
-    mainBranchName: string;
+    /**
+     * The submodule to check out, as returned by `getSubmoduleInfo()`.
+     */
+    submodule: SubmoduleInfo;
+
+    /**
+     * GitHub client instance.
+     */
     githubClient: GithubClient;
+
+    /**
+     * GitHub configuration of the main repository; the submodule's own is derived from it.
+     */
     githubConfig: GithubConfig;
+
+    /**
+     * Logger instance.
+     */
     logger: Logger;
+
+    /**
+     * See `CheckoutExistingBranchParams.baseBranch`.
+     */
     baseBranch?: string;
+
+    /**
+     * See `CheckoutExistingBranchParams.baseBranches`.
+     */
+    baseBranches: string[];
+
+    /**
+     * See `CheckoutExistingBranchParams.unattended`.
+     */
     unattended?: boolean;
 }
 
@@ -76,17 +115,7 @@ interface CheckoutSubmoduleBranchParams {
  * Checkout an existing branch, handling uncommitted changes by prompting the user.
  * Also handles checking out matching branches in submodules if GitHub client is provided.
  */
-export async function checkoutExistingBranch(
-    branchNameOrParams: string | CheckoutExistingBranchParams,
-    taskId?: string,
-    logger?: Logger,
-): Promise<void> {
-    // Support both old signature (for backward compatibility) and new params object
-    const params: CheckoutExistingBranchParams =
-        typeof branchNameOrParams === 'string'
-            ? { branchName: branchNameOrParams, taskId: taskId!, logger: logger! }
-            : branchNameOrParams;
-
+export async function checkoutExistingBranch(params: CheckoutExistingBranchParams): Promise<void> {
     const { branchName, logger: paramLogger, unattended } = params;
     const git = simpleGit();
 
@@ -227,7 +256,7 @@ export async function checkoutExistingBranch(
  * Checkout matching branches in submodules if they exist.
  */
 async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise<void> {
-    const { branchName, taskId, logger, githubClient, githubConfig, baseBranch, unattended } = params;
+    const { logger, githubClient, githubConfig, baseBranch, baseBranches = [], unattended } = params;
 
     // Only process submodules if GitHub client and config are provided
     if (!githubClient || !githubConfig) {
@@ -252,12 +281,11 @@ async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise
             try {
                 await checkoutSubmoduleBranch({
                     submodule,
-                    taskId,
-                    mainBranchName: branchName,
                     githubClient,
                     githubConfig,
                     logger,
                     baseBranch,
+                    baseBranches,
                     unattended,
                 });
             } catch (error) {
@@ -289,11 +317,12 @@ async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise
 }
 
 /**
- * Checkout a matching branch in a specific submodule.
- * Also fetches and fast-forwards the base branch to keep it up to date.
+ * Checkout the branch a submodule's gitlink SHA resolves to, guarding it with
+ * {@link assertSubmoduleReady} first. Also fetches and fast-forwards the base branch to keep it up
+ * to date.
  */
 async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): Promise<void> {
-    const { submodule, taskId, githubClient, githubConfig, logger, baseBranch, unattended } = params;
+    const { submodule, githubClient, githubConfig, logger, baseBranch, baseBranches, unattended } = params;
 
     // Parse the submodule URL to get owner and repo
     const submoduleGithubConfig = getSubmoduleGithubConfig(submodule.url, githubConfig.token);
@@ -305,74 +334,175 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
     }
 
     const submoduleGit = simpleGit({ baseDir: submodule.path });
+    const onBaseBranch = !submodule.detached && submodule.currentBranch === baseBranch;
 
-    // Fetch and fast-forward the base branch in this submodule
-    if (baseBranch) {
+    // `resolveSubmoduleBranch` below (and `assertSubmoduleReady`'s own detached-HEAD resolution)
+    // runs `git branch -r --contains <sha>` over every remote-tracking ref, not only the base
+    // branch fast-forwarded next - the target commit may sit on a task branch this checkout has
+    // never fetched before. Only a full fetch guarantees it is visible.
+    await submoduleGit.fetch('origin');
+
+    // Skipped while already checked out on `baseBranch`: `update-ref` inside
+    // `fetchAndFastForwardSubmoduleBaseBranch` moves the branch pointer without touching the
+    // working tree, and moving the ref out from under the branch that is currently active would
+    // desync HEAD from the checkout - `git status` would then read every file changed between the
+    // two commits as an edit nobody made. `checkoutSubmoduleOntoBase` below brings this case up to
+    // date safely instead, with a real merge that updates the working tree along with the ref.
+    if (baseBranch && !onBaseBranch) {
         await fetchAndFastForwardSubmoduleBaseBranch(submoduleGit, submodule.name, baseBranch, logger);
     }
 
-    // Find if there's a PR for this task in the submodule
-    logger.info(`🔍 Looking for PR in submodule ${chalk.magenta(submodule.name)}...`);
-    const pr = await findMatchingPr(githubClient, submoduleGithubConfig, taskId);
-
-    if (!pr) {
-        logger.info(`📝 No PR found for task ${chalk.bold(taskId)} in submodule ${chalk.magenta(submodule.name)}`);
-
-        // Checkout the base branch (already fetched and FF'd above)
-        if (baseBranch) {
-            // The reset below is `--hard`, so uncommitted work here would be gone for good: it sits in
-            // no commit and no stash. Dirty means somebody is mid-change in this submodule - leave it
-            // exactly where it is. Reachable without a human since `unattended` skips the prompt.
-            const submoduleStatus = await submoduleGit.status();
-            if (submoduleStatus.files.length > 0) {
-                logger.warn(
-                    `⚠️  Submodule ${chalk.magenta(submodule.name)} has uncommitted changes - keeping them in ` +
-                        `place instead of resetting it to ${chalk.cyan(baseBranch)}. Commit or discard them and ` +
-                        `run the command again to update the submodule.`,
-                );
-                return;
-            }
-
-            try {
-                logger.info(
-                    `🔄 Checking out ${chalk.cyan(baseBranch)} in submodule ${chalk.magenta(submodule.name)}...`,
-                );
-                await checkoutLocalBranch(submoduleGit, baseBranch);
-                // Reset working tree to match the ref updated by fetchAndFastForwardSubmoduleBaseBranch.
-                // update-ref only moves the branch pointer without touching the working tree,
-                // and checkout is a no-op when already on the branch, so we need an explicit reset.
-                await submoduleGit.reset(['--hard', `refs/heads/${baseBranch}`]);
-                logger.info(
-                    `✅ Submodule ${chalk.magenta(submodule.name)} updated to latest commit on ${chalk.cyan(baseBranch)}`,
-                );
-            } catch (error) {
-                logger.warn(
-                    `⚠️  Could not checkout ${chalk.cyan(baseBranch)} in submodule ${chalk.magenta(submodule.name)}: ${(error as Error).message}`,
-                );
-            }
+    // A submodule carrying uncommitted or unpushed work must never be moved out from under whoever
+    // is mid-flight in it. Unattended this throws (a deliberate refusal the caller rethrows); with a
+    // human present being mid-flight in a submodule is ordinary, so it is only reported and the
+    // submodule is left exactly where it is - the same shape `judgeSubmodule` uses in `syncAllRepos`.
+    try {
+        await assertSubmoduleReady({ submodule, baseBranches, githubClient, githubConfig: submoduleGithubConfig });
+    } catch (error) {
+        if (unattended || !(error instanceof UsageError)) {
+            throw error;
         }
 
+        logger.warn(`⚠️  Submodule ${chalk.magenta(submodule.name)}: ${error.message}`);
         return;
     }
 
-    const targetBranch = pr.head.ref;
+    // The main repo's checkout of `branchName` has already run by the time this executes, so the
+    // gitlink it now records for the submodule - the commit HEAD points at right now - is the only
+    // fact this repository actually carries about which submodule state belongs to the branch just
+    // checked out. `rev-parse HEAD:<path>` reads that gitlink straight from the commit's tree, the
+    // terser equivalent of `verify-submodule-refs.ts`'s `getSubmoduleCommit` (`ls-tree HEAD <path>`).
+    const gitlinkSha = (await simpleGit().raw(['rev-parse', `HEAD:${submodule.path}`])).trim();
+
+    const resolved = await resolveSubmoduleBranch({
+        git: submoduleGit,
+        sha: gitlinkSha,
+        baseBranches,
+        repoDisplayName: submodule.name,
+    });
+
+    if (resolved.kind === 'base') {
+        await checkoutSubmoduleOntoBase({ submoduleGit, submodule, baseBranch, logger });
+        return;
+    }
+
+    await checkoutSubmoduleOntoBranch({ submoduleGit, submodule, targetBranch: resolved.name, logger, unattended });
+}
+
+/**
+ * Inputs to {@link checkoutSubmoduleOntoBase}.
+ */
+interface CheckoutSubmoduleOntoBaseParams {
+    /**
+     * Git instance scoped to the submodule working tree, with `origin` already fully fetched.
+     */
+    submoduleGit: SimpleGit;
+
+    /**
+     * The submodule being moved, as captured before this checkout began.
+     */
+    submodule: SubmoduleInfo;
+
+    /**
+     * The branch to park the submodule on. `undefined` only when the caller never supplied one, in
+     * which case there is nowhere to move the submodule to.
+     */
+    baseBranch: string | undefined;
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+}
+
+/**
+ * Move a submodule onto its base branch once its gitlink SHA has resolved there.
+ *
+ * Already on that branch, a real fast-forward-only merge is used instead of a plain checkout (a
+ * no-op when already on the target) or a hard reset (destructive by construction): `assertSubmoduleReady`
+ * already confirmed the branch carries no unpushed commits, so origin cannot be behind it, and
+ * `--ff-only` fails loudly rather than fabricating a merge commit if that ever turns out false.
+ * Anywhere else, an ordinary checkout is always safe - the previous branch keeps its own ref.
+ */
+async function checkoutSubmoduleOntoBase(params: CheckoutSubmoduleOntoBaseParams): Promise<void> {
+    const { submoduleGit, submodule, baseBranch, logger } = params;
+    const displayName = chalk.magenta(submodule.name);
+
+    if (!baseBranch) {
+        logger.info(`📝 Submodule ${displayName} belongs on a base branch, but none was supplied - leaving it as is`);
+        return;
+    }
+
+    if (!submodule.detached && submodule.currentBranch === baseBranch) {
+        try {
+            await submoduleGit.raw(['merge', '--ff-only', `origin/${baseBranch}`]);
+        } catch (error) {
+            throw new Error(
+                `Could not fast-forward submodule ${submodule.name} on ${baseBranch}: ${(error as Error).message}`,
+                { cause: error },
+            );
+        }
+
+        logger.info(`✅ Submodule ${displayName} is up to date on ${chalk.cyan(baseBranch)}`);
+        return;
+    }
+
+    logger.info(`🔄 Checking out ${chalk.cyan(baseBranch)} in submodule ${displayName}...`);
+    await checkoutLocalBranch(submoduleGit, baseBranch);
+    logger.info(`✅ Submodule ${displayName} checked out on ${chalk.cyan(baseBranch)}`);
+}
+
+/**
+ * Inputs to {@link checkoutSubmoduleOntoBranch}.
+ */
+interface CheckoutSubmoduleOntoBranchParams {
+    /**
+     * Git instance scoped to the submodule working tree, with `origin` already fully fetched.
+     */
+    submoduleGit: SimpleGit;
+
+    /**
+     * The submodule being moved, as captured before this checkout began.
+     */
+    submodule: SubmoduleInfo;
+
+    /**
+     * The non-base branch the submodule's gitlink SHA resolved to.
+     */
+    targetBranch: string;
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+
+    /**
+     * See `CheckoutExistingBranchParams.unattended`.
+     */
+    unattended?: boolean;
+}
+
+/**
+ * Checkout the task branch a submodule's gitlink SHA resolved to, pulling in whatever origin has
+ * gained since.
+ */
+async function checkoutSubmoduleOntoBranch(params: CheckoutSubmoduleOntoBranchParams): Promise<void> {
+    const { submoduleGit, submodule, targetBranch, logger, unattended } = params;
+    const displayName = chalk.magenta(submodule.name);
 
     // Check if already on the target branch
     if (submodule.currentBranch === targetBranch) {
-        logger.info(`✅ Submodule ${chalk.magenta(submodule.name)} is already on branch ${chalk.cyan(targetBranch)}`);
+        logger.info(`✅ Submodule ${displayName} is already on branch ${chalk.cyan(targetBranch)}`);
         return;
     }
 
     // Checkout the branch in the submodule
-    logger.info(`🌿 Checking out branch ${chalk.cyan(targetBranch)} in submodule ${chalk.magenta(submodule.name)}...`);
+    logger.info(`🌿 Checking out branch ${chalk.cyan(targetBranch)} in submodule ${displayName}...`);
 
     let pullResult: Awaited<ReturnType<typeof handlePullWithRebase>>;
 
     try {
-        // Fetch latest changes for the task branch from origin
-        await submoduleGit.fetch('origin', targetBranch);
-
-        // Checkout the task branch
+        // Checkout the task branch (origin already fetched in full by the caller)
         await checkoutLocalBranch(submoduleGit, targetBranch);
 
         // Pull the latest changes
@@ -381,7 +511,7 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
             remote: 'origin',
             branch: targetBranch,
             logger,
-            contextMessage: `submodule ${chalk.magenta(submodule.name)}`,
+            contextMessage: `submodule ${displayName}`,
             unattended,
         });
     } catch (error) {
@@ -402,7 +532,7 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
         );
     }
 
-    logger.info(`✅ Checked out branch ${chalk.cyan(targetBranch)} in ${chalk.magenta(submodule.name)}`);
+    logger.info(`✅ Checked out branch ${chalk.cyan(targetBranch)} in ${displayName}`);
 }
 
 /**

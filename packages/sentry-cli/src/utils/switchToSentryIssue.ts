@@ -67,6 +67,13 @@ export interface SwitchToSentryIssueParams {
      * @default 'bug'
      */
     branchPrefix?: string;
+
+    /**
+     * Whether nobody can be asked a question, as decided by `decideUnattendedMode` in the command.
+     * A submodule that is not in a state to proceed is then refused by name rather than prompted
+     * about.
+     */
+    unattended: boolean;
 }
 
 /**
@@ -84,6 +91,7 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
         baseBranches,
         branch,
         branchPrefix = 'bug',
+        unattended,
     } = params;
 
     logger.info(`🔍 Looking for Sentry issue: ${chalk.bold(issueId)}`);
@@ -119,7 +127,14 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
         // "task refresh" so conflicts are detected and reported identically in both commands.
         const prBaseBranch = existingPr.base.ref;
         logger.info(`🔄 Synchronizing with PR base branch ${chalk.cyan(prBaseBranch)}`);
-        await syncAllRepos({ baseBranch: prBaseBranch, logger });
+        await syncAllRepos({
+            baseBranch: prBaseBranch,
+            baseBranches,
+            unattended,
+            githubClient,
+            githubConfig,
+            logger,
+        });
 
         logger.info(`🎉 Successfully checked out existing branch for ${chalk.bold(issueData.shortId)}`);
     } else {

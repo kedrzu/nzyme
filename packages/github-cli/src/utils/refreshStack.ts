@@ -5,6 +5,8 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 
 import { autoCommitChanges } from './autoCommitChanges.js';
 import { cascadeStack } from './cascadeStack.js';
+import type { GithubConfig } from '../GithubConfig.js';
+import type { GithubClient } from './createGithubClient.js';
 import { GitMergeConflictError } from './GitMergeConflictError.js';
 import { syncAllRepos } from './syncAllRepos.js';
 import { syncStackNodesFromRemote } from './syncStackNodesFromRemote.js';
@@ -22,6 +24,27 @@ export interface RefreshStackParams {
      * Branch the whole stack ultimately lands on (e.g. `main`).
      */
     trunk: string;
+
+    /**
+     * The caller project's base branches, forwarded to `syncAllRepos` to classify what each
+     * submodule is sitting on. Distinct from {@link trunk}, which is a merge source.
+     */
+    baseBranches: string[];
+
+    /**
+     * Whether nobody can be asked a question — see `decideUnattendedMode`.
+     */
+    unattended: boolean;
+
+    /**
+     * GitHub client used while judging each submodule's readiness.
+     */
+    githubClient: GithubClient;
+
+    /**
+     * GitHub configuration of the main repository.
+     */
+    githubConfig: GithubConfig;
 
     /**
      * Logger instance.
@@ -42,7 +65,7 @@ export interface RefreshStackParams {
  * one.
  */
 export async function refreshStack(params: RefreshStackParams): Promise<void> {
-    const { branches, trunk, logger } = params;
+    const { branches, trunk, baseBranches, unattended, githubClient, githubConfig, logger } = params;
 
     const bottomBranch = branches[0]!;
     const git = simpleGit({ config: ['submodule.recurse=false'] });
@@ -72,7 +95,14 @@ export async function refreshStack(params: RefreshStackParams): Promise<void> {
         }
 
         try {
-            await syncAllRepos({ baseBranch: trunk, logger });
+            await syncAllRepos({
+                baseBranch: trunk,
+                baseBranches,
+                unattended,
+                githubClient,
+                githubConfig,
+                logger,
+            });
         } catch (error) {
             throw withStackPosition(error, {
                 nodeBranch: bottomBranch,

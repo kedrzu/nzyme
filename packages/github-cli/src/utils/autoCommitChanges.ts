@@ -5,6 +5,7 @@ import { simpleGit } from 'simple-git';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import { assertNoConflicts } from './assertNoConflicts.js';
+import { describeChangedPaths } from './describeChangedPaths.js';
 import { getGitStatusInfo } from './getGitStatusInfo.js';
 
 /**
@@ -27,7 +28,9 @@ export interface AutoCommitChangesParams {
     repoDisplayName?: string;
 
     /**
-     * Commit message to use.
+     * Commit message to fall back to when there is nothing to describe. Whenever
+     * `describeChangedPaths` can name what changed, it is combined with this message rather than
+     * replacing it — e.g. `'Work in progress: packages/cli/src/git'`.
      * @default 'Work in progress'
      */
     commitMessage?: string;
@@ -46,6 +49,10 @@ export interface AutoCommitChangesResult {
 /**
  * Auto-commit all pending changes without prompting.
  * Does NOT push - that is handled separately after fetch/rebase.
+ *
+ * The commit message is always generated, never asked for: `commitMessage` names *why* (its
+ * caller-supplied default), and `describeChangedPaths` names *what* changed. Combined when both
+ * are available, the fallback alone otherwise.
  */
 export async function autoCommitChanges(params: AutoCommitChangesParams): Promise<AutoCommitChangesResult> {
     const { logger, git = simpleGit(), repoDisplayName = 'repository', commitMessage = 'Work in progress' } = params;
@@ -64,10 +71,13 @@ export async function autoCommitChanges(params: AutoCommitChangesParams): Promis
         `   ${chalk.yellow(statusInfo.totalChanges.toString())} uncommitted change${statusInfo.totalChanges === 1 ? '' : 's'} in ${repoDisplayName}: ${chalk.yellow(statusInfo.changeDescription)}`,
     );
 
-    await git.add('.');
-    await git.commit(commitMessage);
+    const description = describeChangedPaths(statusInfo.changedPaths);
+    const message = description ? `${commitMessage}: ${description}` : commitMessage;
 
-    logger.info(`   ${chalk.green('✓')} Committed in ${repoDisplayName} with message: "${chalk.cyan(commitMessage)}"`);
+    await git.add('.');
+    await git.commit(message);
+
+    logger.info(`   ${chalk.green('✓')} Committed in ${repoDisplayName} with message: "${chalk.cyan(message)}"`);
 
     return { committed: true };
 }

@@ -5,9 +5,10 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 import type { GithubConfig } from '../GithubConfig.js';
 import { convertPrToReady } from './convertPrToReady.js';
 import type { GithubClient } from './createGithubClient.js';
-import { findMatchingPr } from './findMatchingPr.js';
+import { findOpenPrForBranch } from './findMatchingPr.js';
 import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
+import { resolveSubmoduleCurrentBranch } from './resolveSubmoduleCurrentBranch.js';
 
 /**
  * Parameters for converting all PRs to ready.
@@ -24,11 +25,6 @@ export interface ConvertAllPrsToReadyParams {
     githubConfig: GithubConfig;
 
     /**
-     * Issue/task ID for PR identification.
-     */
-    issueId: string;
-
-    /**
      * Logger instance.
      */
     logger: Logger;
@@ -39,6 +35,13 @@ export interface ConvertAllPrsToReadyParams {
      * chain, not whichever node the CLI happened to be standing on.
      */
     mainPrs: ReadyTargetPr[];
+
+    /**
+     * The caller project's base branches, used to resolve which branch a submodule's pull request
+     * lives on — see `ResolveSubmoduleCurrentBranchParams.baseBranches`. Supplied by the caller:
+     * this package is generic and must never hardcode a project's own branch naming.
+     */
+    baseBranches: string[];
 }
 
 /**
@@ -69,7 +72,7 @@ export interface ReadyTargetPr {
  * - Logging status for all PRs
  */
 export async function convertAllPrsToReady(params: ConvertAllPrsToReadyParams): Promise<void> {
-    const { githubClient, githubConfig, issueId, logger, mainPrs } = params;
+    const { githubClient, githubConfig, logger, mainPrs, baseBranches } = params;
 
     // Convert submodule PRs to ready
     const submodules = await getSubmoduleInfo();
@@ -88,8 +91,13 @@ export async function convertAllPrsToReady(params: ConvertAllPrsToReadyParams): 
             }
 
             try {
-                // Find PR for this submodule
-                const submodulePr = await findMatchingPr(githubClient, submoduleConfig, issueId);
+                // Resolve the branch the submodule is currently on (never skipped for a detached
+                // HEAD — see `resolveSubmoduleCurrentBranch`), then find its PR on that branch alone.
+                const resolved = await resolveSubmoduleCurrentBranch({ submodule, baseBranches });
+                const submodulePr =
+                    resolved.kind === 'branch'
+                        ? await findOpenPrForBranch(githubClient, submoduleConfig, resolved.name)
+                        : null;
 
                 if (submodulePr) {
                     if (submodulePr.draft) {

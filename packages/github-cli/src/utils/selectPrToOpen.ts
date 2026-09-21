@@ -6,9 +6,10 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
-import { findMatchingPr, findTaskPrs } from './findMatchingPr.js';
+import { findOpenPrForBranch, findTaskPrs } from './findMatchingPr.js';
 import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
+import { resolveSubmoduleCurrentBranch } from './resolveSubmoduleCurrentBranch.js';
 
 /**
  * Information about a PR available for opening.
@@ -58,6 +59,13 @@ export interface SelectPrToOpenParams {
      * The issue/task ID to search for.
      */
     issueId: string;
+
+    /**
+     * The caller project's base branches, used to resolve which branch a submodule's pull request
+     * lives on — see `ResolveSubmoduleCurrentBranchParams.baseBranches`. Supplied by the caller:
+     * this package is generic and must never hardcode a project's own branch naming.
+     */
+    baseBranches: string[];
 }
 
 /**
@@ -76,7 +84,7 @@ export interface OpenPrInBrowserParams extends SelectPrToOpenParams {
  * If only one PR is found, returns it without prompting.
  */
 export async function selectPrToOpen(params: SelectPrToOpenParams): Promise<PrInfo> {
-    const { githubClient, githubConfig, issueId } = params;
+    const { githubClient, githubConfig, issueId, baseBranches } = params;
 
     const availablePrs: PrInfo[] = [];
 
@@ -103,7 +111,13 @@ export async function selectPrToOpen(params: SelectPrToOpenParams): Promise<PrIn
             }
 
             try {
-                const submodulePr = await findMatchingPr(githubClient, submoduleConfig, issueId);
+                // Resolved by branch (never skipped for a detached HEAD — see
+                // `resolveSubmoduleCurrentBranch`), not by issue ID.
+                const resolved = await resolveSubmoduleCurrentBranch({ submodule, baseBranches });
+                const submodulePr =
+                    resolved.kind === 'branch'
+                        ? await findOpenPrForBranch(githubClient, submoduleConfig, resolved.name)
+                        : null;
                 if (submodulePr) {
                     availablePrs.push({
                         repoName: submodule.name,

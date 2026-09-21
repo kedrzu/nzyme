@@ -18,6 +18,13 @@ export interface GitStatusInfo {
     totalChanges: number;
 
     /**
+     * Every changed path (staged, unstaged, untracked, conflicted, deduplicated), in the order
+     * `git status` reported them — the raw material for `describeChangedPaths` to turn into a
+     * commit message without a second git call.
+     */
+    changedPaths: string[];
+
+    /**
      * Description of changes.
      */
     changeDescription: string;
@@ -87,7 +94,8 @@ export async function getGitStatusInfo(git: SimpleGit = simpleGit()): Promise<Gi
             ...status.renamed.map(r => r.from || r.to),
             ...status.staged,
         ]);
-        const totalChanges = allFiles.size;
+        const changedPaths = [...allFiles];
+        const totalChanges = changedPaths.length;
         const hasUncommittedChanges = totalChanges > 0;
 
         const changeTypes: string[] = [];
@@ -118,6 +126,7 @@ export async function getGitStatusInfo(git: SimpleGit = simpleGit()): Promise<Gi
         return {
             hasUncommittedChanges,
             totalChanges,
+            changedPaths,
             changeDescription,
             changes,
         };

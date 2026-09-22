@@ -18,7 +18,7 @@ import { getGitStatusInfo } from './getGitStatusInfo.js';
 import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
-import { parkSubmoduleOnBase } from './parkSubmoduleOnBase.js';
+import { isOnAnyRemoteBranch, parkSubmoduleOnBase } from './parkSubmoduleOnBase.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
 import { submoduleBranchFromPrTitle } from './submoduleBranchFromPrTitle.js';
 
@@ -100,6 +100,16 @@ export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleRea
             const errorMessage = `Could not parse GitHub URL for submodule: ${submodule.url}`;
             logger.error(`   ${subName}: ${errorMessage}`);
             throw new UsageError(errorMessage);
+        }
+
+        // Both paths below judge a detached HEAD by reading remote-tracking refs directly and run
+        // no fetch of their own (`assertSubmoduleReady`'s detached-HEAD resolution, and
+        // `isOnAnyRemoteBranch` in the interactive ladder) — the submodule's commit may sit
+        // on a branch this checkout has never fetched, and only a full fetch makes it visible
+        // (mirrors `mergeTaskPrs.ts` and `checkoutExistingBranch.ts`, which fetch for the same
+        // reason).
+        if (submodule.detached) {
+            await simpleGit({ baseDir: submodule.path }).fetch('origin');
         }
 
         if (unattended) {
@@ -189,7 +199,14 @@ async function prepareSubmoduleInteractively(params: PrepareSubmoduleInteractive
 
     const commitMessage = await confirmSubmoduleCommit({ git, submodule, logger });
 
-    const hasWorkToPublish = commitMessage !== null || submodule.unpushedCommitsCount > 0;
+    // `unpushedCommitsCount` is computed only for an attached HEAD (see `getSubmoduleInfo`), so it
+    // reads as zero for every detached one — including a detached HEAD carrying a commit that
+    // exists in this checkout alone. That shape is asked the equivalent question directly, the way
+    // `assertSubmoduleReady` already does unattended; without it the gitlink below would be staged
+    // onto a commit nobody else can see, in silence.
+    const hasWorkToPublish =
+        commitMessage !== null ||
+        (submodule.detached ? !(await isOnAnyRemoteBranch(git, 'HEAD')) : submodule.unpushedCommitsCount > 0);
     const onBaseBranch = submodule.currentBranch !== undefined && baseBranches.includes(submodule.currentBranch);
 
     // Work resting on a base branch or a detached HEAD has no branch of its own to be pushed to,

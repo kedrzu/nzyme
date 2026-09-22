@@ -2,18 +2,40 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, expect, test } from 'bun:test';
+import { afterEach, beforeEach, expect, mock, test } from 'bun:test';
 import { simpleGit } from 'simple-git';
 import type { SimpleGit } from 'simple-git';
 
 import { UsageError } from '@nzyme/cli';
 import { createTestLogger } from '@nzyme/logging';
+import { assertValue } from '@nzyme/utils';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
-import { handleSubmoduleReadyPreparation } from './handleSubmoduleReadyPreparation.js';
 
 const GITHUB_CONFIG: GithubConfig = { owner: 'acme', repo: 'main', token: 'ghp_test' };
+
+/** Answers handed to the interactive ladder's prompts, in the order they are asked. */
+const promptAnswers: string[] = [];
+
+/** Messages of the prompts actually asked, so a test can assert what was (not) put to the human. */
+const promptMessages: string[] = [];
+
+// A terminal is the one thing no test has, so `enquirer` is stubbed — the only system boundary here
+// besides Octokit. A prompt with no queued answer fails the test rather than hanging: "the question
+// was never asked" and "the question was asked" are both assertions below.
+await mock.module('enquirer', () => ({
+    default: {
+        prompt(question: { message: string; name: string }) {
+            promptMessages.push(question.message);
+            const answer = assertValue(promptAnswers.shift(), `Unexpected prompt: ${question.message}`);
+
+            return Promise.resolve({ [question.name]: answer });
+        },
+    },
+}));
+
+const { handleSubmoduleReadyPreparation } = await import('./handleSubmoduleReadyPreparation.js');
 
 interface FakePr {
     number: number;
@@ -130,12 +152,23 @@ async function branchAndPushSubmodule(sub: SimpleGit, branch: string): Promise<v
     await sub.push(['-u', 'origin', branch]);
 }
 
+/**
+ * Detach the submodule and commit on top of the detached HEAD — work reachable from no branch at
+ * all, local or remote, and therefore present in this one checkout and nowhere else.
+ */
+async function commitOnDetachedHead(sub: SimpleGit): Promise<void> {
+    await sub.checkout(['--detach']);
+    await sub.commit('sub c1', [], { '--allow-empty': null });
+}
+
 let root: string;
 let originalCwd: string;
 
 beforeEach(() => {
     originalCwd = process.cwd();
     root = mkdtempSync(join(tmpdir(), 'handle-submodule-ready-'));
+    promptAnswers.length = 0;
+    promptMessages.length = 0;
 });
 
 afterEach(() => {
@@ -249,4 +282,60 @@ test('a submodule whose pull request already merged is parked back on its base b
     const status = await sub.status();
     expect(status.current).toBe('main');
     expect((await sub.revparse(['HEAD'])).trim()).toBe((await sub.revparse(['origin/main'])).trim());
+});
+
+// The interactive counterpart of the unattended refusals above. `getSubmoduleInfo` computes
+// `unpushedCommitsCount` only for an attached HEAD, so a detached one with a clean tree reports
+// zero — and a local commit sitting on top of the gitlink used to read as "nothing to publish":
+// no branch offered, and the detached-HEAD warning written for exactly this case suppressed, while
+// the gitlink was staged onto a commit nobody else can see.
+test('a detached submodule carrying an unpushed commit is offered a branch and warned about', async () => {
+    const { mainPath, sub } = await setupSuperproject(root);
+    const { logger, logs } = createTestLogger('handleSubmoduleReadyPreparation');
+    await commitOnDetachedHead(sub);
+
+    process.chdir(mainPath);
+    const { client, createdPrTitles } = createGithubClientStub([]);
+    promptAnswers.push('no');
+
+    await handleSubmoduleReadyPreparation({
+        githubClient: client,
+        githubConfig: GITHUB_CONFIG,
+        logger,
+        baseBranch: 'main',
+        baseBranches: ['main'],
+        unattended: false,
+    });
+
+    expect(promptMessages).toEqual(['Open a pull request for this work in nzyme?']);
+
+    const warnings = logs.filter(log => log.level === 'warn');
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]!.message).toContain('HEAD is detached');
+    expect(createdPrTitles).toEqual([]);
+});
+
+// The other half of the same check: a detached HEAD is the ordinary state of a gitlink-pinned
+// submodule, so one resting on an already-pushed commit must stay silent — otherwise every push
+// would nag about a submodule nobody has touched.
+test('a detached submodule resting on a pushed commit is neither questioned nor warned about', async () => {
+    const { mainPath, sub } = await setupSuperproject(root);
+    const { logger, logs } = createTestLogger('handleSubmoduleReadyPreparation');
+    await sub.checkout(['--detach']);
+
+    process.chdir(mainPath);
+    const { client, createdPrTitles } = createGithubClientStub([]);
+
+    await handleSubmoduleReadyPreparation({
+        githubClient: client,
+        githubConfig: GITHUB_CONFIG,
+        logger,
+        baseBranch: 'main',
+        baseBranches: ['main'],
+        unattended: false,
+    });
+
+    expect(promptMessages).toEqual([]);
+    expect(logs.filter(log => log.level === 'warn')).toEqual([]);
+    expect(createdPrTitles).toEqual([]);
 });

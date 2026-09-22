@@ -32,8 +32,11 @@ export function setCookie(response: CloudFrontResponse, cookie: SetCookieParams)
     }
 
     if (current) {
-        const multivalue = current.multivalue ?? (current.multivalue = []);
-        multivalue.push({
+        // CloudFront applies `multiValue` alone when it is present and ignores `value`, so the
+        // existing cookie has to be carried into the array rather than left behind in `value`.
+        const multiValue =
+            current.multiValue ?? (current.multiValue = [{ value: current.value, attributes: current.attributes }]);
+        multiValue.push({
             value: cookie.value,
             attributes: attrs,
         });

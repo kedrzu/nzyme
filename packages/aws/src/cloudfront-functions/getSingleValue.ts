@@ -1,7 +1,7 @@
 import type { MultiValueDictionary } from './types.js';
 
 /**
- * Gets the single value from a multivalue.
+ * Gets the first value carried under a name, whether or not the name was repeated.
  */
 export function getSingleValue<T>(dictionary: MultiValueDictionary<T> | undefined, key: string): T | undefined {
     const value = dictionary?.[key];
@@ -9,5 +9,5 @@ export function getSingleValue<T>(dictionary: MultiValueDictionary<T> | undefine
         return undefined;
     }
 
-    return value.multivalue?.[0] ?? value;
+    return value.multiValue?.[0] ?? value;
 }

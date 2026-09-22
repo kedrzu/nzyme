@@ -124,13 +124,20 @@ export interface Cookie extends SingleValue {
 }
 
 /**
- * Represents a multivalue
+ * The extra property CloudFront adds when a request or response carries the same query string,
+ * header or cookie more than once.
+ *
+ * Spelled `multiValue`, as CloudFront spells it — [AWS, *CloudFront Functions event structure*
+ * → Duplicate query strings, headers, and cookies](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/functions-event-structure.html),
+ * read 2026-09-22. A lowercase `multivalue` reads as `undefined` on every event and is written into
+ * a property CloudFront ignores, so duplicates are silently dropped in both directions.
+ *
+ * The first value is repeated in both `value` and `multiValue`, so a consumer reads one or the
+ * other — never both, which would emit the first value twice.
  */
 export interface MultiValue<T> {
-    /**
-     * The multivalue of the multivalue
-     */
-    multivalue?: T[];
+    /** Every value carried under this name, the first of which is also in `value`. */
+    multiValue?: T[];
 }
 
 /**

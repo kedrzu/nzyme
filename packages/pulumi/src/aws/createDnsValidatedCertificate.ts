@@ -59,7 +59,9 @@ export function createDnsValidatedCertificate(name: string, options: CreateDnsVa
     const validationRecords = getValidationDomains(options.domainName, subjectAlternativeNames).map(
         (validationDomain, index) => {
             const validationOption = certificate.domainValidationOptions.apply(validationOptions => {
-                const match = validationOptions.find(option => option.domainName === validationDomain);
+                const match = validationOptions.find(
+                    option => reduceValidationDomain(option.domainName) === validationDomain,
+                );
                 if (!match) {
                     throw new Error(
                         `ACM returned no validation option for ${validationDomain} on certificate ${name}.`,
@@ -110,13 +112,14 @@ export function createDnsValidatedCertificate(name: string, options: CreateDnsVa
  *
  * A wildcard is validated against its parent, so `*.example.com` reduces to `example.com`: a
  * certificate covering both needs one record, and asking Route53 for two records with the same name
- * would fail.
+ * would fail. This reduced name is also the lookup key used to match a validation option returned by
+ * ACM back to the domain it was ordered for — see `reduceValidationDomain`.
  */
 function getValidationDomains(domainName: string, subjectAlternativeNames: string[]) {
     const validationDomains: string[] = [];
 
     for (const name of [domainName, ...subjectAlternativeNames]) {
-        const validationDomain = name.startsWith('*.') ? name.slice(2) : name;
+        const validationDomain = reduceValidationDomain(name);
 
         if (!validationDomains.includes(validationDomain)) {
             validationDomains.push(validationDomain);
@@ -124,4 +127,17 @@ function getValidationDomains(domainName: string, subjectAlternativeNames: strin
     }
 
     return validationDomains;
+}
+
+/**
+ * Reduces a domain name to the form ACM validates it against: a wildcard is validated against its
+ * parent, so `*.example.com` reduces to `example.com`.
+ *
+ * ACM echoes back `domainValidationOptions[].domainName` verbatim as the name was ordered — a
+ * wildcard SAN stays a wildcard — so matching a validation option to an entry from
+ * `getValidationDomains` requires reducing the option's own name the same way before comparing;
+ * comparing it unreduced only matches when the wildcard's parent also happens to be an ordered name.
+ */
+function reduceValidationDomain(domainName: string) {
+    return domainName.startsWith('*.') ? domainName.slice(2) : domainName;
 }

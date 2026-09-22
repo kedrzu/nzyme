@@ -178,6 +178,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
             githubClient,
             githubConfig,
             baseBranch: existingPr.base.ref,
+            baseBranches,
             unattended,
         });
 

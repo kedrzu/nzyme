@@ -57,9 +57,11 @@ export interface CheckoutExistingBranchParams {
      * The caller project's base branches, used to classify a submodule's resolved branch and to
      * judge its readiness - see `assertSubmoduleReady`/`resolveSubmoduleBranch`. Supplied by the
      * caller: this package is generic and must never hardcode a project's own branch naming.
-     * @default []
+     * Required rather than defaulted: an empty list classifies every base branch as a task branch,
+     * so a caller that omits it gets a checkout that refuses or resolves ambiguously - a silence
+     * the type checker has to be able to catch.
      */
-    baseBranches?: string[];
+    baseBranches: string[];
 
     /**
      * Whether nobody is available to answer a question.
@@ -256,7 +258,7 @@ export async function checkoutExistingBranch(params: CheckoutExistingBranchParam
  * Checkout matching branches in submodules if they exist.
  */
 async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise<void> {
-    const { logger, githubClient, githubConfig, baseBranch, baseBranches = [], unattended } = params;
+    const { logger, githubClient, githubConfig, baseBranch, baseBranches, unattended } = params;
 
     // Only process submodules if GitHub client and config are provided
     if (!githubClient || !githubConfig) {

@@ -121,6 +121,8 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
             githubClient,
             githubConfig,
             baseBranch: existingPr.base.ref,
+            baseBranches,
+            unattended,
         });
 
         // Sync all repos with the PR's base branch after checkout. Uses the same pipeline as

@@ -31,6 +31,21 @@ const THROWING_CLIENT: GithubClient = {
 } as unknown as GithubClient;
 
 /**
+ * A `GithubClient` stub whose repository has no pull requests at all - the state nzyme's own `main`
+ * is in. Only reached when the caller's base-branch list fails to classify the branch the submodule
+ * rests on, which is precisely what the test below pins down.
+ */
+const NO_PRS_CLIENT: GithubClient = {
+    rest: {
+        pulls: {
+            list() {
+                return Promise.resolve({ data: [] });
+            },
+        },
+    },
+} as unknown as GithubClient;
+
+/**
  * Build a superproject with one submodule that has two remote branches - `main` (base) and
  * `feat/thing` (task) - and two main-repo branches, `main` and `task-branch`, whose gitlinks record
  * the submodule's base tip and task tip respectively. Leaves the main repo checked out on `main`
@@ -249,4 +264,33 @@ test('a task branch is resolved straight from the gitlink SHA, with no PR lookup
     const status = await sub.status();
     expect(status.current).toBe('feat/thing');
     expect((await sub.revparse(['HEAD'])).trim()).toBe(subTaskTip);
+});
+
+test("an empty base-branch list turns the submodule's own base branch into a task branch and refuses", async () => {
+    const { mainPath, submodulePath } = await setupSuperproject(root);
+
+    process.chdir(mainPath);
+    const { logger } = createTestLogger('checkoutExistingBranch');
+
+    // The same call as the fast-forward test above, with the base-branch list left empty - the shape
+    // a caller that forgets to thread `baseBranches` used to produce silently. Nothing about the
+    // submodule changes: it is clean, pushed, and resting on its own base branch. Only the
+    // classification does, and that alone is enough to break the switch for every task afterwards.
+    const failure = checkoutExistingBranch({
+        branchName: 'main',
+        taskId: 'ABC-123',
+        logger,
+        githubClient: NO_PRS_CLIENT,
+        githubConfig: GITHUB_CONFIG,
+        baseBranch: 'main',
+        baseBranches: [],
+        unattended: true,
+    });
+
+    await expect(failure).rejects.toThrow(UsageError);
+    await expect(failure).rejects.toThrow(/is on main, which has no open pull request/);
+
+    // Refused, not moved - the submodule stays exactly where the caller found it.
+    const sub = simpleGit({ baseDir: submodulePath });
+    expect((await sub.status()).current).toBe('main');
 });

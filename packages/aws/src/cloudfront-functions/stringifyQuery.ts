@@ -39,7 +39,7 @@ export function stringifyQuery(query: CloudFrontQuery) {
 /**
  * Appends one already-encoded name/value pair to a query string.
  */
-export function appendQueryString(qs: string, key: string, value: string | null) {
+function appendQueryString(qs: string, key: string, value: string | null) {
     if (value == null) {
         return qs;
     }

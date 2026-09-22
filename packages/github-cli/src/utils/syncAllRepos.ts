@@ -1,15 +1,25 @@
 import chalk from 'chalk';
+import enquirer from 'enquirer';
 import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
+import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging/Logger.js';
+import { assertValue } from '@nzyme/utils';
 
+import type { GithubConfig } from '../GithubConfig.js';
 import { assertNoConflicts } from './assertNoConflicts.js';
+import { assertSubmoduleReady } from './assertSubmoduleReady.js';
 import { autoCommitChanges } from './autoCommitChanges.js';
+import type { GithubClient } from './createGithubClient.js';
+import { decideSubmoduleOnTaskBranch } from './decideSubmoduleOnTaskBranch.js';
+import type { SubmoduleReadiness } from './decideSubmoduleReadiness.js';
+import { describeChangedPaths } from './describeChangedPaths.js';
+import { getGitStatusInfo } from './getGitStatusInfo.js';
 import type { SubmoduleInfo } from './getSubmoduleInfo.js';
+import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { handleMergeConflict } from './handleMergeConflict.js';
-import { isTaskBranch } from './isTaskBranch.js';
 import { pushSubmoduleUpdates } from './pushSubmoduleUpdates.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
 import { switchDetachedSubmoduleToBaseBranch } from './switchDetachedSubmoduleToBaseBranch.js';
@@ -19,9 +29,37 @@ import { switchDetachedSubmoduleToBaseBranch } from './switchDetachedSubmoduleTo
  */
 export interface SyncAllReposParams {
     /**
-     * Base branch name (e.g., 'main').
+     * The branch to merge **from** (e.g. 'main'), and the one fast-forwarded in every repository.
+     * On a stacked task this is deliberately the parent node's branch rather than the project
+     * trunk, so it is not a reliable answer to "is this a base branch" — see {@link baseBranches}.
      */
     baseBranch: string;
+
+    /**
+     * The caller project's base branches, used **only** to classify what a submodule is sitting on.
+     * Kept apart from {@link baseBranch} because that one is a merge source: on a stacked task it
+     * is a node branch, so classifying against it would read a submodule resting on the trunk as
+     * task work and push to it.
+     */
+    baseBranches: string[];
+
+    /**
+     * Whether nobody can be asked a question — see `decideUnattendedMode`. A dirty submodule is
+     * then refused with a `UsageError` instead of being prompted about; it is never committed
+     * either way, because the message would be this repository's, not the submodule's.
+     */
+    unattended: boolean;
+
+    /**
+     * GitHub client used to look up each submodule's own pull request while judging its readiness.
+     */
+    githubClient: GithubClient;
+
+    /**
+     * GitHub configuration of the **main** repository. Only its token is used here: each
+     * submodule's own owner/repo is derived from its remote URL via `getSubmoduleGithubConfig`.
+     */
+    githubConfig: GithubConfig;
 
     /**
      * Logger instance.
@@ -29,7 +67,9 @@ export interface SyncAllReposParams {
     logger: Logger;
 
     /**
-     * Default commit message for auto-committing pending changes.
+     * Default commit message for auto-committing pending changes **in the main repository**.
+     * Submodules never receive it: a message generated here describes this repository's task, and
+     * a submodule is an independent repository with its own commit conventions.
      * @default 'Work in progress'
      */
     defaultCommitMessage?: string;
@@ -45,7 +85,9 @@ export interface SyncedSubmoduleInfo {
     submodule: SubmoduleInfo;
 
     /**
-     * Whether this submodule is on a task branch.
+     * Whether this submodule carries the task's work — see `decideSubmoduleOnTaskBranch`. It is
+     * both the classification used while syncing and the gate in front of the one step that writes
+     * to a submodule's remote (Phase 5/6).
      */
     isOnTaskBranch: boolean;
 
@@ -82,18 +124,28 @@ export interface SyncAllReposResult {
 
 /**
  * Synchronize all repositories (main + submodules):
- * 1. Auto-commit pending changes in all repos (no prompting)
- * 2. Fetch all repos in parallel (submodules fetched in full only when the main repo will integrate
+ * 1. Detect submodules
+ * 2. Commit pending changes — the main repository automatically, each submodule only by asking its
+ *    own question (or, unattended, by refusing) — then judge every submodule's readiness
+ * 3. Fetch all repos in parallel (submodules fetched in full only when the main repo will integrate
  *    remote commits, so every replayed gitlink is local; otherwise each submodule fetches just its
  *    current + base branch)
- * 3. Rebase current branches (task branches: rebase; detached: switch onto base; non-task: pull/ff)
- * 4. Fast-forward base branch in main + task-branch submodules
- * 5. Merge base branch into task-branch submodules + push
- * 6. Commit & push all submodule reference updates (from rebase, pull, or merge)
- * 7. Merge base branch into main task branch + push
+ * 4. Rebase current branches (task branches: rebase; detached: switch onto base; non-task: pull/ff)
+ * 5. Fast-forward base branch in main + task-branch submodules
+ * 6. Merge base branch into task-branch submodules + push
+ * 7. Commit & push all submodule reference updates (from rebase, pull, or merge)
+ * 8. Merge base branch into main task branch + push
  */
 export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllReposResult> {
-    const { baseBranch, logger, defaultCommitMessage = 'Work in progress' } = params;
+    const {
+        baseBranch,
+        baseBranches,
+        unattended,
+        githubClient,
+        githubConfig,
+        logger,
+        defaultCommitMessage = 'Work in progress',
+    } = params;
     // Disable submodule recursion for main-repo history operations: we manage every submodule's
     // working tree explicitly below. Left on, git would try to auto-fetch submodule gitlink commits
     // by SHA during rebase/merge — which real remotes reject — and check out submodule trees at
@@ -103,13 +155,7 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     // === Phase 1: Detect submodules ===
     const submoduleInfos = await getSubmoduleInfo();
 
-    const syncedSubmodules: SyncedSubmoduleInfo[] = submoduleInfos.map(sub => ({
-        submodule: sub,
-        isOnTaskBranch: isTaskBranch(sub.currentBranch),
-        isDetached: sub.detached,
-    }));
-
-    // === Phase 2: Auto-commit pending changes ===
+    // === Phase 2: Commit pending changes ===
     logger.info('');
     logger.info(chalk.bold('💾 Committing pending changes...'));
 
@@ -125,22 +171,31 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
         anyCommitted = true;
     }
 
-    for (const synced of syncedSubmodules) {
-        const subGit = simpleGit({ baseDir: synced.submodule.path });
-        const result = await autoCommitChanges({
-            logger,
-            git: subGit,
-            repoDisplayName: chalk.magenta(synced.submodule.name),
-            commitMessage: defaultCommitMessage,
-        });
-        if (result.committed) {
-            anyCommitted = true;
-        }
+    // Submodules are deliberately NOT auto-committed. A submodule is an independent repository with
+    // its own commit conventions, so a message generated for this repository's task has no business
+    // in its history — and an auto-commit is an unasked-for write to someone else's repo. A human
+    // gets asked instead; unattended, the readiness check below refuses and says what to do.
+    const anySubmoduleCommitted = await commitSubmoduleChanges({ submodules: submoduleInfos, unattended, logger });
+    if (anySubmoduleCommitted) {
+        anyCommitted = true;
     }
 
     if (!anyCommitted) {
         logger.info('   No pending changes to commit');
     }
+
+    // Re-read after the prompts: `hasChanges` and `unpushedCommitsCount` of anything just committed
+    // are now stale, and readiness is judged from exactly those fields.
+    const resolvedSubmodules = anySubmoduleCommitted ? await getSubmoduleInfo() : submoduleInfos;
+
+    const syncedSubmodules = await classifySubmodules({
+        submodules: resolvedSubmodules,
+        baseBranches,
+        unattended,
+        githubClient,
+        githubConfig,
+        logger,
+    });
 
     // === Phase 3: Fetch all repos in parallel ===
     logger.info('');
@@ -243,13 +298,13 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
         await mergeBaseIntoSubmodules(taskBranchSubmodules, baseBranch, logger);
     }
 
-    // === Phase 6b: Commit & push all submodule reference updates ===
+    // === Phase 7: Commit & push all submodule reference updates ===
     // Submodule refs may change from Phase 4 (rebase/pull) or Phase 6 (merge).
     // Detect and commit any changed gitlinks so the main repo stays clean.
     logger.info('');
     await pushSubmoduleUpdates({ logger });
 
-    // === Phase 7: Merge base into main task branch + push ===
+    // === Phase 8: Merge base into main task branch + push ===
     logger.info('');
     logger.info(chalk.bold('🔀 Merging base branch into main repository...'));
 
@@ -266,6 +321,285 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
         baseMergePerformed: merged,
         baseBranchCommitsAhead: commitsAhead,
     };
+}
+
+/**
+ * Inputs to {@link commitSubmoduleChanges}.
+ */
+interface CommitSubmoduleChangesParams {
+    /**
+     * Every submodule of the main repository, as detected in Phase 1.
+     */
+    submodules: SubmoduleInfo[];
+
+    /**
+     * Whether nobody can be asked — see `SyncAllReposParams.unattended`.
+     */
+    unattended: boolean;
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+}
+
+/**
+ * Offer to commit each dirty submodule's working tree, one question per submodule.
+ *
+ * Unattended this does nothing at all — not even a refusal. The refusal belongs to
+ * {@link classifySubmodules}, which produces the message naming the submodule, its branch and the
+ * remedy; duplicating a weaker version of it here would only give the same problem two voices.
+ * @param params The submodules to offer, plus the mode and logger.
+ * @returns Whether any submodule was committed, so the caller knows its `SubmoduleInfo` is stale.
+ */
+async function commitSubmoduleChanges(params: CommitSubmoduleChangesParams): Promise<boolean> {
+    const { submodules, unattended, logger } = params;
+
+    if (unattended) {
+        return false;
+    }
+
+    let anyCommitted = false;
+
+    for (const submodule of submodules) {
+        if (!submodule.hasChanges) {
+            continue;
+        }
+
+        if (await promptCommitSubmodule({ submodule, logger })) {
+            anyCommitted = true;
+        }
+    }
+
+    return anyCommitted;
+}
+
+/**
+ * Inputs to {@link promptCommitSubmodule}.
+ */
+interface PromptCommitSubmoduleParams {
+    /**
+     * The dirty submodule to ask about.
+     */
+    submodule: SubmoduleInfo;
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+}
+
+/**
+ * Ask whether to commit one submodule's changes; the message itself is always generated from the
+ * submodule's own changed paths, never typed by a human.
+ *
+ * A message is never invented for a repository that is not its own — `describeChangedPaths`
+ * describes what actually changed in the submodule, which is a fact about that repository rather
+ * than something the main repository is guessing on its behalf.
+ * @param params The submodule to ask about, plus the logger.
+ * @returns Whether a commit was created.
+ */
+async function promptCommitSubmodule(params: PromptCommitSubmoduleParams): Promise<boolean> {
+    const { submodule, logger } = params;
+
+    const git = simpleGit({ baseDir: submodule.path });
+    const displayName = chalk.magenta(submodule.name);
+    const statusInfo = await getGitStatusInfo(git);
+
+    // A conflicted tree is never "changes to commit" — committing it would record the conflict
+    // markers. Same guard the auto-commit path has always had before touching a working tree.
+    if (statusInfo.changes.conflicted > 0) {
+        await assertNoConflicts({ git, repoDisplayName: displayName, operation: 'merge', logger });
+    }
+
+    if (!statusInfo.hasUncommittedChanges) {
+        return false;
+    }
+
+    logger.info(
+        `   ${displayName}: ${chalk.yellow(statusInfo.totalChanges.toString())} uncommitted change${
+            statusInfo.totalChanges === 1 ? '' : 's'
+        } (${chalk.yellow(statusInfo.changeDescription)})`,
+    );
+
+    const { shouldCommit } = await enquirer.prompt<{ shouldCommit: 'no' | 'yes' }>({
+        type: 'select',
+        name: 'shouldCommit',
+        message: `Commit ${statusInfo.totalChanges} change${statusInfo.totalChanges === 1 ? '' : 's'} in ${submodule.name}?`,
+        choices: [
+            {
+                name: 'yes',
+                message: `Yes, commit ${statusInfo.totalChanges} change${statusInfo.totalChanges === 1 ? '' : 's'}`,
+            },
+            {
+                name: 'no',
+                message: 'No, skip committing',
+            },
+        ],
+    });
+
+    if (shouldCommit === 'no') {
+        logger.info(`   ${displayName}: skipping commit`);
+        return false;
+    }
+
+    // `hasUncommittedChanges` above guarantees at least one changed path, so a description always
+    // exists here — there is no invented default to fall back to.
+    const message = assertValue(
+        describeChangedPaths(statusInfo.changedPaths),
+        'unreachable: hasUncommittedChanges implies at least one changed path',
+    );
+
+    await git.add('.');
+    await git.commit(message);
+    logger.info(`   ${chalk.green('✓')} Committed in ${displayName} with message: "${chalk.cyan(message)}"`);
+
+    return true;
+}
+
+/**
+ * Inputs to {@link classifySubmodules}.
+ */
+interface ClassifySubmodulesParams {
+    /**
+     * Every submodule of the main repository, with any prompted commit already reflected.
+     */
+    submodules: SubmoduleInfo[];
+
+    /**
+     * The caller project's base branches — see `SyncAllReposParams.baseBranches`.
+     */
+    baseBranches: string[];
+
+    /**
+     * Whether nobody can be asked — see `SyncAllReposParams.unattended`.
+     */
+    unattended: boolean;
+
+    /**
+     * GitHub client used to look up each submodule's own pull request.
+     */
+    githubClient: GithubClient;
+
+    /**
+     * GitHub configuration of the main repository; each submodule's own is derived from it.
+     */
+    githubConfig: GithubConfig;
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+}
+
+/**
+ * Judge every submodule's readiness and turn the verdicts into the classification the rest of the
+ * sync runs on.
+ * @param params The submodules to judge, plus the base branches, mode and GitHub access.
+ * @returns One entry per submodule, in the order they were detected.
+ */
+async function classifySubmodules(params: ClassifySubmodulesParams): Promise<SyncedSubmoduleInfo[]> {
+    const { submodules, baseBranches, unattended, githubClient, githubConfig, logger } = params;
+
+    const classified: SyncedSubmoduleInfo[] = [];
+
+    for (const submodule of submodules) {
+        const readiness = await judgeSubmodule({
+            submodule,
+            baseBranches,
+            unattended,
+            githubClient,
+            githubConfig,
+            logger,
+        });
+
+        classified.push({
+            submodule,
+            isOnTaskBranch: decideSubmoduleOnTaskBranch({
+                readiness,
+                currentBranch: submodule.currentBranch,
+                detached: submodule.detached,
+                baseBranches,
+            }),
+            isDetached: submodule.detached,
+        });
+    }
+
+    return classified;
+}
+
+/**
+ * Inputs to {@link judgeSubmodule}.
+ */
+interface JudgeSubmoduleParams {
+    /**
+     * The submodule to judge.
+     */
+    submodule: SubmoduleInfo;
+
+    /**
+     * The caller project's base branches — see `SyncAllReposParams.baseBranches`.
+     */
+    baseBranches: string[];
+
+    /**
+     * Whether nobody can be asked — see `SyncAllReposParams.unattended`.
+     */
+    unattended: boolean;
+
+    /**
+     * GitHub client used to look up the submodule's own pull request.
+     */
+    githubClient: GithubClient;
+
+    /**
+     * GitHub configuration of the main repository; the submodule's own is derived from it.
+     */
+    githubConfig: GithubConfig;
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+}
+
+/**
+ * Run the readiness check for one submodule, with the mode deciding what a refusal means.
+ *
+ * Unattended, a refusal is fatal and propagates: the whole point of the check is that an agent
+ * whose submodule is dirty, unpushed or PR-less has to be told so by name, not have the CLI guess.
+ * With a human present the same refusal is a warning — being mid-flight in a submodule is a normal
+ * thing for a person to be, so the sync carries on and simply treats the submodule as not carrying
+ * task work, which keeps it out of the one step that would push to it.
+ * @param params The submodule to judge, plus the base branches, mode and GitHub access.
+ * @returns The verdict, or `null` when none could be reached.
+ */
+async function judgeSubmodule(params: JudgeSubmoduleParams): Promise<SubmoduleReadiness | null> {
+    const { submodule, baseBranches, unattended, githubClient, githubConfig, logger } = params;
+
+    const submoduleConfig = getSubmoduleGithubConfig(submodule.url, githubConfig.token);
+    if (!submoduleConfig) {
+        // Not a GitHub remote, so its pull requests cannot be looked up and readiness cannot be
+        // judged. Warn rather than fail: the submodule is simply left alone from here on.
+        logger.warn(`   ⚠️  ${chalk.magenta(submodule.name)}: not a GitHub remote, skipping its readiness check`);
+        return null;
+    }
+
+    try {
+        return await assertSubmoduleReady({
+            submodule,
+            baseBranches,
+            githubClient,
+            githubConfig: submoduleConfig,
+        });
+    } catch (error) {
+        if (unattended || !(error instanceof UsageError)) {
+            throw error;
+        }
+
+        logger.warn(`   ⚠️  ${chalk.magenta(submodule.name)}: ${error.message}`);
+        return null;
+    }
 }
 
 /**
@@ -433,7 +767,9 @@ async function mergeBaseIntoSubmodules(
     for (const synced of taskBranchSubmodules) {
         const sub = synced.submodule;
         const subGit = simpleGit({ baseDir: sub.path });
-        const currentBranch = sub.currentBranch!;
+        // `isOnTaskBranch` is only true for an attached HEAD on a non-base branch, so every
+        // submodule reaching this loop has a branch to merge into and push.
+        const currentBranch = assertValue(sub.currentBranch, `${sub.name} reached the merge with no current branch`);
 
         // Check if remote base branch is ahead of current branch
         let commitsAhead: number;

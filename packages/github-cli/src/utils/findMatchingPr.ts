@@ -41,20 +41,51 @@ export async function findTaskPrs(client: GithubClient, config: GithubConfig, is
 }
 
 /**
- * Find the open pull request whose head is exactly this branch.
+ * Find the open pull request whose head is exactly this branch, matched on `head.ref` alone —
+ * no issue ID involved.
  *
- * Use this when the question is "does the branch I am on already have a PR" rather than "which PR
- * belongs to this task" — with a stack the task owns several, so the issue ID alone cannot answer it.
- * @__NO_SIDE_EFFECTS__
+ * Use this once a submodule branch has been resolved (from its gitlink SHA, or simply the current
+ * branch) instead of `findTaskPrs`: that matches on a Linear issue ID, which a generic submodule
+ * branch does not carry. Deliberately does not go through {@link findAllMatchingPrs} — that filters
+ * by issue ID and would reintroduce the coupling this function exists to remove.
  */
-export async function findPrForBranch(
+export async function findOpenPrForBranch(
     client: GithubClient,
     config: GithubConfig,
-    issueId: string,
-    branchName: string,
+    branch: string,
 ): Promise<GitHubPR | null> {
-    const openPrs = await findTaskPrs(client, config, issueId);
-    return openPrs.find(pr => pr.head.ref === branchName) ?? null;
+    const { data } = await client.rest.pulls.list({
+        owner: config.owner,
+        repo: config.repo,
+        state: 'open',
+        per_page: 100,
+    });
+
+    return data.find(pr => pr.head.ref === branch) ?? null;
+}
+
+/**
+ * Find the merged pull request whose head is exactly this branch, matched on `head.ref` alone —
+ * no issue ID involved. A merged PR is a closed PR with a non-null `merged_at` (see
+ * {@link findMergedPr} for the issue-ID equivalent).
+ *
+ * Deliberately does not go through {@link findAllMatchingPrs} — see {@link findOpenPrForBranch}.
+ */
+export async function findMergedPrForBranch(
+    client: GithubClient,
+    config: GithubConfig,
+    branch: string,
+): Promise<GitHubPR | null> {
+    const { data } = await client.rest.pulls.list({
+        owner: config.owner,
+        repo: config.repo,
+        state: 'closed',
+        per_page: 100,
+        sort: 'updated',
+        direction: 'desc',
+    });
+
+    return data.find(pr => pr.head.ref === branch && pr.merged_at) ?? null;
 }
 
 /**

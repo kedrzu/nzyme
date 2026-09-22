@@ -1,4 +1,6 @@
 export * from './GithubConfig.js';
+export * from './utils/assertSubmoduleReady.js';
+export type { AssertSubmoduleReadyParams } from './utils/assertSubmoduleReady.js';
 export * from './utils/autoCommitChanges.js';
 export type { AutoCommitChangesParams, AutoCommitChangesResult } from './utils/autoCommitChanges.js';
 export * from './utils/branchVersionHelpers.js';
@@ -6,11 +8,6 @@ export * from './utils/checkCurrentPrMerged.js';
 export * from './utils/checkoutBranch.js';
 export * from './utils/checkoutExistingBranch.js';
 export * from './utils/checkUnpushedCommits.js';
-export * from './utils/commitAndPushPendingChanges.js';
-export type {
-    CommitAndPushPendingChangesParams,
-    CommitAndPushPendingChangesResult,
-} from './utils/commitAndPushPendingChanges.js';
 export * from './utils/convertAllPrsToReady.js';
 export type { ConvertAllPrsToReadyParams } from './utils/convertAllPrsToReady.js';
 export * from './utils/convertPrToReady.js';
@@ -43,7 +40,6 @@ export type { HandlePushPreparationParams } from './utils/handlePushPreparation.
 export * from './utils/handleReadyPreparation.js';
 export * from './utils/handleSubmoduleReadyPreparation.js';
 export type { HandleSubmoduleReadyPreparationParams } from './utils/handleSubmoduleReadyPreparation.js';
-export * from './utils/isTaskBranch.js';
 export * from './utils/namedStash.js';
 export type { NamedStash } from './utils/namedStash.js';
 export * from './utils/pushChanges.js';
@@ -62,6 +58,8 @@ export * from './utils/cascadeStack.js';
 export type { CascadeStackParams } from './utils/cascadeStack.js';
 export * from './utils/refreshStack.js';
 export type { RefreshStackParams } from './utils/refreshStack.js';
+export * from './utils/resolveSubmoduleBranch.js';
+export type { ResolveSubmoduleBranchParams, ResolveSubmoduleBranchResult } from './utils/resolveSubmoduleBranch.js';
 export * from './utils/syncAllRepos.js';
 export type { SyncAllReposParams, SyncAllReposResult, SyncedSubmoduleInfo } from './utils/syncAllRepos.js';
 export * from './utils/syncStackNodesFromRemote.js';

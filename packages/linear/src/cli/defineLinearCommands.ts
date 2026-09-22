@@ -9,6 +9,7 @@ import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
 import { GitMergeConflictError } from '@nzyme/github-cli/utils/GitMergeConflictError.js';
 import { convertAllPrsToReady } from '@nzyme/github-cli/utils/convertAllPrsToReady.js';
 import { createGithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';
+import { decideUnattendedMode } from '@nzyme/github-cli/utils/decideUnattendedMode.js';
 import { findMatchingPr, findTaskPrs, resolveNodePr } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
 import { mergeTaskPrs } from '@nzyme/github-cli/utils/mergeTaskPrs.js';
@@ -213,13 +214,17 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
         static override usage = Command.Usage({
             category: 'Linear',
             description: 'Start working on a Linear task',
-            details: 'Find or create a GitHub PR for a Linear task and checkout the branch',
+            details:
+                'Find or create a GitHub PR for a Linear task and checkout the branch. With --yes it asks ' +
+                'nothing, and refuses rather than guesses whenever a submodule is not in a state to proceed ' +
+                '— the same mode it runs in with no terminal attached, or on an issue delegated to this agent.',
             examples: [
                 ['Start work on task by ID', 'task ABC-123'],
                 ['Start work on task by ID without prefix', 'task 123'],
                 ['Start work on task by URL', 'task https://linear.app/abc/issue/ABC-123/some-task'],
                 ['Start work branching from a specific branch', 'task ABC-123 --branch develop'],
                 ['Check out the bottom node of a stacked task', 'task ABC-123 --node 1'],
+                ['Start work without any prompts', 'task ABC-123 --yes'],
             ],
         });
 
@@ -230,6 +235,9 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
         });
         node = Option.String('--node', {
             description: 'For a stacked task, the 1-based node to check out (defaults to the top node)',
+        });
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip every prompt; refuse instead of asking when a submodule is not ready',
         });
 
         override async run() {
@@ -266,6 +274,7 @@ function defineTaskStartCommand(options: LinearCommandsOptions) {
                     node: parseNodeOption(this.node),
                     onTaskSwitched: options.onTaskSwitched,
                     agentUserId: linearConfig.agentUserId,
+                    yes: this.yes,
                 });
             } catch (error) {
                 if (error instanceof GitMergeConflictError) {
@@ -297,11 +306,14 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
             category: 'Linear',
             description: 'Create a new Linear task and start working on it',
             details:
-                'Creates a new task in a Linear project, then automatically starts working on it by creating a branch and PR',
+                'Creates a new task in a Linear project, then automatically starts working on it by creating a ' +
+                'branch and PR. With --yes the branch switch asks nothing, and refuses rather than guesses ' +
+                'whenever a submodule is not in a state to proceed.',
             examples: [
                 ['Create new task with prompts', 'task new'],
                 ['Create task with title', 'task new "Fix authentication bug"'],
                 ['Create task with project and title', 'task new "Fix auth bug" --project PROJECT_ID'],
+                ['Create a task and start it without prompts', 'task new "Fix auth bug" -p PROJECT_ID --yes'],
             ],
         });
 
@@ -310,6 +322,9 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
         branch = Option.String('--branch', {
             description:
                 'Base branch to create the new branch from (defaults to the configured base branch, e.g. main)',
+        });
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip every prompt; refuse instead of asking when a submodule is not ready',
         });
 
         override async run() {
@@ -392,6 +407,7 @@ function defineTaskNewCommand(options: LinearCommandsOptions) {
                     baseBranches,
                     branch: this.branch,
                     onTaskSwitched: options.onTaskSwitched,
+                    yes: this.yes,
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -461,8 +477,18 @@ function defineTaskPushCommand(options: LinearCommandsOptions) {
             category: 'Linear',
             description: 'Push changes and handle submodules without marking PR as ready',
             details:
-                'Commits and pushes changes in both submodules and main repository. Useful when you want to push work in progress without marking the PR as ready for review.',
-            examples: [['Push current task changes', 'task push']],
+                'Commits and pushes changes in the main repository, and requires every submodule to already be ' +
+                'in a state it can be pushed from. Useful when you want to push work in progress without marking ' +
+                'the PR as ready for review. With --yes nothing is prompted: a submodule that is not ready is ' +
+                'refused by name instead of being asked about.',
+            examples: [
+                ['Push current task changes', 'task push'],
+                ['Push without any prompts', 'task push --yes'],
+            ],
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip every prompt; refuse instead of asking when a submodule is not ready',
         });
 
         override async run() {
@@ -482,6 +508,13 @@ function defineTaskPushCommand(options: LinearCommandsOptions) {
                 // Get base branches
                 const baseBranches = await getBaseBranches(options);
                 const baseBranch = baseBranches[0] ?? 'main';
+                // Nobody here loads an issue that could be delegated to this agent, so the flag and
+                // the terminal are the whole of the signal.
+                const unattended = decideUnattendedMode({
+                    delegated: false,
+                    yes: this.yes,
+                    isTty: process.stdin.isTTY,
+                });
 
                 // Push changes
                 await pushChanges({
@@ -489,6 +522,8 @@ function defineTaskPushCommand(options: LinearCommandsOptions) {
                     issueId: taskId,
                     logger: this.logger,
                     baseBranch,
+                    baseBranches,
+                    unattended,
                 });
 
                 this.logger.info('');
@@ -509,8 +544,17 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
             category: 'Linear',
             description: 'Push changes and convert current task from draft to ready for review',
             details:
-                'Pushes all changes (syncing repos, handling submodules) and converts the associated PR from draft to ready for review',
-            examples: [['Push and convert current task to ready for review', 'task ready']],
+                'Pushes all changes (syncing repos, handling submodules) and converts the associated PR from ' +
+                'draft to ready for review. With --yes nothing is prompted: a submodule that is not ready is ' +
+                'refused by name instead of being asked about.',
+            examples: [
+                ['Push and convert current task to ready for review', 'task ready'],
+                ['Convert to ready without any prompts', 'task ready --yes'],
+            ],
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip every prompt; refuse instead of asking when a submodule is not ready',
         });
 
         override async run() {
@@ -530,6 +574,13 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                 // Get base branches
                 const baseBranches = await getBaseBranches(options);
                 const baseBranch = baseBranches[0] ?? 'main';
+                // Nobody here loads an issue that could be delegated to this agent, so the flag and
+                // the terminal are the whole of the signal.
+                const unattended = decideUnattendedMode({
+                    delegated: false,
+                    yes: this.yes,
+                    isTty: process.stdin.isTTY,
+                });
 
                 // Push all changes (same as push command)
                 const { githubClient, pr } = await pushChanges({
@@ -537,6 +588,8 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                     issueId: taskId,
                     logger: this.logger,
                     baseBranch,
+                    baseBranches,
+                    unattended,
                     defaultCommitMessage: 'Ready for review',
                 });
 
@@ -558,9 +611,9 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                 await convertAllPrsToReady({
                     githubClient,
                     githubConfig,
-                    issueId: taskId,
                     logger: this.logger,
                     mainPrs,
+                    baseBranches,
                 });
             } catch (error: unknown) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -578,8 +631,18 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
             category: 'Linear',
             description: 'Refresh current task branch with latest base branch changes',
             details:
-                'Fetches the base branch, fast-forwards it, and merges it into the current task branch and all submodules. Pushes submodule changes and commits submodule reference updates.',
-            examples: [['Refresh current task with base branch', 'task refresh']],
+                'Fetches the base branch, fast-forwards it, and merges it into the current task branch and every ' +
+                "submodule that carries the task's work. Pushes submodule changes and commits submodule reference " +
+                'updates. With --yes nothing is prompted: a submodule that is not ready is refused by name instead ' +
+                'of being asked about.',
+            examples: [
+                ['Refresh current task with base branch', 'task refresh'],
+                ['Refresh without any prompts', 'task refresh --yes'],
+            ],
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip every prompt; refuse instead of asking when a submodule is not ready',
         });
 
         override async run() {
@@ -601,6 +664,14 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                 }
 
                 const baseBranch = baseBranches[0]!;
+
+                // Nobody here loads an issue that could be delegated to this agent, so the flag and
+                // the terminal are the whole of the signal.
+                const unattended = decideUnattendedMode({
+                    delegated: false,
+                    yes: this.yes,
+                    isTty: process.stdin.isTTY,
+                });
 
                 const githubConfig = await getGithubConfig(options);
                 const githubClient = createGithubClient(githubConfig);
@@ -628,6 +699,10 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                     await refreshStack({
                         branches: nodes.map(pr => pr.head.ref),
                         trunk: baseBranch,
+                        baseBranches,
+                        unattended,
+                        githubClient,
+                        githubConfig,
                         logger: this.logger,
                     });
 
@@ -638,9 +713,14 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
 
                 this.logger.info(`🔄 Refreshing task ${chalk.bold(taskId)} with base branch ${chalk.cyan(baseBranch)}`);
 
-                // Sync all repos: auto-commit, fetch, rebase/pull, ff base, merge base, push
+                // Sync all repos: commit the main repo, judge the submodules, fetch, rebase/pull, ff base,
+                // merge base, push
                 const syncResult = await syncAllRepos({
                     baseBranch,
+                    baseBranches,
+                    unattended,
+                    githubClient,
+                    githubConfig,
                     logger: this.logger,
                 });
 
@@ -728,6 +808,7 @@ function defineTaskMergeCommand(options: LinearCommandsOptions) {
                         githubConfig,
                         issueId: taskId,
                         baseBranch,
+                        baseBranches,
                         logger: this.logger,
                         autoYes: this.yes,
                     });
@@ -1079,6 +1160,9 @@ function defineTaskPrCommand(options: LinearCommandsOptions) {
                 const taskId = extractTaskIdFromBranch(currentBranch);
                 this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
 
+                // Get base branches
+                const baseBranches = await getBaseBranches(options);
+
                 // Create GitHub client
                 const githubClient = createGithubClient(githubConfig);
 
@@ -1088,6 +1172,7 @@ function defineTaskPrCommand(options: LinearCommandsOptions) {
                     githubClient,
                     githubConfig,
                     issueId: taskId,
+                    baseBranches,
                     logger: this.logger,
                 });
             } catch (error: unknown) {

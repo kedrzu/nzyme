@@ -7,6 +7,7 @@ import { Command } from '@nzyme/cli/Command.js';
 import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
 import { convertAllPrsToReady } from '@nzyme/github-cli/utils/convertAllPrsToReady.js';
 import { createGithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';
+import { decideUnattendedMode } from '@nzyme/github-cli/utils/decideUnattendedMode.js';
 import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
 import { pushChanges } from '@nzyme/github-cli/utils/pushChanges.js';
@@ -189,12 +190,15 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
         static override usage = Command.Usage({
             category: 'Sentry',
             description: 'Start working on a Sentry issue',
-            details: 'Find or create a GitHub PR for a Sentry issue and checkout the branch',
+            details:
+                'Find or create a GitHub PR for a Sentry issue and checkout the branch. With --yes it asks ' +
+                'nothing, and refuses rather than guesses whenever a submodule is not in a state to proceed.',
             examples: [
                 ['Start work on issue by ID', 'issue MYPROJECT-123'],
                 ['Start work on issue by number', 'issue 123'],
                 ['Start work on issue by URL', 'issue https://sentry.io/organizations/myorg/issues/12345/'],
                 ['Start work branching from a specific branch', 'issue MYPROJECT-123 --branch develop'],
+                ['Start work without any prompts', 'issue MYPROJECT-123 --yes'],
             ],
         });
 
@@ -202,6 +206,9 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
         branch = Option.String('--branch', {
             description:
                 'Base branch to create the new branch from (defaults to the configured base branch, e.g. main)',
+        });
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip every prompt; refuse instead of asking when a submodule is not ready',
         });
 
         override async run() {
@@ -224,6 +231,14 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
                     getBaseBranches(options),
                 ]);
 
+                // Nobody here loads an issue that could be delegated to this agent, so the flag and
+                // the terminal are the whole of the signal.
+                const unattended = decideUnattendedMode({
+                    delegated: false,
+                    yes: this.yes,
+                    isTty: process.stdin.isTTY,
+                });
+
                 // Use the common switch to issue utility
                 await switchToSentryIssue({
                     issueId,
@@ -235,6 +250,7 @@ function defineIssueStartCommand(options: SentryCommandsOptions) {
                     baseBranches,
                     branch: this.branch,
                     branchPrefix: sentryConfig.branchPrefix,
+                    unattended,
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -252,8 +268,18 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
             category: 'Sentry',
             description: 'Push changes and handle submodules without marking PR as ready',
             details:
-                'Commits and pushes changes in both submodules and main repository. Useful when you want to push work in progress without marking the PR as ready for review.',
-            examples: [['Push current issue changes', 'issue push']],
+                'Commits and pushes changes in the main repository, and requires every submodule to already be ' +
+                'in a state it can be pushed from. Useful when you want to push work in progress without marking ' +
+                'the PR as ready for review. With --yes nothing is prompted: a submodule that is not ready is ' +
+                'refused by name instead of being asked about.',
+            examples: [
+                ['Push current issue changes', 'issue push'],
+                ['Push without any prompts', 'issue push --yes'],
+            ],
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip every prompt; refuse instead of asking when a submodule is not ready',
         });
 
         override async run() {
@@ -273,6 +299,13 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
                 // Get base branches
                 const baseBranches = await getBaseBranches(options);
                 const baseBranch = baseBranches[0] ?? 'main';
+                // Nobody here loads an issue that could be delegated to this agent, so the flag and
+                // the terminal are the whole of the signal.
+                const unattended = decideUnattendedMode({
+                    delegated: false,
+                    yes: this.yes,
+                    isTty: process.stdin.isTTY,
+                });
 
                 // Push changes
                 await pushChanges({
@@ -280,6 +313,8 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
                     issueId,
                     logger: this.logger,
                     baseBranch,
+                    baseBranches,
+                    unattended,
                 });
 
                 this.logger.info('');
@@ -300,8 +335,17 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
             category: 'Sentry',
             description: 'Push changes and convert current issue from draft to ready for review',
             details:
-                'Pushes all changes (syncing repos, handling submodules) and converts the associated PR from draft to ready for review',
-            examples: [['Push and convert current issue to ready for review', 'issue ready']],
+                'Pushes all changes (syncing repos, handling submodules) and converts the associated PR from ' +
+                'draft to ready for review. With --yes nothing is prompted: a submodule that is not ready is ' +
+                'refused by name instead of being asked about.',
+            examples: [
+                ['Push and convert current issue to ready for review', 'issue ready'],
+                ['Convert to ready without any prompts', 'issue ready --yes'],
+            ],
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip every prompt; refuse instead of asking when a submodule is not ready',
         });
 
         override async run() {
@@ -321,6 +365,13 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                 // Get base branches
                 const baseBranches = await getBaseBranches(options);
                 const baseBranch = baseBranches[0] ?? 'main';
+                // Nobody here loads an issue that could be delegated to this agent, so the flag and
+                // the terminal are the whole of the signal.
+                const unattended = decideUnattendedMode({
+                    delegated: false,
+                    yes: this.yes,
+                    isTty: process.stdin.isTTY,
+                });
 
                 // Push all changes (same as push command)
                 const { githubClient, pr } = await pushChanges({
@@ -328,6 +379,8 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                     issueId,
                     logger: this.logger,
                     baseBranch,
+                    baseBranches,
+                    unattended,
                     defaultCommitMessage: 'Ready for review',
                 });
 
@@ -347,9 +400,9 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                 await convertAllPrsToReady({
                     githubClient,
                     githubConfig,
-                    issueId,
                     logger: this.logger,
                     mainPrs: [readyPr],
+                    baseBranches,
                 });
             } catch (error: unknown) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -367,8 +420,18 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
             category: 'Sentry',
             description: 'Refresh current issue branch with latest base branch changes',
             details:
-                'Fetches the base branch, fast-forwards it, and merges it into the current issue branch and all submodules. Pushes submodule changes and commits submodule reference updates.',
-            examples: [['Refresh current issue with base branch', 'issue refresh']],
+                'Fetches the base branch, fast-forwards it, and merges it into the current issue branch and every ' +
+                "submodule that carries the issue's work. Pushes submodule changes and commits submodule reference " +
+                'updates. With --yes nothing is prompted: a submodule that is not ready is refused by name instead ' +
+                'of being asked about.',
+            examples: [
+                ['Refresh current issue with base branch', 'issue refresh'],
+                ['Refresh without any prompts', 'issue refresh --yes'],
+            ],
+        });
+
+        yes = Option.Boolean('--yes,-y', false, {
+            description: 'Skip every prompt; refuse instead of asking when a submodule is not ready',
         });
 
         override async run() {
@@ -390,13 +453,30 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                 }
 
                 const baseBranch = baseBranches[0]!;
+
+                // Nobody here loads an issue that could be delegated to this agent, so the flag and
+                // the terminal are the whole of the signal.
+                const unattended = decideUnattendedMode({
+                    delegated: false,
+                    yes: this.yes,
+                    isTty: process.stdin.isTTY,
+                });
+
                 this.logger.info(
                     `🔄 Refreshing issue ${chalk.bold(issueId)} with base branch ${chalk.cyan(baseBranch)}`,
                 );
 
-                // Sync all repos: auto-commit, fetch, rebase/pull, ff base, merge base, push
+                const githubConfig = await getGithubConfig(options);
+                const githubClient = createGithubClient(githubConfig);
+
+                // Sync all repos: commit the main repo, judge the submodules, fetch, rebase/pull, ff base,
+                // merge base, push
                 const syncResult = await syncAllRepos({
                     baseBranch,
+                    baseBranches,
+                    unattended,
+                    githubClient,
+                    githubConfig,
                     logger: this.logger,
                 });
 
@@ -494,6 +574,9 @@ function defineIssuePrCommand(options: SentryCommandsOptions) {
                 const issueId = extractIssueIdFromBranch(currentBranch);
                 this.logger.info(`🎯 Found issue ID: ${chalk.bold(issueId)}`);
 
+                // Get base branches
+                const baseBranches = await getBaseBranches(options);
+
                 // Create GitHub client
                 const githubClient = createGithubClient(githubConfig);
 
@@ -503,6 +586,7 @@ function defineIssuePrCommand(options: SentryCommandsOptions) {
                     githubClient,
                     githubConfig,
                     issueId,
+                    baseBranches,
                     logger: this.logger,
                 });
             } catch (error: unknown) {

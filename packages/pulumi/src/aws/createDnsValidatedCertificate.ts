@@ -41,6 +41,16 @@ export interface CreateDnsValidatedCertificateOptions {
  * domain name that deployed cleanly once and then failed on the next create of the same stack.
  * `CertificateValidation.certificateArn` carries the same value but only resolves once ACM has
  * issued, which is what orders the dependency correctly.
+ *
+ * **Changing the names of a certificate that is already deployed needs a new `name`, not just new
+ * options.** Different names replace the certificate in place, and that replacement is
+ * delete-before-replace: the provider requires it and `deleteBeforeReplace: false` does not override
+ * it, on this resource or on its validation record — both were tried. ACM then refuses to delete a
+ * certificate that a CloudFront distribution still references, the distribution cannot be repointed
+ * until the replacement exists, and the update aborts at the same point on every retry. Passing a
+ * `name` that carries the name set makes it an ordinary create plus a delete of a resource nothing
+ * references any more, which Pulumi orders after its dependents have moved off it. Learned on
+ * `redirectAlternative-global` when a wildcard SAN was swapped for `www` (2026-09-22).
  */
 export function createDnsValidatedCertificate(name: string, options: CreateDnsValidatedCertificateOptions) {
     const subjectAlternativeNames = options.subjectAlternativeNames ?? [];

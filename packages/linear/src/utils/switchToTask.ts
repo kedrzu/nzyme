@@ -6,6 +6,7 @@ import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
 import { checkoutExistingBranch } from '@nzyme/github-cli/utils/checkoutExistingBranch.js';
 import { createBranchAndPr } from '@nzyme/github-cli/utils/createBranchAndPr.js';
 import type { GithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';
+import { decideUnattendedMode } from '@nzyme/github-cli/utils/decideUnattendedMode.js';
 import { findTaskPrs } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { applyStashedChanges, handleBranchSelection } from '@nzyme/github-cli/utils/handleBranchSelection.js';
 import type { BranchSelectionResult } from '@nzyme/github-cli/utils/handleBranchSelection.js';
@@ -83,6 +84,14 @@ export interface SwitchToTaskParams {
      * an issue on the ordinary interactive path.
      */
     agentUserId?: string;
+
+    /**
+     * The caller passed `--yes`/`-y`, asking the switch not to prompt even with a terminal
+     * attached. One of the three signals that together mean nobody can be asked — see
+     * `decideUnattendedMode`.
+     * @default false
+     */
+    yes?: boolean;
 }
 
 /**
@@ -101,6 +110,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
         onTaskSwitched,
         node,
         agentUserId,
+        yes = false,
     } = params;
 
     logger.info(`🔍 Looking for Linear task: ${chalk.bold(issueId)}`);
@@ -114,12 +124,17 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
 
     logger.info(`📝 Found task: ${chalk.green(issueData.title)}`);
 
-    // Delegated to the agent running this process, every question below has an answer that does not
-    // need asking. Worth a line in the log: it is the difference between two quite different runs.
-    const unattended = isDelegatedToAgent(issueData.delegateId, agentUserId);
+    // Three independent reasons nobody can be asked, combined in the one place the whole CLI uses:
+    // the issue is delegated to the agent running this process, the caller passed `--yes`, or there
+    // is no terminal to ask at. Worth a line in the log: it is the difference between two quite
+    // different runs, and which of the three it was decides how a user reads the run afterwards.
+    const delegated = isDelegatedToAgent(issueData.delegateId, agentUserId);
+    const isTty = process.stdin.isTTY;
+    const unattended = decideUnattendedMode({ delegated, yes, isTty });
 
     if (unattended) {
-        logger.info(`🤖 Task is delegated to this agent - proceeding without asking anything`);
+        const reason = delegated ? 'delegated to this agent' : yes ? '--yes was passed' : 'no terminal is attached';
+        logger.info(`🤖 Proceeding without asking anything: ${reason}`);
     }
 
     /**
@@ -163,6 +178,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
             githubClient,
             githubConfig,
             baseBranch: existingPr.base.ref,
+            baseBranches,
             unattended,
         });
 
@@ -173,7 +189,14 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
         // "task refresh" so conflicts are detected and reported identically in both commands.
         const prBaseBranch = existingPr.base.ref;
         logger.info(`🔄 Synchronizing with PR base branch ${chalk.cyan(prBaseBranch)}`);
-        await syncAllRepos({ baseBranch: prBaseBranch, logger });
+        await syncAllRepos({
+            baseBranch: prBaseBranch,
+            baseBranches,
+            unattended,
+            githubClient,
+            githubConfig,
+            logger,
+        });
 
         logger.info(`🎉 Successfully checked out existing branch for ${chalk.bold(issueId)}`);
     } else {

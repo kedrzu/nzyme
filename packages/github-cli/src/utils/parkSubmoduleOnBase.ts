@@ -140,11 +140,12 @@ async function isContainedIn(git: SimpleGit, commit: string, ref: string): Promi
 
 /**
  * Whether `commit` is reachable from at least one remote-tracking branch (`refs/remotes/*`).
- * Used to confirm that work on the current HEAD is safely pushed before a force-reset that would
- * otherwise orphan it. `git branch -r --contains` lists the remote branches containing the commit,
- * so a non-empty result means the commit is preserved on some remote.
+ * Confirms that work on the current HEAD is safely pushed — before a force-reset that would
+ * otherwise orphan it, or before reporting a detached HEAD as carrying nothing to publish.
+ * `git branch -r --contains` lists the remote branches containing the commit, so a non-empty
+ * result means the commit is preserved on some remote.
  */
-async function isOnAnyRemoteBranch(git: SimpleGit, commit: string): Promise<boolean> {
+export async function isOnAnyRemoteBranch(git: SimpleGit, commit: string): Promise<boolean> {
     try {
         const out = await git.raw(['branch', '-r', '--contains', commit]);
         return out.trim().length > 0;

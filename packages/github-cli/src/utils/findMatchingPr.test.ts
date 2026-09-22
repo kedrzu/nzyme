@@ -4,7 +4,13 @@ import { UsageError } from '@nzyme/cli';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
-import { findMatchingPr, findPrForBranch, findTaskPrs, resolveNodePr } from './findMatchingPr.js';
+import {
+    findMatchingPr,
+    findMergedPrForBranch,
+    findOpenPrForBranch,
+    findTaskPrs,
+    resolveNodePr,
+} from './findMatchingPr.js';
 
 const CONFIG: GithubConfig = { owner: 'acme', repo: 'widgets', token: 'ghp_test' };
 
@@ -121,22 +127,61 @@ describe('resolveNodePr', () => {
     });
 });
 
-describe('findPrForBranch', () => {
-    test('matches on the branch, not on the issue ID', async () => {
-        const client = createClient([
-            { number: 1, title: '[ABC-123] Thing — schema', branch: 'abc-123-thing' },
-            { number: 2, title: '[ABC-123] Thing — API', branch: 'abc-123-thing--s2' },
-        ]);
-
-        expect((await findPrForBranch(client, CONFIG, 'ABC-123', 'abc-123-thing--s2'))?.number).toBe(2);
-        expect(await findPrForBranch(client, CONFIG, 'ABC-123', 'abc-123-thing--s9')).toBeNull();
-    });
-});
-
 describe('findMatchingPr', () => {
     test('still resolves an unstacked task to its single PR', async () => {
         const client = createClient([{ number: 1, title: '[ABC-123] Thing', branch: 'abc-123-thing' }]);
 
         expect((await findMatchingPr(client, CONFIG, 'ABC-123'))?.number).toBe(1);
+    });
+});
+
+describe('findOpenPrForBranch', () => {
+    // The must-protect case for HLD-528: a submodule branch named the old, Linear-issue-ID way
+    // (`feature/sig-519-thing`) has to be found identically to any other name — this function
+    // matches on `head.ref` alone, so no naming convention or migration is involved.
+    test('matches purely on head.ref, whatever the branch is named or the PR titled', async () => {
+        const client = createClient([{ number: 7, title: 'Bump a dependency', branch: 'feature/sig-519-thing' }]);
+
+        expect((await findOpenPrForBranch(client, CONFIG, 'feature/sig-519-thing'))?.number).toBe(7);
+        expect(await findOpenPrForBranch(client, CONFIG, 'some-other-branch')).toBeNull();
+    });
+
+    test('ignores a merged PR on the same branch', async () => {
+        const client = createClient([
+            {
+                number: 7,
+                title: 'Bump a dependency',
+                branch: 'feature/sig-519-thing',
+                state: 'closed',
+                mergedAt: '2026-07-01',
+            },
+        ]);
+
+        expect(await findOpenPrForBranch(client, CONFIG, 'feature/sig-519-thing')).toBeNull();
+    });
+});
+
+describe('findMergedPrForBranch', () => {
+    test('matches a merged PR purely on head.ref', async () => {
+        const client = createClient([
+            {
+                number: 7,
+                title: 'Bump a dependency',
+                branch: 'feature/sig-519-thing',
+                state: 'closed',
+                mergedAt: '2026-07-01',
+            },
+        ]);
+
+        expect((await findMergedPrForBranch(client, CONFIG, 'feature/sig-519-thing'))?.number).toBe(7);
+        expect(await findMergedPrForBranch(client, CONFIG, 'some-other-branch')).toBeNull();
+    });
+
+    test('ignores a closed-but-unmerged PR on the same branch', async () => {
+        const client = createClient([
+            { number: 7, title: 'Bump a dependency', branch: 'feature/sig-519-thing', state: 'closed', mergedAt: null },
+        ]);
+
+        expect(await findMergedPrForBranch(client, CONFIG, 'feature/sig-519-thing')).toBeNull();
     });
 });

@@ -1,23 +1,27 @@
 import chalk from 'chalk';
-import enquirer from 'enquirer';
 import { simpleGit } from 'simple-git';
 
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import { assertNoConflicts } from './assertNoConflicts.js';
 import type { UnpushedCommitsResult } from './checkUnpushedCommits.js';
+import { describeChangedPaths } from './describeChangedPaths.js';
 import type { GitStatusInfo } from './getGitStatusInfo.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
 
 /**
  * Handle the preparation phase before marking a PR as ready for review.
  * This includes committing uncommitted changes and pushing all commits.
+ *
+ * The commit message is always generated, never asked for: `defaultCommitMessage` names *why*
+ * (e.g. "Ready for review"), and `describeChangedPaths` names *what* changed. When both are
+ * available they are combined ("Fixes after review: packages/cli/src/git"); with nothing to
+ * describe, `defaultCommitMessage` is used on its own.
  */
 export async function handleReadyPreparation(
     unpushedCommits: UnpushedCommitsResult,
     statusInfo: GitStatusInfo,
     logger: Logger,
-    autoYes: boolean = false,
     defaultCommitMessage: string = 'Ready for review',
 ): Promise<void> {
     const git = simpleGit();
@@ -56,24 +60,8 @@ export async function handleReadyPreparation(
             }: ${chalk.yellow(statusInfo.changeDescription)}`,
         );
 
-        let commitMessage = defaultCommitMessage;
-
-        // Prompt for commit message if not in auto-yes mode
-        if (!autoYes) {
-            const response = await enquirer.prompt<{ commitMessage: string }>({
-                type: 'input',
-                name: 'commitMessage',
-                message: 'Enter commit message:',
-                initial: defaultCommitMessage,
-                validate: (input: string) => {
-                    if (!input.trim()) {
-                        return 'Commit message cannot be empty';
-                    }
-                    return true;
-                },
-            });
-            commitMessage = response.commitMessage;
-        }
+        const description = describeChangedPaths(statusInfo.changedPaths);
+        const commitMessage = description ? `${defaultCommitMessage}: ${description}` : defaultCommitMessage;
 
         // Add unstaged changes to staging if there are any
         if (hasUnstagedFiles) {

@@ -8,19 +8,23 @@ import { waitFor } from '@nzyme/utils/waitFor.js';
 import { withTimeout } from '@nzyme/utils/withTimeout.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
+import { assertSubmoduleReady } from './assertSubmoduleReady.js';
 import { cascadeStack } from './cascadeStack.js';
 import { convertPrToReady } from './convertPrToReady.js';
 import { ensureLocalBranch } from './ensureLocalBranch.js';
 import type { GithubClient } from './createGithubClient.js';
 import { countUnresolvedReviewThreads } from './countUnresolvedReviewThreads.js';
 import type { GitHubPR } from './findMatchingPr.js';
-import { findMatchingPr, findMergedPr, findTaskPrs } from './findMatchingPr.js';
+import { findMergedPr, findMergedPrForBranch, findOpenPrForBranch, findTaskPrs } from './findMatchingPr.js';
 import { getCurrentBranch } from './getCurrentBranch.js';
 import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
+import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { mergePullRequestSquash } from './mergePullRequestSquash.js';
 import { orderStackNodes } from './orderStackNodes.js';
+import { parkSubmoduleOnBase } from './parkSubmoduleOnBase.js';
 import { refreshMainAfterSubmoduleMerge } from './refreshMainAfterSubmoduleMerge.js';
+import { resolveSubmoduleCurrentBranch } from './resolveSubmoduleCurrentBranch.js';
 import { findStackForPr, getMergeAsyncStatus, mergeStackAsync } from './stacksApi.js';
 import { waitForRequiredChecks } from './waitForRequiredChecks.js';
 
@@ -44,9 +48,18 @@ export interface MergeTaskPrsParams {
     issueId: string;
 
     /**
-     * Base branch of the main repository (e.g. 'main').
+     * Base branch of the main repository (e.g. 'main'). Also where a submodule whose work already
+     * landed elsewhere gets parked back — see {@link assertSubmodulesReady}.
      */
     baseBranch: string;
+
+    /**
+     * The caller project's base branches, used to judge each submodule's readiness and to resolve
+     * which branch its pull request lives on — see `AssertSubmoduleReadyParams.baseBranches`.
+     * Separate from {@link baseBranch} because that one names where a submodule gets parked, not
+     * the full set a submodule's own branch is classified against.
+     */
+    baseBranches: string[];
 
     /**
      * Logger instance.
@@ -104,6 +117,7 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
         githubConfig,
         issueId,
         baseBranch,
+        baseBranches,
         logger,
         autoYes,
         checkPollIntervalMs,
@@ -142,9 +156,14 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
     // an auto-commit here is exactly how a submodule pointer lands on the wrong node.
     await assertMainRepoClean(logger);
 
-    // The merge runs against already-pushed commits, so uncommitted submodule work would be silently
-    // left out of the merged result — fail loudly instead.
-    await assertSubmodulesClean(logger);
+    // The merge runs against already-pushed commits, so a submodule that is dirty, unpushed, or
+    // parked on a non-base branch with no open pull request would either be silently left out of the
+    // merged result or let `main` merge while that submodule's own PR stays open — the orphaned-
+    // gitlink shape the module header warns about. `assertSubmoduleReady` throws for both and
+    // performs no mutation of its own, which is why it is safe to run here, before anything moves;
+    // a submodule whose PR already merged is reported rather than acted on — parking it happens
+    // below, once the bottom-node checkout gives the resulting gitlink change somewhere to land.
+    const submodulesToPark = await assertSubmodulesReady({ githubClient, githubConfig, baseBranches, logger });
 
     // === Move to the bottom node, which is where the local half of the merge has to happen ===
     // The refresh below merges the base branch into the checked-out branch (and re-points submodule
@@ -156,10 +175,17 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
         await checkoutBottomNode(bottomNode.head.ref, baseBranch, logger);
     }
 
+    // === Park submodules whose work already landed elsewhere back on their base branch ===
+    // Deferred from the guard above to here, where a changed gitlink has somewhere to land.
+    for (const submodule of submodulesToPark) {
+        const git = simpleGit({ baseDir: submodule.path, config: ['submodule.recurse=false'] });
+        await parkSubmoduleOnBase({ git, baseBranch, logger, repoDisplayName: submodule.name });
+    }
+
     // === Discover task submodules (open or already-merged PRs) ===
-    // After the checkout: this reads the live working tree, so on any other node it would describe
-    // the wrong node's submodule pins.
-    const submoduleTargets = await discoverSubmoduleTargets(githubClient, githubConfig, issueId, logger);
+    // After the checkout (and any parking above): this reads the live working tree, so on any other
+    // node it would describe the wrong node's submodule pins.
+    const submoduleTargets = await discoverSubmoduleTargets(githubClient, githubConfig, baseBranches, logger);
 
     // === Guard: a stacked task keeps its submodule work in the bottom node ===
     // Everything above the bottom is squashed against a base that already carries the merged
@@ -486,12 +512,21 @@ async function waitForStackMerge(params: WaitForStackMergeParams): Promise<void>
 }
 
 /**
- * Discover submodules that participate in the task — those with an open or already-merged PR.
+ * Discover submodules that participate in the task — those with an open or already-merged PR on
+ * the branch they are currently on.
+ *
+ * Resolved by branch, not by issue ID: a submodule's branch/PR names carry nothing tying them to
+ * this task's Linear ID (see `docs/decisions/submodule-branch-resolved-from-gitlink-sha.md`), so
+ * the only link left is which branch the submodule's gitlink actually points at right now.
+ * {@link resolveSubmoduleCurrentBranch} never skips a detached HEAD — the ordinary state for a
+ * gitlink-pinned submodule — which matters here specifically: skipping it would let the main PR
+ * merge while that submodule's own PR stays open, exactly the orphaned-gitlink shape this module's
+ * header comment warns about.
  */
 async function discoverSubmoduleTargets(
     githubClient: GithubClient,
     githubConfig: GithubConfig,
-    issueId: string,
+    baseBranches: string[],
     logger: Logger,
 ): Promise<SubmoduleTarget[]> {
     const submodules = await getSubmoduleInfo();
@@ -504,8 +539,13 @@ async function discoverSubmoduleTargets(
             continue;
         }
 
-        const openPr = await findMatchingPr(githubClient, config, issueId);
-        const mergedPr = openPr ? null : await findMergedPr(githubClient, config, issueId);
+        const resolved = await resolveSubmoduleCurrentBranch({ submodule, baseBranches });
+        if (resolved.kind === 'base') {
+            continue;
+        }
+
+        const openPr = await findOpenPrForBranch(githubClient, config, resolved.name);
+        const mergedPr = openPr ? null : await findMergedPrForBranch(githubClient, config, resolved.name);
 
         if (!openPr && !mergedPr) {
             continue;
@@ -553,7 +593,7 @@ async function checkoutBottomNode(branch: string, baseBranch: string, logger: Lo
 /**
  * Abort the merge if the main repository has uncommitted changes.
  *
- * The mirror of {@link assertSubmodulesClean}, for the repository the merge actually commits in.
+ * The mirror of {@link assertSubmodulesReady}, for the repository the merge actually commits in.
  */
 async function assertMainRepoClean(logger: Logger): Promise<void> {
     const git = simpleGit({ config: ['submodule.recurse=false'] });
@@ -578,27 +618,90 @@ async function assertMainRepoClean(logger: Logger): Promise<void> {
 }
 
 /**
- * Abort the merge if any submodule has uncommitted changes. The merge is performed via the GitHub
- * API against already-pushed commits, so local uncommitted submodule work would be silently left out
- * of the merged result — fail loudly so the user can commit/push (or discard) it first.
+ * Parameters for {@link assertSubmodulesReady}.
  */
-async function assertSubmodulesClean(logger: Logger): Promise<void> {
+export interface AssertSubmodulesReadyParams {
+    /**
+     * GitHub client.
+     */
+    githubClient: GithubClient;
+
+    /**
+     * GitHub configuration for the main repository; each submodule's own is derived from it.
+     */
+    githubConfig: GithubConfig;
+
+    /**
+     * The caller project's base branches — see `MergeTaskPrsParams.baseBranches`.
+     */
+    baseBranches: string[];
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+}
+
+/**
+ * Abort the merge if any submodule is not safe to proceed with, per `assertSubmoduleReady`: dirty,
+ * with unpushed commits, on a non-base branch with no open pull request, or a detached HEAD
+ * resolving to no remote branch at all. The merge is performed via the GitHub API against
+ * already-pushed commits, so uncommitted or unpushed submodule work would be silently left out of
+ * the merged result; a submodule stuck on a non-base branch with no PR would let the main PR merge
+ * while that submodule's own pull request stays open — the orphaned-gitlink shape this module's
+ * header comment warns about.
+ *
+ * Every submodule is judged, not only ones this task happens to touch: a broken submodule anywhere
+ * in the working tree is exactly what `verify-submodule-refs.ts`'s STRICT_MODE would later catch on
+ * `main`, so refusing here is strictly earlier and more actionable.
+ *
+ * `assertSubmoduleReady` performs no mutation of its own — no checkout, no commit, no push — which
+ * is what makes it safe to call from this guard slot, immediately after `assertMainRepoClean` and
+ * before `checkoutBottomNode` moves the working tree. A submodule whose pull request already merged
+ * reports `park-on-base` rather than being acted on immediately: resetting it is a working-tree
+ * mutation, and this guard must stay free of those, so the caller performs it later, once the
+ * bottom-node checkout gives the resulting gitlink change somewhere to land.
+ *
+ * Exported (its only production caller stays {@link mergeTaskPrs}) so its placement — free of any
+ * working-tree mutation — can be tested directly, against real temp repos, without driving the rest
+ * of a merge.
+ * @returns The submodules that should be parked on base, in discovery order.
+ */
+export async function assertSubmodulesReady(params: AssertSubmodulesReadyParams): Promise<SubmoduleInfo[]> {
+    const { githubClient, githubConfig, baseBranches, logger } = params;
     const submodules = await getSubmoduleInfo();
-    const dirty = submodules.filter(submodule => submodule.hasChanges);
+    const toPark: SubmoduleInfo[] = [];
 
-    if (dirty.length === 0) {
-        return;
+    for (const submodule of submodules) {
+        const submoduleConfig = getSubmoduleGithubConfig(submodule.url, githubConfig.token);
+        if (!submoduleConfig) {
+            logger.warn(
+                `⚠️  Could not parse GitHub URL for submodule ${chalk.magenta(submodule.name)} — skipping its readiness check`,
+            );
+            continue;
+        }
+
+        // `assertSubmoduleReady`'s detached-HEAD resolution reads remote-tracking refs directly and
+        // runs no fetch of its own (see its doc) — the submodule's gitlink commit may sit on a
+        // branch this checkout has never fetched before (mirrors `checkoutExistingBranch.ts`'s
+        // `checkoutSubmoduleBranch`, which fetches for the same reason).
+        if (submodule.detached) {
+            await simpleGit({ baseDir: submodule.path }).fetch('origin');
+        }
+
+        const readiness = await assertSubmoduleReady({
+            submodule,
+            baseBranches,
+            githubClient,
+            githubConfig: submoduleConfig,
+        });
+
+        if (readiness.kind === 'park-on-base') {
+            toPark.push(submodule);
+        }
     }
 
-    logger.error('❌ Cannot merge — the following submodules have uncommitted changes:');
-    for (const submodule of dirty) {
-        logger.error(`   ${chalk.magenta(submodule.name)} ${chalk.gray(`(${submodule.path})`)}`);
-    }
-
-    throw new UsageError(
-        `${dirty.length} submodule${dirty.length === 1 ? '' : 's'} ${dirty.length === 1 ? 'has' : 'have'} ` +
-            `uncommitted changes. Commit, push, or discard them (e.g. \`task push\`) and try again.`,
-    );
+    return toPark;
 }
 
 /**

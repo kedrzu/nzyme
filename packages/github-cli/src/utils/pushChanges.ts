@@ -34,6 +34,20 @@ export interface PushChangesParams {
     baseBranch: string;
 
     /**
+     * The caller project's base branches, used to classify what each submodule is sitting on —
+     * see `SyncAllReposParams.baseBranches`. Separate from {@link baseBranch} because that one is
+     * a merge source and, on a stacked task, a node branch.
+     */
+    baseBranches: string[];
+
+    /**
+     * Whether nobody can be asked a question — see `decideUnattendedMode`. Until this parameter
+     * existed the push path hardcoded "do not prompt", which meant a person pushing from a
+     * terminal got the same silent auto-commits an agent does.
+     */
+    unattended: boolean;
+
+    /**
      * Default commit message to use when committing changes.
      */
     defaultCommitMessage?: string;
@@ -59,7 +73,7 @@ export interface PushChangesResult {
  * Shared logic used by both push and ready commands.
  */
 export async function pushChanges(params: PushChangesParams): Promise<PushChangesResult> {
-    const { githubConfig, issueId, logger, baseBranch, defaultCommitMessage } = params;
+    const { githubConfig, issueId, logger, baseBranch, baseBranches, unattended, defaultCommitMessage } = params;
 
     // Create GitHub client
     const githubClient = createGithubClient(githubConfig);
@@ -77,26 +91,30 @@ export async function pushChanges(params: PushChangesParams): Promise<PushChange
     // that node's own work, since its diff is measured against the node below it.
     const syncBaseBranch = pr?.base.ref ?? baseBranch;
 
-    // Sync all repos: auto-commit, fetch, rebase/pull, fast-forward base
+    // Sync all repos: commit the main repo, judge the submodules, fetch, rebase/pull, fast-forward base
     await syncAllRepos({
         baseBranch: syncBaseBranch,
+        baseBranches,
+        unattended,
+        githubClient,
+        githubConfig,
         logger,
         defaultCommitMessage,
     });
 
-    // Deliberately the trunk `baseBranch`, not `syncBaseBranch`: this flows into the submodule PR base
-    // (ensureRepositoryReady), and the submodule always tracks one unsuffixed branch per task
-    // (handleSubmoduleReadyPreparation's `stripNodeSuffix`), never a node-suffixed one. Passing
-    // `syncBaseBranch` here would, for the second stack node, hand it the same branch name as the
-    // submodule itself — making the "commits ahead" check diff the submodule branch against itself,
-    // read 0, and silently skip opening its PR.
+    // Deliberately the trunk `baseBranch`, not `syncBaseBranch`: this flows into the submodule PR
+    // base (ensureRepositoryReady). A submodule's branch is its own repository's, so it never
+    // carries a node suffix and never targets a node branch; passing `syncBaseBranch` here would,
+    // for the second stack node, point a submodule's pull request at a branch of the main
+    // repository that its own remote does not even have.
     await handlePushPreparation({
         githubClient,
         githubConfig,
         issueId,
         logger,
         baseBranch,
-        autoYes: true,
+        baseBranches,
+        unattended,
         prInReview,
         defaultCommitMessage,
     });

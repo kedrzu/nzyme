@@ -156,12 +156,14 @@ function resolveExportsEntry(pkgJson: PackageJson, subpath: string): string | nu
         return null;
     }
 
-    // Handle string exports (shorthand for ".")
-    if (typeof exports === 'string') {
-        return subpath === '.' ? exports : null;
+    // A string, or an object of conditions only (no "."-prefixed keys), is shorthand for "."
+    // (e.g. stripe: `{ "bun": ..., "default": ... }`)
+    const exportsMap = exports as ExportsEntry;
+    if (typeof exportsMap === 'string' || !Object.keys(exportsMap).some(key => key.startsWith('.'))) {
+        return subpath === '.' ? resolveCondition(exportsMap) : null;
     }
 
-    const entry = (exports as Record<string, ExportsEntry>)[subpath];
+    const entry = exportsMap[subpath];
 
     if (!entry) {
         return null;

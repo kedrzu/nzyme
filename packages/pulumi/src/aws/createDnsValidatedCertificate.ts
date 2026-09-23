@@ -6,9 +6,20 @@ import type * as pulumi from '@pulumi/pulumi';
  */
 export interface CreateDnsValidatedCertificateOptions {
     /**
-     * The domain name to create the certificate for.
+     * The primary domain to create the certificate for.
+     *
+     * A plain string rather than an input: the names decide how many validation records exist, and a
+     * name that only resolves while the update runs cannot be counted before it.
      */
-    domainName: pulumi.Input<string>;
+    domainName: string;
+    /**
+     * Further names the certificate must cover, such as `*.example.com` next to `example.com`.
+     *
+     * A wildcard is validated against its parent domain, so names that reduce to the same validation
+     * domain share one record instead of getting one each — which is also what keeps Route53 from
+     * being asked for two records with the same name.
+     */
+    subjectAlternativeNames?: string[];
     /**
      * The zone ID to create the validation records in.
      */
@@ -20,7 +31,7 @@ export interface CreateDnsValidatedCertificateOptions {
 }
 
 /**
- * Creates an ACM certificate, the DNS record that validates it, and the validation itself.
+ * Creates an ACM certificate, the DNS records that validate it, and the validation itself.
  *
  * Returns the ARN from the **validation**, not from the certificate. The two differ in when they
  * resolve, and only one of them is safe to hand to a consumer: `Certificate.arn` is available the
@@ -30,36 +41,72 @@ export interface CreateDnsValidatedCertificateOptions {
  * domain name that deployed cleanly once and then failed on the next create of the same stack.
  * `CertificateValidation.certificateArn` carries the same value but only resolves once ACM has
  * issued, which is what orders the dependency correctly.
+ *
+ * **Changing the names of a certificate that is already deployed needs a new `name`, not just new
+ * options.** Different names replace the certificate in place, and that replacement is
+ * delete-before-replace: the provider requires it and `deleteBeforeReplace: false` does not override
+ * it, on this resource or on its validation record — both were tried. ACM then refuses to delete a
+ * certificate that a CloudFront distribution still references, the distribution cannot be repointed
+ * until the replacement exists, and the update aborts at the same point on every retry. Passing a
+ * `name` that carries the name set makes it an ordinary create plus a delete of a resource nothing
+ * references any more, which Pulumi orders after its dependents have moved off it. Learned on
+ * `redirectAlternative-global` when a wildcard SAN was swapped for `www` (2026-09-22).
  */
 export function createDnsValidatedCertificate(name: string, options: CreateDnsValidatedCertificateOptions) {
+    const subjectAlternativeNames = options.subjectAlternativeNames ?? [];
+
     const certificate = new aws.acm.Certificate(
         name,
         {
             domainName: options.domainName,
+            subjectAlternativeNames: subjectAlternativeNames.length > 0 ? subjectAlternativeNames : undefined,
             validationMethod: 'DNS',
         },
         { provider: options.provider },
     );
 
-    const certfificateValidationOption = certificate.domainValidationOptions[0]!;
+    // Create one DNS validation record per distinct validation domain.
+    const validationRecords = getValidationDomains(options.domainName, subjectAlternativeNames).map(
+        (validationDomain, index) => {
+            const validationOption = certificate.domainValidationOptions.apply(validationOptions => {
+                const match = validationOptions.find(
+                    option => reduceValidationDomain(option.domainName) === validationDomain,
+                );
+                if (!match) {
+                    throw new Error(
+                        `ACM returned no validation option for ${validationDomain} on certificate ${name}.`,
+                    );
+                }
 
-    // Create DNS validation records
-    const validationRecord = new aws.route53.Record(`${name}Validation`, {
-        name: certfificateValidationOption.resourceRecordName,
-        type: certfificateValidationOption.resourceRecordType,
-        zoneId: options.zoneId,
-        records: [certfificateValidationOption.resourceRecordValue],
-        ttl: 60,
-    });
+                return match;
+            });
+
+            return new aws.route53.Record(
+                index === 0 ? `${name}-validation` : `${name}-validation-${index}`,
+                {
+                    name: validationOption.resourceRecordName,
+                    type: validationOption.resourceRecordType,
+                    zoneId: options.zoneId,
+                    records: [validationOption.resourceRecordValue],
+                    ttl: 60,
+                },
+                // The first record used to be called `${name}Validation`. Renaming a Pulumi resource
+                // is a create followed by a delete, and Route53 refuses to create a record that
+                // already exists — so the rename is declared as an alias, which remaps the URN
+                // instead of touching DNS. Droppable once every stack has deployed past it.
+                index === 0 ? { aliases: [{ name: `${name}Validation` }] } : undefined,
+            );
+        },
+    );
 
     // Wait for certificate validation
     const validation = new aws.acm.CertificateValidation(
-        `${name}Validation`,
+        `${name}-validation`,
         {
             certificateArn: certificate.arn,
-            validationRecordFqdns: [validationRecord.fqdn],
+            validationRecordFqdns: validationRecords.map(record => record.fqdn),
         },
-        { provider: options.provider },
+        { provider: options.provider, aliases: [{ name: `${name}Validation` }] },
     );
 
     return {
@@ -68,4 +115,39 @@ export function createDnsValidatedCertificate(name: string, options: CreateDnsVa
         /** The certificate resource itself, for the rare caller that needs more than the ARN. */
         certificate,
     };
+}
+
+/**
+ * The distinct domains ACM will ask for a record for, in the order the names were given.
+ *
+ * A wildcard is validated against its parent, so `*.example.com` reduces to `example.com`: a
+ * certificate covering both needs one record, and asking Route53 for two records with the same name
+ * would fail. This reduced name is also the lookup key used to match a validation option returned by
+ * ACM back to the domain it was ordered for — see `reduceValidationDomain`.
+ */
+function getValidationDomains(domainName: string, subjectAlternativeNames: string[]) {
+    const validationDomains: string[] = [];
+
+    for (const name of [domainName, ...subjectAlternativeNames]) {
+        const validationDomain = reduceValidationDomain(name);
+
+        if (!validationDomains.includes(validationDomain)) {
+            validationDomains.push(validationDomain);
+        }
+    }
+
+    return validationDomains;
+}
+
+/**
+ * Reduces a domain name to the form ACM validates it against: a wildcard is validated against its
+ * parent, so `*.example.com` reduces to `example.com`.
+ *
+ * ACM echoes back `domainValidationOptions[].domainName` verbatim as the name was ordered — a
+ * wildcard SAN stays a wildcard — so matching a validation option to an entry from
+ * `getValidationDomains` requires reducing the option's own name the same way before comparing;
+ * comparing it unreduced only matches when the wildcard's parent also happens to be an ordered name.
+ */
+function reduceValidationDomain(domainName: string) {
+    return domainName.startsWith('*.') ? domainName.slice(2) : domainName;
 }

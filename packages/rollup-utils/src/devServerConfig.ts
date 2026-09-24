@@ -2,7 +2,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import typescript from '@rollup/plugin-typescript';
-import type { RollupOptions } from 'rollup';
+import type { InputPluginOption, RollupOptions } from 'rollup';
 import sourcemapsPlugin from 'rollup-plugin-sourcemaps';
 
 import { unwrapCjsDefaultImport } from '@nzyme/esm/unwrapCjsDefaultImport.js';
@@ -28,6 +28,10 @@ export type DevServerConfigOptions = {
      * @default true
      */
     typescript?: boolean;
+    /**
+     * Extra Rollup plugins (e.g. to bundle file types the built-ins do not handle), appended after the built-in ones.
+     */
+    plugins?: InputPluginOption;
 };
 
 /**
@@ -59,6 +63,7 @@ export function devServerConfig(options: DevServerConfigOptions): RollupOptions 
             unwrapCjsDefaultImport(commonjs)(),
             unwrapCjsDefaultImport(json)(),
             ts && unwrapCjsDefaultImport(typescript)(),
+            options.plugins,
         ],
     };
 }

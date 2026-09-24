@@ -7,6 +7,7 @@ export * from './isFileExternal.js';
 export * from './onRollupWarning.js';
 export * from './plugins/dotenvPlugin.js';
 export * from './plugins/normalizeBuiltinsPlugin.js';
+export * from './plugins/outputFingerprintPlugin.js';
 export * from './plugins/packageJsonPlugin.js';
 export * from './plugins/resolveExternalsPlugin.js';
 export * from './plugins/watchFilesPlugin.js';

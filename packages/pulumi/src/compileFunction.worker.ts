@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { parentPort, workerData } from 'node:worker_threads';
 
 import { babel } from '@rollup/plugin-babel';
@@ -10,6 +11,7 @@ import replace from '@rollup/plugin-replace';
 import chalk from 'chalk';
 import { emptyDir } from 'fs-extra/esm';
 import { rollup } from 'rollup';
+import type { Plugin } from 'rollup';
 import { bundleStats } from 'rollup-plugin-bundle-stats';
 import sourcemaps from 'rollup-plugin-sourcemaps';
 import { terser } from 'rollup-plugin-terser';
@@ -21,7 +23,7 @@ import { sortBy } from '@nzyme/utils/sortBy.js';
 
 import { cloudFrontCheckRollupPlugin } from './cloudfront/cloudFrontCheckRollupPlugin.js';
 import { cloudFrontFunctionPreset } from './cloudfront/cloudFrontFunctionPreset.js';
-import type { CompileFunctionOptions, CompileFunctionResult } from './compileFunction.js';
+import type { CompileFunctionOptions, CompileFunctionPlugin, CompileFunctionResult } from './compileFunction.js';
 
 const start = performance.now();
 const options = workerData as CompileFunctionOptions;
@@ -33,6 +35,8 @@ const outputFile = path.join(outputDir, options.esm ? `${fileName}.mjs` : `${fil
 const outputHash = createHash('md5');
 
 await emptyDir(outputDir);
+
+const extraPlugins = await loadPlugins(options.plugins ?? []);
 
 const rollupResult = await rollup({
     input: options.inputFile,
@@ -68,6 +72,10 @@ const rollupResult = await rollup({
             sourceMap: true,
             preventAssignment: true,
         }),
+        // Before source maps, Babel and the minifier, so any code these plugins emit is downleveled
+        // and minified like the rest of the bundle. Plugins that must win module resolution over
+        // node-resolve do so with `order: 'pre'` hooks, which position does not affect.
+        ...extraPlugins,
         options.stats && bundleStats({}),
         options.sourcemaps &&
             sourcemaps({
@@ -187,3 +195,44 @@ const output: CompileFunctionResult = {
 };
 
 parentPort?.postMessage(output);
+
+/**
+ * Builds the caller's plugins inside the worker: `workerData` carries only data, so each plugin
+ * arrives as a module to import and a factory to call.
+ */
+async function loadPlugins(descriptors: CompileFunctionPlugin[]) {
+    const plugins: Plugin[] = [];
+
+    for (const descriptor of descriptors) {
+        const specifier = path.isAbsolute(descriptor.module)
+            ? pathToFileURL(descriptor.module).href
+            : descriptor.module;
+        const exportName = descriptor.export ?? 'default';
+        const imported: unknown = await import(specifier);
+        const factory: unknown =
+            typeof imported === 'object' && imported !== null ? Reflect.get(imported, exportName) : undefined;
+
+        if (!isPluginFactory(factory)) {
+            throw new TypeError(`Rollup plugin module ${descriptor.module} has no function export "${exportName}"`);
+        }
+
+        const plugin: unknown = await factory(descriptor.options);
+        if (!isRollupPlugin(plugin)) {
+            throw new TypeError(
+                `Export "${exportName}" of ${descriptor.module} did not return a rollup plugin (an object with a name)`,
+            );
+        }
+
+        plugins.push(plugin);
+    }
+
+    return plugins;
+}
+
+function isPluginFactory(value: unknown): value is (options: unknown) => unknown {
+    return typeof value === 'function';
+}
+
+function isRollupPlugin(value: unknown): value is Plugin {
+    return typeof value === 'object' && value !== null && 'name' in value && typeof value.name === 'string';
+}

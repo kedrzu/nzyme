@@ -1,7 +1,7 @@
 {
-    "name": "@nzyme/eslint",
+    "name": "@nzyme/oxlint",
     "version": "0.14.0",
-    "description": "Shared Vue ESLint config and oxlint rule preset (framework)",
+    "description": "Custom oxlint rules, as a JS plugin (framework)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {
@@ -9,15 +9,16 @@
         "url": "https://github.com/kedrzu/nzyme.git"
     },
     "files": [
-        "dist",
-        "oxlintrc.json"
+        "dist"
     ],
     "type": "module",
     "sideEffects": false,
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "exports": {
         ".": {
-            "import": "./dist/index.js",
-            "types": "./dist/index.d.ts"
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
         },
         "./*.js": {
             "types": "./dist/*.d.ts",
@@ -33,16 +34,10 @@
         "build": "tsgo --build tsconfig.esm.json",
         "format": "oxfmt ./src > /dev/null"
     },
-    "dependencies": {
-        "@nzyme/oxlint": "0.14.0",
-        "@typescript-eslint/parser": "8.70.0",
-        "eslint": "10.11.0",
-        "eslint-plugin-vue": "10.11.0",
-        "vue-eslint-parser": "10.4.1"
-    },
     "devDependencies": {
         "@nzyme/tsconfig": "0.14.0",
-        "@types/node": "^26.6.2",
+        "@types/bun": "^1.4.2",
+        "@types/node": "26.6.2",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "oxfmt": "0.68.0"
     }

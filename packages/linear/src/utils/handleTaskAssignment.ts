@@ -34,7 +34,6 @@ export interface HandleTaskAssignmentParams {
 
 /**
  * Handle task assignment logic - assign to current user if unassigned, or ask user if reassign.
- * @__NO_SIDE_EFFECTS__
  */
 export async function handleTaskAssignment(params: HandleTaskAssignmentParams): Promise<void> {
     const { linearClient, issueData, logger, unattended } = params;

@@ -3,6 +3,12 @@
     // particular repo's directories and belong in each repo's root `.oxlintrc.json`. An override
     // keyed on a file KIND (`**/*.d.ts`) is not layout: it holds in any repo, so it lives here.
     "plugins": ["typescript", "unicorn", "oxc", "import", "promise"],
+    // Our own rules, as a JS plugin. Declared by package name rather than by a relative path: after
+    // an npm install of this preset `../oxlint` does not exist, while the package does — it is a
+    // dependency of this one. Loading it means linting needs the workspace built, which is fine —
+    // `tsgo --build` runs before lint both in the verify protocol and in `setup.build.sh`, and an
+    // unbuilt tree makes oxlint refuse to start rather than quietly skip the rule.
+    "jsPlugins": ["@nzyme/oxlint"],
     // Categories rather than a hand-kept list: a new oxlint rule in any of these arrives on its own,
     // and the rules below record only what we decided against and why. `nursery` stays out — those
     // are unstable by definition, which is a reason on the risk side rather than the cost side.
@@ -18,6 +24,12 @@
     // showed the effective rule set unchanged with it gone — 279 rules before and after.
     "rules": {
         "curly": "error",
+        // A call to an `@__NO_SIDE_EFFECTS__` function whose result nothing uses. Rollup takes the
+        // annotation at its word and deletes such a call — in the Healed API bundle it removed the
+        // `selectClosestObservation` call inside `deriveBmiObservations`, so BMI was never derived
+        // in the shipped build while the unbundled tests stayed green. Such a call is either dead
+        // code or proof the function has side effects and must lose the annotation.
+        "nzyme/no-unused-no-side-effects-result": "error",
         // `x == null` is the idiomatic "null or undefined" check and is deliberately kept; without
         // the carve-out the rule reports 375 of them and buries the handful of real loose
         // comparisons.

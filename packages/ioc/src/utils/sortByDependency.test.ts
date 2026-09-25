@@ -102,9 +102,9 @@ describe('sortByDependency', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
         (serviceA as any).deps = { b: serviceB };
 
-        expect(() => {
-            sortByDependency([serviceA, serviceB]);
-        }).toThrow('Circular dependency detected involving service: A');
+        expect(() => sortByDependency([serviceA, serviceB])).toThrow(
+            'Circular dependency detected involving service: A',
+        );
     });
 
     test('should handle empty array', () => {

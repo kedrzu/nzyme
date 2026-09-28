@@ -4,6 +4,7 @@ import { Worker } from 'node:worker_threads';
 import type { MinifyOptions } from 'terser';
 
 import { getDirname } from '@nzyme/esm/dirname.js';
+import type { JsonValue } from '@nzyme/types/JsonValue.js';
 
 /**
  * Options shared by every compilation target.
@@ -41,6 +42,32 @@ interface CompileFunctionOptionsBase {
      * Whether to generate bundle statistics.
      */
     stats?: boolean;
+    /**
+     * Extra rollup plugins, described by where to import them from rather than as instances: the
+     * compilation runs in a worker thread and receives its options as `workerData`, which cannot carry
+     * functions. The worker imports each module and calls the factory with its options.
+     */
+    plugins?: CompileFunctionPlugin[];
+}
+
+/**
+ * A rollup plugin the worker builds itself, see {@link CompileFunctionOptionsBase.plugins}.
+ */
+export interface CompileFunctionPlugin {
+    /**
+     * Module exporting the plugin factory: an absolute path, a `file:` URL, or a bare specifier. A bare
+     * specifier resolves from `@nzyme/pulumi`'s own location, not the caller's — so a caller passing a
+     * module of its own resolves it first (e.g. `import.meta.resolve()`).
+     */
+    module: string;
+    /**
+     * Name of the factory export. Defaults to `default`.
+     */
+    export?: string;
+    /**
+     * The single argument of the factory. Must survive the structured clone into the worker.
+     */
+    options?: JsonValue;
 }
 
 /**

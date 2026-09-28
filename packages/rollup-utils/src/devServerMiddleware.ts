@@ -11,6 +11,7 @@ import { omitProps } from '@nzyme/utils/omitProps.js';
 import type { DevServer } from './createDevServer.js';
 import { createDevServer } from './createDevServer.js';
 import { onRollupWarning } from './onRollupWarning.js';
+import { outputFingerprintPlugin } from './plugins/outputFingerprintPlugin.js';
 
 /**
  * Options for the development server middleware.
@@ -59,6 +60,7 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions) {
      * Starts the Rollup watcher and handles compilation events
      */
     function startRollup() {
+        const fingerprint = outputFingerprintPlugin();
         const watcher = watch({
             watch: {
                 clearScreen: false,
@@ -66,17 +68,23 @@ export function devServerMiddleware(options: DevServerMiddlewareOptions) {
             },
             onwarn: onRollupWarning(),
             ...omitProps(options, ['env']),
+            plugins: [options.plugins, fingerprint],
         });
 
+        // The running server is replaced only once a build has succeeded, so a failed build leaves it serving.
         watcher.on('event', event => {
-            if (event.code === 'BUNDLE_START') {
-                newServer();
-            } else if (event.code === 'BUNDLE_END') {
+            if (event.code === 'BUNDLE_END') {
                 compiled = true;
 
                 const duration = formatDurationMs(event.duration);
                 console.info(`Server compiled in ${chalk.green(duration)}.`);
-                void server?.start();
+
+                if (server && !fingerprint.api.outputChanged()) {
+                    console.info('Server output unchanged, not restarting.');
+                    return;
+                }
+
+                void newServer().start();
             } else if (event.code === 'ERROR') {
                 console.error(event.error);
             }

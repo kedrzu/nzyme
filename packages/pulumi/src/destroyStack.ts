@@ -30,7 +30,7 @@ export async function destroyStack<TOut extends StackOutput>(stack: Stack<TOut>,
     assertStackEnabled(stack);
 
     const stackInstance = await createOrSelectStack(stack, options.config);
-    const stackOutputs = await stack.outputs(stackInstance);
+    const stackOutputs = await stack.getOutputs(stackInstance);
 
     await stack.beforeDestroy(stackOutputs);
 

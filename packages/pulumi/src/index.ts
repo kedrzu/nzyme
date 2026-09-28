@@ -16,5 +16,7 @@ export * from './previewStack.js';
 export * from './PulumiConfig.js';
 export * from './refAll.js';
 export * from './refreshStack.js';
+export * from './selectStack.js';
+export * from './syncStackOutputs.js';
 export * from './types.js';
 export * from './utils/filterPulumiInput.js';

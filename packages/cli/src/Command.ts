@@ -8,10 +8,19 @@ import { PrettyCliLoggerTransport } from '@nzyme/logging/PrettyCliLoggerTranspor
 import { createEventEmitter } from '@nzyme/utils/createEventEmitter.js';
 import { getClassName } from '@nzyme/utils/getClassName.js';
 
+/**
+ * Rewrites an error a command threw before it is reported — e.g. to turn an opaque library failure
+ * into an actionable message. Returns (or resolves to) the error to report in its place, or
+ * `null`/`undefined` to report the original unchanged.
+ */
+export type CommandErrorHandler = (error: unknown) => unknown;
+
 /** Clipanion command context extended with an IoC container. */
 export interface CommandContext extends BaseContext {
     /** The IoC container available to all commands. */
     container: Container;
+    /** Applied by {@link Command.catch} to every error a command throws, before it is reported. */
+    onError?: CommandErrorHandler;
 }
 
 /** Scope identifier for command-level IoC container isolation. */
@@ -82,19 +91,22 @@ export abstract class Command extends ClipanionCommand<CommandContext> {
     }
 
     /**
-     * Logs the error and exits the process with code 1.
+     * Logs the error and exits the process with code 1. The error is first passed through the
+     * context's `onError` handler, so one handler set on `execute()` covers every command — clipanion
+     * routes every command failure through `catch()`, making it the single place to apply it.
      * Parameter is intentionally not named `error`/`err` — that shape makes
      * eslint-plugin-promise's `no-promise-in-callback` heuristic mistake this override for a
-     * Node-style error-first callback and flag the `Promise.resolve()` below.
+     * Node-style error-first callback and flag the awaited handler below.
      */
     override async catch(commandError: unknown) {
+        const reported = (await this.context.onError?.(commandError)) ?? commandError;
+
         if (this.#logger) {
-            this.#logger.error('❌ Command execution failed', { error: commandError });
+            this.#logger.error('❌ Command execution failed', { error: reported });
         } else {
-            console.error('❌ Command execution failed', { error: commandError });
+            console.error('❌ Command execution failed', { error: reported });
         }
 
-        await Promise.resolve();
         process.exit(1);
     }
 

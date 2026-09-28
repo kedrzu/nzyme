@@ -148,7 +148,6 @@ export function moneyZero(money: Money): Money {
  * @param money1 - The first money value
  * @param money2 - The second money value
  * @throws {Error} If the currencies do not match
- * @__NO_SIDE_EFFECTS__
  */
 export function assertCurrenciesMatch(money1: Money, money2: Money) {
     if (money1[1] !== money2[1]) {

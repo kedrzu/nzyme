@@ -1,7 +1,7 @@
 {
-    "name": "@nzyme/vitest",
+    "name": "@nzyme/oxlint",
     "version": "0.14.0",
-    "description": "Vitest configuration and helpers",
+    "description": "Custom oxlint rules, as a JS plugin (framework)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {
@@ -13,14 +13,12 @@
     ],
     "type": "module",
     "sideEffects": false,
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "exports": {
         ".": {
-            "import": "./dist/index.js",
-            "types": "./dist/index.d.ts"
-        },
-        "./setup": {
-            "import": "./dist/setup.js",
-            "types": "./dist/setup.d.ts"
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
         },
         "./*.js": {
             "types": "./dist/*.d.ts",
@@ -34,16 +32,12 @@
     },
     "scripts": {
         "build": "tsgo --build tsconfig.esm.json",
-        "typecheck": "tsgo --noEmit --project tsconfig.check.json",
         "format": "oxfmt ./src > /dev/null"
-    },
-    "dependencies": {
-        "@vitest/expect": "4.1.10",
-        "date-fns": "4.4.0",
-        "vitest": "4.1.10"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "0.14.0",
+        "@types/bun": "^1.4.2",
+        "@types/node": "26.6.3",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "oxfmt": "0.70.0"
     }

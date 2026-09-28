@@ -9,20 +9,29 @@ import { isDependentOn } from '@nzyme/ioc/utils/isDependentOn.js';
 import { sortByDependency } from '@nzyme/ioc/utils/sortByDependency.js';
 import type { Logger } from '@nzyme/logging/Logger.js';
 import { forEachParalell } from '@nzyme/utils/array/forEachParalell.js';
+import { createSemaphore } from '@nzyme/utils/createSemaphore.js';
 
 import { cancelStack } from '../cancelStack.js';
 import { createOrSelectStack } from '../createOrSelectStack.js';
 import { defineStack, isStackDefinition } from '../defineStack.js';
-import type { StackDefinition } from '../defineStack.js';
+import type { Stack, StackDefinition } from '../defineStack.js';
 import { deployStack } from '../deployStack.js';
 import { destroyStack } from '../destroyStack.js';
-import { getStackOutputs } from '../getStackOutputs.js';
 import { installStack } from '../installStack.js';
+import { logSyncStackOutputsReport } from '../logSyncStackOutputsReport.js';
 import { previewStack } from '../previewStack.js';
+import { printStackOutputs } from '../printStackOutputs.js';
 import type { PulumiConfig } from '../PulumiConfig.js';
 import { refreshStack } from '../refreshStack.js';
+import { selectStack } from '../selectStack.js';
+import { syncStackOutputs } from '../syncStackOutputs.js';
 import { listRemoteStacks } from '../utils/listRemoteStacks.js';
 import { filterStacks } from './filterStacks.js';
+
+/**
+ * Pulumi command being run — one per command defined by {@link definePulumiCommands}.
+ */
+export type PulumiAction = 'list' | 'deploy' | 'cancel' | 'preview' | 'refresh' | 'destroy' | 'output' | 'install';
 
 /**
  * Context for the Pulumi commands.
@@ -32,6 +41,12 @@ export interface PulumiContext {
      * Command instance.
      */
     command: Command;
+
+    /**
+     * Which command is running, so hooks shared by all commands (e.g. `beforeEach`) can tell a
+     * read-only command from one that changes infrastructure.
+     */
+    action: PulumiAction;
 }
 
 /**
@@ -177,7 +192,7 @@ function defineListCommand(options: PulumiCommandsOptions) {
         });
 
         override async run() {
-            await options.beforeEach?.({ command: this });
+            await options.beforeEach?.({ command: this, action: 'list' });
 
             const pulumiConfig = await getPulumiConfig(options);
 
@@ -337,7 +352,8 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
         });
 
         skipResources = Option.Boolean('--skip-resources,-sr', {
-            description: 'Skip resource deployment and only execute afterDeploy with previously deployed outputs',
+            description:
+                'Skip resource deployment and only run the outputs and afterDeploy hooks with previously deployed outputs',
         });
 
         cancel = Option.Boolean('--cancel,-c', {
@@ -345,7 +361,7 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
         });
 
         override async run() {
-            await options.beforeEach?.({ command: this });
+            await options.beforeEach?.({ command: this, action: 'deploy' });
 
             const stacks = resolveStacks({
                 ...options,
@@ -361,13 +377,15 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
 
             this.logger.info(`🚀 Deploying stacks: ${stacks.map(s => chalk.green(s.stackName)).join(', ')}`);
 
-            await options.beforeDeploy?.({ command: this, stacks });
+            await options.beforeDeploy?.({ command: this, action: 'deploy', stacks });
 
             const pulumiConfig = await getPulumiConfig(options);
             const stacksLeft = new Set<StackDefinition>(stacks);
             const stacksDeploying = new Map<StackDefinition, Promise<void>>();
             const stacksDeployed = new Set<StackDefinition>();
             const stacksFailed = new Map<StackDefinition, unknown>();
+            // One lock for the whole run: stacks deploy concurrently, their `outputs` hooks must not.
+            const outputsLock = createSemaphore(1);
 
             const deployNext = () => {
                 if (stacksFailed.size > 0) {
@@ -402,7 +420,7 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                             await cancelStack(stackResolved, { config: pulumiConfig });
                         }
 
-                        await options.beforeDeployStack?.({ command: this, stack });
+                        await options.beforeDeployStack?.({ command: this, action: 'deploy', stack });
 
                         return deployStack(stackResolved, {
                             refresh: this.refresh,
@@ -410,6 +428,7 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                             config: pulumiConfig,
                             verbosity: this.verbosity,
                             skipResources: this.skipResources,
+                            outputsLock,
                         });
                     })()
                         .then(async () => {
@@ -441,7 +460,7 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
                                 stackResolved.logger.info(`📋 Remaining: ${shown}${suffix}`);
                             }
 
-                            await options.afterDeployStack?.({ command: this, stack });
+                            await options.afterDeployStack?.({ command: this, action: 'deploy', stack });
                             stacksDeployed.add(stack);
 
                             return undefined;
@@ -481,6 +500,7 @@ function defineDeployCommand(options: PulumiCommandsOptions) {
 
             await options.afterDeploy?.({
                 command: this,
+                action: 'deploy',
                 stacksDeployed: [...stacksDeployed],
                 stacksFailed: [...stacksFailed.keys()],
                 stackFailures,
@@ -516,7 +536,7 @@ function defineCancelCommand(options: PulumiCommandsOptions) {
         });
 
         override async run() {
-            await options.beforeEach?.({ command: this });
+            await options.beforeEach?.({ command: this, action: 'cancel' });
 
             const pulumiConfig = await getPulumiConfig(options);
 
@@ -579,7 +599,7 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
         });
 
         override async run() {
-            await options.beforeEach?.({ command: this });
+            await options.beforeEach?.({ command: this, action: 'preview' });
 
             const pulumiConfig = await getPulumiConfig(options);
 
@@ -631,7 +651,7 @@ function defineRefreshCommand(options: PulumiCommandsOptions) {
         });
 
         override async run() {
-            await options.beforeEach?.({ command: this });
+            await options.beforeEach?.({ command: this, action: 'refresh' });
 
             const pulumiConfig = await getPulumiConfig(options);
 
@@ -709,7 +729,7 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
         stacks = Option.Rest();
 
         override async run() {
-            await options.beforeEach?.({ command: this });
+            await options.beforeEach?.({ command: this, action: 'destroy' });
 
             if (options.preventDestroy) {
                 throw new UsageError('Stack deletion is prohibited.');
@@ -748,7 +768,11 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                             await cancelStack(stackResolved, { config: pulumiConfig });
                         }
 
-                        await options.beforeDestroyStack?.({ command: this, stack: stackDefinition });
+                        await options.beforeDestroyStack?.({
+                            command: this,
+                            action: 'destroy',
+                            stack: stackDefinition,
+                        });
 
                         stackResolved.logger.info(`🗑️  Force destroying stack ${stackName}...`);
 
@@ -764,7 +788,7 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                             stackResolved.logger.info(`💥 Force destroyed stack ${stackName}`);
                         }
 
-                        await options.afterDestroyStack?.({ command: this, stack: stackDefinition });
+                        await options.afterDestroyStack?.({ command: this, action: 'destroy', stack: stackDefinition });
                     } catch (error) {
                         stackResolved.logger.error(`❌ Failed to force destroy stack ${stackName}.`, {
                             error,
@@ -853,7 +877,7 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                         await cancelStack(stackResolved, { config: pulumiConfig });
                     }
 
-                    await options.beforeDestroyStack?.({ command: this, stack });
+                    await options.beforeDestroyStack?.({ command: this, action: 'destroy', stack });
 
                     stackResolved.logger.info(`🗑️  Destroying stack ${stackName}...`);
 
@@ -869,7 +893,7 @@ function defineDestroyCommand(options: PulumiCommandsOptions) {
                         stackResolved.logger.info(`💥 Destroyed stack ${stackName}`);
                     }
 
-                    await options.afterDestroyStack?.({ command: this, stack });
+                    await options.afterDestroyStack?.({ command: this, action: 'destroy', stack });
                 } catch (error) {
                     stackResolved.logger.error(`❌ Failed to destroy stack ${stackName}.`, {
                         error,
@@ -893,13 +917,24 @@ function defineOutputCommand(options: PulumiCommandsOptions) {
         static override paths = getCommandPaths(options, 'output');
         static override usage = Command.Usage({
             category: 'Pulumi',
-            description: 'Print the output of the selected stacks',
+            description: 'Materialize local config from deployed stacks by running only their `outputs` hooks',
+            details:
+                'Fetches the currently deployed outputs of the selected stacks and runs only their `outputs` hooks — no build, no deploy, no deploy hooks. Never creates a stack: a stack that was never deployed is skipped with a warning. Output values are not printed unless `--print` is given.',
+            examples: [
+                ['Materialize local config from all stacks', 'output'],
+                ['Materialize local config from a single stack', 'output core'],
+                ['Print the outputs of a stack instead (includes secrets)', 'output --print core'],
+            ],
         });
 
         stacks = Option.Rest();
 
+        print = Option.Boolean('--print,-p', {
+            description: 'Print the outputs (including secrets) instead of running the `outputs` hooks',
+        });
+
         override async run() {
-            await options.beforeEach?.({ command: this });
+            await options.beforeEach?.({ command: this, action: 'output' });
 
             const pulumiConfig = await getPulumiConfig(options);
 
@@ -913,21 +948,34 @@ function defineOutputCommand(options: PulumiCommandsOptions) {
                 throw new UsageError('No stacks to output.');
             }
 
-            this.logger.info(`📊 Outputting stacks: ${stacks.map(s => chalk.green(s.stackName)).join(', ')}`);
+            const stacksResolved = stacks.map(stack => this.container.resolve(stack));
+            const fetchOutputs = (stack: Stack) => fetchDeployedOutputs(stack, pulumiConfig);
 
-            for (const stack of stacks) {
-                const stackResolved = this.container.resolve(stack);
-                const outputs = await getStackOutputs(stackResolved, {
-                    config: pulumiConfig,
-                });
+            if (this.print) {
+                this.logger.info(`📊 Outputting stacks: ${stacks.map(s => chalk.green(s.stackName)).join(', ')}`);
 
-                console.log(`Outputs for stack ${chalk.green(stack.name)}:`);
-                console.log(chalk.gray(JSON.stringify(outputs, null, 2)));
+                await printStackOutputs({ stacks: stacksResolved, fetchOutputs });
+
+                process.exit(0);
             }
 
-            process.exit(0);
+            this.logger.info(`📥 Syncing outputs of stacks: ${stacks.map(s => chalk.green(s.stackName)).join(', ')}`);
+
+            // Only names and errors are logged below — output values hold secrets.
+            const report = await syncStackOutputs({ stacks: stacksResolved, fetchOutputs });
+            const failed = logSyncStackOutputsReport(report);
+
+            process.exit(failed ? 1 : 0);
         }
     };
+}
+
+/**
+ * Deployed outputs of a stack, or `null` when the backend has no such stack — never creates one.
+ */
+async function fetchDeployedOutputs(stack: Stack, config: PulumiConfig) {
+    const automationStack = await selectStack(stack, config);
+    return automationStack ? await stack.getOutputs(automationStack) : null;
 }
 
 function defineInstallCommand(options: PulumiCommandsOptions) {
@@ -951,7 +999,7 @@ function defineInstallCommand(options: PulumiCommandsOptions) {
         });
 
         override async run() {
-            await options.beforeEach?.({ command: this });
+            await options.beforeEach?.({ command: this, action: 'install' });
 
             const pulumiConfig = await getPulumiConfig(options);
 

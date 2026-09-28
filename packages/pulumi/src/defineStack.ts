@@ -97,6 +97,17 @@ export interface StackOptions<
     beforeDeploy?(this: Stack, deps: ResolveDeps<TDeps>): Promise<void> | void;
 
     /**
+     * Consumes the stack's deployed outputs LOCALLY only — e.g. writes local config files that other
+     * tooling reads. It must have no effect on remote resources, which is what lets it run on its own
+     * (the `output` command) to materialize local config on a fresh checkout without redeploying.
+     *
+     * Runs after every deploy, including `--skip-resources`, before {@link StackOptions.afterDeploy}.
+     * Hooks of different stacks never overlap within one command run, so they may safely
+     * read-modify-write a shared file.
+     */
+    outputs?(this: Stack, output: Unwrap<TOutput>, deps: ResolveDeps<TDeps>): Promise<void> | void;
+
+    /**
      * Program to run after the stack is deployed.
      */
     afterDeploy?(this: Stack, output: Unwrap<TOutput>, deps: ResolveDeps<TDeps>): Promise<void> | void;
@@ -163,9 +174,14 @@ export interface Stack<TOutput extends StackOutput = StackOutput> {
     resources: () => TOutput;
 
     /**
-     * Get the outputs of the stack.
+     * Fetch the currently deployed outputs of the stack.
      */
-    outputs: (stack: automation.Stack) => Promise<Unwrap<TOutput>>;
+    getOutputs: (stack: automation.Stack) => Promise<Unwrap<TOutput>>;
+
+    /**
+     * Run the stack's {@link StackOptions.outputs} hook (a no-op when the stack defines none).
+     */
+    outputs: (output: Record<string, unknown>) => Promise<void>;
 
     /**
      * Function to run before the stack is deployed.
@@ -302,8 +318,11 @@ export function defineStack<
                     const output = options.resources.call(stack, deps, buildResult);
                     return output || {};
                 },
-                outputs: async (automationStack: automation.Stack) => {
+                getOutputs: async (automationStack: automation.Stack) => {
                     return unwrapStackOutput<TOutput>(await automationStack.outputs());
+                },
+                outputs: async output => {
+                    await options.outputs?.call(stack, output as Unwrap<TOutput>, deps);
                 },
                 build: async (ctx: StackBuildContext) => {
                     if (options.build) {

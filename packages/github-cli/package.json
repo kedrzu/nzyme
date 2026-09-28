@@ -39,7 +39,7 @@
         "chalk": "6.0.1",
         "enquirer": "2.4.1",
         "open": "11.0.4",
-        "simple-git": "3.36.0"
+        "simple-git": "4.0.2"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "0.14.0",

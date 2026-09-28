@@ -4,7 +4,7 @@ import type { Container } from '@nzyme/ioc/Container.js';
 import { createContainer } from '@nzyme/ioc/Container.js';
 import { PrettyCliLoggerTransport } from '@nzyme/logging/PrettyCliLoggerTransport.js';
 
-import type { CommandClass, CommandContext } from './Command.js';
+import type { CommandClass, CommandContext, CommandErrorHandler } from './Command.js';
 
 /**
  * Options for creating a CLI program
@@ -18,6 +18,11 @@ export interface ExecuteOptions {
     commands: CommandClass[];
     /** Container to use for the CLI program */
     container?: Container;
+    /**
+     * Rewrites any error a command throws before it is reported — one handler for the whole
+     * program, so no command has to opt in or be subclassed. See {@link CommandErrorHandler}.
+     */
+    onError?: CommandErrorHandler;
 }
 
 /**
@@ -41,5 +46,5 @@ export async function execute(options: ExecuteOptions): Promise<void> {
     cli.register(Builtins.HelpCommand);
     cli.register(Builtins.VersionCommand);
 
-    await cli.runExit(process.argv.slice(2), { container });
+    await cli.runExit(process.argv.slice(2), { container, onError: options.onError });
 }

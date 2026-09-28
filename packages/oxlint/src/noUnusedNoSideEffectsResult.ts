@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 
 import { isNode } from './isNode.js';
 import type {
@@ -23,14 +23,20 @@ const MAX_REEXPORT_HOPS = 5;
 /** Wrappers that stand between a leading JSDoc block and the declaration it documents. */
 const EXPORT_DECLARATIONS = new Set(['ExportDefaultDeclaration', 'ExportNamedDeclaration']);
 
+/** One module a call has crossed into: its text as of `mtimeMs`, and each export scanned from it. */
+interface ModuleEntry {
+    mtimeMs: number;
+    source: string;
+    scans: Map<string, ExportAnnotationScan>;
+}
+
 /**
- * Source text of every module a call has crossed into, `undefined` for one that could not be read.
  * A single util is imported by hundreds of files, so without this the rule would re-read and
- * re-scan the same handful of modules on every one of them. Both caches live for the lint process,
- * which reads each file once.
+ * re-scan the same handful of modules on every one of them. Entries are checked against the file's
+ * mtime because the editor's language server keeps this module loaded for its whole session: an
+ * annotation added or removed there would otherwise go unseen by importers until a restart.
  */
-const sourceTextCache = new Map<string, string | undefined>();
-const scanCache = new Map<string, ExportAnnotationScan>();
+const moduleCache = new Map<string, ModuleEntry>();
 
 /**
  * Reports a call to an `@__NO_SIDE_EFFECTS__` function whose result nothing consumes.
@@ -200,32 +206,36 @@ function isAnnotatedExport(file: string, exportName: string, hopsLeft: number): 
 }
 
 function scanExport(file: string, exportName: string): ExportAnnotationScan {
-    const key = `${file}\u0000${exportName}`;
-    const cached = scanCache.get(key);
-    if (cached != null) {
-        return cached;
+    const entry = readModule(file);
+    if (entry == null) {
+        return { kind: 'absent' };
     }
 
-    const source = readSource(file);
-    const scan: ExportAnnotationScan = source == null ? { kind: 'absent' } : scanExportAnnotation(source, exportName);
-    scanCache.set(key, scan);
+    let scan = entry.scans.get(exportName);
+    if (scan == null) {
+        scan = scanExportAnnotation(entry.source, exportName);
+        entry.scans.set(exportName, scan);
+    }
 
     return scan;
 }
 
 /** `undefined` when the file cannot be read — a module generated or deleted since, not an error. */
-function readSource(file: string): string | undefined {
-    if (sourceTextCache.has(file)) {
-        return sourceTextCache.get(file);
-    }
-
-    let source: string | undefined;
+function readModule(file: string): ModuleEntry | undefined {
     try {
-        source = readFileSync(file, 'utf8');
-    } catch {
-        source = undefined;
-    }
-    sourceTextCache.set(file, source);
+        const { mtimeMs } = statSync(file);
+        const cached = moduleCache.get(file);
+        if (cached?.mtimeMs === mtimeMs) {
+            return cached;
+        }
 
-    return source;
+        const entry: ModuleEntry = { mtimeMs, source: readFileSync(file, 'utf8'), scans: new Map() };
+        moduleCache.set(file, entry);
+
+        return entry;
+    } catch {
+        moduleCache.delete(file);
+
+        return undefined;
+    }
 }

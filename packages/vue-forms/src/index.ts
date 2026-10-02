@@ -22,6 +22,7 @@ export * from './useForm.js';
 export * from './useFormField.js';
 export * from './useFormFieldArray.js';
 export * from './useFormFields.js';
+export * from './useRules.js';
 export * from './validators/emailValidator.js';
 export * from './validators/maxDateValidator.js';
 export * from './validators/maxLengthValidator.js';

@@ -1,11 +1,27 @@
 import { arrayRemove } from '@nzyme/utils/array/arrayRemove.js';
+import type { ValidationErrors } from '@nzyme/validation/Validator.js';
 import { makeRef } from '@nzyme/vue-utils/reactivity/makeRef.js';
 import { reactive } from '@nzyme/vue-utils/reactivity/reactive.js';
 import { useDataSource } from '@nzyme/vue-utils/useDataSource.js';
-import type { Ref } from 'vue';
-import { computed, onScopeDispose, ref, toRef, watchEffect } from 'vue';
+import type { MaybeRefOrGetter, Ref } from 'vue';
+import {
+    computed,
+    getCurrentScope,
+    onScopeDispose,
+    ref,
+    shallowReactive,
+    shallowRef,
+    toRef,
+    toValue,
+    watchEffect,
+} from 'vue';
 
 import { showErrorsOnBlurBehavior } from './behaviors/showErrorsOnBlurBahavior.js';
+import { collectRuleErrors } from './rules/collectRuleErrors.js';
+import { collectRuleRegistrations } from './rules/collectRuleRegistrations.js';
+import { ensureRulesState } from './rules/ensureRulesState.js';
+import type { FormNodeState, RuleRegistration } from './rules/FormNodeState.js';
+import { getFormNodeState, setFormNodeState } from './rules/FormNodeState.js';
 import type {
     FormField,
     FormModel,
@@ -48,6 +64,12 @@ export interface FormFieldBasicParams<T = unknown> {
      * Validators to apply to this field.
      */
     validators: FormValidator<T>[];
+
+    /**
+     * Path of the field's value relative to the parent's value, for `useRules` routing.
+     * Defaults to `null`: the field is an alias of the parent and receives the parent's path messages.
+     */
+    key?: MaybeRefOrGetter<string | number | null>;
 }
 
 /**
@@ -83,6 +105,13 @@ export interface FormFieldCustomParams<T = unknown> {
      * Optional validators to apply to this field.
      */
     validators?: FormValidator<T>[];
+
+    /**
+     * Path of the field's value relative to the parent's value (a property name, an index, or a dotted
+     * path such as `'steps.3'`), for `useRules` routing. Without it the field is opaque to routing:
+     * rules registered above never address it or its children.
+     */
+    key?: MaybeRefOrGetter<string | number | null>;
 }
 
 /**
@@ -130,18 +159,17 @@ export function useFormField<T>(form: FormModel, params: FormFieldCustomParams<T
 export function useFormField(form: FormModel, params: FormFieldBasicParams | FormFieldCustomParams): FormField {
     const focused = ref(false);
     const value = params.value ?? toRef(form, 'value');
-    const validators = params.validators?.map(validator => createValidatorState(validator, value, focused, form)) || [];
+    const key = computed(() => toValue(params.key) ?? null);
+    // Shallow reactive, because `useRules` appends its validator state after the field is created.
+    const validators = shallowReactive(
+        params.validators?.map(validator => createValidatorState(validator, value, focused, form)) || [],
+    );
 
     const errors = computed(() => {
         const fieldErrors: string[] = [];
         for (const validator of validators) {
-            if (!validator.show) {
-                continue;
-            }
-
-            const error = validator.error;
-            if (error) {
-                fieldErrors.push(error);
+            if (validator.show) {
+                fieldErrors.push(...validator.messages);
             }
         }
 
@@ -160,8 +188,10 @@ export function useFormField(form: FormModel, params: FormFieldBasicParams | For
 
     const field = reactive<FormField>({
         form,
+        key,
         value,
         fields,
+        ruleErrors: computed((): ValidationErrors | null => collectRuleErrors(field)),
         lang: form.lang,
         valid,
         invalid,
@@ -173,6 +203,25 @@ export function useFormField(form: FormModel, params: FormFieldBasicParams | For
         focus,
         blur,
     });
+
+    const state: FormNodeState = {
+        parent: getFormNodeState(form),
+        // A field without its own value aliases the parent's; one with its own value needs a key to have a path.
+        addressable: params.key !== undefined || params.value === undefined,
+        scope: getCurrentScope(),
+        value,
+        focused,
+        validators,
+        registrations: shallowReactive<RuleRegistration[]>([]),
+        rules: shallowRef(null),
+    };
+
+    setFormNodeState(field, state);
+
+    // Rules registered above route messages to this field; rules registered later create the state themselves.
+    if (collectRuleRegistrations(state).length > 0) {
+        ensureRulesState(state);
+    }
 
     const formFields = form.fields as FormField[];
 
@@ -260,6 +309,7 @@ function createValidatorStateSync<T>(
 
     return reactive<FormValidatorState>({
         error,
+        messages: computed(() => toMessages(error.value)),
         show,
         validate: () => {
             refresh();
@@ -301,6 +351,7 @@ function createValidatorStateAsync<T>(
 
     return reactive<FormValidatorState>({
         error: toRef(error, 'value'),
+        messages: computed(() => toMessages(error.value)),
         show,
         validate: async () => {
             await error.reload();
@@ -316,6 +367,10 @@ function createValidatorBehavior<T>(validator: FormValidator<T>, ctx: FormValida
     } else {
         showErrorsOnBlurBehavior(ctx);
     }
+}
+
+function toMessages(error: string | null): readonly string[] {
+    return error ? [error] : [];
 }
 
 function normalizeErrors(error: FormValidationResult) {

@@ -65,6 +65,7 @@ export type FormFields<T, V extends FormFieldsParams<T>> = Simplify<{
  *
  * Each key in params creates a field for the corresponding property in the form value.
  * Fields are automatically registered with the parent form and synced via computed refs.
+ * Each field is keyed by its property name, so `useRules` messages for that property reach it.
  *
  * @template T - Type of the form value
  * @template V - Type of the params object
@@ -103,13 +104,14 @@ export function useFormFields<T, V extends FormFieldsParams<T>>(form: FormModel<
 
         const validatorsOrGetter = params[key];
         if (typeof validatorsOrGetter === 'function') {
-            const field = useFormField(form, { value });
+            const field = useFormField(form, { value, key });
             const result = validatorsOrGetter(field as FormModel<T[keyof T & string]>);
 
             fields[key] = result as (typeof fields)[typeof key];
         } else {
             const field = useFormField(form, {
                 value,
+                key,
                 validators: validatorsOrGetter || [],
             });
 

@@ -3,7 +3,7 @@ import type { MaybeRefOrGetter } from 'vue';
 
 import { defineValidator } from '../defineValidator.js';
 import type { FormValidationContext, FormValidationResult } from '../types.js';
-import * as l from './validators.loc.js';
+import { fromRuleAsync } from './fromRule.js';
 
 /**
  * Post code validator options
@@ -29,36 +29,21 @@ export function postCodeValidator(options: PostCodeValidatorOptions) {
 
     return defineValidator<string>({
         async: true,
-        validate: async (value, ctx) => {
-            const postcode = value?.toString();
-            const countryCode = country.value;
-
-            if (!postcode || !countryCode) {
-                return undefined;
-            }
-
-            const isValid = await validatePostCode(postcode, countryCode);
-            if (isValid) {
-                return undefined;
-            }
-
-            if (options.message) {
-                return options.message(postcode, ctx);
-            }
-            return l.invalidPostCode(ctx.lang);
-        },
+        validate: fromRuleAsync(loadRule, options),
     });
-}
 
-/**
- * Validates if the value is a valid postal code for the given country
- * @param value - The postal code to validate
- * @param country - The country code
- * @returns Promise that resolves to true if valid, false otherwise
- */
-async function validatePostCode(value: string, country: string) {
-    const { validate } = await import('postal-codes-js');
-    const result = validate(country, value);
+    /**
+     * Lazily imports the post code rule — `postal-codes-js` is heavy, so it loads only once there
+     * is a value and a resolvable country to validate against.
+     * @__NO_SIDE_EFFECTS__
+     */
+    async function loadRule(value: string | null | undefined) {
+        const countryCode = country.value;
+        if (!value || !countryCode) {
+            return undefined;
+        }
 
-    return result === true;
+        const { postCode } = await import('@nzyme/validation/validators/postCode.js');
+        return postCode(countryCode);
+    }
 }

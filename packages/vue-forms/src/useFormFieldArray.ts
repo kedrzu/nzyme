@@ -17,6 +17,7 @@ type FormFieldFactory<T = unknown, V = unknown> = (field: FormModel<T>, index: n
  *
  * Fields are automatically created and disposed when array items are added or removed.
  * Each field runs in its own effect scope to ensure proper cleanup of watchers.
+ * Each field is keyed by its index, so `useRules` messages for that item reach it.
  *
  * @template T - Type of each array item
  * @param form - Parent form model with array value
@@ -107,7 +108,7 @@ function getFactory(
     if (typeof validatorsOrFactory === 'function') {
         return (index: number) => {
             const value = createIndexedValue(form, index);
-            const field = useFormField(form, { value });
+            const field = useFormField(form, { value, key: index });
 
             return validatorsOrFactory(field, index);
         };
@@ -118,6 +119,7 @@ function getFactory(
 
         return useFormField(form, {
             value,
+            key: index,
             validators: validatorsOrFactory,
         });
     };

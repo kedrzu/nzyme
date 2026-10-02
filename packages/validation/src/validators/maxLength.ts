@@ -1,60 +1,33 @@
-import type { ValidationContext, Validator } from '../Validator.js';
+import { translateToString } from '@nzyme/i18n/translateToString.js';
+
+import type { BoundValidatorOptions, WithLength } from '../types.js';
+import type { Validator } from '../Validator.js';
+import * as l from './validators.loc.js';
 
 /**
- * Context object passed to minLength validator
- */
-export interface MaxLengthValidatorContext<T extends WithLength> extends ValidationContext {
-    /**
-     * Maximum length
-     */
-    maxLength: number;
-    /**
-     * Value to validate
-     */
-    value: T;
-}
-
-/**
- * Options for maxLength validator
- */
-export interface MaxLengthValidatorOptions<T extends WithLength> {
-    /**
-     * Message to return if validation fails
-     */
-    message?: (ctx: MaxLengthValidatorContext<T>) => string;
-}
-
-type WithLength = {
-    length: number;
-};
-
-/**
- * Validator that checks if the value has at most the specified length
+ * Creates a validator that checks the value's `length` is at most `limit`.
+ * Skips null/undefined.
  * @util
- * @param maxLength - The maximum length to check against.
- * @param options - Options for the validator.
- * @returns A validator function.
+ * @__NO_SIDE_EFFECTS__
  */
 export function maxLength<T extends WithLength>(
     limit: number,
-    options?: MaxLengthValidatorOptions<T>,
+    options: BoundValidatorOptions<T> = {},
 ): Validator<T | null | undefined> {
-    const message = options?.message;
-
     return (value, ctx) => {
         if (value == null) {
             return undefined;
         }
 
-        const valid = value.length <= limit;
+        const valid = options.exclusive ? value.length < limit : value.length <= limit;
         if (valid) {
             return undefined;
         }
 
-        if (message) {
-            return message({ ...ctx, maxLength: limit, value });
+        if (options.message) {
+            return options.message(value, ctx);
         }
 
-        return `Maximum length is ${limit}`;
+        return translateToString(l.maxLengthExceeded, ctx.lang ?? 'en', { maxLength: limit.toString() });
     };
 }

@@ -1,9 +1,11 @@
+import { maxLength } from '@nzyme/validation/validators/maxLength.js';
+import type { WithLength } from '@nzyme/validation/types.js';
 import { makeRef } from '@nzyme/vue-utils/reactivity/makeRef.js';
 import type { MaybeRefOrGetter } from 'vue';
 
 import { defineValidator } from '../defineValidator.js';
 import type { FormValidationContext, FormValidationResult } from '../types.js';
-import * as l from './validators.loc.js';
+import { fromRule } from './fromRule.js';
 
 /**
  * Max length validator options
@@ -28,37 +30,19 @@ export interface MaxLengthValidatorOptions<T extends WithLength> {
     exclusive?: MaybeRefOrGetter<boolean>;
 }
 
-interface WithLength {
-    length: number;
-}
-
 /**
  * Maximum length validator that checks if the value has at most the specified length
  * @param options - Validator options
  */
 export function maxLengthValidator<T extends WithLength>(options: MaxLengthValidatorOptions<T>) {
-    const maxLength = makeRef(options.maxLength);
+    const limit = makeRef(options.maxLength);
     const exclusive = makeRef(options.exclusive);
 
     return defineValidator<T>({
         async: false,
-        validate: (value, ctx) => {
-            if (value == null) {
-                return undefined;
-            }
-
-            const valid = exclusive.value ? value.length < maxLength.value : value.length <= maxLength.value;
-            if (valid) {
-                return undefined;
-            }
-
-            if (options.message) {
-                return options.message(value, ctx);
-            }
-
-            return l.maxLengthExceeded(ctx.lang, {
-                maxLength: maxLength.value.toString(),
-            });
-        },
+        validate: fromRule(
+            (value, ctx) => maxLength<T>(limit.value, { exclusive: exclusive.value })(value, ctx),
+            options,
+        ),
     });
 }

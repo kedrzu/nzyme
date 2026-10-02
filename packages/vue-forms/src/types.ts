@@ -1,5 +1,6 @@
 import type { TranslationResult } from '@nzyme/i18n-core/Translation.js';
 import type { Language } from '@nzyme/i18n/Language.js';
+import type { ValidationErrors } from '@nzyme/validation/Validator.js';
 import type { DataSourceDebounceOptions } from '@nzyme/vue-utils/useDataSource.js';
 import type { MaybeRefOrGetter, Ref } from 'vue';
 
@@ -46,6 +47,13 @@ export interface FormModel<T = unknown> extends FormBase<T>, FormValidationConte
      * Form fields registered in the form
      */
     readonly fields: readonly FormField[];
+
+    /**
+     * Every error produced by `useRules` registered on this node or below it, keyed by dotted path
+     * relative to this node (built from field keys). Holds all messages, whether shown or not and
+     * whether or not a field received them — this is the whole-tree view, e.g. for a problems list.
+     */
+    readonly ruleErrors: ValidationErrors | null;
 }
 
 /**
@@ -53,6 +61,14 @@ export interface FormModel<T = unknown> extends FormBase<T>, FormValidationConte
  * Extends FormModel to allow scoped sub-forms where nested fields can be registered
  */
 export interface FormField<T = unknown> extends FormModel<T> {
+    /**
+     * Path of the field's value relative to its parent's value, used to route `useRules` messages.
+     * A property name or array index, possibly dotted (`'steps.3'`). `null` when the field holds no
+     * path of its own: either an alias of its parent's value, or a field with its own value and no key,
+     * which routing treats as opaque.
+     */
+    readonly key: string | number | null;
+
     /**
      * Whether the field is focused
      */
@@ -100,6 +116,12 @@ export interface FormValidatorState {
      * Validation error
      */
     readonly error: string | null;
+
+    /**
+     * Every message of this validator, whether shown or not.
+     * Built-in validators hold at most one; rule messages routed by `useRules` can hold many.
+     */
+    readonly messages: readonly string[];
 
     /**
      * Whether to show the validation errors

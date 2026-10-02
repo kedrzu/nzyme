@@ -1,27 +1,18 @@
+import { translateToString } from '@nzyme/i18n/translateToString.js';
+
+import type { ValidatorOptions } from '../types.js';
 import type { Validator } from '../Validator.js';
+import * as l from './validators.loc.js';
 
 /**
- * Options for creating a regex-based validator.
- */
-export type RegexValidatorOptions = {
-    /** Function that generates the error message when the regex test fails */
-    message: (params: {
-        /** The value that failed validation */
-        value: string;
-    }) => string;
-    /** Regular expression pattern to test against */
-    regex: RegExp;
-};
-
-/**
- * Creates a validator that tests a string against a regular expression.
+ * Creates a validator that checks the value matches `pattern`.
+ * Skips empty values.
  * @util
+ * @__NO_SIDE_EFFECTS__
  */
-export function regex(options: RegexValidatorOptions): Validator<string | null | undefined> {
-    const { regex: pattern, message } = options;
-
+export function regex(pattern: RegExp, options: ValidatorOptions<string> = {}): Validator<string | null | undefined> {
     return (value, ctx) => {
-        if (value == null) {
+        if (!value) {
             return undefined;
         }
 
@@ -29,6 +20,10 @@ export function regex(options: RegexValidatorOptions): Validator<string | null |
             return undefined;
         }
 
-        return message({ ...ctx, value });
+        if (options.message) {
+            return options.message(value, ctx);
+        }
+
+        return translateToString(l.invalidFormat, ctx.lang ?? 'en');
     };
 }

@@ -1,10 +1,11 @@
+import { required } from '@nzyme/validation/validators/required.js';
 import { makeRef } from '@nzyme/vue-utils/reactivity/makeRef.js';
-import { watch } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 
+import { requiredBehavior } from '../behaviors/requiredBehavior.js';
 import { defineValidator } from '../defineValidator.js';
 import type { FormValidationContext, FormValidationResult } from '../types.js';
-import * as l from './validators.loc.js';
+import { toFormValidationResult } from './fromRule.js';
 
 /**
  * Required validator options
@@ -41,18 +42,27 @@ export interface RequiredValidatorOptions<T> {
  */
 export function requiredValidator<T>(options: RequiredValidatorOptions<T> = {}) {
     const condition = options.condition ? makeRef(options.condition) : undefined;
-    const validate = options.custom ?? isFilled;
     const lazy = options.lazy ?? false;
+    const custom = options.custom;
 
     return defineValidator<T>({
         async: false,
         validate: (value, ctx) => {
-            const required = condition?.value ?? true;
-            if (!required) {
+            const isRequired = condition?.value ?? true;
+            if (!isRequired) {
                 return undefined;
             }
 
-            if (validate(value, ctx)) {
+            // `required`'s `test` is called under a bare `ValidationContext`. Closing over the
+            // real `ctx` here — instead of forwarding the one `required` would pass to `test` —
+            // keeps `custom` on its public `FormValidationContext` signature without a cast; both
+            // are the same object at runtime, since this rule is only ever invoked with `ctx` below.
+            const rule = required<T>({
+                test: custom && (innerValue => custom(innerValue, ctx)),
+            });
+
+            const result = rule(value, ctx);
+            if (!result) {
                 return undefined;
             }
 
@@ -60,44 +70,8 @@ export function requiredValidator<T>(options: RequiredValidatorOptions<T> = {}) 
                 return options.message(value, ctx);
             }
 
-            return l.required(ctx.lang);
+            return toFormValidationResult(result);
         },
-        behavior: ({ value, focused, show }) => {
-            watch(value, () => {
-                if (focused.value) {
-                    show.value = true;
-                }
-            });
-
-            if (!lazy) {
-                watch(focused, focusedValue => {
-                    if (!focusedValue) {
-                        show.value = true;
-                    }
-                });
-            }
-        },
+        behavior: requiredBehavior(lazy),
     });
-}
-
-/**
- * Checks if a value is filled (not empty)
- * @param value - The value to check
- * @returns True if value is filled, false otherwise
- * @__NO_SIDE_EFFECTS__
- */
-function isFilled(value: unknown) {
-    if (value == null || value === false) {
-        return false;
-    }
-
-    if (typeof value === 'string' && value.trim() === '') {
-        return false;
-    }
-
-    if (Array.isArray(value) && value.length === 0) {
-        return false;
-    }
-
-    return true;
 }

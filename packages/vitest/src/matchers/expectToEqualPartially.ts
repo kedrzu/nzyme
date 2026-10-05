@@ -1,7 +1,7 @@
 import { equals } from '@vitest/expect';
 import { expect } from 'vitest';
 
-type ExpectedPartial<T> = T extends unknown[] ? Partial<T[number]>[] : Partial<T>;
+type ExpectedPartial<T> = T extends (infer U)[] ? Partial<U>[] : Partial<T>;
 
 /** Asserts that the actual value partially matches the expected value using objectContaining. */
 export function expectToEqualPartially<T>(actual: T, expected: ExpectedPartial<T>) {

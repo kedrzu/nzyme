@@ -206,9 +206,8 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
         );
         stackNodes.forEach((node, index) => {
             logger.info(
-                `   ${index + 1}. ${chalk.cyan(node.head.ref)} ${chalk.gray(`#${node.number}`)}` + node.draft
-                    ? chalk.yellow(' (draft)')
-                    : '',
+                `   ${index + 1}. ${chalk.cyan(node.head.ref)} ${chalk.gray(`#${node.number}`)}` +
+                    (node.draft ? chalk.yellow(' (draft)') : ''),
             );
         });
     }
@@ -247,7 +246,7 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
         await waitForRequiredChecks({
             client: githubClient,
             config: target.config,
-            prNumber: target.openPr.number,
+            prs: [{ number: target.openPr.number, label: target.name }],
             logger,
             intervalMs: checkPollIntervalMs,
             timeoutMs: checkPollTimeoutMs,
@@ -301,17 +300,23 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
             autoYes: true,
             logger,
         });
-
-        await waitForRequiredChecks({
-            client: githubClient,
-            config: githubConfig,
-            prNumber: node.number,
-            logger,
-            intervalMs: checkPollIntervalMs,
-            timeoutMs: checkPollTimeoutMs,
-            expectedHeadSha: expectedHeads.get(node.head.ref),
-        });
     }
+
+    // Every node is gated, not just the top: GitHub evaluates `main`'s required checks against each
+    // pull request of a stack, and each node lands as its own commit on `main`. The nodes are polled
+    // together, so a red node anywhere aborts as soon as GitHub reports it.
+    await waitForRequiredChecks({
+        client: githubClient,
+        config: githubConfig,
+        prs: nodesToMerge.map(node => ({
+            number: node.number,
+            label: stackNodes ? node.head.ref : undefined,
+            expectedHeadSha: expectedHeads.get(node.head.ref),
+        })),
+        logger,
+        intervalMs: checkPollIntervalMs,
+        timeoutMs: checkPollTimeoutMs,
+    });
 
     if (stackNodes) {
         // Merging the top pull request lands every node below it too, each as its own squash commit

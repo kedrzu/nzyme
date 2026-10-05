@@ -14,6 +14,7 @@ interface CheckRun {
     status: string;
     conclusion: string | null;
     check_suite?: { id: number };
+    details_url?: string;
 }
 
 interface CommitStatus {
@@ -73,11 +74,39 @@ function createClient(state: ClientState): GithubClient {
     } as unknown as GithubClient;
 }
 
+/**
+ * A client serving several pull requests at once: each gets its own {@link createClient} state and a
+ * distinct head SHA (`sha-<number>`), so check lookups by ref reach the right pull request.
+ */
+function createMultiClient(states: Record<number, ClientState>): GithubClient {
+    const clients = new Map(
+        Object.entries(states).map(([number, state]) => [
+            Number(number),
+            createClient({ headShas: [`sha-${number}`], ...state }),
+        ]),
+    );
+    const byRef = (ref: string) => clients.get(Number(ref.replace('sha-', '')))!;
+
+    return {
+        rest: {
+            pulls: {
+                get: ({ pull_number }: { pull_number: number }) => clients.get(pull_number)!.rest.pulls.get(),
+            },
+            checks: {
+                listForRef: ({ ref }: { ref: string }) => byRef(ref).rest.checks.listForRef(),
+            },
+            repos: {
+                getCombinedStatusForRef: ({ ref }: { ref: string }) => byRef(ref).rest.repos.getCombinedStatusForRef(),
+            },
+        },
+    } as unknown as GithubClient;
+}
+
 test('resolves immediately when mergeable_state is clean and there are no checks', async () => {
     const { logger } = createTestLogger('waitForRequiredChecks');
     const client = createClient({ mergeableStates: ['clean'] });
 
-    await waitForRequiredChecks({ client, config: CONFIG, prNumber: 1, logger, intervalMs: 0 });
+    await waitForRequiredChecks({ client, config: CONFIG, prs: [{ number: 1 }], logger, intervalMs: 0 });
 });
 
 test('resolves when all check runs have completed successfully', async () => {
@@ -92,7 +121,7 @@ test('resolves when all check runs have completed successfully', async () => {
         ],
     });
 
-    await waitForRequiredChecks({ client, config: CONFIG, prNumber: 1, logger, intervalMs: 0 });
+    await waitForRequiredChecks({ client, config: CONFIG, prs: [{ number: 1 }], logger, intervalMs: 0 });
 });
 
 test('waits while a check is pending, then resolves once it completes', async () => {
@@ -105,7 +134,7 @@ test('waits while a check is pending, then resolves once it completes', async ()
         ],
     });
 
-    await waitForRequiredChecks({ client, config: CONFIG, prNumber: 1, logger, intervalMs: 0 });
+    await waitForRequiredChecks({ client, config: CONFIG, prs: [{ number: 1 }], logger, intervalMs: 0 });
 });
 
 test('throws when a check run has failed', async () => {
@@ -116,7 +145,7 @@ test('throws when a check run has failed', async () => {
     });
 
     await expect(
-        waitForRequiredChecks({ client, config: CONFIG, prNumber: 1, logger, intervalMs: 0 }),
+        waitForRequiredChecks({ client, config: CONFIG, prs: [{ number: 1 }], logger, intervalMs: 0 }),
     ).rejects.toBeInstanceOf(UsageError);
 });
 
@@ -128,7 +157,7 @@ test('throws when a non-required check fails even though mergeable_state is unst
     });
 
     await expect(
-        waitForRequiredChecks({ client, config: CONFIG, prNumber: 1, logger, intervalMs: 0 }),
+        waitForRequiredChecks({ client, config: CONFIG, prs: [{ number: 1 }], logger, intervalMs: 0 }),
     ).rejects.toBeInstanceOf(UsageError);
 });
 
@@ -140,7 +169,7 @@ test('throws when a commit status reports failure', async () => {
     });
 
     await expect(
-        waitForRequiredChecks({ client, config: CONFIG, prNumber: 1, logger, intervalMs: 0 }),
+        waitForRequiredChecks({ client, config: CONFIG, prs: [{ number: 1 }], logger, intervalMs: 0 }),
     ).rejects.toBeInstanceOf(UsageError);
 });
 
@@ -149,7 +178,7 @@ test('throws when the PR is dirty (conflicts with base)', async () => {
     const client = createClient({ mergeableStates: ['dirty'] });
 
     await expect(
-        waitForRequiredChecks({ client, config: CONFIG, prNumber: 1, logger, intervalMs: 0 }),
+        waitForRequiredChecks({ client, config: CONFIG, prs: [{ number: 1 }], logger, intervalMs: 0 }),
     ).rejects.toBeInstanceOf(UsageError);
 });
 
@@ -161,7 +190,7 @@ test('throws after the timeout while a check is still pending', async () => {
     });
 
     await expect(
-        waitForRequiredChecks({ client, config: CONFIG, prNumber: 1, logger, intervalMs: 0, timeoutMs: 0 }),
+        waitForRequiredChecks({ client, config: CONFIG, prs: [{ number: 1 }], logger, intervalMs: 0, timeoutMs: 0 }),
     ).rejects.toBeInstanceOf(UsageError);
 });
 
@@ -178,10 +207,9 @@ test('ignores the stale head SHA and resolves once GitHub reports the expected c
     await waitForRequiredChecks({
         client,
         config: CONFIG,
-        prNumber: 1,
+        prs: [{ number: 1, expectedHeadSha: 'new-sha' }],
         logger,
         intervalMs: 0,
-        expectedHeadSha: 'new-sha',
     });
 });
 
@@ -197,10 +225,9 @@ test('aborts on a failing check once the expected head SHA is reported', async (
         waitForRequiredChecks({
             client,
             config: CONFIG,
-            prNumber: 1,
+            prs: [{ number: 1, expectedHeadSha: 'new-sha' }],
             logger,
             intervalMs: 0,
-            expectedHeadSha: 'new-sha',
         }),
     ).rejects.toBeInstanceOf(UsageError);
 });
@@ -216,11 +243,10 @@ test('throws after the timeout when the expected head SHA never registers', asyn
         waitForRequiredChecks({
             client,
             config: CONFIG,
-            prNumber: 1,
+            prs: [{ number: 1, expectedHeadSha: 'new-sha' }],
             logger,
             intervalMs: 0,
             timeoutMs: 0,
-            expectedHeadSha: 'new-sha',
         }),
     ).rejects.toBeInstanceOf(UsageError);
 });
@@ -239,11 +265,10 @@ test('with expectedHeadSha set, does not pass on clean + zero checks (suppresses
         waitForRequiredChecks({
             client,
             config: CONFIG,
-            prNumber: 1,
+            prs: [{ number: 1, expectedHeadSha: 'new-sha' }],
             logger,
             intervalMs: 0,
             timeoutMs: 0,
-            expectedHeadSha: 'new-sha',
         }),
     ).rejects.toBeInstanceOf(UsageError);
 });
@@ -262,7 +287,7 @@ test('ignores a cancelled check run superseded by a newer suite of the same name
         ],
     });
 
-    await waitForRequiredChecks({ client, config: CONFIG, prNumber: 1, logger, intervalMs: 0 });
+    await waitForRequiredChecks({ client, config: CONFIG, prs: [{ number: 1 }], logger, intervalMs: 0 });
 });
 
 test('keeps waiting when the superseding run of a cancelled check is still in progress', async () => {
@@ -281,7 +306,7 @@ test('keeps waiting when the superseding run of a cancelled check is still in pr
         ],
     });
 
-    await waitForRequiredChecks({ client, config: CONFIG, prNumber: 1, logger, intervalMs: 0 });
+    await waitForRequiredChecks({ client, config: CONFIG, prs: [{ number: 1 }], logger, intervalMs: 0 });
 });
 
 test('throws when the newest suite of a check run is the cancelled one', async () => {
@@ -297,6 +322,63 @@ test('throws when the newest suite of a check run is the cancelled one', async (
     });
 
     await expect(
-        waitForRequiredChecks({ client, config: CONFIG, prNumber: 1, logger, intervalMs: 0 }),
+        waitForRequiredChecks({ client, config: CONFIG, prs: [{ number: 1 }], logger, intervalMs: 0 }),
     ).rejects.toBeInstanceOf(UsageError);
+});
+
+test('aborts on a red pull request without waiting for another one that is still pending', async () => {
+    const { logger } = createTestLogger('waitForRequiredChecks');
+    // The stack-node case: the bottom node's CI is still running while a node above it has already
+    // failed. The failure must surface now, naming the node and linking its run.
+    const client = createMultiClient({
+        1: { mergeableStates: ['blocked'], checkRuns: [[{ name: 'Build', status: 'in_progress', conclusion: null }]] },
+        2: {
+            mergeableStates: ['blocked'],
+            checkRuns: [
+                [
+                    {
+                        name: 'Build',
+                        status: 'completed',
+                        conclusion: 'failure',
+                        details_url: 'https://github.com/acme/widgets/actions/runs/7/job/8',
+                    },
+                ],
+            ],
+        },
+    });
+
+    const gate = waitForRequiredChecks({
+        client,
+        config: CONFIG,
+        prs: [{ number: 1 }, { number: 2, label: 'task--s2' }],
+        logger,
+        intervalMs: 0,
+    });
+
+    await expect(gate).rejects.toThrow(
+        'PR #2 (task--s2) has failing checks:\n   Build — https://github.com/acme/widgets/actions/runs/7/job/8',
+    );
+});
+
+test('resolves only once every pull request has passed', async () => {
+    const { logger } = createTestLogger('waitForRequiredChecks');
+    const client = createMultiClient({
+        1: { mergeableStates: ['clean'], checkRuns: [[{ name: 'Build', status: 'completed', conclusion: 'success' }]] },
+        2: {
+            mergeableStates: ['blocked', 'blocked', 'clean'],
+            checkRuns: [
+                [{ name: 'Build', status: 'in_progress', conclusion: null }],
+                [{ name: 'Build', status: 'in_progress', conclusion: null }],
+                [{ name: 'Build', status: 'completed', conclusion: 'success' }],
+            ],
+        },
+    });
+
+    await waitForRequiredChecks({
+        client,
+        config: CONFIG,
+        prs: [{ number: 1 }, { number: 2 }],
+        logger,
+        intervalMs: 0,
+    });
 });

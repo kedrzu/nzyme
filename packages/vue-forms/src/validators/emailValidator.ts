@@ -1,8 +1,8 @@
-import { isEmailValid } from '@nzyme/validation/validators/email.js';
+import { email } from '@nzyme/validation/validators/email.js';
 
 import { defineValidator } from '../defineValidator.js';
 import type { FormValidationContext, FormValidationResult } from '../types.js';
-import * as l from './validators.loc.js';
+import { fromRule } from './fromRule.js';
 
 /**
  * Email validator options
@@ -21,20 +21,6 @@ export interface EmailValidatorOptions {
 export function emailValidator(options: EmailValidatorOptions = {}) {
     return defineValidator<string>({
         async: false,
-        validate: (value, ctx) => {
-            if (!value?.trim()) {
-                return undefined;
-            }
-
-            if (isEmailValid(value)) {
-                return undefined;
-            }
-
-            if (options.message) {
-                return options.message(value, ctx);
-            }
-
-            return l.invalidEmail(ctx.lang);
-        },
+        validate: fromRule(email(), options),
     });
 }

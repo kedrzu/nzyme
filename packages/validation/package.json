@@ -35,8 +35,12 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
+        "@nzyme/i18n": "0.14.0",
+        "@nzyme/i18n-core": "0.14.0",
         "@nzyme/ioc": "0.14.0",
         "@nzyme/utils": "0.14.0",
+        "libphonenumber-js": "1.13.14",
+        "postal-codes-js": "2.5.2",
         "vitest": "4.1.10"
     },
     "devDependencies": {

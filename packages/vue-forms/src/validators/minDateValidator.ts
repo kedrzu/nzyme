@@ -1,9 +1,10 @@
+import { minDate } from '@nzyme/validation/validators/minDate.js';
 import { makeRef } from '@nzyme/vue-utils/reactivity/makeRef.js';
 import type { MaybeRefOrGetter } from 'vue';
 
 import { defineValidator } from '../defineValidator.js';
 import type { FormValidationContext, FormValidationResult } from '../types.js';
-import * as l from './validators.loc.js';
+import { fromRule } from './fromRule.js';
 
 /**
  * Minimum date validator options
@@ -33,35 +34,11 @@ export interface MinDateValidatorOptions {
  * @param options - Validator options
  */
 export function minDateValidator(options: MinDateValidatorOptions) {
-    const minDate = makeRef(options.minDate);
+    const min = makeRef(options.minDate);
     const exclusive = makeRef(options.exclusive);
 
     return defineValidator<Date>({
         async: false,
-        validate: (value, ctx) => {
-            if (value == null) {
-                return undefined;
-            }
-
-            if (!(value instanceof Date)) {
-                return undefined;
-            }
-
-            const min = minDate.value;
-
-            const valid = exclusive.value ? value > min : value >= min;
-
-            if (valid) {
-                return undefined;
-            }
-
-            if (options.message) {
-                return options.message(value, ctx);
-            }
-
-            return l.minDateNotMet(ctx.lang, {
-                minDate: min.toLocaleDateString(),
-            });
-        },
+        validate: fromRule((value, ctx) => minDate(min.value, { exclusive: exclusive.value })(value, ctx), options),
     });
 }

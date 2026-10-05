@@ -1,6 +1,6 @@
 import { defineValidator } from '../defineValidator.js';
 import type { FormValidationContext, FormValidationResult } from '../types.js';
-import * as l from './validators.loc.js';
+import { fromRuleAsync } from './fromRule.js';
 
 /**
  * Phone number validator options
@@ -19,39 +19,20 @@ export interface PhoneNumberValidatorOptions {
 export function phoneNumberValidator(options: PhoneNumberValidatorOptions = {}) {
     return defineValidator<string>({
         async: true,
-        validate: async (value, ctx) => {
-            const phone = value?.toString();
-            if (!phone?.trim()) {
-                return undefined;
-            }
-
-            const isValid = await validatePhoneNumber(phone);
-            if (isValid) {
-                return undefined;
-            }
-
-            if (options.message) {
-                return options.message(phone, ctx);
-            }
-
-            return l.invalidPhoneNumber(ctx.lang);
-        },
+        validate: fromRuleAsync(loadRule, options),
     });
 }
 
 /**
- * Validates if the value is a valid phone number
- * @param value - The value to validate
- * @returns Promise that resolves to true if valid, false otherwise
+ * Lazily imports the phone number rule — `libphonenumber-js` is heavy, so it loads only once
+ * there is a non-blank value to validate.
  * @__NO_SIDE_EFFECTS__
  */
-async function validatePhoneNumber(value: string) {
-    const { parsePhoneNumberWithError } = await import('libphonenumber-js');
-
-    try {
-        const number = parsePhoneNumberWithError(value);
-        return !!number.country && number.isValid();
-    } catch {
-        return false;
+async function loadRule(value: string | null | undefined) {
+    if (!value?.trim()) {
+        return undefined;
     }
+
+    const { phoneNumber } = await import('@nzyme/validation/validators/phoneNumber.js');
+    return phoneNumber();
 }

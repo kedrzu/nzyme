@@ -1,87 +1,47 @@
-import type { Comparable } from '../types.js';
-import type { ValidationContext, Validator } from '../Validator.js';
+import { translateToString } from '@nzyme/i18n/translateToString.js';
+
+import type { BoundValidatorOptions, Comparable } from '../types.js';
+import type { Validator } from '../Validator.js';
+import * as l from './validators.loc.js';
 
 /**
- * Context object passed to minValue validator
- */
-export interface MinValidatorContext<T extends Comparable> extends ValidationContext {
-    /**
-     * Minimum value
-     */
-    minValue: T;
-    /**
-     * Value to validate
-     */
-    value: T;
-}
-
-/**
- * Options for configuring the minValue validator behavior.
- */
-export interface MinValidatorOptions<T extends Comparable> {
-    /**
-     * Whether to check if the value is strictly greater than the minimum value.
-     * @default false
-     */
-    exclusive?: boolean;
-    /**
-     * The message to return if the value is less than the minimum value.
-     */
-    message?: (ctx: MinValidatorContext<T>) => string;
-}
-
-/**
- * Validator that checks if the value is greater than or equal to the minimum value.
+ * Creates a validator that checks the value is at least `min`. Skips null/undefined.
  * @util
- * @param minValue - The minimum value to check against.
- * @param options - Options for the validator.
- * @returns A validator function.
  */
-export function minValue(minValue: number, options?: MinValidatorOptions<number>): Validator<number | null | undefined>;
+export function minValue(min: number, options?: BoundValidatorOptions<number>): Validator<number | null | undefined>;
 /**
- * Validator that checks if the value is greater than or equal to the minimum value.
- * @param minValue - The minimum value to check against.
- * @param options - Options for the validator.
- * @returns A validator function.
+ * Creates a validator that checks the value is at least `min`. Skips null/undefined.
  */
-export function minValue(minValue: bigint, options?: MinValidatorOptions<bigint>): Validator<bigint | null | undefined>;
+export function minValue(min: bigint, options?: BoundValidatorOptions<bigint>): Validator<bigint | null | undefined>;
 /**
- * Validator that checks if the value is greater than or equal to the minimum value.
- * @param minValue - The minimum value to check against.
- * @param options - Options for the validator.
- * @returns A validator function.
+ * Creates a validator that checks the value is at least `min`. Skips null/undefined.
  */
-export function minValue<T extends Comparable>(
-    minValue: T,
-    options?: MinValidatorOptions<T>,
-): Validator<T | null | undefined>;
+export function minValue(
+    min: Comparable,
+    options?: BoundValidatorOptions<Comparable>,
+): Validator<Comparable | null | undefined>;
 /**
- * Validator that checks if the value is greater than or equal to the minimum value.
- * @param minValue - The minimum value to check against.
- * @param options - Options for the validator.
- * @returns A validator function.
+ * Creates a validator that checks the value is at least `min`. Skips null/undefined.
+ * @__NO_SIDE_EFFECTS__
  */
 export function minValue<T extends Comparable>(
     min: T,
-    options?: MinValidatorOptions<T>,
+    options: BoundValidatorOptions<T> = {},
 ): Validator<T | null | undefined> {
-    const exclusive = options?.exclusive ?? false;
-    const message = options?.message;
-
     return (value, ctx) => {
         if (value == null) {
             return undefined;
         }
 
-        const valid = exclusive ? value > min : value >= min;
+        const valid = options.exclusive ? value > min : value >= min;
         if (valid) {
             return undefined;
         }
 
-        if (message) {
-            return message({ ...ctx, minValue: min, value });
+        if (options.message) {
+            return options.message(value, ctx);
         }
 
-        return `Minimum value is ${String(min)}`;
+        return translateToString(l.minValueNotMet, ctx.lang ?? 'en', { minValue: min.toString() });
     };
 }

@@ -26,5 +26,14 @@ export type ValidationResult = string | string[] | ValidationErrors | null | und
 /**
  * Function type for validators
  * @template T - Type of the value being validated
+ * @template C - Validation context the validator needs; rules pass their own context through
  */
-export type Validator<T = unknown> = (value: T, ctx: ValidationContext) => ValidationResult;
+export type Validator<T = unknown, C extends ValidationContext = ValidationContext> = (
+    value: T,
+    ctx: C,
+) => ValidationResult;
+
+/**
+ * Overrides a validator's default message. Receives the failing value; returns an already-translated message.
+ */
+export type ValidatorMessage<T> = (value: T, ctx: ValidationContext) => string;

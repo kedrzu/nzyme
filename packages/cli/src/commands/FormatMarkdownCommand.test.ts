@@ -71,6 +71,26 @@ test('keeps links whose text equals their destination but only unwraps literal a
     expect(firstPass).toContain('and www.foo.com.');
 });
 
+test('does not follow symlinks found while walking a directory but formats an explicitly passed symlink', async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'format-markdown-'));
+    const linkedDirectory = path.join(directory, 'linked');
+    const walkedDirectory = path.join(directory, 'walked');
+    const unformatted = '* item\n';
+    await fs.mkdir(linkedDirectory);
+    await fs.mkdir(walkedDirectory);
+    await fs.writeFile(path.join(linkedDirectory, 'fixture.md'), unformatted);
+    await fs.writeFile(path.join(walkedDirectory, 'plain.md'), unformatted);
+    await fs.symlink(linkedDirectory, path.join(walkedDirectory, 'link-to-directory'));
+    await fs.symlink(path.join(linkedDirectory, 'fixture.md'), path.join(walkedDirectory, 'link-to-file.md'));
+
+    expect(await runFormatMarkdown(walkedDirectory)).toBe(0);
+    expect(await fs.readFile(path.join(walkedDirectory, 'plain.md'), 'utf8')).not.toBe(unformatted);
+    expect(await fs.readFile(path.join(linkedDirectory, 'fixture.md'), 'utf8')).toBe(unformatted);
+
+    expect(await runFormatMarkdown(path.join(walkedDirectory, 'link-to-directory'))).toBe(0);
+    expect(await fs.readFile(path.join(linkedDirectory, 'fixture.md'), 'utf8')).not.toBe(unformatted);
+});
+
 function runFormatMarkdown(file: string): Promise<number> {
     const child = Bun.spawn([process.execPath, '--conditions=source', CLI_PATH, 'format-markdown', file], {
         cwd: path.dirname(CLI_PATH),

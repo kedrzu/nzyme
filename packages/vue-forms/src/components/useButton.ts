@@ -138,7 +138,7 @@ function setupButton() {
                         ...attrs,
                         href: link,
                         rel: 'noopener noreferrer',
-                        onClick,
+                        onClick: onNativeLinkClick,
                         disabled: disabled.value || undefined,
                     },
                     ctx.slots,
@@ -150,7 +150,7 @@ function setupButton() {
                     {
                         ...attrs,
                         href: link,
-                        onClick,
+                        onClick: onNativeLinkClick,
                         disabled: disabled.value || undefined,
                     },
                     ctx.slots,
@@ -185,14 +185,26 @@ function setupButton() {
         );
     }
 
-    async function onClick(event: Event, navigate?: (e?: Event) => Promise<unknown>) {
+    /**
+     * Click handler of the external and hash link anchors: the browser performs the navigation itself.
+     * The `click` emit still runs (busy state included), but an async listener cannot hold the
+     * navigation back — that would need `preventDefault` plus a manual navigation afterwards.
+     */
+    function onNativeLinkClick(event: Event) {
+        return onClick(event, undefined, true);
+    }
+
+    async function onClick(event: Event, navigate?: (e?: Event) => Promise<unknown>, nativeLink = false) {
         if (props.disabled || pending.value) {
             event.stopPropagation();
             event.preventDefault();
             return;
         }
 
-        if (!navigate) {
+        // A plain button has no default action we want (a submit button inside a native form would post
+        // it — `formCtx.submit()` below handles submission instead). A RouterLink's `navigate` prevents
+        // the default itself. A native link must keep its default action, which is the navigation.
+        if (!navigate && !nativeLink) {
             event.stopPropagation();
             event.preventDefault();
         }

@@ -54,3 +54,15 @@ test('a module without the named export fails the compilation', async () => {
 
     await expect(compilation).rejects.toThrow('has no function export "missing"');
 });
+
+test('the Babel step parses import attributes in a Node function', async () => {
+    const result = await compileFunction({
+        inputFile: fileURLToPath(new URL('./__fixtures__/compileFunctionImportAttributes/entry.js', import.meta.url)),
+        outputDir,
+        esm: true,
+        nodeVersion: 22,
+    });
+
+    const code = await fs.readFile(result.filePath, 'utf8');
+    expect(code).toContain('json imported through import attributes');
+});

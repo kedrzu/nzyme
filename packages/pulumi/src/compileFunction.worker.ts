@@ -88,15 +88,6 @@ const rollupResult = await rollup({
                 // The preset carries its own targets: the CloudFront Functions runtime is an
                 // allowlist, not an engine version, so `targets` cannot express it.
                 presets: [cloudFrontFunctionPreset],
-                plugins: [
-                    [
-                        // Needed for JSON modules
-                        import.meta.resolve('@babel/plugin-syntax-import-attributes'),
-                        {
-                            deprecatedAssertSyntax: true,
-                        },
-                    ],
-                ],
                 sourceMaps: options.sourcemaps,
             }),
         !cloudFront &&
@@ -104,15 +95,6 @@ const rollupResult = await rollup({
             babel({
                 babelHelpers: 'bundled',
                 presets: [[import.meta.resolve('@babel/preset-env')]],
-                plugins: [
-                    [
-                        // Needed for JSON modules
-                        import.meta.resolve('@babel/plugin-syntax-import-attributes'),
-                        {
-                            deprecatedAssertSyntax: true,
-                        },
-                    ],
-                ],
                 targets: {
                     esmodules: options.esm,
                     node: options.nodeVersion.toString(),

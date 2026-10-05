@@ -42,8 +42,8 @@
         "eslint": "10.8.0",
         "nx": "^23.1.0",
         "oxfmt": "0.46.0",
-        "oxlint": "1.80.0",
-        "oxlint-tsgolint": "7.0.2001",
+        "oxlint": "1.86.0",
+        "oxlint-tsgolint": "7.0.2003",
         "vitest": "3.2.4"
     },
     "packageManager": "bun@1.2.4",

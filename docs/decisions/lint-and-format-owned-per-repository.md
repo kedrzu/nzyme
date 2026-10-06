@@ -55,7 +55,7 @@ Option C.
   checked. nzyme's CI checks it anyway.
 - Editors keep nested-config discovery, so files opened under `nzyme/` get nzyme's rules.
 
-The exact product setup is in [docs/consumers.md](../consumers.md#lint-and-format).
+The exact product setup is in [docs/submodule-setup.md](../submodule-setup.md#lint-and-format).
 
 ## Consequences
 
@@ -63,5 +63,5 @@ The exact product setup is in [docs/consumers.md](../consumers.md#lint-and-forma
   product's lint result says nothing about nzyme's code, and vice versa.
 - **Accepted:**
   - The flag requirement is easy to miss, since a config-only exclusion looks right and silently does
-    nothing. `docs/consumers.md` states it explicitly.
+    nothing. `docs/submodule-setup.md` states it explicitly.
   - Linting nzyme in place needs the product's build first (the oxlint plugin loads from `dist`).

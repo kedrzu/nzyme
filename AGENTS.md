@@ -33,7 +33,7 @@ This is a published library with several consumers.
 
 - Every export of a public package is API. Renaming or removing one, or changing its behaviour, is a
   breaking change: commit it as `feat!:`/`fix!:` with a `BREAKING CHANGE:` footer.
-- Product repos pin nzyme per consumer ref (`docs/consumers.md`), so a change reaches them only after
+- Product repos build nzyme as a submodule (`docs/submodule-setup.md`) and pin it per consumer ref (`docs/consumers.md`), so a change reaches them only after
   their own CI accepts it. Still, run their usages through your head before changing shared behaviour.
 
 # Essential commands
@@ -53,7 +53,7 @@ Run from the repo root:
   formatting.
 - The lint and format configs here (`.oxlintrc.json`, `.oxfmtrc.json`, `eslint.config.mjs`) are
   nzyme's own, and they apply even inside a consuming repo. That repo excludes `nzyme/` and runs these
-  scripts in place (`docs/consumers.md#lint-and-format`). Change rules here, never in a consumer.
+  scripts in place (`docs/submodule-setup.md#lint-and-format`). Change rules here, never in a consumer.
 - `bun run reinstall` — clean reinstall after dependency trouble.
 
 ## Keep command output out of context

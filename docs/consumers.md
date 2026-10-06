@@ -1,7 +1,8 @@
-# Consuming nzyme as a submodule
+# Pinning and promoting nzyme in a product
 
 Products that build nzyme from source as a git submodule move it forward through their own CI, and
 nzyme records per product which of its commits passed it. Why: [the ADR](decisions/per-consumer-submodule-refs.md).
+Setting the submodule up in the first place (workspace, build, lint, format): [submodule-setup.md](submodule-setup.md).
 
 ## The model
 
@@ -117,44 +118,6 @@ jobs:
 `consumer-bump.yml` pushes `nzyme-bump/<base-branch>` (input `pr-branch`), titles the PR with
 `commit-message` (default `chore: bump nzyme to {sha}`) and lists the incoming nzyme commits in its
 body. When the base branch already pins `source-ref`, it closes a stale bump PR and stops.
-
-## Lint and format
-
-nzyme owns its own lint and format configuration (`.oxlintrc.json`, `.oxfmtrc.json`,
-`eslint.config.mjs`), and it applies to the nzyme tree also inside a product. The product lints and
-formats only its own code and runs nzyme's scripts for the submodule. Each repository can then evolve
-its rules on its own, and neither formats the other's files. Why: [the ADR](decisions/lint-and-format-owned-per-repository.md).
-
-An `ignorePatterns` entry alone does **not** exclude the submodule. oxlint and oxfmt discover nested
-config files, and `nzyme/.oxlintrc.json` / `nzyme/.oxfmtrc.json` replace the product's config for
-that subtree, its ignore list included. The product's CLI runs must also skip nested configs. Editors
-should keep discovering them, so files opened under `nzyme/` get nzyme's rules.
-
-In the product:
-
-- `.oxlintrc.json`: `"ignorePatterns": [..., "nzyme/**"]`
-- `.oxfmtrc.json`: `"ignorePatterns": [..., "nzyme"]`
-- `eslint.config.mjs`: `globalIgnores([..., "nzyme/**"])`. ESLint has no nested-config discovery, so
-  this is enough.
-- `package.json` scripts:
-
-  ```json
-  {
-      "lint": "oxlint --type-aware --quiet --disable-nested-config --fix . && eslint --fix .",
-      "lint:check": "oxlint --type-aware --quiet --disable-nested-config . && eslint .",
-      "format": "oxfmt --disable-nested-config . && nzyme format-markdown . --exclude nzyme",
-      "format:check": "oxfmt --check --disable-nested-config . && nzyme format-markdown --check . --exclude nzyme",
-      "lint:nzyme": "bun run --cwd nzyme lint:check && bun run --cwd nzyme format:check"
-  }
-  ```
-
-  If the product relies on nested configs of its own, use `--ignore-pattern "nzyme/**"` for oxlint, and
-  `--ignore-path .gitignore --ignore-path <file listing nzyme>` for oxfmt, instead of
-  `--disable-nested-config`.
-
-nzyme's scripts work in place, with dependencies hoisted to the product's workspace and no
-`nzyme/node_modules`. They need the product's build done first: the oxlint preset loads the
-`@nzyme/oxlint` plugin from its `dist`.
 
 ## Hotfix for a product's production
 

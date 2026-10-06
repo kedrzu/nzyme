@@ -716,6 +716,7 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                 // Sync all repos: commit the main repo, judge the submodules, fetch, rebase/pull, ff base,
                 // merge base, push
                 const syncResult = await syncAllRepos({
+                    branch: currentBranch,
                     baseBranch,
                     baseBranches,
                     unattended,

@@ -35,8 +35,8 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "@nzyme/esm": "0.14.0",
-        "@nzyme/utils": "0.14.0",
+        "@nzyme/esm": "workspace:*",
+        "@nzyme/utils": "workspace:*",
         "@rollup/plugin-commonjs": "29.0.3",
         "@rollup/plugin-json": "6.1.0",
         "@rollup/plugin-node-resolve": "16.0.3",
@@ -61,7 +61,7 @@
         "vite-tsconfig-paths": "6.1.1"
     },
     "devDependencies": {
-        "@nzyme/tsconfig": "0.14.0",
+        "@nzyme/tsconfig": "workspace:*",
         "@types/connect": "3.4.38",
         "@types/source-map-support": "0.5.10",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",

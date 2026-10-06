@@ -37,12 +37,12 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "@nzyme/i18n-compiler": "0.14.0",
-        "@nzyme/ioc": "0.14.0",
-        "@nzyme/logging": "0.14.0",
-        "@nzyme/node-utils": "0.14.0",
-        "@nzyme/project-utils": "0.14.0",
-        "@nzyme/utils": "0.14.0",
+        "@nzyme/i18n-compiler": "workspace:*",
+        "@nzyme/ioc": "workspace:*",
+        "@nzyme/logging": "workspace:*",
+        "@nzyme/node-utils": "workspace:*",
+        "@nzyme/project-utils": "workspace:*",
+        "@nzyme/utils": "workspace:*",
         "@types/fs-extra": "11.0.4",
         "chalk": "6.0.1",
         "chokidar": "5.0.0",
@@ -63,7 +63,7 @@
         "type-fest": "5.10.0"
     },
     "devDependencies": {
-        "@nzyme/tsconfig": "0.14.0",
+        "@nzyme/tsconfig": "workspace:*",
         "@types/lodash.merge": "4.6.9",
         "@types/mdast": "4.0.4",
         "@types/node": "26.6.4",

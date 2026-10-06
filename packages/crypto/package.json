@@ -43,11 +43,11 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "@nzyme/types": "0.14.0",
+        "@nzyme/types": "workspace:*",
         "spark-md5": "3.0.2"
     },
     "devDependencies": {
-        "@nzyme/tsconfig": "0.14.0",
+        "@nzyme/tsconfig": "workspace:*",
         "@types/node": "26.6.4",
         "@types/spark-md5": "3.0.5",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",

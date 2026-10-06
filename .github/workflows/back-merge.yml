@@ -1,0 +1,46 @@
+name: Back-merge release into main
+
+# Everything that lands on `release` — hotfixes and the version bump with its changelog — flows back
+# to main as a merge commit, so main never needs a cherry-pick and fixes are never listed twice in
+# the changelog. A conflicting merge is not forced: a PR is opened for a human to resolve instead.
+
+on:
+  push:
+    branches: [release]
+
+concurrency:
+  group: back-merge
+  cancel-in-progress: false
+
+jobs:
+  back-merge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_BOT_TOKEN || github.token }}
+
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin release
+          if git merge-base --is-ancestor origin/release HEAD; then
+            echo "main already contains release."
+            exit 0
+          fi
+          if git merge --no-ff origin/release -m "chore: merge release into main"; then
+            git push origin HEAD:main
+          else
+            git merge --abort
+            if [ -z "$(gh pr list --base main --head release --json number --jq '.[].number')" ]; then
+              gh pr create --base main --head release --title "chore: merge release into main" \
+                --body "The automatic back-merge of \`release\` into \`main\` conflicts. Resolve it here with a merge commit (not a squash)."
+            fi
+          fi

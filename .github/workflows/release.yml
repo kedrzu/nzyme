@@ -1,0 +1,172 @@
+name: Release
+
+# Release line for npm. Runs on every push to `release` (a promotion from main, a merged hotfix,
+# or a merged release PR) and does one of two things:
+#
+# - **prepare** — when the current version is already tagged, compute the next version and changelog
+#   from Conventional Commits since that tag (`nx release`, which reads `git log vX..HEAD` and so sees
+#   commits that reached `release` through a merge), and open or update the release PR
+#   `chore(release): vX` from the `release-pr` branch.
+# - **publish** — when the current version has no tag yet (the release PR was just merged), build
+#   and test that commit, publish every public package to npm, then tag it and create the GitHub
+#   Release. Publishing skips versions already on npm, so a failed run is fixed by re-running it.
+
+on:
+  push:
+    branches: [release]
+  workflow_call:
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  state:
+    name: Resolve release state
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.state.outputs.version }}
+      pending: ${{ steps.state.outputs.pending }}
+      sha: ${{ steps.state.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: release
+          fetch-depth: 0
+
+      - id: state
+        run: |
+          version=$(jq -r .version packages/utils/package.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ -n "$(git tag -l "v$version")" ]; then
+            echo "pending=false" >> "$GITHUB_OUTPUT"
+          else
+            # Publish the release commit itself, not whatever landed on top of it since.
+            sha=$(git log -1 --format=%H --grep="^chore(release): v$version" || true)
+            echo "pending=true" >> "$GITHUB_OUTPUT"
+            echo "sha=${sha:-$(git rev-parse HEAD)}" >> "$GITHUB_OUTPUT"
+          fi
+
+  prepare:
+    name: Prepare release PR
+    needs: state
+    if: needs.state.outputs.pending == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      CI: 'true'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: release
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - run: bun install --frozen-lockfile
+
+      - name: Compute version and changelog
+        id: next
+        run: |
+          current='${{ needs.state.outputs.version }}'
+          bun nx release version
+          next=$(jq -r .version packages/utils/package.json)
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+          if [ "$next" = "$current" ]; then
+            echo "No releasable commits (feat/fix/perf/breaking) since v$current."
+            exit 0
+          fi
+          bun nx release changelog "$next"
+          # Workspace versions are recorded in the lockfile too.
+          bun install
+          bun run format > /dev/null
+          awk -v v="$next" '$0 ~ "^## " v " " {found=1; next} found && /^## / {exit} found {print}' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+
+      - name: Close a stale release PR
+        if: steps.next.outputs.version == needs.state.outputs.version
+        run: |
+          for pr in $(gh pr list --base release --head release-pr --json number --jq '.[].number'); do
+            gh pr close "$pr" --comment "Nothing to release since v${{ needs.state.outputs.version }}." --delete-branch
+          done
+
+      - name: Open or update the release PR
+        if: steps.next.outputs.version != needs.state.outputs.version
+        run: |
+          version='${{ steps.next.outputs.version }}'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C release-pr
+          git commit -qam "chore(release): v$version"
+          git push --force origin release-pr
+
+          title="chore(release): v$version"
+          {
+            echo "Merging this PR publishes **v$version** to npm, tags it and creates the GitHub Release."
+            echo "It is regenerated on every push to \`release\`; do not edit it by hand."
+            echo
+            cat "$RUNNER_TEMP/notes.md"
+          } > "$RUNNER_TEMP/body.md"
+
+          pr=$(gh pr list --base release --head release-pr --json number --jq '.[0].number')
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh pr create --base release --head release-pr --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          fi
+
+  publish:
+    name: Publish v${{ needs.state.outputs.version }}
+    needs: state
+    if: needs.state.outputs.pending == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # Trusted publishing (OIDC) and npm provenance.
+      id-token: write
+    env:
+      CI: 'true'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.state.outputs.sha }}
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      # npm >= 11.5.1 is required for trusted publishing.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: npm install -g npm@latest
+
+      - name: Build
+        run: bash setup.build.sh
+
+      - name: Test
+        run: bun run test
+
+      # Only needed to bootstrap packages that are not on npm yet (trusted publishing can only be
+      # configured for an existing package). Without the secret, npm authenticates through OIDC.
+      - name: Configure npm token
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        if: env.NPM_TOKEN != ''
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
+
+      - name: Publish to npm
+        run: bun scripts/publish.ts
+
+      - name: Tag and create the GitHub Release
+        run: |
+          version='${{ needs.state.outputs.version }}'
+          awk -v v="$version" '$0 ~ "^## " v " " {found=1; next} found && /^## / {exit} found {print}' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          gh release create "v$version" --target '${{ needs.state.outputs.sha }}' --title "v$version" --notes-file "$RUNNER_TEMP/notes.md"

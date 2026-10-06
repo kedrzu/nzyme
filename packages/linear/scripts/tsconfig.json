@@ -1,0 +1,11 @@
+{
+    // Type-checks the package's standalone scripts. They sit outside `src`, so neither the build
+    // config nor the generated `tsconfig.json` covers them, and type-aware lint would otherwise
+    // resolve their imports without the repo's module settings.
+    "extends": "@nzyme/tsconfig/esm.json",
+    "compilerOptions": {
+        "noEmit": true,
+        "composite": false
+    },
+    "include": ["."]
+}

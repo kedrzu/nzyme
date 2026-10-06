@@ -280,6 +280,11 @@ export class FormatMarkdownCommand extends Command {
         if (stats.isDirectory()) {
             const entries = await fs.readdir(target, { withFileTypes: true });
             for (const entry of entries) {
+                // A symlinked file or directory is formatted where it actually lives, or not at all (e.g. a link
+                // into a git submodule); explicit inputs never reach this loop, so they still follow symlinks.
+                if (entry.isSymbolicLink()) {
+                    continue;
+                }
                 await this.collectFiles(path.join(target, entry.name), excluded, results);
             }
         } else if (stats.isFile() && MARKDOWN_REGEX.test(target)) {

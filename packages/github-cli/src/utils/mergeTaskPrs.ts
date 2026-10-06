@@ -261,6 +261,8 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
     const refreshedMainHeadSha = await refreshMainAfterSubmoduleMerge({
         refreshedSubmodulePaths: submoduleTargets.map(target => target.path),
         baseBranch,
+        githubClient,
+        githubConfig,
         logger,
     });
 

@@ -1,9 +1,15 @@
 import chalk from 'chalk';
 import { simpleGit } from 'simple-git';
 
+import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
+import type { GithubConfig } from '../GithubConfig.js';
 import { assertNoConflicts } from './assertNoConflicts.js';
+import { findUpperNodeHeads } from './assertPushLeavesUpperNodesOpen.js';
+import type { BranchGuard } from './createBranchGuard.js';
+import { createBranchGuard } from './createBranchGuard.js';
+import type { GithubClient } from './createGithubClient.js';
 import { handleMergeConflict } from './handleMergeConflict.js';
 import { parkSubmoduleOnBase } from './parkSubmoduleOnBase.js';
 import { pushSubmoduleUpdates } from './pushSubmoduleUpdates.js';
@@ -30,6 +36,17 @@ export interface RefreshMainAfterSubmoduleMergeParams {
     submoduleBaseBranch?: string;
 
     /**
+     * GitHub client used to look up the pull requests stacked on the main task branch before it is
+     * pushed.
+     */
+    githubClient: GithubClient;
+
+    /**
+     * GitHub configuration of the main repository.
+     */
+    githubConfig: GithubConfig;
+
+    /**
      * Logger instance.
      */
     logger: Logger;
@@ -51,17 +68,37 @@ export interface RefreshMainAfterSubmoduleMergeParams {
  * be gated on (see {@link waitForRequiredChecks}'s `expectedHeadSha`).
  */
 export async function refreshMainAfterSubmoduleMerge(params: RefreshMainAfterSubmoduleMergeParams): Promise<string> {
-    const { refreshedSubmodulePaths, baseBranch, submoduleBaseBranch = baseBranch, logger } = params;
+    const {
+        refreshedSubmodulePaths,
+        baseBranch,
+        submoduleBaseBranch = baseBranch,
+        githubClient,
+        githubConfig,
+        logger,
+    } = params;
 
     // Disable submodule recursion for main-repo history ops (mirrors syncAllRepos) so git does not try
     // to auto-fetch submodule gitlink commits by SHA during the base merge.
     const mainGit = simpleGit({ config: ['submodule.recurse=false'] });
 
+    // Pinned for the same reason as in syncAllRepos: every step below acts on whatever HEAD is at that
+    // instant, in a worktree other commands may be switching.
+    const taskBranch = (await mainGit.status()).current;
+    if (!taskBranch) {
+        throw new UsageError('Could not determine the main repository branch to refresh before merging');
+    }
+
+    const guard = createBranchGuard({
+        git: mainGit,
+        branch: taskBranch,
+        findUpperNodes: () => findUpperNodeHeads(githubClient, githubConfig, taskBranch),
+    });
+
     // === Step 1: bring the main task branch up to date with base (if behind) ===
     logger.info('');
     logger.info(chalk.bold('🔄 Refreshing main repository before merge...'));
 
-    const merged = await mergeBaseIntoMainIfBehind(baseBranch, logger, mainGit);
+    const merged = await mergeBaseIntoMainIfBehind({ baseBranch, taskBranch, guard, logger, mainGit });
 
     // === Step 2: park each merged submodule on its merged base tip ===
     for (const path of refreshedSubmodulePaths) {
@@ -75,10 +112,16 @@ export async function refreshMainAfterSubmoduleMerge(params: RefreshMainAfterSub
     }
 
     // === Step 3: commit & push the gitlink updates ===
-    const pushResult = await pushSubmoduleUpdates({ logger, submodulePaths: refreshedSubmodulePaths });
+    await guard.beforeWrite();
+    const pushResult = await pushSubmoduleUpdates({
+        logger,
+        submodulePaths: refreshedSubmodulePaths,
+        beforePush: guard.beforePush,
+    });
 
     // The base-merge commit from step 1 must reach the remote even when no gitlink changed.
     if (merged && !pushResult.pushed) {
+        await guard.beforePush();
         await pushWithUpstream(mainGit);
         logger.info(`   ${chalk.green('✓')} Pushed base merge to main repository`);
     }
@@ -88,22 +131,43 @@ export async function refreshMainAfterSubmoduleMerge(params: RefreshMainAfterSub
 }
 
 /**
- * Merge `origin/<baseBranch>` into the current main task branch when it is behind. Returns whether a
- * merge commit was created.
+ * Inputs to {@link mergeBaseIntoMainIfBehind}.
  */
-async function mergeBaseIntoMainIfBehind(
-    baseBranch: string,
-    logger: Logger,
-    mainGit: ReturnType<typeof simpleGit>,
-): Promise<boolean> {
-    await mainGit.fetch('origin', baseBranch);
+interface MergeBaseIntoMainIfBehindParams {
+    /**
+     * The branch to merge from.
+     */
+    baseBranch: string;
 
-    const status = await mainGit.status();
-    const currentBranch = status.current;
-    if (!currentBranch) {
-        logger.warn('   ⚠️  Could not determine current branch in main repository');
-        return false;
-    }
+    /**
+     * The main task branch being merged into — the one checked out when the refresh started.
+     */
+    taskBranch: string;
+
+    /**
+     * Guard of {@link taskBranch}, run before the merge.
+     */
+    guard: BranchGuard;
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+
+    /**
+     * Git instance of the main repository.
+     */
+    mainGit: ReturnType<typeof simpleGit>;
+}
+
+/**
+ * Merge `origin/<baseBranch>` into the main task branch when it is behind. Returns whether a merge
+ * commit was created.
+ */
+async function mergeBaseIntoMainIfBehind(params: MergeBaseIntoMainIfBehindParams): Promise<boolean> {
+    const { baseBranch, taskBranch: currentBranch, guard, logger, mainGit } = params;
+
+    await mainGit.fetch('origin', baseBranch);
 
     const remoteBase = `origin/${baseBranch}`;
 
@@ -124,6 +188,8 @@ async function mergeBaseIntoMainIfBehind(
         `   Merging ${chalk.cyan(remoteBase)} into ${chalk.cyan(currentBranch)} ` +
             `(${chalk.yellow(commitsAhead.toString())} commit${commitsAhead === 1 ? '' : 's'} behind)...`,
     );
+
+    await guard.beforeWrite();
 
     try {
         await mainGit.merge([remoteBase]);

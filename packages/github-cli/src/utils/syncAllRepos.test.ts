@@ -153,3 +153,136 @@ test('the main repository is still committed automatically before the submodule 
     // (main-work.txt and the submodule gitlink update) alongside the caller's default.
     expect((await main.log(['-1'])).latest?.message).toBe('[ABC-123] Work in progress: main-work.txt and nzyme');
 });
+
+const STACK = ['feature/abc-1-stack', 'feature/abc-1-stack--s2', 'feature/abc-1-stack--s3'] as const;
+
+/**
+ * Build a three-node stack on `main` — each node one commit on top of the node below — push it, and
+ * leave the top node checked out. No submodules, so the sync talks to GitHub only through the
+ * stack's own pull requests.
+ */
+async function setupStack(dir: string): Promise<{ mainPath: string; remotePath: string }> {
+    const remotePath = join(dir, 'origin-main.git');
+    const mainPath = join(dir, 'main');
+
+    const bare = simpleGit();
+    await bare.init(['--bare', remotePath]);
+    await bare.cwd(remotePath).raw(['symbolic-ref', 'HEAD', 'refs/heads/main']);
+
+    await simpleGit().clone(remotePath, mainPath);
+    const main = simpleGit({ baseDir: mainPath });
+    await main.addConfig('user.email', 't@t');
+    await main.addConfig('user.name', 't');
+    await main.addConfig('commit.gpgsign', 'false');
+    await main.checkoutLocalBranch('main');
+    await main.commit('main c0', [], { '--allow-empty': null });
+    await main.push(['-u', 'origin', 'main']);
+
+    for (const node of STACK) {
+        await main.checkoutLocalBranch(node);
+        writeFileSync(join(mainPath, `${node.replaceAll('/', '-')}.txt`), `${node}\n`);
+        await main.add(['.']);
+        await main.commit(`work on ${node}`);
+        await main.push(['-u', 'origin', node]);
+    }
+
+    return { mainPath, remotePath };
+}
+
+/**
+ * A `GithubClient` stub serving the stack's open pull requests, each node based on the one below it,
+ * with head SHAs read from the remote — what GitHub itself would report.
+ */
+async function createStackClient(remotePath: string): Promise<GithubClient> {
+    const remote = simpleGit({ baseDir: remotePath });
+    const prs = await Promise.all(
+        STACK.map(async (node, index) => ({
+            number: index + 1,
+            state: 'open',
+            title: `[ABC-1] node ${index + 1}`,
+            head: { ref: node, sha: (await remote.revparse([node])).trim() },
+            base: { ref: index === 0 ? 'main' : STACK[index - 1] },
+        })),
+    );
+
+    return {
+        rest: {
+            pulls: {
+                list: (params: { base?: string }) =>
+                    Promise.resolve({ data: prs.filter(pr => !params.base || pr.base.ref === params.base) }),
+            },
+        },
+    } as unknown as GithubClient;
+}
+
+test('a sync whose worktree is switched to another node mid-run never merges into or pushes that node', async () => {
+    // HLD-585: `task push` on the top node synced against its base (the middle node) while another
+    // command in the same worktree checked out the bottom node. The push's base merge then landed on
+    // the bottom node and pushed it — a fast-forward onto the middle node's head, which GitHub reads
+    // as the middle pull request being merged.
+    const { mainPath, remotePath } = await setupStack(root);
+    const githubClient = await createStackClient(remotePath);
+    const remote = simpleGit({ baseDir: remotePath });
+    const bottomBefore = (await remote.revparse([STACK[0]])).trim();
+    const { logger } = createTestLogger('syncAllRepos');
+
+    // The other command, switching the shared working tree between the sync's phases.
+    let switched = false;
+    const switchingLogger = {
+        ...logger,
+        info: (message: string) => {
+            if (!switched && message.includes('Fast-forwarding base branches')) {
+                switched = true;
+                Bun.spawnSync(['git', 'checkout', '--quiet', STACK[0]], { cwd: mainPath });
+            }
+
+            logger.info(message);
+        },
+    };
+
+    process.chdir(mainPath);
+
+    const sync = syncAllRepos({
+        baseBranch: STACK[1],
+        baseBranches: ['main'],
+        unattended: true,
+        githubClient,
+        githubConfig: GITHUB_CONFIG,
+        logger: switchingLogger,
+    });
+
+    await expect(sync).rejects.toThrow(UsageError);
+    await expect(sync).rejects.toThrow(STACK[0]);
+
+    expect(switched).toBe(true);
+    expect((await remote.revparse([STACK[0]])).trim()).toBe(bottomBefore);
+    expect((await simpleGit({ baseDir: mainPath }).revparse([STACK[0]])).trim()).toBe(bottomBefore);
+});
+
+test('a sync that would merge an upper node into the node below it refuses to push that node', async () => {
+    // Standing on the bottom node with the middle node as the merge source is the shape the incident
+    // left behind. Whatever call path produces it, the push has to stop by name before GitHub reads
+    // the middle pull request as merged.
+    const { mainPath, remotePath } = await setupStack(root);
+    const githubClient = await createStackClient(remotePath);
+    const remote = simpleGit({ baseDir: remotePath });
+    const bottomBefore = (await remote.revparse([STACK[0]])).trim();
+    const { logger } = createTestLogger('syncAllRepos');
+
+    await simpleGit({ baseDir: mainPath }).checkout(STACK[0]);
+    process.chdir(mainPath);
+
+    const sync = syncAllRepos({
+        baseBranch: STACK[1],
+        baseBranches: ['main'],
+        unattended: true,
+        githubClient,
+        githubConfig: GITHUB_CONFIG,
+        logger,
+    });
+
+    await expect(sync).rejects.toThrow(UsageError);
+    await expect(sync).rejects.toThrow(`Refusing to push ${STACK[0]}: it now contains the head of ${STACK[1]}`);
+
+    expect((await remote.revparse([STACK[0]])).trim()).toBe(bottomBefore);
+});

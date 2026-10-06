@@ -24,6 +24,8 @@ export type {
     FetchAndRebaseCurrentBranchResult,
 } from './utils/fetchAndRebaseCurrentBranch.js';
 export * from './utils/findMatchingPr.js';
+export * from './utils/formatTaskPrHeading.js';
+export * from './utils/formatTaskPrTitle.js';
 export * from './utils/getCurrentBranch.js';
 export * from './utils/getGitStatusInfo.js';
 export type { GitStatusInfo } from './utils/getGitStatusInfo.js';

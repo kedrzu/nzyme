@@ -1,5 +1,6 @@
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
+import { formatTaskPrHeading } from './formatTaskPrHeading.js';
 
 /**
  * Parameters for creating a draft PR.
@@ -93,7 +94,7 @@ export async function createDraftPr(params: CreateDraftPrParams): Promise<Create
  * @__NO_SIDE_EFFECTS__
  */
 export function buildPrBody(description: string, issueId: string, taskUrl: string, issueTitle: string): string {
-    const lines = [`# [${issueId}](${taskUrl}) ${issueTitle}`, ''];
+    const lines = [formatTaskPrHeading({ issueId, taskUrl, title: issueTitle }), ''];
 
     if (description) {
         lines.push(description);

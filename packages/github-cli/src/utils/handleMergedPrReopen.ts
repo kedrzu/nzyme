@@ -9,6 +9,7 @@ import { determineNextVersion, extractBranchVersion } from './branchVersionHelpe
 import { createBranchAndPr } from './createBranchAndPr.js';
 import type { GithubClient } from './createGithubClient.js';
 import { findAllMatchingPrs } from './findMatchingPr.js';
+import { formatTaskPrTitle } from './formatTaskPrTitle.js';
 
 /**
  * Parameters for handling merged PR reopen.
@@ -175,12 +176,9 @@ export async function handleMergedPrReopen(params: HandleMergedPrReopenParams): 
 
     // Extract version for PR title
     const versionNumber = extractBranchVersion(newBranchName);
-    const versionSuffix = versionNumber > 1 ? ` (v${versionNumber})` : '';
 
     // Create PR title with version number
-    const prTitle = projectName
-        ? `[${issueId}][${projectName}] ${issueTitle}${versionSuffix}`
-        : `[${issueId}] ${issueTitle}${versionSuffix}`;
+    const prTitle = formatTaskPrTitle({ issueId, projectName, title: issueTitle, version: versionNumber });
 
     // Create new branch and PR
     const result = await createBranchAndPr({

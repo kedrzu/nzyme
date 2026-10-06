@@ -10,6 +10,7 @@ import { decideUnattendedMode } from '@nzyme/github-cli/utils/decideUnattendedMo
 import { findTaskPrs } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { applyStashedChanges, handleBranchSelection } from '@nzyme/github-cli/utils/handleBranchSelection.js';
 import type { BranchSelectionResult } from '@nzyme/github-cli/utils/handleBranchSelection.js';
+import { formatTaskPrTitle } from '@nzyme/github-cli/utils/formatTaskPrTitle.js';
 import { handleMergedPrReopen } from '@nzyme/github-cli/utils/handleMergedPrReopen.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
 import type { Logger } from '@nzyme/logging/Logger.js';
@@ -259,9 +260,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
                 .replace(/-+/g, '-')
                 .slice(0, 50)}`;
 
-        const prTitle = projectName
-            ? `[${issueId}][${projectName}] ${issueData.title}`
-            : `[${issueId}] ${issueData.title}`;
+        const prTitle = formatTaskPrTitle({ issueId, projectName, title: issueData.title });
 
         logger.info(`🌿 Creating branch: ${chalk.cyan(branchName)}`);
 

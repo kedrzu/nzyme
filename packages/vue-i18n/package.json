@@ -21,7 +21,6 @@
             "default": "./src/index.ts"
         },
         "./*.js": "./src/*.ts",
-        "./*.jsx": "./src/*.tsx",
         "./*.vue": "./src/*.vue"
     },
     "publishConfig": {

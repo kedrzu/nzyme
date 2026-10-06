@@ -32,6 +32,14 @@ import { switchDetachedSubmoduleToBaseBranch } from './switchDetachedSubmoduleTo
  */
 export interface SyncAllReposParams {
     /**
+     * The main repository's branch this sync is for — the one it commits to, merges into and pushes.
+     * Passed in rather than read from HEAD, because the caller derived {@link baseBranch} from this
+     * exact branch: reading HEAD again here would let a checkout by another command in the same
+     * worktree pair one branch's base with another branch.
+     */
+    branch: string;
+
+    /**
      * The branch to merge **from** (e.g. 'main'), and the one fast-forwarded in every repository.
      * On a stacked task this is deliberately the parent node's branch rather than the project
      * trunk, so it is not a reliable answer to "is this a base branch" — see {@link baseBranches}.
@@ -141,6 +149,7 @@ export interface SyncAllReposResult {
  */
 export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllReposResult> {
     const {
+        branch: mainBranch,
         baseBranch,
         baseBranches,
         unattended,
@@ -155,17 +164,14 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     // unexpected times, both of which produce spurious submodule conflicts.
     const mainGit = simpleGit({ config: ['submodule.recurse=false'] });
 
-    // The branch this sync is for, pinned before anything runs: every main-repository step below
-    // acts on whatever HEAD is at that instant, and the worktree is shared with any other command
-    // running in it.
-    const mainBranch = (await mainGit.status()).current;
-    const mainGuard = mainBranch
-        ? createBranchGuard({
-              git: mainGit,
-              branch: mainBranch,
-              findUpperNodes: () => findUpperNodeHeads(githubClient, githubConfig, mainBranch),
-          })
-        : undefined;
+    // Every main-repository step below acts on whatever HEAD is at that instant, and the worktree is
+    // shared with any other command running in it — so each write first checks HEAD is still the
+    // branch this sync is for.
+    const mainGuard = createBranchGuard({
+        git: mainGit,
+        branch: mainBranch,
+        findUpperNodes: () => findUpperNodeHeads(githubClient, githubConfig, mainBranch),
+    });
 
     // === Phase 1: Detect submodules ===
     const submoduleInfos = await getSubmoduleInfo();
@@ -176,6 +182,7 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
 
     let anyCommitted = false;
 
+    await mainGuard.beforeWrite();
     const mainCommit = await autoCommitChanges({
         logger,
         git: mainGit,
@@ -315,8 +322,8 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     // Submodule refs may change from Phase 4 (rebase/pull) or Phase 6 (merge).
     // Detect and commit any changed gitlinks so the main repo stays clean.
     logger.info('');
-    await mainGuard?.beforeWrite();
-    await pushSubmoduleUpdates({ logger, beforePush: mainGuard?.beforePush });
+    await mainGuard.beforeWrite();
+    await pushSubmoduleUpdates({ logger, beforePush: mainGuard.beforePush });
 
     // === Phase 8: Merge base into main task branch + push ===
     logger.info('');

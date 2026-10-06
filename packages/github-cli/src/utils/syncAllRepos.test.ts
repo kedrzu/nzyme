@@ -110,6 +110,7 @@ test('a dirty submodule is refused rather than committed when nobody can be aske
     process.chdir(mainPath);
 
     const failure = syncAllRepos({
+        branch: 'main',
         baseBranch: 'main',
         baseBranches: ['main'],
         unattended: true,
@@ -137,6 +138,7 @@ test('the main repository is still committed automatically before the submodule 
     process.chdir(mainPath);
 
     const failure = syncAllRepos({
+        branch: 'main',
         baseBranch: 'main',
         baseBranches: ['main'],
         unattended: true,
@@ -243,6 +245,7 @@ test('a sync whose worktree is switched to another node mid-run never merges int
     process.chdir(mainPath);
 
     const sync = syncAllRepos({
+        branch: STACK[2],
         baseBranch: STACK[1],
         baseBranches: ['main'],
         unattended: true,
@@ -273,6 +276,7 @@ test('a sync that would merge an upper node into the node below it refuses to pu
     process.chdir(mainPath);
 
     const sync = syncAllRepos({
+        branch: STACK[0],
         baseBranch: STACK[1],
         baseBranches: ['main'],
         unattended: true,
@@ -285,4 +289,34 @@ test('a sync that would merge an upper node into the node below it refuses to pu
     await expect(sync).rejects.toThrow(`Refusing to push ${STACK[0]}: it now contains the head of ${STACK[1]}`);
 
     expect((await remote.revparse([STACK[0]])).trim()).toBe(bottomBefore);
+});
+
+test('a sync whose worktree is already on another node refuses before committing anything to it', async () => {
+    // The caller derived the base from the node it read (the top), but the worktree was switched to
+    // the bottom node before the sync started. Even the auto-commit has to stop: committing the
+    // developer's work onto the bottom node is the first step of the same damage.
+    const { mainPath, remotePath } = await setupStack(root);
+    const githubClient = await createStackClient(remotePath);
+    const main = simpleGit({ baseDir: mainPath });
+    const { logger } = createTestLogger('syncAllRepos');
+
+    await main.checkout(STACK[0]);
+    const bottomBefore = (await main.revparse([STACK[0]])).trim();
+    writeFileSync(join(mainPath, 'top-node-work.txt'), 'work meant for the top node\n');
+    process.chdir(mainPath);
+
+    const sync = syncAllRepos({
+        branch: STACK[2],
+        baseBranch: STACK[1],
+        baseBranches: ['main'],
+        unattended: true,
+        githubClient,
+        githubConfig: GITHUB_CONFIG,
+        logger,
+    });
+
+    await expect(sync).rejects.toThrow(`The working tree switched from ${STACK[2]} to ${STACK[0]}`);
+
+    expect((await main.revparse([STACK[0]])).trim()).toBe(bottomBefore);
+    expect((await main.status()).not_added).toEqual(['top-node-work.txt']);
 });

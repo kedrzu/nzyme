@@ -76,6 +76,15 @@ fi
 
 bash setup.build.sh
 
+# --- Code index (agent navigation) ---
+
+# Not part of setup.build.sh: CI has no agent to read it. Non-fatal — an indexing failure must never
+# break workspace setup.
+echo ""
+echo "🗂️ Generating the code index..."
+echo ""
+bun run index || echo "⚠️  Code indexing failed (non-fatal) — run 'bun run index' manually."
+
 echo ""
 echo "✅ Setup complete."
 echo ""

@@ -10,6 +10,7 @@
         "@nx/js": "^23.1.0",
         "@nzyme/cli": "workspace:*",
         "@nzyme/eslint": "workspace:*",
+        "@nzyme/tsconfig": "workspace:*",
         "@swc-node/register": "1.10.10",
         "@swc/core": "1.12.6",
         "@types/bun": "1.4.2",
@@ -93,6 +94,7 @@
         "remark-gfm": "4.0.1",
         "source-map-support": "0.5.21",
         "type-fest": "5.10.0",
+        "typescript": "6.0.3",
       },
       "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

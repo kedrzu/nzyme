@@ -20,6 +20,7 @@
         "format:check": "oxfmt --check . && bun run format:md:check",
         "format:md": "nzyme format-markdown . --exclude .context --exclude CHANGELOG.md",
         "format:md:check": "nzyme format-markdown --check . --exclude .context --exclude CHANGELOG.md",
+        "index": "nzyme index",
         "lint": "oxlint --type-aware --quiet --fix . && eslint --fix .",
         "lint:check": "oxlint --type-aware --quiet . && eslint .",
         "lint:warnings": "oxlint --type-aware .",
@@ -39,6 +40,7 @@
         "@nx/js": "^23.1.0",
         "@nzyme/cli": "workspace:*",
         "@nzyme/eslint": "workspace:*",
+        "@nzyme/tsconfig": "workspace:*",
         "@swc-node/register": "1.10.10",
         "@swc/core": "1.12.6",
         "@types/bun": "1.4.2",
@@ -59,6 +61,21 @@
         "ignoreDeps": [
             "*"
         ]
+    },
+    "nzyme": {
+        "index": {
+            "globalUtilPackages": [
+                "@nzyme/crypto",
+                "@nzyme/dom-utils",
+                "@nzyme/fetch-utils",
+                "@nzyme/i18n",
+                "@nzyme/money",
+                "@nzyme/node-utils",
+                "@nzyme/utils",
+                "@nzyme/validation",
+                "@nzyme/xml-utils"
+            ]
+        }
     },
     "patchedDependencies": {
         "bun-types@1.4.2": "patches/bun-types@1.4.2.patch"

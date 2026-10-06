@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 import { simpleGit } from 'simple-git';
 
-import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
@@ -19,6 +18,15 @@ import { pushWithUpstream } from './pushWithUpstream.js';
  * Parameters for {@link refreshMainAfterSubmoduleMerge}.
  */
 export interface RefreshMainAfterSubmoduleMergeParams {
+    /**
+     * The main task branch to refresh — the one the caller checked out for it (the bottom node of a
+     * stack). Passed in rather than read from HEAD here: the caller's confirm prompt and submodule
+     * check polling can take minutes, and another command in the same worktree may switch branches
+     * meanwhile. Every write is guarded against this name, so such a switch is refused instead of
+     * merging into and pushing whatever happens to be checked out.
+     */
+    taskBranch: string;
+
     /**
      * Paths of submodules whose PRs were merged for this task and must now be re-pointed at their
      * merged base-branch commit. May be empty (no submodule PRs).
@@ -69,6 +77,7 @@ export interface RefreshMainAfterSubmoduleMergeParams {
  */
 export async function refreshMainAfterSubmoduleMerge(params: RefreshMainAfterSubmoduleMergeParams): Promise<string> {
     const {
+        taskBranch,
         refreshedSubmodulePaths,
         baseBranch,
         submoduleBaseBranch = baseBranch,
@@ -81,18 +90,14 @@ export async function refreshMainAfterSubmoduleMerge(params: RefreshMainAfterSub
     // to auto-fetch submodule gitlink commits by SHA during the base merge.
     const mainGit = simpleGit({ config: ['submodule.recurse=false'] });
 
-    // Pinned for the same reason as in syncAllRepos: every step below acts on whatever HEAD is at that
-    // instant, in a worktree other commands may be switching.
-    const taskBranch = (await mainGit.status()).current;
-    if (!taskBranch) {
-        throw new UsageError('Could not determine the main repository branch to refresh before merging');
-    }
-
     const guard = createBranchGuard({
         git: mainGit,
         branch: taskBranch,
         findUpperNodes: () => findUpperNodeHeads(githubClient, githubConfig, taskBranch),
     });
+    // Checked up front too: step 2 moves submodule pointers in the working tree even when step 1
+    // writes nothing, and must not leave them in a branch another command switched to.
+    await guard.beforeWrite();
 
     // === Step 1: bring the main task branch up to date with base (if behind) ===
     logger.info('');
@@ -140,7 +145,7 @@ interface MergeBaseIntoMainIfBehindParams {
     baseBranch: string;
 
     /**
-     * The main task branch being merged into — the one checked out when the refresh started.
+     * The main task branch being merged into — the one the caller checked out for the refresh.
      */
     taskBranch: string;
 

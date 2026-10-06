@@ -11,6 +11,7 @@ import { createTestLogger } from '@nzyme/logging';
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
 import { assertSubmodulesReady } from './mergeTaskPrs.js';
+import { refreshMainAfterSubmoduleMerge } from './refreshMainAfterSubmoduleMerge.js';
 
 const GITHUB_CONFIG: GithubConfig = { owner: 'acme', repo: 'main', token: 'ghp_test' };
 const BASE_BRANCHES = ['main'];
@@ -186,4 +187,38 @@ test('collects a submodule whose pull request already merged, without touching i
     // Reported, not acted on: `assertSubmodulesReady` must not reset the submodule itself.
     const sub = simpleGit({ baseDir: submodulePath });
     expect((await sub.revparse(['HEAD'])).trim()).toBe(submoduleHeadBefore);
+});
+
+// `mergeTaskPrs` checks the bottom node out, then spends minutes on the confirm prompt and the
+// submodule check polling before refreshing it. A branch switched in that window by another command
+// in the worktree (here: an upper node) must be refused by name — never have `origin/main` merged
+// into it and pushed, which would land the base merge in that node's diff and leave the bottom node's
+// check gate waiting for a commit it never gets.
+test('refresh refuses to merge base into a branch switched to after the bottom node was checked out', async () => {
+    const { mainPath } = await setupSuperprojectWithTaskSubmodule(root, 'feature/sig-999-thing');
+    const { logger } = createTestLogger('mergeTaskPrs');
+    const main = simpleGit({ baseDir: mainPath });
+
+    await main.branch(['node-1']);
+    await main.branch(['node-2']);
+    // Put `origin/main` ahead of both nodes so the refresh has a base merge to make.
+    await main.commit('main moves on', [], { '--allow-empty': null });
+    await main.push(['origin', 'main']);
+    await main.checkout('node-2');
+    const node2HeadBefore = (await main.revparse(['HEAD'])).trim();
+    process.chdir(mainPath);
+
+    const failure = refreshMainAfterSubmoduleMerge({
+        taskBranch: 'node-1',
+        refreshedSubmodulePaths: [],
+        baseBranch: 'main',
+        // Never reached: the branch guard refuses before any upper-node lookup.
+        githubClient: {} as GithubClient,
+        githubConfig: GITHUB_CONFIG,
+        logger,
+    });
+
+    await expect(failure).rejects.toThrow(UsageError);
+    await expect(failure).rejects.toThrow(/from node-1 to node-2/);
+    expect((await main.revparse(['HEAD'])).trim()).toBe(node2HeadBefore);
 });

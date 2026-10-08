@@ -78,5 +78,9 @@
             "commitMessage": "chore: release v{version}"
         }
     },
-    "defaultBase": "main"
+    "defaultBase": "main",
+    // nzyme is checked out as a submodule in many repos and worktrees, and every copy spawned its own
+    // daemon that never exits and keeps watching the file tree (CPU and battery drain). Only an
+    // explicit `NX_DAEMON=true` overrides this.
+    "useDaemonProcess": false
 }

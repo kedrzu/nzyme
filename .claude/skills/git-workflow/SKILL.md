@@ -29,7 +29,7 @@ Pick the base by where the change has to land:
 |-|-|
 |Feature, refactor, anything not urgent|`main`|
 |Fix that must reach npm without what is on `main`|`release`|
-|Fix a product needs in production now|`<consumer>/release` (e.g. `healed/release`)|
+|Fix a product needs in production now|the commit the product's production pins (`docs/consumers.md`)|
 
 Branch name: `<type>/<short-kebab-slug>` from the chosen base (`git switch -c fix/money-rounding
 origin/release`). Opening a draft PR early is optional.
@@ -60,9 +60,9 @@ first and branch the next from the updated base.
 Only on the user's request — merging is outward-facing:
 
 - Normal PRs: `gh pr merge <n> --squash` (the title becomes the commit).
-- Forward-port PRs (`<consumer>/release → main`) and the back-merge PR (`release → main`): **merge
-  commit**, never squash — the release-line commits must become ancestors of `main`, otherwise later
-  fast-forwards of those lines fail.
+- A product hotfix PR (branched from a pinned commit) and the back-merge PR (`release → main`):
+  **merge commit**, never squash — their commits must become ancestors of `main`, or a product pin
+  becomes unreachable and the next back-merge conflicts.
 
 What happens after landing, for orientation:
 
@@ -70,4 +70,3 @@ What happens after landing, for orientation:
   should ship.
 - `release` → `release.yml` opens or updates the release PR `chore(release): vX`; merging it publishes
   to npm, tags and creates the GitHub Release. `back-merge.yml` merges `release` back into `main`.
-- `<consumer>/release` → `forward-port.yml` opens the forward-port PR to `main`.

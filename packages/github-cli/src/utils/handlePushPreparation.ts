@@ -5,6 +5,7 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 import type { GithubConfig } from '../GithubConfig.js';
 import { checkCurrentPrMerged } from './checkCurrentPrMerged.js';
 import { checkUnpushedCommits } from './checkUnpushedCommits.js';
+import type { BranchGuard } from './createBranchGuard.js';
 import type { GithubClient } from './createGithubClient.js';
 import { findOpenPrForBranch, findTaskPrs } from './findMatchingPr.js';
 import { getGitStatusInfo } from './getGitStatusInfo.js';
@@ -68,6 +69,11 @@ export interface HandlePushPreparationParams {
      * When true, uses "Fixes after review" as default commit message if defaultCommitMessage is not provided.
      */
     prInReview?: boolean;
+
+    /**
+     * Guard of the main repository's branch being pushed — see `HandleReadyPreparationParams.guard`.
+     */
+    guard: BranchGuard;
 }
 
 /**
@@ -86,6 +92,7 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
         unattended,
         defaultCommitMessage,
         prInReview,
+        guard,
     } = params;
 
     // FIRST: Check if the current branch's PR has been merged
@@ -109,7 +116,13 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
     // Determine the actual default commit message based on PR review status
     const actualDefaultMessage = defaultCommitMessage ?? (prInReview ? 'Fixes after review' : 'Work in progress');
 
-    await handleReadyPreparation(unpushedCommits, statusInfo, logger, actualDefaultMessage);
+    await handleReadyPreparation({
+        unpushedCommits,
+        statusInfo,
+        logger,
+        defaultCommitMessage: actualDefaultMessage,
+        guard,
+    });
 
     // FOURTH: Display PR links summary
     await displayPrSummary({ githubClient, githubConfig, issueId, baseBranches, logger });

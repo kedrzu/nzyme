@@ -96,6 +96,7 @@ export async function refreshStack(params: RefreshStackParams): Promise<void> {
 
         try {
             await syncAllRepos({
+                branch: bottomBranch,
                 baseBranch: trunk,
                 baseBranches,
                 unattended,

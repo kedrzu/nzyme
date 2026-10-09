@@ -1,6 +1,10 @@
+import { simpleGit } from 'simple-git';
+
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
+import { findUpperNodeHeads } from './assertPushLeavesUpperNodesOpen.js';
+import { createBranchGuard } from './createBranchGuard.js';
 import type { GithubClient } from './createGithubClient.js';
 import { createGithubClient } from './createGithubClient.js';
 import type { GitHubPR } from './findMatchingPr.js';
@@ -91,8 +95,11 @@ export async function pushChanges(params: PushChangesParams): Promise<PushChange
     // that node's own work, since its diff is measured against the node below it.
     const syncBaseBranch = pr?.base.ref ?? baseBranch;
 
-    // Sync all repos: commit the main repo, judge the submodules, fetch, rebase/pull, fast-forward base
+    // Sync all repos: commit the main repo, judge the submodules, fetch, rebase/pull, fast-forward base.
+    // Pinned to `currentBranch`, the branch `syncBaseBranch` was derived from, so a checkout by another
+    // command during the lookup above stops the sync instead of pairing this base with another node.
     await syncAllRepos({
+        branch: currentBranch,
         baseBranch: syncBaseBranch,
         baseBranches,
         unattended,
@@ -117,6 +124,11 @@ export async function pushChanges(params: PushChangesParams): Promise<PushChange
         unattended,
         prInReview,
         defaultCommitMessage,
+        guard: createBranchGuard({
+            git: simpleGit(),
+            branch: currentBranch,
+            findUpperNodes: () => findUpperNodeHeads(githubClient, githubConfig, currentBranch),
+        }),
     });
 
     return { githubClient, pr };

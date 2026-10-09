@@ -48,13 +48,13 @@ export type ResolveSubmoduleBranchResult = { kind: 'base' } | { kind: 'branch'; 
  *
  * Runs `git branch -r --contains <sha>` in the submodule and parses its output into clean remote
  * branch names before handing them to {@link pickSubmoduleBranch}, which does no parsing of its
- * own. When more than one non-base branch contains the SHA, the two branches are — by
- * definition — different tasks sharing a commit, so this throws a `UsageError` naming every
- * candidate rather than guessing: picking one here would silently attach the submodule to the
- * wrong task.
+ * own. When the SHA is off base and more than one branch contains it, the branches are — by
+ * definition — different tasks sharing an unmerged commit, so this throws a `UsageError` naming
+ * every candidate rather than guessing: picking one here would silently attach the submodule to
+ * the wrong task.
  * @param params The gitlink SHA to resolve, the caller's base branches, and git/display context.
- * @returns `base` when the SHA is reachable only from a base branch, `branch` with its name
- * otherwise.
+ * @returns `base` when the SHA is on a base branch (or on no branch at all), `branch` with its
+ * name otherwise.
  */
 export async function resolveSubmoduleBranch(
     params: ResolveSubmoduleBranchParams,

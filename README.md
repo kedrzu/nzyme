@@ -14,8 +14,9 @@ All public packages share one version and are released together. `vue`, `vue-for
 `vue-transitions` ship TypeScript/Vue sources and expect a bundler that compiles them (Vite, Nuxt);
 the rest ship compiled ESM with type declarations.
 
-To use nzyme as a git submodule inside a product monorepo, pinned to commits that passed the product's
-CI, see [docs/consumers.md](docs/consumers.md).
+To build nzyme from source as a git submodule of a product monorepo, see
+[docs/submodule-setup.md](docs/submodule-setup.md) for the workspace, build, lint and format setup, and
+[docs/consumers.md](docs/consumers.md) for pinning nzyme to commits the product's CI has passed.
 
 ## Develop
 

@@ -28,14 +28,16 @@ test('returns an empty list for empty output', () => {
 });
 
 /**
- * Build a tiny git repo with a bare origin: a `main` base branch with one commit, and two
- * further commits — `shared` (reachable from every branch created after it) and `divergedTip`
- * (reachable only from `branchA`) — plus two feature branches cut from `shared`. Mirrors how a
- * submodule's gitlink SHA relates to its remote branches.
+ * Build a tiny git repo with a bare origin, mirroring how a submodule's gitlink SHA relates to its
+ * remote branches:
+ * - `forkPoint` — on `main`, and contained by both task branches forked from it afterwards;
+ * - `shared` — on `branchA` and `branchB` (cut from `branchA`), never on `main`;
+ * - `divergedTip` — only on `branchA`;
+ * - `baseTip` — only on `main`, committed after both task branches were cut.
  */
 async function setupRepo(
     root: string,
-): Promise<{ work: SimpleGit; baseTip: string; shared: string; divergedTip: string }> {
+): Promise<{ work: SimpleGit; forkPoint: string; baseTip: string; shared: string; divergedTip: string }> {
     const remote = join(root, 'origin.git');
     const seed = join(root, 'seed');
     const work = join(root, 'work');
@@ -48,20 +50,21 @@ async function setupRepo(
     const s = simpleGit({ baseDir: seed, config: ['user.email=t@t', 'user.name=t'] });
     await s.checkoutLocalBranch('main');
     await s.commit('c0', [], { '--allow-empty': null });
-    const shared = (await s.revparse(['HEAD'])).trim();
+    const forkPoint = (await s.revparse(['HEAD'])).trim();
     await s.push(['-u', 'origin', 'main']);
 
-    // Two task branches cut from the shared commit — both contain `shared`, but only branchA
-    // carries `divergedTip`.
     await s.checkoutBranch('branchA', 'main');
+    await s.commit('a0', [], { '--allow-empty': null });
+    const shared = (await s.revparse(['HEAD'])).trim();
+
+    await s.checkoutBranch('branchB', 'branchA');
+    await s.commit('b1', [], { '--allow-empty': null });
+    await s.push(['-u', 'origin', 'branchB']);
+
+    await s.checkout(['branchA']);
     await s.commit('a1', [], { '--allow-empty': null });
     const divergedTip = (await s.revparse(['HEAD'])).trim();
     await s.push(['-u', 'origin', 'branchA']);
-
-    await s.checkout(['main']);
-    await s.checkoutBranch('branchB', 'main');
-    await s.commit('b1', [], { '--allow-empty': null });
-    await s.push(['-u', 'origin', 'branchB']);
 
     await s.checkout(['main']);
     await s.commit('c1', [], { '--allow-empty': null });
@@ -71,7 +74,7 @@ async function setupRepo(
     await simpleGit().clone(remote, work);
     const workGit = simpleGit({ baseDir: work, config: ['user.email=t@t', 'user.name=t'] });
 
-    return { work: workGit, baseTip, shared, divergedTip };
+    return { work: workGit, forkPoint, baseTip, shared, divergedTip };
 }
 
 let root: string;
@@ -97,6 +100,21 @@ test('a SHA reachable only from a base branch resolves to base', async () => {
     expect(result).toEqual({ kind: 'base' });
 });
 
+// HLD-589: every branch forked from base after a commit contains it, so a pin on `main` used to be
+// refused as "reachable from more than one branch" as soon as two task branches existed.
+test('a SHA on a base branch resolves to base even when task branches forked after it contain it', async () => {
+    const { work, forkPoint } = await setupRepo(root);
+
+    const result = await resolveSubmoduleBranch({
+        git: work,
+        sha: forkPoint,
+        baseBranches: BASE_BRANCHES,
+        repoDisplayName: 'sub',
+    });
+
+    expect(result).toEqual({ kind: 'base' });
+});
+
 test('a SHA reachable from exactly one non-base branch resolves to that branch', async () => {
     const { work, divergedTip } = await setupRepo(root);
 
@@ -113,7 +131,7 @@ test('a SHA reachable from exactly one non-base branch resolves to that branch',
 // The invariant this task must protect: two task branches sharing a commit are never resolved by
 // a guess. A regression that picked "the first" or "the most recent" candidate instead of
 // throwing would pass every other test here but silently attach the submodule to the wrong task.
-test('a SHA reachable from two non-base branches throws a UsageError naming both', async () => {
+test('a SHA reachable from two non-base branches and not from base throws a UsageError naming both', async () => {
     const { work, shared } = await setupRepo(root);
 
     const failure = resolveSubmoduleBranch({

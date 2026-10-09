@@ -77,16 +77,18 @@ const THROWING_CLIENT: GithubClient = {
 } as unknown as GithubClient;
 
 /**
- * Build a tiny git repo with a bare origin: a `main` base branch with one commit (`baseTip`), a
- * `shared` commit reachable from both `branchA` and `branchB` (ambiguous), a `divergedTip` commit
- * reachable only from `branchA` (an unambiguous single task branch), and an `orphanSha` commit that
- * is never pushed anywhere — reachable from no remote branch at all. Mirrors how a submodule's
- * gitlink SHA relates to its remote branches, plus the one shape a submodule branch cannot answer:
- * work that exists only in the local checkout.
+ * Build a tiny git repo with a bare origin: a `main` base branch with a `forkPoint` commit that both
+ * task branches forked from afterwards also contain, and a later `baseTip` reachable only from
+ * `main`; a `shared` commit reachable from both `branchA` and `branchB` but not `main` (ambiguous),
+ * a `divergedTip` commit reachable only from `branchA` (an unambiguous single task branch), and an
+ * `orphanSha` commit that is never pushed anywhere — reachable from no remote branch at all.
+ * Mirrors how a submodule's gitlink SHA relates to its remote branches, plus the one shape a
+ * submodule branch cannot answer: work that exists only in the local checkout.
  */
 async function setupRepo(root: string): Promise<{
     work: SimpleGit;
     workPath: string;
+    forkPoint: string;
     baseTip: string;
     shared: string;
     divergedTip: string;
@@ -104,18 +106,21 @@ async function setupRepo(root: string): Promise<{
     const s = simpleGit({ baseDir: seed, config: ['user.email=t@t', 'user.name=t'] });
     await s.checkoutLocalBranch('main');
     await s.commit('c0', [], { '--allow-empty': null });
-    const shared = (await s.revparse(['HEAD'])).trim();
+    const forkPoint = (await s.revparse(['HEAD'])).trim();
     await s.push(['-u', 'origin', 'main']);
 
     await s.checkoutBranch('branchA', 'main');
+    await s.commit('a0', [], { '--allow-empty': null });
+    const shared = (await s.revparse(['HEAD'])).trim();
+
+    await s.checkoutBranch('branchB', 'branchA');
+    await s.commit('b1', [], { '--allow-empty': null });
+    await s.push(['-u', 'origin', 'branchB']);
+
+    await s.checkout(['branchA']);
     await s.commit('a1', [], { '--allow-empty': null });
     const divergedTip = (await s.revparse(['HEAD'])).trim();
     await s.push(['-u', 'origin', 'branchA']);
-
-    await s.checkout(['main']);
-    await s.checkoutBranch('branchB', 'main');
-    await s.commit('b1', [], { '--allow-empty': null });
-    await s.push(['-u', 'origin', 'branchB']);
 
     await s.checkout(['main']);
     await s.commit('c1', [], { '--allow-empty': null });
@@ -131,7 +136,7 @@ async function setupRepo(root: string): Promise<{
     await work.commit('orphan', [], { '--allow-empty': null });
     const orphanSha = (await work.revparse(['HEAD'])).trim();
 
-    return { work, workPath, baseTip, shared, divergedTip, orphanSha };
+    return { work, workPath, forkPoint, baseTip, shared, divergedTip, orphanSha };
 }
 
 let root: string;
@@ -236,6 +241,23 @@ test('a detached HEAD whose commit is reachable only from base resolves to ready
     expect(readiness).toEqual({ kind: 'ready' });
 });
 
+// HLD-589: an untouched submodule pinned to a commit on `main` must not be refused just because task
+// branches forked from `main` after that commit contain it as well.
+test('a detached HEAD on a base commit that task branches also contain resolves to ready', async () => {
+    const { work, workPath, forkPoint } = await setupRepo(root);
+    await work.checkout([forkPoint]);
+    const submodule = buildSubmodule({ path: workPath, detached: true });
+
+    const readiness = await assertSubmoduleReady({
+        submodule,
+        baseBranches: BASE_BRANCHES,
+        githubClient: THROWING_CLIENT,
+        githubConfig: GITHUB_CONFIG,
+    });
+
+    expect(readiness).toEqual({ kind: 'ready' });
+});
+
 test('a detached HEAD whose commit is reachable from exactly one task branch resolves to that branch', async () => {
     const { work, workPath, divergedTip } = await setupRepo(root);
     await work.checkout([divergedTip]);
@@ -274,8 +296,8 @@ test('a detached HEAD whose commit is reachable from two task branches propagate
 
 // The invariant this task must protect: a detached HEAD whose commit was never pushed anywhere is
 // the most destructive shape in the readiness table — the work exists only in this one checkout.
-// A regression that mistook "reachable from no remote branch" for "reachable only from base" (both
-// collapse to zero non-base candidates in `resolveSubmoduleBranch`) would let this proceed instead
+// A regression that mistook "reachable from no remote branch" for "reachable from base" (they
+// both resolve to `base` in `resolveSubmoduleBranch`) would let this proceed instead
 // of refusing, silently risking the commit on the next reset/checkout.
 test('a detached HEAD whose commit is on no remote branch at all is refused, not treated as base', async () => {
     const { work, workPath, orphanSha } = await setupRepo(root);

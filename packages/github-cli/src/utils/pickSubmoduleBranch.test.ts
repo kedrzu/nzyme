@@ -31,15 +31,23 @@ test('exactly one task branch resolves unambiguously', () => {
     ).toEqual({ kind: 'branch', name: 'feat/decouple-submodule-flow' });
 });
 
-// The realistic shape: a branch not yet merged also still contains the SHA on every base branch
-// it was cut from, so base branches must be filtered out rather than merely deprioritised.
-test('one task branch mixed with base branches still resolves to that branch', () => {
+// A base branch containing the SHA means the commit is already on base. Every branch forked from
+// base after that commit contains it too, so containment says nothing about which task it belongs
+// to - HLD-589: a pin on `main` was refused as "ambiguous" once two branches had been forked from it.
+test('a SHA on a base branch resolves to base, however many task branches also contain it', () => {
+    expect(
+        pickSubmoduleBranch({
+            candidates: ['main', 'fix-google-mcp-roots-and-reauth', 'gdrive-mcp'],
+            baseBranches: BASE_BRANCHES,
+        }),
+    ).toEqual({ kind: 'base' });
+
     expect(
         pickSubmoduleBranch({
             candidates: ['main', 'feat/decouple-submodule-flow', 'release'],
             baseBranches: BASE_BRANCHES,
         }),
-    ).toEqual({ kind: 'branch', name: 'feat/decouple-submodule-flow' });
+    ).toEqual({ kind: 'base' });
 });
 
 test('two task branches containing the same SHA are ambiguous, never guessed', () => {
@@ -62,7 +70,7 @@ test('a non-standard base branch list is honoured', () => {
             candidates: ['trunk', 'feat/decouple-submodule-flow'],
             baseBranches: ['trunk'],
         }),
-    ).toEqual({ kind: 'branch', name: 'feat/decouple-submodule-flow' });
+    ).toEqual({ kind: 'base' });
 
     // Without the caller's list, 'main' would be treated as a task branch instead of base.
     expect(

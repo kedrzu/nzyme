@@ -38,6 +38,7 @@ export type { HandlePullWithRebaseParams, PullResult } from './utils/handlePullW
 export * from './utils/handlePushPreparation.js';
 export type { HandlePushPreparationParams } from './utils/handlePushPreparation.js';
 export * from './utils/handleReadyPreparation.js';
+export type { HandleReadyPreparationParams } from './utils/handleReadyPreparation.js';
 export * from './utils/handleSubmoduleReadyPreparation.js';
 export type { HandleSubmoduleReadyPreparationParams } from './utils/handleSubmoduleReadyPreparation.js';
 export * from './utils/namedStash.js';

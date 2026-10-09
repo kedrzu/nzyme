@@ -6,17 +6,19 @@ import { assertValue } from '@nzyme/utils';
  */
 export type PickSubmoduleBranchResult =
     /**
-     * No candidate remains once base branches are discarded — the SHA is reachable only from a
-     * base branch, so the submodule has nothing task-specific to sit on.
+     * The SHA is already on a base branch, or on no branch at all — the submodule has nothing
+     * task-specific to sit on.
      */
     | { kind: 'base' }
     /**
-     * Exactly one non-base candidate remains — the branch the submodule belongs on.
+     * The SHA is off base and exactly one task branch contains it — the branch the submodule
+     * belongs on.
      */
     | { kind: 'branch'; name: string }
     /**
-     * More than one non-base candidate remains. The caller must refuse rather than choose one:
-     * picking a branch here would silently attach the submodule's state to the wrong task.
+     * The SHA is off base and more than one task branch contains it. The caller must refuse rather
+     * than choose one: picking a branch here would silently attach the submodule's state to the
+     * wrong task.
      */
     | { kind: 'ambiguous'; candidates: string[] };
 
@@ -46,25 +48,25 @@ export interface PickSubmoduleBranchParams {
  * The only reliable link between a Linear task and a submodule commit is the gitlink SHA itself —
  * there is no naming convention to rely on, and the submodule's own branch names are none of the
  * main repo's business. `git branch -r --contains <sha>` gives every remote branch the commit is
- * reachable from; discarding the base branches from that list leaves either nothing (the commit
- * never left base), one branch (an unambiguous answer), or more than one (a genuine conflict that
- * no automated pick can resolve safely, since the two branches are, by definition, different
- * tasks).
+ * reachable from. A base branch among them settles it: the commit is already on base, and every
+ * branch forked from base after it contains it too, so the other candidates say nothing about
+ * which task it belongs to. Off base, the list holds either nothing, one branch (an unambiguous
+ * answer), or more than one (a genuine conflict that no automated pick can resolve safely, since
+ * the branches are, by definition, different tasks sharing an unmerged commit).
  * @param params The candidate branches and the caller's base-branch list.
  * @returns The base/branch/ambiguous verdict.
  * @__NO_SIDE_EFFECTS__
  */
 export function pickSubmoduleBranch(params: PickSubmoduleBranchParams): PickSubmoduleBranchResult {
     const { candidates, baseBranches } = params;
-    const taskCandidates = candidates.filter(candidate => !baseBranches.includes(candidate));
 
-    if (taskCandidates.length === 0) {
+    if (candidates.length === 0 || candidates.some(candidate => baseBranches.includes(candidate))) {
         return { kind: 'base' };
     }
 
-    if (taskCandidates.length === 1) {
-        return { kind: 'branch', name: assertValue(taskCandidates[0], 'unreachable: length checked above') };
+    if (candidates.length === 1) {
+        return { kind: 'branch', name: assertValue(candidates[0], 'unreachable: length checked above') };
     }
 
-    return { kind: 'ambiguous', candidates: taskCandidates };
+    return { kind: 'ambiguous', candidates };
 }

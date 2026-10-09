@@ -66,5 +66,9 @@
     },
     // Nx CLI usage analytics go to www.google-analytics.com; nothing here needs them.
     "analytics": false,
-    "defaultBase": "origin/main"
+    "defaultBase": "origin/main",
+    // nzyme is checked out as a submodule in many repos and worktrees, and every copy spawned its own
+    // daemon that never exits and keeps watching the file tree (CPU and battery drain). Only an
+    // explicit `NX_DAEMON=true` overrides this.
+    "useDaemonProcess": false
 }

@@ -9,7 +9,9 @@
         "url": "https://github.com/kedrzu/nzyme.git"
     },
     "files": [
-        "src"
+        "src",
+        "!src/**/*.test.ts",
+        "!src/**/*.test.tsx"
     ],
     "type": "module",
     "sideEffects": false,
@@ -36,19 +38,19 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "@nzyme/dom-utils": "0.14.0",
-        "@nzyme/ioc": "0.14.0",
-        "@nzyme/types": "0.14.0",
-        "@nzyme/utils": "0.14.0",
-        "@nzyme/vue-ioc": "0.14.0",
-        "@nzyme/vue-utils": "0.14.0",
+        "@nzyme/dom-utils": "workspace:*",
+        "@nzyme/ioc": "workspace:*",
+        "@nzyme/types": "workspace:*",
+        "@nzyme/utils": "workspace:*",
+        "@nzyme/vue-ioc": "workspace:*",
+        "@nzyme/vue-utils": "workspace:*",
         "@vueuse/core": "15.0.0",
         "lodash.debounce": "4.0.8",
         "type-fest": "5.10.0",
         "vue": "3.5.43"
     },
     "devDependencies": {
-        "@nzyme/tsconfig": "0.14.0",
+        "@nzyme/tsconfig": "workspace:*",
         "@types/lodash.debounce": "4.0.9",
         "@types/node": "26.6.4",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",

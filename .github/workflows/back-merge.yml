@@ -1,0 +1,58 @@
+name: Back-merge release into main
+
+# Everything that lands on `release` — hotfixes and the version bump with its changelog — flows back
+# to main as a merge commit, so main never needs a cherry-pick and fixes are never listed twice in
+# the changelog. A conflicting merge is not forced: a PR is opened for a human to resolve, and it lands
+# by fast-forwarding main to its head, since the repo's squash-only merge button would drop release's
+# commits.
+
+on:
+  push:
+    branches: [release]
+
+concurrency:
+  group: back-merge
+  cancel-in-progress: false
+
+jobs:
+  back-merge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_BOT_TOKEN || github.token }}
+
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin release
+          if git merge-base --is-ancestor origin/release HEAD; then
+            echo "main already contains release."
+            exit 0
+          fi
+          if git merge --no-ff origin/release -m "chore: merge release into main"; then
+            git push origin HEAD:main
+          else
+            git merge --abort
+            # The PR comes from a throwaway copy of release: resolving conflicts in GitHub merges the
+            # base into the head branch, which must never be `release` itself. The copy is moved to
+            # the new release unless it holds a resolution that is in neither main nor release yet.
+            branch=back-merge/release
+            if git fetch origin "$branch" && ! git merge-base --is-ancestor FETCH_HEAD HEAD \
+              && ! git merge-base --is-ancestor FETCH_HEAD origin/release; then
+              echo "::warning::$branch holds a conflict resolution in progress; merge release into it by hand."
+            else
+              git push --force origin "origin/release:refs/heads/$branch"
+            fi
+            if [ -z "$(gh pr list --base main --head "$branch" --state open --json number --jq '.[].number')" ]; then
+              gh pr create --base main --head "$branch" --title "chore: merge release into main" \
+                --body "The automatic back-merge of \`release\` into \`main\` conflicts. Resolve it by merging \`main\` into this branch (GitHub's conflict editor does that), wait for CI to pass, then land it by fast-forwarding main: \`git fetch origin && git push origin origin/$branch:main\`. If main moved meanwhile, the push is rejected: merge \`main\` in again. Never use the merge button: the repo only squashes, and a squash drops release's commits from main."
+            fi
+          fi

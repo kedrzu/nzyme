@@ -35,12 +35,12 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "@nzyme/types": "0.14.0",
-        "@nzyme/utils": "0.14.0",
+        "@nzyme/types": "workspace:*",
+        "@nzyme/utils": "workspace:*",
         "type-fest": "5.10.0"
     },
     "devDependencies": {
-        "@nzyme/tsconfig": "0.14.0",
+        "@nzyme/tsconfig": "workspace:*",
         "@types/bun": "^1.4.2",
         "@types/node": "26.6.4",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",

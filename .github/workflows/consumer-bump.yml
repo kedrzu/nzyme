@@ -1,0 +1,164 @@
+name: Bump nzyme
+
+# Reusable workflow for products that use nzyme as a git submodule (see docs/consumers.md).
+#
+# Proposes a newer nzyme to the product as a pull request: moves the submodule on `base-branch` to
+# `source-ref`, commits that to `pr-branch` and opens (or refreshes) a PR whose body lists the nzyme
+# commits it brings in. The product's CI on that PR is the gate — nzyme only reaches the product
+# once the product's own tests pass on it. With `auto-merge`, a green PR merges itself. It writes only
+# to the product.
+#
+# Bump `main` only: production branches get a new pin through the product's own promotion, never
+# from automation (docs/consumers.md).
+#
+#   jobs:
+#     bump:
+#       uses: kedrzu/nzyme/.github/workflows/consumer-bump.yml@main
+#       with:
+#         cli-version: <version>
+#         auto-merge: true
+#       secrets:
+#         token: ${{ secrets.NZYME_BUMP_TOKEN }}
+#
+# Runs the CLI from npm (`@nzyme/cli`) at the exact `cli-version` given (`submodule bump` exists
+# from the first release that contains it). The product token is kept out of that step.
+
+on:
+  workflow_call:
+    inputs:
+      source-ref:
+        description: The nzyme branch, tag or commit to bump to.
+        type: string
+        default: main
+      base-branch:
+        description: The product branch to bump.
+        type: string
+        default: main
+      pr-branch:
+        description: Branch the bump is pushed to (force-pushed on every run). Defaults to `nzyme-bump/<base-branch>`.
+        type: string
+        default: ''
+      auto-merge:
+        description: Enable auto-merge (squash) on the PR, so it merges once the product's required checks pass.
+        type: boolean
+        default: false
+      commit-message:
+        description: Commit message and PR title; `{sha}` is replaced with the new nzyme commit (abbreviated).
+        type: string
+        default: 'chore: bump nzyme to {sha}'
+      submodule-path:
+        description: Path of the nzyme submodule in the product repository.
+        type: string
+        default: nzyme
+      cli-version:
+        description: >-
+          Exact version of `@nzyme/cli` to run, e.g. `1.2.3` — no dist-tag or range. The job holds
+          the product's write token, so a moving tag would hand it to whatever gets published next.
+        type: string
+        required: true
+    secrets:
+      token:
+        description: >-
+          Product repository token with contents:write and pull-requests:write (a fine-grained
+          PAT). Not GITHUB_TOKEN — pushes and PRs made with it do not trigger workflows, so the
+          product's CI would never run on the bump, and that CI is the whole point.
+        required: true
+
+jobs:
+  bump:
+    name: Bump nzyme on ${{ inputs.base-branch }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: nzyme-bump-${{ inputs.base-branch }}
+      cancel-in-progress: false
+    env:
+      SOURCE_REF: ${{ inputs.source-ref }}
+      BASE_BRANCH: ${{ inputs.base-branch }}
+      PR_BRANCH: ${{ inputs.pr-branch || format('nzyme-bump/{0}', inputs.base-branch) }}
+      COMMIT_MESSAGE: ${{ inputs.commit-message }}
+      SUBMODULE_PATH: ${{ inputs.submodule-path }}
+      CLI_VERSION: ${{ inputs.cli-version }}
+    steps:
+      # The product token is not persisted, so the npm code below never sees it; only the steps that
+      # push or call `gh` get it. Their push is made with it, so it triggers the product's CI.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.base-branch }}
+          submodules: true
+          fetch-depth: 0
+          token: ${{ secrets.token }}
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+
+      # `submodule bump` prints exactly `unchanged` when the product already pins the source commit,
+      # and otherwise a markdown summary (also written to bump.md) with the new gitlink staged.
+      - name: Move the submodule
+        id: bump
+        # Explicit `bash` runs with pipefail, so a failing CLI fails the step instead of `tee`'s exit 0.
+        shell: bash
+        run: |
+          if [[ ! "$CLI_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::cli-version must be an exact version, got '$CLI_VERSION'" && exit 1
+          fi
+          bunx --package "@nzyme/cli@${CLI_VERSION}" nzyme submodule bump \
+            --source "$SOURCE_REF" --path "$SUBMODULE_PATH" --summary-file "$RUNNER_TEMP/bump.md" \
+            | tee "$RUNNER_TEMP/bump.out"
+          if grep -qx unchanged "$RUNNER_TEMP/bump.out"; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "sha=$(git -C "$SUBMODULE_PATH" rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Already at the source, e.g. bumped by hand meanwhile: a PR left open from an earlier run
+      # would only roll the product back.
+      - name: Close a stale bump PR
+        if: steps.bump.outputs.changed == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+        run: |
+          echo "ℹ️ \`$BASE_BRANCH\` already pins nzyme \`$SOURCE_REF\`." >> "$GITHUB_STEP_SUMMARY"
+          for pr in $(gh pr list --base "$BASE_BRANCH" --head "$PR_BRANCH" --state open --json number --jq '.[].number'); do
+            gh pr close "$pr" --comment "\`$BASE_BRANCH\` already pins nzyme \`$SOURCE_REF\`." --delete-branch
+          done
+
+      - name: Open or update the bump PR
+        if: steps.bump.outputs.changed == 'true'
+        env:
+          SHA: ${{ steps.bump.outputs.sha }}
+          GH_TOKEN: ${{ secrets.token }}
+        run: |
+          message="${COMMIT_MESSAGE//\{sha\}/$SHA}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$PR_BRANCH"
+          git commit -qm "$message"
+          # A bot-owned branch, regenerated from the base on every run — force is expected here.
+          gh auth setup-git
+          git push --force origin "HEAD:refs/heads/$PR_BRANCH"
+
+          {
+            cat "$RUNNER_TEMP/bump.md"
+            echo
+            echo "---"
+            echo "Opened by nzyme's \`consumer-bump\` workflow and regenerated on every run — do not push to \`$PR_BRANCH\`."
+          } > "$RUNNER_TEMP/body.md"
+          cat "$RUNNER_TEMP/bump.md" >> "$GITHUB_STEP_SUMMARY"
+
+          pr=$(gh pr list --base "$BASE_BRANCH" --head "$PR_BRANCH" --state open --json number --jq '.[0].number')
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" --title "$message" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh pr create --base "$BASE_BRANCH" --head "$PR_BRANCH" --title "$message" --body-file "$RUNNER_TEMP/body.md"
+          fi
+
+      # Needs "Allow auto-merge" and required status checks on the base branch — without required
+      # checks GitHub merges the PR right away, before the product's CI ran.
+      - name: Enable auto-merge
+        if: steps.bump.outputs.changed == 'true' && inputs.auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+        run: gh pr merge "$PR_BRANCH" --auto --squash

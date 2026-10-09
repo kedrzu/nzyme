@@ -1,5 +1,5 @@
 {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.defaultFormatter": "oxc.oxc-vscode",
     "editor.formatOnSave": true,
     "files.exclude": {
         "**/.git": true,
@@ -7,7 +7,7 @@
         "**/node_modules/**": true,
         "**/tsconfig.tsbuildinfo": true
     },
-    // Allows formatting XML and SVG files by prettier
+    // Allows formatting XML and SVG files by oxfmt
     "files.associations": {
         "*.xml": "html",
         "*.svg": "html"
@@ -17,6 +17,8 @@
         "**/node_modules/**": true,
         "**/*.code-search": true,
         "bun.lock": true,
+        "**/.nx": true,
+        ".context": true,
         "**/legacy": true
     },
     "search.followSymlinks": true,
@@ -26,12 +28,16 @@
     "npm.scriptExplorerAction": "run",
     "typescript.format.enable": false,
     "typescript.tsdk": "node_modules/typescript/lib",
-    "eslint.lintTask.enable": true,
+    // ESLint covers Vue rules only; oxlint (via the oxc extension) covers everything else.
     "eslint.useFlatConfig": true,
-    "eslint.codeAction.showDocumentation": {
-        "enable": true
-    },
-    "eslint.validate": ["javascript", "typescript", "vue"],
+    "eslint.ignoreUntitled": true,
+    "eslint.codeAction.showDocumentation": { "enable": true },
+    "eslint.validate": ["vue"],
+    "eslint.runtime": "bun",
+    "eslint.execArgv": ["--bun"],
+    "oxc.enable": true,
+    "oxc.lint.run": "onType",
+    "bun.test.filePattern": "**/*.test.ts",
     "typescript.enablePromptUseWorkspaceTsdk": true,
     "workbench.colorCustomizations": {
         "activityBar.activeBackground": "#3240bd",

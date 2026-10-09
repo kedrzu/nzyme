@@ -1,0 +1,9 @@
+{
+    // Type-checks the repo-level scripts, which sit outside every package and are run directly by bun.
+    "extends": "../packages/tsconfig/esm.json",
+    "compilerOptions": {
+        "noEmit": true,
+        "composite": false
+    },
+    "include": ["."]
+}

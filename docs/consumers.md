@@ -14,16 +14,19 @@ moves it. nzyme holds no product state and products hold no credentials to nzyme
    `branch =` in `.gitmodules` that a script follows. Assert it before building (see below).
 2. **Only `main` is bumped automatically.** A bump is a PR the product's CI must pass; on `main` it
    may merge itself. Branches that deploy to production (`release`, hotfix branches) receive a new
-   pin only through the product's normal promotion — a merge from `main` brings `main`'s pin along —
-   or through an explicit, reviewed hotfix PR. No automation writes to them.
-3. **Pin only commits that stay reachable**: commits on nzyme `main` or `release`, or a hotfix branch
-   that is merged into `main` with a merge commit (below). A commit reachable only from a deleted
-   branch is garbage-collected, and the pin then points at nothing.
+   pin only through the product's promotion — a merge from `main` brings a pin `main` has run. No
+   automation writes to them.
+3. **Production runs only pins `main` has run.** A pin reaches a production branch only after it was
+   the pin of the product's `main` at some point, so the product's CI and its non-production
+   environments have run it. Pins on nzyme `main` also stay reachable; a commit reachable only from a
+   deleted branch is garbage-collected, and the pin then points at nothing.
 
 ## Guard rails in the product
 
-- **Deploy-time assertion.** Right before building, fail when the checked-out submodule differs from
-  the pin — `git submodule status` prefixes such a submodule with `+` (or `-` when it is missing):
+- **Deploy-time assertion.** Right before a production build, fail when the checked-out submodule
+  differs from the pin — `git submodule status` prefixes such a submodule with `+` (or `-` when it
+  is missing). Deploys to non-production environments may warn instead, so a working tree can still
+  be deployed while debugging:
 
   ```sh
   if git submodule status --recursive | grep -q '^[-+U]'; then
@@ -33,10 +36,11 @@ moves it. nzyme holds no product state and products hold no credentials to nzyme
   fi
   ```
 
-- **Make pin changes visible on production PRs.** A required check on PRs into the production branch
-  that, when the PR moves the nzyme gitlink to something other than what `main` pins, fails or asks
-  for an explicit label (e.g. `nzyme-hotfix`). The usual promotion `main → release` passes untouched;
-  an unexpected pin change stops for a human.
+- **A required check on PRs into the production branch** that fails when the PR's nzyme pin was never
+  the pin of the product's `main` (rule 3) — e.g. collected from `git log -p origin/main -- nzyme`.
+  A promotion from `main`, or a rollback to an older `main` pin, passes even after `main` has moved
+  on. The check also lists the nzyme commits between the old and the new pin, which a PR diff shows
+  only as `Subproject commit a → b`.
 
 - **Required status checks** on the bumped branch, so an auto-merging bump PR cannot merge before CI.
 
@@ -116,12 +120,10 @@ nzyme's scripts work in place, with dependencies hoisted to the product's worksp
 
 ## Hotfix for a product's production
 
-The product's production branch pins nzyme commit `P`, and `main` has moved on in both repositories.
+An nzyme fix reaches production the way every pin does — through the product's `main`:
 
-1. In nzyme, branch from `P` (`git switch -c fix/<slug> P`), fix, push, and open a PR into nzyme
-   `main`.
-2. In the product, on its hotfix branch, pin the fix commit and ship it through the product's normal
-   hotfix review — this is the explicit pin change the guard rail asks a human to approve.
-3. Merge the nzyme PR with a **merge commit**, not a squash: the pinned commit then stays reachable
-   from `main` after the branch is deleted, and the product's next ordinary bump of `main` contains
-   it.
+1. Fix it in nzyme with an ordinary PR into nzyme `main`.
+2. Bump the product's `main` to it (the bump PR, or the scheduled bump).
+3. Promote that pin to the production branch with the product's release, or with a product hotfix
+   PR that sets the pin to the one `main` now runs. It brings every nzyme change between the old and
+   the new pin — the required check lists them.

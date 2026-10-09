@@ -51,6 +51,9 @@ Run from the repo root:
 - `bun run lint` / `bun run lint:check` — oxlint (type-aware) plus ESLint for Vue.
 - `bun run format` / `bun run format:check` — oxfmt plus `nzyme format-markdown`. Never hand-apply
   formatting.
+- The lint and format configs here (`.oxlintrc.json`, `.oxfmtrc.json`, `eslint.config.mjs`) are
+  nzyme's own, and they apply even inside a consuming repo. That repo excludes `nzyme/` and runs these
+  scripts in place (`docs/consumers.md#lint-and-format`). Change rules here, never in a consumer.
 - `bun run reinstall` — clean reinstall after dependency trouble.
 
 ## Keep command output out of context

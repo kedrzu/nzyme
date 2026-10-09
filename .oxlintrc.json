@@ -1,6 +1,8 @@
 {
     "$schema": "./node_modules/oxlint/configuration_schema.json",
     // Rules live in the shared preset; this file adds only what is specific to this repo's layout.
+    // It governs the nzyme tree also when nzyme is a submodule: consuming repos exclude `nzyme/` from
+    // their own runs and call this repo's scripts instead (docs/decisions/lint-and-format-owned-per-repository.md).
     // Referenced by relative path rather than through `node_modules`, because when nzyme is checked
     // out as a submodule its dependencies are hoisted to the parent workspace and `nzyme/node_modules`
     // does not exist.

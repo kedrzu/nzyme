@@ -134,6 +134,27 @@ describe('cascadeStack', () => {
         expect(pushedHeads.size).toBe(0);
     });
 
+    test('refuses to push a node that has taken in the node above it', async () => {
+        const git = simpleGit(repo);
+        const midBefore = await git.revparse(['origin/mid']);
+
+        // `mid` has locally swallowed `top`; carrying a new bottom commit up must not push that
+        // to the remote, where GitHub would read `top`'s pull request as merged.
+        await git.checkout('mid');
+        await git.merge(['top']);
+
+        await git.checkout('bottom');
+        await Bun.write(join(repo, 'new.txt'), 'added later\n');
+        await git.add('.');
+        await git.commit('later work on bottom');
+        await git.push();
+
+        const cascade = cascadeStack({ branches: ['bottom', 'mid', 'top'], logger });
+
+        await expect(cascade).rejects.toThrow('Refusing to push mid: it now contains the head of top');
+        expect(await git.revparse(['origin/mid'])).toBe(midBefore);
+    });
+
     test('a single-node stack is a no-op', async () => {
         const git = simpleGit(repo);
         await git.checkout('bottom');

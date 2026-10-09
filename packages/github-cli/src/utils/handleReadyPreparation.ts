@@ -5,9 +5,43 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 
 import { assertNoConflicts } from './assertNoConflicts.js';
 import type { UnpushedCommitsResult } from './checkUnpushedCommits.js';
+import type { BranchGuard } from './createBranchGuard.js';
 import { describeChangedPaths } from './describeChangedPaths.js';
 import type { GitStatusInfo } from './getGitStatusInfo.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
+
+/**
+ * Parameters for {@link handleReadyPreparation}.
+ */
+export interface HandleReadyPreparationParams {
+    /**
+     * Commits on the current branch not yet on its remote.
+     */
+    unpushedCommits: UnpushedCommitsResult;
+
+    /**
+     * Working-tree status of the main repository.
+     */
+    statusInfo: GitStatusInfo;
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+
+    /**
+     * Why the changes are being committed (e.g. "Ready for review").
+     * @default 'Ready for review'
+     */
+    defaultCommitMessage?: string;
+
+    /**
+     * Guard of the branch being pushed, checked right before the commit and the push: by now the
+     * command has spent a while on GitHub calls and prompts, long enough for another command in the
+     * same worktree to check out a different node.
+     */
+    guard: BranchGuard;
+}
 
 /**
  * Handle the preparation phase before marking a PR as ready for review.
@@ -18,12 +52,8 @@ import { pushWithUpstream } from './pushWithUpstream.js';
  * available they are combined ("Fixes after review: packages/cli/src/git"); with nothing to
  * describe, `defaultCommitMessage` is used on its own.
  */
-export async function handleReadyPreparation(
-    unpushedCommits: UnpushedCommitsResult,
-    statusInfo: GitStatusInfo,
-    logger: Logger,
-    defaultCommitMessage: string = 'Ready for review',
-): Promise<void> {
+export async function handleReadyPreparation(params: HandleReadyPreparationParams): Promise<void> {
+    const { unpushedCommits, statusInfo, logger, defaultCommitMessage = 'Ready for review', guard } = params;
     const git = simpleGit();
     let newCommitCreated = false;
 
@@ -72,6 +102,7 @@ export async function handleReadyPreparation(
 
         // Commit the changes
         logger.info(`   Committing: "${chalk.cyan(commitMessage)}"`);
+        await guard.beforeWrite();
         await git.commit(commitMessage.trim());
         newCommitCreated = true;
     }
@@ -82,6 +113,7 @@ export async function handleReadyPreparation(
         logger.info(
             `   Pushing ${chalk.yellow(totalCommitsToPush.toString())} commit${totalCommitsToPush === 1 ? '' : 's'}...`,
         );
+        await guard.beforePush();
         await pushWithUpstream(git);
         logger.info(`   ${chalk.green('✓')} Pushed successfully`);
     } else if (!statusInfo.hasUncommittedChanges) {

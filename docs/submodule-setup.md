@@ -14,20 +14,18 @@ code, rules and tests, which still apply inside the product.
 ## Add the submodule
 
 ```sh
-git submodule add -b main https://github.com/kedrzu/nzyme.git nzyme
+git submodule add https://github.com/kedrzu/nzyme.git nzyme
 ```
 
 ```ini
 [submodule "nzyme"]
     path = nzyme
     url = https://github.com/kedrzu/nzyme.git
-    branch = main   # after the first mirror: <consumer>/main, e.g. healed/main
-    update = merge
 ```
 
-- **Start on `main`.** The product's `<consumer>/main` ref does not exist until the first mirror
-  creates it. Then switch `branch =` to it: that is the product's tested line, see
-  [consumers.md](consumers.md).
+- **No `branch` and no `update` entry.** The pin is the gitlink, nothing else: a `branch` invites
+  `git submodule update --remote`, which builds whatever nzyme `main` is today, and `update = merge`
+  can leave a local checkout off the pin. How the pin moves: [consumers.md](consumers.md).
 
 - **Every clone and worktree** runs `git submodule update --init`. Put it in the product's setup script.
 

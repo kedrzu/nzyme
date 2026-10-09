@@ -33,8 +33,9 @@ This is a published library with several consumers.
 
 - Every export of a public package is API. Renaming or removing one, or changing its behaviour, is a
   breaking change: commit it as `feat!:`/`fix!:` with a `BREAKING CHANGE:` footer.
-- Product repos build nzyme as a submodule (`docs/submodule-setup.md`) and pin it per consumer ref (`docs/consumers.md`), so a change reaches them only after
-  their own CI accepts it. Still, run their usages through your head before changing shared behaviour.
+- Product repos build nzyme as a submodule (`docs/submodule-setup.md`) and pin it themselves
+  (`docs/consumers.md`), so a change reaches them only after their own CI accepts it. Still, run their
+  usages through your head before changing shared behaviour.
 
 # Essential commands
 

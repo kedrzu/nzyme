@@ -5,6 +5,7 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 
 import { assertNoConflicts } from './assertNoConflicts.js';
 import { countCommits } from './countCommits.js';
+import { createBranchGuard } from './createBranchGuard.js';
 import { ensureLocalBranch } from './ensureLocalBranch.js';
 import { GitMergeConflictError } from './GitMergeConflictError.js';
 import { handleMergeConflict } from './handleMergeConflict.js';
@@ -93,6 +94,18 @@ export async function cascadeStack(params: CascadeStackParams): Promise<Map<stri
 
             await git.checkout(nodeBranch);
 
+            // Only the node directly above can be checked against: its remote head is the one GitHub
+            // would read as merged, and a node further up cannot become reachable without it.
+            const upperBranch = branches[index + 1];
+            const guard = createBranchGuard({
+                git,
+                branch: nodeBranch,
+                findUpperNodes: () =>
+                    Promise.resolve(upperBranch ? [{ branch: upperBranch, head: `origin/${upperBranch}` }] : []),
+            });
+
+            await guard.beforeWrite();
+
             try {
                 await git.merge([parentBranch]);
             } catch (error) {
@@ -107,6 +120,7 @@ export async function cascadeStack(params: CascadeStackParams): Promise<Map<stri
                 { nodeBranch, nodePosition: index + 1, nodeCount: branches.length, against: parentBranch },
             );
 
+            await guard.beforePush();
             await pushWithUpstream(git);
             pushedHeads.set(nodeBranch, await git.revparse([nodeBranch]));
             logger.info(`   ${chalk.green('✓')} Updated and pushed ${chalk.cyan(nodeBranch)}`);

@@ -166,8 +166,8 @@ async function resolveEffectiveBranch(params: ResolveEffectiveBranchParams): Pro
  * Resolve a detached HEAD's effective branch from its own commit, mirroring
  * {@link resolveSubmoduleBranch} but adding the one case that function cannot see by itself: a
  * commit on no remote branch at all. `resolveSubmoduleBranch` reports `{ kind: 'base' }` both when
- * the commit is only on a base branch AND when it is on nothing whatsoever — both collapse to zero
- * non-base candidates — so the unfiltered candidate list is inspected here first, exactly the way
+ * the commit is on a base branch AND when it is on nothing whatsoever, so the unfiltered candidate
+ * list is inspected here first, exactly the way
  * `parkSubmoduleOnBase`'s `isOnAnyRemoteBranch` guard does for the same reason.
  */
 async function resolveDetachedBranch(params: ResolveEffectiveBranchParams): Promise<EffectiveSubmoduleBranch> {
@@ -199,8 +199,8 @@ async function resolveDetachedBranch(params: ResolveEffectiveBranchParams): Prom
     }
 
     // `verdict.kind === 'base'`: `candidates` is non-empty (checked above) and
-    // `pickSubmoduleBranch` only returns `base` when every candidate is a base branch, so one is
-    // guaranteed to be found here.
+    // `pickSubmoduleBranch` returns `base` for a non-empty candidate list only when a base branch
+    // is among them, so one is guaranteed to be found here.
     const baseBranchName = assertValue(
         candidates.find(candidate => baseBranches.includes(candidate)),
         'unreachable: resolveSubmoduleBranch returned base, so a base-branch candidate must exist',

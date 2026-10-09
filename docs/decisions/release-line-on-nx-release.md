@@ -18,8 +18,8 @@ The requirements for its replacement:
 - Publishing uses npm trusted publishing (OIDC) with provenance, not a stored token.
 - The next version and its changelog are reviewable before anything is published.
 
-Products that consume nzyme as a submodule are not served by this line; they pin nzyme through their own
-pins (`product-owned-submodule-pins.md`).
+Products that consume nzyme as a submodule are not served by this line; each pins nzyme
+itself (`product-owned-submodule-pins.md`).
 
 ## Options Considered
 

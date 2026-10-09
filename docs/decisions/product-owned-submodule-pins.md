@@ -46,8 +46,8 @@ nzyme added state, automation and a credential without adding information.
 - **Gained:** no product holds a credential to nzyme; nothing to keep in sync; a product's production
   pin changes only with a commit on its own production branch.
 - **Accepted:**
-  - A product's hotfix pins an nzyme commit off `main`. It must be merged into `main` with a merge
-    commit to stay reachable.
+  - An nzyme fix reaches production only through the product's `main`, so it ships together with
+    every nzyme change pinned there since the production pin.
   - Keeping production branches free of automated bumps is the product's discipline, backed by its own
     guard rails (a deploy-time assertion and a required check on production PRs), not something nzyme
     can enforce.

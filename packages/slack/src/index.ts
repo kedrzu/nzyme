@@ -1,6 +1,7 @@
 export * from './components/slackActionButton.js';
 export * from './components/slackActions.js';
 export * from './components/slackCodeBlock.js';
+export * from './components/slackContainer.js';
 export * from './components/slackDivider.js';
 export * from './components/slackEmail.js';
 export * from './components/slackFieldsSection.js';

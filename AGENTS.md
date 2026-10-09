@@ -40,11 +40,11 @@ This is a published library with several consumers.
 
 Run from the repo root:
 
-- `zsh setup.sh` — full setup. In a worktree it also catches up with `origin/main` and copies `.env`.
-  `bash setup.build.sh` is the build half, shared with CI: install, `nzyme` CLI, generated files, all
-  package builds.
-- `bun run build` — Nx build of all packages (`--exclude=@nzyme/logging-ui` as CI does); `bun watch`
-  rebuilds on change.
+- `zsh setup.sh` — full setup. In a worktree it also catches up with the branch's base (`origin/main` or
+  `origin/release`) and copies `.env`. `bash setup.build.sh` is the build half, shared with CI:
+  install, `nzyme` CLI, generated files, all package builds.
+- `bun run build --exclude=@nzyme/logging-ui` — Nx build of all packages, as CI runs it (the bare
+  script includes `logging-ui`); `bun watch` rebuilds on change.
 - `bun run typecheck` — `tsgo --build`.
 - `bun run test` — all tests (`bun:test`); `bun test packages/<pkg>/src` for one package. Always run
   from the repo root, and use `bun run test`, not bare `bun test`, for the whole suite.

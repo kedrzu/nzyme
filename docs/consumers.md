@@ -66,6 +66,7 @@ jobs:
     with:
       source-ref: main
       base-branch: main
+      cli-version: <version>
       auto-merge: true
     secrets:
       token: ${{ secrets.NZYME_BUMP_TOKEN }}
@@ -73,8 +74,10 @@ jobs:
 
 `NZYME_BUMP_TOKEN` needs contents and pull-requests write on the **product** repository. Not
 `GITHUB_TOKEN`: a PR it opens triggers no workflows, so the product's CI would never run on the bump.
-The workflow runs `@nzyme/cli` from npm (input `cli-version`, default `latest`); `submodule bump`
-exists from the first release that contains it. The same command runs locally:
+The workflow runs `@nzyme/cli` from npm at `cli-version`, a required exact version (no dist-tag or
+range): the job holds the product's write token, so a moving tag would run whatever is published
+next with it. `submodule bump` exists from the first release that contains it. The same command
+runs locally:
 `bunx @nzyme/cli submodule bump --source origin/main` stages the move and prints the summary.
 
 Working on nzyme from inside the product does not change this: the nzyme change is a PR to nzyme,

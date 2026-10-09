@@ -44,8 +44,8 @@ downstream consumers.
    `bun nzyme quiet-run bun nx affected -t build --base=origin/main --exclude=@nzyme/logging-ui`
 2. Tests of the touched packages, always from the repo root:
    `bun nzyme quiet-run bun test packages/<pkg>/src` (a file path narrows further).
-3. Lint the changed files:
-   `git diff --name-only --diff-filter=d $(git merge-base origin/main HEAD) -- '*.ts' '*.tsx' '*.vue' | xargs bun nzyme quiet-run bun x oxlint --type-aware --quiet`
+3. Lint the changed files, new untracked ones included (`git diff` alone lists only tracked paths):
+   `{ git diff --name-only --diff-filter=d $(git merge-base origin/main HEAD) -- '*.ts' '*.tsx' '*.vue'; git ls-files --others --exclude-standard -- '*.ts' '*.tsx' '*.vue'; } | xargs bun nzyme quiet-run bun x oxlint --type-aware --quiet`
    (on a hotfix branch use its base instead of `origin/main`)
 4. Format: `bun run format` (oxfmt + markdown) — never hand-format.
 

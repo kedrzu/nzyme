@@ -2,7 +2,9 @@ name: Back-merge release into main
 
 # Everything that lands on `release` — hotfixes and the version bump with its changelog — flows back
 # to main as a merge commit, so main never needs a cherry-pick and fixes are never listed twice in
-# the changelog. A conflicting merge is not forced: a PR is opened for a human to resolve instead.
+# the changelog. A conflicting merge is not forced: a PR is opened for a human to resolve, and it lands
+# by fast-forwarding main to its head, since the repo's squash-only merge button would drop release's
+# commits.
 
 on:
   push:
@@ -51,6 +53,6 @@ jobs:
             fi
             if [ -z "$(gh pr list --base main --head "$branch" --state open --json number --jq '.[].number')" ]; then
               gh pr create --base main --head "$branch" --title "chore: merge release into main" \
-                --body "The automatic back-merge of \`release\` into \`main\` conflicts. Resolve the conflicts on this branch, then merge with a merge commit (not a squash or rebase), so main keeps release's commits."
+                --body "The automatic back-merge of \`release\` into \`main\` conflicts. Resolve it by merging \`main\` into this branch (GitHub's conflict editor does that), wait for CI to pass, then land it by fast-forwarding main: \`git fetch origin && git push origin origin/$branch:main\`. If main moved meanwhile, the push is rejected: merge \`main\` in again. Never use the merge button: the repo only squashes, and a squash drops release's commits from main."
             fi
           fi

@@ -1,5 +1,5 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 
 import type { Package } from '@nzyme/project-utils/getPackages.js';
 import { getPackages } from '@nzyme/project-utils/getPackages.js';
@@ -64,6 +64,13 @@ export class IndexCommand extends Command {
             await mkdir(dirname(filePath), { recursive: true });
             await writeFile(filePath, data);
         }
+
+        // Drop index files this run no longer generates (a package lost its last symbol, or
+        // `globalUtilPackages` was emptied), so a stale one never misleads an agent.
+        const staleFiles = [join(root, 'UTILS.md'), ...packages.map(pkg => join(pkg.path, 'INDEX.md'))].filter(
+            filePath => !files.has(filePath),
+        );
+        await Promise.all(staleFiles.map(filePath => rm(filePath, { force: true })));
 
         this.logger.info(`Wrote ${files.size} index files.`);
         this.warnMissingDescriptions(packages);

@@ -1,0 +1,27 @@
+{
+    "worktree": {
+        "setup": "zsh setup.sh"
+    },
+    "scripts": {
+        "watch": {
+            "command": "bun run watch"
+        },
+        "test": {
+            "command": "bun run test"
+        },
+        "lint": {
+            "command": "bun run lint:check && bun run format:check"
+        }
+    },
+    "metadataGeneration": {
+        "branchName": {
+            "instructions": "Use `<type>/<short-kebab-slug>`, where type is a Conventional Commits type (feat, fix, refactor, perf, docs, test, build, ci, chore)."
+        },
+        "commitMessage": {
+            "instructions": "Conventional Commits: `<type>(<scope>): <summary>` in English, imperative, lowercase summary, no trailing period. Scope is the package name without `@nzyme/` (e.g. `feat(vue-forms): ...`); omit it for repo-wide changes. Mark breaking changes with `!` after the scope. Versions and the changelog are computed from these messages."
+        },
+        "pullRequest": {
+            "instructions": "The title becomes the squash commit on main, so it must be a Conventional Commits message: `<type>(<scope>): <summary>`, scope = package name without `@nzyme/`, `!` for breaking changes. The body explains what changed and why, in English."
+        }
+    }
+}

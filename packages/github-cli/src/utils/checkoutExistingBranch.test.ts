@@ -210,7 +210,10 @@ test('a submodule already on its base branch is fast-forwarded onto the fresh ti
 
     // Someone else pushes a new commit to the submodule's base branch after this checkout's clone
     // was made - the ordinary way a submodule ends up behind origin.
-    const pusher = simpleGit({ baseDir: join(root, 'sub-seed') });
+    const pusher = simpleGit({
+        baseDir: join(root, 'sub-seed'),
+        config: ['user.email=t@t', 'user.name=t', 'commit.gpgsign=false'],
+    });
     writeFileSync(join(root, 'sub-seed', 'new-on-main.txt'), 'pushed after the clone\n');
     await pusher.add('new-on-main.txt');
     await pusher.commit('advance main');

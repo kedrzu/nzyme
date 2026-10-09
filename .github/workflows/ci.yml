@@ -1,0 +1,41 @@
+name: CI
+
+# The merge gate: every pull request (to main, release, or a stacked node) and every push to main and
+# release runs the same build local setup does, then lint, format and tests.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main, release]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Build, lint, test
+    runs-on: ubuntu-latest
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          # Follows package.json's `packageManager` field, so the runner cannot drift from local.
+          bun-version-file: package.json
+
+      - name: Build
+        run: bash setup.build.sh
+
+      - name: Lint
+        run: bun run lint:check
+
+      - name: Format
+        run: bun run format:check
+
+      # `bun run test` (not `bun test`) — `test` is a bun builtin; the bare form would ignore the script.
+      - name: Test
+        run: bun run test

@@ -6,7 +6,16 @@
     "trailingComma": "all",
     "endOfLine": "lf",
     "singleAttributePerLine": true,
-    "ignorePatterns": ["dist", "**/__fixtures__/**"],
+    "ignorePatterns": [
+        "dist",
+        ".output",
+        ".nuxt",
+        "node_modules",
+        "*.loc.ts",
+        "coverage",
+        "**/__fixtures__/**",
+        "*.md"
+    ],
     "overrides": [
         {
             "files": ["*.yml", "*.yaml", "*.html", "*.vue"],

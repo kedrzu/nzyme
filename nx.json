@@ -12,43 +12,29 @@
             "{workspaceRoot}/nx.json",
             "{workspaceRoot}/tsconfig.json"
         ],
+        // Listed out rather than as `["default", "!…"]`, matching the consuming monorepo: the
+        // exclusions must sit next to the globs they narrow.
         "production": [
-            "default",
-            "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?",
+            "{projectRoot}/**/*",
+            "sharedGlobals",
+            "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)",
             "!{projectRoot}/**/__snapshots__/**",
             "!{projectRoot}/**/*.snap"
         ],
         "localEnvironment": [
             {
                 "env": "ENV"
-            },
-            "{workspaceRoot}/.worktree"
+            }
         ]
     },
     "targetDefaults": {
         "build": {
             "cache": true,
             "inputs": ["production", "^production", "localEnvironment"],
-            "outputs": [
-                "{projectRoot}/dist",
-                "{projectRoot}/dist-cjs",
-                "{projectRoot}/.output",
-                "{projectRoot}/storybook-static",
-                "{projectRoot}/*.tsbuildinfo"
-            ],
+            "outputs": ["{projectRoot}/dist", "{projectRoot}/.output", "{projectRoot}/*.tsbuildinfo"],
             "dependsOn": ["^build"]
         },
-        "prep": {
-            "cache": true,
-            "inputs": ["default", "^default", "localEnvironment"],
-            "outputs": ["{projectRoot}/.nuxt"]
-        },
         "typecheck": {
-            "cache": true,
-            "inputs": ["default", "^default", "localEnvironment"],
-            "dependsOn": ["prep"]
-        },
-        "test:stories": {
             "cache": true,
             "inputs": ["default", "^default", "localEnvironment"]
         },
@@ -78,7 +64,9 @@
             "commitMessage": "chore: release v{version}"
         }
     },
-    "defaultBase": "main",
+    // Nx CLI usage analytics go to www.google-analytics.com; nothing here needs them.
+    "analytics": false,
+    "defaultBase": "origin/main",
     // nzyme is checked out as a submodule in many repos and worktrees, and every copy spawned its own
     // daemon that never exits and keeps watching the file tree (CPU and battery drain). Only an
     // explicit `NX_DAEMON=true` overrides this.

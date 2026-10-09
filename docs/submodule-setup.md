@@ -109,7 +109,11 @@ The product builds nzyme packages together with its own. Workspace imports of `@
 their `dist`, so nothing runs before this has been done:
 
 ```sh
-bun install --frozen-lockfile     # --frozen-lockfile in CI
+if [ "$CI" = "true" ]; then
+    bun install --frozen-lockfile
+else
+    bun install
+fi
 bun nx run @nzyme/cli:build       # the generators below are part of the CLI
 bun run monorepo && bun run localise
 bun x tsgo --build                # or: bun nx run-many -t build
@@ -136,8 +140,18 @@ invalidate cached builds. Hash the submodule's tree explicitly and add it to `de
     "submoduleDefault": [
         { "runtime": "{ git -C nzyme ls-tree -r HEAD; git -C nzyme diff --binary HEAD; git -C nzyme ls-files --others --exclude-standard | git -C nzyme hash-object --stdin-paths; } | git hash-object --stdin" }
     ],
-    // `submoduleProduction`: the same, excluding test files and snapshots — copy it from healed's nx.json.
-    "production": ["{projectRoot}/**/*", "sharedGlobals", "submoduleProduction", "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)"]
+    // The same, excluding test files and snapshots, so editing them does not invalidate production builds.
+    "submoduleProduction": [
+        { "runtime": "{ git -C nzyme ls-tree -r HEAD | grep -Ev '\\.(test|spec)\\.[jt]sx?$|/__snapshots__/|\\.snap$'; git -C nzyme diff --binary HEAD -- . ':(exclude,glob)**/*.test.*' ':(exclude,glob)**/*.spec.*' ':(exclude,glob)**/__snapshots__/**' ':(exclude,glob)**/*.snap'; git -C nzyme ls-files --others --exclude-standard -- . ':(exclude,glob)**/*.test.*' ':(exclude,glob)**/*.spec.*' ':(exclude,glob)**/__snapshots__/**' ':(exclude,glob)**/*.snap' | git -C nzyme hash-object --stdin-paths; } | git hash-object --stdin" }
+    ],
+    "production": [
+        "{projectRoot}/**/*",
+        "sharedGlobals",
+        "submoduleProduction",
+        "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)",
+        "!{projectRoot}/**/__snapshots__/**",
+        "!{projectRoot}/**/*.snap"
+    ]
 }
 ```
 

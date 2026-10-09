@@ -7,10 +7,6 @@ name: Promote main to release
 on:
   workflow_dispatch:
 
-concurrency:
-  group: release
-  cancel-in-progress: false
-
 jobs:
   promote:
     name: Merge main into release

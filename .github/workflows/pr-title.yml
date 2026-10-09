@@ -1,7 +1,7 @@
 name: PR title
 
 # Pull requests are squash-merged, so the title becomes the commit on the target branch — and
-# release-please computes versions and the changelog from those commits.
+# nx release computes versions and the changelog from those commits.
 
 on:
   pull_request:

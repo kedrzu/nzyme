@@ -113,8 +113,8 @@ export const CatalogSync = defineService({
         const runner = createSingleRunner({ handler: syncCatalog });
 
         return {
-            /** Fire-and-forget; concurrent calls share one run. */
-            sync: () => void runner.execute(),
+            /** Fire-and-forget; concurrent calls share one run. `execute()` rethrows, so catch. */
+            sync: () => void runner.execute().catch(error => logger.error('Catalog sync failed', { error })),
             /** Resolves when the current (or a new) run finishes. */
             syncAndWait: () => runner.execute(),
         };

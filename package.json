@@ -28,7 +28,7 @@
         "reinstall": "bun run clean && bun run clean:npm && bun install && bun run setup",
         "setup": "zsh setup.sh",
         "test": "bun test ./packages/*/src",
-        "typecheck": "tsgo --build",
+        "typecheck": "tsgo --build && tsgo -p scripts",
         "update": "bun update -i -r --latest",
         "watch": "tsgo --build --watch"
     },

@@ -64,7 +64,7 @@ export function renderMarkdown(options: RenderMarkdownOptions): Map<string, stri
     }
     sortedPackages.sort((a, b) => a.name.localeCompare(b.name));
 
-    const symbolsByPackage = groupByToMap(symbols, (symbol) => symbol.packageName);
+    const symbolsByPackage = groupByToMap(symbols, symbol => symbol.packageName);
 
     const files = new Map<string, string>([[join(root, 'INDEX.md'), renderRootIndex()]]);
     if (hasUtilsFile) {
@@ -119,7 +119,7 @@ export function renderMarkdown(options: RenderMarkdownOptions): Map<string, stri
         const utilSymbols = symbols.filter(
             symbol => symbol.kind === 'util' && settings.globalUtilPackages.has(symbol.packageName),
         );
-        const groups = groupByToMap(utilSymbols, (symbol) => symbol.packageName);
+        const groups = groupByToMap(utilSymbols, symbol => symbol.packageName);
         const packageNames = [...groups.keys()].toSorted((a, b) => a.localeCompare(b));
 
         const lines = [
@@ -152,7 +152,7 @@ export function renderMarkdown(options: RenderMarkdownOptions): Map<string, stri
 
         const lines = [HEADER, '', `# ${packageName}`, '', description, '', `Path: \`${packagePath}\``, ''];
 
-        const byKind = groupByToMap(packageSymbols, (symbol) => symbol.kind);
+        const byKind = groupByToMap(packageSymbols, symbol => symbol.kind);
 
         const kinds = [...byKind.keys()].toSorted(
             (a, b) => (sections.get(a)?.order ?? 0) - (sections.get(b)?.order ?? 0),

@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/i18n-core",
-    "version": "0.14.0",
+    "version": "0.15.0",
     "description": "i18n core primitives",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

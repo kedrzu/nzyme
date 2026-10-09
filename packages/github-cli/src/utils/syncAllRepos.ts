@@ -9,6 +9,9 @@ import { assertValue } from '@nzyme/utils';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import { assertNoConflicts } from './assertNoConflicts.js';
+import { findUpperNodeHeads } from './assertPushLeavesUpperNodesOpen.js';
+import type { BranchGuard } from './createBranchGuard.js';
+import { createBranchGuard } from './createBranchGuard.js';
 import { assertSubmoduleReady } from './assertSubmoduleReady.js';
 import { autoCommitChanges } from './autoCommitChanges.js';
 import type { GithubClient } from './createGithubClient.js';
@@ -28,6 +31,14 @@ import { switchDetachedSubmoduleToBaseBranch } from './switchDetachedSubmoduleTo
  * Parameters for synchronizing all repositories.
  */
 export interface SyncAllReposParams {
+    /**
+     * The main repository's branch this sync is for — the one it commits to, merges into and pushes.
+     * Passed in rather than read from HEAD, because the caller derived {@link baseBranch} from this
+     * exact branch: reading HEAD again here would let a checkout by another command in the same
+     * worktree pair one branch's base with another branch.
+     */
+    branch: string;
+
     /**
      * The branch to merge **from** (e.g. 'main'), and the one fast-forwarded in every repository.
      * On a stacked task this is deliberately the parent node's branch rather than the project
@@ -138,6 +149,7 @@ export interface SyncAllReposResult {
  */
 export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllReposResult> {
     const {
+        branch: mainBranch,
         baseBranch,
         baseBranches,
         unattended,
@@ -152,6 +164,15 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     // unexpected times, both of which produce spurious submodule conflicts.
     const mainGit = simpleGit({ config: ['submodule.recurse=false'] });
 
+    // Every main-repository step below acts on whatever HEAD is at that instant, and the worktree is
+    // shared with any other command running in it — so each write first checks HEAD is still the
+    // branch this sync is for.
+    const mainGuard = createBranchGuard({
+        git: mainGit,
+        branch: mainBranch,
+        findUpperNodes: () => findUpperNodeHeads(githubClient, githubConfig, mainBranch),
+    });
+
     // === Phase 1: Detect submodules ===
     const submoduleInfos = await getSubmoduleInfo();
 
@@ -161,6 +182,7 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
 
     let anyCommitted = false;
 
+    await mainGuard.beforeWrite();
     const mainCommit = await autoCommitChanges({
         logger,
         git: mainGit,
@@ -200,8 +222,6 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     // === Phase 3: Fetch all repos in parallel ===
     logger.info('');
     logger.info(chalk.bold('📡 Fetching all repositories...'));
-
-    const mainBranch = (await mainGit.status()).current;
 
     // Fetch the main repo's current + base branch first (cheap, single-branch fetches): we need
     // them locally to decide whether the main repo will integrate remote commits below.
@@ -253,7 +273,7 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     logger.info(chalk.bold('📥 Syncing current branches...'));
 
     // Main repo (always on task branch) - rebase + push
-    await rebaseAndPushCurrentBranch(mainGit, logger, 'main repository');
+    await rebaseAndPushCurrentBranch(mainGit, logger, 'main repository', mainGuard);
 
     // Each submodule
     for (const synced of syncedSubmodules) {
@@ -302,7 +322,8 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     // Submodule refs may change from Phase 4 (rebase/pull) or Phase 6 (merge).
     // Detect and commit any changed gitlinks so the main repo stays clean.
     logger.info('');
-    await pushSubmoduleUpdates({ logger });
+    await mainGuard.beforeWrite();
+    await pushSubmoduleUpdates({ logger, beforePush: mainGuard.beforePush });
 
     // === Phase 8: Merge base into main task branch + push ===
     logger.info('');
@@ -313,6 +334,7 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
         baseBranch,
         logger,
         'main repository',
+        mainGuard,
     );
 
     return {
@@ -638,7 +660,14 @@ async function countCommitsAhead(git: SimpleGit, from: string | null | undefined
  * Rebase the current branch onto origin/<branch> and push.
  * Assumes fetch has already been done.
  */
-async function rebaseAndPushCurrentBranch(git: SimpleGit, logger: Logger, repoDisplayName: string): Promise<void> {
+async function rebaseAndPushCurrentBranch(
+    git: SimpleGit,
+    logger: Logger,
+    repoDisplayName: string,
+    guard?: BranchGuard,
+): Promise<void> {
+    await guard?.beforeWrite();
+
     const status = await git.status();
     const currentBranch = status.current;
 
@@ -658,6 +687,7 @@ async function rebaseAndPushCurrentBranch(git: SimpleGit, logger: Logger, repoDi
         localAhead = Number.parseInt(localResult.trim(), 10);
     } catch {
         // Remote branch may not exist yet - push to create it
+        await guard?.beforePush();
         await pushWithUpstream(git);
         logger.info(`   ${chalk.green('✓')} Pushed ${repoDisplayName} (new remote branch)`);
         return;
@@ -677,12 +707,14 @@ async function rebaseAndPushCurrentBranch(git: SimpleGit, logger: Logger, repoDi
         await assertNoConflicts({ git, repoDisplayName, operation: 'rebase', logger });
         logger.info(`   ${chalk.green('✓')} Rebased ${repoDisplayName}`);
 
+        await guard?.beforePush();
         await pushWithUpstream(git);
         logger.info(`   ${chalk.green('✓')} Pushed ${repoDisplayName}`);
     } else if (localAhead > 0) {
         logger.info(
             `   ${repoDisplayName}: pushing ${chalk.yellow(localAhead.toString())} local commit${localAhead === 1 ? '' : 's'}...`,
         );
+        await guard?.beforePush();
         await pushWithUpstream(git);
         logger.info(`   ${chalk.green('✓')} Pushed ${repoDisplayName}`);
     } else {
@@ -815,7 +847,10 @@ async function mergeBaseIntoCurrent(
     baseBranch: string,
     logger: Logger,
     repoDisplayName: string,
+    guard?: BranchGuard,
 ): Promise<{ wasAhead: boolean; commitsAhead: number; merged: boolean }> {
+    await guard?.beforeWrite();
+
     const status = await git.status();
     const currentBranch = status.current;
     const remoteBaseBranch = `origin/${baseBranch}`;
@@ -851,6 +886,7 @@ async function mergeBaseIntoCurrent(
     await assertNoConflicts({ git, repoDisplayName, operation: 'merge', logger });
     logger.info(`   ${chalk.green('✓')} Merged ${chalk.cyan(baseBranch)} into ${repoDisplayName}`);
 
+    await guard?.beforePush();
     await pushWithUpstream(git);
     logger.info(`   ${chalk.green('✓')} Pushed ${repoDisplayName}`);
 

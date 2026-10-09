@@ -190,6 +190,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
         const prBaseBranch = existingPr.base.ref;
         logger.info(`🔄 Synchronizing with PR base branch ${chalk.cyan(prBaseBranch)}`);
         await syncAllRepos({
+            branch: existingPr.head.ref,
             baseBranch: prBaseBranch,
             baseBranches,
             unattended,

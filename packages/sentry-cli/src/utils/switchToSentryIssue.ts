@@ -130,6 +130,7 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
         const prBaseBranch = existingPr.base.ref;
         logger.info(`🔄 Synchronizing with PR base branch ${chalk.cyan(prBaseBranch)}`);
         await syncAllRepos({
+            branch: existingPr.head.ref,
             baseBranch: prBaseBranch,
             baseBranches,
             unattended,

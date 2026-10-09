@@ -20,6 +20,13 @@ export interface PushSubmoduleUpdatesParams {
      * If not provided, the function will detect changed submodules automatically.
      */
     submodulePaths?: string[];
+
+    /**
+     * Run right before the push, after the commit; throwing stops the push. Lets a caller that
+     * knows more about the branch — which pull requests are stacked on it — refuse a push it must
+     * not make.
+     */
+    beforePush?: () => Promise<void>;
 }
 
 /**
@@ -42,7 +49,7 @@ export interface PushSubmoduleUpdatesResult {
  * Only commits the specified submodule paths (or detected changes if not specified).
  */
 export async function pushSubmoduleUpdates(params: PushSubmoduleUpdatesParams): Promise<PushSubmoduleUpdatesResult> {
-    const { logger, submodulePaths } = params;
+    const { logger, submodulePaths, beforePush } = params;
     const git = simpleGit();
 
     let pathsToCommit: string[];
@@ -99,6 +106,7 @@ export async function pushSubmoduleUpdates(params: PushSubmoduleUpdatesParams): 
     await git.raw(['commit', '-m', 'Submodule update', '--', ...pathsToCommit]);
 
     // Push (handles case where no upstream is configured)
+    await beforePush?.();
     await pushWithUpstream(git);
     logger.info(`   ${chalk.green('✓')} Pushed submodule reference update${pathsToCommit.length === 1 ? '' : 's'}`);
 

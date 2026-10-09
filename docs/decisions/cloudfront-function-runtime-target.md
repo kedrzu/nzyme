@@ -9,18 +9,17 @@ Accepted
 ## Context
 
 CloudFront Functions run on `cloudfront-js-2.0`, which is ECMAScript 5.1 plus an enumerated menu
-of later features — not a browser, not Node. The patient app's viewer-request function is bundled
-from shared code (`packages/lambdas/src/patientViewerRequest.ts` pulls in
-`parseAcceptLanguageHeader` from `@healed/common`), and the compiler
-(`packages/pulumi/src/compileFunction.worker.ts`) ran `@babel/preset-env` with
+of later features — not a browser, not Node. Healed's patient app viewer-request function is bundled
+from shared code (it pulls in `parseAcceptLanguageHeader` from healed's `@healed/common`), and the
+compiler (`packages/pulumi/src/compileFunction.worker.ts`) ran `@babel/preset-env` with
 `targets: { node: '5' }` and no `useBuiltIns`. That target is wrong in both directions: it
 downlevels syntax the runtime has (`const`/`let`, arrow functions, template literals), costing
 bytes against a hard 10 KB quota, and it never touches built-in methods, so an ES2023 call passes
 typecheck, lint, build and deploy and fails only at the edge.
 
-That is exactly what happened during the `testing` cutover verification (HLD-381):
+That is exactly what happened during healed's `testing` cutover verification:
 `Array.prototype.toSorted` in `parseAcceptLanguageHeader` — added by an `unicorn/no-array-sort`
-lint suggestion in PR #273 — made every browser request to the patient app root a CloudFront 503
+lint suggestion — made every browser request to the patient app root a CloudFront 503
 ("The CloudFront function associated with the CloudFront distribution is invalid or could not
 run"). `curl` without an `Accept-Language` header took the early return and got the 302, so no
 health check saw it.
@@ -32,8 +31,9 @@ health check saw it.
 > [AWS, CloudFront quotas](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits.html).
 
 > **Measured 2026-09-04** with `aws cloudfront test-function` on a throwaway function in the
-> `testing` account (deleted afterwards): the runtime also has `Array.from` and a `global` object,
-> neither of which the document lists; every deployed function starts with `global.handler =`.
+> healed `testing` account (deleted afterwards): the runtime also has `Array.from` and a `global`
+> object, neither of which the document lists; every deployed function starts with
+> `global.handler =`.
 > Absent, as documented: `Array.prototype.{flat,flatMap,at,findLast,findLastIndex,toSorted,
 > toReversed,toSpliced,with}`, `String.prototype.{at,matchAll,normalize}`,
 > `Object.{fromEntries,hasOwn,groupBy}`, `Map`, `Set`, `WeakMap`, `Proxy`, `Reflect`, `BigInt`,
@@ -66,26 +66,26 @@ Functions**, and that target is a preset of our own in `@nzyme/pulumi`
    `findLast`, `findLastIndex`, `Object.fromEntries`, `Object.hasOwn`) into ES5 helpers guarded by
    `Array.isArray`, falling back to the original call for anything that is not an array.
 3. **The check** (`assertCloudFrontFunctionCode.ts`) runs on the **final** bundle — after Babel and
-   after terser, as a Rollup `renderChunk` plugin — and on the two hand-written templates that never
-   go through the compiler (`createRewriteCloudfrontFunction`, `createSentryTunnel`). It is
+   after terser, as a Rollup `renderChunk` plugin — and on the two hand-written templates in healed
+   that never go through the compiler (`createRewriteCloudfrontFunction`, `createSentryTunnel`). It is
    scope-aware (`@babel/core` `parseSync` + `traverse`): a free identifier outside the model, a call
    to a static or instance method outside the model, a generator or `for await`, or a bundle over
    10 240 bytes stops the compile with the API name, the source file and a suggested replacement.
    String literals never trip it — `"Map"` inside a Babel helper is not a `Map`.
 
-A repo-side test (`packages/infra/src/utils/createCloudFrontFunction.test.ts`) discovers every
+A test in healed (beside its `createCloudFrontFunction` helper) discovers every
 `createCloudFrontFunction` call site in the stack sources and compiles each entry point through the
 same path, so the guard also runs in `bun tests`, not only at deploy time.
 
 Shared utilities keep using modern array methods. `parseAcceptLanguageHeader` keeps its
 `toSorted`; the preset rewrites it for the edge, which is the point of having a preset rather than a
-rule in `packages/common` that only one consumer needs.
+rule in healed's shared `common` package that only one consumer needs.
 
 ## Consequences
 
 - A method the runtime lacks is either rewritten (sugar) or a build failure with a named cause —
   never a 503 discovered in a browser.
-- The five deployed functions shrank or stayed within a few bytes (patient viewer-request
+- Healed's five deployed functions shrank or stayed within a few bytes (patient viewer-request
   5 002 → 4 826 B); `const`, arrow functions and template literals now survive into the bundle.
 - The runtime model is a dated snapshot. When AWS ships a new runtime or adds a method, the model
   file is where it changes, and the probe procedure (a temporary function plus

@@ -51,14 +51,41 @@ draft). The body says what changed and why, in English; the dev pipeline supplie
 
 ## Stack
 
-Not supported in this repository: one PR per change. When a change must be split, land the lower part
-first and branch the next from the updated base.
+GitHub's native stacked pull requests, enabled on this repository and driven through `gh api` —
+nothing to install. A node is an ordinary `<type>/<slug>` branch whose PR's base is the node below,
+with its own Conventional Commit title: each node lands as its own squash commit, titled by its PR.
+The bottom node's base is whatever Start picked, so a hotfix line can carry a stack too.
+
+- **Add a node:** with the current node committed and pushed, `git switch -c <type>/<slug>`, commit,
+  `git push -u origin HEAD`, `gh pr create --draft --base <node below> --title … --body-file …`.
+  Then join it to the stack — the first extra node creates it, later ones append:
+  `echo '{"pull_requests":[<bottom>,<new>]}' | gh api -X POST repos/kedrzu/nzyme/stacks --input -`
+  or `echo '{"pull_requests":[<new>]}' | gh api -X POST repos/kedrzu/nzyme/stacks/<stack>/add --input -`.
+- **Read the chain:** `gh api "repos/kedrzu/nzyme/stacks?pull_request=<any node>" --jq '.[0] |
+  .number, (.pull_requests[] | "\(.number) \(.head.ref) \(.state)")'` prints the stack number, then
+  the nodes bottom to top. The tip is the last open one; `git switch <head.ref>` checks out any node.
+- **Propagate an edit to a lower node:** commit and push it, then for each node above it, bottom-up:
+  `git switch <node> && git merge <node below> && git push`. The stack's base (`origin/<base>`, the
+  bottom node's PR base — `main` or `release`) is merged into the bottom node only. Merge, never
+  rebase or force-push: review comments keep their anchors, conflicts keep their plain ours/theirs
+  meaning, and the merge commits vanish in the squash.
+- **GitHub rewrites the upper branches itself** after a partial merge or its "Rebase stack" button.
+  Keep every node pushed, so after `git fetch` a rewritten node is simply taken from the remote:
+  `git switch -C <node> origin/<node>`.
+- **Bottom node only:** nothing — nzyme has no submodules.
+- **Land** (only on the user's request): `gh pr merge` cannot merge a stacked PR. Submit
+  `echo '{"merge_method":"squash"}' | gh api -X PUT repos/kedrzu/nzyme/pulls/<top>/merge-async --input -`
+  — it lands that PR and every one below it atomically, one squash commit each. The method must be
+  explicit: the API defaults to a merge commit, which this repository does not allow. Poll
+  `gh api repos/kedrzu/nzyme/pulls/<top>/merge-async/<uuid> --jq .status` until it is no longer
+  `pending`. Every node must be out of draft and green.
 
 ## Land
 
 Only on the user's request — merging is outward-facing:
 
-- Normal PRs: `gh pr merge <n> --squash` (the title becomes the commit).
+- Normal PRs: `gh pr merge <n> --squash` (the title becomes the commit). A stacked PR lands through
+  `merge-async` (Stack).
 - The back-merge PR (`release → main`): never through the merge button, which only squashes —
   release's commits must become ancestors of `main`, or the next back-merge conflicts. Merge `main`
   into its branch, wait for CI, then fast-forward: `git push origin origin/back-merge/release:main`.

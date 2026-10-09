@@ -14,7 +14,7 @@ export interface ExtractDefineSymbolOptions {
     relPath: string;
     /** Deep import specifier for this file, from `importPathOf`. */
     importPath: string;
-    /** Callee identifier text → the `defineX` kind it marks (see `getDefineKindsByCallee`). */
+    /** Callee identifier text → the `defineX` kind it marks (built in `collectSymbols`). */
     kindsByCallee: ReadonlyMap<string, DefineSymbolKind>;
 }
 

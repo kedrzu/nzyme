@@ -116,6 +116,20 @@ describe('nzyme index', () => {
 
         expect(second).toEqual(first);
     });
+
+    it('removes the INDEX.md of a package that lost its last symbol', async () => {
+        await writeJson('packages/delta/package.json', { name: '@fix/delta', description: 'Delta pkg' });
+        await write(
+            'packages/delta/src/DeltaService.ts',
+            `export const DeltaService = defineService({ name: 'DeltaService' });`,
+        );
+        expect(await runIndex()).toBe(0);
+        expect(await exists('packages/delta/INDEX.md')).toBe(true);
+
+        await rm(join(root, 'packages/delta/src'), { recursive: true });
+        expect(await runIndex()).toBe(0);
+        expect(await exists('packages/delta/INDEX.md')).toBe(false);
+    });
 });
 
 function runIndex(): Promise<number> {

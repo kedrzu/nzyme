@@ -33,6 +33,11 @@ export function blockToMarkdown(block: KnownBlock): string | undefined {
 
             return text;
         }
+        case 'container': {
+            const children = mapNotNull(block.child_blocks, blockToMarkdown);
+
+            return [block.title ? `**${block.title.text}**` : null, ...children].filter(Boolean).join('\n\n');
+        }
         case 'image': {
             const title = block.title?.text ?? block.alt_text;
 

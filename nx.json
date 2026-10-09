@@ -52,6 +52,15 @@
         "releaseTag": {
             "pattern": "v{version}"
         },
+        // Nx defaults give `perf` a `semverBump` of `none`; make it release a patch. The changelog
+        // section of the default is kept (the override is merged over the defaults).
+        "conventionalCommits": {
+            "types": {
+                "perf": {
+                    "semverBump": "patch"
+                }
+            }
+        },
         "version": {
             "conventionalCommits": true,
             "git": {

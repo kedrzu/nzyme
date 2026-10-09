@@ -1,7 +1,8 @@
 /**
  * Publishes every public workspace package to npm at the version currently in its `package.json`.
  *
- * Runs in the release workflow right after release-please tags a release, but is safe to run again:
+ * Runs in the publish job of the release workflow (Nx Release) before the release tag is created, and
+ * is safe to run again:
  * a version that is already on the registry is skipped, so a half-finished publish is resumed by
  * re-running the job rather than by bumping the version.
  *

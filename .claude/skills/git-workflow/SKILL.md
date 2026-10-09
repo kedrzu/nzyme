@@ -65,8 +65,8 @@ The bottom node's base is whatever Start picked, so a hotfix line can carry a st
   .number, (.pull_requests[] | "\(.number) \(.head.ref) \(.state)")'` prints the stack number, then
   the nodes bottom to top. The tip is the last open one; `git switch <head.ref>` checks out any node.
 - **Propagate an edit to a lower node:** commit and push it, then for each node above it, bottom-up:
-  `git switch <node> && git merge <node below> && git push`. The stack's base (`origin/main`) is
-  merged into the bottom node only. Merge, never rebase or force-push: review comments keep their
+  `git switch <node> && git merge <node below> && git push`. The stack's base (`origin/<base>`, the
+  bottom node's PR base — `main` or `release`) is merged into the bottom node only. Merge, never rebase or force-push: review comments keep their
   anchors, conflicts keep their plain ours/theirs meaning, and the merge commits vanish in the squash.
 - **GitHub rewrites the upper branches itself** after a partial merge or its "Rebase stack" button.
   Keep every node pushed, so after `git fetch` a rewritten node is simply taken from the remote:

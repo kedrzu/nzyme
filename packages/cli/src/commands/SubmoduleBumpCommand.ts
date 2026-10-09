@@ -15,10 +15,9 @@ export const BUMP_UNCHANGED_OUTPUT = 'unchanged';
 /**
  * Moves the product's submodule to a source ref and stages the new gitlink — the start of a bump PR.
  *
- * Under per-consumer refs a product no longer follows nzyme's `main` blindly: it proposes a newer
- * nzyme commit in a PR, and only its own CI going green lets that commit in (and, once on the
- * product's `main`, into `<consumer>/main` via `submodule mirror`). This prepares that PR's change
- * and its description; committing, pushing and merging stay with the product's workflow, which owns
+ * A product owns its pin and does not follow nzyme's `main` blindly: it proposes a newer nzyme commit
+ * in a PR, and only its own CI going green lets that commit in. This prepares that PR's change and
+ * its description; committing, pushing and merging stay with the product's workflow, which owns
  * the policy (cadence, source ref, auto-merge). See `docs/consumers.md`.
  */
 export class SubmoduleBumpCommand extends Command {

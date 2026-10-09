@@ -9,7 +9,6 @@ import { LocaliseCommand } from './commands/LocaliseCommand.js';
 import { MonorepoCommand } from './commands/MonorepoCommand.js';
 import { QuietRunCommand } from './commands/QuietRunCommand.js';
 import { SubmoduleBumpCommand } from './commands/SubmoduleBumpCommand.js';
-import { SubmoduleMirrorCommand } from './commands/SubmoduleMirrorCommand.js';
 import { execute } from './execute.js';
 import { initialize } from './initialize.js';
 
@@ -34,7 +33,6 @@ await execute({
         FormatMarkdownCommand,
         IndexCommand,
         QuietRunCommand,
-        SubmoduleMirrorCommand,
         SubmoduleBumpCommand,
     ],
 });

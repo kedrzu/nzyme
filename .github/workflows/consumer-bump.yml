@@ -5,11 +5,11 @@ name: Bump nzyme
 # Proposes a newer nzyme to the product as a pull request: moves the submodule on `base-branch` to
 # `source-ref`, commits that to `pr-branch` and opens (or refreshes) a PR whose body lists the nzyme
 # commits it brings in. The product's CI on that PR is the gate — nzyme only reaches the product
-# once the product's own tests pass on it, and only then (on merge) does `consumer-mirror` advance
-# `<consumer>/<branch>`. With `auto-merge`, a green PR merges itself.
+# once the product's own tests pass on it. With `auto-merge`, a green PR merges itself. It writes only
+# to the product.
 #
-# Cadence, source and auto-merge are the product's policy: e.g. a daily bump of `main` from nzyme
-# `main` with auto-merge, and a manual bump of `release` from `<consumer>/main`.
+# Bump `main` only: production branches get a new pin through the product's own promotion, never
+# from automation (docs/consumers.md).
 #
 #   jobs:
 #     bump:

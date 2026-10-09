@@ -30,8 +30,7 @@ export function renderBumpSummary(bump: BumpChanged): string {
         lines.push(
             '> [!WARNING]',
             `> The new commit does not descend from the previous one: ${droppedCount} commit(s) of the previous`,
-            '> pin are not in the new one. Merge only if this rollback is intended — per-consumer refs only',
-            '> fast-forward, so mirroring will refuse to follow it until resolved by hand.',
+            '> pin are not in the new one. Merge only if dropping them is intended.',
             '',
         );
     }

@@ -20,14 +20,9 @@ commands exist from the first release that contains them.
 
 ## Adopting it
 
-1. **Pick a consumer name** (e.g. `healed`) and point the submodule at its line in `.gitmodules`:
-
-   ```ini
-   [submodule "nzyme"]
-       path = nzyme
-       url = https://github.com/kedrzu/nzyme.git
-       branch = healed/main
-   ```
+1. **Pick a consumer name** (e.g. `healed`) and add the submodule as in
+   [submodule-setup.md](submodule-setup.md#add-the-submodule). Once the first mirror has created
+   `<consumer>/main`, set `branch =` to it in `.gitmodules`.
 
 2. **Secrets in the product repository:**
    - `NZYME_TOKEN` — may push branches to `kedrzu/nzyme` (contents: write). A fine-grained PAT

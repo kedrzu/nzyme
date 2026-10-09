@@ -14,20 +14,26 @@ code, rules and tests, which still apply inside the product.
 ## Add the submodule
 
 ```sh
-git submodule add -b healed/main https://github.com/kedrzu/nzyme.git nzyme
+git submodule add -b main https://github.com/kedrzu/nzyme.git nzyme
 ```
 
 ```ini
 [submodule "nzyme"]
     path = nzyme
     url = https://github.com/kedrzu/nzyme.git
-    branch = healed/main   # this product's tested line — see consumers.md
+    branch = main   # after the first mirror: <consumer>/main, e.g. healed/main
     update = merge
 ```
 
+- **Start on `main`.** The product's `<consumer>/main` ref does not exist until the first mirror
+  creates it. Then switch `branch =` to it: that is the product's tested line, see
+  [consumers.md](consumers.md).
+
 - **Every clone and worktree** runs `git submodule update --init`. Put it in the product's setup script.
+
 - **CI checks out** with `actions/checkout` and `submodules: recursive`. nzyme is public, so the default
   token is enough.
+
 - **One remote URL in every product:** `https://github.com/kedrzu/nzyme.git`.
 
 ## Workspace and dependencies
@@ -92,6 +98,9 @@ All generated files are gitignored, in both trees. In the product's `.gitignore`
 tsconfig.json
 tsconfig.cjs.json
 *.loc.ts
+/INDEX.md
+/UTILS.md
+/packages/*/INDEX.md
 ```
 
 nzyme's own `.gitignore` covers its tree. Never commit or edit generated files.
@@ -105,7 +114,7 @@ their `dist`, so nothing runs before this has been done:
 bun install --frozen-lockfile     # --frozen-lockfile in CI
 bun nx run @nzyme/cli:build       # the generators below are part of the CLI
 bun run monorepo && bun run localise
-tsgo --build                      # or: nx run-many -t build
+bun x tsgo --build                # or: bun nx run-many -t build
 ```
 
 - **Scripts:** keep this order in one script (`setup.build.sh` in nzyme and in healed) and use it both
@@ -150,8 +159,9 @@ In the product:
 
 - `.oxlintrc.json`: `"ignorePatterns": [..., "nzyme/**"]`
 - `.oxfmtrc.json`: `"ignorePatterns": [..., "nzyme"]`
-- `eslint.config.mjs`: `globalIgnores([..., "nzyme/**"])`. ESLint has no nested-config discovery, so
-  this is enough.
+- `eslint.config.mjs`: `globalIgnores([..., "nzyme/**"])`. ESLint does discover nested configs, but this
+  stops a directory run from descending into `nzyme/`, so `nzyme/eslint.config.mjs` is never used. ESLint
+  is here only for the Vue rules oxlint does not cover.
 - `package.json` scripts:
 
   ```json

@@ -129,7 +129,9 @@ skill, an ADR, a docs page. `file:line` is fine in text read once: a review comm
 ## Imports
 
 Import `@nzyme/*` APIs by file path — `import { defineService } from '@nzyme/ioc/Service.js'` — every
-package exports `./*.js` and names each file after its export. Nothing sorts imports for you, so keep a
+package exports `./*.js` and names each file after its export. The exception is `@nzyme/crypto`, which
+exports only `.`, `./node` and `./browser`: import from `@nzyme/crypto` (or `/node`, `/browser`), never
+by file path, whatever `UTILS.md` lists. Nothing sorts imports for you, so keep a
 touched file's existing order rather than reordering it: builtin, then external, then internal
 (`@nzyme/*` and the repo's own scope), then relative, with a blank line between groups.
 

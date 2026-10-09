@@ -1,6 +1,7 @@
 import { join, relative } from 'node:path';
 
 import type { Package } from '@nzyme/project-utils/getPackages.js';
+import { groupByToMap } from '@nzyme/utils/array/groupByToMap.js';
 
 import type { IndexSettings } from './IndexSettings.js';
 import { EXTRA_SECTIONS } from './IndexSettings.js';
@@ -63,7 +64,7 @@ export function renderMarkdown(options: RenderMarkdownOptions): Map<string, stri
     }
     sortedPackages.sort((a, b) => a.name.localeCompare(b.name));
 
-    const symbolsByPackage = groupByPackageName(symbols);
+    const symbolsByPackage = groupByToMap(symbols, (symbol) => symbol.packageName);
 
     const files = new Map<string, string>([[join(root, 'INDEX.md'), renderRootIndex()]]);
     if (hasUtilsFile) {
@@ -118,7 +119,7 @@ export function renderMarkdown(options: RenderMarkdownOptions): Map<string, stri
         const utilSymbols = symbols.filter(
             symbol => symbol.kind === 'util' && settings.globalUtilPackages.has(symbol.packageName),
         );
-        const groups = groupByPackageName(utilSymbols);
+        const groups = groupByToMap(utilSymbols, (symbol) => symbol.packageName);
         const packageNames = [...groups.keys()].toSorted((a, b) => a.localeCompare(b));
 
         const lines = [
@@ -151,12 +152,7 @@ export function renderMarkdown(options: RenderMarkdownOptions): Map<string, stri
 
         const lines = [HEADER, '', `# ${packageName}`, '', description, '', `Path: \`${packagePath}\``, ''];
 
-        const byKind = new Map<string, IndexSymbol[]>();
-        for (const symbol of packageSymbols) {
-            const rows = byKind.get(symbol.kind) ?? [];
-            rows.push(symbol);
-            byKind.set(symbol.kind, rows);
-        }
+        const byKind = groupByToMap(packageSymbols, (symbol) => symbol.kind);
 
         const kinds = [...byKind.keys()].toSorted(
             (a, b) => (sections.get(a)?.order ?? 0) - (sections.get(b)?.order ?? 0),
@@ -240,17 +236,6 @@ function renderUtilRow(row: IndexSymbol): string {
  */
 function compareSymbols(a: IndexSymbol, b: IndexSymbol): number {
     return a.exportName.localeCompare(b.exportName) || a.importPath.localeCompare(b.importPath);
-}
-
-/** Groups symbols by `packageName` — the map's own key order is never relied upon by callers. */
-function groupByPackageName(symbols: readonly IndexSymbol[]): Map<string, IndexSymbol[]> {
-    const groups = new Map<string, IndexSymbol[]>();
-    for (const symbol of symbols) {
-        const group = groups.get(symbol.packageName) ?? [];
-        group.push(symbol);
-        groups.set(symbol.packageName, group);
-    }
-    return groups;
 }
 
 /** Normalizes a path to forward slashes so generated Markdown links are OS-independent. */

@@ -26,8 +26,9 @@ with its own configuration, and evolves it independently.
 >   format-checked the probe. The nested nzyme config replaces the product's config for that subtree,
 >   ignore list included.
 > - With `--disable-nested-config` (oxlint and oxfmt), or `--ignore-pattern` / `--ignore-path`, the
->   product skipped `nzyme/` entirely. ESLint's `globalIgnores(['nzyme/**'])` was enough, since flat
->   config has no nested discovery.
+>   product skipped `nzyme/` entirely. ESLint (kept only for Vue rules
+>   that oxlint does not cover) needed just `globalIgnores(['nzyme/**'])`: ignoring the directory
+>   stops a directory run from reaching `nzyme/`, so its nested `eslint.config.mjs` is never used.
 
 ## Options Considered
 
@@ -36,7 +37,7 @@ with its own configuration, and evolves it independently.
   and a product formatter writes into another repository.
 - **Option B — nested-config delegation (status quo).** The product lints everything and oxlint swaps
   in nzyme's config for its subtree. Trade-off: nzyme's rules apply, but the product still runs them,
-  fails on nzyme findings, and formats nzyme files. ESLint has no such delegation at all.
+  fails on nzyme findings, and formats nzyme files.
 - **Option C — each repository owns its tree.** The product excludes the submodule from its own runs
   and calls nzyme's scripts when it wants the submodule checked. Trade-off: two invocations, and the
   exclusion needs `--disable-nested-config` (or an explicit ignore flag), not only a config entry.

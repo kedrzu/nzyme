@@ -151,8 +151,8 @@ const fields = useFormFields(form, {
 ```
 
 Async conditions are not supported — do a server-dependent check in the submit handler after
-`validate()` and show it as a form-level error. `requiredValidator({ lazy: true })` shows the error
-only after a submit attempt instead of on blur.
+`validate()` and show it as a form-level error. `requiredValidator({ lazy: true })` stops revealing
+the error on blur; it still shows when the value changes while focused, and after a submit attempt.
 
 ### Custom
 

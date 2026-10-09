@@ -1,6 +1,8 @@
+import { assertNever } from '@nzyme/utils/assertNever.js';
+
 import { Command } from '../Command.js';
 import { Option } from '../index.js';
-import type { MirrorResult } from '../submodule/mirrorSubmoduleRef.js';
+import type { MirrorAction, MirrorResult } from '../submodule/mirrorSubmoduleRef.js';
 import { isMirrorRefusal, mirrorSubmoduleRef } from '../submodule/mirrorSubmoduleRef.js';
 
 /**
@@ -82,18 +84,20 @@ function describeMirror(targetBranch: string, result: MirrorResult): string {
             return `${targetBranch}: ${pushed ? 'created' : 'would create'} at ${gitlink}`;
         case 'fast-forward':
             return `${targetBranch}: ${pushed ? 'fast-forwarded' : 'would fast-forward'} ${previous} → ${gitlink}`;
-        default:
+        case 'noop':
             return `${targetBranch}: already at ${gitlink}, nothing to do`;
+        case 'rollback':
+        case 'diverged':
+            throw new Error(`Refusal "${action}" must be reported by describeRefusal, not describeMirror`);
+        default:
+            return assertNever(action, 'Unhandled mirror action');
     }
 }
 
 /** Why the ref was not moved, both commits, and how to resolve it. */
 function describeRefusal(targetBranch: string, result: MirrorResult): string {
     const { action, gitlink, previous } = result;
-    const reason =
-        action === 'rollback'
-            ? 'the pinned commit is an ancestor of the ref — the product went back (rollback)'
-            : 'neither commit descends from the other — the histories diverged';
+    const reason = describeRefusalReason(action);
 
     return [
         `✗ ${targetBranch} was left untouched: moving it would not be a fast-forward.`,
@@ -105,4 +109,20 @@ function describeRefusal(targetBranch: string, result: MirrorResult): string {
         `  \`git push --force-with-lease=refs/heads/${targetBranch}:${previous ?? ''} <remote> ${gitlink}:refs/heads/${targetBranch}\`.`,
         '',
     ].join('\n');
+}
+
+/** Why the ref was refused; only a refusal action has one. */
+function describeRefusalReason(action: MirrorAction): string {
+    switch (action) {
+        case 'rollback':
+            return 'the pinned commit is an ancestor of the ref — the product went back (rollback)';
+        case 'diverged':
+            return 'neither commit descends from the other — the histories diverged';
+        case 'create':
+        case 'noop':
+        case 'fast-forward':
+            throw new Error(`Action "${action}" is not a refusal`);
+        default:
+            return assertNever(action, 'Unhandled mirror action');
+    }
 }

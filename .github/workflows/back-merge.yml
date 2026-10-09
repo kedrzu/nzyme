@@ -39,8 +39,18 @@ jobs:
             git push origin HEAD:main
           else
             git merge --abort
-            if [ -z "$(gh pr list --base main --head release --json number --jq '.[].number')" ]; then
-              gh pr create --base main --head release --title "chore: merge release into main" \
-                --body "The automatic back-merge of \`release\` into \`main\` conflicts. Resolve it here with a merge commit (not a squash)."
+            # The PR comes from a throwaway copy of release: resolving conflicts in GitHub merges the
+            # base into the head branch, which must never be `release` itself. The copy is moved to
+            # the new release unless it holds a resolution that is in neither main nor release yet.
+            branch=back-merge/release
+            if git fetch origin "$branch" && ! git merge-base --is-ancestor FETCH_HEAD HEAD \
+              && ! git merge-base --is-ancestor FETCH_HEAD origin/release; then
+              echo "::warning::$branch holds a conflict resolution in progress; merge release into it by hand."
+            else
+              git push --force origin "origin/release:refs/heads/$branch"
+            fi
+            if [ -z "$(gh pr list --base main --head "$branch" --state open --json number --jq '.[].number')" ]; then
+              gh pr create --base main --head "$branch" --title "chore: merge release into main" \
+                --body "The automatic back-merge of \`release\` into \`main\` conflicts. Resolve the conflicts on this branch, then merge with a merge commit (not a squash or rebase), so main keeps release's commits."
             fi
           fi

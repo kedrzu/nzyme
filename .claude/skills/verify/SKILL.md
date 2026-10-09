@@ -54,8 +54,8 @@ dependency? Run `bun run monorepo` (regenerates the per-package `tsconfig.json`)
 
 ## Full — once, when all work is done
 
-Exactly what CI (`.github/workflows/ci.yml`) runs, in order; fix each failure before moving on, and
-re-run from step 1 if a fix touched dependencies or generated inputs:
+CI's steps (`.github/workflows/ci.yml`) plus `typecheck`, in order; fix each failure before moving on,
+and re-run from step 1 if a fix touched dependencies or generated inputs:
 
 1. `bun nzyme quiet-run bash setup.build.sh` — install, nzyme CLI, generated tsconfigs and
    translations, all package builds.
@@ -70,7 +70,7 @@ gitignored), and formatting fixes must be committed.
 
 ## Troubleshooting
 
-- Phantom TypeScript errors → `tsgo --build --clean && bun run typecheck`.
+- Phantom TypeScript errors → `bun x tsgo --build --clean && bun run typecheck`.
 - Dependency weirdness after switching branches → `bun run reinstall`.
 - A test passes locally but fails in CI with a git error → it relies on a global git identity; give the
   test repo its own `user.name`/`user.email`.

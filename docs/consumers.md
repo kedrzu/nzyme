@@ -65,7 +65,19 @@ jobs:
 ```
 
 From a separate `workflow_run`-triggered workflow instead, pass
-`branch: ${{ github.event.workflow_run.head_branch }}` and `ref: ${{ github.event.workflow_run.head_sha }}`.
+`branch: ${{ github.event.workflow_run.head_branch }}` and `ref: ${{ github.event.workflow_run.head_sha }}`,
+and guard the job:
+
+```yaml
+if: >-
+  github.event.workflow_run.conclusion == 'success' &&
+  github.event.workflow_run.event == 'push' &&
+  github.event.workflow_run.head_repository.full_name == github.repository
+```
+
+`workflow_run` fires on every completed run, failed and `pull_request` runs included, and a fork's PR
+from its own `main` reports `head_branch: main`. Without the guard, a red CI or a fork's PR would move
+`healed/main` to whatever commit it pins.
 
 A daily (and manual) bump of `main` from nzyme `main`, merging itself when green:
 
@@ -120,11 +132,16 @@ body. When the base branch already pins `source-ref`, it closes a stale bump PR 
    `git switch -c fix/<slug> origin/healed/release`, then a PR with base `healed/release`. nzyme's CI
    runs on it as on any PR.
 2. Merging it triggers `forward-port.yml`, which opens `chore: forward-port healed/release into main`.
-3. In the product, run the release bump with `source-ref: healed/release`. Its CI gates it; once merged
-   and green on `release`, the release mirror is a no-op (`healed/release` is already there).
+3. In the product, run the release bump with `source-ref: healed/release` right away. Its CI gates it;
+   once merged and green on `release`, the release mirror is a no-op (`healed/release` is already
+   there). Until then the product's `release` pins a commit behind `healed/release`, so any push to it
+   fails the mirror as a rollback: expected — do not move the ref back, that would drop the hotfix.
 4. Merge the forward-port PR **with a merge commit** — not a squash or rebase, which would land a copy
-   and leave `healed/release` diverged from `main`. Do not delete `healed/release`. Merge it before the
-   next release bump from `healed/main`, or that bump drops the hotfix and its mirror is refused.
+   and leave `healed/release` diverged from `main`. Do not delete `healed/release`.
+5. Before the next release bump from `healed/main`, check that it contains the hotfix:
+   `git merge-base --is-ancestor origin/healed/release origin/healed/main`. It does only once the
+   product's `main` was bumped past the forward-port and mirrored; a release bump before that drops the
+   hotfix and its mirror is refused.
 
 ## Rollback
 

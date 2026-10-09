@@ -40,6 +40,10 @@ Commit in the format above and push (`git push -u origin HEAD`). Before pushing 
 the scoped checks from the `verify` skill must be green. Confirm the push landed:
 `git rev-parse HEAD` equals `git rev-parse @{u}`.
 
+To commit only given files: `git add -- <files>` with nothing else staged (check
+`git diff --cached --name-only`), then commit; repeat per group. To push what is already committed,
+skip the commit and run `git push` (`git push -u origin HEAD` for a new branch).
+
 ## Publish
 
 `gh pr create --base <base> --title "<conventional title>" --body-file <file>` (or `gh pr ready` for a

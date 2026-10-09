@@ -63,8 +63,16 @@ export function createMiddleware(options: CreateMiddlewareOptions): RequestListe
             ip: getIp(req) || '::1',
         });
 
-        res.writeHead(response.status, response.statusText, response.headers);
-        res.end(response.body);
+        // `setHeader` with an array sends each value as its own header line, which `Set-Cookie`
+        // requires; undefined values are skipped because Node rejects them.
+        for (const [name, value] of Object.entries(response.headers)) {
+            if (value !== undefined) {
+                res.setHeader(name, value);
+            }
+        }
+
+        res.writeHead(response.status, response.statusText);
+        res.end(response.body instanceof Blob ? Buffer.from(await response.body.arrayBuffer()) : response.body);
 
         await afterRequest?.(req, res);
         next?.();

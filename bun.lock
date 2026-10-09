@@ -84,7 +84,7 @@
         "compare-versions": "6.1.1",
         "depcheck": "1.4.7",
         "enquirer": "2.4.1",
-        "execa": "10.0.1",
+        "execa": "10.1.0",
         "fs-extra": "11.4.1",
         "latest-version": "9.0.0",
         "lodash.merge": "4.6.2",
@@ -422,7 +422,7 @@
         "@nzyme/utils": "workspace:*",
         "chalk": "6.0.1",
         "dotenv": "18.0.5",
-        "execa": "10.0.1",
+        "execa": "10.1.0",
         "fs-extra": "11.4.1",
         "oxfmt": "0.71.0",
         "parse-gitignore": "2.0.0",
@@ -462,7 +462,7 @@
         "@types/fs-extra": "11.0.4",
         "chalk": "6.0.1",
         "cli-table3": "0.6.5",
-        "execa": "10.0.1",
+        "execa": "10.1.0",
         "fs-extra": "11.4.1",
         "rollup": "4.62.2",
         "rollup-plugin-bundle-stats": "4.22.3",
@@ -2569,7 +2569,7 @@
 
     "events-universal": ["events-universal@1.0.1", "", { "dependencies": { "bare-events": "^2.7.0" } }, "sha512-LUd5euvbMLpwOF8m6ivPCbhQeSiYVNb8Vs0fQ8QjXo0JTkEHpz8pxdQf0gStltaPpw0Cca8b39KxvK9cfKRiAw=="],
 
-    "execa": ["execa@10.0.1", "", { "dependencies": { "@sindresorhus/merge-streams": "^4.0.0", "figures": "^6.1.0", "get-stream": "^9.0.1", "human-signals": "^8.0.1", "is-plain-obj": "^4.1.0", "is-stream": "^4.0.1", "npm-run-path": "^6.0.0", "pretty-ms": "^9.3.0", "signal-exit": "^4.1.0", "strip-final-newline": "^4.0.0", "which-command": "^0.1.0", "yoctocolors": "^2.1.2" } }, "sha512-ge98qjkRK4IB7tL7Ju/6qmm5LHoH1eEMt5FNZrz3f4UIYhF28lggX20z3FaX1sgc67msLEn0N0BscOs29iuwyw=="],
+    "execa": ["execa@10.1.0", "", { "dependencies": { "@sindresorhus/merge-streams": "^4.0.0", "figures": "^6.1.0", "get-stream": "^9.0.1", "human-signals": "^8.0.1", "is-plain-obj": "^4.1.0", "is-stream": "^4.0.1", "npm-run-path": "^6.0.0", "pretty-ms": "^9.3.1", "signal-exit": "^4.1.0", "strip-final-newline": "^4.0.0", "which-command": "^0.1.0", "yoctocolors": "^2.2.0" } }, "sha512-5HT/600HqXEtmkb9mK/PkTWw+bQSCzPnWiZ4/87wD3Hi0wFzCapOuNT9p4M08PDd+KLHdHvFhKjOWmNx/npRNQ=="],
 
     "expand-tilde": ["expand-tilde@2.0.2", "", { "dependencies": { "homedir-polyfill": "^1.0.1" } }, "sha512-A5EmesHW6rfnZ9ysHQjPdJRni0SRar0tjtG5MNtm9n5TUvsYU8oozprtRD4AqHxcZWWlVuAmQo2nWKfN9oyjTw=="],
 

@@ -6,8 +6,19 @@ set -e
 REPO_ROOT=$(git rev-parse --path-format=absolute --git-common-dir | sed 's|/\.git\(/.*\)*$||')
 CURRENT_DIR=$(pwd -P)
 IS_WORKTREE=false
+WARNINGS=()
 
-if [ "$CI" != "true" ] && [ "$REPO_ROOT" != "$CURRENT_DIR" ]; then
+# Warn now and again at the very end, so a skipped step is not lost above the build output.
+warn() {
+    echo "⚠️  $1"
+    WARNINGS+=("$1")
+}
+
+# Inside a submodule (nzyme in a product repo) the git common dir belongs to the superproject, so
+# REPO_ROOT would be the product repo: that is not a worktree, and its .env files are not ours.
+SUPERPROJECT=$(git rev-parse --show-superproject-working-tree)
+
+if [ "$CI" != "true" ] && [ -z "$SUPERPROJECT" ] && [ "$REPO_ROOT" != "$CURRENT_DIR" ]; then
     IS_WORKTREE=true
     echo ""
     echo "📂 Repo root: $REPO_ROOT"
@@ -24,31 +35,32 @@ if [ "$IS_WORKTREE" = true ]; then
     echo "🔄 Catching up with origin/main..."
     echo ""
 
-    git fetch --quiet origin main
-
-    # Fast-forward the local `main` too, so the NEXT worktree is not cut from a stale base. Git
-    # refuses to move a branch another worktree holds, so ask that worktree — and only when clean.
-    MAIN_WORKTREE=$(git worktree list --porcelain \
-        | awk '/^worktree /{wt=$2} /^branch refs\/heads\/main$/{print wt; exit}')
-
-    if [ -z "$MAIN_WORKTREE" ]; then
-        git fetch --quiet origin main:main \
-            || echo "⚠️  Local main not fast-forwarded (diverged from origin/main)."
-    elif [ -n "$(git -C "$MAIN_WORKTREE" status --porcelain)" ]; then
-        echo "⚠️  Local main left as it is — $MAIN_WORKTREE has uncommitted changes."
+    if ! git fetch --quiet origin main; then
+        warn "Could not fetch origin/main (offline?) — the build reflects this branch, not origin/main."
     else
-        git -C "$MAIN_WORKTREE" merge --ff-only --quiet origin/main \
-            || echo "⚠️  Local main not fast-forwarded (diverged from origin/main)."
-    fi
+        # Fast-forward the local `main` too, so the NEXT worktree is not cut from a stale base. Git
+        # refuses to move a branch another worktree holds, so ask that worktree — and only when clean.
+        MAIN_WORKTREE=$(git worktree list --porcelain \
+            | awk '/^worktree /{wt=$2} /^branch refs\/heads\/main$/{print wt; exit}')
 
-    # A re-run on a branch carrying real work may not merge cleanly; a conflict under `set -e` would
-    # leave a half-merged tree, so an unclean merge is rolled back and reported instead.
-    if git merge --quiet --no-edit origin/main; then
-        echo "✅ Up to date with origin/main"
-    else
-        git merge --abort 2> /dev/null || true
-        echo "⚠️  Could not merge origin/main into $(git branch --show-current) — merge it by hand."
-        echo "   Until then the build reflects this branch, not origin/main."
+        if [ -z "$MAIN_WORKTREE" ]; then
+            git fetch --quiet origin main:main \
+                || warn "Local main not fast-forwarded (diverged from origin/main)."
+        elif [ -n "$(git -C "$MAIN_WORKTREE" status --porcelain)" ]; then
+            warn "Local main left as it is — $MAIN_WORKTREE has uncommitted changes."
+        else
+            git -C "$MAIN_WORKTREE" merge --ff-only --quiet origin/main \
+                || warn "Local main not fast-forwarded (diverged from origin/main)."
+        fi
+
+        # A re-run on a branch carrying real work may not merge cleanly; a conflict under `set -e` would
+        # leave a half-merged tree, so an unclean merge is rolled back and reported instead.
+        if git merge --quiet --no-edit origin/main; then
+            echo "✅ Up to date with origin/main"
+        else
+            git merge --abort 2> /dev/null || true
+            warn "Could not merge origin/main into $(git branch --show-current) — merge it by hand. Until then the build reflects this branch, not origin/main."
+        fi
     fi
 fi
 
@@ -77,5 +89,12 @@ fi
 bash setup.build.sh
 
 echo ""
+if [ ${#WARNINGS[@]} -gt 0 ]; then
+    echo "⚠️  Setup finished with skipped steps:"
+    for warning in "${WARNINGS[@]}"; do
+        echo "   - $warning"
+    done
+    echo ""
+fi
 echo "✅ Setup complete."
 echo ""

@@ -1,13 +1,13 @@
 name: CI
 
-# The merge gate: every pull request (to main, release, or a consumer ref like `healed/release`)
-# and every push to those branches runs the same build local setup does, then lint, format and tests.
+# The merge gate: every pull request (to main, release, or a stacked node) and every push to main and
+# release runs the same build local setup does, then lint, format and tests.
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   push:
-    branches: [main, release, '*/main', '*/release']
+    branches: [main, release]
 
 concurrency:
   group: ci-${{ github.ref }}

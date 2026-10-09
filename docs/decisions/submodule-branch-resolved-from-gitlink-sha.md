@@ -32,8 +32,8 @@ The main repo does not record a submodule branch. A commit records a **gitlink**
 commit SHA — and nothing else. `.gitmodules` has an optional `branch` field, but it is advisory and
 exists for `git submodule update --remote`, not for identifying work in progress.
 
-> **Checked 2026-09-21:** `.github/scripts/verify-submodule-refs.ts:207-260` already answers this
-> question in CI and has since it was written. `getBranchesContainingCommit` runs
+> **Checked 2026-09-21:** healed's `verify-submodule-refs.ts` CI script already answers this
+> question and has since it was written. Its `getBranchesContainingCommit` runs
 > `git branch -r --contains <gitlink-sha>` inside the submodule and derives the branch from the
 > result. It never reads a branch name or a PR title. Run against this worktree's current pin, it
 > returns exactly `origin/main`; across the ten stale `feature/sig-*` branches there is no commit

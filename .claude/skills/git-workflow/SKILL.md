@@ -59,8 +59,9 @@ first and branch the next from the updated base.
 Only on the user's request — merging is outward-facing:
 
 - Normal PRs: `gh pr merge <n> --squash` (the title becomes the commit).
-- The back-merge PR (`release → main`): **merge commit**, never squash — release's commits must
-  become ancestors of `main`, or the next back-merge conflicts.
+- The back-merge PR (`release → main`): never through the merge button, which only squashes —
+  release's commits must become ancestors of `main`, or the next back-merge conflicts. Merge `main`
+  into its branch, wait for CI, then fast-forward: `git push origin origin/back-merge/release:main`.
 
 What happens after landing, for orientation:
 

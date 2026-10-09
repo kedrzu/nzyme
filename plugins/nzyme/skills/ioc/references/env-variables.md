@@ -33,12 +33,15 @@ export const QUEUE_URLS = defineEnvVariable('QUEUE_URLS', {
     parse: value => JSON.parse(value) as Record<string, string>,
 });
 
-// Boolean flag with a default
-export const DEBUG_MODE = defineEnvVariable('DEBUG_MODE', { parse: value => value === 'true', default: false });
+// Boolean flag with a default — a falsy default must be a function (see the warning below)
+export const DEBUG_MODE = defineEnvVariable('DEBUG_MODE', { parse: value => value === 'true', default: () => false });
 
 // Optional → still typed `string`, but `undefined` at runtime when unset
 export const SENTRY_DSN = defineEnvVariable('SENTRY_DSN', { required: false });
 ```
+
+**Falsy defaults:** a literal falsy `default` (`false`, `0`, `''`) is dropped and the variable becomes
+required, so resolution throws when it is unset. Pass a function instead (`default: () => false`).
 
 **Type hole:** `required: false` does not add `| undefined` to the resolved type — the dependency is
 typed `string` (or the parsed type) while the runtime value can be `undefined`. Treat an optional

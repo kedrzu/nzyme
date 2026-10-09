@@ -19,7 +19,7 @@ const testEndpoint = defineEndpoint<void, unknown>({
  * Builds a real router with one `test` endpoint whose handler receives the live HTTP context, and
  * runs a payload-2.0 event for it through the adapter.
  */
-function execute(handle: (http: HttpContext) => unknown) {
+function execute(handle: (http: HttpContext) => unknown, event: Partial<types.APIGatewayProxyEventV2> = {}) {
     const handler = defineEndpointHandler({
         endpoint: testEndpoint,
         deps: { httpContextProvider: HttpContextProvider },
@@ -30,7 +30,7 @@ function execute(handle: (http: HttpContext) => unknown) {
 
     const router = createRouter({ container: createContainer(), handlers: [handler] });
 
-    return executeLambdaRpcApiV2(router, createEvent('test'));
+    return executeLambdaRpcApiV2(router, { ...createEvent('test'), ...event });
 }
 
 function createEvent(path: string): types.APIGatewayProxyEventV2 {
@@ -75,6 +75,32 @@ describe('executeLambdaRpcApiV2', () => {
                 'cache-control': CACHE_CONTROL_DISABLED,
             },
         });
+    });
+
+    it('passes the request cookies of the cookies field to the handler as one cookie header', async () => {
+        let cookie: unknown;
+        await execute(
+            http => {
+                cookie = http.request.headers['cookie'];
+                return null;
+            },
+            { cookies: ['a=1', 'b=%7B%22x%22%3A1%7D'] },
+        );
+
+        expect(cookie).toBe('a=1; b=%7B%22x%22%3A1%7D');
+    });
+
+    it('merges the cookies field with a cookie header already on the request', async () => {
+        let cookie: unknown;
+        await execute(
+            http => {
+                cookie = http.request.headers['cookie'];
+                return null;
+            },
+            { headers: { cookie: 'a=1' }, cookies: ['b=2'] },
+        );
+
+        expect(cookie).toBe('a=1; b=2');
     });
 
     it('sends every cookie of a JSON result through the cookies field, not a joined header', async () => {

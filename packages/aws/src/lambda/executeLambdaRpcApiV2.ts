@@ -19,7 +19,7 @@ export async function executeLambdaRpcApiV2(
         method,
         path: event.pathParameters?.proxy || event.rawPath,
         query: event.queryStringParameters,
-        headers: event.headers,
+        headers: getRequestHeaders(event),
         body: event.body,
         ip: event.requestContext.http.sourceIp,
     });
@@ -59,6 +59,20 @@ export async function executeLambdaRpcApiV2(
     }
 
     return result;
+}
+
+/**
+ * The request headers as the router expects them. Payload format 2.0 moves the request's cookies out of
+ * `headers` into the `cookies` field, one entry per cookie, so they are folded back into a single
+ * `cookie` header — merged with one already there rather than replacing it.
+ */
+function getRequestHeaders(event: types.APIGatewayProxyEventV2): types.APIGatewayProxyEventV2['headers'] {
+    if (!event.cookies?.length) {
+        return event.headers;
+    }
+
+    const cookies = [event.headers['cookie'], ...event.cookies].filter(Boolean);
+    return { ...event.headers, cookie: cookies.join('; ') };
 }
 
 /**

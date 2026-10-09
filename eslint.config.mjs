@@ -12,6 +12,8 @@ export default [
         '**/playwright-report/**',
         '**/*.loc.ts',
         '**/*.loc.js',
+        // Agent worktrees are full checkouts of this repo; ESLint does not read .gitignore.
+        '.claude/worktrees/**',
     ]),
     ...vue(),
 ];

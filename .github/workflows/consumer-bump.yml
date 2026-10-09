@@ -56,10 +56,9 @@ on:
     secrets:
       token:
         description: >-
-          Product repository token with contents:write and pull-requests:write (a GitHub App
-          installation token or a fine-grained PAT). Not GITHUB_TOKEN — pushes and PRs made with it
-          do not trigger workflows, so the product's CI would never run on the bump, and that CI is
-          the whole point.
+          Product repository token with contents:write and pull-requests:write (a fine-grained
+          PAT). Not GITHUB_TOKEN — pushes and PRs made with it do not trigger workflows, so the
+          product's CI would never run on the bump, and that CI is the whole point.
         required: true
 
 jobs:
@@ -94,6 +93,8 @@ jobs:
       # and otherwise a markdown summary (also written to bump.md) with the new gitlink staged.
       - name: Move the submodule
         id: bump
+        # Explicit `bash` runs with pipefail, so a failing CLI fails the step instead of `tee`'s exit 0.
+        shell: bash
         run: |
           bunx --package "@nzyme/cli@${CLI_VERSION}" nzyme submodule bump \
             --source "$SOURCE_REF" --path "$SUBMODULE_PATH" --summary-file "$RUNNER_TEMP/bump.md" \

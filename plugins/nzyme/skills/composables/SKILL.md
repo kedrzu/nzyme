@@ -152,7 +152,7 @@ initial load, rarely what you want.
 |`error`|last loader error; cleared on success|
 |`get()`|cached value, loading only if missing or invalidated|
 |`reload()`|force a reload now|
-|`invalidate()`|mark stale — the old value **stays visible** and reloads on next `get()` (`lazy`: next `.value` access)|
+|`invalidate()`|mark stale — the old value **stays visible** until the next `get()`/`reload()`; reading `.value` never reloads it|
 |`clear()`|reset value and error to `default` now and cancel a cancelable in-flight load|
 
 `invalidate()` is stale-while-revalidate for the same subject (after a mutation). `clear()` is an

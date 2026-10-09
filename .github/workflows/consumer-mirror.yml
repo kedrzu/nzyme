@@ -49,7 +49,7 @@ on:
         default: latest
     secrets:
       nzyme-token:
-        description: Token allowed to push branches to kedrzu/nzyme (contents:write) — a GitHub App installation token or a fine-grained PAT.
+        description: Token allowed to push branches to kedrzu/nzyme (contents:write) — a fine-grained PAT.
         required: true
 
 jobs:
@@ -78,6 +78,23 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # `concurrency` serialises runs but does not order them: an older push finishing after a newer
+      # one would see the ref already past its pin and report a false rollback. Only the branch tip
+      # is mirrored; a superseded commit is left to the run of the commit that superseded it.
+      - name: Check the commit is the branch tip
+        id: tip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tip=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$BRANCH" --jq .object.sha)
+          if [ "$tip" = "$(git rev-parse HEAD)" ]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::$(git rev-parse --short HEAD) is no longer the tip of $BRANCH ($tip); not mirrored."
+            echo "ℹ️ Skipped: \`$BRANCH\` has moved on to \`$tip\`, whose run mirrors it." >> "$GITHUB_STEP_SUMMARY"
+            echo "current=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: oven-sh/setup-bun@v2
 
       # Every github.com URL (the submodule's remote included) goes through the nzyme token. The
@@ -89,6 +106,7 @@ jobs:
 
       - name: Mirror the pinned nzyme commit
         id: mirror
+        if: steps.tip.outputs.current == 'true'
         run: |
           result=$(bunx --package "@nzyme/cli@${CLI_VERSION}" nzyme submodule mirror \
             --consumer "$CONSUMER" --branch "$BRANCH" --path "$SUBMODULE_PATH")

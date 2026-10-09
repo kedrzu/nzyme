@@ -101,7 +101,8 @@ The `git-workflow` skill covers what a contributor does. A new or changed public
   `vue-forms`, `vue-i18n` and `vue-transitions` ship `src`;
 - internal dependencies as `workspace:*`, and no dependency on a private package.
 
-`bun scripts/publish.ts --dry-run` checks the last two.
+`bun scripts/publish.ts --dry-run` checks only that no public package depends on a private one and
+that no `workspace:` specifier survives packing (versions already on npm are skipped, not packed).
 
 # Git
 

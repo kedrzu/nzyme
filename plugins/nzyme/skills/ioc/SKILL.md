@@ -185,12 +185,14 @@ with `useService(Unit)` from `@nzyme/vue-ioc/useService.js`. The resolved type o
 ### Interfaces — abstract dependencies the app provides
 
 `defineInterface<T>({ name, default? })` (`@nzyme/ioc/Interface.js`) declares a dependency with no
-implementation; the app registers one with `container.set(Interface, value)`, or a service declares
-`implements: Interface`. Resolution walks up parent containers, falls back to `default`, and throws
-when neither exists. `Interface.optional()` resolves to `undefined` instead of throwing;
-`Interface.default(value)` supplies a per-dependency fallback. Framework interfaces an app typically
-provides: `LanguageContext` (`@nzyme/i18n`), `LoggerTransport` (`@nzyme/logging`, defaults to the
-console), `EnvVariables` (defaults to `process.env`).
+implementation; the app registers one with `container.set(Interface, value)`, or with
+`container.register(Service)` for a service declaring `implements: Interface` — `implements` alone binds
+nothing until that service is first resolved. Resolution walks up parent containers, falls back to
+`default`, and throws when neither exists. `Interface.optional()` resolves to `undefined` instead of
+throwing; `Interface.default(value)` supplies a per-dependency fallback — both look only in the current
+container, not its parents. Framework interfaces an app typically provides: `LanguageContext`
+(`@nzyme/i18n`), `LoggerTransport` (`@nzyme/logging`, defaults to the console), `EnvVariables`
+(defaults to `process.env`).
 
 ### Environment variables
 

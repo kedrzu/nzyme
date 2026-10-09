@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
+
 /**
  * Configuration of `nzyme index`, read from the `nzyme.index` field of the repo's root
  * `package.json`. Everything is optional: the generic kinds (services, commands, factories,
@@ -71,8 +73,8 @@ export interface NzymeIndexEntitiesConfig {
  */
 export async function readIndexConfig(root: string): Promise<NzymeIndexConfig> {
     const packageJson: unknown = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
-    const nzyme = isRecord(packageJson) ? packageJson.nzyme : undefined;
-    const index = isRecord(nzyme) ? nzyme.index : undefined;
+    const nzyme = isPlainObject(packageJson) ? packageJson.nzyme : undefined;
+    const index = isPlainObject(nzyme) ? nzyme.index : undefined;
 
     return parseIndexConfig(index);
 }
@@ -86,7 +88,7 @@ export function parseIndexConfig(value: unknown): NzymeIndexConfig {
     if (value === undefined) {
         return {};
     }
-    if (!isRecord(value)) {
+    if (!isPlainObject(value)) {
         throw configError('nzyme.index', 'an object');
     }
 
@@ -116,7 +118,7 @@ export function parseIndexConfig(value: unknown): NzymeIndexConfig {
 
 /** Validates one `defineKinds` entry. */
 function parseDefineKind(value: unknown, path: string): NzymeIndexDefineKindConfig {
-    if (!isRecord(value)) {
+    if (!isPlainObject(value)) {
         throw configError(path, 'an object');
     }
 
@@ -141,7 +143,7 @@ function parseDefineKind(value: unknown, path: string): NzymeIndexDefineKindConf
 
 /** Validates the `entities` object. */
 function parseEntities(value: unknown, path: string): NzymeIndexEntitiesConfig {
-    if (!isRecord(value)) {
+    if (!isPlainObject(value)) {
         throw configError(path, 'an object');
     }
 
@@ -180,9 +182,4 @@ function parseString(value: unknown, path: string): string {
 /** The error for a config value of the wrong shape. */
 function configError(path: string, expected: string): Error {
     return new Error(`Invalid code index config in package.json: \`${path}\` must be ${expected}.`);
-}
-
-/** True for a plain JSON object. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

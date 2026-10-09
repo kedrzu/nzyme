@@ -27,9 +27,8 @@ Pick the base by where the change has to land:
 
 |Change|Base branch|
 |-|-|
-|Feature, refactor, anything not urgent|`main`|
+|Feature, refactor, a fix a product needs (it reaches the product via its `main`)|`main`|
 |Fix that must reach npm without what is on `main`|`release`|
-|Fix a product needs in production now|the commit the product's production pins (`docs/consumers.md`)|
 
 Branch name: `<type>/<short-kebab-slug>` from the chosen base (`git switch -c fix/money-rounding
 origin/release`). Opening a draft PR early is optional.
@@ -86,9 +85,8 @@ Only on the user's request — merging is outward-facing:
 
 - Normal PRs: `gh pr merge <n> --squash` (the title becomes the commit). A stacked PR lands through
   `merge-async` (Stack).
-- A product hotfix PR (branched from a pinned commit) and the back-merge PR (`release → main`):
-  **merge commit**, never squash — their commits must become ancestors of `main`, or a product pin
-  becomes unreachable and the next back-merge conflicts.
+- The back-merge PR (`release → main`): **merge commit**, never squash — release's commits must
+  become ancestors of `main`, or the next back-merge conflicts.
 
 What happens after landing, for orientation:
 

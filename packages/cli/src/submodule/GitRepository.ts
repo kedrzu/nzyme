@@ -68,20 +68,6 @@ export class GitRepository {
         }
     }
 
-    /** The commit a branch points at on the remote, or `null` when the branch does not exist there. */
-    async getRemoteBranchSha(remote: string, branch: string): Promise<string | null> {
-        const ref = `refs/heads/${branch}`;
-        const output = await this.git(['ls-remote', remote, ref]);
-        for (const line of output.split('\n')) {
-            const [sha, name] = line.split('\t');
-            if (sha && name === ref) {
-                return sha;
-            }
-        }
-
-        return null;
-    }
-
     /**
      * Fetches a ref (branch, tag or full SHA) from the remote and returns the commit it resolves to,
      * or `null` when the remote does not have it — so callers can fall back to a local lookup.
@@ -95,35 +81,10 @@ export class GitRepository {
         return await this.git(['rev-parse', '--verify', 'FETCH_HEAD^{commit}']);
     }
 
-    /**
-     * Makes sure a commit is present locally, fetching it when it is not — a gitlink can point at a
-     * commit the submodule's clone never fetched (e.g. one reachable only from a PR branch).
-     */
-    async ensureCommit(remote: string, sha: string): Promise<void> {
-        if (await this.resolveLocalCommit(sha)) {
-            return;
-        }
-
-        await this.fetchCommit(remote, sha);
-        if (!(await this.resolveLocalCommit(sha))) {
-            throw new Error(`Commit ${sha} is not in ${this.dir} and could not be fetched from "${remote}".`);
-        }
-    }
-
     /** The commit a local revision resolves to (tags peeled), or `null` when it does not exist locally. */
     async resolveLocalCommit(revision: string): Promise<string | null> {
         const resolved = await this.tryGit(['rev-parse', '--verify', '--quiet', `${revision}^{commit}`]);
         return resolved.ok ? resolved.stdout : null;
-    }
-
-    /** Whether `ancestor` is reachable from `descendant` — i.e. moving a ref between them is a fast-forward. */
-    async isAncestor(ancestor: string, descendant: string): Promise<boolean> {
-        const result = await this.tryGit(['merge-base', '--is-ancestor', ancestor, descendant]);
-        if (result.exitCode > 1) {
-            throw new Error(`git merge-base --is-ancestor ${ancestor} ${descendant} failed: ${result.stderr}`);
-        }
-
-        return result.ok;
     }
 
     /** Commits reachable from `to` but not from `from`, newest first — `git log from..to`. */
@@ -160,14 +121,6 @@ export class GitRepository {
         }
 
         return `https://github.com/${match[1]}/${match[2]}`;
-    }
-
-    /** Throws unless git accepts `refs/heads/<branch>` as a ref name — before anything is fetched or pushed. */
-    async assertValidBranchName(branch: string): Promise<void> {
-        const result = await this.tryGit(['check-ref-format', `refs/heads/${branch}`]);
-        if (!result.ok) {
-            throw new Error(`"${branch}" is not a valid branch name.`);
-        }
     }
 
     /** Runs git and returns its trimmed stdout; throws with git's stderr when it fails. */

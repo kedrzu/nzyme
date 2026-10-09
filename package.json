@@ -41,7 +41,7 @@
         "@nzyme/cli": "workspace:*",
         "@nzyme/eslint": "workspace:*",
         "@nzyme/tsconfig": "workspace:*",
-        "@swc-node/register": "1.10.10",
+        "@swc-node/register": "1.12.1",
         "@swc/core": "1.12.6",
         "@types/bun": "1.4.2",
         "@types/node": "^26.1.1",

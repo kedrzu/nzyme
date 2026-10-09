@@ -26,10 +26,9 @@
         "localise": "nzyme localise",
         "monorepo": "nzyme monorepo",
         "reinstall": "bun run clean && bun run clean:npm && bun install && bun run setup",
-        "release": "nx release --yes",
         "setup": "zsh setup.sh",
         "test": "bun test ./packages/*/src",
-        "typecheck": "tsgo --build",
+        "typecheck": "tsgo --build && tsgo -p scripts",
         "update": "bun update -i -r --latest",
         "watch": "tsgo --build --watch"
     },
@@ -38,8 +37,8 @@
     },
     "devDependencies": {
         "@nx/js": "^23.1.0",
-        "@nzyme/cli": "0.14.0",
-        "@nzyme/eslint": "0.14.0",
+        "@nzyme/cli": "workspace:*",
+        "@nzyme/eslint": "workspace:*",
         "@swc-node/register": "1.10.10",
         "@swc/core": "1.12.6",
         "@types/bun": "1.4.2",

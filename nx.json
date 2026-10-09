@@ -48,20 +48,37 @@
         }
     },
     "release": {
-        "projects": ["packages/*"],
+        "projects": ["packages/*", "!@nzyme/logging-ui"],
         "releaseTag": {
             "pattern": "v{version}"
         },
+        // Nx defaults give `perf` a `semverBump` of `none`; make it release a patch. The changelog
+        // section of the default is kept (the override is merged over the defaults).
+        "conventionalCommits": {
+            "types": {
+                "perf": {
+                    "semverBump": "patch"
+                }
+            }
+        },
         "version": {
-            "conventionalCommits": true
+            "conventionalCommits": true,
+            "git": {
+                "commit": false,
+                "tag": false,
+                "stageChanges": false
+            }
         },
         "changelog": {
             "workspaceChangelog": {
-                "createRelease": "github"
+                "createRelease": false
+            },
+            "projectChangelogs": false,
+            "git": {
+                "commit": false,
+                "tag": false,
+                "stageChanges": false
             }
-        },
-        "git": {
-            "commitMessage": "chore: release v{version}"
         }
     },
     // Nx CLI usage analytics go to www.google-analytics.com; nothing here needs them.

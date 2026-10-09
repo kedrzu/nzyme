@@ -9,7 +9,10 @@
         "url": "https://github.com/kedrzu/nzyme.git"
     },
     "files": [
-        "src"
+        "src",
+        "!src/**/*.test.ts",
+        "!src/**/*.test.tsx",
+        "css"
     ],
     "type": "module",
     "sideEffects": false,
@@ -20,9 +23,10 @@
     },
     "exports": {
         ".": {
-            "types": "./dist/index.d.ts",
-            "import": "./dist/index.js",
-            "default": "./dist/index.js"
+            "types": "./src/index.ts",
+            "source": "./src/index.ts",
+            "import": "./src/index.ts",
+            "default": "./src/index.ts"
         },
         "./shims": {
             "types": "./src/shims.d.ts"
@@ -48,16 +52,16 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "@nzyme/dom-utils": "0.14.0",
-        "@nzyme/i18n": "0.14.0",
-        "@nzyme/i18n-core": "0.14.0",
-        "@nzyme/money": "0.14.0",
-        "@nzyme/types": "0.14.0",
-        "@nzyme/utils": "0.14.0",
-        "@nzyme/validation": "0.14.0",
-        "@nzyme/vue-i18n": "0.14.0",
-        "@nzyme/vue-ioc": "0.14.0",
-        "@nzyme/vue-utils": "0.14.0",
+        "@nzyme/dom-utils": "workspace:*",
+        "@nzyme/i18n": "workspace:*",
+        "@nzyme/i18n-core": "workspace:*",
+        "@nzyme/money": "workspace:*",
+        "@nzyme/types": "workspace:*",
+        "@nzyme/utils": "workspace:*",
+        "@nzyme/validation": "workspace:*",
+        "@nzyme/vue-i18n": "workspace:*",
+        "@nzyme/vue-ioc": "workspace:*",
+        "@nzyme/vue-utils": "workspace:*",
         "@vueuse/core": "15.0.0",
         "imask": "7.6.1",
         "libphonenumber-js": "1.13.14",
@@ -66,8 +70,8 @@
         "vue-router": "5.3.1"
     },
     "devDependencies": {
-        "@nzyme/tsconfig": "0.14.0",
-        "@nzyme/vue-ioc": "0.14.0",
+        "@nzyme/tsconfig": "workspace:*",
+        "@nzyme/vue-ioc": "workspace:*",
         "@types/bun": "^1.4.2",
         "@types/node": "26.6.4",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",

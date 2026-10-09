@@ -258,9 +258,14 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
     // === Refresh the main branch so gitlinks point at the merged submodule commits ===
     // The returned SHA is the commit we just pushed; the main PR's checks are gated on it so a
     // stale PR head (pre-push) does not surface the previous commit's failing checks.
+    // Named rather than read back from HEAD: the prompt and check polling above can take minutes, and
+    // a branch switched in that window must be refused, not refreshed and pushed in place of this one.
     const refreshedMainHeadSha = await refreshMainAfterSubmoduleMerge({
+        taskBranch: bottomNode?.head.ref ?? currentBranch,
         refreshedSubmodulePaths: submoduleTargets.map(target => target.path),
         baseBranch,
+        githubClient,
+        githubConfig,
         logger,
     });
 

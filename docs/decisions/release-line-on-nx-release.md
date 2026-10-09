@@ -19,7 +19,7 @@ The requirements for its replacement:
 - The next version and its changelog are reviewable before anything is published.
 
 Products that consume nzyme as a submodule are not served by this line; they pin nzyme through their own
-refs (`per-consumer-submodule-refs.md`).
+pins (`product-owned-submodule-pins.md`).
 
 ## Options Considered
 

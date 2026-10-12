@@ -43,10 +43,10 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "@aws-sdk/client-s3": "3.1146.0",
-        "@aws-sdk/credential-provider-node": "3.972.84",
-        "@babel/core": "8.0.6",
-        "@babel/preset-env": "8.0.6",
+        "@aws-sdk/client-s3": "3.1149.0",
+        "@aws-sdk/credential-provider-node": "3.972.85",
+        "@babel/core": "8.0.7",
+        "@babel/preset-env": "8.0.7",
         "@nzyme/cli": "workspace:*",
         "@nzyme/esm": "workspace:*",
         "@nzyme/ioc": "workspace:*",
@@ -54,8 +54,8 @@
         "@nzyme/rollup-utils": "workspace:*",
         "@nzyme/types": "workspace:*",
         "@nzyme/utils": "workspace:*",
-        "@pulumi/aws": "7.48.0",
-        "@pulumi/pulumi": "3.267.0",
+        "@pulumi/aws": "7.50.0",
+        "@pulumi/pulumi": "3.268.0",
         "@pulumi/random": "4.21.2",
         "@rollup/plugin-babel": "7.1.0",
         "@rollup/plugin-commonjs": "29.0.3",
@@ -65,7 +65,7 @@
         "@types/fs-extra": "11.0.4",
         "chalk": "6.0.1",
         "cli-table3": "0.6.5",
-        "execa": "10.0.1",
+        "execa": "10.1.0",
         "fs-extra": "11.4.1",
         "rollup": "4.62.2",
         "rollup-plugin-bundle-stats": "4.22.3",
@@ -75,9 +75,9 @@
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
-        "@types/node": "26.6.4",
+        "@types/node": "26.6.5",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-        "oxfmt": "0.71.0"
+        "oxfmt": "0.72.0"
     },
     "depcheck": {
         "ignoreDeps": [

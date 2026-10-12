@@ -2,20 +2,77 @@ name: CI
 
 # The merge gate: every pull request (to main, release, or a stacked node) and every push to main and
 # release runs the same build local setup does, then lint, format and tests.
+#
+# A pull request whose bun.lock no longer matches its package.json files gets the regenerated lockfile
+# committed to its branch instead of a failed install — reviewing that lockfile change is still the
+# author's job, remembering to make it is not. Everything else installs with a frozen lockfile.
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main, release]
+  # Dispatched by the `lockfile` job below for the commit it pushes.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  lockfile:
+    name: Refresh lockfile
+    # Only same-repo pull requests: a fork's branch cannot be pushed to, so a fork stays strict and
+    # fails in `check`. main and release stay strict too — their lockfile only arrives through a PR.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    outputs:
+      pushed: ${{ steps.refresh.outputs.pushed }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      HEAD_REF: ${{ github.head_ref }}
+    steps:
+      # The PR head itself, not the merge commit `check` builds: the lockfile is committed to the head
+      # branch, so it has to be resolved from the head's own package.json files.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      # `--lockfile-only` resolves without installing, so no install script from the PR runs while the
+      # job holds a write token. Pushing the tested sha (not the branch tip) means a branch that moved
+      # meanwhile rejects the push rather than getting a lockfile resolved for older manifests.
+      #
+      # Pushes made with the workflow token trigger no workflow, so the new head would have no CI run;
+      # dispatching this workflow for the branch is the one event that token may start. That run is a
+      # `workflow_dispatch`, so it skips this job and installs frozen — it cannot loop.
+      - id: refresh
+        run: |
+          bun install --lockfile-only
+          if git diff --quiet -- bun.lock; then
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: update bun.lock" -- bun.lock
+          git push origin "HEAD:refs/heads/$HEAD_REF"
+          gh workflow run ci.yml --ref "$HEAD_REF"
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+          echo "::notice::bun.lock was stale and has been regenerated on $HEAD_REF — review that commit."
+
   check:
     name: Build, lint, test
+    needs: lockfile
+    # Runs when `lockfile` was skipped (push, dispatch, fork PR) or found nothing to change. After a
+    # push the commit under test is superseded, and the dispatched run checks the new head.
+    if: ${{ !cancelled() && needs.lockfile.result != 'failure' && needs.lockfile.outputs.pushed != 'true' }}
     runs-on: ubuntu-latest
     env:
       CI: 'true'

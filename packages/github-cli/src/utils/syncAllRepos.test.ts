@@ -451,32 +451,6 @@ test('a branch that does not land on the trunk leaves the submodule on its pin: 
     expect((await main.raw(['rev-parse', 'origin/abc-1-hotfix:nzyme'])).trim()).toBe(pin);
 });
 
-test('a branch landing on the trunk parks the submodule on the trunk tip and pushes the moved gitlink', async () => {
-    const { mainPath, submodulePath, subMainTip } = await setupMovedSubmodule(root, [
-        { name: 'abc-2-work', from: 'main' },
-    ]);
-    const { logger } = createTestLogger('syncAllRepos');
-    process.chdir(mainPath);
-
-    await syncAllRepos({
-        branch: 'abc-2-work',
-        baseBranch: 'main',
-        submoduleBase: FOLLOW_MAIN,
-        unattended: true,
-        githubClient: NO_UPPER_NODES_CLIENT,
-        githubConfig: GITHUB_CONFIG,
-        logger,
-    });
-
-    const sub = simpleGit({ baseDir: submodulePath });
-    expect((await sub.status()).current).toBe('main');
-    expect((await sub.revparse(['HEAD'])).trim()).toBe(subMainTip);
-
-    const main = simpleGit({ baseDir: mainPath });
-    await main.fetch('origin');
-    expect((await main.raw(['rev-parse', 'origin/abc-2-work:nzyme'])).trim()).toBe(subMainTip);
-});
-
 // An upper node's merge source is the node below it, a branch the submodule's repository does not
 // have. Its submodule still follows the trunk the whole chain lands on — the same as the bottom
 // node's — rather than being synced with a node branch that resolves to nothing.

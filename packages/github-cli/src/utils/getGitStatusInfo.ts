@@ -66,11 +66,18 @@ export interface GitStatusInfo {
 
 /**
  * Get structured information about git status.
+ * @param excludedPaths Paths whose changes are not reported at all — see `unstagePaths`, which
+ * leaves the same paths out of the commit this status decides on.
  * @__NO_SIDE_EFFECTS__
  */
-export async function getGitStatusInfo(git: SimpleGit = simpleGit()): Promise<GitStatusInfo> {
+export async function getGitStatusInfo(
+    git: SimpleGit = simpleGit(),
+    excludedPaths: string[] = [],
+): Promise<GitStatusInfo> {
     try {
-        const status = await git.status();
+        const status = await git.status(
+            excludedPaths.length > 0 ? ['--', '.', ...excludedPaths.map(path => `:(exclude)${path}`)] : [],
+        );
 
         // Collect detailed breakdown as requested
         const changes = {

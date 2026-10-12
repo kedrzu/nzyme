@@ -13,6 +13,7 @@ import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { handleReadyPreparation } from './handleReadyPreparation.js';
 import { handleSubmoduleReadyPreparation } from './handleSubmoduleReadyPreparation.js';
+import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 import { resolveSubmoduleCurrentBranch } from './resolveSubmoduleCurrentBranch.js';
 
 /**
@@ -40,17 +41,9 @@ export interface HandlePushPreparationParams {
     logger: Logger;
 
     /**
-     * Base branch for submodules.
+     * What the submodules follow — see `HandleSubmoduleReadyPreparationParams.submoduleBase`.
      */
-    baseBranch: string;
-
-    /**
-     * The caller project's base branches, used to tell a submodule resting on a base branch apart
-     * from one carrying work of its own — see `HandleSubmoduleReadyPreparationParams.baseBranches`.
-     * Separate from {@link baseBranch} because that one is a pull request target and, on a stacked
-     * task, a node branch.
-     */
-    baseBranches: string[];
+    submoduleBase: SubmoduleBase;
 
     /**
      * Whether nobody can be asked a question — see `decideUnattendedMode`. It is the single flag
@@ -87,8 +80,7 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
         githubConfig,
         issueId,
         logger,
-        baseBranch,
-        baseBranches,
+        submoduleBase,
         unattended,
         defaultCommitMessage,
         prInReview,
@@ -103,15 +95,22 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
         githubClient,
         githubConfig,
         logger,
-        baseBranch,
-        baseBranches,
+        submoduleBase,
         unattended,
     });
 
     // THIRD: Handle main repository changes (including submodule reference updates)
     logger.info('');
     logger.info(chalk.bold('📤 Pushing main repository...'));
-    const [unpushedCommits, statusInfo] = await Promise.all([checkUnpushedCommits(), getGitStatusInfo()]);
+
+    // A pinned submodule's gitlink is never committed here, whatever its checkout says: the sync
+    // may just have merged in a base that re-pinned it without moving the checkout, and committing
+    // the stale checkout would roll that pin back.
+    const pinnedPaths = submoduleBase.kind === 'pin' ? (await getSubmoduleInfo()).map(sub => sub.path) : [];
+    const [unpushedCommits, statusInfo] = await Promise.all([
+        checkUnpushedCommits(),
+        getGitStatusInfo(undefined, pinnedPaths),
+    ]);
 
     // Determine the actual default commit message based on PR review status
     const actualDefaultMessage = defaultCommitMessage ?? (prInReview ? 'Fixes after review' : 'Work in progress');
@@ -122,20 +121,21 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
         logger,
         defaultCommitMessage: actualDefaultMessage,
         guard,
+        excludedPaths: pinnedPaths,
     });
 
     // FOURTH: Display PR links summary
-    await displayPrSummary({ githubClient, githubConfig, issueId, baseBranches, logger });
+    await displayPrSummary({ githubClient, githubConfig, issueId, submoduleBase, logger });
 }
 
 async function displayPrSummary(params: {
     githubClient: GithubClient;
     githubConfig: GithubConfig;
     issueId: string;
-    baseBranches: string[];
+    submoduleBase: SubmoduleBase;
     logger: Logger;
 }): Promise<void> {
-    const { githubClient, githubConfig, issueId, baseBranches, logger } = params;
+    const { githubClient, githubConfig, issueId, submoduleBase, logger } = params;
 
     logger.info('');
     logger.info(chalk.bold('🔗 Pull requests'));
@@ -152,6 +152,12 @@ async function displayPrSummary(params: {
         });
     }
 
+    // A pinned submodule carries no pull request of this task's: whatever branch its pin sits on
+    // belongs to the submodule alone.
+    if (submoduleBase.kind === 'pin') {
+        return;
+    }
+
     // Submodule PRs — resolved by branch (never skipped for a detached HEAD, the ordinary state for
     // a gitlink-pinned submodule; see `resolveSubmoduleCurrentBranch`), not by issue ID.
     const submodules = await getSubmoduleInfo();
@@ -161,7 +167,7 @@ async function displayPrSummary(params: {
             continue;
         }
 
-        const resolved = await resolveSubmoduleCurrentBranch({ submodule: sub, baseBranches });
+        const resolved = await resolveSubmoduleCurrentBranch({ submodule: sub, trunk: submoduleBase.trunk });
         if (resolved.kind === 'base') {
             continue;
         }

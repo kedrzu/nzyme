@@ -15,6 +15,8 @@ import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
 import { mergeTaskPrs } from '@nzyme/github-cli/utils/mergeTaskPrs.js';
 import { orderStackNodes } from '@nzyme/github-cli/utils/orderStackNodes.js';
 import { pushChanges } from '@nzyme/github-cli/utils/pushChanges.js';
+import { resolvePrSubmoduleBase } from '@nzyme/github-cli/utils/resolvePrSubmoduleBase.js';
+import { getLandingTrunk, resolveSubmoduleBase } from '@nzyme/github-cli/utils/resolveSubmoduleBase.js';
 import { returnToBranch } from '@nzyme/github-cli/utils/returnToBranch.js';
 import { openPrInBrowser } from '@nzyme/github-cli/utils/selectPrToOpen.js';
 import { logStackConflictGuidance, refreshStack } from '@nzyme/github-cli/utils/refreshStack.js';
@@ -522,7 +524,6 @@ function defineTaskPushCommand(options: LinearCommandsOptions) {
                     issueId: taskId,
                     logger: this.logger,
                     baseBranch,
-                    baseBranches,
                     unattended,
                 });
 
@@ -583,12 +584,11 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                 });
 
                 // Push all changes (same as push command)
-                const { githubClient, pr } = await pushChanges({
+                const { githubClient, pr, submoduleBase } = await pushChanges({
                     githubConfig,
                     issueId: taskId,
                     logger: this.logger,
                     baseBranch,
-                    baseBranches,
                     unattended,
                     defaultCommitMessage: 'Ready for review',
                 });
@@ -613,7 +613,7 @@ function defineTaskReadyCommand(options: LinearCommandsOptions) {
                     githubConfig,
                     logger: this.logger,
                     mainPrs,
-                    baseBranches,
+                    submoduleBase,
                 });
             } catch (error: unknown) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -695,11 +695,26 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                     reason: 'Refreshing merges each one into the next, so it needs the stack to know which order that is.',
                 });
 
+                // The submodules follow the trunk only when the task lands there: a stack lands where
+                // its record says, a lone pull request where its own lookup says.
+                const submoduleBase = stack
+                    ? resolveSubmoduleBase({ landingTrunk: stack.base, trunk: baseBranch })
+                    : await resolvePrSubmoduleBase({
+                          githubClient,
+                          githubConfig,
+                          pr: taskPrs[0] ?? null,
+                          trunk: baseBranch,
+                      });
+
+                // The main repository is refreshed with the branch the task lands on — the trunk, or
+                // `release` for a hotfix, which must never take in the trunk and its submodule pins.
+                const landingTrunk = getLandingTrunk(submoduleBase);
+
                 if (nodes) {
                     await refreshStack({
                         branches: nodes.map(pr => pr.head.ref),
-                        trunk: baseBranch,
-                        baseBranches,
+                        trunk: landingTrunk,
+                        submoduleBase,
                         unattended,
                         githubClient,
                         githubConfig,
@@ -711,14 +726,16 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                     return;
                 }
 
-                this.logger.info(`🔄 Refreshing task ${chalk.bold(taskId)} with base branch ${chalk.cyan(baseBranch)}`);
+                this.logger.info(
+                    `🔄 Refreshing task ${chalk.bold(taskId)} with base branch ${chalk.cyan(landingTrunk)}`,
+                );
 
                 // Sync all repos: commit the main repo, judge the submodules, fetch, rebase/pull, ff base,
                 // merge base, push
                 const syncResult = await syncAllRepos({
                     branch: currentBranch,
-                    baseBranch,
-                    baseBranches,
+                    baseBranch: landingTrunk,
+                    submoduleBase,
                     unattended,
                     githubClient,
                     githubConfig,
@@ -730,10 +747,10 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                     this.logger.info(
                         `🎉 Successfully merged ${chalk.yellow(syncResult.baseBranchCommitsAhead.toString())} commit${
                             syncResult.baseBranchCommitsAhead === 1 ? '' : 's'
-                        } from ${chalk.cyan(baseBranch)}`,
+                        } from ${chalk.cyan(landingTrunk)}`,
                     );
                 } else {
-                    this.logger.info(`✅ Task branch is already up to date with ${chalk.cyan(baseBranch)}`);
+                    this.logger.info(`✅ Task branch is already up to date with ${chalk.cyan(landingTrunk)}`);
                 }
             } catch (error) {
                 if (error instanceof GitMergeConflictError && error.stackContext) {
@@ -809,7 +826,6 @@ function defineTaskMergeCommand(options: LinearCommandsOptions) {
                         githubConfig,
                         issueId: taskId,
                         baseBranch,
-                        baseBranches,
                         logger: this.logger,
                         autoYes: this.yes,
                     });
@@ -1161,8 +1177,9 @@ function defineTaskPrCommand(options: LinearCommandsOptions) {
                 const taskId = extractTaskIdFromBranch(currentBranch);
                 this.logger.info(`🎯 Found task ID: ${chalk.bold(taskId)}`);
 
-                // Get base branches
+                // Get the trunk submodule branches are classified against
                 const baseBranches = await getBaseBranches(options);
+                const baseBranch = baseBranches[0] ?? 'main';
 
                 // Create GitHub client
                 const githubClient = createGithubClient(githubConfig);
@@ -1173,7 +1190,7 @@ function defineTaskPrCommand(options: LinearCommandsOptions) {
                     githubClient,
                     githubConfig,
                     issueId: taskId,
-                    baseBranches,
+                    trunk: baseBranch,
                     logger: this.logger,
                 });
             } catch (error: unknown) {

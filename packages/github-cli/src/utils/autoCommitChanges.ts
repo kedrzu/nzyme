@@ -7,6 +7,7 @@ import type { Logger } from '@nzyme/logging/Logger.js';
 import { assertNoConflicts } from './assertNoConflicts.js';
 import { describeChangedPaths } from './describeChangedPaths.js';
 import { getGitStatusInfo } from './getGitStatusInfo.js';
+import { unstagePaths } from './unstagePaths.js';
 
 /**
  * Parameters for auto-committing changes.
@@ -34,6 +35,13 @@ export interface AutoCommitChangesParams {
      * @default 'Work in progress'
      */
     commitMessage?: string;
+
+    /**
+     * Paths left out of the commit, whatever their state — the gitlinks of submodules that stay on
+     * their pin (see `unstagePaths`).
+     * @default []
+     */
+    excludedPaths?: string[];
 }
 
 /**
@@ -55,9 +63,15 @@ export interface AutoCommitChangesResult {
  * are available, the fallback alone otherwise.
  */
 export async function autoCommitChanges(params: AutoCommitChangesParams): Promise<AutoCommitChangesResult> {
-    const { logger, git = simpleGit(), repoDisplayName = 'repository', commitMessage = 'Work in progress' } = params;
+    const {
+        logger,
+        git = simpleGit(),
+        repoDisplayName = 'repository',
+        commitMessage = 'Work in progress',
+        excludedPaths = [],
+    } = params;
 
-    const statusInfo = await getGitStatusInfo(git);
+    const statusInfo = await getGitStatusInfo(git, excludedPaths);
 
     if (statusInfo.changes.conflicted > 0) {
         await assertNoConflicts({ git, repoDisplayName, operation: 'merge', logger });
@@ -75,6 +89,7 @@ export async function autoCommitChanges(params: AutoCommitChangesParams): Promis
     const message = description ? `${commitMessage}: ${description}` : commitMessage;
 
     await git.add('.');
+    await unstagePaths(git, excludedPaths);
     await git.commit(message);
 
     logger.info(`   ${chalk.green('✓')} Committed in ${repoDisplayName} with message: "${chalk.cyan(message)}"`);

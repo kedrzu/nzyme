@@ -10,7 +10,7 @@ import { UsageError } from '@nzyme/cli';
 
 import { parseContainingBranches, resolveSubmoduleBranch } from './resolveSubmoduleBranch.js';
 
-const BASE_BRANCHES = ['main'];
+const TRUNK = 'main';
 
 test('drops the origin/HEAD pointer line and strips the origin/ prefix', () => {
     const rawOutput = '  origin/HEAD -> origin/main\n  origin/main\n  origin/feature/decouple-submodule-flow\n';
@@ -93,7 +93,7 @@ test('a SHA reachable only from a base branch resolves to base', async () => {
     const result = await resolveSubmoduleBranch({
         git: work,
         sha: baseTip,
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
         repoDisplayName: 'sub',
     });
 
@@ -108,7 +108,7 @@ test('a SHA on a base branch resolves to base even when task branches forked aft
     const result = await resolveSubmoduleBranch({
         git: work,
         sha: forkPoint,
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
         repoDisplayName: 'sub',
     });
 
@@ -121,7 +121,7 @@ test('a SHA reachable from exactly one non-base branch resolves to that branch',
     const result = await resolveSubmoduleBranch({
         git: work,
         sha: divergedTip,
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
         repoDisplayName: 'sub',
     });
 
@@ -137,7 +137,7 @@ test('a SHA reachable from two non-base branches and not from base throws a Usag
     const failure = resolveSubmoduleBranch({
         git: work,
         sha: shared,
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
         repoDisplayName: 'sub',
     });
 

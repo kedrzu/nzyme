@@ -9,6 +9,7 @@ import type { BranchGuard } from './createBranchGuard.js';
 import { describeChangedPaths } from './describeChangedPaths.js';
 import type { GitStatusInfo } from './getGitStatusInfo.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
+import { unstagePaths } from './unstagePaths.js';
 
 /**
  * Parameters for {@link handleReadyPreparation}.
@@ -20,9 +21,16 @@ export interface HandleReadyPreparationParams {
     unpushedCommits: UnpushedCommitsResult;
 
     /**
-     * Working-tree status of the main repository.
+     * Working-tree status of the main repository, read with the same {@link excludedPaths}.
      */
     statusInfo: GitStatusInfo;
+
+    /**
+     * Paths left out of the commit, whatever their state — the gitlinks of submodules that stay on
+     * their pin (see `unstagePaths`).
+     * @default []
+     */
+    excludedPaths?: string[];
 
     /**
      * Logger instance.
@@ -53,7 +61,14 @@ export interface HandleReadyPreparationParams {
  * describe, `defaultCommitMessage` is used on its own.
  */
 export async function handleReadyPreparation(params: HandleReadyPreparationParams): Promise<void> {
-    const { unpushedCommits, statusInfo, logger, defaultCommitMessage = 'Ready for review', guard } = params;
+    const {
+        unpushedCommits,
+        statusInfo,
+        logger,
+        defaultCommitMessage = 'Ready for review',
+        guard,
+        excludedPaths = [],
+    } = params;
     const git = simpleGit();
     let newCommitCreated = false;
 
@@ -99,6 +114,8 @@ export async function handleReadyPreparation(params: HandleReadyPreparationParam
         } else if (hasStagedFiles) {
             // Using already staged files
         }
+
+        await unstagePaths(git, excludedPaths);
 
         // Commit the changes
         logger.info(`   Committing: "${chalk.cyan(commitMessage)}"`);

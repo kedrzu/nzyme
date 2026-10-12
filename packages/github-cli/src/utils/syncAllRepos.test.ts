@@ -9,10 +9,14 @@ import { UsageError } from '@nzyme/cli';
 import { createTestLogger } from '@nzyme/logging';
 
 import type { GithubConfig } from '../GithubConfig.js';
+import { createBranchGuard } from './createBranchGuard.js';
 import type { GithubClient } from './createGithubClient.js';
+import { handlePushPreparation } from './handlePushPreparation.js';
+import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 import { syncAllRepos } from './syncAllRepos.js';
 
 const GITHUB_CONFIG: GithubConfig = { owner: 'acme', repo: 'main', token: 'ghp_test' };
+const FOLLOW_MAIN: SubmoduleBase = { kind: 'trunk', trunk: 'main' };
 
 /**
  * A `GithubClient` stub that fails the test if called at all. A submodule resting on a base branch
@@ -112,7 +116,7 @@ test('a dirty submodule is refused rather than committed when nobody can be aske
     const failure = syncAllRepos({
         branch: 'main',
         baseBranch: 'main',
-        baseBranches: ['main'],
+        submoduleBase: FOLLOW_MAIN,
         unattended: true,
         githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,
@@ -140,7 +144,7 @@ test('the main repository is still committed automatically before the submodule 
     const failure = syncAllRepos({
         branch: 'main',
         baseBranch: 'main',
-        baseBranches: ['main'],
+        submoduleBase: FOLLOW_MAIN,
         unattended: true,
         githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,
@@ -247,7 +251,7 @@ test('a sync whose worktree is switched to another node mid-run never merges int
     const sync = syncAllRepos({
         branch: STACK[2],
         baseBranch: STACK[1],
-        baseBranches: ['main'],
+        submoduleBase: FOLLOW_MAIN,
         unattended: true,
         githubClient,
         githubConfig: GITHUB_CONFIG,
@@ -278,7 +282,7 @@ test('a sync that would merge an upper node into the node below it refuses to pu
     const sync = syncAllRepos({
         branch: STACK[0],
         baseBranch: STACK[1],
-        baseBranches: ['main'],
+        submoduleBase: FOLLOW_MAIN,
         unattended: true,
         githubClient,
         githubConfig: GITHUB_CONFIG,
@@ -308,7 +312,7 @@ test('a sync whose worktree is already on another node refuses before committing
     const sync = syncAllRepos({
         branch: STACK[2],
         baseBranch: STACK[1],
-        baseBranches: ['main'],
+        submoduleBase: FOLLOW_MAIN,
         unattended: true,
         githubClient,
         githubConfig: GITHUB_CONFIG,
@@ -319,4 +323,224 @@ test('a sync whose worktree is already on another node refuses before committing
 
     expect((await main.revparse([STACK[0]])).trim()).toBe(bottomBefore);
     expect((await main.status()).not_added).toEqual(['top-node-work.txt']);
+});
+
+/**
+ * A `GithubClient` stub for a branch nothing is stacked on: the only call the sync makes in these
+ * scenarios is the upper-node lookup before a push, and it finds none.
+ */
+const NO_UPPER_NODES_CLIENT: GithubClient = {
+    rest: {
+        pulls: {
+            list: () => Promise.resolve({ data: [] }),
+        },
+    },
+} as unknown as GithubClient;
+
+/**
+ * A product branch to cut from an existing one, with one commit of its own, and push.
+ */
+interface ProductBranch {
+    name: string;
+    from: string;
+}
+
+/**
+ * Build a product whose `main` and `release` both pin the submodule at `pin` — the tip of the
+ * submodule's `main` at the time — with the submodule checked out detached at that pin, the way
+ * `git submodule update` leaves it. Then move the submodule's origin on after the clone: its `main`
+ * gains a commit, and its own `release` line (nzyme's npm release branch — a branch of the
+ * submodule's repository that merely shares the product branch's name) gains another.
+ */
+async function setupMovedSubmodule(
+    dir: string,
+    branches: ProductBranch[],
+): Promise<{ mainPath: string; submodulePath: string; pin: string; subMainTip: string }> {
+    const mainRemote = join(dir, 'origin-main.git');
+    const subRemote = join(dir, 'origin-sub.git');
+    const subSeed = join(dir, 'sub-seed');
+    const mainPath = join(dir, 'main');
+    const submodulePath = join(mainPath, 'nzyme');
+
+    const bare = simpleGit();
+    await bare.init(['--bare', mainRemote]);
+    await bare.cwd(mainRemote).raw(['symbolic-ref', 'HEAD', 'refs/heads/main']);
+    await bare.init(['--bare', subRemote]);
+    await bare.cwd(subRemote).raw(['symbolic-ref', 'HEAD', 'refs/heads/main']);
+
+    await simpleGit().clone(subRemote, subSeed);
+    const seed = simpleGit({ baseDir: subSeed, config: ['user.email=t@t', 'user.name=t', 'commit.gpgsign=false'] });
+    await seed.checkoutLocalBranch('main');
+    await seed.commit('sub c0', [], { '--allow-empty': null });
+    const pin = (await seed.revparse(['HEAD'])).trim();
+    await seed.push(['-u', 'origin', 'main']);
+
+    await simpleGit().clone(mainRemote, mainPath);
+    const main = simpleGit({ baseDir: mainPath });
+    await main.addConfig('user.email', 't@t');
+    await main.addConfig('user.name', 't');
+    await main.addConfig('commit.gpgsign', 'false');
+    await main.checkoutLocalBranch('main');
+    await main.commit('main c0', [], { '--allow-empty': null });
+
+    await simpleGit().clone(subRemote, submodulePath);
+    const sub = simpleGit({ baseDir: submodulePath });
+    await sub.addConfig('user.email', 't@t');
+    await sub.addConfig('user.name', 't');
+    await sub.addConfig('commit.gpgsign', 'false');
+    await sub.checkout(['--detach']);
+
+    writeFileSync(
+        join(mainPath, '.gitmodules'),
+        '[submodule "nzyme"]\n\tpath = nzyme\n\turl = https://github.com/acme/sub.git\n',
+    );
+    await main.add(['.gitmodules', 'nzyme']);
+    await main.commit('pin submodule');
+    await main.push(['-u', 'origin', 'main']);
+    await main.branch(['release']);
+    await main.push(['-u', 'origin', 'release']);
+
+    for (const branch of branches) {
+        await main.checkoutBranch(branch.name, branch.from);
+        writeFileSync(join(mainPath, `${branch.name.replaceAll('/', '-')}.txt`), `${branch.name}\n`);
+        await main.add(['.']);
+        await main.commit(`work on ${branch.name}`);
+        await main.push(['-u', 'origin', branch.name]);
+    }
+
+    await seed.commit('sub c1 on main', [], { '--allow-empty': null });
+    const subMainTip = (await seed.revparse(['HEAD'])).trim();
+    await seed.push(['origin', 'main']);
+    await seed.checkoutBranch('release', pin);
+    await seed.commit('chore(release): v1.0.0', [], { '--allow-empty': null });
+    await seed.push(['-u', 'origin', 'release']);
+
+    return { mainPath, submodulePath, pin, subMainTip };
+}
+
+// A hotfix into the product's `release` must leave the submodule exactly where `release` pins it.
+// Before the trunk-or-pin rule, the sync took the PR base (`release`) as the submodule base too:
+// it fetched the submodule's own `release`, parked the detached submodule on it, and committed that
+// gitlink into the hotfix — shipping an nzyme commit the product's `main` had never run.
+test('a branch that does not land on the trunk leaves the submodule on its pin: nothing fetched, parked or re-pointed', async () => {
+    const { mainPath, submodulePath, pin } = await setupMovedSubmodule(root, [
+        { name: 'abc-1-hotfix', from: 'release' },
+    ]);
+    const main = simpleGit({ baseDir: mainPath });
+    const remoteHeadBefore = (await main.revparse(['origin/abc-1-hotfix'])).trim();
+    const { logger } = createTestLogger('syncAllRepos');
+    process.chdir(mainPath);
+
+    await syncAllRepos({
+        branch: 'abc-1-hotfix',
+        baseBranch: 'release',
+        submoduleBase: { kind: 'pin', trunk: 'main', landingTrunk: 'release' },
+        unattended: true,
+        githubClient: NO_UPPER_NODES_CLIENT,
+        githubConfig: GITHUB_CONFIG,
+        logger,
+    });
+
+    const sub = simpleGit({ baseDir: submodulePath });
+    expect((await sub.revparse(['HEAD'])).trim()).toBe(pin);
+    expect((await sub.status()).detached).toBe(true);
+    // Not even fetched: the submodule's view of its origin is the one it was cloned with.
+    expect((await sub.revparse(['origin/main'])).trim()).toBe(pin);
+    expect((await sub.raw(['branch', '-r', '--list', 'origin/release'])).trim()).toBe('');
+
+    await main.fetch('origin');
+    expect((await main.revparse(['origin/abc-1-hotfix'])).trim()).toBe(remoteHeadBefore);
+    expect((await main.raw(['rev-parse', 'origin/abc-1-hotfix:nzyme'])).trim()).toBe(pin);
+});
+
+// The product's `release` re-pins the submodule after a hotfix was cut from it. Merging `release` in
+// moves the hotfix's gitlink but not the submodule checkout (recursion is off), so the checkout is
+// left on the old pin. Every later `git add .` on the push path — the sync's auto-commit on the next
+// push, the push's own commit — used to stage that stale checkout and roll the production pin back.
+test('a pinned branch takes in a re-pin from its base and no later push rolls it back', async () => {
+    const { mainPath, submodulePath, pin, subMainTip } = await setupMovedSubmodule(root, [
+        { name: 'abc-1-hotfix', from: 'release' },
+    ]);
+    const main = simpleGit({ baseDir: mainPath });
+    const sub = simpleGit({ baseDir: submodulePath });
+    await main.checkout('release');
+    await sub.fetch('origin');
+    await sub.checkout(['--detach', subMainTip]);
+    await main.add(['nzyme']);
+    await main.commit('promote the submodule pin');
+    await main.push(['origin', 'release']);
+    await main.checkout('abc-1-hotfix');
+    await sub.checkout(['--detach', pin]);
+
+    const submoduleBase: SubmoduleBase = { kind: 'pin', trunk: 'main', landingTrunk: 'release' };
+    const { logger } = createTestLogger('syncAllRepos');
+    process.chdir(mainPath);
+
+    async function push(workFile: string) {
+        writeFileSync(join(mainPath, workFile), `${workFile}\n`);
+        await syncAllRepos({
+            branch: 'abc-1-hotfix',
+            baseBranch: 'release',
+            submoduleBase,
+            unattended: true,
+            githubClient: NO_UPPER_NODES_CLIENT,
+            githubConfig: GITHUB_CONFIG,
+            logger,
+        });
+        await handlePushPreparation({
+            githubClient: NO_UPPER_NODES_CLIENT,
+            githubConfig: GITHUB_CONFIG,
+            issueId: 'ABC-1',
+            logger,
+            submoduleBase,
+            unattended: true,
+            guard: createBranchGuard({
+                git: simpleGit(),
+                branch: 'abc-1-hotfix',
+                findUpperNodes: () => Promise.resolve([]),
+            }),
+        });
+    }
+
+    // The first push takes in the re-pin; the second runs with the checkout still on the old pin.
+    await push('first.txt');
+    await push('second.txt');
+
+    await main.fetch('origin');
+    expect((await main.raw(['rev-parse', 'origin/abc-1-hotfix:nzyme'])).trim()).toBe(subMainTip);
+    const pushedFiles = (await main.raw(['ls-tree', '--name-only', 'origin/abc-1-hotfix'])).split('\n');
+    expect(pushedFiles).toContain('first.txt');
+    expect(pushedFiles).toContain('second.txt');
+    // The checkout itself is the submodule's business: nothing on the push path moved it.
+    expect((await sub.revparse(['HEAD'])).trim()).toBe(pin);
+});
+
+// An upper node's merge source is the node below it, a branch the submodule's repository does not
+// have. Its submodule still follows the trunk the whole chain lands on — the same as the bottom
+// node's — rather than being synced with a node branch that resolves to nothing.
+test('an upper stack node syncs its submodule with the trunk, not with the node below it', async () => {
+    const { mainPath, submodulePath, subMainTip } = await setupMovedSubmodule(root, [
+        { name: 'abc-3-stack', from: 'main' },
+        { name: 'abc-3-stack--s2', from: 'abc-3-stack' },
+    ]);
+    const { logger } = createTestLogger('syncAllRepos');
+    process.chdir(mainPath);
+
+    await syncAllRepos({
+        branch: 'abc-3-stack--s2',
+        baseBranch: 'abc-3-stack',
+        submoduleBase: FOLLOW_MAIN,
+        unattended: true,
+        githubClient: NO_UPPER_NODES_CLIENT,
+        githubConfig: GITHUB_CONFIG,
+        logger,
+    });
+
+    const sub = simpleGit({ baseDir: submodulePath });
+    expect((await sub.status()).current).toBe('main');
+    expect((await sub.revparse(['HEAD'])).trim()).toBe(subMainTip);
+
+    const main = simpleGit({ baseDir: mainPath });
+    await main.fetch('origin');
+    expect((await main.raw(['rev-parse', 'origin/abc-3-stack--s2:nzyme'])).trim()).toBe(subMainTip);
 });

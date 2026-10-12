@@ -20,6 +20,8 @@ import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { isOnAnyRemoteBranch, parkSubmoduleOnBase } from './parkSubmoduleOnBase.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
+import type { SubmoduleBase } from './resolveSubmoduleBase.js';
+import { describeSubmodulePin } from './resolveSubmoduleBase.js';
 import { submoduleBranchFromPrTitle } from './submoduleBranchFromPrTitle.js';
 
 /**
@@ -43,17 +45,12 @@ export interface HandleSubmoduleReadyPreparationParams {
     logger: Logger;
 
     /**
-     * Branch a submodule's pull request is opened against, and the one a submodule is parked on
-     * once its own pull request has merged.
+     * What the submodules follow — see `resolveSubmoduleBase`. Following the trunk, a submodule's
+     * pull request is opened against it, a submodule whose own pull request merged is parked on it,
+     * and resting on it is what tells a submodule apart from one carrying work of its own. Pinned,
+     * no submodule is prepared at all.
      */
-    baseBranch: string;
-
-    /**
-     * The caller project's base branches, used to tell a submodule resting on a base branch apart
-     * from one carrying work of its own. Supplied by the caller — this package is generic and must
-     * never hardcode a project's own branch naming.
-     */
-    baseBranches: string[];
+    submoduleBase: SubmoduleBase;
 
     /**
      * Whether nobody can be asked a question — see `decideUnattendedMode`. Unattended, this path
@@ -75,9 +72,12 @@ export interface HandleSubmoduleReadyPreparationParams {
  *
  * Either way it ends by staging each submodule's new commit in the main repository, which is what
  * makes the main repository start pointing at the work that was just published.
+ *
+ * A pinned submodule (a branch that does not land on the trunk) is not prepared at all: no pull
+ * request, no parking, and no gitlink staged — the branch keeps the pin it has.
  */
 export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleReadyPreparationParams): Promise<void> {
-    const { githubClient, githubConfig, logger, baseBranch, baseBranches, unattended } = params;
+    const { githubClient, githubConfig, logger, submoduleBase, unattended } = params;
 
     const submodules = await getSubmoduleInfo();
 
@@ -88,9 +88,16 @@ export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleRea
     logger.info('');
     logger.info(chalk.bold('📦 Processing submodules...'));
 
+    if (submoduleBase.kind === 'pin') {
+        logger.info(`   ${describeSubmodulePin(submoduleBase)}`);
+        return;
+    }
+
+    const { trunk } = submoduleBase;
+
     for (const submodule of submodules) {
         const subName = chalk.magenta(submodule.name);
-        const state = describeSubmoduleState(submodule, baseBranches);
+        const state = describeSubmoduleState(submodule, trunk);
         if (state) {
             logger.info(`   ${subName}: ${state}`);
         }
@@ -115,7 +122,7 @@ export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleRea
         if (unattended) {
             const readiness = await assertSubmoduleReady({
                 submodule,
-                baseBranches,
+                trunk,
                 githubClient,
                 githubConfig: submoduleConfig,
             });
@@ -125,7 +132,7 @@ export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleRea
             if (readiness.kind === 'park-on-base') {
                 await parkSubmoduleOnBase({
                     git: simpleGit({ baseDir: submodule.path }),
-                    baseBranch,
+                    baseBranch: trunk,
                     logger,
                     repoDisplayName: submodule.name,
                 });
@@ -136,8 +143,7 @@ export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleRea
                 githubClient,
                 githubConfig: submoduleConfig,
                 logger,
-                baseBranch,
-                baseBranches,
+                trunk,
             });
         }
 
@@ -170,14 +176,10 @@ interface PrepareSubmoduleInteractivelyParams {
     logger: Logger;
 
     /**
-     * Branch the submodule's pull request is opened against.
+     * The trunk the submodule follows: its pull request is opened against it, and resting on it
+     * means carrying no work of its own.
      */
-    baseBranch: string;
-
-    /**
-     * The caller project's base branches — see `HandleSubmoduleReadyPreparationParams.baseBranches`.
-     */
-    baseBranches: string[];
+    trunk: string;
 }
 
 /**
@@ -192,7 +194,7 @@ interface PrepareSubmoduleInteractivelyParams {
  * questions follows the order of the work.
  */
 async function prepareSubmoduleInteractively(params: PrepareSubmoduleInteractivelyParams): Promise<void> {
-    const { submodule, githubClient, githubConfig, logger, baseBranch, baseBranches } = params;
+    const { submodule, githubClient, githubConfig, logger, trunk } = params;
 
     const git = simpleGit({ baseDir: submodule.path });
     const displayName = chalk.magenta(submodule.name);
@@ -207,7 +209,7 @@ async function prepareSubmoduleInteractively(params: PrepareSubmoduleInteractive
     const hasWorkToPublish =
         commitMessage !== null ||
         (submodule.detached ? !(await isOnAnyRemoteBranch(git, 'HEAD')) : submodule.unpushedCommitsCount > 0);
-    const onBaseBranch = submodule.currentBranch !== undefined && baseBranches.includes(submodule.currentBranch);
+    const onBaseBranch = submodule.currentBranch === trunk;
 
     // Work resting on a base branch or a detached HEAD has no branch of its own to be pushed to,
     // so it gets offered one — named after the pull request it is about to open, which is the one
@@ -236,7 +238,7 @@ async function prepareSubmoduleInteractively(params: PrepareSubmoduleInteractive
         return;
     }
 
-    if (baseBranches.includes(status.current)) {
+    if (status.current === trunk) {
         // Still on a base branch: either there was nothing to publish, or a pull request was
         // declined. A base branch is nobody's pull request, so pushing what it carries is all
         // that is left to do — and `ensureRepositoryReady` is deliberately not used for it, since
@@ -259,7 +261,7 @@ async function prepareSubmoduleInteractively(params: PrepareSubmoduleInteractive
         githubClient,
         githubConfig,
         logger,
-        baseBranch,
+        baseBranch: trunk,
         git,
         repoDisplayName: submodule.name,
         prTitle: agreedPrTitle ?? (await lastCommitSubject(git, submodule.name)),
@@ -423,12 +425,12 @@ async function lastCommitSubject(git: SimpleGit, repoDisplayName: string): Promi
 
 /**
  * Summarise what is worth reporting about a submodule before acting on it: unsaved work, unshared
- * work, and whether it is standing somewhere other than a base branch.
- * @returns The summary, or `null` when the submodule is resting on a base branch with nothing
+ * work, and whether it is standing somewhere other than the trunk.
+ * @returns The summary, or `null` when the submodule is resting on the trunk with nothing
  * pending — there is nothing to say about it.
  * @__NO_SIDE_EFFECTS__
  */
-function describeSubmoduleState(submodule: SubmoduleInfo, baseBranches: string[]): string | null {
+function describeSubmoduleState(submodule: SubmoduleInfo, trunk: string): string | null {
     const details: string[] = [];
 
     if (submodule.hasChanges) {
@@ -443,7 +445,7 @@ function describeSubmoduleState(submodule: SubmoduleInfo, baseBranches: string[]
 
     if (submodule.detached) {
         details.push('detached HEAD');
-    } else if (submodule.currentBranch && !baseBranches.includes(submodule.currentBranch)) {
+    } else if (submodule.currentBranch && submodule.currentBranch !== trunk) {
         details.push(`on ${chalk.cyan(submodule.currentBranch)}`);
     }
 

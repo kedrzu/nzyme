@@ -17,11 +17,15 @@ name: Bump nzyme
 #       with:
 #         cli-version: <version>
 #         auto-merge: true
+#         refresh-lockfile: true
 #       secrets:
 #         token: ${{ secrets.NZYME_BUMP_TOKEN }}
 #
 # Runs the CLI from npm (`@nzyme/cli`) at the exact `cli-version` given (`submodule bump` exists
-# from the first release that contains it). The product token is kept out of that step.
+# from the first release that contains it), in a job of its own that never has the product token.
+# Steps of one job share the runner — files, `$GITHUB_ENV`, `$BASH_ENV` — so only a separate job
+# keeps npm code away from a later step that holds the token. The token job runs no package code:
+# it re-derives the bump with git and takes from the CLI's job only the PR description.
 
 on:
   workflow_call:
@@ -50,10 +54,17 @@ on:
         description: Path of the nzyme submodule in the product repository.
         type: string
         default: nzyme
+      refresh-lockfile:
+        description: >-
+          Regenerate the product's `bun.lock` for the new submodule tree and commit it with the bump,
+          for products whose workspaces include the submodule's packages. Without it the bump moves
+          only the gitlink and leaves the lock stale.
+        type: boolean
+        default: false
       cli-version:
         description: >-
-          Exact version of `@nzyme/cli` to run, e.g. `1.2.3` — no dist-tag or range. The job holds
-          the product's write token, so a moving tag would hand it to whatever gets published next.
+          Exact version of `@nzyme/cli` to run, e.g. `1.2.3` — no dist-tag or range. It runs over a
+          checkout of the product, so a moving tag would hand that to whatever gets published next.
         type: string
         required: true
     secrets:
@@ -65,36 +76,38 @@ on:
         required: true
 
 jobs:
-  bump:
-    name: Bump nzyme on ${{ inputs.base-branch }}
+  # Runs the npm CLI. No product token here (checkout uses the caller's read-only GITHUB_TOKEN, not
+  # persisted); its outputs are a claim the `bump` job checks, never trusted as they are.
+  prepare:
+    name: Prepare the ${{ inputs.submodule-path }} bump
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    concurrency:
-      group: nzyme-bump-${{ inputs.base-branch }}
-      cancel-in-progress: false
+    outputs:
+      changed: ${{ steps.bump.outputs.changed }}
+      sha: ${{ steps.bump.outputs.sha }}
+      summary: ${{ steps.bump.outputs.summary }}
     env:
       SOURCE_REF: ${{ inputs.source-ref }}
-      BASE_BRANCH: ${{ inputs.base-branch }}
-      PR_BRANCH: ${{ inputs.pr-branch || format('nzyme-bump/{0}', inputs.base-branch) }}
-      COMMIT_MESSAGE: ${{ inputs.commit-message }}
       SUBMODULE_PATH: ${{ inputs.submodule-path }}
       CLI_VERSION: ${{ inputs.cli-version }}
     steps:
-      # The product token is not persisted, so the npm code below never sees it; only the steps that
-      # push or call `gh` get it. Their push is made with it, so it triggers the product's CI.
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.base-branch }}
           submodules: true
           fetch-depth: 0
-          token: ${{ secrets.token }}
           persist-credentials: false
 
+      # setup-bun saves its cache in a post step, i.e. after the CLI ran — a cache the token job
+      # could then restore. No cache in either job.
       - uses: oven-sh/setup-bun@v2
+        with:
+          no-cache: true
 
       # `submodule bump` prints exactly `unchanged` when the product already pins the source commit,
       # and otherwise a markdown summary (also written to bump.md) with the new gitlink staged.
+      # The summary goes out base64-encoded, as a single-line job output.
       - name: Move the submodule
         id: bump
         # Explicit `bash` runs with pipefail, so a failing CLI fails the step instead of `tee`'s exit 0.
@@ -109,8 +122,95 @@ jobs:
           if grep -qx unchanged "$RUNNER_TEMP/bump.out"; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "sha=$(git -C "$SUBMODULE_PATH" rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+            {
+              echo "changed=true"
+              echo "sha=$(git -C "$SUBMODULE_PATH" rev-parse HEAD)"
+              echo "summary=$(base64 -w0 "$RUNNER_TEMP/bump.md")"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+  # Holds the product token and runs no package code: bun only rewrites the lockfile, with scripts
+  # off. Its push triggers the product's CI.
+  bump:
+    name: Bump ${{ inputs.submodule-path }} on ${{ inputs.base-branch }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # Keyed by the submodule too: a product that bumps several submodules calls this once per path,
+    # and those runs write different branches, so they need not wait for each other.
+    concurrency:
+      group: nzyme-bump-${{ inputs.submodule-path }}-${{ inputs.base-branch }}
+      cancel-in-progress: false
+    env:
+      SOURCE_REF: ${{ inputs.source-ref }}
+      BASE_BRANCH: ${{ inputs.base-branch }}
+      PR_BRANCH: ${{ inputs.pr-branch || format('nzyme-bump/{0}', inputs.base-branch) }}
+      COMMIT_MESSAGE: ${{ inputs.commit-message }}
+      SUBMODULE_PATH: ${{ inputs.submodule-path }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.base-branch }}
+          submodules: true
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Re-derives the bump with git rather than trusting `prepare`: resolves `source-ref` as the
+      # CLI does (fetched by name, `origin/` stripped, else a local commit such as an abbreviated
+      # SHA) and goes on only when `prepare` named that same commit, so its summary describes what
+      # is pushed. A source that moved between the jobs fails here too; the next run picks it up.
+      # `prepare`'s values reach the shell only as env vars and are never echoed.
+      - name: Check and stage the bump
+        id: bump
+        shell: bash
+        env:
+          CLAIMED_CHANGED: ${{ needs.prepare.outputs.changed }}
+          CLAIMED_SHA: ${{ needs.prepare.outputs.sha }}
+          SUMMARY: ${{ needs.prepare.outputs.summary }}
+        run: |
+          read -r mode _ previous _ < <(git ls-tree HEAD -- "$SUBMODULE_PATH") || true
+          if [ "$mode" != 160000 ]; then
+            echo "::error::'$SUBMODULE_PATH' is not a submodule on $BASE_BRANCH" && exit 1
+          fi
+          if git -C "$SUBMODULE_PATH" fetch -q origin "${SOURCE_REF#origin/}"; then
+            current=$(git -C "$SUBMODULE_PATH" rev-parse 'FETCH_HEAD^{commit}')
+          else
+            current=$(git -C "$SUBMODULE_PATH" rev-parse --verify -q "${SOURCE_REF}^{commit}") \
+              || { echo "::error::cannot resolve '$SOURCE_REF' in $SUBMODULE_PATH" && exit 1; }
+          fi
+          changed=false
+          [ "$current" = "$previous" ] || changed=true
+          if [ "$CLAIMED_CHANGED" != "$changed" ] || { [ "$changed" = true ] && [ "$CLAIMED_SHA" != "$current" ]; }; then
+            echo "::error::the prepare job's result does not match '$SOURCE_REF' (now $current) — the source moved during the run, or prepare misreported" && exit 1
+          fi
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          if [ "$changed" = true ]; then
+            git -C "$SUBMODULE_PATH" -c advice.detachedHead=false checkout -q --detach "$current"
+            git add -- "$SUBMODULE_PATH"
+            echo "sha=${current:0:7}" >> "$GITHUB_OUTPUT"
+            printf '%s' "$SUMMARY" | base64 -d > "$RUNNER_TEMP/bump.md"
+          fi
+
+      - uses: oven-sh/setup-bun@v2
+        if: steps.bump.outputs.changed == 'true' && inputs.refresh-lockfile
+        with:
+          no-cache: true
+
+      # `bun.lock` records every workspace package's version and dependencies, and
+      # `bun install --frozen-lockfile` does not notice when only a workspace version moved — so a
+      # gitlink-only bump leaves a stale lock that the next developer's install rewrites inside an
+      # unrelated PR. `--lockfile-only` resolves from registry metadata and installs nothing, and
+      # `--ignore-scripts` runs no lifecycle script, so no package code runs in this job. Bun is the
+      # product's `packageManager` version (setup-bun's default). A failing install fails the job, so
+      # no PR carries a broken lock.
+      - name: Refresh the lockfile
+        if: steps.bump.outputs.changed == 'true' && inputs.refresh-lockfile
+        run: |
+          bun install --lockfile-only --ignore-scripts
+          if ! git diff --quiet -- bun.lock; then
+            git add bun.lock
+            printf '\n%s\n' "\`bun.lock\` refreshed for the new nzyme tree." >> "$RUNNER_TEMP/bump.md"
           fi
 
       # Already at the source, e.g. bumped by hand meanwhile: a PR left open from an earlier run
@@ -135,10 +235,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -C "$PR_BRANCH"
-          git commit -qm "$message"
+          git commit --no-verify -qm "$message"
           # A bot-owned branch, regenerated from the base on every run — force is expected here.
           gh auth setup-git
-          git push --force origin "HEAD:refs/heads/$PR_BRANCH"
+          git push --no-verify --force origin "HEAD:refs/heads/$PR_BRANCH"
 
           {
             cat "$RUNNER_TEMP/bump.md"

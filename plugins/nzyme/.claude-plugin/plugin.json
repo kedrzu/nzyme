@@ -1,7 +1,7 @@
 {
     "name": "nzyme",
     "description": "How to use the @nzyme framework packages — dependency injection (@nzyme/ioc), logging (@nzyme/logging), translations (@nzyme/i18n, @nzyme/vue-i18n), Vue forms (@nzyme/vue-forms, @nzyme/validation) and composables (@nzyme/vue-utils, @nzyme/vue-ioc) — plus the TypeScript conventions and testing practice they are written for",
-    "version": "0.14.0",
+    "version": "0.15.0",
     "author": {
         "name": "Michał Kędrzyński"
     },

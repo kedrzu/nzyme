@@ -40,17 +40,17 @@
         "@manypkg/find-root": "3.1.0",
         "@nzyme/utils": "workspace:*",
         "chalk": "6.0.1",
-        "dotenv": "18.0.5",
-        "execa": "10.0.1",
+        "dotenv": "18.0.7",
+        "execa": "10.1.0",
         "fs-extra": "11.4.1",
-        "oxfmt": "0.71.0",
+        "oxfmt": "0.72.0",
         "parse-gitignore": "2.0.0",
         "pkg-types": "2.3.3"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
         "@types/fs-extra": "11.0.4",
-        "@types/node": "26.6.4",
+        "@types/node": "26.6.5",
         "@types/parse-gitignore": "1.0.2",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2"
     }

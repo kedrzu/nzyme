@@ -75,12 +75,14 @@ on:
 
 jobs:
   bump:
-    name: Bump nzyme on ${{ inputs.base-branch }}
+    name: Bump ${{ inputs.submodule-path }} on ${{ inputs.base-branch }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    # Keyed by the submodule too: a product that bumps several submodules calls this once per path,
+    # and those runs write different branches, so they need not wait for each other.
     concurrency:
-      group: nzyme-bump-${{ inputs.base-branch }}
+      group: nzyme-bump-${{ inputs.submodule-path }}-${{ inputs.base-branch }}
       cancel-in-progress: false
     env:
       SOURCE_REF: ${{ inputs.source-ref }}

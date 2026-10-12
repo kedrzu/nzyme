@@ -8,7 +8,7 @@ import { simpleGit } from 'simple-git';
 import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 import { resolveSubmoduleCurrentBranch } from './resolveSubmoduleCurrentBranch.js';
 
-const BASE_BRANCHES = ['main'];
+const TRUNK = 'main';
 
 function baseSubmodule(path: string): Omit<SubmoduleInfo, 'currentBranch' | 'detached'> {
     return {
@@ -75,7 +75,7 @@ test('an attached HEAD on a non-base branch resolves to that branch, by name', a
 
     const result = await resolveSubmoduleCurrentBranch({
         submodule: { ...baseSubmodule(workPath), currentBranch: 'feature/sig-519-thing', detached: false },
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
     });
 
     expect(result).toEqual({ kind: 'branch', name: 'feature/sig-519-thing' });
@@ -86,7 +86,7 @@ test('an attached HEAD on a base branch resolves to base', async () => {
 
     const result = await resolveSubmoduleCurrentBranch({
         submodule: { ...baseSubmodule(workPath), currentBranch: 'main', detached: false },
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
     });
 
     expect(result).toEqual({ kind: 'base' });
@@ -104,7 +104,7 @@ test('a detached HEAD is resolved from its commit, not skipped', async () => {
 
     const result = await resolveSubmoduleCurrentBranch({
         submodule: { ...baseSubmodule(workPath), currentBranch: undefined, detached: true },
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
     });
 
     expect(result).toEqual({ kind: 'branch', name: 'feature/sig-519-thing' });
@@ -118,7 +118,7 @@ test('a detached HEAD reachable only from a base branch resolves to base', async
 
     const result = await resolveSubmoduleCurrentBranch({
         submodule: { ...baseSubmodule(workPath), currentBranch: undefined, detached: true },
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
     });
 
     expect(result).toEqual({ kind: 'base' });

@@ -13,6 +13,7 @@ import { handleMergeConflict } from './handleMergeConflict.js';
 import { parkSubmoduleOnBase } from './parkSubmoduleOnBase.js';
 import { pushSubmoduleUpdates } from './pushSubmoduleUpdates.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
+import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 
 /**
  * Parameters for {@link refreshMainAfterSubmoduleMerge}.
@@ -39,9 +40,11 @@ export interface RefreshMainAfterSubmoduleMergeParams {
     baseBranch: string;
 
     /**
-     * Base branch of the submodules. Defaults to {@link baseBranch}.
+     * What the submodules follow — see `resolveSubmoduleBase`. Following the trunk, each merged
+     * submodule is parked on it and every changed gitlink is committed. Pinned, steps 2 and 3 are
+     * skipped: no submodule moves and no gitlink is re-pointed.
      */
-    submoduleBaseBranch?: string;
+    submoduleBase: SubmoduleBase;
 
     /**
      * GitHub client used to look up the pull requests stacked on the main task branch before it is
@@ -65,9 +68,12 @@ export interface RefreshMainAfterSubmoduleMergeParams {
  * main PR can be merged cleanly:
  * 1. Merge the base branch into the main task branch if it is behind (avoids `mergeable_state: behind`
  *    on the main PR). Runs even when there are no submodules.
- * 2. Park each merged submodule on its merged base-branch tip (the squash commit).
+ * 2. Park each merged submodule on its merged trunk tip (the squash commit).
  * 3. Commit and push the resulting submodule gitlink updates (and any base-merge commit) so the main
  *    PR's head reflects the merged submodule references.
+ *
+ * Steps 2 and 3 run only while the submodules follow the trunk; a branch that keeps its pin gets
+ * step 1 alone, plus the push of its base-merge commit.
  *
  * Idempotent: re-running parks submodules already on base and pushes nothing new when the gitlinks
  * already match.
@@ -76,15 +82,8 @@ export interface RefreshMainAfterSubmoduleMergeParams {
  * be gated on (see {@link waitForRequiredChecks}'s `expectedHeadSha`).
  */
 export async function refreshMainAfterSubmoduleMerge(params: RefreshMainAfterSubmoduleMergeParams): Promise<string> {
-    const {
-        taskBranch,
-        refreshedSubmodulePaths,
-        baseBranch,
-        submoduleBaseBranch = baseBranch,
-        githubClient,
-        githubConfig,
-        logger,
-    } = params;
+    const { taskBranch, refreshedSubmodulePaths, baseBranch, submoduleBase, githubClient, githubConfig, logger } =
+        params;
 
     // Disable submodule recursion for main-repo history ops (mirrors syncAllRepos) so git does not try
     // to auto-fetch submodule gitlink commits by SHA during the base merge.
@@ -105,27 +104,34 @@ export async function refreshMainAfterSubmoduleMerge(params: RefreshMainAfterSub
 
     const merged = await mergeBaseIntoMainIfBehind({ baseBranch, taskBranch, guard, logger, mainGit });
 
-    // === Step 2: park each merged submodule on its merged base tip ===
-    for (const path of refreshedSubmodulePaths) {
-        const subGit = simpleGit({ baseDir: path });
-        await parkSubmoduleOnBase({
-            git: subGit,
-            baseBranch: submoduleBaseBranch,
+    let gitlinksPushed = false;
+
+    // Pinned submodules skip steps 2 and 3: nothing was merged into them, and a gitlink that differs
+    // from HEAD here was moved by someone else — committing it would re-point the pin.
+    if (submoduleBase.kind === 'trunk') {
+        // === Step 2: park each merged submodule on its merged trunk tip ===
+        for (const path of refreshedSubmodulePaths) {
+            const subGit = simpleGit({ baseDir: path });
+            await parkSubmoduleOnBase({
+                git: subGit,
+                baseBranch: submoduleBase.trunk,
+                logger,
+                repoDisplayName: chalk.magenta(path),
+            });
+        }
+
+        // === Step 3: commit & push the gitlink updates ===
+        await guard.beforeWrite();
+        const pushResult = await pushSubmoduleUpdates({
             logger,
-            repoDisplayName: chalk.magenta(path),
+            submodulePaths: refreshedSubmodulePaths,
+            beforePush: guard.beforePush,
         });
+        gitlinksPushed = pushResult.pushed;
     }
 
-    // === Step 3: commit & push the gitlink updates ===
-    await guard.beforeWrite();
-    const pushResult = await pushSubmoduleUpdates({
-        logger,
-        submodulePaths: refreshedSubmodulePaths,
-        beforePush: guard.beforePush,
-    });
-
     // The base-merge commit from step 1 must reach the remote even when no gitlink changed.
-    if (merged && !pushResult.pushed) {
+    if (merged && !gitlinksPushed) {
         await guard.beforePush();
         await pushWithUpstream(mainGit);
         logger.info(`   ${chalk.green('✓')} Pushed base merge to main repository`);

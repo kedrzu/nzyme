@@ -22,11 +22,9 @@ export interface ResolveSubmoduleBranchParams {
     sha: string;
 
     /**
-     * Branches that count as "base" for the caller's project (e.g. `['main', 'release']`).
-     * Supplied by the caller — this package is generic and must never hardcode a project's own
-     * branch naming.
+     * The caller project's trunk — see `PickSubmoduleBranchParams.trunk`.
      */
-    baseBranches: string[];
+    trunk: string;
 
     /**
      * Display name of the submodule, used to name it in a thrown `UsageError`.
@@ -48,23 +46,23 @@ export type ResolveSubmoduleBranchResult = { kind: 'base' } | { kind: 'branch'; 
  *
  * Runs `git branch -r --contains <sha>` in the submodule and parses its output into clean remote
  * branch names before handing them to {@link pickSubmoduleBranch}, which does no parsing of its
- * own. When the SHA is off base and more than one branch contains it, the branches are — by
+ * own. When the SHA is off the trunk and more than one branch contains it, the branches are — by
  * definition — different tasks sharing an unmerged commit, so this throws a `UsageError` naming
  * every candidate rather than guessing: picking one here would silently attach the submodule to
  * the wrong task.
- * @param params The gitlink SHA to resolve, the caller's base branches, and git/display context.
- * @returns `base` when the SHA is on a base branch (or on no branch at all), `branch` with its
+ * @param params The gitlink SHA to resolve, the caller's trunk, and git/display context.
+ * @returns `base` when the SHA is on the trunk (or on no branch at all), `branch` with its
  * name otherwise.
  */
 export async function resolveSubmoduleBranch(
     params: ResolveSubmoduleBranchParams,
 ): Promise<ResolveSubmoduleBranchResult> {
-    const { git, sha, baseBranches, repoDisplayName } = params;
+    const { git, sha, trunk, repoDisplayName } = params;
 
     const rawOutput = await git.raw(['branch', '-r', '--contains', sha]);
     const candidates = parseContainingBranches(rawOutput);
 
-    const verdict = pickSubmoduleBranch({ candidates, baseBranches });
+    const verdict = pickSubmoduleBranch({ candidates, trunk });
 
     if (verdict.kind === 'base') {
         return { kind: 'base' };

@@ -11,6 +11,7 @@ import { decideUnattendedMode } from '@nzyme/github-cli/utils/decideUnattendedMo
 import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
 import { pushChanges } from '@nzyme/github-cli/utils/pushChanges.js';
+import { resolvePrSubmoduleBase } from '@nzyme/github-cli/utils/resolvePrSubmoduleBase.js';
 import { openPrInBrowser } from '@nzyme/github-cli/utils/selectPrToOpen.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
 
@@ -313,7 +314,6 @@ function defineIssuePushCommand(options: SentryCommandsOptions) {
                     issueId,
                     logger: this.logger,
                     baseBranch,
-                    baseBranches,
                     unattended,
                 });
 
@@ -374,12 +374,11 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                 });
 
                 // Push all changes (same as push command)
-                const { githubClient, pr } = await pushChanges({
+                const { githubClient, pr, submoduleBase } = await pushChanges({
                     githubConfig,
                     issueId,
                     logger: this.logger,
                     baseBranch,
-                    baseBranches,
                     unattended,
                     defaultCommitMessage: 'Ready for review',
                 });
@@ -402,7 +401,7 @@ function defineIssueReadyCommand(options: SentryCommandsOptions) {
                     githubConfig,
                     logger: this.logger,
                     mainPrs: [readyPr],
-                    baseBranches,
+                    submoduleBase,
                 });
             } catch (error: unknown) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -469,12 +468,20 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                 const githubConfig = await getGithubConfig(options);
                 const githubClient = createGithubClient(githubConfig);
 
+                // The submodules follow the trunk only when the issue's PR lands there.
+                const submoduleBase = await resolvePrSubmoduleBase({
+                    githubClient,
+                    githubConfig,
+                    pr: await findMatchingPr(githubClient, githubConfig, issueId),
+                    trunk: baseBranch,
+                });
+
                 // Sync all repos: commit the main repo, judge the submodules, fetch, rebase/pull, ff base,
                 // merge base, push
                 const syncResult = await syncAllRepos({
                     branch: currentBranch,
                     baseBranch,
-                    baseBranches,
+                    submoduleBase,
                     unattended,
                     githubClient,
                     githubConfig,
@@ -575,8 +582,9 @@ function defineIssuePrCommand(options: SentryCommandsOptions) {
                 const issueId = extractIssueIdFromBranch(currentBranch);
                 this.logger.info(`🎯 Found issue ID: ${chalk.bold(issueId)}`);
 
-                // Get base branches
+                // Get the trunk submodule branches are classified against
                 const baseBranches = await getBaseBranches(options);
+                const baseBranch = baseBranches[0] ?? 'main';
 
                 // Create GitHub client
                 const githubClient = createGithubClient(githubConfig);
@@ -587,7 +595,7 @@ function defineIssuePrCommand(options: SentryCommandsOptions) {
                     githubClient,
                     githubConfig,
                     issueId,
-                    baseBranches,
+                    trunk: baseBranch,
                     logger: this.logger,
                 });
             } catch (error: unknown) {

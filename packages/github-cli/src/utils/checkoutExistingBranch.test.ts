@@ -11,9 +11,10 @@ import { createTestLogger } from '@nzyme/logging';
 import type { GithubConfig } from '../GithubConfig.js';
 import { checkoutExistingBranch } from './checkoutExistingBranch.js';
 import type { GithubClient } from './createGithubClient.js';
+import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 
 const GITHUB_CONFIG: GithubConfig = { owner: 'acme', repo: 'main', token: 'ghp_test' };
-const BASE_BRANCHES = ['main'];
+const FOLLOW_MAIN: SubmoduleBase = { kind: 'trunk', trunk: 'main' };
 
 /**
  * A `GithubClient` stub that fails the test if called at all. The gitlink-SHA resolution this file
@@ -25,21 +26,6 @@ const THROWING_CLIENT: GithubClient = {
         pulls: {
             list() {
                 throw new Error('pulls.list should not be called for this scenario');
-            },
-        },
-    },
-} as unknown as GithubClient;
-
-/**
- * A `GithubClient` stub whose repository has no pull requests at all - the state nzyme's own `main`
- * is in. Only reached when the caller's base-branch list fails to classify the branch the submodule
- * rests on, which is precisely what the test below pins down.
- */
-const NO_PRS_CLIENT: GithubClient = {
-    rest: {
-        pulls: {
-            list() {
-                return Promise.resolve({ data: [] });
             },
         },
     },
@@ -162,8 +148,7 @@ test('a dirty submodule on its base branch is refused unattended, and nothing is
         logger,
         githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,
-        baseBranch: 'main',
-        baseBranches: BASE_BRANCHES,
+        submoduleBase: FOLLOW_MAIN,
         unattended: true,
     });
 
@@ -192,8 +177,7 @@ test('a dirty submodule on its base branch is left in place with a warning when 
         logger,
         githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,
-        baseBranch: 'main',
-        baseBranches: BASE_BRANCHES,
+        submoduleBase: FOLLOW_MAIN,
         unattended: false,
     });
 
@@ -229,8 +213,7 @@ test('a submodule already on its base branch is fast-forwarded onto the fresh ti
         logger,
         githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,
-        baseBranch: 'main',
-        baseBranches: BASE_BRANCHES,
+        submoduleBase: FOLLOW_MAIN,
         unattended: true,
     });
 
@@ -258,8 +241,7 @@ test('a task branch is resolved straight from the gitlink SHA, with no PR lookup
         logger,
         githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,
-        baseBranch: 'main',
-        baseBranches: BASE_BRANCHES,
+        submoduleBase: FOLLOW_MAIN,
         unattended: true,
     });
 
@@ -269,31 +251,50 @@ test('a task branch is resolved straight from the gitlink SHA, with no PR lookup
     expect((await sub.revparse(['HEAD'])).trim()).toBe(subTaskTip);
 });
 
-test("an empty base-branch list turns the submodule's own base branch into a task branch and refuses", async () => {
-    const { mainPath, submodulePath } = await setupSuperproject(root);
+// Switching to a hotfix PR into the product's `release`: the submodule has to end up on exactly the
+// commit `release` pins. Before the trunk-or-pin rule the PR base (`release`) doubled as the
+// submodule base, so the switch fast-forwarded the submodule's OWN `release` — nzyme's npm release
+// line, sharing nothing with the product's but the name — and checked the submodule out on it.
+test('a branch that does not land on the trunk checks the submodule out at its pin, never onto a base', async () => {
+    const { mainPath, submodulePath, subBaseTip } = await setupSuperproject(root);
+    const sub = simpleGit({ baseDir: submodulePath });
+    const main = simpleGit({ baseDir: mainPath });
+    const pin = (await sub.revparse([`${subBaseTip}~1`])).trim();
+
+    // nzyme's own release line moves on from the pin.
+    const seed = simpleGit({
+        baseDir: join(root, 'sub-seed'),
+        config: ['user.email=t@t', 'user.name=t', 'commit.gpgsign=false'],
+    });
+    await seed.checkoutBranch('release', pin);
+    await seed.commit('chore(release): v1.0.0', [], { '--allow-empty': null });
+    await seed.push(['-u', 'origin', 'release']);
+
+    // The product's hotfix branch pins the older submodule commit.
+    await main.checkoutBranch('hotfix', 'main');
+    await sub.checkout([pin]);
+    await main.add(['nzyme']);
+    await main.commit('pin submodule as release has it');
+    await main.push(['-u', 'origin', 'hotfix']);
+    await sub.checkout(['main']);
+    await main.checkout(['main']);
 
     process.chdir(mainPath);
     const { logger } = createTestLogger('checkoutExistingBranch');
 
-    // The same call as the fast-forward test above, with the base-branch list left empty - the shape
-    // a caller that forgets to thread `baseBranches` used to produce silently. Nothing about the
-    // submodule changes: it is clean, pushed, and resting on its own base branch. Only the
-    // classification does, and that alone is enough to break the switch for every task afterwards.
-    const failure = checkoutExistingBranch({
-        branchName: 'main',
+    await checkoutExistingBranch({
+        branchName: 'hotfix',
         taskId: 'ABC-123',
         logger,
-        githubClient: NO_PRS_CLIENT,
+        githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,
-        baseBranch: 'main',
-        baseBranches: [],
+        submoduleBase: { kind: 'pin', trunk: 'main', landingTrunk: 'release' },
         unattended: true,
     });
 
-    await expect(failure).rejects.toThrow(UsageError);
-    await expect(failure).rejects.toThrow(/is on main, which has no open pull request/);
-
-    // Refused, not moved - the submodule stays exactly where the caller found it.
-    const sub = simpleGit({ baseDir: submodulePath });
-    expect((await sub.status()).current).toBe('main');
+    expect((await sub.revparse(['HEAD'])).trim()).toBe(pin);
+    expect((await sub.status()).detached).toBe(true);
+    expect((await sub.branchLocal()).all).not.toContain('release');
+    // The product's working tree is clean - the checked-out submodule matches the gitlink exactly.
+    expect((await main.status()).files).toEqual([]);
 });

@@ -24,6 +24,7 @@ import { mergePullRequestSquash } from './mergePullRequestSquash.js';
 import { orderStackNodes } from './orderStackNodes.js';
 import { parkSubmoduleOnBase } from './parkSubmoduleOnBase.js';
 import { refreshMainAfterSubmoduleMerge } from './refreshMainAfterSubmoduleMerge.js';
+import { describeSubmodulePin, resolveSubmoduleBase } from './resolveSubmoduleBase.js';
 import { resolveSubmoduleCurrentBranch } from './resolveSubmoduleCurrentBranch.js';
 import { findStackForPr, getMergeAsyncStatus, mergeStackAsync } from './stacksApi.js';
 import { waitForRequiredChecks } from './waitForRequiredChecks.js';
@@ -48,18 +49,11 @@ export interface MergeTaskPrsParams {
     issueId: string;
 
     /**
-     * Base branch of the main repository (e.g. 'main'). Also where a submodule whose work already
-     * landed elsewhere gets parked back — see {@link assertSubmodulesReady}.
+     * The project's trunk (e.g. 'main'): what the main repository is refreshed with before merging,
+     * and the only branch submodules follow. A task whose pull request (or stack) lands anywhere
+     * else leaves every submodule on its pin — see `resolveSubmoduleBase`.
      */
     baseBranch: string;
-
-    /**
-     * The caller project's base branches, used to judge each submodule's readiness and to resolve
-     * which branch its pull request lives on — see `AssertSubmoduleReadyParams.baseBranches`.
-     * Separate from {@link baseBranch} because that one names where a submodule gets parked, not
-     * the full set a submodule's own branch is classified against.
-     */
-    baseBranches: string[];
 
     /**
      * Logger instance.
@@ -117,7 +111,6 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
         githubConfig,
         issueId,
         baseBranch,
-        baseBranches,
         logger,
         autoYes,
         checkPollIntervalMs,
@@ -149,6 +142,17 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
     const mainPr = stackNodes ? stackNodes[stackNodes.length - 1]! : mainPrs[0]!;
     const bottomNode = stackNodes?.[0];
 
+    // Submodules are merged and re-pointed only when the task lands on the trunk: a stack lands
+    // where its record says, a lone pull request on its own base.
+    const submoduleBase = resolveSubmoduleBase({
+        landingTrunk: stack?.base ?? mainPr.base.ref,
+        trunk: baseBranch,
+    });
+    const followsTrunk = submoduleBase.kind === 'trunk';
+    if (submoduleBase.kind === 'pin') {
+        logger.info(describeSubmodulePin(submoduleBase));
+    }
+
     // === Guard: nothing moves while there is uncommitted work ===
     // The local half of a merge all happens on the checked-out branch — the base-branch refresh, the
     // gitlink re-point, the restack — and moving to the bottom node would carry a dirty tree onto it.
@@ -163,7 +167,11 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
     // performs no mutation of its own, which is why it is safe to run here, before anything moves;
     // a submodule whose PR already merged is reported rather than acted on — parking it happens
     // below, once the bottom-node checkout gives the resulting gitlink change somewhere to land.
-    const submodulesToPark = await assertSubmodulesReady({ githubClient, githubConfig, baseBranches, logger });
+    // A pinned submodule is not judged at all: the clean main repository above already proves it
+    // sits on its gitlink, and nothing below touches it.
+    const submodulesToPark = followsTrunk
+        ? await assertSubmodulesReady({ githubClient, githubConfig, trunk: baseBranch, logger })
+        : [];
 
     // === Move to the bottom node, which is where the local half of the merge has to happen ===
     // The refresh below merges the base branch into the checked-out branch (and re-points submodule
@@ -184,8 +192,11 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
 
     // === Discover task submodules (open or already-merged PRs) ===
     // After the checkout (and any parking above): this reads the live working tree, so on any other
-    // node it would describe the wrong node's submodule pins.
-    const submoduleTargets = await discoverSubmoduleTargets(githubClient, githubConfig, baseBranches, logger);
+    // node it would describe the wrong node's submodule pins. None while pinned: whatever branch a
+    // pin sits on — nzyme's `release` with its own open pull request, say — is not this task's.
+    const submoduleTargets = followsTrunk
+        ? await discoverSubmoduleTargets(githubClient, githubConfig, baseBranch, logger)
+        : [];
 
     // === Guard: a stacked task keeps its submodule work in the bottom node ===
     // Everything above the bottom is squashed against a base that already carries the merged
@@ -264,6 +275,7 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
         taskBranch: bottomNode?.head.ref ?? currentBranch,
         refreshedSubmodulePaths: submoduleTargets.map(target => target.path),
         baseBranch,
+        submoduleBase,
         githubClient,
         githubConfig,
         logger,
@@ -536,7 +548,7 @@ async function waitForStackMerge(params: WaitForStackMergeParams): Promise<void>
 async function discoverSubmoduleTargets(
     githubClient: GithubClient,
     githubConfig: GithubConfig,
-    baseBranches: string[],
+    trunk: string,
     logger: Logger,
 ): Promise<SubmoduleTarget[]> {
     const submodules = await getSubmoduleInfo();
@@ -549,7 +561,7 @@ async function discoverSubmoduleTargets(
             continue;
         }
 
-        const resolved = await resolveSubmoduleCurrentBranch({ submodule, baseBranches });
+        const resolved = await resolveSubmoduleCurrentBranch({ submodule, trunk });
         if (resolved.kind === 'base') {
             continue;
         }
@@ -642,9 +654,9 @@ export interface AssertSubmodulesReadyParams {
     githubConfig: GithubConfig;
 
     /**
-     * The caller project's base branches — see `MergeTaskPrsParams.baseBranches`.
+     * The trunk the submodules follow — see `MergeTaskPrsParams.baseBranch`.
      */
-    baseBranches: string[];
+    trunk: string;
 
     /**
      * Logger instance.
@@ -678,7 +690,7 @@ export interface AssertSubmodulesReadyParams {
  * @returns The submodules that should be parked on base, in discovery order.
  */
 export async function assertSubmodulesReady(params: AssertSubmodulesReadyParams): Promise<SubmoduleInfo[]> {
-    const { githubClient, githubConfig, baseBranches, logger } = params;
+    const { githubClient, githubConfig, trunk, logger } = params;
     const submodules = await getSubmoduleInfo();
     const toPark: SubmoduleInfo[] = [];
 
@@ -701,7 +713,7 @@ export async function assertSubmodulesReady(params: AssertSubmodulesReadyParams)
 
         const readiness = await assertSubmoduleReady({
             submodule,
-            baseBranches,
+            trunk,
             githubClient,
             githubConfig: submoduleConfig,
         });

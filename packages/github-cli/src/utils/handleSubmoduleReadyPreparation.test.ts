@@ -12,8 +12,10 @@ import { assertValue } from '@nzyme/utils';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
+import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 
 const GITHUB_CONFIG: GithubConfig = { owner: 'acme', repo: 'main', token: 'ghp_test' };
+const FOLLOW_MAIN: SubmoduleBase = { kind: 'trunk', trunk: 'main' };
 
 /** Answers handed to the interactive ladder's prompts, in the order they are asked. */
 const promptAnswers: string[] = [];
@@ -194,8 +196,7 @@ test('a dirty submodule is refused unattended, with no branch, no commit and no 
         githubClient: client,
         githubConfig: GITHUB_CONFIG,
         logger,
-        baseBranch: 'main',
-        baseBranches: ['main'],
+        submoduleBase: FOLLOW_MAIN,
         unattended: true,
     });
 
@@ -220,8 +221,7 @@ test('a submodule branch with no open pull request is refused unattended rather 
         githubClient: client,
         githubConfig: GITHUB_CONFIG,
         logger,
-        baseBranch: 'main',
-        baseBranches: ['main'],
+        submoduleBase: FOLLOW_MAIN,
         unattended: true,
     });
 
@@ -246,8 +246,7 @@ test('a ready submodule has its new commit staged in the main repository', async
         githubClient: client,
         githubConfig: GITHUB_CONFIG,
         logger,
-        baseBranch: 'main',
-        baseBranches: ['main'],
+        submoduleBase: FOLLOW_MAIN,
         unattended: true,
     });
 
@@ -274,8 +273,7 @@ test('a submodule whose pull request already merged is parked back on its base b
         githubClient: client,
         githubConfig: GITHUB_CONFIG,
         logger,
-        baseBranch: 'main',
-        baseBranches: ['main'],
+        submoduleBase: FOLLOW_MAIN,
         unattended: true,
     });
 
@@ -302,8 +300,7 @@ test('a detached submodule carrying an unpushed commit is offered a branch and w
         githubClient: client,
         githubConfig: GITHUB_CONFIG,
         logger,
-        baseBranch: 'main',
-        baseBranches: ['main'],
+        submoduleBase: FOLLOW_MAIN,
         unattended: false,
     });
 
@@ -330,12 +327,41 @@ test('a detached submodule resting on a pushed commit is neither questioned nor 
         githubClient: client,
         githubConfig: GITHUB_CONFIG,
         logger,
-        baseBranch: 'main',
-        baseBranches: ['main'],
+        submoduleBase: FOLLOW_MAIN,
         unattended: false,
     });
 
     expect(promptMessages).toEqual([]);
     expect(logs.filter(log => log.level === 'warn')).toEqual([]);
     expect(createdPrTitles).toEqual([]);
+});
+
+// `task push` on a hotfix into the product's `release`: the very submodule the test above parks on
+// `main` and stages must stay exactly where the branch pins it — parking it would put an nzyme
+// commit `main` has never run into a production line. Run attended, so any question put to the
+// human (the ladder's branch/commit/PR prompts) fails the test too.
+test('a pinned submodule is neither parked nor staged, and gets no pull request', async () => {
+    const { mainPath, sub } = await setupSuperproject(root);
+    const { logger } = createTestLogger('handleSubmoduleReadyPreparation');
+    await branchAndPushSubmodule(sub, 'feat/thing');
+    const headBefore = (await sub.revparse(['HEAD'])).trim();
+
+    process.chdir(mainPath);
+    const { client, createdPrTitles } = createGithubClientStub([
+        { number: 7, branch: 'feat/thing', state: 'closed', mergedAt: '2026-01-01T00:00:00Z' },
+    ]);
+
+    await handleSubmoduleReadyPreparation({
+        githubClient: client,
+        githubConfig: GITHUB_CONFIG,
+        logger,
+        submoduleBase: { kind: 'pin', trunk: 'main', landingTrunk: 'release' },
+        unattended: false,
+    });
+
+    expect((await sub.status()).current).toBe('feat/thing');
+    expect((await sub.revparse(['HEAD'])).trim()).toBe(headBefore);
+    expect((await simpleGit({ baseDir: mainPath }).diff(['--cached', '--name-only'])).trim()).toBe('');
+    expect(createdPrTitles).toEqual([]);
+    expect(promptMessages).toEqual([]);
 });

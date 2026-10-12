@@ -40,7 +40,7 @@ export interface DecideSubmoduleReadinessParams {
     branchName: string | null;
 
     /**
-     * Whether `branchName` (when not `null`) is one of the caller's base branches. Irrelevant
+     * Whether `branchName` (when not `null`) is the caller's trunk — its base branch. Irrelevant
      * when `branchName` is `null`.
      */
     isBaseBranch: boolean;

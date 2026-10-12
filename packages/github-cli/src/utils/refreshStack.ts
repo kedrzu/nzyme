@@ -8,6 +8,7 @@ import { cascadeStack } from './cascadeStack.js';
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
 import { GitMergeConflictError } from './GitMergeConflictError.js';
+import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 import { syncAllRepos } from './syncAllRepos.js';
 import { syncStackNodesFromRemote } from './syncStackNodesFromRemote.js';
 
@@ -26,10 +27,10 @@ export interface RefreshStackParams {
     trunk: string;
 
     /**
-     * The caller project's base branches, forwarded to `syncAllRepos` to classify what each
-     * submodule is sitting on. Distinct from {@link trunk}, which is a merge source.
+     * What the submodules follow, forwarded to `syncAllRepos` — see `resolveSubmoduleBase`.
+     * Distinct from {@link trunk}, which is the main repository's merge source.
      */
-    baseBranches: string[];
+    submoduleBase: SubmoduleBase;
 
     /**
      * Whether nobody can be asked a question — see `decideUnattendedMode`.
@@ -65,7 +66,7 @@ export interface RefreshStackParams {
  * one.
  */
 export async function refreshStack(params: RefreshStackParams): Promise<void> {
-    const { branches, trunk, baseBranches, unattended, githubClient, githubConfig, logger } = params;
+    const { branches, trunk, submoduleBase, unattended, githubClient, githubConfig, logger } = params;
 
     const bottomBranch = branches[0]!;
     const git = simpleGit({ config: ['submodule.recurse=false'] });
@@ -98,7 +99,7 @@ export async function refreshStack(params: RefreshStackParams): Promise<void> {
             await syncAllRepos({
                 branch: bottomBranch,
                 baseBranch: trunk,
-                baseBranches,
+                submoduleBase,
                 unattended,
                 githubClient,
                 githubConfig,

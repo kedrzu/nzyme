@@ -23,11 +23,11 @@ export interface DecideSubmoduleOnTaskBranchParams {
     detached: boolean;
 
     /**
-     * The caller's base branches. Supplied by the caller rather than derived from the merge source:
-     * on a stacked task the merge source is a node branch, so reading "is this a base branch" from
-     * it would classify a submodule sitting on the trunk as task work.
+     * The caller project's trunk. Supplied by the caller rather than derived from the merge source:
+     * on a stacked task the merge source is a node branch, so reading "is this the trunk" from it
+     * would classify a submodule sitting on the trunk as task work.
      */
-    baseBranches: string[];
+    trunk: string;
 }
 
 /**
@@ -42,16 +42,16 @@ export interface DecideSubmoduleOnTaskBranchParams {
  *   branch someone happened to leave the submodule on could match and be pushed to. A `ready`
  *   verdict means the branch has an open pull request of its own, which is what actually ties it
  *   to work in flight.
- * - **Not a base branch.** A submodule resting on the trunk is ready, but merging the trunk into
+ * - **Not the trunk.** A submodule resting on the trunk is ready, but merging the trunk into
  *   itself and pushing is not this function's business.
  * - **Not detached.** A detached HEAD has no branch to push, and gets parked on base earlier in
  *   the sync instead.
- * @param params The readiness verdict plus the submodule's branch state and the caller's bases.
+ * @param params The readiness verdict plus the submodule's branch state and the caller's trunk.
  * @returns `true` only when the submodule is on its own task branch with work vouched for.
  * @__NO_SIDE_EFFECTS__
  */
 export function decideSubmoduleOnTaskBranch(params: DecideSubmoduleOnTaskBranchParams): boolean {
-    const { readiness, currentBranch, detached, baseBranches } = params;
+    const { readiness, currentBranch, detached, trunk } = params;
 
     if (readiness === null || readiness.kind !== 'ready') {
         return false;
@@ -61,5 +61,5 @@ export function decideSubmoduleOnTaskBranch(params: DecideSubmoduleOnTaskBranchP
         return false;
     }
 
-    return !baseBranches.includes(currentBranch);
+    return currentBranch !== trunk;
 }

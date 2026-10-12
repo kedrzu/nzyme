@@ -9,6 +9,7 @@ import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { applyStashedChanges, handleBranchSelection } from '@nzyme/github-cli/utils/handleBranchSelection.js';
 import type { BranchSelectionResult } from '@nzyme/github-cli/utils/handleBranchSelection.js';
 import { handleMergedPrReopen } from '@nzyme/github-cli/utils/handleMergedPrReopen.js';
+import { resolvePrSubmoduleBase } from '@nzyme/github-cli/utils/resolvePrSubmoduleBase.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
@@ -50,8 +51,9 @@ export interface SwitchToSentryIssueParams {
     logger: Logger;
 
     /**
-     * Base branches to use when creating new branches.
-     * The first entry is used as the default base to branch from (e.g. 'main').
+     * The project's base branches. The first entry is the trunk (e.g. 'main'): the default base a
+     * new branch is cut from, and the only branch submodules follow — an existing pull request that
+     * lands anywhere else leaves them on their pin.
      */
     baseBranches: string[];
 
@@ -114,14 +116,22 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
         logger.info(`✅ Found existing PR: ${chalk.blue(existingPr.title)} (#${existingPr.number})`);
         logger.info(`🔄 Checking out branch: ${chalk.cyan(existingPr.head.ref)}`);
 
+        // The PR's base is what the main repository syncs with, but the submodules follow only the
+        // trunk, and only when the PR (or its whole stack) lands there — see `resolveSubmoduleBase`.
+        const trunk = baseBranches[0];
+        if (!trunk) {
+            throw new UsageError('No base branches configured');
+        }
+
+        const submoduleBase = await resolvePrSubmoduleBase({ githubClient, githubConfig, pr: existingPr, trunk });
+
         await checkoutExistingBranch({
             branchName: existingPr.head.ref,
             taskId: issueData.shortId,
             logger,
             githubClient,
             githubConfig,
-            baseBranch: existingPr.base.ref,
-            baseBranches,
+            submoduleBase,
             unattended,
         });
 
@@ -132,7 +142,7 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
         await syncAllRepos({
             branch: existingPr.head.ref,
             baseBranch: prBaseBranch,
-            baseBranches,
+            submoduleBase,
             unattended,
             githubClient,
             githubConfig,

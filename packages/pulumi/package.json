@@ -75,9 +75,9 @@
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
-        "@types/node": "26.6.4",
+        "@types/node": "26.6.5",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-        "oxfmt": "0.71.0"
+        "oxfmt": "0.72.0"
     },
     "depcheck": {
         "ignoreDeps": [

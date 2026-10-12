@@ -49,9 +49,9 @@ export interface MergeTaskPrsParams {
     issueId: string;
 
     /**
-     * The project's trunk (e.g. 'main'): what the main repository is refreshed with before merging,
-     * and the only branch submodules follow. A task whose pull request (or stack) lands anywhere
-     * else leaves every submodule on its pin — see `resolveSubmoduleBase`.
+     * The project's trunk (e.g. 'main'): the only branch submodules follow. A task whose pull request
+     * (or stack) lands anywhere else leaves every submodule on its pin — see `resolveSubmoduleBase` —
+     * and its main repository is refreshed with the branch it lands on instead of the trunk.
      */
     baseBranch: string;
 
@@ -142,12 +142,12 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
     const mainPr = stackNodes ? stackNodes[stackNodes.length - 1]! : mainPrs[0]!;
     const bottomNode = stackNodes?.[0];
 
-    // Submodules are merged and re-pointed only when the task lands on the trunk: a stack lands
-    // where its record says, a lone pull request on its own base.
-    const submoduleBase = resolveSubmoduleBase({
-        landingTrunk: stack?.base ?? mainPr.base.ref,
-        trunk: baseBranch,
-    });
+    // A stack lands where its record says, a lone pull request on its own base. That branch is what
+    // the main repository is refreshed with — a hotfix into `release` refreshed with the trunk would
+    // carry all of it, submodule pins included, into the squash that lands on `release` — and
+    // submodules are merged and re-pointed only when it is the trunk.
+    const landingTrunk = stack?.base ?? mainPr.base.ref;
+    const submoduleBase = resolveSubmoduleBase({ landingTrunk, trunk: baseBranch });
     const followsTrunk = submoduleBase.kind === 'trunk';
     if (submoduleBase.kind === 'pin') {
         logger.info(describeSubmodulePin(submoduleBase));
@@ -180,7 +180,7 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
     // out the timeout for a commit the bottom node never gets. Which node the user happens to be on
     // is not their problem to solve, so this goes there itself; the caller puts them back afterwards.
     if (bottomNode && currentBranch !== bottomNode.head.ref) {
-        await checkoutBottomNode(bottomNode.head.ref, baseBranch, logger);
+        await checkoutBottomNode(bottomNode.head.ref, landingTrunk, logger);
     }
 
     // === Park submodules whose work already landed elsewhere back on their base branch ===
@@ -274,7 +274,7 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
     const refreshedMainHeadSha = await refreshMainAfterSubmoduleMerge({
         taskBranch: bottomNode?.head.ref ?? currentBranch,
         refreshedSubmodulePaths: submoduleTargets.map(target => target.path),
-        baseBranch,
+        baseBranch: landingTrunk,
         submoduleBase,
         githubClient,
         githubConfig,

@@ -68,6 +68,16 @@ export function resolveSubmoduleBase(params: ResolveSubmoduleBaseParams): Submod
 }
 
 /**
+ * The branch the product pull request lands on — what its main repository is synced with before a
+ * refresh or a merge. Pinned, that is `landingTrunk`: syncing a hotfix into `release` with the trunk
+ * would carry the whole trunk, submodule pins included, onto the production line.
+ * @__NO_SIDE_EFFECTS__
+ */
+export function getLandingTrunk(submoduleBase: SubmoduleBase): string {
+    return submoduleBase.kind === 'pin' ? submoduleBase.landingTrunk : submoduleBase.trunk;
+}
+
+/**
  * Say why the submodules are left alone, so a command that skipped them reads as a decision rather
  * than as nothing having happened.
  * @__NO_SIDE_EFFECTS__

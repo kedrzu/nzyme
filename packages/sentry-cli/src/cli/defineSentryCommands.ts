@@ -12,6 +12,7 @@ import { findMatchingPr } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { getCurrentBranch } from '@nzyme/github-cli/utils/getCurrentBranch.js';
 import { pushChanges } from '@nzyme/github-cli/utils/pushChanges.js';
 import { resolvePrSubmoduleBase } from '@nzyme/github-cli/utils/resolvePrSubmoduleBase.js';
+import { getLandingTrunk } from '@nzyme/github-cli/utils/resolveSubmoduleBase.js';
 import { openPrInBrowser } from '@nzyme/github-cli/utils/selectPrToOpen.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
 
@@ -461,10 +462,6 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                     isTty: process.stdin.isTTY,
                 });
 
-                this.logger.info(
-                    `🔄 Refreshing issue ${chalk.bold(issueId)} with base branch ${chalk.cyan(baseBranch)}`,
-                );
-
                 const githubConfig = await getGithubConfig(options);
                 const githubClient = createGithubClient(githubConfig);
 
@@ -476,11 +473,19 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                     trunk: baseBranch,
                 });
 
+                // The main repository is refreshed with the branch the PR lands on — the trunk, or
+                // `release` for a hotfix, which must never take in the trunk and its submodule pins.
+                const landingTrunk = getLandingTrunk(submoduleBase);
+
+                this.logger.info(
+                    `🔄 Refreshing issue ${chalk.bold(issueId)} with base branch ${chalk.cyan(landingTrunk)}`,
+                );
+
                 // Sync all repos: commit the main repo, judge the submodules, fetch, rebase/pull, ff base,
                 // merge base, push
                 const syncResult = await syncAllRepos({
                     branch: currentBranch,
-                    baseBranch,
+                    baseBranch: landingTrunk,
                     submoduleBase,
                     unattended,
                     githubClient,
@@ -493,10 +498,10 @@ function defineIssueRefreshCommand(options: SentryCommandsOptions) {
                     this.logger.info(
                         `🎉 Successfully merged ${chalk.yellow(syncResult.baseBranchCommitsAhead.toString())} commit${
                             syncResult.baseBranchCommitsAhead === 1 ? '' : 's'
-                        } from ${chalk.cyan(baseBranch)}`,
+                        } from ${chalk.cyan(landingTrunk)}`,
                     );
                 } else {
-                    this.logger.info(`✅ Issue branch is already up to date with ${chalk.cyan(baseBranch)}`);
+                    this.logger.info(`✅ Issue branch is already up to date with ${chalk.cyan(landingTrunk)}`);
                 }
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';

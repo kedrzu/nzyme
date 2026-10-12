@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, expect, test } from 'bun:test';
+import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
 import { UsageError } from '@nzyme/cli';
@@ -498,3 +499,50 @@ test('a task that does not land on the trunk merges only the product pull reques
     expect((await simpleGit({ baseDir: submodulePath }).revparse(['HEAD'])).trim()).toBe(pin);
     expect((await simpleGit({ baseDir: remotes.main }).raw(['rev-parse', 'abc-1-work:nzyme'])).trim()).toBe(pin);
 });
+
+// Both product lines move on before a hotfix into `release` merges. The pre-merge refresh has to take
+// in `release`, never `main`: merging `main` into the hotfix would land all of it — submodule pins
+// included — on `release` with the squash.
+test('a task that does not land on the trunk is refreshed with the branch it lands on, not the trunk', async () => {
+    const { mainPath, remotes } = await setupMergeScenario(root, { subBranch: 'release', productBase: 'release' });
+    const main = simpleGit({ baseDir: mainPath });
+    const tips: Record<string, string> = {};
+    for (const branch of ['main', 'release']) {
+        await main.checkout(branch);
+        await main.commit(`${branch} moves on`, [], { '--allow-empty': null });
+        await main.push(['origin', branch]);
+        tips[branch] = (await main.revparse(['HEAD'])).trim();
+    }
+    await main.checkout('abc-1-work');
+    const { client, merged } = createFakeGithub({
+        remotes,
+        prs: [
+            { repo: 'main', number: 10, title: '[ABC-1] Hotfix', head: 'abc-1-work', base: 'release', state: 'open' },
+        ],
+    });
+    const { logger } = createTestLogger('mergeTaskPrs');
+    process.chdir(mainPath);
+
+    await mergeTaskPrs({
+        githubClient: client,
+        githubConfig: GITHUB_CONFIG,
+        issueId: 'ABC-1',
+        baseBranch: 'main',
+        logger,
+        autoYes: true,
+        checkPollIntervalMs: 0,
+    });
+
+    const remote = simpleGit({ baseDir: remotes.main });
+    expect(merged).toEqual(['main#10']);
+    expect(await isAncestor(remote, tips.release!, 'abc-1-work')).toBe(true);
+    expect(await isAncestor(remote, tips.main!, 'abc-1-work')).toBe(false);
+});
+
+/**
+ * Whether `commit` is in the history of `of`. Read from the merge base because `merge-base
+ * --is-ancestor` answers through its exit code alone, which simple-git does not reject on.
+ */
+async function isAncestor(git: SimpleGit, commit: string, of: string): Promise<boolean> {
+    return (await git.raw(['merge-base', commit, of])).trim() === commit;
+}

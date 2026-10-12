@@ -35,7 +35,8 @@ export interface RefreshMainAfterSubmoduleMergeParams {
     refreshedSubmodulePaths: string[];
 
     /**
-     * Base branch of the main repository (e.g. 'main').
+     * The branch the task lands on, merged into the main task branch in step 1 — the trunk, or
+     * `release` for a hotfix that keeps its pins (never the trunk then: see `getLandingTrunk`).
      */
     baseBranch: string;
 

@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/eslint",
-    "version": "0.14.0",
+    "version": "0.15.0",
     "description": "Shared Vue ESLint config and oxlint rule preset (framework)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

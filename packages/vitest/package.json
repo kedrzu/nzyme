@@ -38,7 +38,7 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "@vitest/expect": "4.1.10",
+        "@vitest/expect": "5.0.3",
         "date-fns": "4.4.0",
         "vitest": "4.1.10"
     },

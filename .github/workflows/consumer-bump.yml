@@ -17,11 +17,13 @@ name: Bump nzyme
 #       with:
 #         cli-version: <version>
 #         auto-merge: true
+#         refresh-lockfile: true
 #       secrets:
 #         token: ${{ secrets.NZYME_BUMP_TOKEN }}
 #
 # Runs the CLI from npm (`@nzyme/cli`) at the exact `cli-version` given (`submodule bump` exists
-# from the first release that contains it). The product token is kept out of that step.
+# from the first release that contains it). The product token is kept out of that step and out of
+# the lockfile refresh.
 
 on:
   workflow_call:
@@ -50,6 +52,13 @@ on:
         description: Path of the nzyme submodule in the product repository.
         type: string
         default: nzyme
+      refresh-lockfile:
+        description: >-
+          Regenerate the product's `bun.lock` for the new submodule tree and commit it with the bump,
+          for products whose workspaces include the submodule's packages. Without it the bump moves
+          only the gitlink and leaves the lock stale.
+        type: boolean
+        default: false
       cli-version:
         description: >-
           Exact version of `@nzyme/cli` to run, e.g. `1.2.3` — no dist-tag or range. The job holds
@@ -111,6 +120,22 @@ jobs:
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
             echo "sha=$(git -C "$SUBMODULE_PATH" rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      # `bun.lock` records every workspace package's version and dependencies, and
+      # `bun install --frozen-lockfile` does not notice when only a workspace version moved — so a
+      # gitlink-only bump leaves a stale lock that the next developer's install rewrites inside an
+      # unrelated PR. `--lockfile-only` resolves from registry metadata and installs nothing, and
+      # `--ignore-scripts` runs no lifecycle script, so no package code runs here; the token is not
+      # in this step either way. Bun is the product's `packageManager` version (setup-bun's default).
+      # A failing install fails the job, so no PR carries a broken lock.
+      - name: Refresh the lockfile
+        if: steps.bump.outputs.changed == 'true' && inputs.refresh-lockfile
+        run: |
+          bun install --lockfile-only --ignore-scripts
+          if ! git diff --quiet -- bun.lock; then
+            git add bun.lock
+            printf '\n%s\n' "\`bun.lock\` refreshed for the new nzyme tree." >> "$RUNNER_TEMP/bump.md"
           fi
 
       # Already at the source, e.g. bumped by hand meanwhile: a PR left open from an earlier run

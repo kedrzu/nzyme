@@ -68,6 +68,7 @@ jobs:
       base-branch: main
       cli-version: <version>
       auto-merge: true
+      refresh-lockfile: true
     secrets:
       token: ${{ secrets.NZYME_BUMP_TOKEN }}
 ```
@@ -79,6 +80,15 @@ range): the job holds the product's write token, so a moving tag would run whate
 next with it. `submodule bump` exists from the first release that contains it. The same command
 runs locally:
 `bunx @nzyme/cli submodule bump --source origin/main` stages the move and prints the summary.
+
+Set `refresh-lockfile` when the product's workspaces include `nzyme/packages/*`. `bun.lock` records
+each workspace package's version and dependencies, so a bump that moves only the gitlink leaves it
+stale, and `bun install --frozen-lockfile` does not catch it when only workspace versions moved. The
+next developer's install then rewrites the lock inside an unrelated PR, and a bump that adds an
+external dependency fails the product's frozen install outright. With the input set, the bump
+runs `bun install --lockfile-only --ignore-scripts` (no package code runs, and the token is not in
+that step) and commits the regenerated `bun.lock` with the gitlink; a failing install fails the job
+and opens no PR.
 
 Working on nzyme from inside the product does not change this: the nzyme change is a PR to nzyme,
 and the product's PR pins the merged commit (or the bump picks it up).

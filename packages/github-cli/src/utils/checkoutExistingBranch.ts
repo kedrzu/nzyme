@@ -16,6 +16,8 @@ import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { handlePullWithRebase } from './handlePullWithRebase.js';
 import { applyNamedStash, pushNamedStash } from './namedStash.js';
+import type { SubmoduleBase } from './resolveSubmoduleBase.js';
+import { describeSubmodulePin } from './resolveSubmoduleBase.js';
 import { resolveSubmoduleBranch } from './resolveSubmoduleBranch.js';
 
 /**
@@ -48,20 +50,13 @@ export interface CheckoutExistingBranchParams {
     githubConfig?: GithubConfig;
 
     /**
-     * The branch fast-forwarded in each submodule and, when a submodule's gitlink SHA resolves to
-     * a base branch (see {@link baseBranches}), the one it is checked out onto (optional).
+     * What the submodules follow - see `resolveSubmoduleBase`. Following the trunk, each
+     * submodule's trunk is fast-forwarded and a submodule whose gitlink SHA resolves onto it is
+     * checked out there. Pinned, each submodule is checked out at exactly the commit the branch's
+     * gitlink records, and no base is fast-forwarded. Either way its `trunk` is what a submodule's
+     * branch is classified against while judging its readiness.
      */
-    baseBranch?: string;
-
-    /**
-     * The caller project's base branches, used to classify a submodule's resolved branch and to
-     * judge its readiness - see `assertSubmoduleReady`/`resolveSubmoduleBranch`. Supplied by the
-     * caller: this package is generic and must never hardcode a project's own branch naming.
-     * Required rather than defaulted: an empty list classifies every base branch as a task branch,
-     * so a caller that omits it gets a checkout that refuses or resolves ambiguously - a silence
-     * the type checker has to be able to catch.
-     */
-    baseBranches: string[];
+    submoduleBase: SubmoduleBase;
 
     /**
      * Whether nobody is available to answer a question.
@@ -98,14 +93,9 @@ interface CheckoutSubmoduleBranchParams {
     logger: Logger;
 
     /**
-     * See `CheckoutExistingBranchParams.baseBranch`.
+     * See `CheckoutExistingBranchParams.submoduleBase`.
      */
-    baseBranch?: string;
-
-    /**
-     * See `CheckoutExistingBranchParams.baseBranches`.
-     */
-    baseBranches: string[];
+    submoduleBase: SubmoduleBase;
 
     /**
      * See `CheckoutExistingBranchParams.unattended`.
@@ -258,7 +248,7 @@ export async function checkoutExistingBranch(params: CheckoutExistingBranchParam
  * Checkout matching branches in submodules if they exist.
  */
 async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise<void> {
-    const { logger, githubClient, githubConfig, baseBranch, baseBranches, unattended } = params;
+    const { logger, githubClient, githubConfig, submoduleBase, unattended } = params;
 
     // Only process submodules if GitHub client and config are provided
     if (!githubClient || !githubConfig) {
@@ -278,6 +268,10 @@ async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise
             `📦 Found ${chalk.yellow(submodules.length.toString())} submodule${submodules.length === 1 ? '' : 's'}`,
         );
 
+        if (submoduleBase.kind === 'pin') {
+            logger.info(describeSubmodulePin(submoduleBase));
+        }
+
         // Process each submodule
         for (const submodule of submodules) {
             try {
@@ -286,8 +280,7 @@ async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise
                     githubClient,
                     githubConfig,
                     logger,
-                    baseBranch,
-                    baseBranches,
+                    submoduleBase,
                     unattended,
                 });
             } catch (error) {
@@ -320,11 +313,13 @@ async function checkoutSubmodules(params: CheckoutExistingBranchParams): Promise
 
 /**
  * Checkout the branch a submodule's gitlink SHA resolves to, guarding it with
- * {@link assertSubmoduleReady} first. Also fetches and fast-forwards the base branch to keep it up
- * to date.
+ * {@link assertSubmoduleReady} first. Also fetches and fast-forwards the trunk to keep it up to
+ * date. A pinned submodule is instead checked out at the gitlink SHA itself, and its trunk is left
+ * as it is.
  */
 async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): Promise<void> {
-    const { submodule, githubClient, githubConfig, logger, baseBranch, baseBranches, unattended } = params;
+    const { submodule, githubClient, githubConfig, logger, submoduleBase, unattended } = params;
+    const { trunk } = submoduleBase;
 
     // Parse the submodule URL to get owner and repo
     const submoduleGithubConfig = getSubmoduleGithubConfig(submodule.url, githubConfig.token);
@@ -336,22 +331,24 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
     }
 
     const submoduleGit = simpleGit({ baseDir: submodule.path });
-    const onBaseBranch = !submodule.detached && submodule.currentBranch === baseBranch;
+    const onTrunk = !submodule.detached && submodule.currentBranch === trunk;
 
     // `resolveSubmoduleBranch` below (and `assertSubmoduleReady`'s own detached-HEAD resolution)
-    // runs `git branch -r --contains <sha>` over every remote-tracking ref, not only the base
-    // branch fast-forwarded next - the target commit may sit on a task branch this checkout has
-    // never fetched before. Only a full fetch guarantees it is visible.
+    // runs `git branch -r --contains <sha>` over every remote-tracking ref, not only the trunk
+    // fast-forwarded next - the target commit may sit on a task branch this checkout has never
+    // fetched before. Only a full fetch guarantees it is visible, and it is also what makes a pinned
+    // commit available to check out. It moves remote-tracking refs only, never a branch.
     await submoduleGit.fetch('origin');
 
-    // Skipped while already checked out on `baseBranch`: `update-ref` inside
+    // Skipped while already checked out on the trunk: `update-ref` inside
     // `fetchAndFastForwardSubmoduleBaseBranch` moves the branch pointer without touching the
     // working tree, and moving the ref out from under the branch that is currently active would
     // desync HEAD from the checkout - `git status` would then read every file changed between the
     // two commits as an edit nobody made. `checkoutSubmoduleOntoBase` below brings this case up to
     // date safely instead, with a real merge that updates the working tree along with the ref.
-    if (baseBranch && !onBaseBranch) {
-        await fetchAndFastForwardSubmoduleBaseBranch(submoduleGit, submodule.name, baseBranch, logger);
+    // Skipped entirely while pinned: the submodule does not follow any base then.
+    if (submoduleBase.kind === 'trunk' && !onTrunk) {
+        await fetchAndFastForwardSubmoduleBaseBranch(submoduleGit, submodule.name, trunk, logger);
     }
 
     // A submodule carrying uncommitted or unpushed work must never be moved out from under whoever
@@ -359,7 +356,7 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
     // human present being mid-flight in a submodule is ordinary, so it is only reported and the
     // submodule is left exactly where it is - the same shape `judgeSubmodule` uses in `syncAllRepos`.
     try {
-        await assertSubmoduleReady({ submodule, baseBranches, githubClient, githubConfig: submoduleGithubConfig });
+        await assertSubmoduleReady({ submodule, trunk, githubClient, githubConfig: submoduleGithubConfig });
     } catch (error) {
         if (unattended || !(error instanceof UsageError)) {
             throw error;
@@ -376,15 +373,20 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
     // terser equivalent of `verify-submodule-refs.ts`'s `getSubmoduleCommit` (`ls-tree HEAD <path>`).
     const gitlinkSha = (await simpleGit().raw(['rev-parse', `HEAD:${submodule.path}`])).trim();
 
+    if (submoduleBase.kind === 'pin') {
+        await checkoutSubmoduleOntoPin({ submoduleGit, submodule, gitlinkSha, logger });
+        return;
+    }
+
     const resolved = await resolveSubmoduleBranch({
         git: submoduleGit,
         sha: gitlinkSha,
-        baseBranches,
+        trunk,
         repoDisplayName: submodule.name,
     });
 
     if (resolved.kind === 'base') {
-        await checkoutSubmoduleOntoBase({ submoduleGit, submodule, baseBranch, logger });
+        await checkoutSubmoduleOntoBase({ submoduleGit, submodule, baseBranch: trunk, logger });
         return;
     }
 
@@ -406,10 +408,9 @@ interface CheckoutSubmoduleOntoBaseParams {
     submodule: SubmoduleInfo;
 
     /**
-     * The branch to park the submodule on. `undefined` only when the caller never supplied one, in
-     * which case there is nowhere to move the submodule to.
+     * The branch to park the submodule on — the trunk.
      */
-    baseBranch: string | undefined;
+    baseBranch: string;
 
     /**
      * Logger instance.
@@ -430,11 +431,6 @@ async function checkoutSubmoduleOntoBase(params: CheckoutSubmoduleOntoBaseParams
     const { submoduleGit, submodule, baseBranch, logger } = params;
     const displayName = chalk.magenta(submodule.name);
 
-    if (!baseBranch) {
-        logger.info(`📝 Submodule ${displayName} belongs on a base branch, but none was supplied - leaving it as is`);
-        return;
-    }
-
     if (!submodule.detached && submodule.currentBranch === baseBranch) {
         try {
             await submoduleGit.raw(['merge', '--ff-only', `origin/${baseBranch}`]);
@@ -452,6 +448,54 @@ async function checkoutSubmoduleOntoBase(params: CheckoutSubmoduleOntoBaseParams
     logger.info(`🔄 Checking out ${chalk.cyan(baseBranch)} in submodule ${displayName}...`);
     await checkoutLocalBranch(submoduleGit, baseBranch);
     logger.info(`✅ Submodule ${displayName} checked out on ${chalk.cyan(baseBranch)}`);
+}
+
+/**
+ * Inputs to {@link checkoutSubmoduleOntoPin}.
+ */
+interface CheckoutSubmoduleOntoPinParams {
+    /**
+     * Git instance scoped to the submodule working tree, with `origin` already fully fetched.
+     */
+    submoduleGit: SimpleGit;
+
+    /**
+     * The submodule being moved, as captured before this checkout began.
+     */
+    submodule: SubmoduleInfo;
+
+    /**
+     * The commit the checked-out main-repository branch records for this submodule.
+     */
+    gitlinkSha: string;
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+}
+
+/**
+ * Put a pinned submodule on exactly the commit its gitlink records — what `git submodule update`
+ * does — so the branch builds what it pins and a later push has no moved gitlink to commit.
+ *
+ * Already on that commit, attached or not, it is left alone. Anywhere else a detached checkout is
+ * safe: `assertSubmoduleReady` has already refused uncommitted or unpushed work, and the branch it
+ * leaves keeps its own ref.
+ */
+async function checkoutSubmoduleOntoPin(params: CheckoutSubmoduleOntoPinParams): Promise<void> {
+    const { submoduleGit, submodule, gitlinkSha, logger } = params;
+    const displayName = chalk.magenta(submodule.name);
+    const shortSha = gitlinkSha.slice(0, 7);
+
+    if ((await submoduleGit.revparse(['HEAD'])).trim() === gitlinkSha) {
+        logger.info(`✅ Submodule ${displayName} is on its pinned commit ${chalk.cyan(shortSha)}`);
+        return;
+    }
+
+    logger.info(`📌 Checking out pinned commit ${chalk.cyan(shortSha)} in submodule ${displayName}...`);
+    await submoduleGit.checkout(['--detach', gitlinkSha]);
+    logger.info(`✅ Submodule ${displayName} is on its pinned commit ${chalk.cyan(shortSha)}`);
 }
 
 /**

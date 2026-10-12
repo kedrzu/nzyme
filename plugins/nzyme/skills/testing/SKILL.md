@@ -4,9 +4,12 @@ description: >-
     Deciding whether a test is worth writing and writing it well in projects built on @nzyme — the
     test-worthiness gate, the anti-signal catalog of tests that look like coverage but prove nothing,
     bun:test conventions, wiring units with createTestContainer from @nzyme/ioc-testing and container.set
-    overrides, captured logs, assertion typing, and the @nzyme/vitest matchers. Use when writing,
-    reviewing or debugging a unit or integration test (`*.test.ts`) for code that uses @nzyme/ioc or
-    other @nzyme packages, or when deciding whether a change needs a test at all.
+    overrides, the mocking policy, captured logs, assertion typing, the @nzyme/vitest matchers, Vue
+    component tests in Vitest browser mode over Storybook composeStories, Playwright e2e specs
+    (component harnesses, selectors, parallel-safe data), and the boundary between e2e and component
+    tests. Use when writing, reviewing or debugging a unit, integration, component or e2e test, or when
+    deciding whether a change needs a test and which kind. Not for: writing the Storybook stories
+    themselves, or running a project's full verification protocol (its verify skill).
 ---
 
 # Testing
@@ -80,6 +83,12 @@ validation makes unreachable; restating a higher-level test one level lower.
 anything with injected deps → resolve it from `createTestContainer()` with the real collaborators. Use
 the cheapest harness that catches the regression.
 
+**Component vs e2e** — one Vue component's behavior (validation, conditional rendering, focus, emits,
+loading states) → a component test in Vitest browser mode, mounted from its stories
+(`references/component-tests.md`). A journey a user performs across the UI and the backend (CRUD
+lifecycles, multi-page flows, auth and role boundaries) → a Playwright e2e spec (`references/e2e.md`).
+The checklist, and why a rule is not re-checked in both layers: `references/e2e-vs-component.md`.
+
 ## bun:test conventions
 
 - Import from `bun:test`: `import { expect, mock, test } from 'bun:test'` (`vi` exists too, for Jest-style
@@ -120,6 +129,11 @@ test('creates the product and returns its id', async () => {
   (env variables, `Fetch`) — see the ioc skill.
 - **Don't mock internal services and commands** — resolve the real ones; mock only the true outside
   world (third-party APIs, clocks). A mocked integration test passes while the real wiring is broken.
+- **Fidelity follows the subject under test.** Run for real whatever the test asserts on. A heavy side
+  effect that fixture *setup* drags in and the test never asserts on (a fixture that also provisions an
+  identity-provider user, say) is not the subject: switch it off through the opt-out the effect itself
+  exposes, never by mocking the internal command that performs it. This covers setup side effects only,
+  never the logic the test exists to exercise.
 - **Never mock the logger** — `createTestContainer()` already captures every entry in `logs`; outside a
   container use `createTestLogger(name)` from `@nzyme/logging/createTestLogger.js`.
 - **No process-wide mutation** — not `process.env` (set `EnvVariables` in the container), not module
@@ -128,7 +142,8 @@ test('creates the product and returns its id', async () => {
   leaks into every other test file. Prefer container overrides; if you must mock a module, run the full
   suite afterwards.
 - **Collision-free input instead of cleanup** — generate unique ids per test rather than deleting data in
-  `afterEach`; never assert on "everything" in shared state, only on what this test created.
+  `afterEach`. Never query all rows and assert on them or their count: tests run in parallel against the
+  same store, so query by the ids this test created.
 - **Never gate a test on infrastructure with `test.skip`** — it silently hides the test whenever the
   infra is missing. Let it fail loudly.
 - **A mock that needs a builder chain is a design signal** — when stubbing means recreating
@@ -149,3 +164,9 @@ by a `date-fns` duration.
   guard, identity not position, exact values, payload not call, `rejects` for errors.
 - `references/assertions.md` — assertion typing: typed `const` expectations, which matcher, typed mock
   returns, no `as never`, `!` in tests, typed `objectContaining`.
+- `references/component-tests.md` — Vitest browser mode with `composeStories`: running stories,
+  `userEvent`, `expect.element`, `page.viewport`, overriding args.
+- `references/e2e.md` — Playwright: component harnesses, selectors that survive the build, parallel-safe
+  data, helpers, journeys, reading failures.
+- `references/e2e-vs-component.md` — what belongs in an e2e journey vs a component test, and not
+  duplicating a check across layers.

@@ -13,7 +13,7 @@ import { assertSubmoduleReady } from './assertSubmoduleReady.js';
 import type { GithubClient } from './createGithubClient.js';
 import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 
-const BASE_BRANCHES = ['main'];
+const TRUNK = 'main';
 const GITHUB_CONFIG: GithubConfig = { owner: 'acme', repo: 'sub', token: 'ghp_test' };
 
 /**
@@ -155,7 +155,7 @@ test('an attached HEAD on a base branch, clean, is ready without any GitHub call
 
     const readiness = await assertSubmoduleReady({
         submodule,
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
         githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,
     });
@@ -174,7 +174,7 @@ test('an attached HEAD on a task branch with unpushed commits is refused', async
 
     const failure = assertSubmoduleReady({
         submodule,
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
         githubClient: createPrClient([]),
         githubConfig: GITHUB_CONFIG,
     });
@@ -189,7 +189,7 @@ test('an attached HEAD on a task branch with no open pull request is refused', a
 
     const failure = assertSubmoduleReady({
         submodule,
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
         githubClient: createPrClient([]),
         githubConfig: GITHUB_CONFIG,
     });
@@ -204,7 +204,7 @@ test('an attached HEAD on a task branch with an open pull request is ready', asy
 
     const readiness = await assertSubmoduleReady({
         submodule,
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
         githubClient: createPrClient([{ number: 7, branch: 'feat/thing', state: 'open' }]),
         githubConfig: GITHUB_CONFIG,
     });
@@ -218,7 +218,7 @@ test('an attached HEAD on a task branch whose pull request already merged is par
 
     const readiness = await assertSubmoduleReady({
         submodule,
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
         githubClient: createPrClient([{ number: 7, branch: 'feat/thing', state: 'closed', mergedAt: '2026-01-01' }]),
         githubConfig: GITHUB_CONFIG,
     });
@@ -233,7 +233,7 @@ test('a detached HEAD whose commit is reachable only from base resolves to ready
 
     const readiness = await assertSubmoduleReady({
         submodule,
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
         githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,
     });
@@ -250,7 +250,7 @@ test('a detached HEAD on a base commit that task branches also contain resolves 
 
     const readiness = await assertSubmoduleReady({
         submodule,
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
         githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,
     });
@@ -265,7 +265,7 @@ test('a detached HEAD whose commit is reachable from exactly one task branch res
 
     const failure = assertSubmoduleReady({
         submodule,
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
         githubClient: createPrClient([]),
         githubConfig: GITHUB_CONFIG,
     });
@@ -284,7 +284,7 @@ test('a detached HEAD whose commit is reachable from two task branches propagate
 
     const failure = assertSubmoduleReady({
         submodule,
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
         githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,
     });
@@ -306,7 +306,7 @@ test('a detached HEAD whose commit is on no remote branch at all is refused, not
 
     const failure = assertSubmoduleReady({
         submodule,
-        baseBranches: BASE_BRANCHES,
+        trunk: TRUNK,
         githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,
     });

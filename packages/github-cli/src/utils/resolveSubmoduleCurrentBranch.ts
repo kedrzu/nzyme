@@ -16,11 +16,9 @@ export interface ResolveSubmoduleCurrentBranchParams {
     submodule: SubmoduleInfo;
 
     /**
-     * Branches that count as "base" for the caller's project — see
-     * `ResolveSubmoduleBranchParams.baseBranches`. Supplied by the caller: this package is generic
-     * and must never hardcode a project's own branch naming.
+     * The caller project's trunk — see `PickSubmoduleBranchParams.trunk`.
      */
-    baseBranches: string[];
+    trunk: string;
 }
 
 /**
@@ -36,14 +34,14 @@ export interface ResolveSubmoduleCurrentBranchParams {
  * Never treats a detached HEAD as "nothing to look up" — a submodule resting on a task branch this
  * checkout has not fetched yet would otherwise silently read as having no pull request, which is
  * exactly the regression this function exists to prevent.
- * @param params The submodule to resolve, plus the caller's base branches.
+ * @param params The submodule to resolve, plus the caller's trunk.
  * @returns `base` when the submodule carries no task-specific work right now, or `branch` naming
  * the branch its pull request (if any) lives on.
  */
 export async function resolveSubmoduleCurrentBranch(
     params: ResolveSubmoduleCurrentBranchParams,
 ): Promise<ResolveSubmoduleBranchResult> {
-    const { submodule, baseBranches } = params;
+    const { submodule, trunk } = params;
 
     if (!submodule.detached) {
         const branchName = assertValue(
@@ -51,7 +49,7 @@ export async function resolveSubmoduleCurrentBranch(
             `${submodule.name} is not detached but reports no current branch`,
         );
 
-        if (baseBranches.includes(branchName)) {
+        if (branchName === trunk) {
             return { kind: 'base' };
         }
 
@@ -62,5 +60,5 @@ export async function resolveSubmoduleCurrentBranch(
     await git.fetch('origin');
     const sha = (await git.revparse(['HEAD'])).trim();
 
-    return resolveSubmoduleBranch({ git, sha, baseBranches, repoDisplayName: submodule.name });
+    return resolveSubmoduleBranch({ git, sha, trunk, repoDisplayName: submodule.name });
 }

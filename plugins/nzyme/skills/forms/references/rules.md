@@ -1,5 +1,7 @@
 # Shared validation rules
 
+Why rules are a node visitor shared by the backend and `useRules`, and the trade-offs: nzyme's `docs/decisions/shared-validation-rules-node-visitor.md` ([on GitHub](https://github.com/kedrzu/nzyme/blob/main/docs/decisions/shared-validation-rules-node-visitor.md)).
+
 ## Rule or field validator?
 
 |Situation|Use|

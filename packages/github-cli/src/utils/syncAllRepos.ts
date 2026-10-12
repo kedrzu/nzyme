@@ -25,6 +25,8 @@ import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { handleMergeConflict } from './handleMergeConflict.js';
 import { pushSubmoduleUpdates } from './pushSubmoduleUpdates.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
+import type { SubmoduleBase } from './resolveSubmoduleBase.js';
+import { describeSubmodulePin } from './resolveSubmoduleBase.js';
 import { switchDetachedSubmoduleToBaseBranch } from './switchDetachedSubmoduleToBaseBranch.js';
 
 /**
@@ -40,19 +42,18 @@ export interface SyncAllReposParams {
     branch: string;
 
     /**
-     * The branch to merge **from** (e.g. 'main'), and the one fast-forwarded in every repository.
-     * On a stacked task this is deliberately the parent node's branch rather than the project
-     * trunk, so it is not a reliable answer to "is this a base branch" — see {@link baseBranches}.
+     * The branch the main repository merges **from** (e.g. 'main') and fast-forwards. On a stacked
+     * task this is deliberately the parent node's branch rather than the project trunk, so it says
+     * nothing about the submodules — see {@link submoduleBase}.
      */
     baseBranch: string;
 
     /**
-     * The caller project's base branches, used **only** to classify what a submodule is sitting on.
-     * Kept apart from {@link baseBranch} because that one is a merge source: on a stacked task it
-     * is a node branch, so classifying against it would read a submodule resting on the trunk as
-     * task work and push to it.
+     * What the submodules follow — see `resolveSubmoduleBase`. Following the trunk, each submodule
+     * is classified against it and fetched, parked, fast-forwarded and merged against it, and the
+     * resulting gitlinks are committed. Pinned, no submodule is touched at all.
      */
-    baseBranches: string[];
+    submoduleBase: SubmoduleBase;
 
     /**
      * Whether nobody can be asked a question — see `decideUnattendedMode`. A dirty submodule is
@@ -113,7 +114,7 @@ export interface SyncedSubmoduleInfo {
  */
 export interface SyncAllReposResult {
     /**
-     * All synced submodule info.
+     * All synced submodule info — empty when the submodules stay on their pin.
      */
     submodules: SyncedSubmoduleInfo[];
 
@@ -134,7 +135,8 @@ export interface SyncAllReposResult {
 }
 
 /**
- * Synchronize all repositories (main + submodules):
+ * Synchronize all repositories (main + submodules). Steps 2–7 touch a submodule only while it
+ * follows the trunk (`submoduleBase`); pinned, it stays exactly where its gitlink says:
  * 1. Detect submodules
  * 2. Commit pending changes — the main repository automatically, each submodule only by asking its
  *    own question (or, unattended, by refusing) — then judge every submodule's readiness
@@ -151,13 +153,14 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     const {
         branch: mainBranch,
         baseBranch,
-        baseBranches,
+        submoduleBase,
         unattended,
         githubClient,
         githubConfig,
         logger,
         defaultCommitMessage = 'Work in progress',
     } = params;
+    const followsTrunk = submoduleBase.kind === 'trunk';
     // Disable submodule recursion for main-repo history operations: we manage every submodule's
     // working tree explicitly below. Left on, git would try to auto-fetch submodule gitlink commits
     // by SHA during rebase/merge — which real remotes reject — and check out submodule trees at
@@ -182,12 +185,15 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
 
     let anyCommitted = false;
 
+    // A pinned submodule's gitlink is left out of the commit: wherever its checkout sits — a stale
+    // commit, another branch's — committing it would re-point the pin.
     await mainGuard.beforeWrite();
     const mainCommit = await autoCommitChanges({
         logger,
         git: mainGit,
         repoDisplayName: 'main repository',
         commitMessage: defaultCommitMessage,
+        excludedPaths: followsTrunk ? [] : submoduleInfos.map(submodule => submodule.path),
     });
     if (mainCommit.committed) {
         anyCommitted = true;
@@ -197,7 +203,8 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     // its own commit conventions, so a message generated for this repository's task has no business
     // in its history — and an auto-commit is an unasked-for write to someone else's repo. A human
     // gets asked instead; unattended, the readiness check below refuses and says what to do.
-    const anySubmoduleCommitted = await commitSubmoduleChanges({ submodules: submoduleInfos, unattended, logger });
+    const anySubmoduleCommitted =
+        followsTrunk && (await commitSubmoduleChanges({ submodules: submoduleInfos, unattended, logger }));
     if (anySubmoduleCommitted) {
         anyCommitted = true;
     }
@@ -210,14 +217,22 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     // are now stale, and readiness is judged from exactly those fields.
     const resolvedSubmodules = anySubmoduleCommitted ? await getSubmoduleInfo() : submoduleInfos;
 
-    const syncedSubmodules = await classifySubmodules({
-        submodules: resolvedSubmodules,
-        baseBranches,
-        unattended,
-        githubClient,
-        githubConfig,
-        logger,
-    });
+    // A pinned submodule is left out of every phase below, so none of them can fetch, park,
+    // fast-forward or merge a base inside it, or commit a gitlink it moved.
+    if (submoduleBase.kind === 'pin' && resolvedSubmodules.length > 0) {
+        logger.info(`   ${describeSubmodulePin(submoduleBase)}`);
+    }
+
+    const syncedSubmodules = followsTrunk
+        ? await classifySubmodules({
+              submodules: resolvedSubmodules,
+              trunk: submoduleBase.trunk,
+              unattended,
+              githubClient,
+              githubConfig,
+              logger,
+          })
+        : [];
 
     // === Phase 3: Fetch all repos in parallel ===
     logger.info('');
@@ -236,7 +251,7 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     //   - origin/<mainBranch> is ahead of local <mainBranch> (Phase 4 rebase), OR
     //   - origin/<base> is ahead of <mainBranch> (Phase 7 base merge).
     // When neither holds, no foreign gitlinks get replayed, so each submodule only needs its own
-    // current branch (for the rebase/pull/detached-parking in Phase 4) plus the base branch (for the
+    // current branch (for the rebase/pull/detached-parking in Phase 4) plus the trunk (for the
     // Phase 5/6 fast-forward + merge) — a much cheaper targeted fetch on large submodules.
     const mainNeedsIntegration =
         (await countCommitsAhead(mainGit, mainBranch, `origin/${mainBranch}`)) > 0 ||
@@ -257,9 +272,9 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
             );
         } else {
             // Targeted fetch: only this submodule's current branch (null/detached → fetchSafe no-ops)
-            // and the base branch are needed for Phase 4-6.
+            // and the trunk are needed for Phase 4-6.
             fetchPromises.push(fetchSafe(subGit, 'origin', synced.submodule.currentBranch));
-            fetchPromises.push(fetchSafe(subGit, 'origin', baseBranch));
+            fetchPromises.push(fetchSafe(subGit, 'origin', submoduleBase.trunk));
         }
     }
 
@@ -282,11 +297,11 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
         if (synced.isOnTaskBranch) {
             await rebaseAndPushCurrentBranch(subGit, logger, subName);
         } else if (synced.isDetached) {
-            // Park detached submodules on the (up-to-date) base branch so the upcoming gitlink
-            // merges in the main repo stay clean fast-forwards. Already fetched in Phase 3.
+            // Park detached submodules on the (up-to-date) trunk so the upcoming gitlink merges in
+            // the main repo stay clean fast-forwards. Already fetched in Phase 3.
             await switchDetachedSubmoduleToBaseBranch({
                 git: subGit,
-                baseBranch,
+                baseBranch: submoduleBase.trunk,
                 logger,
                 repoDisplayName: subName,
             });
@@ -304,7 +319,7 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     for (const synced of syncedSubmodules) {
         if (synced.isOnTaskBranch) {
             const subGit = simpleGit({ baseDir: synced.submodule.path });
-            await fastForwardBranch(subGit, baseBranch, logger, chalk.magenta(synced.submodule.name));
+            await fastForwardBranch(subGit, submoduleBase.trunk, logger, chalk.magenta(synced.submodule.name));
         }
     }
 
@@ -315,15 +330,19 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
         logger.info('');
         logger.info(chalk.bold('🔀 Merging base branch into submodules...'));
 
-        await mergeBaseIntoSubmodules(taskBranchSubmodules, baseBranch, logger);
+        await mergeBaseIntoSubmodules(taskBranchSubmodules, submoduleBase.trunk, logger);
     }
 
     // === Phase 7: Commit & push all submodule reference updates ===
     // Submodule refs may change from Phase 4 (rebase/pull) or Phase 6 (merge).
-    // Detect and commit any changed gitlinks so the main repo stays clean.
-    logger.info('');
-    await mainGuard.beforeWrite();
-    await pushSubmoduleUpdates({ logger, beforePush: mainGuard.beforePush });
+    // Detect and commit any changed gitlinks so the main repo stays clean. Never while pinned: the
+    // phases above moved nothing, so a gitlink that differs here was moved by someone else, and
+    // committing it would re-point the pin.
+    if (followsTrunk) {
+        logger.info('');
+        await mainGuard.beforeWrite();
+        await pushSubmoduleUpdates({ logger, beforePush: mainGuard.beforePush });
+    }
 
     // === Phase 8: Merge base into main task branch + push ===
     logger.info('');
@@ -489,9 +508,9 @@ interface ClassifySubmodulesParams {
     submodules: SubmoduleInfo[];
 
     /**
-     * The caller project's base branches — see `SyncAllReposParams.baseBranches`.
+     * The trunk the submodules follow — see `SyncAllReposParams.submoduleBase`.
      */
-    baseBranches: string[];
+    trunk: string;
 
     /**
      * Whether nobody can be asked — see `SyncAllReposParams.unattended`.
@@ -517,18 +536,18 @@ interface ClassifySubmodulesParams {
 /**
  * Judge every submodule's readiness and turn the verdicts into the classification the rest of the
  * sync runs on.
- * @param params The submodules to judge, plus the base branches, mode and GitHub access.
+ * @param params The submodules to judge, plus the trunk, mode and GitHub access.
  * @returns One entry per submodule, in the order they were detected.
  */
 async function classifySubmodules(params: ClassifySubmodulesParams): Promise<SyncedSubmoduleInfo[]> {
-    const { submodules, baseBranches, unattended, githubClient, githubConfig, logger } = params;
+    const { submodules, trunk, unattended, githubClient, githubConfig, logger } = params;
 
     const classified: SyncedSubmoduleInfo[] = [];
 
     for (const submodule of submodules) {
         const readiness = await judgeSubmodule({
             submodule,
-            baseBranches,
+            trunk,
             unattended,
             githubClient,
             githubConfig,
@@ -541,7 +560,7 @@ async function classifySubmodules(params: ClassifySubmodulesParams): Promise<Syn
                 readiness,
                 currentBranch: submodule.currentBranch,
                 detached: submodule.detached,
-                baseBranches,
+                trunk,
             }),
             isDetached: submodule.detached,
         });
@@ -560,9 +579,9 @@ interface JudgeSubmoduleParams {
     submodule: SubmoduleInfo;
 
     /**
-     * The caller project's base branches — see `SyncAllReposParams.baseBranches`.
+     * The trunk the submodules follow — see `SyncAllReposParams.submoduleBase`.
      */
-    baseBranches: string[];
+    trunk: string;
 
     /**
      * Whether nobody can be asked — see `SyncAllReposParams.unattended`.
@@ -593,11 +612,11 @@ interface JudgeSubmoduleParams {
  * With a human present the same refusal is a warning — being mid-flight in a submodule is a normal
  * thing for a person to be, so the sync carries on and simply treats the submodule as not carrying
  * task work, which keeps it out of the one step that would push to it.
- * @param params The submodule to judge, plus the base branches, mode and GitHub access.
+ * @param params The submodule to judge, plus the trunk, mode and GitHub access.
  * @returns The verdict, or `null` when none could be reached.
  */
 async function judgeSubmodule(params: JudgeSubmoduleParams): Promise<SubmoduleReadiness | null> {
-    const { submodule, baseBranches, unattended, githubClient, githubConfig, logger } = params;
+    const { submodule, trunk, unattended, githubClient, githubConfig, logger } = params;
 
     const submoduleConfig = getSubmoduleGithubConfig(submodule.url, githubConfig.token);
     if (!submoduleConfig) {
@@ -610,7 +629,7 @@ async function judgeSubmodule(params: JudgeSubmoduleParams): Promise<SubmoduleRe
     try {
         return await assertSubmoduleReady({
             submodule,
-            baseBranches,
+            trunk,
             githubClient,
             githubConfig: submoduleConfig,
         });

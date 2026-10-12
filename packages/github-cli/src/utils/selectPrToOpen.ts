@@ -61,11 +61,10 @@ export interface SelectPrToOpenParams {
     issueId: string;
 
     /**
-     * The caller project's base branches, used to resolve which branch a submodule's pull request
-     * lives on — see `ResolveSubmoduleCurrentBranchParams.baseBranches`. Supplied by the caller:
-     * this package is generic and must never hardcode a project's own branch naming.
+     * The caller project's trunk, used to resolve which branch a submodule's pull request lives on
+     * — see `ResolveSubmoduleCurrentBranchParams.trunk`.
      */
-    baseBranches: string[];
+    trunk: string;
 }
 
 /**
@@ -84,7 +83,7 @@ export interface OpenPrInBrowserParams extends SelectPrToOpenParams {
  * If only one PR is found, returns it without prompting.
  */
 export async function selectPrToOpen(params: SelectPrToOpenParams): Promise<PrInfo> {
-    const { githubClient, githubConfig, issueId, baseBranches } = params;
+    const { githubClient, githubConfig, issueId, trunk } = params;
 
     const availablePrs: PrInfo[] = [];
 
@@ -113,7 +112,7 @@ export async function selectPrToOpen(params: SelectPrToOpenParams): Promise<PrIn
             try {
                 // Resolved by branch (never skipped for a detached HEAD — see
                 // `resolveSubmoduleCurrentBranch`), not by issue ID.
-                const resolved = await resolveSubmoduleCurrentBranch({ submodule, baseBranches });
+                const resolved = await resolveSubmoduleCurrentBranch({ submodule, trunk });
                 const submodulePr =
                     resolved.kind === 'branch'
                         ? await findOpenPrForBranch(githubClient, submoduleConfig, resolved.name)

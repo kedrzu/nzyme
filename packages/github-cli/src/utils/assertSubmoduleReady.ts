@@ -24,11 +24,10 @@ export interface AssertSubmoduleReadyParams {
     submodule: SubmoduleInfo;
 
     /**
-     * Branches that count as "base" for the caller's project (e.g. `['main', 'release']`).
-     * Supplied by the caller — this package is generic and must never hardcode a project's own
-     * branch naming.
+     * The caller project's trunk — the only branch that counts as the submodule's base; see
+     * `PickSubmoduleBranchParams.trunk`.
      */
-    baseBranches: string[];
+    trunk: string;
 
     /**
      * GitHub client used to look up the submodule's own pull request when it is off a base
@@ -68,10 +67,10 @@ export interface AssertSubmoduleReadyParams {
  * submodule, its branch, and the remedy.
  */
 export async function assertSubmoduleReady(params: AssertSubmoduleReadyParams): Promise<SubmoduleReadiness> {
-    const { submodule, baseBranches, githubClient, githubConfig } = params;
+    const { submodule, trunk, githubClient, githubConfig } = params;
     const git = simpleGit({ baseDir: submodule.path });
 
-    const effective = await resolveEffectiveBranch({ git, submodule, baseBranches });
+    const effective = await resolveEffectiveBranch({ git, submodule, trunk });
     const pr = await resolvePrStatus({
         githubClient,
         githubConfig,
@@ -130,9 +129,9 @@ interface ResolveEffectiveBranchParams {
     submodule: SubmoduleInfo;
 
     /**
-     * The caller's base-branch list, forwarded to {@link resolveSubmoduleBranch}.
+     * The caller's trunk, forwarded to {@link resolveSubmoduleBranch}.
      */
-    baseBranches: string[];
+    trunk: string;
 }
 
 /**
@@ -142,7 +141,7 @@ interface ResolveEffectiveBranchParams {
  * resolving from its commit; see {@link resolveDetachedBranch}.
  */
 async function resolveEffectiveBranch(params: ResolveEffectiveBranchParams): Promise<EffectiveSubmoduleBranch> {
-    const { git, submodule, baseBranches } = params;
+    const { git, submodule, trunk } = params;
 
     if (!submodule.detached) {
         const branchName = assertValue(
@@ -152,26 +151,26 @@ async function resolveEffectiveBranch(params: ResolveEffectiveBranchParams): Pro
 
         return {
             branchName,
-            isBaseBranch: baseBranches.includes(branchName),
+            isBaseBranch: branchName === trunk,
             // `unpushedCommitsCount` is computed only when `currentBranch` is set (see
             // `getSubmoduleInfo`), which is exactly the branch of this `if` — safe to read here.
             hasUnpushedCommits: submodule.unpushedCommitsCount > 0,
         };
     }
 
-    return resolveDetachedBranch({ git, submodule, baseBranches });
+    return resolveDetachedBranch({ git, submodule, trunk });
 }
 
 /**
  * Resolve a detached HEAD's effective branch from its own commit, mirroring
  * {@link resolveSubmoduleBranch} but adding the one case that function cannot see by itself: a
  * commit on no remote branch at all. `resolveSubmoduleBranch` reports `{ kind: 'base' }` both when
- * the commit is on a base branch AND when it is on nothing whatsoever, so the unfiltered candidate
+ * the commit is on the trunk AND when it is on nothing whatsoever, so the unfiltered candidate
  * list is inspected here first, exactly the way
  * `parkSubmoduleOnBase`'s `isOnAnyRemoteBranch` guard does for the same reason.
  */
 async function resolveDetachedBranch(params: ResolveEffectiveBranchParams): Promise<EffectiveSubmoduleBranch> {
-    const { git, submodule, baseBranches } = params;
+    const { git, submodule, trunk } = params;
 
     const sha = (await git.revparse(['HEAD'])).trim();
     const rawOutput = await git.raw(['branch', '-r', '--contains', sha]);
@@ -187,7 +186,7 @@ async function resolveDetachedBranch(params: ResolveEffectiveBranchParams): Prom
     const verdict = await resolveSubmoduleBranch({
         git,
         sha,
-        baseBranches,
+        trunk,
         repoDisplayName: submodule.name,
     });
 
@@ -199,14 +198,9 @@ async function resolveDetachedBranch(params: ResolveEffectiveBranchParams): Prom
     }
 
     // `verdict.kind === 'base'`: `candidates` is non-empty (checked above) and
-    // `pickSubmoduleBranch` returns `base` for a non-empty candidate list only when a base branch
-    // is among them, so one is guaranteed to be found here.
-    const baseBranchName = assertValue(
-        candidates.find(candidate => baseBranches.includes(candidate)),
-        'unreachable: resolveSubmoduleBranch returned base, so a base-branch candidate must exist',
-    );
-
-    return { branchName: baseBranchName, isBaseBranch: true, hasUnpushedCommits: false };
+    // `pickSubmoduleBranch` returns `base` for a non-empty candidate list only when the trunk is
+    // among them.
+    return { branchName: trunk, isBaseBranch: true, hasUnpushedCommits: false };
 }
 
 /**
@@ -229,7 +223,7 @@ interface ResolvePrStatusParams {
     branchName: string | null;
 
     /**
-     * Whether `branchName` is one of the caller's base branches.
+     * Whether `branchName` is the caller's trunk.
      */
     isBaseBranch: boolean;
 }

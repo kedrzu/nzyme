@@ -51,9 +51,9 @@ exists for `git submodule update --remote`, not for identifying work in progress
   repos — a different shape of the same defect this change exists to remove — and it breaks the
   moment a human names a branch by hand.
 - **Option C — resolve from the gitlink SHA.** Ask the submodule which of its remote branches
-  contain the pinned commit, discard the base branches, and take what is left. Trade-off: no new
-  state and no coupling, but the answer can be ambiguous when several task branches contain the
-  same commit, and it needs the submodule fetched.
+  contain the pinned commit; the base branch among them means base, otherwise take the single task
+  branch left. Trade-off: no new state and no coupling, but the answer can be ambiguous when
+  several task branches contain the same off-base commit, and it needs the submodule fetched.
 
 ## Decision
 
@@ -62,8 +62,13 @@ making it the only link means there is nothing to keep in sync and nothing to ge
 mechanism is not speculative: CI has been resolving the submodule branch this way in production,
 and it is precisely the check that catches an unmerged submodule PR before a main PR lands.
 
-Ambiguity is a hard failure, not a guess. When more than one non-base branch contains the pinned
-commit, the tool raises a `UsageError` naming the candidates and stops. Resolving it by heuristic —
+A pinned commit that the base branch contains resolves to base, whatever else contains it. Every
+branch forked from base after that commit contains it too, so containment cannot tell "this commit
+belongs to branch X" from "branch X was forked later". Counting those branches as candidates made an
+untouched submodule pinned to its trunk unpushable as soon as two branches existed.
+
+Ambiguity is a hard failure, not a guess. When the pinned commit is off base and more than one
+branch contains it, the tool raises a `UsageError` naming the candidates and stops. Resolving it by heuristic —
 most recently updated, best name match — is how a tool silently pushes to the wrong branch.
 
 The base-branch list is a parameter supplied by the consuming project, never a constant inside
@@ -86,3 +91,28 @@ automatically and stops the command. That state is rare and is itself a symptom 
 
 We also accept that the submodule must be fetched before resolution answers correctly — the same
 precondition CI already carries.
+
+## Update 2026-10-12 — base is the product trunk, or the submodule stays on its pin
+
+The base a submodule is classified against is always the product's trunk: the first of the base
+branches the product configures. `pickSubmoduleBranch` compares the containing branches with that
+trunk alone. No other branch is ever a submodule base — neither the product's other base branches nor
+the submodule's own long-lived branches. nzyme's `release` is its npm release line, not a base.
+
+Each command now decides once what the submodules follow (`resolveSubmoduleBase`), from where the
+product pull request finally lands: its `base.ref`, or for a stack the base of the whole chain
+(`resolvePrSubmoduleBase`), never an upper node's parent branch.
+
+- **It lands on the trunk:** submodules follow the trunk as described above. They are fetched, parked,
+  fast-forwarded and merged against it, their pull requests target it, and a merge re-points the
+  gitlinks.
+- **It lands anywhere else** (a hotfix into a production branch, say): every command — switch, push,
+  ready, refresh, merge — leaves each submodule on its gitlink. Nothing is fetched, parked or merged
+  inside it, no submodule pull request is opened or readied, and no gitlink is re-pointed.
+
+The product owns its pins ([product-owned-submodule-pins](product-owned-submodule-pins.md)), and only
+its trunk has them moved; a production branch receives a pin only by promotion, one the trunk has
+already run (`docs/consumers.md`, rules 2 and 3). Taking the product pull request's base as the
+submodule base did the opposite. A hotfix into the product's `release` fetched, parked, fast-forwarded
+and merged the submodule's own `release`, and `merge` could squash the submodule's release pull
+request and re-point the gitlink at a commit no trunk had run.

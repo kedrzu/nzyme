@@ -42,6 +42,10 @@ function setupCheckbox() {
             </button>
         );
     };
+    // A functional component without declared props passes only class, style and listeners to its
+    // root. Declaring none lets every attribute reach the <button>, as it would on a component, so a
+    // consumer can relate the control to its label or description (`aria-labelledby`, `aria-describedby`).
+    Checkbox.props = {};
 
     return {
         field,

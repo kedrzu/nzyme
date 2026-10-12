@@ -136,9 +136,14 @@ const product = useDataSource({
 return product; // already reactive — return as-is
 ```
 
-Options: `params`, `load(params, oldValue)`, `default`, `behavior`, `debounce` (ms, or
-`{ time, leading, trailing }`), `onLoad`, `onError` (when given, loader errors go there instead of being
-re-thrown from `get()`/`reload()`).
+Options: `params`, `load(params, oldValue)`, `default`, `behavior`, `debounce`, `onLoad`, `onError`
+(when given, loader errors go there instead of being re-thrown from `get()`/`reload()`).
+
+- `params` takes a value, a ref or a getter (normalised with `makeRef`). A getter becomes a `computed`;
+  a plain value never changes, so it never triggers a reload.
+- `debounce` in ms means **leading and trailing**: the first change in a burst loads at once, and if more
+  changes arrive within the window, one more load runs at its end. Pass `{ time, leading, trailing }`
+  to switch an edge off (both default to `true`). `reload()` flushes a pending debounced load.
 
 Set `behavior` explicitly: `'eager'` loads immediately and on every params change; `'lazy'` loads on
 first access of `.value` or `get()`; unset loads only on a params *change* or an explicit `get()` — no
@@ -152,8 +157,13 @@ initial load, rarely what you want.
 |`error`|last loader error; cleared on success|
 |`get()`|cached value, loading only if missing or invalidated|
 |`reload()`|force a reload now|
-|`invalidate()`|mark stale — the old value **stays visible** until the next `get()`/`reload()`; reading `.value` never reloads it|
+|`invalidate()`|mark stale — the old value **stays visible** until the next `get()`/`reload()`; reading `.value` never reloads it (see below for `'lazy'`)|
 |`clear()`|reset value and error to `default` now and cancel a cancelable in-flight load|
+
+In `'lazy'` mode `invalidate()` also resets the "accessed" flag, but `value` is a cached `computed`, so
+the next `.value` read does not re-run it and does not reload. Until a `get()` or `reload()`, a lazy
+source stays on the stale value and also ignores `params` changes — call `reload()` after invalidating
+when it must refresh.
 
 `invalidate()` is stale-while-revalidate for the same subject (after a mutation). `clear()` is an
 identity switch — the subject changed and stale data would render mixed-identity frames (the new id with

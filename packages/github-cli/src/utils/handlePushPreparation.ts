@@ -102,7 +102,15 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
     // THIRD: Handle main repository changes (including submodule reference updates)
     logger.info('');
     logger.info(chalk.bold('📤 Pushing main repository...'));
-    const [unpushedCommits, statusInfo] = await Promise.all([checkUnpushedCommits(), getGitStatusInfo()]);
+
+    // A pinned submodule's gitlink is never committed here, whatever its checkout says: the sync
+    // may just have merged in a base that re-pinned it without moving the checkout, and committing
+    // the stale checkout would roll that pin back.
+    const pinnedPaths = submoduleBase.kind === 'pin' ? (await getSubmoduleInfo()).map(sub => sub.path) : [];
+    const [unpushedCommits, statusInfo] = await Promise.all([
+        checkUnpushedCommits(),
+        getGitStatusInfo(undefined, pinnedPaths),
+    ]);
 
     // Determine the actual default commit message based on PR review status
     const actualDefaultMessage = defaultCommitMessage ?? (prInReview ? 'Fixes after review' : 'Work in progress');
@@ -113,6 +121,7 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
         logger,
         defaultCommitMessage: actualDefaultMessage,
         guard,
+        excludedPaths: pinnedPaths,
     });
 
     // FOURTH: Display PR links summary

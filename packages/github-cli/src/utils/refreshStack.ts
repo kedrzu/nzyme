@@ -8,6 +8,7 @@ import { cascadeStack } from './cascadeStack.js';
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
 import { GitMergeConflictError } from './GitMergeConflictError.js';
+import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 import { syncAllRepos } from './syncAllRepos.js';
 import { syncStackNodesFromRemote } from './syncStackNodesFromRemote.js';
@@ -82,8 +83,13 @@ export async function refreshStack(params: RefreshStackParams): Promise<void> {
     // rewrote it, and dropping to the bottom node would carry the changes onto a node they were not
     // written for. `syncAllRepos` auto-commits too, but only once both have already happened — far
     // too late. Committing here lands the work on the node it belongs to and leaves that later
-    // auto-commit with nothing to do.
-    await autoCommitChanges({ logger, git, repoDisplayName: startingBranch ?? 'main repository' });
+    // auto-commit with nothing to do. A pinned submodule's gitlink is left out, as there.
+    await autoCommitChanges({
+        logger,
+        git,
+        repoDisplayName: startingBranch ?? 'main repository',
+        excludedPaths: submoduleBase.kind === 'pin' ? (await getSubmoduleInfo()).map(sub => sub.path) : [],
+    });
 
     // The stack's branches may have been rewritten on the server — by a lower node merging, or by a
     // "Rebase stack". Adopt those rewrites first, or the sync below replays superseded commits.

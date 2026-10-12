@@ -9,7 +9,9 @@ import { UsageError } from '@nzyme/cli';
 import { createTestLogger } from '@nzyme/logging';
 
 import type { GithubConfig } from '../GithubConfig.js';
+import { createBranchGuard } from './createBranchGuard.js';
 import type { GithubClient } from './createGithubClient.js';
+import { handlePushPreparation } from './handlePushPreparation.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 import { syncAllRepos } from './syncAllRepos.js';
 
@@ -449,6 +451,68 @@ test('a branch that does not land on the trunk leaves the submodule on its pin: 
     await main.fetch('origin');
     expect((await main.revparse(['origin/abc-1-hotfix'])).trim()).toBe(remoteHeadBefore);
     expect((await main.raw(['rev-parse', 'origin/abc-1-hotfix:nzyme'])).trim()).toBe(pin);
+});
+
+// The product's `release` re-pins the submodule after a hotfix was cut from it. Merging `release` in
+// moves the hotfix's gitlink but not the submodule checkout (recursion is off), so the checkout is
+// left on the old pin. Every later `git add .` on the push path — the sync's auto-commit on the next
+// push, the push's own commit — used to stage that stale checkout and roll the production pin back.
+test('a pinned branch takes in a re-pin from its base and no later push rolls it back', async () => {
+    const { mainPath, submodulePath, pin, subMainTip } = await setupMovedSubmodule(root, [
+        { name: 'abc-1-hotfix', from: 'release' },
+    ]);
+    const main = simpleGit({ baseDir: mainPath });
+    const sub = simpleGit({ baseDir: submodulePath });
+    await main.checkout('release');
+    await sub.fetch('origin');
+    await sub.checkout(['--detach', subMainTip]);
+    await main.add(['nzyme']);
+    await main.commit('promote the submodule pin');
+    await main.push(['origin', 'release']);
+    await main.checkout('abc-1-hotfix');
+    await sub.checkout(['--detach', pin]);
+
+    const submoduleBase: SubmoduleBase = { kind: 'pin', trunk: 'main', landingTrunk: 'release' };
+    const { logger } = createTestLogger('syncAllRepos');
+    process.chdir(mainPath);
+
+    async function push(workFile: string) {
+        writeFileSync(join(mainPath, workFile), `${workFile}\n`);
+        await syncAllRepos({
+            branch: 'abc-1-hotfix',
+            baseBranch: 'release',
+            submoduleBase,
+            unattended: true,
+            githubClient: NO_UPPER_NODES_CLIENT,
+            githubConfig: GITHUB_CONFIG,
+            logger,
+        });
+        await handlePushPreparation({
+            githubClient: NO_UPPER_NODES_CLIENT,
+            githubConfig: GITHUB_CONFIG,
+            issueId: 'ABC-1',
+            logger,
+            submoduleBase,
+            unattended: true,
+            guard: createBranchGuard({
+                git: simpleGit(),
+                branch: 'abc-1-hotfix',
+                findUpperNodes: () => Promise.resolve([]),
+            }),
+        });
+    }
+
+    // The first push takes in the re-pin; the second runs with the checkout still on the old pin.
+    await push('first.txt');
+    await push('second.txt');
+
+    await main.fetch('origin');
+    expect((await main.raw(['rev-parse', 'origin/abc-1-hotfix:nzyme'])).trim()).toBe(subMainTip);
+    const pushedFiles = (await main.raw(['ls-tree', '--name-only', 'origin/abc-1-hotfix'])).split('\n');
+    expect(pushedFiles).toContain('first.txt');
+    expect(pushedFiles).toContain('second.txt');
+    // The checkout itself is the submodule's business: nothing on the push path moved it.
+    expect((await sub.revparse(['HEAD'])).trim()).toBe(pin);
 });
 
 // An upper node's merge source is the node below it, a branch the submodule's repository does not

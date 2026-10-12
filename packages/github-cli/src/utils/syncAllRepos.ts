@@ -185,12 +185,15 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
 
     let anyCommitted = false;
 
+    // A pinned submodule's gitlink is left out of the commit: wherever its checkout sits — a stale
+    // commit, another branch's — committing it would re-point the pin.
     await mainGuard.beforeWrite();
     const mainCommit = await autoCommitChanges({
         logger,
         git: mainGit,
         repoDisplayName: 'main repository',
         commitMessage: defaultCommitMessage,
+        excludedPaths: followsTrunk ? [] : submoduleInfos.map(submodule => submodule.path),
     });
     if (mainCommit.committed) {
         anyCommitted = true;

@@ -76,9 +76,11 @@ jobs:
 `NZYME_BUMP_TOKEN` needs contents and pull-requests write on the **product** repository. Not
 `GITHUB_TOKEN`: a PR it opens triggers no workflows, so the product's CI would never run on the bump.
 The workflow runs `@nzyme/cli` from npm at `cli-version`, a required exact version (no dist-tag or
-range): the job holds the product's write token, so a moving tag would run whatever is published
-next with it. `submodule bump` exists from the first release that contains it. The same command
-runs locally:
+range): it runs over a checkout of the product, so a moving tag would hand that to whatever is
+published next. It runs in a job without the token; the job that pushes runs no package code,
+re-derives the bump with git and takes only the PR description from the CLI's job, so a compromised
+CLI cannot reach the token or choose the pinned commit. `submodule bump` exists from the first
+release that contains it. The same command runs locally:
 `bunx @nzyme/cli submodule bump --source origin/main` stages the move and prints the summary.
 
 Set `refresh-lockfile` when the product's workspaces include `nzyme/packages/*`. `bun.lock` records
@@ -86,9 +88,8 @@ each workspace package's version and dependencies, so a bump that moves only the
 stale, and `bun install --frozen-lockfile` does not catch it when only workspace versions moved. The
 next developer's install then rewrites the lock inside an unrelated PR, and a bump that adds an
 external dependency fails the product's frozen install outright. With the input set, the bump
-runs `bun install --lockfile-only --ignore-scripts` (no package code runs, and the token is not in
-that step) and commits the regenerated `bun.lock` with the gitlink; a failing install fails the job
-and opens no PR.
+runs `bun install --lockfile-only --ignore-scripts` (no package code runs) and commits the
+regenerated `bun.lock` with the gitlink; a failing install fails the job and opens no PR.
 
 Working on nzyme from inside the product does not change this: the nzyme change is a PR to nzyme,
 and the product's PR pins the merged commit (or the bump picks it up).

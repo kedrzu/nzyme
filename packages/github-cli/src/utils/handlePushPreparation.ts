@@ -156,15 +156,20 @@ interface TaskPrs {
 }
 
 /**
- * Log the task's pull requests and return them.
+ * Parameters for logging the task's pull requests.
  */
-async function displayPrSummary(params: {
+interface DisplayPrSummaryParams {
     githubClient: GithubClient;
     githubConfig: GithubConfig;
     issueId: string;
     submoduleBase: SubmoduleBase;
     logger: Logger;
-}): Promise<TaskPrs> {
+}
+
+/**
+ * Log the task's pull requests and return them.
+ */
+async function displayPrSummary(params: DisplayPrSummaryParams): Promise<TaskPrs> {
     const { githubClient, githubConfig, issueId, submoduleBase, logger } = params;
 
     logger.info('');
@@ -221,17 +226,22 @@ async function displayPrSummary(params: {
 }
 
 /**
- * Keep each main PR's managed "Submodule PRs" block in step with the submodule PRs found now — see
- * `upsertSubmodulePrLinks`. Best-effort: the push has already happened, so a failed description
- * update is reported and never fails it.
+ * Parameters for linking the submodule PRs from the main PRs.
  */
-async function linkSubmodulePrs(params: {
+interface LinkSubmodulePrsParams {
     githubClient: GithubClient;
     githubConfig: GithubConfig;
     mainPrs: GitHubPR[];
     submodulePrs: SubmodulePrLink[];
     logger: Logger;
-}): Promise<void> {
+}
+
+/**
+ * Keep each main PR's managed "Submodule PRs" block in step with the submodule PRs found now — see
+ * `upsertSubmodulePrLinks`. Best-effort: the push has already happened, so a failed description
+ * update is reported and never fails it.
+ */
+async function linkSubmodulePrs(params: LinkSubmodulePrsParams): Promise<void> {
     const { githubClient, githubConfig, mainPrs, submodulePrs, logger } = params;
 
     for (const pr of mainPrs) {

@@ -7,6 +7,7 @@ import { checkCurrentPrMerged } from './checkCurrentPrMerged.js';
 import { checkUnpushedCommits } from './checkUnpushedCommits.js';
 import type { BranchGuard } from './createBranchGuard.js';
 import type { GithubClient } from './createGithubClient.js';
+import type { GitHubPR } from './findMatchingPr.js';
 import { findOpenPrForBranch, findTaskPrs } from './findMatchingPr.js';
 import { getGitStatusInfo } from './getGitStatusInfo.js';
 import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
@@ -15,6 +16,8 @@ import { handleReadyPreparation } from './handleReadyPreparation.js';
 import { handleSubmoduleReadyPreparation } from './handleSubmoduleReadyPreparation.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 import { resolveSubmoduleCurrentBranch } from './resolveSubmoduleCurrentBranch.js';
+import type { SubmodulePrLink } from './upsertSubmodulePrLinks.js';
+import { upsertSubmodulePrLinks } from './upsertSubmodulePrLinks.js';
 
 /**
  * Parameters for handling push preparation.
@@ -125,16 +128,43 @@ export async function handlePushPreparation(params: HandlePushPreparationParams)
     });
 
     // FOURTH: Display PR links summary
-    await displayPrSummary({ githubClient, githubConfig, issueId, submoduleBase, logger });
+    const { mainPrs, submodulePrs } = await displayPrSummary({
+        githubClient,
+        githubConfig,
+        issueId,
+        submoduleBase,
+        logger,
+    });
+
+    // FIFTH: Link the submodule PRs from every main PR of the task (one submodule PR serves all nodes).
+    await linkSubmodulePrs({ githubClient, githubConfig, mainPrs, submodulePrs, logger });
 }
 
+/**
+ * The pull requests of a task, as collected by `displayPrSummary`.
+ */
+interface TaskPrs {
+    /**
+     * One per stack node, bottom to top.
+     */
+    mainPrs: GitHubPR[];
+
+    /**
+     * Empty for a pinned submodule.
+     */
+    submodulePrs: SubmodulePrLink[];
+}
+
+/**
+ * Log the task's pull requests and return them.
+ */
 async function displayPrSummary(params: {
     githubClient: GithubClient;
     githubConfig: GithubConfig;
     issueId: string;
     submoduleBase: SubmoduleBase;
     logger: Logger;
-}): Promise<void> {
+}): Promise<TaskPrs> {
     const { githubClient, githubConfig, issueId, submoduleBase, logger } = params;
 
     logger.info('');
@@ -155,11 +185,12 @@ async function displayPrSummary(params: {
     // A pinned submodule carries no pull request of this task's: whatever branch its pin sits on
     // belongs to the submodule alone.
     if (submoduleBase.kind === 'pin') {
-        return;
+        return { mainPrs, submodulePrs: [] };
     }
 
     // Submodule PRs — resolved by branch (never skipped for a detached HEAD, the ordinary state for
     // a gitlink-pinned submodule; see `resolveSubmoduleCurrentBranch`), not by issue ID.
+    const submodulePrs: SubmodulePrLink[] = [];
     const submodules = await getSubmoduleInfo();
     for (const sub of submodules) {
         const subConfig = getSubmoduleGithubConfig(sub.url, githubConfig.token);
@@ -175,6 +206,54 @@ async function displayPrSummary(params: {
         const subPr = await findOpenPrForBranch(githubClient, subConfig, resolved.name);
         if (subPr) {
             logger.info(`   ${chalk.magenta(sub.name)}: ${chalk.blueBright(chalk.underline(subPr.html_url))}`);
+            submodulePrs.push({
+                submodule: sub.name,
+                owner: subConfig.owner,
+                repo: subConfig.repo,
+                number: subPr.number,
+                title: subPr.title,
+                url: subPr.html_url,
+            });
+        }
+    }
+
+    return { mainPrs, submodulePrs };
+}
+
+/**
+ * Keep each main PR's managed "Submodule PRs" block in step with the submodule PRs found now — see
+ * `upsertSubmodulePrLinks`. Best-effort: the push has already happened, so a failed description
+ * update is reported and never fails it.
+ */
+async function linkSubmodulePrs(params: {
+    githubClient: GithubClient;
+    githubConfig: GithubConfig;
+    mainPrs: GitHubPR[];
+    submodulePrs: SubmodulePrLink[];
+    logger: Logger;
+}): Promise<void> {
+    const { githubClient, githubConfig, mainPrs, submodulePrs, logger } = params;
+
+    for (const pr of mainPrs) {
+        try {
+            const body = upsertSubmodulePrLinks(pr.body, submodulePrs);
+            if (body === null) {
+                continue;
+            }
+
+            await githubClient.rest.pulls.update({
+                owner: githubConfig.owner,
+                repo: githubConfig.repo,
+                pull_number: pr.number,
+                body,
+            });
+        } catch (error) {
+            logger.warn(
+                `   ⚠️  Could not link submodule PRs in ${pr.html_url} — push went through, update it by hand.`,
+                {
+                    error,
+                },
+            );
         }
     }
 }

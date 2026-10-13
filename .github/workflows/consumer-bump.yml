@@ -18,8 +18,13 @@ name: Bump nzyme
 #         cli-version: <version>
 #         auto-merge: true
 #         refresh-lockfile: true
+#         app-client-id: ${{ vars.BUMP_APP_CLIENT_ID }}
+#         environment: submodule-bump
 #       secrets:
-#         token: ${{ secrets.NZYME_BUMP_TOKEN }}
+#         app-private-key: ${{ secrets.BUMP_APP_PRIVATE_KEY }}
+#
+# The product credential is either a GitHub App (`app-client-id` + `app-private-key`, a token minted
+# per run) or a `token` such as a fine-grained PAT — exactly one of them.
 #
 # Runs the CLI from npm (`@nzyme/cli`) at the exact `cli-version` given (`submodule bump` exists
 # from the first release that contains it), in a job of its own that never has the product token.
@@ -67,13 +72,31 @@ on:
           checkout of the product, so a moving tag would hand that to whatever gets published next.
         type: string
         required: true
+      app-client-id:
+        description: >-
+          Client ID of a GitHub App installed on the product with contents:write and
+          pull-requests:write. With `app-private-key`, the job mints a one-hour token narrowed to those
+          two permissions on the product repository. Use it instead of `token`.
+        type: string
+        default: ''
+      environment:
+        description: >-
+          GitHub Environment of the product for the job that holds the credential, e.g. one whose
+          branch policy admits only the bumped branch, so the credential is unreadable from any other
+          branch. The caller still passes the secret by name. Empty runs without an environment.
+        type: string
+        default: ''
     secrets:
       token:
         description: >-
           Product repository token with contents:write and pull-requests:write (a fine-grained
           PAT). Not GITHUB_TOKEN — pushes and PRs made with it do not trigger workflows, so the
-          product's CI would never run on the bump, and that CI is the whole point.
-        required: true
+          product's CI would never run on the bump, and that CI is the whole point. Set either this
+          or the App credentials.
+        required: false
+      app-private-key:
+        description: Private key of the GitHub App named by `app-client-id`.
+        required: false
 
 jobs:
   # Runs the npm CLI. No product token here (checkout uses the caller's read-only GITHUB_TOKEN, not
@@ -135,6 +158,8 @@ jobs:
     name: Bump ${{ inputs.submodule-path }} on ${{ inputs.base-branch }}
     needs: prepare
     runs-on: ubuntu-latest
+    # Only this job gets the environment: `prepare` runs npm code and must never see its secrets.
+    environment: ${{ inputs.environment }}
     permissions:
       contents: read
     # Keyed by the submodule too: a product that bumps several submodules calls this once per path,
@@ -149,6 +174,21 @@ jobs:
       COMMIT_MESSAGE: ${{ inputs.commit-message }}
       SUBMODULE_PATH: ${{ inputs.submodule-path }}
     steps:
+      # `secrets` cannot be read in `if:`, so the check runs in the shell. Neither credential would
+      # fail only at the first push; both is ambiguous about which identity writes to the product.
+      - name: Check the product credential
+        env:
+          HAS_TOKEN: ${{ secrets.token != '' }}
+          HAS_APP_ID: ${{ inputs.app-client-id != '' }}
+          HAS_APP_KEY: ${{ secrets.app-private-key != '' }}
+        run: |
+          if [ "$HAS_APP_ID" != "$HAS_APP_KEY" ]; then
+            echo "::error::app-client-id and app-private-key go together — set both or neither" && exit 1
+          fi
+          if [ "$HAS_TOKEN" = "$HAS_APP_ID" ]; then
+            echo "::error::set exactly one product credential: the token secret, or app-client-id with app-private-key" && exit 1
+          fi
+
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.base-branch }}
@@ -213,12 +253,25 @@ jobs:
             printf '\n%s\n' "\`bun.lock\` refreshed for the new nzyme tree." >> "$RUNNER_TEMP/bump.md"
           fi
 
+      # Minted only after `bun` has run, so no token exists on the runner while it does. Without
+      # `repositories` the token covers only the product repository (the caller), and the explicit
+      # permissions keep it to those two even when the App holds more for other flows.
+      - name: Mint the App token
+        id: app-token
+        if: inputs.app-client-id != ''
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ inputs.app-client-id }}
+          private-key: ${{ secrets.app-private-key }}
+          permission-contents: write
+          permission-pull-requests: write
+
       # Already at the source, e.g. bumped by hand meanwhile: a PR left open from an earlier run
       # would only roll the product back.
       - name: Close a stale bump PR
         if: steps.bump.outputs.changed == 'false'
         env:
-          GH_TOKEN: ${{ secrets.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.token }}
         run: |
           echo "ℹ️ \`$BASE_BRANCH\` already pins nzyme \`$SOURCE_REF\`." >> "$GITHUB_STEP_SUMMARY"
           for pr in $(gh pr list --base "$BASE_BRANCH" --head "$PR_BRANCH" --state open --json number --jq '.[].number'); do
@@ -229,11 +282,18 @@ jobs:
         if: steps.bump.outputs.changed == 'true'
         env:
           SHA: ${{ steps.bump.outputs.sha }}
-          GH_TOKEN: ${{ secrets.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         run: |
           message="${COMMIT_MESSAGE//\{sha\}/$SHA}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$APP_SLUG" ]; then
+            user_id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
+            git config user.name "${APP_SLUG}[bot]"
+            git config user.email "${user_id}+${APP_SLUG}[bot]@users.noreply.github.com"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          fi
           git switch -C "$PR_BRANCH"
           git commit --no-verify -qm "$message"
           # A bot-owned branch, regenerated from the base on every run — force is expected here.
@@ -260,5 +320,5 @@ jobs:
       - name: Enable auto-merge
         if: steps.bump.outputs.changed == 'true' && inputs.auto-merge
         env:
-          GH_TOKEN: ${{ secrets.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.token }}
         run: gh pr merge "$PR_BRANCH" --auto --squash

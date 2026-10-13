@@ -26,6 +26,7 @@ import { parkSubmoduleOnBase } from './parkSubmoduleOnBase.js';
 import { refreshMainAfterSubmoduleMerge } from './refreshMainAfterSubmoduleMerge.js';
 import { describeSubmodulePin, resolveSubmoduleBase } from './resolveSubmoduleBase.js';
 import { resolveSubmoduleCurrentBranch } from './resolveSubmoduleCurrentBranch.js';
+import type { MergeAsyncResult } from './stacksApi.js';
 import { findStackForPr, getMergeAsyncStatus, mergeStackAsync } from './stacksApi.js';
 import { waitForRequiredChecks } from './waitForRequiredChecks.js';
 
@@ -355,12 +356,12 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
         // the answer only for a top node this run never pushed, where nothing can be stale.
         const topHeadSha = expectedHeads.get(topNode.head.ref) ?? freshTopPr.head.sha;
 
-        const uuid = await mergeStackAsync(githubClient, githubConfig, topNode.number, topHeadSha);
+        const submitted = await mergeStackAsync(githubClient, githubConfig, topNode.number, topHeadSha);
         await waitForStackMerge({
             githubClient,
             githubConfig,
             prNumber: topNode.number,
-            uuid,
+            submitted,
             nodeCount: stackNodes.length,
             logger,
             intervalMs: checkPollIntervalMs,
@@ -451,7 +452,11 @@ interface WaitForStackMergeParams {
     githubClient: GithubClient;
     githubConfig: GithubConfig;
     prNumber: number;
-    uuid: string;
+
+    /**
+     * What submitting the merge reported — possibly already terminal, in which case nothing is polled.
+     */
+    submitted: MergeAsyncResult;
     nodeCount: number;
     logger: Logger;
 
@@ -475,24 +480,25 @@ const DEFAULT_STACK_MERGE_TIMEOUT_MS = 1_200_000;
  * Poll an asynchronous stack merge until GitHub reports it landed, was queued, or failed.
  *
  * Bounded by a deadline: `pending` is a legitimate transient state, but it is also what a stack
- * blocked on a review that nobody leaves — or a status string this client does not model — reports
- * forever, and the status payload is untyped so neither is distinguishable at runtime. An
- * unattended `task merge --yes` must fail with a diagnosis rather than poll until someone kills it.
+ * blocked on a review that nobody leaves reports forever. An unattended `task merge --yes` must
+ * fail with a diagnosis rather than poll until someone kills it.
  */
 async function waitForStackMerge(params: WaitForStackMergeParams): Promise<void> {
     const {
         githubClient,
         githubConfig,
         prNumber,
-        uuid,
+        submitted,
         nodeCount,
         logger,
         intervalMs = DEFAULT_STACK_MERGE_INTERVAL_MS,
         timeoutMs = DEFAULT_STACK_MERGE_TIMEOUT_MS,
     } = params;
 
-    // The last status GitHub reported, so the deadline can name what it was stuck on.
-    let lastStatus = 'pending';
+    if (submitted.status !== 'pending') {
+        settleStackMerge(submitted, nodeCount, logger);
+        return;
+    }
 
     await withTimeout({
         timeoutMs,
@@ -500,37 +506,49 @@ async function waitForStackMerge(params: WaitForStackMergeParams): Promise<void>
         // GitHub request that stalls: an unresponsive API call can no longer hang the wait forever.
         operation: async signal => {
             while (!signal.aborted) {
-                const { status, message } = await getMergeAsyncStatus(githubClient, githubConfig, prNumber, uuid);
+                const result = await getMergeAsyncStatus(githubClient, githubConfig, prNumber, submitted.uuid);
 
-                if (status === 'merged') {
+                if (result.status !== 'pending') {
+                    settleStackMerge(result, nodeCount, logger);
                     return;
                 }
 
-                if (status === 'enqueued') {
-                    logger.info(`   ${chalk.green('✓')} Stack enqueued in the merge queue — it will land there.`);
-                    return;
-                }
-
-                if (status === 'failed') {
-                    throw new UsageError(
-                        `GitHub could not merge the stack of ${nodeCount} PRs: ${message ?? 'no reason given'}. ` +
-                            'Nothing was merged — the stack merge is atomic.',
-                    );
-                }
-
-                lastStatus = status;
-                logger.info(`   Waiting for GitHub to land the stack (${status})...`);
+                logger.info('   Waiting for GitHub to land the stack (pending)...');
                 await waitFor(intervalMs);
             }
         },
         onTimeout: () => {
             throw new UsageError(
                 `Timed out after ${Math.round(timeoutMs / 1000)}s waiting for GitHub to land the stack of ` +
-                    `${nodeCount} PRs via PR #${prNumber} (last reported status: ${lastStatus}). It may be ` +
+                    `${nodeCount} PRs via PR #${prNumber} (still pending). It may be ` +
                     'waiting on a required review or a merge queue that has not drained — nothing was merged.',
             );
         },
     });
+}
+
+/**
+ * Act on a stack merge GitHub reports as finished: `merged` and `enqueued` are success, `failed` and
+ * any status this client does not model are an error — never a silent success.
+ */
+function settleStackMerge(result: MergeAsyncResult, nodeCount: number, logger: Logger): void {
+    switch (result.status) {
+        case 'merged':
+            return;
+        case 'enqueued':
+            logger.info(`   ${chalk.green('✓')} Stack enqueued in the merge queue — it will land there.`);
+            return;
+        case 'failed':
+            throw new UsageError(
+                `GitHub could not merge the stack of ${nodeCount} PRs: ${result.message ?? 'no reason given'}. ` +
+                    'Nothing was merged — the stack merge is atomic.',
+            );
+        default:
+            throw new UsageError(
+                `GitHub reported an unknown status "${result.status}" for the stack merge of ` +
+                    `${nodeCount} PRs. Check the stack on GitHub before re-running.`,
+            );
+    }
 }
 
 /**

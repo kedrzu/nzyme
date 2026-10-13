@@ -48,7 +48,7 @@ moves it. nzyme holds no product state and products hold no credentials to nzyme
 
 `consumer-bump.yml` (a reusable workflow here) moves the submodule on a product branch to an nzyme
 ref, pushes `nzyme-bump/<base-branch>` and opens or refreshes a PR listing the incoming nzyme
-commits. It writes only to the product, with the product's token. When the branch already pins the
+commits. It writes only to the product, with the product's credential. When the branch already pins the
 source it closes a stale bump PR and stops. A daily (and manual) bump of `main`, merging itself when
 green:
 
@@ -69,12 +69,29 @@ jobs:
       cli-version: <version>
       auto-merge: true
       refresh-lockfile: true
+      app-client-id: ${{ vars.BUMP_APP_CLIENT_ID }}
+      environment: submodule-bump
     secrets:
-      token: ${{ secrets.NZYME_BUMP_TOKEN }}
+      app-private-key: ${{ secrets.BUMP_APP_PRIVATE_KEY }}
 ```
 
-`NZYME_BUMP_TOKEN` needs contents and pull-requests write on the **product** repository. Not
+The credential needs contents and pull-requests write on the **product** repository. Not
 `GITHUB_TOKEN`: a PR it opens triggers no workflows, so the product's CI would never run on the bump.
+Pass exactly one of:
+
+- **A GitHub App** — `app-client-id` (an input, so a repository variable, not an environment one)
+  and the `app-private-key` secret. The job mints a one-hour token narrowed to contents and
+  pull-requests write on the product repository, after the lockfile refresh, so no token exists
+  while `bun` runs. Commits and the PR are by `<app-slug>[bot]`. Give the App no ruleset bypass: a
+  bypass actor's PR could merge without the checks that gate the bump.
+- **A `token` secret** — e.g. a fine-grained PAT. It expires and belongs to a person, which is why
+  an App is preferred.
+
+`environment` puts the job that holds the credential in one of the product's GitHub Environments.
+Store the key as that environment's secret with a branch policy admitting only the bumped branch,
+and a workflow on any other branch cannot read it. The caller still passes the secret by name; the
+CLI's job never gets the environment.
+
 The workflow runs `@nzyme/cli` from npm at `cli-version`, a required exact version (no dist-tag or
 range): it runs over a checkout of the product, so a moving tag would hand that to whatever is
 published next. It runs in a job without the token; the job that pushes runs no package code,

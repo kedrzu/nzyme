@@ -46,6 +46,15 @@ export interface PullRequestStack {
 export type MergeAsyncStatus = 'enqueued' | 'failed' | 'merged' | 'pending';
 
 /**
+ * Where an asynchronous merge stands, as reported by submitting it or by polling it. Only a
+ * `pending` merge has a `uuid` — the identifier to poll with {@link getMergeAsyncStatus}.
+ * `message` describes the current state; for `failed`, the reason nothing merged.
+ */
+export type MergeAsyncResult =
+    | { status: 'pending'; uuid: string; message?: string }
+    | { status: Exclude<MergeAsyncStatus, 'pending'>; message?: string };
+
+/**
  * Raw shape of the stack resource. Declared locally because the Stacks API shipped after
  * `@octokit/rest` 22, so these routes have no generated types yet and `client.request` returns an
  * untyped payload for them.
@@ -64,26 +73,89 @@ interface StackResponse {
 }
 
 /**
- * Raw shape of the async-merge status resource.
+ * Raw shape of the async-merge result resource, shared by the submit and the poll endpoints. Every
+ * field other than `status` lives under `details`, and which of them are present depends on the
+ * status — `uuid` only while `pending`.
  */
 interface MergeAsyncResponse {
-    uuid?: string;
-    status?: MergeAsyncStatus;
-    message?: string;
+    status: MergeAsyncStatus;
+    details?: {
+        uuid?: string;
+        message?: string;
+    };
 }
+
+/**
+ * HTTP statuses on which the merge-async submit still answers with a {@link MergeAsyncResponse}:
+ * 409 when a merge request for the pull request already exists (its `uuid` is returned), 400 when
+ * the pull request cannot be merged at all (closed or draft, as `failed`).
+ */
+const MERGE_ASYNC_RESULT_ERROR_STATUSES = new Set([400, 409]);
 
 /**
  * Perform a request against a route `@octokit/rest` has no types for, and hand the caller the shape
  * it declared. The Stacks endpoints are newer than the pinned Octokit version, so this is the one
  * place where the untyped payload is narrowed — every caller works with a declared interface.
+ *
+ * Octokit throws on every non-2xx status; `resultErrorStatuses` lists the ones on which the route
+ * still answers with its declared payload, so those come back as a response instead of an error.
  */
 async function requestUntyped<T>(
     client: GithubClient,
     route: string,
     params: Record<string, unknown>,
+    resultErrorStatuses?: Set<number>,
 ): Promise<{ data: T; status: number }> {
-    const response = await client.request(route, params);
-    return { data: response.data as T, status: response.status };
+    try {
+        const response = await client.request(route, params);
+        return { data: response.data as T, status: response.status };
+    } catch (error) {
+        const response = resultErrorStatuses && readErrorResponse(error, resultErrorStatuses);
+        if (!response) {
+            throw error;
+        }
+
+        return { data: response.data as T, status: response.status };
+    }
+}
+
+/**
+ * Flatten the raw async-merge payload into the shape used across the CLI. `knownUuid` is the id a
+ * poll already has, so only the submit depends on GitHub returning one.
+ */
+function toMergeAsyncResult(data: MergeAsyncResponse, prNumber: number, knownUuid?: string): MergeAsyncResult {
+    const message = data.details?.message;
+    if (data.status !== 'pending') {
+        return { status: data.status, message };
+    }
+
+    const uuid = data.details?.uuid ?? knownUuid;
+    if (!uuid) {
+        throw new UsageError(`GitHub did not return a merge id for the stack merge of PR #${prNumber}.`);
+    }
+
+    return { status: 'pending', uuid, message };
+}
+
+/**
+ * The response a failed Octokit request carried, when its HTTP status is one of `statuses`.
+ */
+function readErrorResponse(error: unknown, statuses: Set<number>): { data: unknown; status: number } | undefined {
+    if (
+        typeof error === 'object' &&
+        error !== null &&
+        'status' in error &&
+        typeof error.status === 'number' &&
+        statuses.has(error.status) &&
+        'response' in error &&
+        typeof error.response === 'object' &&
+        error.response !== null &&
+        'data' in error.response
+    ) {
+        return { data: error.response.data, status: error.status };
+    }
+
+    return undefined;
 }
 
 /**
@@ -204,14 +276,18 @@ export async function unstackPrs(
  * The legacy synchronous merge endpoint cannot merge stacked pull requests, so this is not
  * interchangeable with {@link mergePullRequestSquash}.
  *
- * Returns the UUID to poll with {@link getMergeAsyncStatus}.
+ * The submit can already be terminal — `merged` when the pull request was merged before, `enqueued`
+ * when it already sits in the merge queue, `failed` when it is closed or a draft. Only a `pending`
+ * result carries the `uuid` to poll with {@link getMergeAsyncStatus}; that includes a merge request
+ * already running for this pull request (GitHub's 409), so re-running after an interrupted merge
+ * attaches to it instead of failing.
  */
 export async function mergeStackAsync(
     client: GithubClient,
     config: GithubConfig,
     prNumber: number,
     headSha: string,
-): Promise<string> {
+): Promise<MergeAsyncResult> {
     const { data } = await requestUntyped<MergeAsyncResponse>(
         client,
         'PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge-async',
@@ -222,13 +298,10 @@ export async function mergeStackAsync(
             merge_method: 'squash',
             sha: headSha,
         },
+        MERGE_ASYNC_RESULT_ERROR_STATUSES,
     );
 
-    if (!data.uuid) {
-        throw new UsageError(`GitHub did not return a merge id for the stack merge of PR #${prNumber}.`);
-    }
-
-    return data.uuid;
+    return toMergeAsyncResult(data, prNumber);
 }
 
 /**
@@ -239,7 +312,7 @@ export async function getMergeAsyncStatus(
     config: GithubConfig,
     prNumber: number,
     uuid: string,
-): Promise<{ status: MergeAsyncStatus; message?: string }> {
+): Promise<MergeAsyncResult> {
     const { data } = await requestUntyped<MergeAsyncResponse>(
         client,
         'GET /repos/{owner}/{repo}/pulls/{pull_number}/merge-async/{uuid}',
@@ -251,5 +324,5 @@ export async function getMergeAsyncStatus(
         },
     );
 
-    return { status: data.status ?? 'pending', message: data.message };
+    return toMergeAsyncResult(data, prNumber, uuid);
 }

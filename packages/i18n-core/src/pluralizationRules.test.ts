@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { pluralizationEn, pluralizationPl } from './pluralizationRules.js';
+import { pluralizationCs, pluralizationEn, pluralizationPl } from './pluralizationRules.js';
 
 test('pluralizationPl follows the CLDR Polish rules for integers', () => {
     const plurals = { one: 'one', few: 'few', many: 'many' };
@@ -33,6 +33,24 @@ test('pluralizationPl follows the CLDR Polish rules for integers', () => {
 
 test('pluralizationPl uses the zero form for zero when there is one', () => {
     expect(pluralizationPl.pluralize(0, { zero: 'zero', one: 'one', few: 'few', many: 'many' })).toBe('zero');
+});
+
+test('pluralizationCs follows the CLDR Czech rules for integers', () => {
+    const plurals = { one: 'one', few: 'few', many: 'many' };
+    const counts = [0, 1, 2, 4, 5, 12, 22, 24, 102, 1022];
+
+    expect(counts.map(count => [count, pluralizationCs.pluralize(count, plurals)])).toEqual([
+        [0, 'many'],
+        [1, 'one'],
+        [2, 'few'],
+        [4, 'few'],
+        [5, 'many'],
+        [12, 'many'],
+        [22, 'many'],
+        [24, 'many'],
+        [102, 'many'],
+        [1022, 'many'],
+    ]);
 });
 
 test('pluralizationEn uses one for 1 only', () => {

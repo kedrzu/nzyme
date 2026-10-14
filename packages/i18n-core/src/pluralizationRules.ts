@@ -50,7 +50,29 @@ export const pluralizationPl = definePluralization({
 /**
  * Czech pluralization
  */
-export const pluralizationCs = pluralizationPl;
+export const pluralizationCs = definePluralization({
+    plurals: ['few', 'many', 'one', 'zero'],
+    optionalPlurals: ['zero'],
+    pluralize: (count, plurals) => {
+        // např: nula jablek
+        if (count === 0) {
+            return plurals.zero ?? plurals.many ?? plurals.few;
+        }
+
+        // např: jedno jablko
+        if (count === 1) {
+            return plurals.one;
+        }
+
+        // např: 3 jablka, ale 23 jablek
+        if (count >= 2 && count <= 4) {
+            return plurals.few ?? plurals.many;
+        }
+
+        // např: 8 jablek
+        return plurals.many ?? plurals.few;
+    },
+});
 
 /**
  * German pluralization

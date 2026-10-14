@@ -37,6 +37,22 @@ test('useRadio arrow keys move focus and selection, skipping disabled radios and
     expect(radios.map(radio => radio.props.tabindex)).toEqual([0, -1, -1]);
 });
 
+test('useRadio keeps a readonly group reachable: arrow keys move focus, nothing changes the selection', async () => {
+    const { radios, value } = mountRadioGroup([{ value: 'a' }, { value: 'b' }, { value: 'c' }], 'b', {
+        readonly: true,
+    });
+    await nextTick();
+    expect(radios.map(radio => radio.props.tabindex)).toEqual([-1, 0, -1]);
+
+    await press(radios[1]!, 'ArrowDown');
+    expect(activeElement).toBe(radios[2]!);
+
+    fire(radios[2]!, 'onClick', {});
+    await press(radios[2]!, 'ArrowRight');
+    expect(activeElement).toBe(radios[0]!);
+    expect(value.value).toBe('b');
+});
+
 test('useRadioGroup returns the field its radios select', async () => {
     const { radios, field } = mountRadioGroup([{ value: 'a' }, { value: 'b' }], 'a', { errors: 'Pick one' });
     expect(field.errors).toEqual(['Pick one']);

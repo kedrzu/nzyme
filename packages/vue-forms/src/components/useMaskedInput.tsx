@@ -88,7 +88,6 @@ export function defineMaskedInput<T = string>() {
                     placeholderChar={mask.value.placeholderChar}
                     readonly={props.readonly}
                     tabindex={props.tabindex}
-                    title={props.label}
                     typed={typedValue.value}
                     {...attrs}
                 />

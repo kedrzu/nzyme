@@ -62,7 +62,6 @@ function setupTextInput() {
                 placeholder={props.placeholder}
                 readonly={props.readonly}
                 tabindex={props.tabindex}
-                title={props.label}
                 type="text"
                 value={field.value}
             />

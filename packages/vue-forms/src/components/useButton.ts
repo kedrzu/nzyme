@@ -195,7 +195,7 @@ function setupButton() {
     }
 
     async function onClick(event: Event, navigate?: (e?: Event) => Promise<unknown>, nativeLink = false) {
-        if (props.disabled || pending.value) {
+        if (props.disabled || busy.value) {
             event.stopPropagation();
             event.preventDefault();
             return;

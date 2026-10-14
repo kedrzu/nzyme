@@ -1,6 +1,8 @@
 import { expect, test } from 'bun:test';
+import { assertValue } from '@nzyme/utils/assert.js';
 import { createRenderer, defineComponent, h, markRaw, nextTick, ref } from 'vue';
 
+import type { FormFieldController } from './defineFormField.js';
 import { getRadioEmits, getRadioProps, useRadio } from './useRadio.jsx';
 import { getRadioGroupEmits, getRadioGroupProps, useRadioGroup } from './useRadioGroup.js';
 
@@ -35,6 +37,14 @@ test('useRadio arrow keys move focus and selection, skipping disabled radios and
     expect(radios.map(radio => radio.props.tabindex)).toEqual([0, -1, -1]);
 });
 
+test('useRadioGroup returns the field its radios select', async () => {
+    const { radios, field } = mountRadioGroup([{ value: 'a' }, { value: 'b' }], 'a', { errors: 'Pick one' });
+    expect(field.errors).toEqual(['Pick one']);
+
+    await press(radios[0]!, 'ArrowDown');
+    expect(field.value).toBe('b');
+});
+
 test('useRadio passes attributes through to the button', () => {
     const { radios } = mountRadioGroup([{ value: 'a' }]);
 
@@ -47,14 +57,15 @@ interface TestRadio {
     disabled?: boolean;
 }
 
-function mountRadioGroup(options: TestRadio[], initialValue?: string) {
+function mountRadioGroup(options: TestRadio[], initialValue?: string, groupProps: Record<string, unknown> = {}) {
     const value = ref(initialValue);
+    let field: FormFieldController<string> | undefined;
 
     const RadioGroup = defineComponent({
         props: getRadioGroupProps<string>(),
         emits: getRadioGroupEmits<string>(),
         setup(props, { slots }) {
-            useRadioGroup(props);
+            field = useRadioGroup<string>(props).field;
             return () => slots.default?.();
         },
     });
@@ -100,6 +111,7 @@ function mountRadioGroup(options: TestRadio[], initialValue?: string) {
             h(
                 RadioGroup,
                 {
+                    ...groupProps,
                     modelValue: value.value,
                     'onUpdate:modelValue': (newValue: string) => (value.value = newValue),
                 },
@@ -107,7 +119,11 @@ function mountRadioGroup(options: TestRadio[], initialValue?: string) {
             ),
     }).mount(root);
 
-    return { radios: flatten(root).filter(node => node.props.role === 'radio'), value };
+    return {
+        radios: flatten(root).filter(node => node.props.role === 'radio'),
+        value,
+        field: assertValue(field),
+    };
 }
 
 async function press(radio: TestNode, key: string) {

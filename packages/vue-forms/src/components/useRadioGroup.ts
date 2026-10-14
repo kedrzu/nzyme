@@ -54,7 +54,8 @@ export function getRadioGroupEmits<T extends Primitive = Primitive>() {
 
 /**
  * Composable for creating a radio group that manages a form field with primitive values.
- * Provides context to child radio components for coordinated behavior.
+ * Provides context to child radio components for coordinated behavior, and returns the group's field so
+ * a component wrapping the group can render its errors without a second field over the same props.
  */
 export function useRadioGroup<T extends Primitive = Primitive>(props: RadioGroupProps<T>) {
     const field = createFormField<T>({ props });
@@ -65,6 +66,10 @@ export function useRadioGroup<T extends Primitive = Primitive>(props: RadioGroup
     });
 
     provideContext(RadioGroupContext, { field, props: props, radios, tabStop, getEnabledRadios });
+
+    return {
+        field,
+    };
 
     function getEnabledRadios() {
         return radios.filter(radio => !radio.disabled).toSorted(compareDocumentOrder);

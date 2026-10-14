@@ -35,12 +35,11 @@ export const pluralizationPl = definePluralization({
             return plurals.one;
         }
 
-        if (count < 10 || count > 20) {
-            // np: 3 jabłka lub 23 jabłka
-            const lastDigit = count % 10;
-            if (lastDigit >= 2 && lastDigit <= 4) {
-                return plurals.few ?? plurals.many;
-            }
+        // np: 3 jabłka lub 23 jabłka, ale 12 jabłek i 112 jabłek
+        const lastDigit = count % 10;
+        const lastTwoDigits = count % 100;
+        if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14)) {
+            return plurals.few ?? plurals.many;
         }
 
         // np 8 jabłek

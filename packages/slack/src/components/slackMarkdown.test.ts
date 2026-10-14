@@ -50,6 +50,32 @@ describe('slackMarkdown', () => {
             );
         });
 
+        // Must protect: a URL closing an inline code span is code, not a link — wrapping it would
+        // break the span apart.
+        test('leaves a URL that ends an inline code span alone', () => {
+            const body = 'Run `curl https://example.com`\nThen check the output.';
+            expect(textOf(body)).toBe(body);
+        });
+
+        // Must protect: the closing paren of a parenthetical is not part of the URL — inside the
+        // brackets it would send the link to the wrong address.
+        test('leaves the closing paren of a parenthetical outside the brackets', () => {
+            expect(textOf('Check the vault (see https://example.com).\nDone.')).toBe(
+                'Check the vault (see <https://example.com>).\nDone.',
+            );
+        });
+
+        test('keeps a paren that belongs to the URL inside the brackets', () => {
+            expect(textOf('See https://en.wikipedia.org/wiki/Foo_(bar)\nDone.')).toBe(
+                'See <https://en.wikipedia.org/wiki/Foo_(bar)>\nDone.',
+            );
+        });
+
+        test('does not let the other fence character close a fenced code block', () => {
+            const body = '```\n~~~\ncurl https://example.com/api\n```\nDone.';
+            expect(textOf(body)).toBe(body);
+        });
+
         test('keeps a URL containing dots and a path intact', () => {
             expect(textOf('See https://bitwarden.com/help/two-step-recovery-code/\nPrint it.')).toBe(
                 'See <https://bitwarden.com/help/two-step-recovery-code/>\nPrint it.',

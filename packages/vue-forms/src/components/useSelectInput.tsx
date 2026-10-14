@@ -41,7 +41,6 @@ function setupSelectInput() {
                 onInput={onInput}
                 placeholder={props.placeholder}
                 tabindex={props.tabindex}
-                title={props.label}
                 value={field.value}
             >
                 {ctx.slots.default?.()}

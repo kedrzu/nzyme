@@ -81,7 +81,6 @@ function setupTextArea() {
                 ref={input}
                 rows={1}
                 tabindex={props.tabindex}
-                title={props.label}
             />
         );
     }

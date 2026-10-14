@@ -61,7 +61,6 @@ function setupDateInput() {
                 readonly={props.readonly}
                 ref={input}
                 tabindex={props.tabindex}
-                title={props.label}
                 type="date"
                 value={formatDate(field.value)}
                 {...attrs}

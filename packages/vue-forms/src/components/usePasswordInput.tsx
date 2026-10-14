@@ -55,7 +55,6 @@ function setupPasswordInput() {
                 readonly={props.readonly}
                 ref={inputEl}
                 tabindex={props.tabindex}
-                title={props.label}
                 type={inputType.value}
                 value={field.value}
                 {...attrs}

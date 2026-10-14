@@ -2,11 +2,14 @@ import { describe, expect, it } from 'bun:test';
 
 import { createContainer } from '@nzyme/ioc/Container.js';
 import { createRouter } from '@nzyme/rpc/createRouter.js';
+import type { Router } from '@nzyme/rpc/createRouter.js';
 import { defineEndpoint } from '@nzyme/rpc/defineEndpoint.js';
 import { defineEndpointHandler } from '@nzyme/rpc/defineEndpointHandler.js';
 import { HttpContextProvider } from '@nzyme/rpc/services/HttpContextProvider.js';
 import type { HttpContext } from '@nzyme/rpc/services/HttpContextProvider.js';
+import type { HttpRequest } from '@nzyme/rpc/types/HttpRequest.js';
 import { CACHE_CONTROL_DISABLED } from '@nzyme/rpc/utils/cacheControl.js';
+import { createEventEmitter } from '@nzyme/utils/createEventEmitter.js';
 
 import { executeLambdaRpcApiV2 } from './executeLambdaRpcApiV2.js';
 import type { types } from './types.js';
@@ -156,3 +159,75 @@ describe('executeLambdaRpcApiV2', () => {
         expect(result.cookies).toBeUndefined();
     });
 });
+
+describe('executeLambdaRpcApiV2 request body', () => {
+    // Must protect: a body delivered base64-encoded reaches the router as the UTF-8 text the client sent.
+    it('decodes a base64-encoded body to UTF-8 before routing', async () => {
+        const body = '{"action":"create","title":"Zażółć gęślą jaźń"}';
+        const requests = await executeWithBody({
+            body: Buffer.from(body, 'utf8').toString('base64'),
+            isBase64Encoded: true,
+        });
+
+        expect(requests.map(request => request.body)).toEqual([body]);
+    });
+
+    // Must protect: a plain body is passed through untouched.
+    it('passes a plain body through unchanged', async () => {
+        const body = '{"action":"create"}';
+        const requests = await executeWithBody({ body, isBase64Encoded: false });
+
+        expect(requests.map(request => request.body)).toEqual([body]);
+    });
+
+    it('passes an absent body through as undefined', async () => {
+        const requests = await executeWithBody({ body: undefined, isBase64Encoded: true });
+
+        expect(requests.map(request => request.body)).toEqual([undefined]);
+    });
+});
+
+async function executeWithBody(params: { body: string | undefined; isBase64Encoded: boolean }) {
+    const requests: HttpRequest[] = [];
+    const router: Router = {
+        execute(request) {
+            requests.push(request);
+            return Promise.resolve({ status: 200, headers: {}, body: '' });
+        },
+        events: { error: createEventEmitter<unknown>().event },
+    };
+
+    await executeLambdaRpcApiV2(router, createBodyEvent(params));
+
+    return requests;
+}
+
+function createBodyEvent(params: { body: string | undefined; isBase64Encoded: boolean }): types.APIGatewayProxyEventV2 {
+    return {
+        version: '2.0',
+        routeKey: '$default',
+        rawPath: '/webhook',
+        rawQueryString: '',
+        headers: { 'content-type': 'application/json' },
+        requestContext: {
+            accountId: '123456789012',
+            apiId: 'api-id',
+            domainName: 'example.lambda-url.eu-central-1.on.aws',
+            domainPrefix: 'example',
+            http: {
+                method: 'POST',
+                path: '/webhook',
+                protocol: 'HTTP/1.1',
+                sourceIp: '127.0.0.1',
+                userAgent: 'test',
+            },
+            requestId: 'request-id',
+            routeKey: '$default',
+            stage: '$default',
+            time: '09/Oct/2026:12:00:00 +0000',
+            timeEpoch: 1_791_547_200_000,
+        },
+        body: params.body,
+        isBase64Encoded: params.isBase64Encoded,
+    };
+}

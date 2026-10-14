@@ -5,6 +5,10 @@ import type { types } from './types.js';
 
 /**
  * Executes a lambda RPC API v2.
+ *
+ * A body API Gateway or a Lambda function URL delivered base64-encoded (`isBase64Encoded`, set for
+ * a content type it does not treat as text) is decoded to UTF-8 first, so the router always sees
+ * the raw request text.
  * @param router - The API router to use.
  * @param event - The event to execute.
  * @returns The result of the lambda RPC API v2.
@@ -15,12 +19,17 @@ export async function executeLambdaRpcApiV2(
 ): Promise<types.APIGatewayProxyStructuredResultV2> {
     const method: HttpMethod = (event.requestContext.http.method.toUpperCase() as HttpMethod | undefined) || 'GET';
 
+    const requestBody =
+        event.body !== undefined && event.isBase64Encoded
+            ? Buffer.from(event.body, 'base64').toString('utf8')
+            : event.body;
+
     const response = await router.execute({
         method,
         path: event.pathParameters?.proxy || event.rawPath,
         query: event.queryStringParameters,
         headers: getRequestHeaders(event),
-        body: event.body,
+        body: requestBody,
         ip: event.requestContext.http.sourceIp,
     });
 

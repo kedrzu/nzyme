@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, expect, test } from 'bun:test';
+import { afterEach, beforeEach, expect, setDefaultTimeout, test } from 'bun:test';
 import { simpleGit } from 'simple-git';
 
 import { UsageError } from '@nzyme/cli';
@@ -14,6 +14,9 @@ import type { GithubClient } from './createGithubClient.js';
 import { handlePushPreparation } from './handlePushPreparation.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 import { syncAllRepos } from './syncAllRepos.js';
+
+// Every test builds real repositories and runs whole sync and push cycles against them.
+setDefaultTimeout(60_000);
 
 const GITHUB_CONFIG: GithubConfig = { owner: 'acme', repo: 'main', token: 'ghp_test' };
 const FOLLOW_MAIN: SubmoduleBase = { kind: 'trunk', trunk: 'main' };

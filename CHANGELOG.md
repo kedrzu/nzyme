@@ -1,3 +1,19 @@
+## 0.15.1 (2026-10-14)
+
+### 🚀 Features
+
+- let consumer-bump authenticate as a GitHub App ([#218](https://github.com/kedrzu/nzyme/pull/218))
+
+### 🩹 Fixes
+
+- **github-cli:** keep submodules on their pin when a PR does not land on the trunk ([#215](https://github.com/kedrzu/nzyme/pull/215))
+- **github-cli:** read the stack merge result from its details payload ([#216](https://github.com/kedrzu/nzyme/pull/216))
+- **i18n-compiler:** declare @nzyme/typography as a runtime dependency ([#221](https://github.com/kedrzu/nzyme/pull/221))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.15.0 (2026-10-09)
 
 ### 🚀 Features

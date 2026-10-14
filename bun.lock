@@ -220,13 +220,13 @@
       "dependencies": {
         "@nzyme/i18n-core": "workspace:*",
         "@nzyme/project-utils": "workspace:*",
+        "@nzyme/typography": "workspace:*",
         "@nzyme/utils": "workspace:*",
         "vitest": "4.1.10",
         "yaml": "2.9.1",
       },
       "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
-        "@nzyme/typography": "workspace:*",
         "@types/bun": "^1.4.2",
         "@types/node": "26.6.5",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",

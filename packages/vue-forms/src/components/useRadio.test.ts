@@ -45,6 +45,25 @@ test('useRadioGroup returns the field its radios select', async () => {
     expect(field.value).toBe('b');
 });
 
+test('useRadioGroup keeps its field focused while focus moves between its radios', () => {
+    const events: string[] = [];
+    const { radios, field } = mountRadioGroup([{ value: 'a' }, { value: 'b' }], 'a', {
+        onFocus: () => events.push('focus'),
+        onBlur: () => events.push('blur'),
+    });
+
+    fire(radios[0]!, 'onFocus', { relatedTarget: null });
+    expect(field.focused).toBe(true);
+
+    fire(radios[0]!, 'onBlur', { relatedTarget: radios[1]! });
+    fire(radios[1]!, 'onFocus', { relatedTarget: radios[0]! });
+    expect(field.focused).toBe(true);
+
+    fire(radios[1]!, 'onBlur', { relatedTarget: null });
+    expect(field.focused).toBe(false);
+    expect(events).toEqual(['focus', 'blur']);
+});
+
 test('useRadio passes attributes through to the button', () => {
     const { radios } = mountRadioGroup([{ value: 'a' }]);
 
@@ -127,13 +146,17 @@ function mountRadioGroup(options: TestRadio[], initialValue?: string, groupProps
 }
 
 async function press(radio: TestNode, key: string) {
-    const onKeydown = radio.props.onKeydown;
-    if (typeof onKeydown !== 'function') {
-        throw new TypeError('The radio has no keydown listener');
+    fire(radio, 'onKeydown', { key });
+    await nextTick();
+}
+
+function fire(radio: TestNode, listener: string, init: object) {
+    const handler = radio.props[listener];
+    if (typeof handler !== 'function') {
+        throw new TypeError(`The radio has no ${listener} listener`);
     }
 
-    onKeydown(Object.assign(new Event('keydown', { cancelable: true }), { key }));
-    await nextTick();
+    handler(Object.assign(new Event(listener.slice(2).toLowerCase(), { cancelable: true }), init));
 }
 
 interface TestNode {

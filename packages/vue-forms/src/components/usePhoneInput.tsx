@@ -72,7 +72,6 @@ function setupPhoneInput() {
                 readonly={props.readonly}
                 ref={inputElement}
                 tabindex={props.tabindex}
-                title={props.label}
                 type="tel"
             />
         );

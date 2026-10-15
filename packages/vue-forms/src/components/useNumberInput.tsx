@@ -63,7 +63,6 @@ function setupNumberInput() {
                 placeholder={props.placeholder}
                 readonly={props.readonly}
                 tabindex={props.tabindex}
-                title={props.label}
                 type="number"
                 value={field.value}
                 {...attrs}

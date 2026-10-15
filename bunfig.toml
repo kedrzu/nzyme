@@ -1,0 +1,5 @@
+# Bun reads JSX options only from the working directory's config, not from each package's tsconfig, so
+# tests importing a Vue `.tsx` component need the same classic `h` factory as `@nzyme/tsconfig/vue.json`.
+jsx = "react"
+jsxFactory = "h"
+jsxFragment = "h"

@@ -150,11 +150,13 @@ export function createFormField<T>(options: FormFieldOptions<T>) {
 
         if (props.field) {
             props.field.value = newValue;
+            // The model is not read while a field is bound, so it may be stale and would skip the emit.
+            vm.$emit('update:modelValue', newValue);
+            return;
         }
 
+        // `useModel` emits `update:modelValue` itself.
         model.value = newValue;
-
-        vm.$emit('update:modelValue', newValue);
     }
 
     function scrollToError() {

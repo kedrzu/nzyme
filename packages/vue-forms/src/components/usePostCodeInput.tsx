@@ -83,7 +83,6 @@ function setupPostCodeInput() {
                 placeholder={props.placeholder}
                 readonly={props.readonly}
                 tabindex={props.tabindex}
-                title={props.label}
                 value={field.value ?? ''}
                 {...attrs}
             />

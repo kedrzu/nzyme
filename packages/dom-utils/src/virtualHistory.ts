@@ -32,13 +32,20 @@ interface VirtualHistoryData {
 }
 
 /**
+ * What Back to before an entry runs. Cancelled, its callback is `null` and Back steps over the entry.
+ */
+interface VirtualHistoryEntry {
+    callback: VirtualHistoryCallback | null;
+}
+
+/**
  * The virtual history kept for one `History` object. A new one starts when `window.history` is another
  * object than the one patched — a test replacing the globals.
  */
 interface VirtualHistorySession {
     readonly history: History;
     readonly uid: string;
-    readonly callbacks: Map<number, VirtualHistoryCallback | null>;
+    readonly entries: Map<number, VirtualHistoryEntry>;
 }
 
 let activeSession: VirtualHistorySession | null = null;
@@ -52,17 +59,19 @@ let activeSession: VirtualHistorySession | null = null;
  * @returns A handle object that can be used to cancel the callback
  */
 export function onHistoryBack(callback: VirtualHistoryCallback): VirtualHistoryHandle {
-    const { callbacks } = getSession();
+    const { entries } = getSession();
 
     history.pushState(history.state, document.title, null);
     const index = getStateIndex(history.state as VirtualHistoryState | null);
 
-    callbacks.set(index, callback);
+    const entry: VirtualHistoryEntry = { callback };
+    entries.set(index, entry);
 
     return {
         index,
         cancel() {
-            callbacks.set(index, null);
+            // Once Back has run the callback, the entry is no longer kept: there is nothing left to step over.
+            entry.callback = null;
         },
     };
 }
@@ -79,7 +88,7 @@ function startSession(browserHistory: History): VirtualHistorySession {
     const started: VirtualHistorySession = {
         history: browserHistory,
         uid: randomString(16),
-        callbacks: new Map(),
+        entries: new Map(),
     };
 
     window.addEventListener('popstate', event => onPopState(started, event));
@@ -135,14 +144,16 @@ function onPopState(session: VirtualHistorySession, event: PopStateEvent) {
         return;
     }
 
-    const { callbacks } = session;
-    const keys = [...callbacks.keys()].filter(x => x > index);
+    const { entries } = session;
+    const keys = [...entries.keys()].filter(x => x > index);
     // sort in reverse order
     keys.sort((k1, k2) => k2 - k1);
 
-    const entries = keys.map(key => {
-        const callback = callbacks.get(key);
-        callbacks.delete(key);
+    // The callbacks are read before any runs: one cancelling an entry Back has already gone past (a modal
+    // closing the others) must not make it an entry to step over.
+    const popped = keys.map(key => {
+        const callback = entries.get(key)?.callback;
+        entries.delete(key);
 
         return {
             key,
@@ -150,7 +161,7 @@ function onPopState(session: VirtualHistorySession, event: PopStateEvent) {
         };
     });
 
-    for (const entry of entries) {
+    for (const entry of popped) {
         void entry.callback?.();
 
         if (entry.callback == null && entry.key === index + 1) {

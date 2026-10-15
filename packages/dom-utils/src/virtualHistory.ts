@@ -31,9 +31,17 @@ interface VirtualHistoryData {
     virtual: boolean;
 }
 
-let initialized = false;
-const callbacks = new Map<number, VirtualHistoryCallback | null>();
-const uid = randomString(16);
+/**
+ * The virtual history kept for one `History` object. A new one starts when `window.history` is another
+ * object than the one patched — a test replacing the globals.
+ */
+interface VirtualHistorySession {
+    readonly history: History;
+    readonly uid: string;
+    readonly callbacks: Map<number, VirtualHistoryCallback | null>;
+}
+
+let activeSession: VirtualHistorySession | null = null;
 
 /**
  * Registers a callback to be executed when the user navigates back in browser history.
@@ -44,7 +52,7 @@ const uid = randomString(16);
  * @returns A handle object that can be used to cancel the callback
  */
 export function onHistoryBack(callback: VirtualHistoryCallback): VirtualHistoryHandle {
-    initialize();
+    const { callbacks } = getSession();
 
     history.pushState(history.state, document.title, null);
     const index = getStateIndex(history.state as VirtualHistoryState | null);
@@ -59,41 +67,51 @@ export function onHistoryBack(callback: VirtualHistoryCallback): VirtualHistoryH
     };
 }
 
-function initialize() {
-    if (initialized) {
-        return;
+function getSession() {
+    if (activeSession?.history !== window.history) {
+        activeSession = startSession(window.history);
     }
 
-    window.addEventListener('popstate', onPopState);
+    return activeSession;
+}
+
+function startSession(browserHistory: History): VirtualHistorySession {
+    const started: VirtualHistorySession = {
+        history: browserHistory,
+        uid: randomString(16),
+        callbacks: new Map(),
+    };
+
+    window.addEventListener('popstate', event => onPopState(started, event));
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    const pushState = window.history.pushState;
+    const pushState = browserHistory.pushState;
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    const replaceState = window.history.replaceState;
+    const replaceState = browserHistory.replaceState;
 
-    window.history.pushState = function (data, title, url) {
-        const index = getStateIndex(history.state as VirtualHistoryState | null) + 1;
-        const state = getState(index, data);
+    browserHistory.pushState = function (data, title, url) {
+        const index = getStateIndex(browserHistory.state as VirtualHistoryState | null) + 1;
+        const state = getState(started, index, data);
 
         pushState.call(this, state, title, url);
     };
 
-    window.history.replaceState = function (data, title, url) {
-        const index = getStateIndex(history.state as VirtualHistoryState | null);
-        const state = getState(index, data);
+    browserHistory.replaceState = function (data, title, url) {
+        const index = getStateIndex(browserHistory.state as VirtualHistoryState | null);
+        const state = getState(started, index, data);
 
         replaceState.call(this, state, title, url);
     };
 
-    window.history.replaceState(history.state, document.title, null);
+    browserHistory.replaceState(browserHistory.state, document.title, null);
 
-    initialized = true;
+    return started;
 }
 
-function getState(index: number, data?: unknown) {
+function getState(session: VirtualHistorySession, index: number, data?: unknown) {
     let state: VirtualHistoryState = {
         virtualHistory: {
-            sessionUid: uid,
+            sessionUid: session.uid,
             index: index,
             virtual: false,
         },
@@ -107,16 +125,17 @@ function getState(index: number, data?: unknown) {
     return state;
 }
 
-function onPopState(event: PopStateEvent) {
+function onPopState(session: VirtualHistorySession, event: PopStateEvent) {
     const state = event.state as VirtualHistoryState | null;
     const index = getStateIndex(state);
 
     // user may have gone back to some other session
     // we shouldn't do anything about that
-    if (state?.virtualHistory?.sessionUid !== uid) {
+    if (state?.virtualHistory?.sessionUid !== session.uid) {
         return;
     }
 
+    const { callbacks } = session;
     const keys = [...callbacks.keys()].filter(x => x > index);
     // sort in reverse order
     keys.sort((k1, k2) => k2 - k1);

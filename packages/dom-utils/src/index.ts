@@ -1,5 +1,6 @@
 export * from './animateOnce.js';
 export * from './clearFocus.js';
+export * from './createHistoryMock.js';
 export * from './downloadFile.js';
 export * from './getBrowserLanguage.js';
 export * from './getChildrenHeight.js';

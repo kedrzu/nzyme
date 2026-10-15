@@ -679,6 +679,7 @@
       },
       "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
+        "@types/bun": "^1.4.2",
         "@types/lodash.debounce": "4.0.9",
         "@types/node": "26.6.5",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",

@@ -1,11 +1,11 @@
-.moving {
-    cursor: grabbing;
-}
-
 .carousel {
     display: flex;
     position: relative;
+    // The items are moved by a transform, so the browser must not scroll the carousel to a focused item or
+    // for `scrollIntoView`: `clip` cannot be scrolled (and leaves the vertical overflow visible — focus
+    // rings, shadows). Where `clip` is not supported, the carousel resets a scroll itself.
     overflow-x: hidden;
+    overflow-x: clip;
 
     user-select: none;
     -webkit-user-drag: none;
@@ -17,21 +17,25 @@
         -webkit-user-drag: none;
     }
 
-    .moving & {
-        // this prevents from clicking some link inside
-        // when finished sliding with mouse
-        pointer-events: none;
+    &_moving {
+        cursor: grabbing;
     }
 }
 
 .items {
     display: flex;
+    margin: 0;
     padding: 0;
+    list-style: none;
     overflow: visible;
     transition: transform 0.3s ease-out;
     min-width: 100%;
 
     &_swiping {
+        transition: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
         transition: none;
     }
 }

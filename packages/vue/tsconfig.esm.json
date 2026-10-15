@@ -4,7 +4,8 @@
         "outDir": "./dist",
         "rootDir": "./src",
         "emitDeclarationOnly": true,
-        "composite": false
+        "composite": false,
+        "types": ["vue", "vue/jsx", "vite/client", "@types/node", "bun"]
     },
     "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.json", "src/**/*.scss", "src/**/*.vue"],
     "exclude": ["node_modules", "dist"]

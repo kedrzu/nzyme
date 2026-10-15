@@ -38,7 +38,8 @@ export function getRadioEmits<T extends Primitive = Primitive>() {
 /**
  * Radio button composable that integrates with a RadioGroup context for selection state. Follows the
  * WAI-ARIA radio group pattern: only one radio of the group is in the tab order, and the arrow keys move
- * focus and selection to the previous or next enabled radio, wrapping around.
+ * focus and selection to the previous or next enabled radio, wrapping around. A readonly radio stays
+ * focusable and the arrow keys still move focus, but nothing changes the selection.
  */
 export function useRadio<T extends Primitive = Primitive>(props: RadioProps<T>) {
     const ctx = injectContext(RadioGroupContext);
@@ -82,11 +83,13 @@ export function useRadio<T extends Primitive = Primitive>(props: RadioProps<T>) 
                 aria-required={required.value}
                 disabled={disabled.value}
                 name={props.name}
+                onBlur={ctx.onBlur}
                 onClick={onClick}
+                onFocus={ctx.onFocus}
                 onKeydown={onKeydown}
                 ref={element}
                 role="radio"
-                tabindex={state.readonly || ctx.tabStop.value !== item ? -1 : (props.tabindex ?? 0)}
+                tabindex={ctx.tabStop.value !== item ? -1 : (props.tabindex ?? 0)}
                 type="button"
             >
                 {slots.default?.()}
@@ -103,7 +106,7 @@ export function useRadio<T extends Primitive = Primitive>(props: RadioProps<T>) 
     }
 
     function onKeydown(event: KeyboardEvent) {
-        if (state.readonly || state.disabled) {
+        if (state.disabled) {
             return;
         }
 
@@ -125,7 +128,10 @@ export function useRadio<T extends Primitive = Primitive>(props: RadioProps<T>) 
 
         const radios = ctx.getEnabledRadios();
         const next = assertValue(radios[(radios.indexOf(item) + step + radios.length) % radios.length]);
-        next.select();
+        if (!state.readonly) {
+            next.select();
+        }
+
         next.element?.focus();
     }
 

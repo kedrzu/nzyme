@@ -20,6 +20,10 @@ interface RadioGroupContext {
     tabStop: ComputedRef<RadioGroupItem | undefined>;
     /** Enabled radios in document order — the order the arrow keys move through. */
     getEnabledRadios(): RadioGroupItem[];
+    /** Focus handler for each radio: the field is focused while any of its radios is. */
+    onFocus: (event: FocusEvent) => void;
+    /** Blur handler for each radio: focus moving to another radio of the group does not blur the field. */
+    onBlur: (event: FocusEvent) => void;
 }
 
 interface RadioGroupItem {
@@ -54,7 +58,8 @@ export function getRadioGroupEmits<T extends Primitive = Primitive>() {
 
 /**
  * Composable for creating a radio group that manages a form field with primitive values.
- * Provides context to child radio components for coordinated behavior.
+ * Provides context to child radio components for coordinated behavior, and returns the group's field so
+ * a component wrapping the group can render its errors without a second field over the same props.
  */
 export function useRadioGroup<T extends Primitive = Primitive>(props: RadioGroupProps<T>) {
     const field = createFormField<T>({ props });
@@ -64,10 +69,36 @@ export function useRadioGroup<T extends Primitive = Primitive>(props: RadioGroup
         return enabled.find(radio => radio.value === field.value) ?? enabled[0];
     });
 
-    provideContext(RadioGroupContext, { field, props: props, radios, tabStop, getEnabledRadios });
+    provideContext(RadioGroupContext, {
+        field,
+        props: props,
+        radios,
+        tabStop,
+        getEnabledRadios,
+        onFocus,
+        onBlur,
+    });
+
+    return {
+        field,
+    };
 
     function getEnabledRadios() {
         return radios.filter(radio => !radio.disabled).toSorted(compareDocumentOrder);
+    }
+
+    function onFocus(event: FocusEvent) {
+        if (!field.focused) {
+            field.inputAttrs.onFocus(event);
+        }
+    }
+
+    function onBlur(event: FocusEvent) {
+        if (radios.some(radio => radio.element && radio.element === event.relatedTarget)) {
+            return;
+        }
+
+        field.inputAttrs.onBlur(event);
     }
 }
 

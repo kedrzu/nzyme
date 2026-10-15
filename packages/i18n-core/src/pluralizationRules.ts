@@ -35,12 +35,11 @@ export const pluralizationPl = definePluralization({
             return plurals.one;
         }
 
-        if (count < 10 || count > 20) {
-            // np: 3 jabłka lub 23 jabłka
-            const lastDigit = count % 10;
-            if (lastDigit >= 2 && lastDigit <= 4) {
-                return plurals.few ?? plurals.many;
-            }
+        // np: 3 jabłka lub 23 jabłka, ale 12 jabłek i 112 jabłek
+        const lastDigit = count % 10;
+        const lastTwoDigits = count % 100;
+        if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14)) {
+            return plurals.few ?? plurals.many;
         }
 
         // np 8 jabłek
@@ -51,7 +50,29 @@ export const pluralizationPl = definePluralization({
 /**
  * Czech pluralization
  */
-export const pluralizationCs = pluralizationPl;
+export const pluralizationCs = definePluralization({
+    plurals: ['few', 'many', 'one', 'zero'],
+    optionalPlurals: ['zero'],
+    pluralize: (count, plurals) => {
+        // např: nula jablek
+        if (count === 0) {
+            return plurals.zero ?? plurals.many ?? plurals.few;
+        }
+
+        // např: jedno jablko
+        if (count === 1) {
+            return plurals.one;
+        }
+
+        // např: 3 jablka, ale 23 jablek
+        if (count >= 2 && count <= 4) {
+            return plurals.few ?? plurals.many;
+        }
+
+        // např: 8 jablek
+        return plurals.many ?? plurals.few;
+    },
+});
 
 /**
  * German pluralization

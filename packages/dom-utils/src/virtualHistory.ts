@@ -39,6 +39,17 @@ interface VirtualHistoryEntry {
 }
 
 /**
+ * A step back over a cancelled entry, from when it is asked until it lands.
+ */
+interface VirtualHistoryStep {
+    /** Index of the entry it was asked from. */
+    readonly from: number;
+    /** Index of the last entry pushed since it was asked: the step lands under it, undoing it. */
+    pushed: number | null;
+    readonly timeout: ReturnType<typeof setTimeout>;
+}
+
+/**
  * The virtual history kept for one `History` object. A new one starts when `window.history` is another
  * object than the one patched — a test replacing the globals.
  */
@@ -46,7 +57,16 @@ interface VirtualHistorySession {
     readonly history: History;
     readonly uid: string;
     readonly entries: Map<number, VirtualHistoryEntry>;
+    step: VirtualHistoryStep | null;
+    /** Set while going forward to an entry a step undid, until it lands. */
+    returning: ReturnType<typeof setTimeout> | null;
 }
+
+/**
+ * How long a step nzyme takes through the history may take to land before it is given up on: one that
+ * leaves the document never lands.
+ */
+const STEP_TIMEOUT_MS = 1000;
 
 let activeSession: VirtualHistorySession | null = null;
 
@@ -89,6 +109,8 @@ function startSession(browserHistory: History): VirtualHistorySession {
         history: browserHistory,
         uid: randomString(16),
         entries: new Map(),
+        step: null,
+        returning: null,
     };
 
     window.addEventListener('popstate', event => onPopState(started, event));
@@ -103,6 +125,10 @@ function startSession(browserHistory: History): VirtualHistorySession {
         const state = getState(started, index, data);
 
         pushState.call(this, state, title, url);
+
+        if (started.step) {
+            started.step.pushed = index;
+        }
     };
 
     browserHistory.replaceState = function (data, title, url) {
@@ -135,12 +161,42 @@ function getState(session: VirtualHistorySession, index: number, data?: unknown)
 }
 
 function onPopState(session: VirtualHistorySession, event: PopStateEvent) {
+    if (session.returning) {
+        // Back at the entry the app pushed, after the detour hidden from the listeners added later.
+        clearTimeout(session.returning);
+        session.returning = null;
+        event.stopImmediatePropagation();
+        return;
+    }
+
     const state = event.state as VirtualHistoryState | null;
     const index = getStateIndex(state);
+    const isOwnState = state?.virtualHistory?.sessionUid === session.uid;
+
+    const step = session.step;
+    if (step) {
+        clearTimeout(step.timeout);
+        session.step = null;
+
+        if (step.pushed != null) {
+            // The app navigated before the step landed, and the step has undone it: go forward to where the app
+            // went. Listeners added after this one never see the detour; one added before (a router created
+            // before the first entry) sees both steps and follows them back to where the app went.
+            event.stopImmediatePropagation();
+            // A step goes from the entry that was current when it was asked.
+            const delta = step.pushed - (isOwnState ? index : step.from - 1);
+            if (delta !== 0) {
+                session.returning = setTimeout(() => (session.returning = null), STEP_TIMEOUT_MS);
+                session.history.go(delta);
+            }
+
+            return;
+        }
+    }
 
     // user may have gone back to some other session
     // we shouldn't do anything about that
-    if (state?.virtualHistory?.sessionUid !== session.uid) {
+    if (!isOwnState) {
         return;
     }
 
@@ -165,7 +221,12 @@ function onPopState(session: VirtualHistorySession, event: PopStateEvent) {
         void entry.callback?.();
 
         if (entry.callback == null && entry.key === index + 1) {
-            history.back();
+            session.step = {
+                from: index,
+                pushed: null,
+                timeout: setTimeout(() => (session.step = null), STEP_TIMEOUT_MS),
+            };
+            session.history.back();
         }
     }
 }

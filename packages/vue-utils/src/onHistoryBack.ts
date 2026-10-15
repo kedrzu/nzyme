@@ -27,7 +27,6 @@ export function onHistoryBack(options: OnHistoryBackOptions) {
 
     if (options.enabled) {
         watch(options.enabled, enabled => {
-            console.warn('[onHistoryBack] watch callback - enabled:', enabled);
             if (enabled) {
                 init();
             } else {
@@ -43,7 +42,11 @@ export function onHistoryBack(options: OnHistoryBackOptions) {
 
     function init() {
         if (!handle) {
-            handle = virtualHistory.pushState(options.callback);
+            handle = virtualHistory.pushState(() => {
+                // Back has used the entry up: arming again adds a new one.
+                handle = undefined;
+                return options.callback();
+            });
         }
     }
 

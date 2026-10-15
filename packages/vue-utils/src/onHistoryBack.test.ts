@@ -29,6 +29,20 @@ test('unmounted after Back has run its callback, it leaves nothing for Back from
     expect(browser.url).toBe('/screen');
 });
 
+test('armed again after Back has run its callback, Back runs it again', async () => {
+    const callback = mock();
+    const { historyBack } = mountWithHistoryBack(callback);
+
+    history.back();
+    await browser.settle();
+    historyBack.init();
+    history.back();
+    await browser.settle();
+
+    expect(callback).toHaveBeenCalledTimes(2);
+    expect(browser.url).toBe('/screen');
+});
+
 function mountWithHistoryBack(callback: () => void) {
     let historyBack: ReturnType<typeof onHistoryBack> | undefined;
     const app = createInertRenderer().createApp(

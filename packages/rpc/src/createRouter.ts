@@ -149,15 +149,9 @@ export function createRouter(options: RouterOptions): Router {
             const result: unknown = await handlerInstance(input?.value, { request });
 
             if (result instanceof Response) {
-                const headers: HttpResponseHeaders = httpContext.response.headers;
-
-                result.headers.forEach((value, key) => {
-                    headers[key] = value;
-                });
-
                 return {
                     body: await result.blob(),
-                    headers,
+                    headers: mergeResponseHeaders(httpContext.response.headers, result.headers),
                     status: result.status,
                     statusText: result.statusText,
                 };
@@ -232,4 +226,34 @@ function parseJson(input: string | null | undefined): unknown {
     } catch {
         throw new HttpError(400, 'Invalid JSON');
     }
+}
+
+/**
+ * Merges the headers of a handler-returned `Response` over the headers the handler set through
+ * {@link HttpContextProvider}. `Set-Cookie` is the one header that must never be folded into a
+ * single value, so every cookie from both sources is kept as its own array entry.
+ */
+function mergeResponseHeaders(contextHeaders: HttpResponseHeaders, responseHeaders: Headers): HttpResponseHeaders {
+    const headers: HttpResponseHeaders = { ...contextHeaders };
+
+    responseHeaders.forEach((value, key) => {
+        if (key !== 'set-cookie') {
+            headers[key] = value;
+        }
+    });
+
+    const cookies = [...toCookieList(contextHeaders['set-cookie']), ...responseHeaders.getSetCookie()];
+    if (cookies.length > 0) {
+        headers['set-cookie'] = cookies;
+    }
+
+    return headers;
+}
+
+function toCookieList(value: string | string[] | undefined): string[] {
+    if (value === undefined) {
+        return [];
+    }
+
+    return Array.isArray(value) ? value : [value];
 }

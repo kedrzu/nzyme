@@ -41,7 +41,8 @@ it in review.
   `x => x`.
 - **Type tautology** — asserting a runtime shape the compiler already guarantees.
 - **Literal or declaration lock-in** — exact-string tests for labels and descriptions; assertions that
-  mirror a static config object. Review of the diff protects a config value, not a test restating it.
+  mirror a static config object or a declarative infrastructure definition (an IaC stack's resources
+  and their properties). Review of the diff protects a config value, not a test restating it.
   If the only way to test something is extracting it from its single call site into a function that
   exists for the test, don't test it.
 - **"It renders"** — mounting a component without logic and asserting it rendered.
@@ -65,7 +66,8 @@ state (query shape, auth narrowing, idempotency). A red-first regression test st
 first.
 
 **Not worth writing:** pass-throughs, getters, prop forwarding; what TypeScript enforces; paths upstream
-validation makes unreachable; restating a higher-level test one level lower.
+validation makes unreachable; restating a higher-level test one level lower; internal dev tooling (CLI
+commands, repo scripts), whose only user is the developer who sees the failure on the next run.
 
 **Borderline calls:**
 

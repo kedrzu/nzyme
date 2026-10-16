@@ -149,7 +149,8 @@ touched file's existing order rather than reordering it: builtin, then external,
   has a generated code index (a root `INDEX.md`/`UTILS.md`, e.g. from a `bun run index` script), read
   it first, and check `@nzyme/utils`, `@nzyme/vue-utils` and `@nzyme/dom-utils`. Reuse beats reinvent.
 - No performance optimizations (caching, pooling, memoization) without profiling evidence.
-- No config, enum variants or branches that no caller exercises yet.
+- No config, enum variants, branches or deployment topology (multi-region, multi-instance) that no
+  caller or requirement exercises yet.
 - No generic registration/plugin abstraction for a handful of known cases — use a `switch`.
 - No injectable or `defineEnvVariable()` wrapper for a fixed internal constant (cache size, timeout,
   retry count) — a plain `const`.

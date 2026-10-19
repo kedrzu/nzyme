@@ -62,12 +62,12 @@ test('converts zero bigint to string', () => {
 
 test('converts function to undefined', () => {
     const result = toJson(() => 'test');
-    expect(result).toBe(undefined);
+    expect(result).toBeUndefined();
 });
 
 test('converts arrow function to undefined', () => {
     const result = toJson((x: number) => x + 1);
-    expect(result).toBe(undefined);
+    expect(result).toBeUndefined();
 });
 
 // ============================================================================

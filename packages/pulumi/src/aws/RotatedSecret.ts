@@ -62,7 +62,7 @@ export class RotatedSecret extends pulumi.ComponentResource {
     public readonly keySet: pulumi.Output<RotatedKeySet>;
 
     constructor(name: string, args: RotatedSecretArgs, opts?: pulumi.ComponentResourceOptions) {
-        super('examples:secrets:RotatedSecret', name, {}, opts);
+        super('nzyme:aws:RotatedSecret', name, {}, opts);
 
         const { secretName, rotationDays = 90, keyCount = 6, length = 64, kmsKeyId } = args;
 

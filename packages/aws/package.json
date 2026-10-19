@@ -35,10 +35,10 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "@aws-sdk/client-cloudfront": "3.1149.0",
-        "@aws-sdk/client-dynamodb": "3.1149.0",
-        "@aws-sdk/client-s3": "3.1149.0",
-        "@aws-sdk/client-sqs": "3.1149.0",
+        "@aws-sdk/client-cloudfront": "3.1152.0",
+        "@aws-sdk/client-dynamodb": "3.1152.0",
+        "@aws-sdk/client-s3": "3.1152.0",
+        "@aws-sdk/client-sqs": "3.1152.0",
         "@nzyme/fetch-utils": "workspace:*",
         "@nzyme/ioc": "workspace:*",
         "@nzyme/logging": "workspace:*",

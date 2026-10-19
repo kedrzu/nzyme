@@ -38,7 +38,7 @@
         "@nzyme/ioc": "workspace:*",
         "@nzyme/logging": "workspace:*",
         "@nzyme/types": "workspace:*",
-        "vue": "3.5.43"
+        "vue": "3.5.44"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

@@ -8,13 +8,13 @@ import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
+import terser from '@rollup/plugin-terser';
 import chalk from 'chalk';
 import { emptyDir } from 'fs-extra/esm';
 import { rollup } from 'rollup';
 import type { Plugin } from 'rollup';
 import { bundleStats } from 'rollup-plugin-bundle-stats';
 import sourcemaps from 'rollup-plugin-sourcemaps';
-import { terser } from 'rollup-plugin-terser';
 
 import { unwrapCjsDefaultImport } from '@nzyme/esm/unwrapCjsDefaultImport.js';
 import { normalizeBuiltinsPlugin } from '@nzyme/rollup-utils/plugins/normalizeBuiltinsPlugin.js';
@@ -101,8 +101,11 @@ const rollupResult = await rollup({
                 },
                 sourceMaps: options.sourcemaps,
             }),
+        // Runs terser in worker threads. Never a minifier that forks child processes: a fork inherits
+        // `process.execArgv`, which under `bun -e`/`node -e` is the eval script itself, so every child
+        // re-runs the whole compile and forks again.
         options.minify &&
-            terser(
+            unwrapCjsDefaultImport(terser)(
                 options.minify === true
                     ? {
                           toplevel: true,

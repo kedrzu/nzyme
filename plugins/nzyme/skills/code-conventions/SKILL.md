@@ -32,8 +32,11 @@ description: >-
 - **In closures, define functions AFTER the `return`** and rely on hoisting — the returned shape reads
   first.
 - **Plain function declarations, not arrow-function variables.**
-- **Don't abstract a helper with exactly one caller** — inline it; extraction earns its keep through
-  reuse.
+- **Don't add an indirection with exactly one caller** — inline a wrapper, factory or constant
+  that adds a name but no capability (`getUserId(u) { return u.id }`). A function a caller
+  elsewhere could use without knowing its file (`parseDate`) is a helper even with one caller
+  today — it gets its own file (see the `@util` rule under Documentation). Which of the two it is
+  is your judgement.
 - **Co-locate single-consumer utilities with their consumer's package**; reserve shared packages for
   concerns used by 2+ packages.
 - **Don't mutate function arguments** — work on a copy and return the result; callers capture it.
@@ -96,8 +99,10 @@ Don't document the internal functions declared inside a service, command or comp
   redundant JSDoc type annotations — TypeScript has them.
 - Skip trivial getters, re-exports and type-only files whose names are self-documenting.
 - Leave existing lint-disable comments where they are — directly under the JSDoc block.
-- If the repo generates a code index from JSDoc (see Design principles), tag context-agnostic,
-  reusable helpers with `@util` so they are listed.
+- If the repo generates a code index from JSDoc (see Design principles), tag every reusable helper
+  with `@util` so it is listed — a domain-specific one too, in its own file in the nearest `utils/`
+  folder of its module or package. A helper left private inside the file using it is invisible to
+  the index, so the next agent writes it again.
 
 ### `@__NO_SIDE_EFFECTS__`
 
@@ -145,9 +150,9 @@ touched file's existing order rather than reordering it: builtin, then external,
 ## Design principles
 
 - Write complete code — no skipped implementations or TODOs.
-- Don't repeat code — extract a utility. Before writing one, check for an existing helper: if the repo
-  has a generated code index (a root `INDEX.md`/`UTILS.md`, e.g. from a `bun run index` script), read
-  it first, and check `@nzyme/utils`, `@nzyme/vue-utils` and `@nzyme/dom-utils`. Reuse beats reinvent.
+- Don't repeat code — extract a utility. Reuse beats reinvent: `@nzyme/utils`, `@nzyme/vue-utils` and
+  `@nzyme/dom-utils` hold the shared helpers, and a repo's generated code index (a root
+  `INDEX.md`/`UTILS.md`) lists its own.
 - No performance optimizations (caching, pooling, memoization) without profiling evidence.
 - No config, enum variants, branches or deployment topology (multi-region, multi-instance) that no
   caller or requirement exercises yet.

@@ -140,7 +140,7 @@ This applies to everything you write: plans, PR descriptions, reviews, docs, cha
   columns; anything smaller is bullets.
 - **Match the user's register.** Anything durable or read by agents (code, comments, docs, ADRs, skills,
   PRs) is English. A reply only the user reads is in their language.
-- **Hub files stay thin.** `AGENTS.md` and a `SKILL.md` carry routing and rules; detail goes in the
+- **Hub files stay thin.** `CLAUDE.md` and a `SKILL.md` carry routing and rules; detail goes in the
   reference they point at.
 
 # Agent tool use

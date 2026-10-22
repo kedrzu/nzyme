@@ -22,7 +22,7 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
 - each package's `INDEX.md` lists its services, commands, endpoints, components and utils;
 - `UTILS.md` catalogues the `@util` helpers of the foundational packages.
 
-Read these before grepping, and check `UTILS.md` before writing a helper.
+Read these before grepping.
 
 **Generated, never edit:** each package's `tsconfig.json` (`bun run monorepo`) and `*.loc.ts`
 (`bun run localise`, from `.loc.yaml`).

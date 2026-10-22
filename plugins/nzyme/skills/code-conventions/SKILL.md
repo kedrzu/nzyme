@@ -32,8 +32,11 @@ description: >-
 - **In closures, define functions AFTER the `return`** and rely on hoisting — the returned shape reads
   first.
 - **Plain function declarations, not arrow-function variables.**
-- **Don't abstract a helper with exactly one caller** — inline it; extraction earns its keep through
-  reuse.
+- **Don't add an indirection with exactly one caller** — inline a wrapper, factory or constant
+  that adds a name but no capability (`getUserId(u) { return u.id }`). A function a caller
+  elsewhere could use without knowing its file (`parseDate`) is a helper even with one caller
+  today — it gets its own file (see the `@util` rule under Documentation). Which of the two it is
+  is your judgement.
 - **Co-locate single-consumer utilities with their consumer's package**; reserve shared packages for
   concerns used by 2+ packages.
 - **Don't mutate function arguments** — work on a copy and return the result; callers capture it.

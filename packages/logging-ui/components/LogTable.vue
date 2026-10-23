@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { LoggerLevel } from '@nzyme/logging/LoggerLevel.js';
-import { AlertCircle, AlertTriangle, Bug, Ellipsis, Info, Search } from 'lucide-vue-next';
+import { AlertCircle, AlertTriangle, Bug, Ellipsis, Info, Search } from '@lucide/vue';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import { ref, watch, type Component } from 'vue';

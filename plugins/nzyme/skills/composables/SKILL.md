@@ -62,7 +62,7 @@ export interface UseOrderStatusOptions {
 
 export function useOrderStatus(options: UseOrderStatusOptions) {
     const getOrderStatus = useService(GetOrderStatusCommand);
-    const logger = useLogger('useOrderStatus');
+    const logger = useLogger(); // named after the host component
 
     const orderId = makeRef(options.orderId); // normalize before first use
     const status = ref<OrderStatus | null>(null);
@@ -174,9 +174,10 @@ Don't hand-roll `onMounted` + a loading ref + `try/catch` around a fetch — `us
 
 ## Injecting services
 
-`useService(Unit)` from `@nzyme/vue-ioc/useService.js`; `useLogger(name)` from
-`@nzyme/vue-ioc/useLogger.js`. Inject what the frontend container actually registers — server-only
-services are not there and fail at runtime; import their types only.
+`useService(Unit)` from `@nzyme/vue-ioc/useService.js`; `useLogger()` from
+`@nzyme/vue-ioc/useLogger.js`, named after the component being set up unless you pass a name. Inject
+what the frontend container actually registers — server-only services are not there and fail at
+runtime; import their types only.
 
 **Call `useService` unconditionally at the top of setup — gate the use, not the call.** It is backed by
 `inject()`, which only works synchronously during setup:

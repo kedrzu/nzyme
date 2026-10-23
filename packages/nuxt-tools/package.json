@@ -41,7 +41,7 @@
         "fs-extra": "11.4.1",
         "mime-types": "3.0.2",
         "nuxt": "4.4.8",
-        "vite": "7.3.6"
+        "vite": "8.3.4"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

@@ -52,8 +52,9 @@ export const ProductSync = defineService({
 });
 ```
 
-In Vue components and composables, `useLogger('ProductList')` from `@nzyme/vue-ioc/useLogger.js` gives a
-logger with an explicit name.
+In Vue components and composables, `useLogger()` from `@nzyme/vue-ioc/useLogger.js` gives a logger named
+after the component being set up, so a composable logs under the component that uses it.
+`useLogger('Name')` sets the name explicitly.
 
 ## Constant message, variables in the object
 

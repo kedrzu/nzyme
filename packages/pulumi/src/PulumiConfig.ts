@@ -20,7 +20,7 @@ export interface PulumiConfig {
     /**
      * Shared AWS config (credentials/endpoints + default/backend region). The per-stack deploy region
      * is taken from each stack's `region` option and overrides `awsConfig.region`. Usually only set for
-     * LocalStack; outside it the provider resolves credentials/region from the environment.
+     * a local AWS emulator; outside it the provider resolves credentials/region from the environment.
      */
     awsConfig?: AwsConfig;
 

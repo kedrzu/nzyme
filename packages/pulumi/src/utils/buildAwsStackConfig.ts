@@ -8,7 +8,7 @@ import type { AwsConfig } from '../AwsConfig.js';
 export interface BuildAwsStackConfigOptions {
     /**
      * Workspace-level AWS config (credentials, endpoints, default region). Optional — outside
-     * LocalStack it is usually unset and the provider resolves credentials/region from the env.
+     * a local AWS emulator it is usually unset and the provider resolves credentials/region from the env.
      */
     awsConfig?: AwsConfig;
 

@@ -102,6 +102,8 @@
         "web-search@kedrzu-skills": true,
         "playwright@kedrzu-skills": true,
         "skill-improve@kedrzu-skills": true,
-        "skill-creator@claude-plugins-official": true
+        "skill-creator@claude-plugins-official": true,
+        "guardrails@kedrzu-skills": true,
+        "claude-md-management@claude-plugins-official": true
     }
 }

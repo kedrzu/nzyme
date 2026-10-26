@@ -45,7 +45,7 @@
         "@nzyme/utils": "workspace:*",
         "@types/fs-extra": "11.0.4",
         "chalk": "6.0.1",
-        "chokidar": "5.0.0",
+        "chokidar": "6.0.0",
         "clipanion": "4.0.0-rc.4",
         "comment-json": "5.0.0",
         "compare-versions": "6.1.1",

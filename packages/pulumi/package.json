@@ -43,8 +43,8 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "@aws-sdk/client-s3": "3.1152.0",
-        "@aws-sdk/credential-provider-node": "3.972.86",
+        "@aws-sdk/client-s3": "3.1156.0",
+        "@aws-sdk/credential-provider-node": "3.972.88",
         "@babel/core": "8.0.7",
         "@babel/preset-env": "8.0.7",
         "@nzyme/cli": "workspace:*",

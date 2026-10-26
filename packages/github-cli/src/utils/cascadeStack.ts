@@ -22,6 +22,13 @@ export interface CascadeStackParams {
     branches: string[];
 
     /**
+     * Working tree of the repository whose stack this is — a submodule's path for a submodule's own
+     * stack.
+     * @default the current working directory
+     */
+    baseDir?: string;
+
+    /**
      * Logger instance.
      */
     logger: Logger;
@@ -52,7 +59,7 @@ export interface CascadeStackParams {
  * nothing here pushed it, so its local tip is no evidence of what the remote holds.
  */
 export async function cascadeStack(params: CascadeStackParams): Promise<Map<string, string>> {
-    const { branches, logger } = params;
+    const { branches, baseDir, logger } = params;
 
     const pushedHeads = new Map<string, string>();
 
@@ -62,7 +69,7 @@ export async function cascadeStack(params: CascadeStackParams): Promise<Map<stri
 
     // Submodule recursion off for the same reason as syncAllRepos: git would otherwise try to fetch
     // gitlink commits by SHA while merging, which real remotes reject.
-    const git = simpleGit({ config: ['submodule.recurse=false'] });
+    const git = simpleGit({ baseDir, config: ['submodule.recurse=false'] });
     const originalBranch = (await git.status()).current;
 
     logger.info('');

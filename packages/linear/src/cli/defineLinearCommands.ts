@@ -7,6 +7,7 @@ import type { CommandClass } from '@nzyme/cli/Command.js';
 import { Command } from '@nzyme/cli/Command.js';
 import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
 import { GitMergeConflictError } from '@nzyme/github-cli/utils/GitMergeConflictError.js';
+import { assertSubmodulePrsMergeable } from '@nzyme/github-cli/utils/assertSubmodulePrsMergeable.js';
 import { convertAllPrsToReady } from '@nzyme/github-cli/utils/convertAllPrsToReady.js';
 import { createGithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';
 import { decideUnattendedMode } from '@nzyme/github-cli/utils/decideUnattendedMode.js';
@@ -711,13 +712,19 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                 const landingTrunk = getLandingTrunk(submoduleBase);
 
                 if (nodes) {
-                    await refreshStack({
+                    const stackSyncResult = await refreshStack({
                         branches: nodes.map(pr => pr.head.ref),
                         trunk: landingTrunk,
                         submoduleBase,
                         unattended,
                         githubClient,
                         githubConfig,
+                        logger: this.logger,
+                    });
+
+                    await assertSubmodulePrsMergeable({
+                        githubClient,
+                        prs: stackSyncResult.submodulePrs,
                         logger: this.logger,
                     });
 
@@ -739,6 +746,12 @@ function defineTaskRefreshCommand(options: LinearCommandsOptions) {
                     unattended,
                     githubClient,
                     githubConfig,
+                    logger: this.logger,
+                });
+
+                await assertSubmodulePrsMergeable({
+                    githubClient,
+                    prs: syncResult.submodulePrs,
                     logger: this.logger,
                 });
 

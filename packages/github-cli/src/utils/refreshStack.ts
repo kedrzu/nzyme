@@ -9,7 +9,9 @@ import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
 import { GitMergeConflictError } from './GitMergeConflictError.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
+import { restoreSubmoduleHomes } from './refreshSubmoduleChain.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
+import type { SyncAllReposResult } from './syncAllRepos.js';
 import { syncAllRepos } from './syncAllRepos.js';
 import { syncStackNodesFromRemote } from './syncStackNodesFromRemote.js';
 
@@ -65,8 +67,10 @@ export interface RefreshStackParams {
  *
  * You end up back on the node you started from — refreshing is a maintenance step, not a navigation
  * one.
+ * @returns What the trunk sync of the bottom node did, including the submodule pull requests it
+ * refreshed.
  */
-export async function refreshStack(params: RefreshStackParams): Promise<void> {
+export async function refreshStack(params: RefreshStackParams): Promise<SyncAllReposResult> {
     const { branches, trunk, submoduleBase, unattended, githubClient, githubConfig, logger } = params;
 
     const bottomBranch = branches[0]!;
@@ -83,7 +87,13 @@ export async function refreshStack(params: RefreshStackParams): Promise<void> {
     // rewrote it, and dropping to the bottom node would carry the changes onto a node they were not
     // written for. `syncAllRepos` auto-commits too, but only once both have already happened — far
     // too late. Committing here lands the work on the node it belongs to and leaves that later
-    // auto-commit with nothing to do. A pinned submodule's gitlink is left out, as there.
+    // auto-commit with nothing to do. A pinned submodule's gitlink is left out, as there. A submodule
+    // an interrupted refresh left on a lower node of its own chain goes home first, or this commit
+    // would record a gitlink pointing at that node.
+    if (submoduleBase.kind === 'trunk') {
+        await restoreSubmoduleHomes({ logger });
+    }
+
     await autoCommitChanges({
         logger,
         git,
@@ -101,8 +111,9 @@ export async function refreshStack(params: RefreshStackParams): Promise<void> {
             await git.checkout(bottomBranch);
         }
 
+        let syncResult: SyncAllReposResult;
         try {
-            await syncAllRepos({
+            syncResult = await syncAllRepos({
                 branch: bottomBranch,
                 baseBranch: trunk,
                 submoduleBase,
@@ -121,6 +132,8 @@ export async function refreshStack(params: RefreshStackParams): Promise<void> {
         }
 
         await cascadeStack({ branches, logger });
+
+        return syncResult;
     } finally {
         // Return to where the user was — unless a conflict left the working tree mid-merge, where
         // switching away would strand the resolution they are about to make.
@@ -164,16 +177,19 @@ export function logStackConflictGuidance(error: GitMergeConflictError, logger: L
         return;
     }
 
-    const { nodeBranch, nodePosition, nodeCount, against } = context;
+    const { nodeBranch, nodePosition, nodeCount, against, submodule } = context;
+    const where = submodule ? `${chalk.magenta(submodule)}'s chain node` : 'stack node';
 
     logger.error('');
     logger.error(
         chalk.red.bold(
-            `   ✖ Conflict on stack node ${nodePosition}/${nodeCount} — ${chalk.cyan(nodeBranch)} vs ${chalk.cyan(against)}`,
+            `   ✖ Conflict on ${where} ${nodePosition}/${nodeCount} — ${chalk.cyan(nodeBranch)} vs ${chalk.cyan(against)}`,
         ),
     );
     logger.error('');
-    logger.error(`   ${chalk.yellow('Resolve it on this node.')} It is checked out and mid-merge.`);
+    logger.error(
+        `   ${chalk.yellow('Resolve it on this node.')} It is checked out and mid-merge${submodule ? ` in ${chalk.magenta(submodule)}` : ''}.`,
+    );
     logger.error(
         `   ${chalk.gray('Resolving it on a node above instead would bury')} ${chalk.cyan(against)}${chalk.gray("'s changes inside that node's own diff.")}`,
     );
@@ -182,6 +198,13 @@ export function logStackConflictGuidance(error: GitMergeConflictError, logger: L
         logger.error('');
         logger.error(
             `   ${chalk.gray(`${nodeCount - nodePosition} node(s) above are still waiting. Commit the resolution, then re-run`)} ${chalk.cyan('task refresh')} ${chalk.gray('— it picks up where it stopped.')}`,
+        );
+    }
+
+    if (submodule) {
+        logger.error('');
+        logger.error(
+            `   ${chalk.gray(`Commit the resolution in ${submodule} (do not switch branches there); the re-run takes ${submodule} back to the branch the refresh started from.`)}`,
         );
     }
 

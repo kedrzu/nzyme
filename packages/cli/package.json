@@ -70,7 +70,7 @@
         "@types/node": "26.6.5",
         "@types/source-map-support": "0.5.10",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-        "oxfmt": "0.73.0"
+        "oxfmt": "0.74.0"
     },
     "engines": {
         "node": ">=20"

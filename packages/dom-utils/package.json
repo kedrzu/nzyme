@@ -45,7 +45,7 @@
         "@types/bun": "^1.4.3",
         "@types/lodash.debounce": "4.0.9",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-        "oxfmt": "0.73.0"
+        "oxfmt": "0.74.0"
     },
     "nzyme": {
         "cjs": true

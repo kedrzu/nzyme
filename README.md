@@ -29,7 +29,7 @@ bun run format:check  # oxfmt + markdown
 
 Paseo worktrees run `setup.sh` automatically (`paseo.json`).
 
-For coding agents, [AGENTS.md](AGENTS.md) holds the rules, and `.claude/settings.json` enables the
+For coding agents, [CLAUDE.md](CLAUDE.md) holds the rules, and `.claude/settings.json` enables the
 `kedrzu-skills` plugins. Install them once per machine:
 
 ```sh

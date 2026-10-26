@@ -216,8 +216,8 @@ A product's setup script (Paseo runs it for every new worktree through `paseo.js
 
 ## Agents
 
-- **nzyme's rules:** `nzyme/AGENTS.md` and the `nzyme` plugin describe how to use and change nzyme.
-  Point the product's `AGENTS.md` at them for work inside `nzyme/`. Changes there follow nzyme's
+- **nzyme's rules:** `nzyme/CLAUDE.md` and the `nzyme` plugin describe how to use and change nzyme.
+  Point the product's `CLAUDE.md` at them for work inside `nzyme/`. Changes there follow nzyme's
   conventions: Conventional Commits, and a PR to `kedrzu/nzyme`.
 - **The plugin:** install it from nzyme's marketplace via the product's `.claude/settings.json`:
 

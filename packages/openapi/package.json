@@ -40,7 +40,7 @@
         "@nzyme/types": "workspace:*",
         "@nzyme/utils": "workspace:*",
         "ufo": "1.6.4",
-        "undici-types": "8.12.2"
+        "undici-types": "8.12.3"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

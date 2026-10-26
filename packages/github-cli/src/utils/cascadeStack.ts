@@ -7,9 +7,9 @@ import { assertNoConflicts } from './assertNoConflicts.js';
 import { countCommits } from './countCommits.js';
 import { createBranchGuard } from './createBranchGuard.js';
 import { ensureLocalBranch } from './ensureLocalBranch.js';
-import { GitMergeConflictError } from './GitMergeConflictError.js';
 import { handleMergeConflict } from './handleMergeConflict.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
+import { rethrowWithStackPosition } from './rethrowWithStackPosition.js';
 
 /**
  * Parameters for {@link cascadeStack}.
@@ -144,27 +144,4 @@ export async function cascadeStack(params: CascadeStackParams): Promise<Map<stri
     }
 
     return pushedHeads;
-}
-
-/**
- * Run an operation that may throw {@link GitMergeConflictError} and re-throw it carrying the stack
- * position, so the caller can tell the user which node to fix instead of just which files broke.
- */
-async function rethrowWithStackPosition(
-    operation: () => Promise<unknown>,
-    stackContext: NonNullable<GitMergeConflictError['stackContext']>,
-): Promise<void> {
-    try {
-        await operation();
-    } catch (error) {
-        if (error instanceof GitMergeConflictError) {
-            throw new GitMergeConflictError({
-                repoDisplayName: error.repoDisplayName,
-                conflictedFiles: error.conflictedFiles,
-                operation: error.operation,
-                stackContext,
-            });
-        }
-        throw error;
-    }
 }

@@ -16,6 +16,7 @@ import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { handleMergeConflict } from './handleMergeConflict.js';
 import { resolveSubmodulePrChain } from './resolveSubmodulePrChain.js';
+import { rethrowWithStackPosition } from './rethrowWithStackPosition.js';
 import { syncStackNodesFromRemote } from './syncStackNodesFromRemote.js';
 
 /**
@@ -261,24 +262,18 @@ async function mergeTrunkIntoBottom(params: MergeTrunkIntoBottomParams): Promise
     }
 
     try {
-        try {
-            await git.merge([remoteTrunk]);
-        } catch (error) {
-            await handleMergeConflict({ git, repoDisplayName, operation: 'merge', logger }, error);
-        }
-
-        await assertNoConflicts({ git, repoDisplayName, operation: 'merge', logger });
+        await git.merge([remoteTrunk]);
     } catch (error) {
-        if (error instanceof GitMergeConflictError) {
-            throw new GitMergeConflictError({
-                repoDisplayName,
-                conflictedFiles: error.conflictedFiles,
-                operation: error.operation,
-                stackContext,
-            });
-        }
-        throw error;
+        await rethrowWithStackPosition(
+            () => handleMergeConflict({ git, repoDisplayName, operation: 'merge', logger }, error),
+            stackContext,
+        );
     }
+
+    await rethrowWithStackPosition(
+        () => assertNoConflicts({ git, repoDisplayName, operation: 'merge', logger }),
+        stackContext,
+    );
 
     logger.info(`   ${chalk.green('✓')} Merged ${chalk.cyan(trunk)} into ${chalk.cyan(bottom)}`);
 }

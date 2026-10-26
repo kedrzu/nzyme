@@ -55,7 +55,7 @@
         "@nzyme/types": "workspace:*",
         "@nzyme/utils": "workspace:*",
         "@pulumi/aws": "7.51.1",
-        "@pulumi/pulumi": "3.270.0",
+        "@pulumi/pulumi": "3.272.0",
         "@pulumi/random": "4.21.4",
         "@rollup/plugin-babel": "7.1.0",
         "@rollup/plugin-commonjs": "29.0.3",

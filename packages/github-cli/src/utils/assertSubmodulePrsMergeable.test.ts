@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 
 import { UsageError } from '@nzyme/cli';
-import { createTestLogger } from '@nzyme/logging';
+import { createTestLogger } from '@nzyme/logging/createTestLogger.js';
 
 import { assertSubmodulePrsMergeable } from './assertSubmodulePrsMergeable.js';
 import type { GithubClient } from './createGithubClient.js';

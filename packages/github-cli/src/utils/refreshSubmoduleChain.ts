@@ -3,7 +3,7 @@ import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
 import type { Logger } from '@nzyme/logging/Logger.js';
-import { assertValue } from '@nzyme/utils';
+import { assertValue } from '@nzyme/utils/assert.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import { assertNoConflicts } from './assertNoConflicts.js';

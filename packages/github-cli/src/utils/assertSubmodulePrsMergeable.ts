@@ -2,7 +2,7 @@ import chalk from 'chalk';
 
 import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging/Logger.js';
-import { waitFor } from '@nzyme/utils/waitFor.js';
+import { waitUntil } from '@nzyme/utils/waitUntil.js';
 
 import type { GithubClient } from './createGithubClient.js';
 import type { RefreshedSubmodulePr } from './refreshSubmoduleChain.js';
@@ -65,37 +65,36 @@ export async function assertSubmodulePrsMergeable(params: AssertSubmodulePrsMerg
     logger.info('');
     logger.info(chalk.bold('🔎 Checking the submodule pull requests are mergeable...'));
 
-    const deadline = Date.now() + timeoutMs;
     const conflicting: RefreshedSubmodulePr[] = [];
     let pending = prs;
 
-    while (pending.length > 0) {
-        const stillPending: RefreshedSubmodulePr[] = [];
+    // Bounding the whole poll rather than checking the clock between rounds also covers a GitHub
+    // request that stalls: an unresponsive API call can no longer hang the check past its deadline.
+    await waitUntil(
+        async () => {
+            const stillPending: RefreshedSubmodulePr[] = [];
 
-        for (const pr of pending) {
-            const { data } = await githubClient.rest.pulls.get({
-                owner: pr.githubConfig.owner,
-                repo: pr.githubConfig.repo,
-                pull_number: pr.number,
-            });
+            for (const pr of pending) {
+                const { data } = await githubClient.rest.pulls.get({
+                    owner: pr.githubConfig.owner,
+                    repo: pr.githubConfig.repo,
+                    pull_number: pr.number,
+                });
 
-            if (data.head.sha !== pr.headSha || data.mergeable === null) {
-                stillPending.push(pr);
-            } else if (!data.mergeable || data.mergeable_state === 'dirty') {
-                conflicting.push(pr);
-            } else {
-                logger.info(`   ${chalk.green('✓')} ${describePr(pr)} is mergeable`);
+                if (data.head.sha !== pr.headSha || data.mergeable === null) {
+                    stillPending.push(pr);
+                } else if (!data.mergeable || data.mergeable_state === 'dirty') {
+                    conflicting.push(pr);
+                } else {
+                    logger.info(`   ${chalk.green('✓')} ${describePr(pr)} is mergeable`);
+                }
             }
-        }
 
-        pending = stillPending;
-
-        if (pending.length === 0 || Date.now() + intervalMs > deadline) {
-            break;
-        }
-
-        await waitFor(intervalMs);
-    }
+            pending = stillPending;
+            return pending.length === 0;
+        },
+        { intervalMs, timeoutMs, onTimeout: () => {} },
+    );
 
     if (conflicting.length === 0 && pending.length === 0) {
         return;

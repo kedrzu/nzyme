@@ -17,6 +17,7 @@ const LOWER: RefreshedSubmodulePr = {
     headSha: 'lower-new',
 };
 const UPPER: RefreshedSubmodulePr = { ...LOWER, number: 232, headRef: 'feat/upper', headSha: 'upper-new' };
+const TOP: RefreshedSubmodulePr = { ...LOWER, number: 240, headRef: 'feat/top', headSha: 'top-new' };
 
 interface PrState {
     sha: string;
@@ -26,15 +27,20 @@ interface PrState {
 
 /**
  * A `GithubClient` answering `pulls.get` from a per-PR script: each read takes the next state, and
- * the last one repeats — how GitHub moves from the pre-push head to a computed answer.
+ * the last one repeats — how GitHub moves from the pre-push head to a computed answer. A PR scripted
+ * as `'stalls'` never answers, like a GitHub request that hangs.
  */
-function createClient(script: Record<number, PrState[]>): GithubClient {
+function createClient(script: Record<number, PrState[] | 'stalls'>): GithubClient {
     const reads = new Map<number, number>();
     return {
         rest: {
             pulls: {
                 get: (params: { pull_number: number }) => {
                     const states = script[params.pull_number] ?? [];
+                    if (states === 'stalls') {
+                        return new Promise(() => {});
+                    }
+
                     const index = reads.get(params.pull_number) ?? 0;
                     reads.set(params.pull_number, index + 1);
                     const state = states[Math.min(index, states.length - 1)];
@@ -94,4 +100,29 @@ test('a PR still reporting its pre-refresh head is never confirmed, so the check
 
     expect(error).toBeInstanceOf(UsageError);
     expect((error as UsageError).message).toContain('nzyme PR #232 (feat/upper): GitHub did not confirm');
+});
+
+// The deadline can fire mid-round, after earlier PRs in that round were already classified — the
+// report has to name each PR once, by what GitHub last said about it.
+test('a deadline in the middle of a round reports each PR by its last known state', async () => {
+    const client = createClient({
+        207: [{ sha: 'lower-new', mergeable: false, mergeable_state: 'dirty' }],
+        232: [{ sha: 'upper-new', mergeable: true, mergeable_state: 'clean' }],
+        240: 'stalls',
+    });
+
+    const error = await assertSubmodulePrsMergeable({
+        githubClient: client,
+        prs: [LOWER, UPPER, TOP],
+        logger,
+        intervalMs: 1,
+        timeoutMs: 20,
+    }).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(UsageError);
+    const message = (error as UsageError).message;
+    expect(message).toContain('nzyme PR #207 (feat/lower) has conflicts');
+    expect(message).not.toContain('nzyme PR #207 (feat/lower): GitHub did not confirm');
+    expect(message).not.toContain('#232');
+    expect(message).toContain('nzyme PR #240 (feat/top): GitHub did not confirm');
 });

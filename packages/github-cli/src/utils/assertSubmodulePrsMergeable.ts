@@ -66,15 +66,16 @@ export async function assertSubmodulePrsMergeable(params: AssertSubmodulePrsMerg
     logger.info(chalk.bold('🔎 Checking the submodule pull requests are mergeable...'));
 
     const conflicting: RefreshedSubmodulePr[] = [];
-    let pending = prs;
+    // A PR is settled the moment it is classified, not at the end of its round: the deadline can
+    // fire mid-round, and the report must then show what GitHub last said about each PR.
+    const settled = new Set<RefreshedSubmodulePr>();
+    const unsettled = () => prs.filter(pr => !settled.has(pr));
 
     // Bounding the whole poll rather than checking the clock between rounds also covers a GitHub
     // request that stalls: an unresponsive API call can no longer hang the check past its deadline.
     await waitUntil(
         async () => {
-            const stillPending: RefreshedSubmodulePr[] = [];
-
-            for (const pr of pending) {
+            for (const pr of unsettled()) {
                 const { data } = await githubClient.rest.pulls.get({
                     owner: pr.githubConfig.owner,
                     repo: pr.githubConfig.repo,
@@ -82,27 +83,30 @@ export async function assertSubmodulePrsMergeable(params: AssertSubmodulePrsMerg
                 });
 
                 if (data.head.sha !== pr.headSha || data.mergeable === null) {
-                    stillPending.push(pr);
-                } else if (!data.mergeable || data.mergeable_state === 'dirty') {
+                    continue;
+                }
+
+                settled.add(pr);
+                if (!data.mergeable || data.mergeable_state === 'dirty') {
                     conflicting.push(pr);
                 } else {
                     logger.info(`   ${chalk.green('✓')} ${describePr(pr)} is mergeable`);
                 }
             }
 
-            pending = stillPending;
-            return pending.length === 0;
+            return settled.size === prs.length;
         },
         { intervalMs, timeoutMs, onTimeout: () => {} },
     );
 
-    if (conflicting.length === 0 && pending.length === 0) {
+    const unconfirmed = unsettled();
+    if (conflicting.length === 0 && unconfirmed.length === 0) {
         return;
     }
 
     const problems = [
         ...conflicting.map(pr => `${describePr(pr)} has conflicts GitHub will not merge`),
-        ...pending.map(
+        ...unconfirmed.map(
             pr => `${describePr(pr)}: GitHub did not confirm it is mergeable within ${Math.round(timeoutMs / 1000)}s`,
         ),
     ];

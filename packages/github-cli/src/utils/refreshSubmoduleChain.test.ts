@@ -11,6 +11,7 @@ import { createTestLogger } from '@nzyme/logging';
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
 import { GitMergeConflictError } from './GitMergeConflictError.js';
+import { restoreSubmoduleHomes } from './refreshSubmoduleChain.js';
 import { syncAllRepos } from './syncAllRepos.js';
 
 // Every test builds real repositories and runs whole sync cycles against them.
@@ -252,5 +253,44 @@ test('a rejected push mid-refresh takes the submodule back to the branch the ref
     expect(failure).toBeInstanceOf(Error);
     expect(failure).not.toBeInstanceOf(GitMergeConflictError);
     expect((await sub.status()).current).toBe(UPPER);
+    expect((await sub.getConfig('nzyme.refreshHome')).value).toBeNull();
+});
+
+test('a refresh abandoned on one branch leaves the submodule alone once the main repository is on another', async () => {
+    const { mainPath, submodulePath } = await setupSubmoduleChain(true);
+    process.chdir(mainPath);
+    const sub = simpleGit({ baseDir: submodulePath });
+    const main = simpleGit({ baseDir: mainPath });
+
+    expect(await sync().catch((error: unknown) => error)).toBeInstanceOf(GitMergeConflictError);
+
+    // The refresh is abandoned, and the main repository moves on to another task, whose submodule
+    // branch is checked out.
+    await sub.merge(['--abort']);
+    await main.checkoutLocalBranch('feat/other-task');
+    await sub.checkout('main');
+
+    const { logger } = createTestLogger('refreshSubmoduleChain');
+    await restoreSubmoduleHomes({ logger });
+
+    expect((await sub.status()).current).toBe('main');
+    expect((await sub.getConfig('nzyme.refreshHome')).value).toBeNull();
+    expect((await sub.getConfig('nzyme.refreshParent')).value).toBeNull();
+});
+
+test('a refresh whose starting branch no longer exists leaves the submodule where it is', async () => {
+    const { mainPath, submodulePath } = await setupSubmoduleChain(true);
+    process.chdir(mainPath);
+    const sub = simpleGit({ baseDir: submodulePath });
+
+    expect(await sync().catch((error: unknown) => error)).toBeInstanceOf(GitMergeConflictError);
+
+    await sub.merge(['--abort']);
+    await sub.deleteLocalBranch(UPPER, true);
+
+    const { logger } = createTestLogger('refreshSubmoduleChain');
+    await restoreSubmoduleHomes({ logger });
+
+    expect((await sub.status()).current).toBe(LOWER);
     expect((await sub.getConfig('nzyme.refreshHome')).value).toBeNull();
 });

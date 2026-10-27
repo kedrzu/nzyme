@@ -22,6 +22,7 @@ import { getGitStatusInfo } from './getGitStatusInfo.js';
 import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
+import { GitMergeConflictError } from './GitMergeConflictError.js';
 import { handleMergeConflict } from './handleMergeConflict.js';
 import { pushSubmoduleUpdates } from './pushSubmoduleUpdates.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
@@ -331,6 +332,20 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
         }
     }
 
+    // === Phase 7: Commit & push all submodule reference updates ===
+    // Runs after Phase 6, and from inside it when a submodule conflicts.
+    // Submodule refs may change from Phase 4 (rebase/pull) or Phase 6 (merge).
+    // Detect and commit any changed gitlinks so the main repo stays clean. Never while pinned: the
+    // phases above moved nothing, so a gitlink that differs here was moved by someone else, and
+    // committing it would re-point the pin.
+    const commitSubmoduleRefs = async () => {
+        if (followsTrunk) {
+            logger.info('');
+            await mainGuard.beforeWrite();
+            await pushSubmoduleUpdates({ logger, beforePush: mainGuard.beforePush });
+        }
+    };
+
     // === Phase 6: Refresh task-branch submodules' chains + push ===
     // The trunk goes into the bottom pull request of each submodule's chain and is carried up, never
     // straight into the checked-out branch: that branch may sit on other open pull requests.
@@ -347,28 +362,31 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
                 `${synced.submodule.name} is on a task branch but has no GitHub remote`,
             );
 
-            submodulePrs.push(
-                ...(await refreshSubmoduleChain({
-                    submodule: synced.submodule,
-                    trunk: submoduleBase.trunk,
-                    githubClient,
-                    githubConfig: submoduleConfig,
-                    logger,
-                })),
-            );
+            try {
+                submodulePrs.push(
+                    ...(await refreshSubmoduleChain({
+                        submodule: synced.submodule,
+                        trunk: submoduleBase.trunk,
+                        githubClient,
+                        githubConfig: submoduleConfig,
+                        logger,
+                    })),
+                );
+            } catch (error) {
+                // A conflict leaves every submodule back on its branch at a head its remote holds,
+                // and possibly moved there — commit that gitlink now, or the next checkout carries
+                // it onto another node to be auto-committed there. Any other failure (a rejected
+                // push) may leave the branch ahead of its remote, which no gitlink may point at;
+                // the re-run commits it once the branch is pushed.
+                if (error instanceof GitMergeConflictError) {
+                    await commitSubmoduleRefs();
+                }
+                throw error;
+            }
         }
     }
 
-    // === Phase 7: Commit & push all submodule reference updates ===
-    // Submodule refs may change from Phase 4 (rebase/pull) or Phase 6 (merge).
-    // Detect and commit any changed gitlinks so the main repo stays clean. Never while pinned: the
-    // phases above moved nothing, so a gitlink that differs here was moved by someone else, and
-    // committing it would re-point the pin.
-    if (followsTrunk) {
-        logger.info('');
-        await mainGuard.beforeWrite();
-        await pushSubmoduleUpdates({ logger, beforePush: mainGuard.beforePush });
-    }
+    await commitSubmoduleRefs();
 
     // === Phase 8: Merge base into main task branch + push ===
     logger.info('');

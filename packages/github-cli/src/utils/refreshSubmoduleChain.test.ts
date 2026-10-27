@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, expect, setDefaultTimeout, test } from 'bun:test';
 import { simpleGit } from 'simple-git';
 
+import { UsageError } from '@nzyme/cli';
 import { createTestLogger } from '@nzyme/logging/createTestLogger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
@@ -37,9 +38,10 @@ afterEach(() => {
  * `feat/upper` on `feat/lower` — with the submodule checked out on the upper node, then move the
  * submodule's `main` on, so the lower node is behind the trunk: the HLD-641 shape (#232 on #207).
  *
- * With `conflict`, the lower node and the trunk change the same line of `shared.txt`.
+ * With `conflictOn`, that node and the trunk change the same line of `shared.txt`; `home` is the node
+ * the submodule is checked out on.
  */
-async function setupSubmoduleChain(conflict: boolean) {
+async function setupSubmoduleChain(conflictOn?: typeof LOWER | typeof UPPER, home: string = UPPER) {
     const mainRemote = join(root, 'origin-main.git');
     const subRemote = join(root, 'origin-sub.git');
     const subSeed = join(root, 'sub-seed');
@@ -61,13 +63,13 @@ async function setupSubmoduleChain(conflict: boolean) {
     await seed.push(['-u', 'origin', 'main']);
 
     await seed.checkoutLocalBranch(LOWER);
-    writeFileSync(join(subSeed, conflict ? 'shared.txt' : 'lower.txt'), 'lower\n');
+    writeFileSync(join(subSeed, conflictOn === LOWER ? 'shared.txt' : 'lower.txt'), 'lower\n');
     await seed.add(['.']);
     await seed.commit('lower work');
     await seed.push(['-u', 'origin', LOWER]);
 
     await seed.checkoutLocalBranch(UPPER);
-    writeFileSync(join(subSeed, 'upper.txt'), 'upper\n');
+    writeFileSync(join(subSeed, conflictOn === UPPER ? 'shared.txt' : 'upper.txt'), 'upper\n');
     await seed.add(['.']);
     await seed.commit('upper work');
     await seed.push(['-u', 'origin', UPPER]);
@@ -85,7 +87,7 @@ async function setupSubmoduleChain(conflict: boolean) {
     await sub.addConfig('user.email', 't@t');
     await sub.addConfig('user.name', 't');
     await sub.addConfig('commit.gpgsign', 'false');
-    await sub.checkout(UPPER);
+    await sub.checkout(home);
 
     writeFileSync(
         join(mainPath, '.gitmodules'),
@@ -97,7 +99,7 @@ async function setupSubmoduleChain(conflict: boolean) {
 
     // The trunk moves on after the chain was cut — nothing merges it into the lower node.
     await seed.checkout('main');
-    writeFileSync(join(subSeed, conflict ? 'shared.txt' : 'trunk.txt'), 'trunk\n');
+    writeFileSync(join(subSeed, conflictOn ? 'shared.txt' : 'trunk.txt'), 'trunk\n');
     await seed.add(['.']);
     await seed.commit('trunk moved on');
     await seed.push(['origin', 'main']);
@@ -107,35 +109,76 @@ async function setupSubmoduleChain(conflict: boolean) {
 }
 
 /**
+ * The submodule's two open pull requests, `feat/upper` based on `feat/lower`; the main repository has none.
+ */
+const CHAIN_PULLS = {
+    list: (params: { repo: string; base?: string }) => {
+        if (params.repo !== 'sub') {
+            return Promise.resolve({ data: [] });
+        }
+        const prs = [
+            { number: 207, state: 'open', head: { ref: LOWER, sha: 'x' }, base: { ref: 'main' } },
+            { number: 232, state: 'open', head: { ref: UPPER, sha: 'x' }, base: { ref: LOWER } },
+        ];
+        return Promise.resolve({ data: prs.filter(pr => !params.base || pr.base.ref === params.base) });
+    },
+};
+
+/**
  * A `GithubClient` serving the submodule's two open pull requests, with no stack record — so the
  * chain is found through the upper PR's base. The main repository has no pull requests at all.
  */
 const CHAIN_CLIENT = {
-    rest: {
-        pulls: {
-            list: (params: { repo: string; base?: string }) => {
-                if (params.repo !== 'sub') {
-                    return Promise.resolve({ data: [] });
-                }
-                const prs = [
-                    { number: 207, state: 'open', head: { ref: LOWER, sha: 'x' }, base: { ref: 'main' } },
-                    { number: 232, state: 'open', head: { ref: UPPER, sha: 'x' }, base: { ref: LOWER } },
-                ];
-                return Promise.resolve({ data: prs.filter(pr => !params.base || pr.base.ref === params.base) });
-            },
-        },
-    },
+    rest: { pulls: CHAIN_PULLS },
     request: () => Promise.resolve({ status: 200, data: [] }),
 } as unknown as GithubClient;
 
-function sync() {
+/**
+ * {@link CHAIN_CLIENT} with GitHub's stack record for the submodule's chain, which is what includes
+ * the nodes above the branch the submodule is on.
+ */
+const STACKED_CHAIN_CLIENT = {
+    rest: { pulls: CHAIN_PULLS },
+    request: (_route: string, params: { repo: string }) =>
+        Promise.resolve({
+            status: 200,
+            data:
+                params.repo === 'sub'
+                    ? [
+                          {
+                              number: 1,
+                              base: { ref: 'main' },
+                              open: true,
+                              pull_requests: [
+                                  {
+                                      number: 207,
+                                      state: 'open',
+                                      draft: false,
+                                      merged_at: null,
+                                      head: { ref: LOWER, sha: 'x' },
+                                  },
+                                  {
+                                      number: 232,
+                                      state: 'open',
+                                      draft: false,
+                                      merged_at: null,
+                                      head: { ref: UPPER, sha: 'x' },
+                                  },
+                              ],
+                          },
+                      ]
+                    : [],
+        }),
+} as unknown as GithubClient;
+
+function sync(githubClient = CHAIN_CLIENT) {
     const { logger } = createTestLogger('refreshSubmoduleChain');
     return syncAllRepos({
         branch: 'main',
         baseBranch: 'main',
         submoduleBase: { kind: 'trunk', trunk: 'main' },
         unattended: true,
-        githubClient: CHAIN_CLIENT,
+        githubClient,
         githubConfig: GITHUB_CONFIG,
         logger,
     });
@@ -147,7 +190,7 @@ async function containsCommit(git: ReturnType<typeof simpleGit>, ref: string, co
 }
 
 test('a lower submodule node behind the trunk is refreshed first and carried up, every node pushed', async () => {
-    const { mainPath, submodulePath, subRemote, subTrunkTip } = await setupSubmoduleChain(false);
+    const { mainPath, submodulePath, subRemote, subTrunkTip } = await setupSubmoduleChain();
     process.chdir(mainPath);
 
     const result = await sync();
@@ -175,7 +218,7 @@ test('a lower submodule node behind the trunk is refreshed first and carried up,
 });
 
 test('a conflict on the lower node is aborted back on the upper node, and a re-run after resolving it by hand carries it up', async () => {
-    const { mainPath, submodulePath, subRemote, subTrunkTip } = await setupSubmoduleChain(true);
+    const { mainPath, submodulePath, subRemote, subTrunkTip } = await setupSubmoduleChain(LOWER);
     process.chdir(mainPath);
     const sub = simpleGit({ baseDir: submodulePath });
     const main = simpleGit({ baseDir: mainPath });
@@ -220,7 +263,7 @@ test('a conflict on the lower node is aborted back on the upper node, and a re-r
 });
 
 test('a rejected push mid-refresh takes the submodule back to the branch the refresh started from', async () => {
-    const { mainPath, submodulePath, subRemote } = await setupSubmoduleChain(false);
+    const { mainPath, submodulePath, subRemote } = await setupSubmoduleChain();
     process.chdir(mainPath);
     const sub = simpleGit({ baseDir: submodulePath });
 
@@ -232,5 +275,46 @@ test('a rejected push mid-refresh takes the submodule back to the branch the ref
 
     expect(failure).toBeInstanceOf(Error);
     expect(failure).not.toBeInstanceOf(GitMergeConflictError);
+    expect((await sub.status()).current).toBe(UPPER);
+});
+
+test('a conflict above the lower node the refresh started from still commits the gitlink at its new head', async () => {
+    const { mainPath, submodulePath, subRemote, subTrunkTip } = await setupSubmoduleChain(UPPER, LOWER);
+    process.chdir(mainPath);
+    const sub = simpleGit({ baseDir: submodulePath });
+    const main = simpleGit({ baseDir: mainPath });
+
+    const failure = await sync(STACKED_CHAIN_CLIENT).catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(GitMergeConflictError);
+    expect((failure as GitMergeConflictError).stackContext?.nodeBranch).toBe(UPPER);
+
+    // The lower node took in the trunk and was pushed before the upper node conflicted; the main
+    // repository records it rather than leaving the gitlink dirty for another node to pick up.
+    const remote = simpleGit({ baseDir: subRemote });
+    const lowerHead = (await remote.revparse([LOWER])).trim();
+    expect(await containsCommit(remote, LOWER, subTrunkTip)).toBe(true);
+    expect((await sub.status()).current).toBe(LOWER);
+    await main.fetch('origin');
+    expect((await main.raw(['rev-parse', 'origin/main:nzyme'])).trim()).toBe(lowerHead);
+    expect((await main.status()).isClean()).toBe(true);
+});
+
+test('a lower node that took in the upper node by hand is refused rather than pushed', async () => {
+    const { mainPath, submodulePath, subRemote } = await setupSubmoduleChain();
+    process.chdir(mainPath);
+    const sub = simpleGit({ baseDir: submodulePath });
+    const remote = simpleGit({ baseDir: subRemote });
+    const lowerBefore = (await remote.revparse([LOWER])).trim();
+
+    await sub.checkout(LOWER);
+    await sub.merge([UPPER]);
+    await sub.checkout(UPPER);
+
+    const failure = await sync().catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(UsageError);
+    expect((failure as UsageError).message).toContain(`Refusing to push ${LOWER}`);
+    expect((await remote.revparse([LOWER])).trim()).toBe(lowerBefore);
     expect((await sub.status()).current).toBe(UPPER);
 });

@@ -7,6 +7,8 @@ import { assertValue } from '@nzyme/utils/assert.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import { assertNoConflicts } from './assertNoConflicts.js';
+import { assertOnBranch } from './assertOnBranch.js';
+import { assertPushLeavesUpperNodesOpen } from './assertPushLeavesUpperNodesOpen.js';
 import { cascadeStack } from './cascadeStack.js';
 import { countCommits } from './countCommits.js';
 import type { GithubClient } from './createGithubClient.js';
@@ -85,7 +87,9 @@ export interface RefreshSubmoduleChainParams {
  * the node above would then be pushed on top of commits its base lacks on the remote.
  *
  * The submodule ends on the branch it started from ("home"), so the caller commits the gitlink at
- * home's refreshed head — on a failure too. A conflict is aborted rather than left mid-merge on the
+ * home's refreshed head — on a conflict too, when every node below the conflicted one is pushed and
+ * home is either among them or untouched. After any other failure home may hold commits its remote
+ * lacks, so the gitlink is left for the re-run. A conflict is aborted rather than left mid-merge on the
  * node it happened on: that node is not home, and a gitlink committed while the submodule sits there
  * would point the main repository at it. The conflict is resolved by hand on that node and the
  * refresh re-run from home.
@@ -212,6 +216,7 @@ async function mergeTrunkIntoBottom(params: MergeTrunkIntoBottomParams): Promise
     if ((await git.status()).current !== bottom) {
         await git.checkout(bottom);
     }
+    await assertOnBranch(git, bottom);
 
     try {
         await git.merge([remoteTrunk]);
@@ -233,13 +238,13 @@ async function mergeTrunkIntoBottom(params: MergeTrunkIntoBottomParams): Promise
 /**
  * Push every node of the chain whose local branch is ahead of its remote, bottom first.
  *
- * Each push carries one node's own branch and never the node above's head: the node above is pushed
- * after it, by name, so GitHub never sees an upper node merged into the one below it.
+ * Each push carries one node's own branch and never the node above's head — refused, if a merge by
+ * hand put it there — so GitHub never sees an upper node merged into the one below it.
  */
 async function pushNodesAheadOfRemote(params: ChainStepParams): Promise<void> {
     const { git, branches, repoDisplayName, logger } = params;
 
-    for (const branch of branches) {
+    for (const [index, branch] of branches.entries()) {
         await ensureLocalBranch(git, branch);
 
         const ahead = await countCommits(git, `origin/${branch}..${branch}`);
@@ -247,6 +252,14 @@ async function pushNodesAheadOfRemote(params: ChainStepParams): Promise<void> {
             continue;
         }
 
+        // The branch is pushed by name, not checked out, so only the push half of the stack guard
+        // applies. A node resolved by hand is exactly where a merge in the wrong direction happens.
+        const upperBranch = branches[index + 1];
+        await assertPushLeavesUpperNodesOpen({
+            git,
+            branch,
+            upperNodes: upperBranch ? [{ branch: upperBranch, head: `origin/${upperBranch}` }] : [],
+        });
         await git.push('origin', branch);
         logger.info(
             `   ${chalk.green('✓')} ${repoDisplayName}: pushed ${chalk.cyan(branch)} ` +

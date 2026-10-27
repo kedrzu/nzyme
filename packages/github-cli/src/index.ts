@@ -60,11 +60,7 @@ export type { CascadeStackParams } from './utils/cascadeStack.js';
 export * from './utils/refreshStack.js';
 export type { RefreshStackParams } from './utils/refreshStack.js';
 export * from './utils/refreshSubmoduleChain.js';
-export type {
-    RefreshSubmoduleChainParams,
-    RefreshedSubmodulePr,
-    RestoreSubmoduleHomesParams,
-} from './utils/refreshSubmoduleChain.js';
+export type { RefreshSubmoduleChainParams, RefreshedSubmodulePr } from './utils/refreshSubmoduleChain.js';
 export * from './utils/resolveSubmodulePrChain.js';
 export type { ResolveSubmodulePrChainParams, SubmodulePrChainNode } from './utils/resolveSubmodulePrChain.js';
 export * from './utils/assertSubmodulePrsMergeable.js';

@@ -26,7 +26,7 @@ import { handleMergeConflict } from './handleMergeConflict.js';
 import { pushSubmoduleUpdates } from './pushSubmoduleUpdates.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
 import type { RefreshedSubmodulePr } from './refreshSubmoduleChain.js';
-import { refreshSubmoduleChain, restoreSubmoduleHomes } from './refreshSubmoduleChain.js';
+import { refreshSubmoduleChain } from './refreshSubmoduleChain.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 import { describeSubmodulePin } from './resolveSubmoduleBase.js';
 import { switchDetachedSubmoduleToBaseBranch } from './switchDetachedSubmoduleToBaseBranch.js';
@@ -185,12 +185,6 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     });
 
     // === Phase 1: Detect submodules ===
-    // A submodule an interrupted chain refresh left on a lower node goes home before it is read, or
-    // every phase below would take that node for the submodule's branch.
-    if (followsTrunk) {
-        await restoreSubmoduleHomes({ logger });
-    }
-
     const submoduleInfos = await getSubmoduleInfo();
 
     // === Phase 2: Commit pending changes ===

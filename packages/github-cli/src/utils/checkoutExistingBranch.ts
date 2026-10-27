@@ -16,7 +16,6 @@ import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { handlePullWithRebase } from './handlePullWithRebase.js';
 import { applyNamedStash, pushNamedStash } from './namedStash.js';
-import { restoreSubmoduleHomes } from './refreshSubmoduleChain.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 import { describeSubmodulePin } from './resolveSubmoduleBase.js';
 import { resolveSubmoduleBranch } from './resolveSubmoduleBranch.js';
@@ -109,15 +108,8 @@ interface CheckoutSubmoduleBranchParams {
  * Also handles checking out matching branches in submodules if GitHub client is provided.
  */
 export async function checkoutExistingBranch(params: CheckoutExistingBranchParams): Promise<void> {
-    const { branchName, logger: paramLogger, unattended, submoduleBase } = params;
+    const { branchName, logger: paramLogger, unattended } = params;
     const git = simpleGit();
-
-    // A submodule an interrupted chain refresh left on a lower node goes home while the main
-    // repository is still on the branch that refresh ran for — the checkout below would
-    // otherwise judge, and refuse, that node instead of resuming the refresh.
-    if (submoduleBase.kind === 'trunk') {
-        await restoreSubmoduleHomes({ logger: paramLogger });
-    }
 
     try {
         // Check if there are uncommitted changes

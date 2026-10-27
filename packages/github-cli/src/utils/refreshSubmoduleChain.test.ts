@@ -5,13 +5,11 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, expect, setDefaultTimeout, test } from 'bun:test';
 import { simpleGit } from 'simple-git';
 
-import { UsageError } from '@nzyme/cli';
 import { createTestLogger } from '@nzyme/logging';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
 import { GitMergeConflictError } from './GitMergeConflictError.js';
-import { restoreSubmoduleHomes } from './refreshSubmoduleChain.js';
 import { syncAllRepos } from './syncAllRepos.js';
 
 // Every test builds real repositories and runs whole sync cycles against them.
@@ -176,10 +174,12 @@ test('a lower submodule node behind the trunk is refreshed first and carried up,
     ]);
 });
 
-test('a conflict on the lower node stops there, and the re-run after resolving it ends back on the upper node', async () => {
+test('a conflict on the lower node is aborted back on the upper node, and a re-run after resolving it by hand carries it up', async () => {
     const { mainPath, submodulePath, subRemote, subTrunkTip } = await setupSubmoduleChain(true);
     process.chdir(mainPath);
     const sub = simpleGit({ baseDir: submodulePath });
+    const main = simpleGit({ baseDir: mainPath });
+    const gitlinkBefore = (await main.raw(['rev-parse', 'HEAD:nzyme'])).trim();
 
     const failure = await sync().catch((error: unknown) => error);
 
@@ -191,13 +191,17 @@ test('a conflict on the lower node stops there, and the re-run after resolving i
         against: 'main',
         submodule: 'nzyme',
     });
-    // Left where the fix belongs: on the lower node, mid-merge.
-    expect((await sub.status()).current).toBe(LOWER);
-    expect((await sub.status()).conflicted).toEqual(['shared.txt']);
+    // Back home with the merge aborted, so nothing commits a gitlink at the lower node.
+    expect((await sub.status()).current).toBe(UPPER);
+    expect((await sub.status()).conflicted).toEqual([]);
+    expect((await main.raw(['rev-parse', 'HEAD:nzyme'])).trim()).toBe(gitlinkBefore);
 
+    await sub.checkout(LOWER);
+    await sub.merge(['origin/main']).catch(() => undefined);
     writeFileSync(join(submodulePath, 'shared.txt'), 'lower and trunk\n');
     await sub.add(['shared.txt']);
     await sub.commit('resolve the trunk merge');
+    await sub.checkout(UPPER);
 
     await sync();
 
@@ -210,33 +214,9 @@ test('a conflict on the lower node stops there, and the re-run after resolving i
     expect(await containsCommit(remote, LOWER, subTrunkTip)).toBe(true);
     expect(await containsCommit(remote, UPPER, lowerHead)).toBe(true);
 
-    // Home is the upper node, not the lower one the conflict left checked out — so the gitlink keeps
-    // pointing at the upper node's work.
     expect((await sub.status()).current).toBe(UPPER);
-    const main = simpleGit({ baseDir: mainPath });
     await main.fetch('origin');
     expect((await main.raw(['rev-parse', 'origin/main:nzyme'])).trim()).toBe(upperHead);
-    expect((await sub.getConfig('nzyme.refreshHome')).value).toBeNull();
-});
-
-test('a re-run while the lower node is still mid-merge stops before committing a gitlink at it', async () => {
-    const { mainPath, submodulePath } = await setupSubmoduleChain(true);
-    process.chdir(mainPath);
-    const sub = simpleGit({ baseDir: submodulePath });
-    const main = simpleGit({ baseDir: mainPath });
-    const gitlinkBefore = (await main.raw(['rev-parse', 'HEAD:nzyme'])).trim();
-
-    expect(await sync().catch((error: unknown) => error)).toBeInstanceOf(GitMergeConflictError);
-
-    // Resolved and staged, but the merge is not committed yet.
-    writeFileSync(join(submodulePath, 'shared.txt'), 'lower and trunk\n');
-    await sub.add(['shared.txt']);
-
-    expect(await sync().catch((error: unknown) => error)).toBeInstanceOf(UsageError);
-
-    expect((await sub.status()).current).toBe(LOWER);
-    expect((await main.raw(['rev-parse', 'HEAD:nzyme'])).trim()).toBe(gitlinkBefore);
-    expect((await sub.getConfig('nzyme.refreshHome')).value).toBe(UPPER);
 });
 
 test('a rejected push mid-refresh takes the submodule back to the branch the refresh started from', async () => {
@@ -253,44 +233,4 @@ test('a rejected push mid-refresh takes the submodule back to the branch the ref
     expect(failure).toBeInstanceOf(Error);
     expect(failure).not.toBeInstanceOf(GitMergeConflictError);
     expect((await sub.status()).current).toBe(UPPER);
-    expect((await sub.getConfig('nzyme.refreshHome')).value).toBeNull();
-});
-
-test('a refresh abandoned on one branch leaves the submodule alone once the main repository is on another', async () => {
-    const { mainPath, submodulePath } = await setupSubmoduleChain(true);
-    process.chdir(mainPath);
-    const sub = simpleGit({ baseDir: submodulePath });
-    const main = simpleGit({ baseDir: mainPath });
-
-    expect(await sync().catch((error: unknown) => error)).toBeInstanceOf(GitMergeConflictError);
-
-    // The refresh is abandoned, and the main repository moves on to another task, whose submodule
-    // branch is checked out.
-    await sub.merge(['--abort']);
-    await main.checkoutLocalBranch('feat/other-task');
-    await sub.checkout('main');
-
-    const { logger } = createTestLogger('refreshSubmoduleChain');
-    await restoreSubmoduleHomes({ logger });
-
-    expect((await sub.status()).current).toBe('main');
-    expect((await sub.getConfig('nzyme.refreshHome')).value).toBeNull();
-    expect((await sub.getConfig('nzyme.refreshParent')).value).toBeNull();
-});
-
-test('a refresh whose starting branch no longer exists leaves the submodule where it is', async () => {
-    const { mainPath, submodulePath } = await setupSubmoduleChain(true);
-    process.chdir(mainPath);
-    const sub = simpleGit({ baseDir: submodulePath });
-
-    expect(await sync().catch((error: unknown) => error)).toBeInstanceOf(GitMergeConflictError);
-
-    await sub.merge(['--abort']);
-    await sub.deleteLocalBranch(UPPER, true);
-
-    const { logger } = createTestLogger('refreshSubmoduleChain');
-    await restoreSubmoduleHomes({ logger });
-
-    expect((await sub.status()).current).toBe(LOWER);
-    expect((await sub.getConfig('nzyme.refreshHome')).value).toBeNull();
 });

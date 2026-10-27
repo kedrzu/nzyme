@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
+import { UsageError } from '@nzyme/cli';
 import type { Logger } from '@nzyme/logging/Logger.js';
 import { assertValue } from '@nzyme/utils';
 
@@ -21,7 +22,7 @@ import { syncStackNodesFromRemote } from './syncStackNodesFromRemote.js';
 
 /**
  * Local git config key, in the submodule's own repository, holding the branch a chain refresh
- * started from while a conflict keeps the submodule on another node of the chain.
+ * started from for as long as the refresh may leave the submodule on another node of the chain.
  */
 const REFRESH_HOME_KEY = 'nzyme.refreshHome';
 
@@ -92,9 +93,11 @@ export interface RefreshSubmoduleChainParams {
  * the node above would then be pushed on top of commits its base lacks on the remote.
  *
  * The submodule ends on the branch it started from ("home"), so the caller commits the gitlink at
- * home's refreshed head. A conflict leaves the node it happened on checked out mid-merge, as the
- * main stack does, and records home so that {@link restoreSubmoduleHomes} takes the next run back
- * there before anything reads or commits the submodule.
+ * home's refreshed head. Home is recorded before the first checkout and cleared once the submodule
+ * is back on it, so that {@link restoreSubmoduleHomes} takes the next run back there before anything
+ * reads or commits the submodule whenever this run stops elsewhere: a conflict leaves the node it
+ * happened on checked out mid-merge, as the main stack does, and any other failure goes back to home
+ * itself unless git refuses the checkout.
  * @returns Every node of the chain with the head its remote now holds.
  * @throws {GitMergeConflictError} On a conflict, carrying the node's stack position and the
  * submodule's name.
@@ -121,6 +124,8 @@ export async function refreshSubmoduleChain(params: RefreshSubmoduleChainParams)
         );
     }
 
+    await git.addConfig(REFRESH_HOME_KEY, home);
+
     try {
         await syncStackNodesFromRemote({ branches, baseDir: submodule.path, logger });
         await mergeTrunkIntoBottom({ git, branches, trunk, repoDisplayName: subName, logger });
@@ -128,11 +133,8 @@ export async function refreshSubmoduleChain(params: RefreshSubmoduleChainParams)
         await cascadeStack({ branches, baseDir: submodule.path, logger });
     } catch (error) {
         if (!(error instanceof GitMergeConflictError)) {
+            await returnHome(git, home);
             throw error;
-        }
-
-        if (error.stackContext && error.stackContext.nodeBranch !== home) {
-            await git.addConfig(REFRESH_HOME_KEY, home);
         }
 
         throw new GitMergeConflictError({
@@ -143,9 +145,7 @@ export async function refreshSubmoduleChain(params: RefreshSubmoduleChainParams)
         });
     }
 
-    if ((await git.status()).current !== home) {
-        await git.checkout(home);
-    }
+    await returnHome(git, home);
 
     if (branches.length > 1) {
         logger.info(
@@ -178,13 +178,14 @@ export interface RestoreSubmoduleHomesParams {
 }
 
 /**
- * Take every submodule a conflicted chain refresh left on a lower node back to the branch the
+ * Take every submodule an interrupted chain refresh left on another node back to the branch the
  * refresh started from, once the conflict is resolved and committed.
  *
  * This has to run before anything reads or commits a submodule: otherwise the main repository's
- * auto-commit records a gitlink pointing at the lower node, and the readiness check judges the lower
- * node as the submodule's branch. A submodule still mid-merge or dirty is left where it is — the
- * readiness check then refuses it as dirty, which is the instruction the user needs.
+ * auto-commit records a gitlink pointing at the other node, and the readiness check judges that
+ * node as the submodule's branch.
+ * @throws {UsageError} When such a submodule is still mid-merge or dirty — the run has to stop here,
+ * before the auto-commit, rather than commit a gitlink at the node the resolution is on.
  */
 export async function restoreSubmoduleHomes(params: RestoreSubmoduleHomesParams): Promise<void> {
     const { logger } = params;
@@ -200,20 +201,36 @@ export async function restoreSubmoduleHomes(params: RestoreSubmoduleHomesParams)
         const subName = chalk.magenta(submodule.name);
 
         if (submodule.hasChanges) {
-            logger.warn(
-                `   ⚠️  ${subName} is still mid-refresh on ${chalk.cyan(submodule.currentBranch ?? 'a detached HEAD')} — ` +
+            throw new UsageError(
+                `${submodule.name} is still mid-refresh on ${submodule.currentBranch ?? 'a detached HEAD'} — ` +
                     `commit the conflict resolution there, then re-run.`,
             );
-            continue;
         }
 
         if (submodule.currentBranch !== home) {
-            await git.checkout(home);
             logger.info(`   ↩️  ${subName}: back on ${chalk.cyan(home)}, where the interrupted refresh started`);
         }
 
-        await git.raw(['config', '--local', '--unset', REFRESH_HOME_KEY]);
+        await returnHome(git, home);
     }
+}
+
+/**
+ * Check `home` out unless it already is, or unless the tree is mid-merge — the resolution belongs
+ * where the conflict is, and git refuses to switch away from an unresolved index anyway — then clear
+ * the record that the refresh left it.
+ */
+async function returnHome(git: SimpleGit, home: string): Promise<void> {
+    const status = await git.status();
+    if (status.conflicted.length > 0) {
+        return;
+    }
+
+    if (status.current !== home) {
+        await git.checkout(home);
+    }
+
+    await git.raw(['config', '--local', '--unset', REFRESH_HOME_KEY]);
 }
 
 /**

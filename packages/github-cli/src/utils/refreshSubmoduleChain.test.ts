@@ -1,10 +1,11 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, expect, setDefaultTimeout, test } from 'bun:test';
 import { simpleGit } from 'simple-git';
 
+import { UsageError } from '@nzyme/cli';
 import { createTestLogger } from '@nzyme/logging';
 
 import type { GithubConfig } from '../GithubConfig.js';
@@ -214,5 +215,42 @@ test('a conflict on the lower node stops there, and the re-run after resolving i
     const main = simpleGit({ baseDir: mainPath });
     await main.fetch('origin');
     expect((await main.raw(['rev-parse', 'origin/main:nzyme'])).trim()).toBe(upperHead);
+    expect((await sub.getConfig('nzyme.refreshHome')).value).toBeNull();
+});
+
+test('a re-run while the lower node is still mid-merge stops before committing a gitlink at it', async () => {
+    const { mainPath, submodulePath } = await setupSubmoduleChain(true);
+    process.chdir(mainPath);
+    const sub = simpleGit({ baseDir: submodulePath });
+    const main = simpleGit({ baseDir: mainPath });
+    const gitlinkBefore = (await main.raw(['rev-parse', 'HEAD:nzyme'])).trim();
+
+    expect(await sync().catch((error: unknown) => error)).toBeInstanceOf(GitMergeConflictError);
+
+    // Resolved and staged, but the merge is not committed yet.
+    writeFileSync(join(submodulePath, 'shared.txt'), 'lower and trunk\n');
+    await sub.add(['shared.txt']);
+
+    expect(await sync().catch((error: unknown) => error)).toBeInstanceOf(UsageError);
+
+    expect((await sub.status()).current).toBe(LOWER);
+    expect((await main.raw(['rev-parse', 'HEAD:nzyme'])).trim()).toBe(gitlinkBefore);
+    expect((await sub.getConfig('nzyme.refreshHome')).value).toBe(UPPER);
+});
+
+test('a rejected push mid-refresh takes the submodule back to the branch the refresh started from', async () => {
+    const { mainPath, submodulePath, subRemote } = await setupSubmoduleChain(false);
+    process.chdir(mainPath);
+    const sub = simpleGit({ baseDir: submodulePath });
+
+    const hook = join(subRemote, 'hooks', 'pre-receive');
+    writeFileSync(hook, '#!/bin/sh\nexit 1\n');
+    chmodSync(hook, 0o755);
+
+    const failure = await sync().catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure).not.toBeInstanceOf(GitMergeConflictError);
+    expect((await sub.status()).current).toBe(UPPER);
     expect((await sub.getConfig('nzyme.refreshHome')).value).toBeNull();
 });

@@ -12,7 +12,6 @@ import { applyStashedChanges, handleBranchSelection } from '@nzyme/github-cli/ut
 import type { BranchSelectionResult } from '@nzyme/github-cli/utils/handleBranchSelection.js';
 import { handleMergedPrReopen } from '@nzyme/github-cli/utils/handleMergedPrReopen.js';
 import { resolvePrSubmoduleBase } from '@nzyme/github-cli/utils/resolvePrSubmoduleBase.js';
-import { restoreSubmoduleHomes } from '@nzyme/github-cli/utils/refreshSubmoduleChain.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
@@ -182,13 +181,6 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
         }
 
         const submoduleBase = await resolvePrSubmoduleBase({ githubClient, githubConfig, pr: existingPr, trunk });
-
-        // A submodule an interrupted chain refresh left on a lower node goes home while the main
-        // repository is still on the branch that refresh ran for — the checkout below would
-        // otherwise judge, and refuse, that node instead of resuming the refresh.
-        if (submoduleBase.kind === 'trunk') {
-            await restoreSubmoduleHomes({ logger });
-        }
 
         await checkoutExistingBranch({
             branchName: existingPr.head.ref,

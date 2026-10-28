@@ -16,6 +16,13 @@ export interface SyncStackNodesFromRemoteParams {
     branches: string[];
 
     /**
+     * Working tree of the repository whose stack this is — a submodule's path for a submodule's own
+     * stack.
+     * @default the current working directory
+     */
+    baseDir?: string;
+
+    /**
      * Logger instance.
      */
     logger: Logger;
@@ -35,9 +42,9 @@ export interface SyncStackNodesFromRemoteParams {
  * auto-commit first; the working-tree check is the last line of defence in front of a `reset --hard`.
  */
 export async function syncStackNodesFromRemote(params: SyncStackNodesFromRemoteParams): Promise<void> {
-    const { branches, logger } = params;
+    const { branches, baseDir, logger } = params;
 
-    const git = simpleGit({ config: ['submodule.recurse=false'] });
+    const git = simpleGit({ baseDir, config: ['submodule.recurse=false'] });
     const currentBranch = (await git.status()).current;
 
     logger.info('');

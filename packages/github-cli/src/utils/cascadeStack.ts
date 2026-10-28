@@ -7,9 +7,9 @@ import { assertNoConflicts } from './assertNoConflicts.js';
 import { countCommits } from './countCommits.js';
 import { createBranchGuard } from './createBranchGuard.js';
 import { ensureLocalBranch } from './ensureLocalBranch.js';
-import { GitMergeConflictError } from './GitMergeConflictError.js';
 import { handleMergeConflict } from './handleMergeConflict.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
+import { rethrowWithStackPosition } from './rethrowWithStackPosition.js';
 
 /**
  * Parameters for {@link cascadeStack}.
@@ -20,6 +20,13 @@ export interface CascadeStackParams {
      * and is never touched here.
      */
     branches: string[];
+
+    /**
+     * Working tree of the repository whose stack this is — a submodule's path for a submodule's own
+     * stack.
+     * @default the current working directory
+     */
+    baseDir?: string;
 
     /**
      * Logger instance.
@@ -52,7 +59,7 @@ export interface CascadeStackParams {
  * nothing here pushed it, so its local tip is no evidence of what the remote holds.
  */
 export async function cascadeStack(params: CascadeStackParams): Promise<Map<string, string>> {
-    const { branches, logger } = params;
+    const { branches, baseDir, logger } = params;
 
     const pushedHeads = new Map<string, string>();
 
@@ -62,7 +69,7 @@ export async function cascadeStack(params: CascadeStackParams): Promise<Map<stri
 
     // Submodule recursion off for the same reason as syncAllRepos: git would otherwise try to fetch
     // gitlink commits by SHA while merging, which real remotes reject.
-    const git = simpleGit({ config: ['submodule.recurse=false'] });
+    const git = simpleGit({ baseDir, config: ['submodule.recurse=false'] });
     const originalBranch = (await git.status()).current;
 
     logger.info('');
@@ -137,27 +144,4 @@ export async function cascadeStack(params: CascadeStackParams): Promise<Map<stri
     }
 
     return pushedHeads;
-}
-
-/**
- * Run an operation that may throw {@link GitMergeConflictError} and re-throw it carrying the stack
- * position, so the caller can tell the user which node to fix instead of just which files broke.
- */
-async function rethrowWithStackPosition(
-    operation: () => Promise<unknown>,
-    stackContext: NonNullable<GitMergeConflictError['stackContext']>,
-): Promise<void> {
-    try {
-        await operation();
-    } catch (error) {
-        if (error instanceof GitMergeConflictError) {
-            throw new GitMergeConflictError({
-                repoDisplayName: error.repoDisplayName,
-                conflictedFiles: error.conflictedFiles,
-                operation: error.operation,
-                stackContext,
-            });
-        }
-        throw error;
-    }
 }

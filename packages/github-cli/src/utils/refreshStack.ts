@@ -10,6 +10,7 @@ import type { GithubClient } from './createGithubClient.js';
 import { GitMergeConflictError } from './GitMergeConflictError.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
+import type { SyncAllReposResult } from './syncAllRepos.js';
 import { syncAllRepos } from './syncAllRepos.js';
 import { syncStackNodesFromRemote } from './syncStackNodesFromRemote.js';
 
@@ -65,8 +66,10 @@ export interface RefreshStackParams {
  *
  * You end up back on the node you started from — refreshing is a maintenance step, not a navigation
  * one.
+ * @returns What the trunk sync of the bottom node did, including the submodule pull requests it
+ * refreshed.
  */
-export async function refreshStack(params: RefreshStackParams): Promise<void> {
+export async function refreshStack(params: RefreshStackParams): Promise<SyncAllReposResult> {
     const { branches, trunk, submoduleBase, unattended, githubClient, githubConfig, logger } = params;
 
     const bottomBranch = branches[0]!;
@@ -101,8 +104,9 @@ export async function refreshStack(params: RefreshStackParams): Promise<void> {
             await git.checkout(bottomBranch);
         }
 
+        let syncResult: SyncAllReposResult;
         try {
-            await syncAllRepos({
+            syncResult = await syncAllRepos({
                 branch: bottomBranch,
                 baseBranch: trunk,
                 submoduleBase,
@@ -121,6 +125,8 @@ export async function refreshStack(params: RefreshStackParams): Promise<void> {
         }
 
         await cascadeStack({ branches, logger });
+
+        return syncResult;
     } finally {
         // Return to where the user was — unless a conflict left the working tree mid-merge, where
         // switching away would strand the resolution they are about to make.
@@ -164,16 +170,26 @@ export function logStackConflictGuidance(error: GitMergeConflictError, logger: L
         return;
     }
 
-    const { nodeBranch, nodePosition, nodeCount, against } = context;
+    const { nodeBranch, nodePosition, nodeCount, against, submodule } = context;
+    const where = submodule ? `${chalk.magenta(submodule)}'s chain node` : 'stack node';
 
     logger.error('');
     logger.error(
         chalk.red.bold(
-            `   ✖ Conflict on stack node ${nodePosition}/${nodeCount} — ${chalk.cyan(nodeBranch)} vs ${chalk.cyan(against)}`,
+            `   ✖ Conflict on ${where} ${nodePosition}/${nodeCount} — ${chalk.cyan(nodeBranch)} vs ${chalk.cyan(against)}`,
         ),
     );
     logger.error('');
-    logger.error(`   ${chalk.yellow('Resolve it on this node.')} It is checked out and mid-merge.`);
+    if (submodule) {
+        logger.error(
+            `   ${chalk.yellow('Resolve it on this node by hand.')} The merge was aborted and ${chalk.magenta(submodule)} is back on the branch the refresh started from:`,
+        );
+        logger.error(
+            `   ${chalk.gray(`in ${submodule}, check out ${nodeBranch}, merge origin/${against}, resolve and commit, then check the starting branch out again.`)}`,
+        );
+    } else {
+        logger.error(`   ${chalk.yellow('Resolve it on this node.')} It is checked out and mid-merge.`);
+    }
     logger.error(
         `   ${chalk.gray('Resolving it on a node above instead would bury')} ${chalk.cyan(against)}${chalk.gray("'s changes inside that node's own diff.")}`,
     );

@@ -92,10 +92,15 @@ export function createOpenApiFetch<Paths>(config: OpenApiFetchConfig = {}) {
         }
 
         // Prepare headers
-        const headers = new Headers({
-            ...(defaultHeaders as Record<string, string>),
-            ...(requestHeaders as Record<string, string>),
-        });
+        // `undefined` values are skipped, so a request-level `undefined` keeps the default header
+        const headers = new Headers();
+        for (const source of [defaultHeaders, requestHeaders] as Record<string, string | undefined>[]) {
+            for (const [name, value] of Object.entries(source)) {
+                if (value !== undefined) {
+                    headers.set(name, value);
+                }
+            }
+        }
 
         // Prepare request body and content type
         if (body !== undefined) {

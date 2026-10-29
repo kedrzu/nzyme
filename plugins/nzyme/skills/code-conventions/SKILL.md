@@ -149,7 +149,7 @@ touched file's existing order rather than reordering it: builtin, then external,
 
 ## Design principles
 
-- Write complete code — no skipped implementations or TODOs.
+- Write complete code — no skipped implementations or bare TODOs. A TODO naming the issue that will resolve it (`TODO(ABC-123)`) is allowed.
 - Don't repeat code — extract a utility. Reuse beats reinvent: `@nzyme/utils`, `@nzyme/vue-utils` and
   `@nzyme/dom-utils` hold the shared helpers, and a repo's generated code index (a root
   `INDEX.md`/`UTILS.md`) lists its own.

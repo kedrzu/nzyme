@@ -22,7 +22,7 @@ description: >-
   counts as one export. The groups below illustrate the principle; apply it to cases not named here:
   - an exported function and its params/options interface;
   - a service or command and the types used only by it — its private shapes sit beside it, not in
-    five files of five lines each (its published contract: see the ioc skill);
+    five files of five lines each (its explicit `Shape`: see the ioc skill);
   - several small related types that are read and changed as a set, in one `*Types.ts`;
   - a Vue component, its props, and types that belong only to that component;
   - enums and their translations;
@@ -42,8 +42,11 @@ description: >-
 - **Don't mutate function arguments** — work on a copy and return the result; callers capture it.
 - A single type earns its own file once a second module needs it.
 
-File-name suffixes for IoC and RPC units (`*Command.ts`, `*Service.ts`, `*Endpoint.ts`,
-`*EndpointHandler.ts`, …) are owned by the ioc skill.
+**The file name is the unit's name; a dot-suffix marks another part of the same unit** —
+`ProductCreateEndpoint.handler.ts`, `ProductService.mock.ts`, `ProductService.test.ts`,
+`ProductCard.stories.tsx`. A file whose name is a different unit is a different unit. File-name
+suffixes for IoC and RPC units (`*Command.ts`, `*Service.ts`, `*Endpoint.ts`,
+`*Endpoint.handler.ts`, …) are owned by the ioc skill.
 
 ## Style
 

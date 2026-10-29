@@ -247,6 +247,10 @@ interface CreateFakeGithubParams {
     remotes: Record<FakeRepoPr['repo'], string>;
     prs: FakeRepoPr[];
     /**
+     * GitHub stacks, each as its pull request numbers in one repository, bottom to top.
+     */
+    stacks?: { repo: FakeRepoPr['repo']; number: number; prs: number[] }[];
+    /**
      * Performs a squash merge on the remote, the part of GitHub's merge a test has to reproduce.
      */
     onMerge?: (pr: FakeRepoPr) => Promise<void>;
@@ -254,12 +258,55 @@ interface CreateFakeGithubParams {
 
 /**
  * A `GithubClient` stub serving both repositories of a superproject: every pull request in `prs`,
- * green checks on every head, no stacks and no review threads. Records each merge as
- * `<repo>#<number>`, in order.
+ * green checks on every head, the given `stacks` and no review threads. A stacked pull request refuses
+ * the plain merge endpoint, as GitHub does, and merge-async lands it with every open node below it.
+ * Records each merge as `<repo>#<number>`, in order.
  */
 function createFakeGithub(params: CreateFakeGithubParams): { client: GithubClient; merged: string[] } {
-    const { remotes, prs, onMerge } = params;
+    const { remotes, prs, stacks = [], onMerge } = params;
     const merged: string[] = [];
+
+    function findStack(repo: string, number: number) {
+        return stacks.find(stack => stack.repo === repo && stack.prs.includes(number));
+    }
+
+    async function land(pr: FakeRepoPr) {
+        await onMerge?.(pr);
+        pr.state = 'closed';
+        merged.push(`${pr.repo}#${pr.number}`);
+    }
+
+    async function request(
+        route: string,
+        requestParams: { repo: string; pull_request?: number; pull_number?: number },
+    ) {
+        if (route === 'GET /repos/{owner}/{repo}/stacks') {
+            const stack = findStack(requestParams.repo, requestParams.pull_request!);
+            if (!stack) {
+                return { status: 200, data: [] };
+            }
+
+            const nodes = await Promise.all(stack.prs.map(number => toApi(find(stack.repo, number))));
+            return {
+                status: 200,
+                data: [{ number: stack.number, base: { ref: 'main' }, open: true, pull_requests: nodes }],
+            };
+        }
+
+        if (route === 'PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge-async') {
+            const stack = findStack(requestParams.repo, requestParams.pull_number!)!;
+            for (const number of stack.prs.slice(0, stack.prs.indexOf(requestParams.pull_number!) + 1)) {
+                const pr = find(stack.repo, number);
+                if (pr.state === 'open') {
+                    await land(pr);
+                }
+            }
+
+            return { status: 202, data: { status: 'merged' } };
+        }
+
+        throw new Error(`Unexpected request ${route}`);
+    }
 
     async function toApi(pr: FakeRepoPr) {
         const sha = (await simpleGit({ baseDir: remotes[pr.repo] }).revparse([pr.head])).trim();
@@ -288,7 +335,7 @@ function createFakeGithub(params: CreateFakeGithubParams): { client: GithubClien
     }
 
     const client = {
-        request: () => Promise.resolve({ status: 200, data: [] }),
+        request,
         graphql: () => Promise.reject(new Error('no review threads here')),
         rest: {
             pulls: {
@@ -304,10 +351,11 @@ function createFakeGithub(params: CreateFakeGithubParams): { client: GithubClien
                     data: await toApi(find(getParams.repo, getParams.pull_number)),
                 }),
                 merge: async (mergeParams: { repo: string; pull_number: number }) => {
-                    const pr = find(mergeParams.repo, mergeParams.pull_number);
-                    await onMerge?.(pr);
-                    pr.state = 'closed';
-                    merged.push(`${pr.repo}#${pr.number}`);
+                    if (findStack(mergeParams.repo, mergeParams.pull_number)) {
+                        throw new Error('Merging stacked PRs via this endpoint is not supported.');
+                    }
+
+                    await land(find(mergeParams.repo, mergeParams.pull_number));
                     return { data: { merged: true } };
                 },
             },
@@ -454,6 +502,53 @@ test('a task landing on the trunk merges its submodule pull request first and re
 
     const squashed = (await seed.revparse(['main'])).trim();
     expect(merged).toEqual(['sub#5', 'main#10']);
+    expect((await simpleGit({ baseDir: submodulePath }).revparse(['HEAD'])).trim()).toBe(squashed);
+    expect((await simpleGit({ baseDir: remotes.main }).raw(['rev-parse', 'abc-1-work:nzyme'])).trim()).toBe(squashed);
+});
+
+// The submodule work is itself a GitHub stack, pinned at its top node. GitHub refuses the plain merge
+// endpoint for a stacked pull request, so the merge goes through merge-async, which lands the pinned
+// node with the node below it.
+test('a task whose submodule work is a stack merges that stack before the product pull request', async () => {
+    const { mainPath, submodulePath, subSeed, remotes } = await setupMergeScenario(root, {
+        subBranch: 'feat/top',
+        productBase: 'main',
+    });
+    const seed = simpleGit({ baseDir: subSeed, config: ['user.email=t@t', 'user.name=t', 'commit.gpgsign=false'] });
+    await seed.push(['origin', 'main:refs/heads/feat/bottom']);
+    const { client, merged } = createFakeGithub({
+        remotes,
+        prs: [
+            { repo: 'main', number: 10, title: '[ABC-1] Work', head: 'abc-1-work', base: 'main', state: 'open' },
+            { repo: 'sub', number: 4, title: 'fix: bottom', head: 'feat/bottom', base: 'main', state: 'open' },
+            { repo: 'sub', number: 5, title: 'feat: top', head: 'feat/top', base: 'feat/bottom', state: 'open' },
+        ],
+        stacks: [{ repo: 'sub', number: 1, prs: [4, 5] }],
+        onMerge: async pr => {
+            if (pr.repo !== 'sub' || pr.number !== 5) {
+                return;
+            }
+
+            await seed.raw(['merge', '--squash', `origin/${pr.head}`]);
+            await seed.commit(pr.title);
+            await seed.push(['origin', 'main']);
+        },
+    });
+    const { logger } = createTestLogger('mergeTaskPrs');
+    process.chdir(mainPath);
+
+    await mergeTaskPrs({
+        githubClient: client,
+        githubConfig: GITHUB_CONFIG,
+        issueId: 'ABC-1',
+        baseBranch: 'main',
+        logger,
+        autoYes: true,
+        checkPollIntervalMs: 0,
+    });
+
+    const squashed = (await seed.revparse(['main'])).trim();
+    expect(merged).toEqual(['sub#4', 'sub#5', 'main#10']);
     expect((await simpleGit({ baseDir: submodulePath }).revparse(['HEAD'])).trim()).toBe(squashed);
     expect((await simpleGit({ baseDir: remotes.main }).raw(['rev-parse', 'abc-1-work:nzyme'])).trim()).toBe(squashed);
 });

@@ -1,6 +1,7 @@
 import { HttpError } from '@nzyme/fetch-utils/HttpError.js';
 import type { HttpResponseHeaders } from '@nzyme/fetch-utils/HttpHeaders.js';
 import type { Container } from '@nzyme/ioc/Container.js';
+import { asArray } from '@nzyme/utils/array/asArray.js';
 import { createEventEmitter } from '@nzyme/utils/createEventEmitter.js';
 import type { EventEmitter } from '@nzyme/utils/createEventEmitter.js';
 
@@ -242,18 +243,10 @@ function mergeResponseHeaders(contextHeaders: HttpResponseHeaders, responseHeade
         }
     });
 
-    const cookies = [...toCookieList(contextHeaders['set-cookie']), ...responseHeaders.getSetCookie()];
+    const cookies = [...asArray(contextHeaders['set-cookie']), ...responseHeaders.getSetCookie()];
     if (cookies.length > 0) {
         headers['set-cookie'] = cookies;
     }
 
     return headers;
-}
-
-function toCookieList(value: string | string[] | undefined): string[] {
-    if (value === undefined) {
-        return [];
-    }
-
-    return Array.isArray(value) ? value : [value];
 }

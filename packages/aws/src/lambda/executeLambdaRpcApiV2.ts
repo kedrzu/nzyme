@@ -1,5 +1,6 @@
 import type { HttpMethod } from '@nzyme/fetch-utils/HttpMethod.js';
 import type { Router } from '@nzyme/rpc/createRouter.js';
+import { asArray } from '@nzyme/utils/array/asArray.js';
 
 import type { types } from './types.js';
 
@@ -40,11 +41,7 @@ export async function executeLambdaRpcApiV2(
     const cookies: string[] = [];
     for (const [key, value] of Object.entries(response.headers)) {
         if (key.toLowerCase() === 'set-cookie') {
-            if (Array.isArray(value)) {
-                cookies.push(...value);
-            } else if (value !== undefined) {
-                cookies.push(String(value));
-            }
+            cookies.push(...asArray(value).map(String));
         } else if (Array.isArray(value)) {
             headers[key] = value.join(',');
         } else {

@@ -3,7 +3,8 @@ import type { ComponentPublicInstance, ObjectDirective } from 'vue';
 import { unwrapElement } from '../unwrapElement.js';
 
 /**
- * Directive that focuses an element when trigger is true.
+ * Directive that focuses an element when trigger is true. The focus is applied after a short delay, and
+ * only if focus did not move to another element in the meantime.
  *
  * @example
  * <input v-focus="true" />
@@ -20,7 +21,19 @@ function focusIf(el: ComponentPublicInstance | Element | undefined, value: boole
     }
 
     const element = unwrapElement(el);
-    if (element && 'focus' in element) {
-        setTimeout(() => element.focus(), 50);
+    if (!element || !('focus' in element)) {
+        return;
     }
+
+    const document = 'ownerDocument' in element ? element.ownerDocument : element.document;
+    const activeBefore = document.activeElement;
+    setTimeout(() => {
+        // Focus that moved during the delay was moved on purpose — by the user, or a test filling the
+        // next field. Taking it back would send what they type next into this element.
+        if (document.activeElement !== activeBefore) {
+            return;
+        }
+
+        element.focus();
+    }, 50);
 }

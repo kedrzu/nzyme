@@ -100,6 +100,27 @@ const { data, error } = await apiClient({
 });
 ```
 
+### As an IoC service
+
+In an app built on `@nzyme/ioc`, the client is a service, so a test replaces the whole client with
+`container.set(PetstoreClient, fake)`:
+
+```typescript
+import { Fetch } from '@nzyme/ioc/Fetch.js';
+import { defineService } from '@nzyme/ioc/Service.js';
+import { createOpenApiFetch } from '@nzyme/openapi';
+import type { paths } from './schema.gen.js';
+import { PETSTORE_API_KEY, PETSTORE_BASE_URL } from './petstoreEnv.js';
+
+export const PetstoreClient = defineService({
+    name: 'PetstoreClient',
+    deps: { baseUrl: PETSTORE_BASE_URL, apiKey: PETSTORE_API_KEY, fetch: Fetch },
+    setup({ baseUrl, apiKey, fetch }) {
+        return createOpenApiFetch<paths>({ baseUrl, headers: { api_key: apiKey }, fetch });
+    },
+});
+```
+
 ### Custom headers
 
 ```typescript

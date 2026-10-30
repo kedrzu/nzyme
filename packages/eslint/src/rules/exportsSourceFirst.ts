@@ -1,6 +1,8 @@
 import type { Rule } from 'eslint';
 import type { AST } from 'jsonc-eslint-parser';
 
+import { propertyName } from './jsonPackage.js';
+
 const DECISION = 'docs/decisions/workspace-code-generators-run-from-source.md in the healed repository';
 
 /**
@@ -99,11 +101,6 @@ export const exportsSourceFirst: Rule.RuleModule = {
 
 function isJsonProperty(node: unknown): node is AST.JSONProperty {
     return typeof node === 'object' && node !== null && 'type' in node && node.type === 'JSONProperty';
-}
-
-function propertyName(property: AST.JSONProperty): string {
-    const key = property.key;
-    return key.type === 'JSONLiteral' ? String(key.value) : key.name;
 }
 
 /** Whether any runtime condition (everything but `types`) targets a file in `dist`. */

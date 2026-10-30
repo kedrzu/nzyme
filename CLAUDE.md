@@ -96,15 +96,15 @@ These always apply. Everything else — organization, naming, casting, JSDoc, de
 # Publishing
 
 Releases come from the `release` branch through a release PR (`docs/decisions/release-line-on-nx-release.md`).
-The `git-workflow` skill covers what a contributor does. A new or changed public package must have:
+The `git-workflow` skill covers what a contributor does.
 
-- `publishConfig.access: "public"`, `license`, `repository`, and a `description`;
-- `files` that contain every `exports`/`main`/`types` target. Most packages ship `dist`; `vue`,
-  `vue-forms`, `vue-i18n` and `vue-transitions` ship `src`;
-- internal dependencies as `workspace:*`, and no dependency on a private package.
+`bun run lint:check` enforces, on every non-private `package.json`: `license`, `description`,
+`repository`, `publishConfig.access: "public"`, and `files` covering every `exports`/`main`/`types`
+target (`source` targets excepted). The rules are in `eslint.config.mjs` and `@nzyme/eslint`.
 
-`bun scripts/publish.ts --dry-run` checks only that no public package depends on a private one and
-that no `workspace:` specifier survives packing (versions already on npm are skipped, not packed).
+Not linted: internal dependencies must be `workspace:*`, and a public package must not depend on a
+private one. `bun scripts/publish.ts --dry-run` checks the private dependency and that no `workspace:`
+specifier survives packing (versions already on npm are skipped, not packed).
 
 # Git
 

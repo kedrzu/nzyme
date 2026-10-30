@@ -17,6 +17,7 @@ export function packageJson() {
         },
         rules: {
             'nzyme/exports-source-first': 'error',
+            'nzyme/files-cover-exports': 'error',
         },
     });
 }

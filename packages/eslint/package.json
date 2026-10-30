@@ -16,13 +16,14 @@
     "sideEffects": false,
     "exports": {
         ".": {
-            "import": "./dist/index.js",
-            "types": "./dist/index.d.ts"
+            "types": "./dist/index.d.ts",
+            "source": "./src/index.ts",
+            "import": "./dist/index.js"
         },
         "./*.js": {
             "types": "./dist/*.d.ts",
-            "import": "./dist/*.js",
             "source": "./src/*.ts",
+            "import": "./dist/*.js",
             "default": "./dist/*.js"
         }
     },
@@ -38,10 +39,12 @@
         "@typescript-eslint/parser": "8.71.2",
         "eslint": "10.13.0",
         "eslint-plugin-vue": "10.11.1",
+        "jsonc-eslint-parser": "3.3.0",
         "vue-eslint-parser": "10.4.1"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
+        "@types/bun": "^1.4.3",
         "@types/node": "^26.6.5",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "oxfmt": "0.73.0"

@@ -15,17 +15,19 @@
     "sideEffects": false,
     "exports": {
         ".": {
-            "import": "./dist/index.js",
-            "types": "./dist/index.d.ts"
+            "types": "./dist/index.d.ts",
+            "source": "./src/index.ts",
+            "import": "./dist/index.js"
         },
         "./setup": {
-            "import": "./dist/setup.js",
-            "types": "./dist/setup.d.ts"
+            "types": "./dist/setup.d.ts",
+            "source": "./src/setup.ts",
+            "import": "./dist/setup.js"
         },
         "./*.js": {
             "types": "./dist/*.d.ts",
-            "import": "./dist/*.js",
             "source": "./src/*.ts",
+            "import": "./dist/*.js",
             "default": "./dist/*.js"
         }
     },

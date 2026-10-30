@@ -1,7 +1,7 @@
 {
     "name": "@nzyme/eslint",
     "version": "0.15.1",
-    "description": "Shared Vue ESLint config and oxlint rule preset (framework)",
+    "description": "Shared ESLint configs (Vue, package.json, Markdown) and oxlint rule preset (framework)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {
@@ -16,13 +16,14 @@
     "sideEffects": false,
     "exports": {
         ".": {
-            "import": "./dist/index.js",
-            "types": "./dist/index.d.ts"
+            "types": "./dist/index.d.ts",
+            "source": "./src/index.ts",
+            "import": "./dist/index.js"
         },
         "./*.js": {
             "types": "./dist/*.d.ts",
-            "import": "./dist/*.js",
             "source": "./src/*.ts",
+            "import": "./dist/*.js",
             "default": "./dist/*.js"
         }
     },
@@ -34,14 +35,24 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
+        "@eslint/markdown": "8.0.3",
         "@nzyme/oxlint": "workspace:*",
+        "@nzyme/project-utils": "workspace:*",
+        "@nzyme/utils": "workspace:*",
         "@typescript-eslint/parser": "8.71.2",
         "eslint": "10.13.0",
         "eslint-plugin-vue": "10.11.1",
+        "jsonc-eslint-parser": "3.3.0",
+        "mdast-util-to-markdown": "2.2.0",
+        "remark": "15.0.1",
+        "remark-frontmatter": "5.0.0",
+        "remark-gfm": "4.0.1",
         "vue-eslint-parser": "10.4.1"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
+        "@types/bun": "^1.4.3",
+        "@types/mdast": "4.0.4",
         "@types/node": "^26.6.5",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "oxfmt": "0.73.0"

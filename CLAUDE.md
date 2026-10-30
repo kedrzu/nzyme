@@ -9,8 +9,8 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
   `typography`
 - **Vue:** `vue`, `vue-utils`, `vue-ioc`, `vue-forms`, `vue-i18n`, `vue-transitions`, `dom-utils`
 - **Tooling:**
-  - `cli` (the `nzyme` binary: `monorepo`, `localise`, `index`, `quiet-run`, `format-markdown`,
-    `submodule`, `depcheck`)
+  - `cli` (the `nzyme` binary: `monorepo`, `localise`, `index`, `quiet-run`, `submodule`,
+    `depcheck`)
   - `tsconfig`, `eslint` (also the oxlint preset), `oxlint` (custom rules), `project-utils`,
     `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`
 - **Integrations:** `aws`, `pulumi`, `slack`, `apis`
@@ -49,8 +49,9 @@ Run from the repo root:
 - `bun run typecheck` — `tsgo --build`.
 - `bun run test` — all tests (`bun:test`); `bun test packages/<pkg>/src` for one package. Always run
   from the repo root, and use `bun run test`, not bare `bun test`, for the whole suite.
-- `bun run lint` / `bun run lint:check` — oxlint (type-aware) plus ESLint for Vue.
-- `bun run format` / `bun run format:check` — oxfmt plus `nzyme format-markdown`. Never hand-apply
+- `bun run lint` / `bun run lint:check` — oxlint (type-aware) plus ESLint for Vue,
+  `package.json` and Markdown (`lint` formats Markdown).
+- `bun run format` / `bun run format:check` — oxfmt (Markdown is ESLint's, above). Never hand-apply
   formatting.
 - The lint and format configs here (`.oxlintrc.json`, `.oxfmtrc.json`, `eslint.config.mjs`) are
   nzyme's own, and they apply even inside a consuming repo. That repo excludes `nzyme/` and runs these
@@ -95,15 +96,15 @@ These always apply. Everything else — organization, naming, casting, JSDoc, de
 # Publishing
 
 Releases come from the `release` branch through a release PR (`docs/decisions/release-line-on-nx-release.md`).
-The `git-workflow` skill covers what a contributor does. A new or changed public package must have:
+The `git-workflow` skill covers what a contributor does.
 
-- `publishConfig.access: "public"`, `license`, `repository`, and a `description`;
-- `files` that contain every `exports`/`main`/`types` target. Most packages ship `dist`; `vue`,
-  `vue-forms`, `vue-i18n` and `vue-transitions` ship `src`;
-- internal dependencies as `workspace:*`, and no dependency on a private package.
+`bun run lint:check` enforces, on every non-private `package.json`: `license`, `description`,
+`repository`, `publishConfig.access: "public"`, and `files` covering every `exports`/`main`/`types`
+target (`source` targets excepted). The rules are in `eslint.config.mjs` and `@nzyme/eslint`.
 
-`bun scripts/publish.ts --dry-run` checks only that no public package depends on a private one and
-that no `workspace:` specifier survives packing (versions already on npm are skipped, not packed).
+Not linted: internal dependencies must be `workspace:*`, and a public package must not depend on a
+private one. `bun scripts/publish.ts --dry-run` checks the private dependency and that no `workspace:`
+specifier survives packing (versions already on npm are skipped, not packed).
 
 # Git
 

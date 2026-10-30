@@ -2,8 +2,8 @@
 name: ioc
 description: >-
     Dependency injection with @nzyme/ioc — defineCommand (one operation), defineService (several
-    methods or held state), defineFactory (per-call instances), defineInterface, the contract `Shape`
-    annotation, deps, defineEnvVariable, container.set overrides and mocking with @nzyme/ioc-testing,
+    methods or held state), defineFactory (per-call instances), defineInterface, the explicit `Shape`
+    interface, deps, defineEnvVariable, container.set overrides and mocking with @nzyme/ioc-testing,
     plus shared reactive stores built on createEventEmitter/createSingleRunner from @nzyme/utils. Use
     when writing or reviewing code that imports @nzyme/ioc, @nzyme/ioc-testing or @nzyme/vue-ioc:
     creating a service or command, wiring dependencies, injecting env variables, naming `*Command.ts` /
@@ -53,12 +53,11 @@ Examples for a "Product" domain:
 
 |Pattern|Example|Holds|
 |-|-|-|
-|`*Command.ts`|`ProductCreateCommand.ts`|`defineCommand` — single-purpose operation|
+|`*Command.ts`|`ProductCreateCommand.ts`|`defineCommand` — single-purpose operation, with its params, result and `Shape` at the top|
 |`*Service.ts`|`ProductService.ts`|`defineService` — multi-method service or store|
 |`*Factory.ts`|`ProductClientFactory.ts`|`defineFactory`|
-|`*.contract.ts`|`ProductCreateCommand.contract.ts`|the unit's published params, result and `Shape`|
 |`*Endpoint.ts`|`ProductCreateEndpoint.ts`|`defineEndpoint` from `@nzyme/rpc` — the API definition|
-|`*EndpointHandler.ts`|`ProductCreateEndpointHandler.ts`|`defineEndpointHandler` from `@nzyme/rpc`|
+|`*Endpoint.handler.ts`|`ProductCreateEndpoint.handler.ts`|`defineEndpointHandler` from `@nzyme/rpc`, exported as `ProductCreateEndpointHandler`|
 |`*Types.ts`|`ProductTypes.ts`|types shared by 2+ modules, or a set of small related types|
 |`*.test.ts`|`ProductService.test.ts`|colocated test|
 
@@ -71,7 +70,9 @@ import { defineCommand } from '@nzyme/ioc/Command.js';
 import { Logger } from '@nzyme/logging/Logger.js';
 
 import { ProductApiClient } from './ProductApiClient.js';
-import type { ProductCreateCommandShape } from './ProductCreateCommand.contract.js';
+
+// ProductCreateCommandParams, ProductCreateCommandResult and ProductCreateCommandShape sit at the top
+// of this file — see "Explicit Shape" below.
 
 export const ProductCreateCommand = defineCommand({
     name: 'ProductCreateCommand',
@@ -129,13 +130,14 @@ export const ProductClientFactory = defineFactory({
 // container.resolve(ProductClientFactory)('https://eu.example.com')
 ```
 
-### Contract split — the `: Shape` annotation is mandatory
+### Explicit Shape — the `: Shape` annotation is mandatory
 
-A command or service others depend on publishes its shape in a colocated `.contract.ts` (params,
-result, `Shape` interface), separate from the implementation:
+A command or service others depend on states its interface explicitly, at the top of its own file:
+params, result and the `Shape` interface with its JSDoc, then the implementation below. An agent or a
+reader opening the file gets the interface first, without inferring it from `setup()`.
 
 ```ts
-// ProductCreateCommand.contract.ts
+// ProductCreateCommand.ts
 export interface ProductCreateCommandParams {
     name: string;
     priceCents: number;
@@ -149,21 +151,33 @@ export interface ProductCreateCommandResult {
 export interface ProductCreateCommandShape {
     (params: ProductCreateCommandParams): Promise<ProductCreateCommandResult>;
 }
+
+/** Creates a product in the catalog. */
+export const ProductCreateCommand = defineCommand({
+    // …
+    setup({ api, logger }): ProductCreateCommandShape {
+        // …
+    },
+});
 ```
+
+The interface lives in the same file, never in a separate one: a second file costs a read
+and an import and buys nothing an agent uses. Describe behaviour that can be typed as a type (the
+failures a `Result` carries); do not restate the implementation's behaviour in JSDoc prose — it drifts.
 
 The implementation's `setup()` **must** carry the explicit `: [Name]Shape` return annotation. Without
 it the unit's type is inferred from whatever `setup` happens to return, so drift — a wrong param type,
 a missing field, a forgotten `await` — type-checks green and explodes at a distant call site or at
-runtime. The annotation checks the implementation against the published contract at the definition.
-Factories, external-client wrappers and reactive stores have no contract; their inferred return is
+runtime. The annotation checks the implementation against the declared interface at the definition.
+Factories, external-client wrappers and reactive stores declare no `Shape`; their inferred return is
 fine.
 
-- Keep a command's params type in its own `.contract.ts` as `[Command]Params` — don't promote it to a
+- Keep a command's params type in the command's own file as `[Command]Params` — don't promote it to a
   shared package unless unrelated domains genuinely share it.
 - Params that cross a trust boundary (endpoint payloads) are a runtime schema parsed at the top of the
   command; a plain interface is enough for internal callers.
 - For non-trivial results, a named `…Result` interface with JSDoc — never an inline object type.
-- Expected failures the caller must branch on are part of the contract (a discriminated result the
+- Expected failures the caller must branch on are part of the `Shape` (a discriminated result the
   caller checks before reading the value); `throw` is for invariant violations. Use one shape across a
   domain's commands so every caller reads failures the same way.
 
@@ -243,13 +257,13 @@ directly. Test structure and assertions: testing skill.
 
 - **Wrapping a stateless helper in `defineCommand`** — container dead weight, a noisier call site, and
   a mock nobody needs.
-- **`setup()` without the `: Shape` annotation** where a contract exists — a contract mismatch compiles
+- **`setup()` without the `: Shape` annotation** where a `Shape` exists — a mismatch compiles
   clean and surfaces far away.
 - **`process.env.X` or importing a service value inside `setup`** — no typing or required-check, no
   test override, resolution at import time.
 - **A `defineService` with exactly one stateless method** — a command wearing a service's clothes. Use
   `defineCommand`, whose `setup` returns the callable (`generate(opts)`, not `generator.generate(opts)`),
-  and name its signature in the `.contract.ts`.
+  and name its signature in its `Shape`.
 - **Making callers pre-format nullable inputs** (`firstName ?? ''` at every call site) — accept the raw
   `string | null` and handle it once inside the command.
 - **Leaking an external SDK's raw types into params or the Shape** — define the params you need and

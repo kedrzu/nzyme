@@ -1,6 +1,8 @@
 import type { Rule } from 'eslint';
 import type { AST } from 'jsonc-eslint-parser';
 
+import { assert } from '@nzyme/utils';
+
 import { propertyName } from './jsonPackage.js';
 
 const DECISION = 'docs/decisions/workspace-code-generators-run-from-source.md in the healed repository';
@@ -37,7 +39,9 @@ export const exportsSourceFirst: Rule.RuleModule = {
                 if (sourceIndex === -1) {
                     context.report({ loc: object.loc, messageId: 'missing' });
                 } else {
-                    const desiredIndex = propertyName(properties[0]!) === 'types' ? 1 : 0;
+                    const first = properties[0];
+                    assert(first);
+                    const desiredIndex = propertyName(first) === 'types' ? 1 : 0;
                     if (sourceIndex !== desiredIndex) {
                         reportMisplaced(properties, sourceIndex, desiredIndex);
                     }
@@ -52,7 +56,8 @@ export const exportsSourceFirst: Rule.RuleModule = {
         }
 
         function reportMisplaced(properties: AST.JSONProperty[], sourceIndex: number, desiredIndex: number): void {
-            const property = properties[sourceIndex]!;
+            const property = properties[sourceIndex];
+            assert(property);
             context.report({
                 loc: property.loc,
                 messageId: 'misplaced',
@@ -60,6 +65,10 @@ export const exportsSourceFirst: Rule.RuleModule = {
                     const from = Math.min(sourceIndex, desiredIndex);
                     const to = Math.max(sourceIndex, desiredIndex);
                     const affected = properties.slice(from, to + 1);
+                    const head = affected[0];
+                    const tail = affected.at(-1);
+                    assert(head);
+                    assert(tail);
                     const reordered = [...affected];
                     reordered.splice(sourceIndex - from, 1);
                     reordered.splice(desiredIndex - from, 0, property);
@@ -67,16 +76,14 @@ export const exportsSourceFirst: Rule.RuleModule = {
                     let text = '';
                     reordered.forEach((moved, i) => {
                         text += sourceCode.text.slice(...moved.range);
-                        const current = affected[i]!;
+                        const current = affected[i];
+                        assert(current);
                         const next = affected[i + 1];
                         if (next) {
                             text += sourceCode.text.slice(current.range[1], next.range[0]);
                         }
                     });
-                    return fixer.replaceTextRange(
-                        [affected[0]!.range[0], affected[affected.length - 1]!.range[1]],
-                        text,
-                    );
+                    return fixer.replaceTextRange([head.range[0], tail.range[1]], text);
                 },
             });
         }

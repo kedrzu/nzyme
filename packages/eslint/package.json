@@ -38,6 +38,7 @@
         "@eslint/markdown": "8.0.3",
         "@nzyme/oxlint": "workspace:*",
         "@nzyme/project-utils": "workspace:*",
+        "@nzyme/utils": "workspace:*",
         "@typescript-eslint/parser": "8.71.2",
         "eslint": "10.13.0",
         "eslint-plugin-vue": "10.11.1",

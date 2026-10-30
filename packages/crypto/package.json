@@ -44,7 +44,7 @@
     },
     "dependencies": {
         "@nzyme/types": "workspace:*",
-        "spark-md5": "3.0.2"
+        "spark-md5": "^3.0.2"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

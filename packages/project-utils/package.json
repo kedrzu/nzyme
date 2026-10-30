@@ -37,15 +37,15 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "@manypkg/find-root": "3.1.0",
+        "@manypkg/find-root": "^3.1.0",
         "@nzyme/utils": "workspace:*",
-        "chalk": "6.0.1",
-        "dotenv": "18.0.8",
-        "execa": "10.2.0",
-        "fs-extra": "11.4.1",
-        "oxfmt": "0.73.0",
-        "parse-gitignore": "2.0.0",
-        "pkg-types": "2.3.3"
+        "chalk": "^6.0.1",
+        "dotenv": "^18.0.8",
+        "execa": "^10.2.0",
+        "fs-extra": "^11.4.1",
+        "oxfmt": "^0.73.0",
+        "parse-gitignore": "^2.0.0",
+        "pkg-types": "^2.3.3"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

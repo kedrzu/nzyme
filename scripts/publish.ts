@@ -20,18 +20,25 @@ import path from 'node:path';
 
 import { $, Glob } from 'bun';
 
-interface WorkspacePackage {
+/** Dependency name to version specifier, as written in a `package.json` field. */
+type Specifiers = Record<string, string>;
+
+export interface WorkspacePackage {
     dir: string;
     name: string;
     version: string;
     private: boolean;
-    dependencies: string[];
+    /** The runtime-facing fields (`DEPENDENCY_FIELDS`) plus `devDependencies`. */
+    specifiers: Record<(typeof DEPENDENCY_FIELDS)[number] | 'devDependencies', Specifiers>;
 }
 
 const ROOT = path.resolve(import.meta.dir, '..');
+const EXACT_VERSION = /^\d+\.\d+\.\d+(-[\w.]+)?$/;
 const DEPENDENCY_FIELDS = ['dependencies', 'peerDependencies', 'optionalDependencies'] as const;
 
-await main();
+if (import.meta.main) {
+    await main();
+}
 
 async function main() {
     const dryRun = process.argv.includes('--dry-run');
@@ -39,6 +46,7 @@ async function main() {
     const publishable = packages.filter(pkg => !pkg.private);
 
     assertNoPrivateDependencies(publishable, packages);
+    assertDependencyRanges(publishable);
 
     const outDir = await mkdtemp(path.join(tmpdir(), 'nzyme-publish-'));
     for (const pkg of publishable) {
@@ -54,7 +62,7 @@ async function main() {
     }
 }
 
-async function readWorkspacePackages() {
+export async function readWorkspacePackages() {
     const packages: WorkspacePackage[] = [];
     for await (const file of new Glob('packages/*/package.json').scan(ROOT)) {
         const json = (await Bun.file(path.join(ROOT, file)).json()) as Record<string, unknown>;
@@ -62,11 +70,16 @@ async function readWorkspacePackages() {
             continue;
         }
 
-        const dependencies: string[] = [];
-        for (const field of DEPENDENCY_FIELDS) {
+        const specifiers: WorkspacePackage['specifiers'] = {
+            dependencies: {},
+            peerDependencies: {},
+            optionalDependencies: {},
+            devDependencies: {},
+        };
+        for (const field of Object.keys(specifiers) as (keyof typeof specifiers)[]) {
             const deps = json[field];
             if (deps && typeof deps === 'object') {
-                dependencies.push(...Object.keys(deps));
+                specifiers[field] = deps as Specifiers;
             }
         }
 
@@ -75,7 +88,7 @@ async function readWorkspacePackages() {
             name: json['name'],
             version: json['version'],
             private: json['private'] === true,
-            dependencies,
+            specifiers,
         });
     }
 
@@ -86,7 +99,8 @@ function assertNoPrivateDependencies(publishable: WorkspacePackage[], all: Works
     const privateNames = new Set(all.filter(pkg => pkg.private).map(pkg => pkg.name));
     const problems: string[] = [];
     for (const pkg of publishable) {
-        for (const dep of pkg.dependencies) {
+        const names = DEPENDENCY_FIELDS.flatMap(field => Object.keys(pkg.specifiers[field]));
+        for (const dep of names) {
             if (privateNames.has(dep)) {
                 problems.push(`${pkg.name} depends on private ${dep}`);
             }
@@ -96,6 +110,49 @@ function assertNoPrivateDependencies(publishable: WorkspacePackage[], all: Works
     if (problems.length > 0) {
         throw new Error(`Public packages must not depend on private ones:\n${problems.join('\n')}`);
     }
+}
+
+function assertDependencyRanges(publishable: WorkspacePackage[]) {
+    const problems = checkDependencyRanges(publishable);
+    if (problems.length > 0) {
+        throw new Error(`Public packages must declare ranges, not exact versions:\n${problems.join('\n')}`);
+    }
+}
+
+/**
+ * Finds dependencies of public packages that would force an exact version on every consumer: an
+ * exact semver in a runtime-facing field, or a dev counterpart of a peer whose specifier differs
+ * from the peer's (the submodule consumer installs devDependencies too, so it would get two copies).
+ * Private packages are ignored.
+ *
+ * @returns one message per problem, naming package, field, dependency and specifier
+ */
+export function checkDependencyRanges(packages: WorkspacePackage[]) {
+    const problems: string[] = [];
+    for (const pkg of packages) {
+        if (pkg.private) {
+            continue;
+        }
+
+        for (const field of DEPENDENCY_FIELDS) {
+            for (const [dep, specifier] of Object.entries(pkg.specifiers[field])) {
+                if (EXACT_VERSION.test(specifier)) {
+                    problems.push(`${pkg.name} ${field}: ${dep} is pinned to ${specifier}`);
+                }
+            }
+        }
+
+        for (const [dep, specifier] of Object.entries(pkg.specifiers.devDependencies)) {
+            const peer = pkg.specifiers.peerDependencies[dep];
+            if (peer != null && peer !== specifier) {
+                problems.push(
+                    `${pkg.name} devDependencies: ${dep} is ${specifier} but its peerDependencies range is ${peer}`,
+                );
+            }
+        }
+    }
+
+    return problems;
 }
 
 async function isPublished(pkg: WorkspacePackage) {

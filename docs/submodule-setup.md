@@ -40,6 +40,10 @@ nzyme's packages become workspaces of the product, so they link to each other an
 packages without npm. nzyme's own `bun.lock` and root `package.json` are ignored here: the product's
 lockfile pins every dependency, nzyme's included.
 
+nzyme declares ranges and peers, so the product's lockfile and its own pins choose the versions. A
+product that pins a singleton (`vue`, `nuxt`, ...) below nzyme's lower bound ends up with two copies:
+lower that bound in nzyme rather than overriding it.
+
 ```json
 {
     "workspaces": ["packages/*", "nzyme/packages/*"],

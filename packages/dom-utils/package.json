@@ -38,7 +38,7 @@
         "@nzyme/crypto": "workspace:*",
         "@nzyme/types": "workspace:*",
         "@nzyme/utils": "workspace:*",
-        "lodash.debounce": "4.0.8"
+        "lodash.debounce": "^4.0.8"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

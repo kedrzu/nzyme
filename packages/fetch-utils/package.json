@@ -37,8 +37,8 @@
     "dependencies": {
         "@nzyme/types": "workspace:*",
         "@nzyme/xml-utils": "workspace:*",
-        "fast-xml-parser": "5.11.2",
-        "ufo": "1.6.4"
+        "fast-xml-parser": "^5.11.2",
+        "ufo": "^1.6.4"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

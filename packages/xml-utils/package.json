@@ -35,7 +35,7 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "fast-xml-parser": "5.11.2"
+        "fast-xml-parser": "^5.11.2"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

@@ -17,14 +17,18 @@
         "access": "public"
     },
     "dependencies": {
-        "typescript-plugin-css-modules": "5.2.0",
-        "typescript-vue-plugin": "1.8.27",
-        "vite": "7.3.6",
-        "vue": "3.5.44"
+        "typescript-plugin-css-modules": "^5.2.0",
+        "typescript-vue-plugin": "^1.8.27"
     },
     "devDependencies": {
         "oxfmt": "0.73.0",
-        "typescript": "6.0.3"
+        "typescript": "6.0.3",
+        "vite": "^7.3.6",
+        "vue": "^3.5.44"
+    },
+    "peerDependencies": {
+        "vite": "^7.3.6",
+        "vue": "^3.5.44"
     },
     "depcheck": {
         "ignoreDeps": [

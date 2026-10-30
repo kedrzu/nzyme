@@ -44,7 +44,7 @@ tester.run('markdown-format', markdownFormat, {
 });
 
 it('runs next to the package.json preset and fixes Markdown through the shared plugin', () => {
-    const linter = new Linter({ configType: 'flat' });
+    const linter = new Linter({ configType: 'flat', cwd: PACKAGE_ROOT });
     const result = linter.verifyAndFix('* item\n', [...packageJson(), ...markdown()], {
         filename: path.join(PACKAGE_ROOT, 'src/fixture.md'),
     });

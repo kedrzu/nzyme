@@ -22,7 +22,8 @@ description: >-
   counts as one export. The groups below illustrate the principle; apply it to cases not named here:
   - an exported function and its params/options interface;
   - a service or command and the types used only by it — its private shapes sit beside it, not in
-    five files of five lines each (its explicit `Shape`: see the ioc skill);
+    five files of five lines each; its params, result and `Shape` sit at the top of the same file
+    even though callers and mocks import them (see the ioc skill);
   - several small related types that are read and changed as a set, in one `*Types.ts`;
   - a Vue component, its props, and types that belong only to that component;
   - enums and their translations;

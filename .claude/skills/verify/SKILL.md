@@ -16,7 +16,7 @@ description: >-
   `package.json`/`bun.lock`, generated inputs (`.loc.yaml`), build/lint/format/test config, workflows
   that build or publish. → verify it.
 - **Non-code-only** — docs, ADRs, agent instructions and skills. → run only the matching check
-  (`bun run format:md:check` for markdown, `claude plugin validate . --strict` for the plugin, parse
+  (`bun run lint:check` for markdown, `claude plugin validate . --strict` for the plugin, parse
   edited JSON). That is sufficient evidence; do not run the full protocol unless asked.
 - Mixed or unsure → code-impacting.
 
@@ -47,7 +47,8 @@ downstream consumers.
 3. Lint the changed files, new untracked ones included (`git diff` alone lists only tracked paths):
    `{ git diff --name-only --diff-filter=d $(git merge-base origin/main HEAD) -- '*.ts' '*.tsx' '*.vue'; git ls-files --others --exclude-standard -- '*.ts' '*.tsx' '*.vue'; } | xargs bun nzyme quiet-run bun x oxlint --type-aware --quiet`
    (on a hotfix branch use its base instead of `origin/main`)
-4. Format: `bun run format` (oxfmt + markdown) — never hand-format.
+4. Format: `bun run format` (oxfmt); Markdown is formatted by `bun run lint` (ESLint) — never
+   hand-format.
 
 Changed a `.loc.yaml`? Run `bun run localise` before building. Added or removed a package or an internal
 dependency? Run `bun run monorepo` (regenerates the per-package `tsconfig.json`) and `bun install`.

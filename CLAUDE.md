@@ -9,8 +9,8 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
   `typography`
 - **Vue:** `vue`, `vue-utils`, `vue-ioc`, `vue-forms`, `vue-i18n`, `vue-transitions`, `dom-utils`
 - **Tooling:**
-  - `cli` (the `nzyme` binary: `monorepo`, `localise`, `index`, `quiet-run`, `format-markdown`,
-    `submodule`, `depcheck`)
+  - `cli` (the `nzyme` binary: `monorepo`, `localise`, `index`, `quiet-run`, `submodule`,
+    `depcheck`)
   - `tsconfig`, `eslint` (also the oxlint preset), `oxlint` (custom rules), `project-utils`,
     `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`
 - **Integrations:** `aws`, `pulumi`, `slack`, `apis`
@@ -49,8 +49,9 @@ Run from the repo root:
 - `bun run typecheck` — `tsgo --build`.
 - `bun run test` — all tests (`bun:test`); `bun test packages/<pkg>/src` for one package. Always run
   from the repo root, and use `bun run test`, not bare `bun test`, for the whole suite.
-- `bun run lint` / `bun run lint:check` — oxlint (type-aware) plus ESLint for Vue.
-- `bun run format` / `bun run format:check` — oxfmt plus `nzyme format-markdown`. Never hand-apply
+- `bun run lint` / `bun run lint:check` — oxlint (type-aware) plus ESLint for Vue,
+  `package.json` and Markdown (`lint` formats Markdown).
+- `bun run format` / `bun run format:check` — oxfmt (Markdown is ESLint's, above). Never hand-apply
   formatting.
 - The lint and format configs here (`.oxlintrc.json`, `.oxfmtrc.json`, `eslint.config.mjs`) are
   nzyme's own, and they apply even inside a consuming repo. That repo excludes `nzyme/` and runs these

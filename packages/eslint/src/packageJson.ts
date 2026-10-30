@@ -1,6 +1,6 @@
 import * as jsoncParser from 'jsonc-eslint-parser';
 import { defineConfig } from 'eslint/config';
-import { exportsSourceFirst } from './rules/exportsSourceFirst.js';
+import { nzymePlugin } from './plugin.js';
 
 /**
  * Creates an ESLint config for `package.json` files.
@@ -11,9 +11,7 @@ import { exportsSourceFirst } from './rules/exportsSourceFirst.js';
 export function packageJson() {
     return defineConfig({
         files: ['**/package.json'],
-        plugins: {
-            nzyme: { rules: { 'exports-source-first': exportsSourceFirst } },
-        },
+        plugins: { nzyme: nzymePlugin },
         languageOptions: {
             parser: jsoncParser,
         },

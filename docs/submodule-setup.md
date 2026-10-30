@@ -64,7 +64,7 @@ lockfile pins every dependency, nzyme's included.
   - Bun (`packageManager`);
   - `@types/bun` (with the override above);
   - `@typescript/native-preview`;
-  - `oxlint`, `oxlint-tsgolint`, `oxfmt`, `eslint`.
+  - `oxlint`, `oxlint-tsgolint`, `oxfmt`, `eslint`, `eslint-plugin-package-json`.
 - **Apply the `bun-types` patch.** Copy `nzyme/patches/bun-types@<version>.patch` into the product and
   declare it as above. Without it, nzyme's tests type `await expect(…).rejects` as non-awaitable and
   fail type-aware lint.

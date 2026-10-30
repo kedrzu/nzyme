@@ -97,10 +97,16 @@ function toMatcher(pattern: string): (path: string) => boolean {
     if (!entry.includes('*')) {
         return path => path === entry || path.startsWith(`${entry}/`);
     }
+    // `**/` matches zero or more directories, a remaining `**` anything, `*` one path segment.
     const source = entry
-        .split('**')
-        .map(part => part.split('*').map(escapeRegExp).join('[^/]*'))
-        .join('.*');
+        .split('**/')
+        .map(segment =>
+            segment
+                .split('**')
+                .map(part => part.split('*').map(escapeRegExp).join('[^/]*'))
+                .join('.*'),
+        )
+        .join('(?:.*/)?');
     const regExp = new RegExp(`^${source}(/.*)?$`);
     return path => regExp.test(path);
 }

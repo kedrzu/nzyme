@@ -35,6 +35,10 @@ tester.run('files-cover-exports', filesCoverExports, {
             code: `{ "files": ["dist/index.js", "types/*.d.ts"], "main": "./dist/index.js", "types": "./types/index.d.ts" }`,
         },
         {
+            name: 'a `**/` glob matches zero directories',
+            code: `{ "files": ["dist/**/*.js"], "main": "./dist/index.js" }`,
+        },
+        {
             name: 'package.json is always shipped',
             code: `{ "files": ["dist"], "exports": { "./package.json": "./package.json" } }`,
         },

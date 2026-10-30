@@ -1,0 +1,36 @@
+{
+    "tabWidth": 4,
+    "singleQuote": true,
+    "printWidth": 120,
+    "arrowParens": "avoid",
+    "trailingComma": "all",
+    "endOfLine": "lf",
+    "singleAttributePerLine": true,
+    "ignorePatterns": [
+        "dist",
+        ".output",
+        ".output-local",
+        ".nuxt",
+        ".nuxt-local",
+        "test-results",
+        "playwright-report",
+        "node_modules",
+        "*.loc.ts",
+        "coverage",
+        "storybook-static",
+        // Markdown is formatted by `nzyme format-markdown` (`format:md`).
+        "*.md",
+        ".context",
+        // The `kedrzu/nzyme` submodule is formatted by its own config, through `lint:nzyme`; the
+        // runs also pass `--disable-nested-config` (nzyme/docs/submodule-setup.md#lint-and-format).
+        "nzyme"
+    ],
+    "overrides": [
+        {
+            "files": ["*.yml", "*.yaml", "*.html", "*.vue"],
+            "options": {
+                "tabWidth": 2
+            }
+        }
+    ]
+}

@@ -1,0 +1,55 @@
+name: Build
+
+# The merge gate for pull requests. It runs the same build local setup does (`setup.build.sh`), then
+# the checks of the `verify` skill's full protocol. For a stacked PR GitHub builds each node as the
+# cumulative state of the chain up to it, so a green node means that slice compiles on its own.
+#
+# No secrets: the job runs on a plain runner, which is why `setup.build.sh` holds nothing that needs
+# credentials or local infrastructure. The job name `Build` is the required check on the `main`
+# ruleset — keep it stable.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    env:
+      CI: 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@{{ref:actions/checkout}}
+        with:
+          # The gitlink is the pin (nzyme/docs/consumers.md). nzyme is public, so the default token
+          # clones it.
+          submodules: recursive
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@{{ref:oven-sh/setup-bun}}
+        with:
+          # Follows package.json's `packageManager`, so the runner cannot drift from local.
+          bun-version-file: package.json
+
+      - name: Build
+        run: bash setup.build.sh
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint:check
+
+      - name: Format
+        run: bun run format:check
+
+      - name: Tests
+        run: bun run tests

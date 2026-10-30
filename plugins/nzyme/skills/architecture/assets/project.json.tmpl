@@ -1,0 +1,44 @@
+{
+    "$schema": "./node_modules/nx/schemas/project-schema.json",
+    "name": "{{name}}-root",
+    "targets": {
+        "localise": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "nzyme localise"
+            }
+        },
+        "monorepo": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "nzyme monorepo"
+            }
+        },
+        "watch:localise": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "continuous": true,
+            "options": {
+                "command": "nzyme localise --watch"
+            }
+        },
+        "watch:monorepo": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "continuous": true,
+            "options": {
+                "command": "nzyme monorepo --watch"
+            }
+        },
+        "watch:tsc": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "continuous": true,
+            "options": {
+                "command": "tsgo --build --watch --preserveWatchOutput"
+            }
+        }
+    }
+}

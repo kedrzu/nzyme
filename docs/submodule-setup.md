@@ -27,7 +27,8 @@ git submodule add https://github.com/kedrzu/nzyme.git nzyme
   `git submodule update --remote`, which builds whatever nzyme `main` is today, and `update = merge`
   can leave a local checkout off the pin. How the pin moves: [consumers.md](consumers.md).
 
-- **Every clone and worktree** runs `git submodule update --init`. Put it in the product's setup script.
+- **Every clone and worktree** runs `git submodule update --init --recursive --checkout`. Put it in
+  the product's setup script.
 
 - **CI checks out** with `actions/checkout` and `submodules: recursive`. nzyme is public, so the default
   token is enough.
@@ -137,6 +138,12 @@ invalidate cached builds. Hash the submodule's tree explicitly and add it to `de
 ```jsonc
 "namedInputs": {
     "default": ["{projectRoot}/**/*", "sharedGlobals", "submoduleDefault"],
+    "sharedGlobals": [
+        "{workspaceRoot}/package.json",
+        "{workspaceRoot}/bun.lock",
+        "{workspaceRoot}/nx.json",
+        "{workspaceRoot}/tsconfig.json"
+    ],
     "submoduleDefault": [
         { "runtime": "{ git -C nzyme ls-tree -r HEAD; git -C nzyme diff --binary HEAD; git -C nzyme ls-files --others --exclude-standard | git -C nzyme hash-object --stdin-paths; } | git hash-object --stdin" }
     ],
@@ -154,6 +161,15 @@ invalidate cached builds. Hash the submodule's tree explicitly and add it to `de
     ]
 }
 ```
+
+Two more settings matter once several worktrees of the product are open:
+
+- **`"useDaemonProcess": false`** in `nx.json`. Every worktree spawns its own daemon, which never
+  exits and watches the whole tree, `nzyme/` included.
+- **`"nx": { "includedScripts": [] }`** in the root `package.json`. Otherwise Nx turns the root's
+  scripts into targets, and a root `build` that itself calls Nx recurses.
+
+The `nzyme:architecture` skill's Nx reference covers the rest of a parallel-worktree setup.
 
 ## Lint and format
 
@@ -180,8 +196,10 @@ In the product:
   {
       "lint": "oxlint --type-aware --quiet --disable-nested-config --fix . && eslint --fix .",
       "lint:check": "oxlint --type-aware --quiet --disable-nested-config . && eslint .",
-      "format": "oxfmt --disable-nested-config . && nzyme format-markdown . --exclude nzyme",
-      "format:check": "oxfmt --check --disable-nested-config . && nzyme format-markdown --check . --exclude nzyme",
+      "format": "oxfmt --disable-nested-config . > /dev/null && bun run format:md",
+      "format:check": "oxfmt --check --disable-nested-config . && bun run format:md:check",
+      "format:md": "nzyme format-markdown . --exclude .context --exclude nzyme",
+      "format:md:check": "nzyme format-markdown --check . --exclude .context --exclude nzyme",
       "lint:nzyme": "bun run --cwd nzyme lint:check && bun run --cwd nzyme format:check"
   }
   ```
@@ -209,7 +227,9 @@ bun test nzyme/packages/<pkg>/src         # one package, from the product root
 
 A product's setup script (Paseo runs it for every new worktree through `paseo.json`) does, in order:
 
-1. `git submodule update --init` (before anything is installed — the workspace globs point into it).
+1. `git submodule update --init --recursive --checkout`, before anything is installed: the workspace
+   globs point into it. `--checkout` puts the submodule on the pinned commit even when a leftover
+   `update = merge` in the local git config would otherwise merge into it and leave it off the pin.
 2. The build above.
 3. Optionally `nzyme index`, to generate the code map for agents. It covers nzyme's packages too;
    configure it under `nzyme.index` in the product's `package.json`.
@@ -219,17 +239,17 @@ A product's setup script (Paseo runs it for every new worktree through `paseo.js
 - **nzyme's rules:** `nzyme/CLAUDE.md` and the `nzyme` plugin describe how to use and change nzyme.
   Point the product's `CLAUDE.md` at them for work inside `nzyme/`. Changes there follow nzyme's
   conventions: Conventional Commits, and a PR to `kedrzu/nzyme`.
-- **The plugin:** install it from nzyme's marketplace via the product's `.claude/settings.json`:
+- **The plugin:** symlink it from the submodule, so the skills always match the nzyme commit the
+  product pins:
 
-  ```json
-  {
-      "extraKnownMarketplaces": {
-          "nzyme": { "source": { "source": "github", "repo": "kedrzu/nzyme" }, "autoUpdate": true }
-      },
-      "enabledPlugins": { "nzyme@nzyme": true }
-  }
+  ```sh
+  ln -s ../../nzyme/plugins/nzyme .claude/skills/nzyme
   ```
 
-  Alternatively, symlink `.claude/skills/nzyme` → `../../nzyme/plugins/nzyme`. The skills then load from
-  the submodule and always match the nzyme commit the product pins, but drop the marketplace entry,
-  because a marketplace install of the same plugin wins over the symlinked copy.
+  Remove any `nzyme` entry from `extraKnownMarketplaces` and `nzyme@nzyme` from `enabledPlugins` in the
+  product's `.claude/settings.json`: a project-level marketplace install of the same plugin wins over
+  the symlinked copy, so the skills would follow nzyme `main` instead of the pin.
+- **Setting up or updating a product repo:** run `/nzyme:architecture`. It sets up a new repo or
+  brings an existing one up to date with nzyme's reference architecture, element by element, and
+  keeps the repo's `ARCHITECTURE.md`. To run it in an empty directory, before the submodule exists,
+  install the `nzyme` plugin at user level.

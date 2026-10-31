@@ -112,8 +112,8 @@ An imperative modal service: open a component, get a promise of its result.
 - **`ModalService`** (`modal/ModalService.js`, a `defineService`) — `open(component, props?, { parent? })`
   returns a `Modal<C>`: a promise of the result that also carries `id`, `controller`, `props` and the
   wrapped `component`. `component` may be a component, a promise of its module, or a loader
-  `() => import('./X.vue')`. Opening blurs the focused element. The browser Back button closes the modal
-  like `close()`; Escape closes it without settling the promise. `modals` lists the open ones; `closeAll()` closes them.
+  `() => import('./X.vue')`. Opening blurs the focused element. The browser Back button and Escape both
+  close the modal like `close()`. `modals` lists the open ones; `closeAll()` closes them.
 - **`ModalHost`** (`modal/ModalHost.js`) — renders the open modals; mount it once in the app root. Its
   default slot receives `modals` to render them yourself.
 - **`useModalOpen({ closeOnUnmounted? })`** (`modal/useModalOpen.js`) — `open` bound to the calling

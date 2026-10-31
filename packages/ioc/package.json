@@ -37,7 +37,7 @@
     "dependencies": {
         "@nzyme/types": "workspace:*",
         "@nzyme/utils": "workspace:*",
-        "type-fest": "5.10.0"
+        "type-fest": "^5.10.0"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

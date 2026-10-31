@@ -39,8 +39,8 @@
         "@nzyme/project-utils": "workspace:*",
         "@nzyme/typography": "workspace:*",
         "@nzyme/utils": "workspace:*",
-        "vitest": "4.1.10",
-        "yaml": "2.9.1"
+        "vitest": "^4.1.10",
+        "yaml": "^2.9.1"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

@@ -39,8 +39,8 @@
         "@nzyme/fetch-utils": "workspace:*",
         "@nzyme/types": "workspace:*",
         "@nzyme/utils": "workspace:*",
-        "ufo": "1.6.4",
-        "undici-types": "8.12.2"
+        "ufo": "^1.6.4",
+        "undici-types": "^8.12.2"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

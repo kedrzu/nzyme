@@ -100,9 +100,19 @@ The `git-workflow` skill covers what a contributor does. A new or changed public
 - `publishConfig.access: "public"`, `license`, `repository`, and a `description`;
 - `files` that contain every `exports`/`main`/`types` target. Most packages ship `dist`; `vue`,
   `vue-forms`, `vue-i18n` and `vue-transitions` ship `src`;
-- internal dependencies as `workspace:*`, and no dependency on a private package.
+- internal dependencies as `workspace:*`, and no dependency on a private package;
+- external dependencies as ranges (`^`), never exact pins: the product's lockfile chooses the version.
 
-`bun scripts/publish.ts --dry-run` checks only that no public package depends on a private one and
+Framework singletons (instances or types shared with the consumer, or the host of a plugin/preset:
+`vue`, `vue-router`, `@pulumi/*`, `nuxt`, `vite`, `rollup`, `vitest`, `eslint`) are
+`peerDependencies`, with the same range repeated in `devDependencies` (the submodule consumer installs
+dev dependencies too, so a different specifier makes a second copy).
+
+- Raise a range's lower bound only when the code needs the newer version, not because one exists.
+- Moving a range to a new major is a breaking change: `feat!`/`fix!` with a `BREAKING CHANGE:` footer.
+- `checkDependencyRanges()` in `scripts/publish.ts` enforces this and runs in `bun run test`.
+
+`bun scripts/publish.ts --dry-run` checks that the ranges hold, that no public package depends on a private one and
 that no `workspace:` specifier survives packing (versions already on npm are skipped, not packed).
 
 # Git

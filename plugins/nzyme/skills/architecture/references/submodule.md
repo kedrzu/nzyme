@@ -16,14 +16,13 @@ Where this skill and those docs disagree, the docs win; report the disagreement.
 
 What the docs leave to the product, and the repo-side state this skill checks:
 
-- **`.gitmodules`** holds `nzyme` with `path` and `url` only (`https://github.com/kedrzu/nzyme.git`).
+- **`.gitmodules`** is the one in `docs/submodule-setup.md#add-the-submodule`.
 - **Checkout** is `git submodule update --init --recursive --checkout`, in `setup.sh`
   (`assets/setup.sh.tmpl`) and nowhere else locally; CI checks out with `submodules: recursive`
   (`references/github.md`). Why `--checkout`: `docs/submodule-setup.md#setup-script-and-worktrees`.
 - **Bumps** are commits that move the gitlink, made by the bump workflow (`references/github.md`) or
   by hand with `bunx @nzyme/cli submodule bump --source origin/main`, which stages the move and prints
-  the summary for the commit. A `--remote` update anywhere in the repo is a difference: it builds
-  whatever nzyme `main` is today.
+  the summary for the commit.
 - **Tests:** the product's `tests` script runs `./packages` and `./scripts`, never `nzyme/`
   (`assets/package.json.tmpl`).
 
@@ -32,8 +31,8 @@ Nx, setup-scripts, lint-format and GitHub elements.
 
 ## Compare
 
-- `.gitmodules`: a `branch` or `update` entry, or another URL, is a difference. When `update = merge`
-  was there, existing clones keep it in `.git/config` after the file is fixed; `--checkout` in
+- `.gitmodules`: anything `#add-the-submodule` rules out is a difference. When `update = merge` was
+  there, existing clones keep it in `.git/config` after the file is fixed; `--checkout` in
   `setup.sh` overrides it, and this loop before the checkout removes it for good:
 
   ```sh
@@ -44,8 +43,9 @@ Nx, setup-scripts, lint-format and GitHub elements.
   done
   ```
 
-- Scripts: `git submodule update --remote` (often `upgrade:submodules`) and `bun update "@nzyme/*"` are
-  differences — the second does nothing with `workspace:*` dependencies.
+- `git submodule update --remote` anywhere in the repo (often an `upgrade:submodules` script; why:
+  `#add-the-submodule`) and a `bun update "@nzyme/*"` script are differences — the second does nothing
+  with `workspace:*` dependencies.
 
 - `git submodule status` showing `-`, `+` or `U` after setup means the checkout is not on the pin:
   report it, never commit the moved gitlink as a side effect.

@@ -76,9 +76,8 @@ menus, listbox), the parts wrap reka parts and the context carries only what rek
 - **SSR caveat.** `Reveal`, `Collapse`, `Carousel` and the transitions import `*.module.scss` from
   `.tsx` sources, which Nuxt's per-component SSR style inlining does not pick up. On a server-rendered
   page their styles arrive only with the client bundle — carousel slides render stacked until
-  hydration (layout shift). An SSR app built on them turns style inlining off and keeps CSS in one file
-  (`features.inlineStyles: false`, `vite.build.cssCodeSplit: false`) — part of the Nuxt app setup in
-  the `architecture` skill. An SPA is unaffected.
+  hydration (layout shift). An SSR app built on them needs the style settings in
+  `../architecture/references/nuxt-app.md` (SPA or SSR). An SPA is unaffected.
 
 ## Modals
 
@@ -97,7 +96,7 @@ menus, listbox), the parts wrap reka parts and the context carries only what rek
 `ConfigProvider` and the language toolbar, so a story renders the component exactly as an app does.
 
 ```tsx
-import type { Meta, StoryObj } from '@storybook/vue3';
+import type { Meta, StoryObj } from '@storybook/vue3-vite';
 
 import TextInput from './TextInput.vue';
 

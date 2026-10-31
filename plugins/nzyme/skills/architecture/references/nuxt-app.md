@@ -44,9 +44,10 @@ Ask it in a new repo; in an existing one the config already answers it.
   ```ts
   ssr: true,
   nitro: { prerender: { routes: ['/'], crawlLinks: true, failOnError: true } },
-  // `Reveal`, `Collapse`, `Carousel` and the transitions of `@nzyme/vue` import CSS modules from
-  // `.tsx` files, which Nuxt's per-component style inlining misses: without these two, their CSS
-  // arrives with the chunk at hydration and a carousel renders stacked until then (layout shift).
+  // `Reveal`, `Collapse`, `Carousel` (`@nzyme/vue`) and the `@nzyme/vue-transitions` components
+  // import CSS modules from `.tsx` files, which Nuxt's per-component style inlining misses: without
+  // these two, their CSS arrives with the chunk at hydration and a carousel renders stacked until then
+  // (layout shift).
   features: { inlineStyles: false },
   vite: { build: { cssCodeSplit: false } },
   ```
@@ -262,7 +263,8 @@ A build that reads any other gitignored file (a key, a per-worktree config) adds
   dependencies stay.
 - `nuxt.config.ts`: by option. Auto-imports on, `pages/` routing, a `~`/`@@` alias in use, `ssr`
   missing (Nuxt's default is SSR), or an SSR app without `inlineStyles: false` and
-  `cssCodeSplit: false` while it uses `@nzyme/vue` containers: each a difference. Repo modules,
+  `cssCodeSplit: false` while it uses those `@nzyme/vue` or `@nzyme/vue-transitions` components: each
+  a difference. Repo modules,
   `app.head`, route rules and hooks stay.
 - Plugins: a container created anywhere but one `ioc-plugin`, or a plugin that resolves services
   without `dependsOn: ['ioc-plugin']`, is a difference.

@@ -57,8 +57,7 @@ Every component, no exceptions:
 
 The story test is the floor for every component — it proves the component mounts with its real
 decorators and that every state shown in a story meets the axe rules. A spec adds what the floor
-cannot see: a click that makes a button busy, a keyboard path, an emitted payload. A component with
-only props and pass-through has no spec; its stories are its tests.
+cannot see: a click that makes a button busy, a keyboard path, an emitted payload.
 
 ## Layout
 
@@ -152,11 +151,9 @@ const t = useTranslate();
 
 - **Two script blocks.** The plain `<script>` exports `FooProps`, `FooEmits` and the prop unions so a
   specialised component spreads them; `<script setup>` follows the order in `nzyme:code-conventions`.
-- **A busy button is never `disabled`** (why: the `vue-forms` README, "Busy and pending"). `useButton`
-  does **not** set `aria-busy` — the wrapper binds it, and gives the busy state an accessible name (visually hidden loading text). The
-  content stays in the layout with `opacity: 0`, so the button does not change width.
-- **No pending refs around a button.** `<Button @click="save">` with an `async save()` is busy for the
-  whole call; inside a `Form`, `type="submit"` is busy while the form is pending (`nzyme:forms`).
+- **Busy state, never `disabled`, no pending refs:** the `vue-forms` README, "Busy and pending", and
+  `nzyme:forms`. The wrapper gives the busy state an accessible name (visually hidden loading text) and
+  keeps the content in the layout with `opacity: 0`, so the button does not change width.
 
 The rest — field wrappers, reka-ui wrappers, compound components, transitions and the `@nzyme/vue`
 containers, modals, stories, harnesses — is in `references/components.md`.

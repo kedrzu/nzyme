@@ -11,8 +11,8 @@ bun add @nzyme/vue
 
 Everything is exported from the package root. Each module is also importable on its own: `.ts` files as
 `@nzyme/vue/<path>.js`, `.tsx` as `@nzyme/vue/<path>.jsx`, SFCs as `@nzyme/vue/<path>.vue`. `Reveal`,
-`Collapse` and `Carousel` import `*.module.scss`, so the bundler must process SCSS modules from
-dependencies.
+`Collapse`, `Carousel` and `useScrollLock` import `*.module.scss`, so the bundler must process SCSS
+modules from dependencies.
 
 ## Animated containers
 
@@ -163,8 +163,8 @@ const confirmed = await openModal(() => import('./ConfirmDialog.vue'), { questio
 - **`useStickyElement({ position, element?, container? })`** (`useStickyElement.js`) — a ref that is
   `true` while a CSS `position: sticky` element is stuck. `position` is `'top'` or `'bottom'` (match the
   element's CSS); `element` defaults to the component's root; `container` defaults to the nearest
-  scrollable ancestor (`'body'` for the window). Types: `StickyElementOptions`,
-  `StickyElementPosition`, `StickyElementContainer`.
+  scrollable ancestor, else the window; pass `'body'` only when `<body>` itself scrolls. Types:
+  `StickyElementOptions`, `StickyElementPosition`, `StickyElementContainer`.
 - **`useScrollableContainer(element)`** (`useScrollableContainer.js`) — computed nearest vertically
   scrollable ancestor of an element, `null` when only the window scrolls. `isElementScrollable(el)` is
   the check it uses.

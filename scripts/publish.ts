@@ -23,6 +23,7 @@ import { $, Glob } from 'bun';
 /** Dependency name to version specifier, as written in a `package.json` field. */
 type Specifiers = Record<string, string>;
 
+/** A workspace package with the dependency specifiers the publish guards check. */
 export interface WorkspacePackage {
     dir: string;
     name: string;
@@ -62,6 +63,7 @@ async function main() {
     }
 }
 
+/** Reads every workspace package manifest under `packages` that has a name and a version. */
 export async function readWorkspacePackages() {
     const packages: WorkspacePackage[] = [];
     for await (const file of new Glob('packages/*/package.json').scan(ROOT)) {
@@ -112,6 +114,7 @@ function assertNoPrivateDependencies(publishable: WorkspacePackage[], all: Works
     }
 }
 
+/** Throws when `checkDependencyRanges` finds any problem in the public packages. */
 function assertDependencyRanges(publishable: WorkspacePackage[]) {
     const problems = checkDependencyRanges(publishable);
     if (problems.length > 0) {

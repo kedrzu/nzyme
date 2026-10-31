@@ -9,7 +9,7 @@
     },
     "dependencies": {
         "@lucide/vue": "1.61.0",
-        "@nuxt/schema": "4.4.8",
+        "@nuxt/schema": "4.6.2",
         "@nzyme/ioc": "workspace:*",
         "@nzyme/logging": "workspace:*",
         "@nzyme/utils": "workspace:*",

@@ -43,6 +43,12 @@ export interface StorageRef<T> extends Ref<T> {
 }
 
 /**
+ * The part of the Web Storage API a storage ref uses — lets a caller supply its own storage
+ * (an injected wrapper, an in-memory one in tests) instead of the browser globals.
+ */
+export type StorageLike = Pick<Storage, 'getItem' | 'removeItem' | 'setItem'>;
+
+/**
  * Configuration options for creating a storage ref.
  */
 export type StorageRefOptions = {
@@ -68,8 +74,11 @@ export type StorageRefOptions = {
      * Which storage to use:
      * - 'local': localStorage (persists across browser restarts)
      * - 'session': sessionStorage (cleared when browser is closed)
+     * - a {@link StorageLike} object: read and written as is, the globals are never touched.
+     *   Cross-tab sync matches `storage` events by `storageArea`, so it reacts only when the object
+     *   is a real `Storage`; otherwise call `reload()` yourself.
      */
-    storage?: 'local' | 'session';
+    storage?: 'local' | 'session' | StorageLike;
 
     /**
      * When to sync changes across browser tabs:
@@ -315,8 +324,10 @@ export function storageRef<T>(
     }
 }
 
-function getStorage(storage: 'local' | 'session' | undefined) {
-    if (storage === 'session' && typeof sessionStorage !== 'undefined') {
+function getStorage(storage: 'local' | 'session' | StorageLike | undefined): StorageLike | null {
+    if (typeof storage === 'object') {
+        return storage;
+    } else if (storage === 'session' && typeof sessionStorage !== 'undefined') {
         return sessionStorage;
     } else if (typeof localStorage !== 'undefined') {
         return localStorage;

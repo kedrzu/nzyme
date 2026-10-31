@@ -85,7 +85,7 @@ generated file — the next codegen run silently reverts it.
   `nx.json` `targetDefaults` (`"codegen": { "cache": false }`, `"schema": { "cache": false }`) —
   their output is committed source, so a cache replay buys nothing and would hide an input the
   target forgot to declare. The root script runs every package's generator at once
-  (`"codegen": "nx run-many -t codegen"`), and setup calls it.
+  (`"codegen": "nx run-many -t codegen"`).
 - `openapi-typescript` (and the graphql-codegen packages) are `devDependencies` of the vendor
   package; nothing generated imports them at run time.
 

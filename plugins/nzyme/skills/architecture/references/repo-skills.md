@@ -55,13 +55,14 @@ Primitives and components: `nzyme/packages/vue-forms/README.md`, `nzyme/packages
 ## Paths
 
 - Components: `packages/ui/src/` — flat, folders only for families (`forms/`, `layout/`).
-- Screens: `packages/app/app/pages/`, built only from `packages/ui` components.
+- Screens: `packages/app/<feature>/`, routed in `packages/app/app/router.options.ts`, built only
+  from `packages/ui` components.
 - Design tokens: `packages/ui/src/styles/tokens.scss`.
 
 ## Requirements
 
 - Every component has a `*.stories.tsx` story per state; each story runs as a test in
-  `bun run test:components`, with axe failing on any WCAG 2.2 AA violation.
+  `bun run test:stories`, with axe failing on any WCAG 2.2 AA violation.
 
 ## Decisions
 

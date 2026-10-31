@@ -24,7 +24,7 @@ and never nzyme's.
   - The flags that keep nzyme out: below.
   - `--exclude .context` on `format-markdown`: `.context/` is agent scratch space. The formatter
     already skips gitignored paths; the flag keeps the scratch space out even where `.gitignore`
-    lacks it, as nzyme's own scripts do. nzyme's docs show the scripts without it.
+    lacks it, as nzyme's own scripts do.
   - `lint:nzyme` runs nzyme's own `lint:check` and `format:check` in place, for changes made inside
     `nzyme/`.
 - **Dev dependencies:** `@nzyme/eslint`, `eslint`, `oxlint`, `oxlint-tsgolint` (type-aware rules),
@@ -53,7 +53,7 @@ Editors keep discovering nested configs, so a file opened under `nzyme/` gets nz
   overrides stay (a technology adds its own, e.g. Drizzle's `migrations/meta` in `.oxfmtrc.json`).
   Formatting options that differ from the template are a difference, since they reformat every file
   against nzyme's style.
-- Any of the four nzyme exclusions missing: always a difference, shown even when the rest matches.
+- Any part of the nzyme exclusion missing (a config ignore or a script flag): always a difference, shown even when the rest matches.
 - `extends` by a path into the submodule (`./nzyme/packages/eslint/oxlintrc.json`) instead of
   `./node_modules/@nzyme/eslint/oxlintrc.json`: a difference; the package path is the one that
   survives a layout change.

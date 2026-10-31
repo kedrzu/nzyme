@@ -1,0 +1,57 @@
+{
+    "name": "{{name}}",
+    "private": true,
+    "workspaces": [
+        "packages/*",
+        "nzyme/packages/*"
+    ],
+    "type": "module",
+    "scripts": {
+        "setup": "zsh setup.sh",
+        "build": "tsgo --build",
+        "typecheck": "bun run build && tsgo -p scripts && nx run-many -t typecheck --exclude='@nzyme/*'",
+        "monorepo": "nzyme monorepo",
+        "localise": "nzyme localise",
+        "codegen": "nx run-many -t codegen,localise,monorepo",
+        "prep": "nx run-many -t prep",
+        "watch": "nx run-many -t watch,watch:localise,watch:monorepo,watch:tsc --parallel=100",
+        "dev": "nx run-many -t dev,watch:localise --exclude='@nzyme/*' --parallel=100",
+        "lint": "oxlint --type-aware --quiet --disable-nested-config --fix . && eslint --fix .",
+        "lint:check": "oxlint --type-aware --quiet --disable-nested-config . && eslint .",
+        "lint:warnings": "oxlint --type-aware --disable-nested-config .",
+        "lint:nzyme": "bun run --cwd nzyme lint:check && bun run --cwd nzyme format:check",
+        "format": "oxfmt --disable-nested-config . > /dev/null && bun run format:md",
+        "format:check": "oxfmt --check --disable-nested-config . && bun run format:md:check",
+        "format:md": "nzyme format-markdown . --exclude .context --exclude nzyme",
+        "format:md:check": "nzyme format-markdown --check . --exclude .context --exclude nzyme",
+        "tests": "TZ=UTC bun test --timeout 10000 --pass-with-no-tests --path-ignore-patterns='**/*.spec.ts' --path-ignore-patterns='**/dist/**' ./packages ./scripts",
+        "index": "nzyme index",
+        "clean": "del \"**/dist\" \"**/dist-cjs\" \"**/.output\" \"**/.nuxt\" \"**/.nx\" \"**/.nzyme\" \"**/*.tsbuildinfo\" \"**/storybook-static\" \"**/test-results\" \"**/playwright-report\" \"!**/node_modules/**\"",
+        "clean:npm": "del \"**/node_modules\"",
+        "reinstall": "bun run clean && bun run clean:npm && bun install"
+    },
+    "devDependencies": {
+        "@nzyme/cli": "workspace:*",
+        "@nzyme/eslint": "workspace:*",
+        "@nzyme/tsconfig": "workspace:*",
+        "@types/bun": "{{version:@types/bun}}",
+        "@types/node": "{{version:@types/node}}",
+        "@typescript/native-preview": "{{version:@typescript/native-preview}}",
+        "del-cli": "{{version:del-cli}}",
+        "eslint": "{{version:eslint}}",
+        "nx": "{{version:nx}}",
+        "oxfmt": "{{version:oxfmt}}",
+        "oxlint": "{{version:oxlint}}",
+        "oxlint-tsgolint": "{{version:oxlint-tsgolint}}"
+    },
+    "overrides": {
+        "@types/bun": "{{version:@types/bun}}"
+    },
+    "packageManager": "bun@{{bunVersion}}",
+    "nx": {
+        "includedScripts": []
+    },
+    "patchedDependencies": {
+        "bun-types@{{version:@types/bun}}": "patches/bun-types@{{version:@types/bun}}.patch"
+    }
+}

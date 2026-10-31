@@ -1,0 +1,57 @@
+# Verify-only check of the submodule pins a pull request into `main` would land: every pin must be on
+# its submodule's `main` (a merged commit, never a feature branch) and must not move back the pin of
+# the base the merge commit was computed from. Nothing here moves a pin — pins move through the bump
+# PRs (`bump-nzyme.yml`) or a commit that sets the gitlink by hand (nzyme/docs/consumers.md).
+#
+# The job name `Verify Submodules` is the required check on the `main` ruleset — keep it stable. It is
+# filtered by trunk with a job-level `if:` rather than `branches:`: on a stack the upper nodes' base is
+# the node below, so a trigger filter would never start the required check for them. A job skipped by
+# `if:` reports success.
+name: Verify PR submodules
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-submodules:
+    name: Verify Submodules
+    runs-on: ubuntu-latest
+    # `stack.base.ref` is the trunk a whole stack lands on; it is absent on an ordinary PR, whose base
+    # already is the trunk.
+    if: (github.event.pull_request.stack.base.ref || github.event.pull_request.base.ref) == 'main'
+    steps:
+      # The merge commit, not the PR head: a PR behind main lands main's pin for a submodule it never
+      # touched. Full history, to read the base's pin and check ancestry. Every submodule is public.
+      - name: Checkout with submodules
+        uses: actions/checkout@{{ref:actions/checkout}}
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          submodules: true
+          persist-credentials: false
+
+      - name: Verify the submodule pins
+        run: |
+          status=0
+          while read -r _ path; do
+            git -C "$path" fetch --quiet origin main
+            pin=$(git rev-parse "HEAD:$path")
+            if ! git -C "$path" merge-base --is-ancestor "$pin" origin/main; then
+              echo "::error::$path pins $pin, which is not on its main. Merge the $path PR first and pin the merged commit."
+              status=1
+              continue
+            fi
+            # The merge commit's first parent is the base it was computed from. A submodule the base
+            # lacks only needs the rule above.
+            if base=$(git rev-parse --verify --quiet "HEAD^1:$path" 2>/dev/null); then
+              if ! git -C "$path" merge-base --is-ancestor "$base" "$pin"; then
+                echo "::error::$path moves back from $base to $pin. Update the branch from its base, or pin a later $path main commit."
+                status=1
+              fi
+            fi
+          done < <(git config -f .gitmodules --get-regexp '\.path$')
+          exit $status

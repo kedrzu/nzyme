@@ -77,6 +77,9 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
   it touches (`ioc`, `logging`, `translations`, `forms`, `composables`, `testing`). These skills ship from
   this repo in `plugins/nzyme/` and are what consumer repos install too, so fix them here when they are
   wrong.
+- **User-invoked skills** in the same plugin serve product repos: `/nzyme:architecture` sets up or
+  updates a repo and routes to the practice skills `ui`, `drizzle` and `api-clients`. Here they matter
+  when you change them, or the packages and docs they link.
 - **ADRs** go to `docs/decisions/<title-slug>.md`, never numbered.
 
 # TypeScript rules

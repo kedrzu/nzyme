@@ -130,39 +130,13 @@ bun x tsgo --build                # or: bun nx run-many -t build
 
 ## Nx
 
-Nx hashes only files the product's git index tracks, and for a submodule that index holds a single
-gitlink. Without extra inputs, a change inside `nzyme/` — even an uncommitted one — does not
-invalidate cached builds. Hash the submodule's tree explicitly and add it to `default` and
-`production`, as healed does:
+The submodule needs no extra Nx inputs. nzyme's packages are workspace projects, and Nx 23 hashes a
+project's files from the working tree, not from the product's git index, where the submodule is one
+gitlink. A change inside an nzyme package, committed or not, invalidates every task that depends on
+it through `^production`/`^default` (checked 2026-10-31 on Nx 23.3.1). Only files in `nzyme/` outside
+any package (`nzyme/package.json`) go unhashed, and no product build reads them.
 
-```jsonc
-"namedInputs": {
-    "default": ["{projectRoot}/**/*", "sharedGlobals", "submoduleDefault"],
-    "sharedGlobals": [
-        "{workspaceRoot}/package.json",
-        "{workspaceRoot}/bun.lock",
-        "{workspaceRoot}/nx.json",
-        "{workspaceRoot}/tsconfig.json"
-    ],
-    "submoduleDefault": [
-        { "runtime": "{ git -C nzyme ls-tree -r HEAD; git -C nzyme diff --binary HEAD; git -C nzyme ls-files --others --exclude-standard | git -C nzyme hash-object --stdin-paths; } | git hash-object --stdin" }
-    ],
-    // The same, excluding test files and snapshots, so editing them does not invalidate production builds.
-    "submoduleProduction": [
-        { "runtime": "{ git -C nzyme ls-tree -r HEAD | grep -Ev '\\.(test|spec)\\.[jt]sx?$|/__snapshots__/|\\.snap$'; git -C nzyme diff --binary HEAD -- . ':(exclude,glob)**/*.test.*' ':(exclude,glob)**/*.spec.*' ':(exclude,glob)**/__snapshots__/**' ':(exclude,glob)**/*.snap'; git -C nzyme ls-files --others --exclude-standard -- . ':(exclude,glob)**/*.test.*' ':(exclude,glob)**/*.spec.*' ':(exclude,glob)**/__snapshots__/**' ':(exclude,glob)**/*.snap' | git -C nzyme hash-object --stdin-paths; } | git hash-object --stdin" }
-    ],
-    "production": [
-        "{projectRoot}/**/*",
-        "sharedGlobals",
-        "submoduleProduction",
-        "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)",
-        "!{projectRoot}/**/__snapshots__/**",
-        "!{projectRoot}/**/*.snap"
-    ]
-}
-```
-
-Two more settings matter once several worktrees of the product are open:
+Two settings matter once several worktrees of the product are open:
 
 - **`"useDaemonProcess": false`** in `nx.json`. Every worktree spawns its own daemon, which never
   exits and watches the whole tree, `nzyme/` included.

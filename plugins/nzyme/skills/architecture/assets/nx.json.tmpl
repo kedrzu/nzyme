@@ -9,31 +9,16 @@
         "autoExit": true
     },
     "namedInputs": {
-        "default": ["{projectRoot}/**/*", "sharedGlobals", "submoduleDefault"],
+        "default": ["{projectRoot}/**/*", "sharedGlobals"],
         "sharedGlobals": [
             "{workspaceRoot}/package.json",
             "{workspaceRoot}/bun.lock",
             "{workspaceRoot}/nx.json",
             "{workspaceRoot}/tsconfig.json"
         ],
-        // Nx hashes only files this repo's git index tracks, and for the nzyme submodule that is a
-        // single gitlink — so a change inside `nzyme/`, committed or not, would not invalidate cached
-        // builds. These hash the submodule's tree explicitly (nzyme/docs/submodule-setup.md#nx).
-        "submoduleDefault": [
-            {
-                "runtime": "{ git -C nzyme ls-tree -r HEAD; git -C nzyme diff --binary HEAD; git -C nzyme ls-files --others --exclude-standard | git -C nzyme hash-object --stdin-paths; } | git hash-object --stdin"
-            }
-        ],
-        // The same, excluding test files and snapshots, so editing them does not invalidate production builds.
-        "submoduleProduction": [
-            {
-                "runtime": "{ git -C nzyme ls-tree -r HEAD | grep -Ev '\\.(test|spec)\\.[jt]sx?$|/__snapshots__/|\\.snap$'; git -C nzyme diff --binary HEAD -- . ':(exclude,glob)**/*.test.*' ':(exclude,glob)**/*.spec.*' ':(exclude,glob)**/__snapshots__/**' ':(exclude,glob)**/*.snap'; git -C nzyme ls-files --others --exclude-standard -- . ':(exclude,glob)**/*.test.*' ':(exclude,glob)**/*.spec.*' ':(exclude,glob)**/__snapshots__/**' ':(exclude,glob)**/*.snap' | git -C nzyme hash-object --stdin-paths; } | git hash-object --stdin"
-            }
-        ],
         "production": [
             "{projectRoot}/**/*",
             "sharedGlobals",
-            "submoduleProduction",
             "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)",
             "!{projectRoot}/**/__snapshots__/**",
             "!{projectRoot}/**/*.snap"

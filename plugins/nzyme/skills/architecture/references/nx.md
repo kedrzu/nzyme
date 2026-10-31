@@ -19,10 +19,9 @@ What each part of `nx.json` is for:
 - **`useDaemonProcess: false`.** Why: `docs/submodule-setup.md#nx`; in practice one daemon spun at
   100% CPU for 21 days. Only `NX_DAEMON=true` overrides it; keep it out of scripts
   and env files.
-- **`submoduleDefault` and `submoduleProduction`** in `default` and `production`: they hash nzyme's
-  tree into every task's key. Why and how: `docs/submodule-setup.md#nx` (nzyme's docs,
-  `../../../../docs/submodule-setup.md` from this skill). Keep `grep -Ev` in them, not `rg`: CI images
-  do not all have ripgrep.
+- **No submodule inputs.** nzyme's packages are workspace projects, so Nx hashes their files from the
+  working tree like any project's, through `^production`/`^default` (Nx 23; checked 2026-10-31).
+  `docs/submodule-setup.md#nx` (nzyme's docs, `../../../../docs/submodule-setup.md` from this skill).
 - **`production`** drops tests and snapshots with exactly `!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)`.
   A trailing `?` (`s?(x)?`) once made the extglob match every file, so `production` held none of the
   project's sources and every `build` was a permanent cache hit.
@@ -68,10 +67,11 @@ overriding the empty `appEnvironment` that `nx.json` declares and the `build` ta
 ## The guard test
 
 Each of the failures above is silent: the build succeeds from cache and reports green. The test
-fails when a cached task's key stops changing with the project's own sources, with nzyme's tree, or
-with a declared gitignored input. It reads the inputs Nx itself resolves (`HashPlanInspector`), runs
-each task's `runtime` commands, changes the probed file, and asserts some command printed something
-different. The file is restored (or deleted, if it did not exist) in `finally`; the test briefly
+fails when a cached task's key stops changing with the project's own sources, with a source file of
+an nzyme package it depends on, or with a declared gitignored input. It reads the inputs Nx itself
+resolves (`HashPlanInspector`): sources and the nzyme probe must be among a task's files; for a
+gitignored input it runs the task's `runtime` commands, changes the file, and asserts some command
+printed something different. The file is restored (or deleted, if it did not exist) in `finally`; the test briefly
 edits the working tree, so do not run it alongside a build.
 
 `scripts/nxInputs.test.ts`:
@@ -82,6 +82,7 @@ import path from 'node:path';
 
 import { expect, test } from 'bun:test';
 import { readNxJson } from 'nx/src/config/nx-json.js';
+import type { ProjectGraph } from 'nx/src/config/project-graph.js';
 import { HashPlanInspector } from 'nx/src/hasher/hash-plan-inspector.js';
 import { createProjectGraphAsync } from 'nx/src/project-graph/project-graph.js';
 import { workspaceRoot } from 'nx/src/utils/workspace-root.js';
@@ -94,8 +95,8 @@ const GITIGNORED_INPUTS: GitignoredInput[] = [
     // { file: 'packages/app/.env', tasks: ['{{scope}}/app:build'] },
 ];
 
-/** A file inside the submodule that both `submoduleDefault` and `submoduleProduction` cover. */
-const NZYME_PROBE = 'nzyme/package.json';
+/** A source file of an nzyme package the product's projects depend on. */
+const NZYME_PROBE = 'nzyme/packages/utils/src/index.ts';
 
 interface GitignoredInput {
     /** Workspace-relative path of the file. */
@@ -117,10 +118,13 @@ interface CachedTask {
 
     /** `runtime` input commands Nx runs for this task. */
     runtime: string[];
+
+    /** Workspace-relative paths of the projects the task's project depends on, transitively. */
+    dependencyRoots: string[];
 }
 
 // Resolving the inputs builds the whole project graph, so every assertion shares one run.
-test('every cached Nx task is invalidated by its own sources, the nzyme tree and its gitignored inputs', async () => {
+test('every cached Nx task is invalidated by its own sources, the nzyme packages it uses and its gitignored inputs', async () => {
     const tasks = await resolveCachedTasks();
     expect(tasks.length).toBeGreaterThan(0);
 
@@ -129,8 +133,14 @@ test('every cached Nx task is invalidated by its own sources, the nzyme tree and
     expect(tasks.filter(task => !task.files.some(file => isOwnSource(task, file))).map(task => task.id)).toEqual([]);
     expect(tasks.filter(task => task.id.endsWith(':build')).flatMap(task => task.files.filter(isTestFile))).toEqual([]);
 
-    // The submodule is one gitlink to git: the runtime inputs carry nzyme's whole tree into every key.
-    expect(tasksBlindTo(tasks, NZYME_PROBE)).toEqual([]);
+    // nzyme's packages are workspace projects: a product task over one hashes its files through `^` inputs.
+    const overNzyme = tasks.filter(
+        task =>
+            !task.projectRoot.startsWith('nzyme/') &&
+            task.dependencyRoots.some(root => NZYME_PROBE.startsWith(`${root}/`)),
+    );
+    expect(overNzyme.length).toBeGreaterThan(0);
+    expect(overNzyme.filter(task => !task.files.includes(NZYME_PROBE)).map(task => task.id)).toEqual([]);
 
     for (const input of GITIGNORED_INPUTS) {
         const covered = tasks.filter(task => input.tasks.includes(task.id));
@@ -161,11 +171,32 @@ async function resolveCachedTasks(): Promise<CachedTask[]> {
             const id = `${project}:${target}`;
             const inputs = inspector.inspectTaskInputs({ project, target }, {}, undefined, true)[id];
             if (inputs) {
-                tasks.push({ id, projectRoot: node.data.root, files: inputs.files, runtime: inputs.runtime });
+                tasks.push({
+                    id,
+                    projectRoot: node.data.root,
+                    files: inputs.files,
+                    runtime: inputs.runtime,
+                    dependencyRoots: dependenciesOf(graph, project).map(name => graph.nodes[name]?.data.root ?? name),
+                });
             }
         }
     }
     return tasks;
+}
+
+/** Names of the projects `project` depends on, transitively. */
+function dependenciesOf(graph: ProjectGraph, project: string): string[] {
+    const seen = new Set<string>();
+    const queue = [project];
+    for (const current of queue) {
+        for (const dependency of graph.dependencies[current] ?? []) {
+            if (!seen.has(dependency.target)) {
+                seen.add(dependency.target);
+                queue.push(dependency.target);
+            }
+        }
+    }
+    return [...seen];
 }
 
 /**
@@ -230,20 +261,27 @@ function isTestFile(file: string): boolean {
 - Own sources exclude the project's `package.json` and `project.json`: Nx hashes those whatever
   `inputs` say, so counting them would pass a task whose sources dropped out.
 - Proven against a scratch product (nzyme as a submodule, an app with an `appEnvironment` override):
-  green on the reference, red on each of — `submoduleProduction` removed from `production`, the
-  app's override removed, `appEnvironment` removed from `build` inputs, the `s?(x)?` extglob.
+  green on the reference, red on each of — `production` narrowed to `{projectRoot}/src/**/*`,
+  `{projectRoot}/**/*` removed from `default`, `^production` removed from `build` inputs, `^default`
+  removed from the others, the app's override removed, `appEnvironment` removed from `build` inputs,
+  the `s?(x)?` extglob (checked 2026-10-31, Nx 23.3.1).
+- `production` without `{projectRoot}/**/*` stays green, rightly: a fileset of only exclusions
+  matches every other project file.
 
 ## Placeholders
 
 - `{{name}}` in `project.json` — the root package name.
 - `{{scope}}` in the commented `GITIGNORED_INPUTS` row — the product's npm scope; fill a row per
   runtime input the repo declares, or leave the list empty.
+- `NZYME_PROBE` — a source file of an nzyme package the product depends on; `utils` suits every
+  product.
 
 ## Compare
 
 - `nx.json`: key-wise merge; repo-only named inputs, target defaults and plugins stay. A difference in
-  `useDaemonProcess`, the two submodule inputs, the `production` exclusions or `appEnvironment` is
-  always shown, even when the rest matches.
+  `useDaemonProcess`, the `production` exclusions or `appEnvironment` is always shown, even when the
+  rest matches. `submoduleDefault`/`submoduleProduction` runtime inputs from an older reference are
+  redundant: propose removing them.
 - Gitignored inputs: look for build-time code that reads a gitignored file (`nuxt.config.ts`,
   `vite.config.ts`, a Nuxt module: `readFileSync`, `loadEnv`, `dotenv`, `--env-file`). Each one without
   a runtime input is a difference: propose the override and the guard row.
@@ -251,5 +289,5 @@ function isTestFile(file: string): boolean {
   it if the file reaches no output.
 - No guard test, or one checking only own sources: propose the skeleton above. Run it before
   reporting the element done.
-- Turbo or no task runner: propose Nx with this configuration. The submodule inputs, the env-file
-  rule and the guard are written for Nx.
+- Turbo or no task runner: propose Nx with this configuration. The env-file rule and the guard
+  are written for Nx.

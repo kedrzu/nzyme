@@ -150,7 +150,9 @@ Every input primitive follows one shape:
   `defineProps`/`defineEmits`, and is called with no arguments inside its `setup`;
 - it returns `field` (the field controller, below) and a render function named after the input, which
   renders the bare native element with value, ARIA and focus wiring; attributes passed to the render
-  function (`class`, `id`, `aria-describedby`…) land on that element.
+  function (`class`, `id`, `aria-describedby`…) land on that element. The exceptions are
+  `PhoneInput` and `SelectInput`, which declare no props: only `class`, `style` and `on*` listeners
+  fall through to them, and `id` or `aria-describedby` is dropped.
 
 Common props (from `defineFormField`): `modelValue` (`v-model`), `field` (a `FormField` from
 `useFormFields`), `errors` (extra messages), `required`, `disabled`, `readonly`. Common emits:

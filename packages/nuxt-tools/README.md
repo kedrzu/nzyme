@@ -9,7 +9,8 @@ bun add -D @nzyme/nuxt-tools
 ## `simplifyAliasesModule()`
 
 Removes Nuxt's `@@`, `~`, `~~`, `assets` and `public` aliases, leaving `@/` as the only path alias
-(assets and public files are then reached as `@/assets/…` and `@/public/…`).
+(assets are then reached as `@/assets/…`; public files as `@/public/…` only when `srcDir` is the
+root, `srcDir: '.'`, since Nuxt 4's default `app/` srcDir leaves `public/` outside `@`).
 
 ## `outputFilesModule(files)`
 

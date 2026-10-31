@@ -1,7 +1,7 @@
 # @nzyme/vue-transitions
 
-Ready-made Vue 3 transition components with a per-use `duration` and `delay`, and the factory they are
-built with.
+Ready-made Vue 3 transition components, most with a per-use `duration` and `delay`, and the factory
+they are built with.
 
 ```bash
 bun add @nzyme/vue-transitions
@@ -14,7 +14,8 @@ components import `*.module.scss`, so the bundler must process SCSS modules from
 ## Common props
 
 `TransitionFade`, `TransitionSlide`, `TransitionBump` and anything made with `defineTransition` wrap
-Vue's `<Transition>` and share these props:
+Vue's `<Transition>` and share these props. `duration` and `delay` set the CSS `transition-*`
+properties, so they have no effect on `TransitionBump`, which runs a CSS animation:
 
 |Prop|Meaning|
 |-|-|
@@ -30,11 +31,12 @@ The default slot holds the `v-if`/`v-show`/keyed child (or the list, with `group
 ## Components
 
 - **`TransitionFade`** — opacity in and out, 100 ms by default.
-- **`TransitionSlide`** — moves in the `direction` (`'down'` default: enters from above; `'up'`,
-  `'left'`, `'right'`) and leaves back the way it came, by its full size; with `fade`, by 30% while
-  fading. `--transition-slide-distance` overrides the distance. 100 ms by default.
-- **`TransitionBump`** — a quick scale pulse (to 1.3 and back) on enter and leave; for a badge or
-  counter that changes.
+- **`TransitionSlide`** — `direction` is `'down'` (default: enters from above), `'up'` (from below),
+  `'left'` (from the left) or `'right'` (from the right); it leaves back the way it came, by its full
+  size; with `fade`, by 30% while fading. `--transition-slide-distance` overrides the distance.
+  100 ms by default.
+- **`TransitionBump`** — a fixed 100 ms scale animation: enters shrinking from 1.3 to 1, leaves
+  growing from 1 to 1.3; for a badge or counter that changes.
 - **`TransitionList`** (`TransitionList.vue`) — a `<TransitionGroup>` for lists: items animate in and out
   and the rest move into place. Props: `tag` (`'div'`), `duration` (ms, `400`), `delay` (ms, `0`),
   `animation` (`'fade'` default, `'slide-up'`, `'slide-down'`, `'slide-left'`, `'slide-right'`),

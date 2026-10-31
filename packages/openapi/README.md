@@ -110,7 +110,7 @@ import { Fetch } from '@nzyme/ioc/Fetch.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 import { createOpenApiFetch } from '@nzyme/openapi';
 import type { paths } from './schema.gen.js';
-import { PETSTORE_API_KEY, PETSTORE_BASE_URL } from './petstoreEnv.js';
+import { PETSTORE_API_KEY, PETSTORE_BASE_URL } from './env.js';
 
 export const PetstoreClient = defineService({
     name: 'PetstoreClient',

@@ -43,30 +43,32 @@ test('after Back has closed a modal, Back from a screen opened next returns to t
 });
 
 test('Escape closes a modal and rejects its promise like `close()`', async () => {
-    Object.defineProperty(globalThis, 'document', { value: new EventTarget(), configurable: true });
     const modals = createContainer().resolve(ModalService);
     const modal = modals.open(Dialog);
     const app = createInertRenderer().createApp({
         render: () => h(Suspense, null, { default: () => h(modal.component) }),
     });
-    app.mount({});
-    // The modal component's setup is async, so it renders only once Suspense has resolved it.
-    await waitFor(0);
+    Object.defineProperty(globalThis, 'document', { value: new EventTarget(), configurable: true });
+    try {
+        app.mount({});
+        // The modal component's setup is async, so it renders only once Suspense has resolved it.
+        await waitFor(0);
 
-    document.dispatchEvent(Object.assign(new Event('keyup'), { key: 'Escape' }));
-    const outcome = await Promise.race([
-        modal.then(
-            () => 'resolved',
-            (error: unknown) => error,
-        ),
-        waitFor(50, 'unsettled'),
-    ]);
+        document.dispatchEvent(Object.assign(new Event('keyup'), { key: 'Escape' }));
+        const outcome = await Promise.race([
+            modal.then(
+                () => 'resolved',
+                (error: unknown) => error,
+            ),
+            waitFor(50, 'unsettled'),
+        ]);
 
-    expect(modal.controller.open).toBe(false);
-    expect(outcome).toBeInstanceOf(CancelError);
-
-    app.unmount();
-    Reflect.deleteProperty(globalThis, 'document');
+        expect(modal.controller.open).toBe(false);
+        expect(outcome).toBeInstanceOf(CancelError);
+    } finally {
+        app.unmount();
+        Reflect.deleteProperty(globalThis, 'document');
+    }
 });
 
 /** A renderer that renders nothing, so that a component can be mounted and unmounted without a DOM. */

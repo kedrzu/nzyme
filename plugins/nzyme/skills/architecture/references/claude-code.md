@@ -31,10 +31,7 @@ clone or a new worktree behaves the same for every agent, with no per-machine se
   - `agentPushNotifEnabled: false` — no proactive push notifications to a phone over Remote Control;
     with several agents in parallel worktrees they are noise.
   - `extraKnownMarketplaces.kedrzu-skills` (GitHub `kedrzu/skills`, auto-updated) and
-    `enabledPlugins`: `dev` (the pipeline: `/dev:fix` … `/dev:deliver`, `/dev:setup`), `git`
-    (conflicts, stash safety, `/git:setup`, the protected-branch hook), `web-search`, `playwright` (the browser MCP), `skill-improve`,
-    `guardrails` (hooks refusing dangerous commands), and from `claude-plugins-official`
-    `skill-creator` and `claude-md-management`.
+    `enabledPlugins` — the plugin set in "Plugins" below.
 - **`.claude/git.json`** — `assets/git.json.tmpl`: `protectedBranches` lists `main`. The `git`
   plugin's hook refuses an agent's push to a listed branch; with no file every branch is pushable.
   `/git:setup` writes the same file.
@@ -68,6 +65,45 @@ clone or a new worktree behaves the same for every agent, with no per-machine se
 - **`.mcp.json`** — none by default; a product adds its own servers and enables them with
   `enabledMcpjsonServers`. The browser MCP comes from the `playwright` plugin.
 
+## Plugins
+
+Plugins are committed in `enabledPlugins`, so every clone and worktree gets the same set. Each one
+adds skills, commands or hooks to every session, so a project enables what it uses and nothing more.
+
+**Always** — `assets/claude-settings.json.tmpl`:
+
+|Plugin|Marketplace|What the repo gets|
+|-|-|-|
+|`dev`|`kedrzu-skills`|the pipeline (`/dev:fix` … `/dev:deliver`, `/dev:design`, `/dev:review`), `/dev:setup`|
+|`git`|`kedrzu-skills`|conflict resolution, stash safety, `/git:setup`, the protected-branch hook|
+|`guardrails`|`kedrzu-skills`|hooks that refuse dangerous commands and say what to do instead|
+|`skill-improve`|`kedrzu-skills`|revising the repo's own skills from transcript evidence|
+|`web-search`|`kedrzu-skills`|the research protocol every skill that searches relies on|
+|`playwright`|`kedrzu-skills`|the browser MCP: e2e, story debugging, checking a page|
+|`handoff`|`kedrzu-skills`|handing work to a fresh Paseo agent with a pointer summary|
+|`retro`|`kedrzu-skills`|retrospectives on how agents worked in this repo|
+|`secrets`|`kedrzu-skills`|API keys collected through a masked dialog, never pasted into the chat|
+|`claude-md-management`|`claude-plugins-official`|auditing and updating `CLAUDE.md`|
+|`skill-creator`|`claude-plugins-official`|writing and evaluating the repo's own skills|
+
+**When the repo uses it** — added with the element or integration that needs it, and recorded in
+`ARCHITECTURE.md`:
+
+|Plugin|Marketplace|When|
+|-|-|-|
+|`naming`|`kedrzu-skills`|the product or app has no name yet|
+|`supabase`, `cloudflare`, `stripe`, `sentry`, `figma`, `linear`|`claude-plugins-official`|the repo uses that service; its MCP or skills replace guessing at the API|
+
+**Never in a project** — personal tools belong in the user's own `~/.claude/settings.json`: `gmail-mcp`,
+`gdrive-mcp`, `whatsapp`, `telegram`, `shopping-research`, `wait-what` (`kedrzu-skills`).
+
+**New plugins.** The marketplaces grow. On every run, list `kedrzu-skills` — the local copy at
+`~/.claude/plugins/marketplaces/kedrzu-skills/.claude-plugin/marketplace.json`, or
+`gh api repos/kedrzu/skills/contents/.claude-plugin/marketplace.json --jq .content | base64 -d` —
+and show the user every plugin none of the lists above classifies, with its description and a
+recommendation. What they decide is recorded in `ARCHITECTURE.md`; a plugin no longer in the
+marketplace is a difference (remove it from `enabledPlugins`).
+
 ## Placeholders
 
 - `CLAUDE.md`: `{{summary — …}}` from `ARCHITECTURE.md`'s opening, or ask; `{{repo skills — …}}`
@@ -79,9 +115,10 @@ clone or a new worktree behaves the same for every agent, with no per-machine se
 
 ## Compare
 
-- `settings.json`: key-wise. Repo-only allows, plugins (`naming`, `secrets`, `figma`) and settings
-  stay. Missing disable flags, deny entries, plugins from the set above or `Bash(bun nzyme:*)` are
-  differences. `Bash(*)` in `allow` is a difference: it grants everything the deny list and the
+- `settings.json`: key-wise. Repo-only allows and settings stay, and so do plugins the repo chose
+  (recorded in `ARCHITECTURE.md`, or from the "when the repo uses it" list). Missing disable flags,
+  deny entries, an "always" plugin or `Bash(bun nzyme:*)` are differences; so is a personal plugin
+  ("never in a project"). `Bash(*)` in `allow` is a difference: it grants everything the deny list and the
   guardrails exist to stop.
 - An `nzyme@nzyme` entry in `enabledPlugins`, or an `nzyme` marketplace in `extraKnownMarketplaces`:
   always a difference. Remove both and add the symlink: a marketplace install of the same plugin

@@ -10,8 +10,11 @@ import { promptSecret } from './promptSecret.js';
 
 const SENTINEL = 'sentinel-secret-value-prompt-5c2d';
 const NAME = 'API_KEY';
-/** Both quote kinds: spliced into AppleScript or PowerShell text, either would change the script. */
-const HINT = `Settings → "API" → it's the 'live' key`;
+/**
+ * Both quote kinds: spliced into AppleScript or PowerShell text, either would change the script. The
+ * backslash, `&` and `<…>` are markup to zenity's and kdialog's labels, like the `_` in the name.
+ */
+const HINT = `Settings → "API" → it's the 'live' key in C:\\new & <b>`;
 const TITLE = `${NAME} - nzyme secrets`;
 const MESSAGE = `${NAME}\n\n${HINT}\n\nNothing you type here is visible to the agent.`;
 
@@ -82,7 +85,8 @@ test('linux: zenity gets the texts as argv items and returns the value', async (
     const expected: PromptSecretResult = { status: 'entered', value: SENTINEL };
     expect(result).toEqual(expected);
     const recorded = await readRecorded('zenity');
-    expect(recorded.argv).toEqual(['--entry', '--hide-text', `--title=${TITLE}`, `--text=${MESSAGE}`, '--timeout=300']);
+    const text = `API__KEY\n\nSettings → "API" → it's the 'live' key in C:\\\\new & <b>\n\nNothing you type here is visible to the agent.`;
+    expect(recorded.argv).toEqual(['--entry', '--hide-text', `--title=${TITLE}`, `--text=${text}`, '--timeout=300']);
     expectNoLeak(recorded);
 });
 
@@ -94,7 +98,8 @@ test('linux: kdialog is asked when zenity cannot open', async () => {
 
     const expected: PromptSecretResult = { status: 'entered', value: SENTINEL };
     expect(result).toEqual(expected);
-    expect((await readRecorded('kdialog')).argv).toEqual(['--title', TITLE, '--password', MESSAGE]);
+    const text = `API_KEY<br><br>Settings → "API" → it's the 'live' key in C:\\\\new &amp; &lt;b&gt;<br><br>Nothing you type here is visible to the agent.`;
+    expect((await readRecorded('kdialog')).argv).toEqual(['--title', TITLE, '--password', text]);
 });
 
 test('linux: kdialog is asked when zenity has a display set that it cannot open', async () => {

@@ -153,7 +153,8 @@ function getDialogTools(options: GetDialogToolsOptions): DialogTool[] {
 
             // 1 is a cancel for both, 5 a zenity timeout; zenity also exits 1 when GTK cannot open the
             // display, which runDialogTool tells apart by its stderr. kdialog aborts on that instead.
-            // `zenity --password` shows no message text.
+            // `zenity --password` shows no message text. Neither tool shows its label verbatim, so the
+            // message is escaped for each.
             return [
                 {
                     command: 'zenity',
@@ -161,16 +162,41 @@ function getDialogTools(options: GetDialogToolsOptions): DialogTool[] {
                         '--entry',
                         '--hide-text',
                         `--title=${title}`,
-                        `--text=${message}`,
+                        `--text=${escapeZenityText(message)}`,
                         `--timeout=${DIALOG_TIMEOUT_SECONDS}`,
                     ],
                     cancelCodes: [1, 5],
                 },
-                { command: 'kdialog', args: ['--title', title, '--password', message], cancelCodes: [1] },
+                {
+                    command: 'kdialog',
+                    args: ['--title', title, '--password', escapeKdialogText(message)],
+                    cancelCodes: [1],
+                },
             ];
         default:
             return [];
     }
+}
+
+/**
+ * zenity's entry label unescapes C sequences (`g_strcompress`: `\n`, `\\`, and drops any other
+ * backslash), then reads `_` as a mnemonic marker; real newlines pass through both.
+ */
+function escapeZenityText(text: string) {
+    return text.replace(/\\/g, '\\\\').replace(/_/g, '__');
+}
+
+/**
+ * kdialog unescapes `\n` and `\\` in its argument, then KPasswordDialog shows it in a `Qt::RichText`
+ * label: HTML is rendered and real newlines collapse into spaces, so they become `<br>`.
+ */
+function escapeKdialogText(text: string) {
+    return text
+        .replace(/\\/g, '\\\\')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
 }
 
 /** Runs one dialog tool; `null` means it could not open here and the next one should be tried. */

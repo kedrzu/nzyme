@@ -74,7 +74,7 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
 - Both are the contracts of the `dev` plugin (`/dev:fix`, `/dev:task`, `/dev:feature`, `/dev:build`,
   `/dev:deliver`), which is installed from the `kedrzu-skills` marketplace in `.claude/settings.json`.
 - **Every implementation task reads `nzyme:code-conventions`**, plus the `nzyme:*` skill for the package
-  it touches (`ioc`, `logging`, `translations`, `forms`, `composables`, `testing`). These skills ship from
+  it touches (`ioc`, `logging`, `translations`, `forms`, `composables`, `secrets`, `testing`). These skills ship from
   this repo in `plugins/nzyme/` and are what consumer repos install too, so fix them here when they are
   wrong.
 - **User-invoked skills** in the same plugin serve product repos: `/nzyme:architecture` sets up or

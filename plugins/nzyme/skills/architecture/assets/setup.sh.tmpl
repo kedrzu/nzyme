@@ -103,20 +103,14 @@ if [ "$CI" != "true" ] && [ "$repo_root" != "$(pwd -P)" ]; then
         fi
     fi
 
-    # Gitignored files that live only in the main checkout: personal instructions, personal Claude
-    # settings, env files. Templates (`*.example`) are committed and stay as they are; a file already
-    # in the worktree is not overwritten. `(N)` is zsh's nullglob: a pattern matching nothing is
-    # skipped, not fatal.
+    # Gitignored files that live only in the main checkout: personal instructions and personal Claude
+    # settings. A file already in the worktree is not overwritten. Secrets are not files: they come
+    # from the store and the keychain every worktree shares.
     echo ""
     echo "📋 Copying local files from the main checkout..."
     echo ""
-    for src in "$repo_root"/CLAUDE.local.md "$repo_root"/.claude/settings.local.json \
-        "$repo_root"/.env(N) "$repo_root"/.env.*(N) \
-        "$repo_root"/packages/*/.env(N) "$repo_root"/packages/*/.env.*(N); do
+    for src in "$repo_root"/CLAUDE.local.md "$repo_root"/.claude/settings.local.json; do
         rel=${src#$repo_root/}
-        case "$rel" in
-            *.example) continue ;;
-        esac
         if [ -f "$src" ] && [ ! -e "$rel" ]; then
             mkdir -p "$(dirname "$rel")"
             cp "$src" "$rel"

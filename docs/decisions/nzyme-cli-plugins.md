@@ -34,16 +34,15 @@ A repo lists plugin modules, as paths from the project root, under `nzyme.plugin
 `package.json`. A module default-exports `{ commands }` (`NzymePlugin` from `@nzyme/cli-core`), and
 the binary adds those commands to its own.
 
-- A built-in command loads no plugin, so a broken plugin cannot affect it.
-- With no command (no arguments, `--help`, `--version`), a broken plugin is a warning.
-- Any other invocation exits with 1 on a broken plugin, naming its path and the cause.
-- A command that does not extend the binary's `Command` is reported as a second copy of
-  `@nzyme/cli-core`, with the fix: one version of `@nzyme/*`, installed in the repo.
+- Every invocation loads every plugin, built-in commands and `--help` included.
+- A broken plugin, or a malformed `nzyme.plugins`, fails the CLI: it exits with 1, naming the
+  plugin's path and the cause.
 
 ## Consequences
 
 - `@nzyme/cli` and every other `@nzyme/*` package must be one version, installed in the repo. A
   globally installed `nzyme` with a repo's plugin is unsupported.
-- A plugin module is imported on every non-built-in invocation; it should only define commands, and
-  do work only when they run.
+- A plugin module is imported on every invocation; it should only define commands, and do work only
+  when they run.
+- A broken plugin stops built-in commands too, until it is fixed or removed from `nzyme.plugins`.
 - Plugins depend on `@nzyme/cli-core`, not on the binary (`cli-framework-split-from-binary.md`).

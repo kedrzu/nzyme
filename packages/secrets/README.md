@@ -103,8 +103,8 @@ export default { commands: defineSecretsCommands({ provider: AppSecrets }) } sat
 ```
 
 `@nzyme/cli` and every other `@nzyme/*` package must be one version, installed in the repo: the
-plugin's commands must extend the `Command` of the same `@nzyme/cli-core` the binary runs. The binary
-detects a second copy and names this fix. Why: `docs/decisions/nzyme-cli-plugins.md`.
+plugin's commands must extend the `Command` of the same `@nzyme/cli-core` the binary runs. Why:
+`docs/decisions/nzyme-cli-plugins.md`.
 
 A product CLI registers the same commands itself:
 

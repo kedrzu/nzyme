@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { Option } from '@nzyme/cli-core';
+import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { readEnvVariables } from '@nzyme/project-utils/readEnvVariables.js';
@@ -37,6 +37,10 @@ export function defineSecretsImportCommand(options: SecretsCommandsOptions): Com
             const { alias, store } = selectSecretStore(mapping, this.store);
 
             const filePath = path.resolve(this.file);
+            if (!(await Bun.file(filePath).exists())) {
+                throw new UsageError(`${filePath} does not exist; nothing was imported.`);
+            }
+
             const variables = await readEnvVariables({
                 cwd: path.dirname(filePath),
                 file: path.basename(filePath),

@@ -242,6 +242,18 @@ test('import writes every non-empty variable in one call, skips empty and creden
     expectNoLeak(result, 'bw-cred');
 });
 
+test('import of a file that does not exist fails and writes nothing', async () => {
+    const bw = createMemoryStore({ id: 'bw' });
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'secrets-import-'));
+    const mapping: SecretsMapping = { stores: { bw: bw.store }, secrets: {} };
+
+    const result = await runCommand(mapping, ['secrets', 'import', '--file', path.join(dir, '.env')]);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.errors).toContain('does not exist');
+    expect(bw.writes).toEqual([]);
+});
+
 test('import with several stores and no --store fails listing the aliases', async () => {
     const bw = createMemoryStore({ id: 'bw' });
     const vault = createMemoryStore({ id: 'vault' });

@@ -2,7 +2,7 @@ import type { Container } from '@nzyme/ioc/Container.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 import { Logger } from '@nzyme/logging/Logger.js';
 
-import { resolveSecrets } from './resolveSecrets.js';
+import { describeMissingSecrets, resolveSecrets } from './resolveSecrets.js';
 import { SecretsProvider } from './SecretsProvider.js';
 
 /**
@@ -40,8 +40,7 @@ export async function loadSecrets(container: Container): Promise<LoadSecretsResu
     const { values, missing, overridden } = await resolveSecrets(mapping, env);
 
     if (missing.length > 0) {
-        const list = missing.map(secret => `${secret.name} (key ${secret.key} in store ${secret.storeId})`);
-        throw new Error(`Secrets missing or empty: ${list.join(', ')}`);
+        throw new Error(`Secrets missing or empty: ${describeMissingSecrets(missing)}`);
     }
 
     for (const [name, value] of values) {

@@ -197,7 +197,7 @@ test('a rejected token fails with its own message', async () => {
     const error = await catchError(store.read(['DB_URL']));
 
     expect(error.message).toBe(
-        `Bitwarden at ${new URL(fake.url).host} rejected the access token: run \`secrets login\` with a valid one`,
+        `Bitwarden at ${new URL(fake.url).host} rejected the access token: run \`secrets login\` (\`secrets login --write\` for the write token) with a valid one`,
     );
     expectNoLeak(error, fake.tokens.unknown);
 });

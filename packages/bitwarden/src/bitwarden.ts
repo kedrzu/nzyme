@@ -80,7 +80,7 @@ export function bitwarden(options: BitwardenOptions): SecretStore {
             }
 
             if (secret.value == null) {
-                throw new Error(`Bitwarden secret ${key} has no value`);
+                throw new Error(`Bitwarden secret ${key} has no value: store one with \`secrets set\``);
             }
 
             result.set(key, await decryptEncString(secret.value, client.organizationKey));

@@ -16,6 +16,15 @@ export interface MissingSecret {
 /**
  * The outcome of {@link resolveSecrets}.
  */
+/**
+ * Describes missing secrets for an error message: each name with its key and store, and how to
+ * store them. Never a value.
+ */
+export function describeMissingSecrets(missing: MissingSecret[]): string {
+    const list = missing.map(secret => `${secret.name} (key ${secret.key} in store ${secret.storeId})`);
+    return `${list.join(', ')}. Store them with \`secrets set <NAME>\`.`;
+}
+
 export interface ResolvedSecrets {
     /** Fetched values by environment variable name; only names neither missing nor overridden. */
     values: Map<string, string>;

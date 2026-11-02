@@ -8,7 +8,7 @@ import { Command } from '@nzyme/cli-core/Command.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 
 import { getSecretStores } from '../getSecretStores.js';
-import { resolveSecrets } from '../resolveSecrets.js';
+import { describeMissingSecrets, resolveSecrets } from '../resolveSecrets.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
 
 /** Exit code a shell uses for a command it cannot find — reused when the command cannot be spawned. */
@@ -43,8 +43,9 @@ export function defineSecretsRunCommand(options: SecretsCommandsOptions): Comman
             const { values, missing, overridden } = await resolveSecrets(mapping, env);
 
             if (missing.length > 0) {
-                const list = missing.map(secret => `${secret.name} (key ${secret.key} in store ${secret.storeId})`);
-                throw new UsageError(`Secrets missing or empty, nothing was started: ${list.join(', ')}`);
+                throw new UsageError(
+                    `Secrets missing or empty, nothing was started: ${describeMissingSecrets(missing)}`,
+                );
             }
 
             if (overridden.length > 0) {

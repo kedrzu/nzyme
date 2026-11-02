@@ -43,14 +43,14 @@
         "dotenv": "^18.0.8",
         "execa": "^10.2.0",
         "fs-extra": "^11.4.1",
-        "oxfmt": "^0.74.0",
+        "oxfmt": "^0.75.0",
         "parse-gitignore": "^2.0.0",
         "pkg-types": "^2.3.3"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
         "@types/fs-extra": "11.0.4",
-        "@types/node": "26.6.5",
+        "@types/node": "26.6.6",
         "@types/parse-gitignore": "1.0.2",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2"
     }

@@ -81,6 +81,24 @@ installed version exits 0 and applies nothing; lint then reports `await-thenable
 value is `undefined`. Use an argument-free matcher (`toBeUndefined()`) whenever the asserted value's
 type is `never` by design; do not widen the type.
 
+### The root manifest is invisible to a consumer's `bun outdated -r`
+
+A consumer puts `nzyme/packages/*` in its workspaces, never `nzyme/` itself, so this repository's
+**root** `package.json` is in no consumer's workspace graph and `bun outdated -r` run there never
+reports it. Its dev toolchain therefore drifts silently while every package manifest stays current —
+found on 2026-11-02 at `oxfmt` 0.72.0, `oxlint` 1.86.0 and `eslint` 10.12.0 against package-level
+pins already three releases ahead.
+
+A consumer's run cannot verify these either: it never installs this root's `devDependencies`, so its
+in-place `lint` and `format` resolve the binaries from the consumer's own hoisted copy. Aligning them
+is still correct — it is what standalone development and this repository's CI use — and **the nzyme
+PR's own CI is their verification**, not the consumer's protocol.
+
+So a run started in a consumer checks this manifest explicitly, with `bun outdated` from `nzyme/`,
+and treats anything only this root declares (`nx`, `@swc/core`, `@swc-node/register`, `del-cli`) as
+nzyme-side work: either a batch proven by this repository's CI, or an escalation. Never bump one of
+those blind and call it verified because the consumer's protocol was green.
+
 ### vitest — all `@vitest/*` move together
 
 `vitest`, `@vitest/browser`, `@vitest/browser-playwright` and `@vitest/expect` move as one.

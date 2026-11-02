@@ -23,8 +23,8 @@ To build nzyme from source as a git submodule of a product monorepo, see
 ```sh
 zsh setup.sh          # install, build the nzyme CLI, generate tsconfigs/translations, build packages
 bun run test          # all tests
-bun run lint:check    # oxlint + ESLint (Vue)
-bun run format:check  # oxfmt + markdown
+bun run lint:check    # oxlint + ESLint (Vue, package.json, Markdown)
+bun run format:check  # oxfmt
 ```
 
 Paseo worktrees run `setup.sh` automatically (`paseo.json`).

@@ -1,24 +1,9 @@
-import fs from 'node:fs/promises';
-import * as path from 'node:path';
-
-import chalk from 'chalk';
 import type { Break, Link, Parents } from 'mdast';
 import type { Info, State } from 'mdast-util-to-markdown';
 import { defaultHandlers } from 'mdast-util-to-markdown';
 import { remark } from 'remark';
 import remarkFrontmatter from 'remark-frontmatter';
 import remarkGfm from 'remark-gfm';
-
-import { isFileIgnored } from '@nzyme/project-utils/isFileIgnored.js';
-import { forEachParalell } from '@nzyme/utils/array/forEachParalell.js';
-
-import { Command } from '../Command.js';
-import { Option } from '../index.js';
-
-const MARKDOWN_REGEX = /\.mdx?$/;
-
-/** Bounded parallelism for file processing — high throughput without opening a handle per file. */
-const CONCURRENCY = 20;
 
 /** Parse-only pipeline used to check whether dropping an escape changes document structure. */
 const structureChecker = remark().use(remarkFrontmatter, ['yaml']).use(remarkGfm, { singleTilde: false });
@@ -174,125 +159,12 @@ const processor = remark()
     .data('settings', STRINGIFY_SETTINGS);
 
 /**
- * Token-minimising markdown formatter. Reserialises markdown files (or every `.md`/`.mdx`
- * file under the given directories) through remark with compact GFM tables — the opposite
- * of an aligning formatter like oxfmt/prettier. Reusable across projects; point it at any
- * markdown that should stay small (e.g. agent skill files).
+ * Formats Markdown for minimal tokens: reserialises it through remark with compact GFM tables,
+ * single-space list indentation and prose-preserving handlers, then drops escapes that do not change
+ * how the document parses. Returns the input unchanged when it is already formatted.
+ * @__NO_SIDE_EFFECTS__
  */
-export class FormatMarkdownCommand extends Command {
-    static override paths = [['format-markdown']];
-
-    static override usage = Command.Usage({
-        category: 'Format',
-        description: 'Format markdown for minimal tokens (compact GFM tables)',
-        details: `
-            Reserialises markdown through remark with un-padded GFM tables and single-space
-            list indentation. Arguments are files or directories; directories are walked
-            recursively for .md/.mdx files (gitignored paths are skipped). With no arguments
-            the current working directory is used. Pass --exclude to skip a file or directory
-            (e.g. generated/scraped docs or a nested submodule); repeatable. By default only a
-            summary count is printed; pass --verbose to log every file formatted/reformatted.
-        `,
-        examples: [
-            ['Format the whole repo', 'nzyme format-markdown .'],
-            [
-                'Skip generated docs and a submodule',
-                'nzyme format-markdown . --exclude nzyme --exclude packages/scraped-docs',
-            ],
-            ['Check without writing', 'nzyme format-markdown --check docs'],
-            ['List each file formatted', 'nzyme format-markdown --verbose docs'],
-        ],
-    });
-
-    check = Option.Boolean('--check,-c', {
-        description: 'Do not write; exit non-zero if any file would change',
-    });
-
-    verbose = Option.Boolean('--verbose,-v', {
-        description: 'Log each file formatted/reformatted (default: summary count only)',
-    });
-
-    exclude = Option.Array('--exclude,-e', [], {
-        description: 'File or directory to skip (repeatable)',
-    });
-
-    inputs = Option.Rest();
-
-    cwd = process.cwd();
-
-    /**
-     *
-     */
-    override async run() {
-        const inputs = this.inputs.length > 0 ? this.inputs : ['.'];
-        const excluded = new Set(this.exclude.map(entry => this.toAbsolute(entry)));
-
-        const files: string[] = [];
-        for (const input of inputs) {
-            await this.collectFiles(this.toAbsolute(input), excluded, files);
-        }
-
-        let changed = 0;
-        await forEachParalell(files, {
-            concurrency: CONCURRENCY,
-            callback: async file => {
-                const source = await fs.readFile(file, 'utf-8');
-                const safelyFormatted = String(await processor.process(source));
-                const formatted = safelyFormatted === source ? source : removeInertEscapes(safelyFormatted);
-
-                if (formatted === source) {
-                    return;
-                }
-
-                changed++;
-                if (this.check) {
-                    if (this.verbose) {
-                        const relative = path.relative(this.cwd, file);
-                        this.logger.warn(`Would reformat ${chalk.yellow(relative)}`);
-                    }
-                } else {
-                    await fs.writeFile(file, formatted);
-                    if (this.verbose) {
-                        const relative = path.relative(this.cwd, file);
-                        this.logger.info(`Formatted ${chalk.green(relative)}`);
-                    }
-                }
-            },
-        });
-
-        if (this.check && changed > 0) {
-            this.logger.error(`${changed} markdown file(s) are not formatted`);
-            return 1;
-        }
-
-        this.logger.info(
-            `${this.check ? 'Checked' : 'Formatted'} ${files.length} markdown file(s), ${changed} changed`,
-        );
-        return 0;
-    }
-
-    private async collectFiles(target: string, excluded: Set<string>, results: string[]) {
-        if (excluded.has(target) || isFileIgnored(target) === true) {
-            return;
-        }
-
-        const stats = await fs.stat(target);
-        if (stats.isDirectory()) {
-            const entries = await fs.readdir(target, { withFileTypes: true });
-            for (const entry of entries) {
-                // A symlinked file or directory is formatted where it actually lives, or not at all (e.g. a link
-                // into a git submodule); explicit inputs never reach this loop, so they still follow symlinks.
-                if (entry.isSymbolicLink()) {
-                    continue;
-                }
-                await this.collectFiles(path.join(target, entry.name), excluded, results);
-            }
-        } else if (stats.isFile() && MARKDOWN_REGEX.test(target)) {
-            results.push(target);
-        }
-    }
-
-    private toAbsolute(file: string) {
-        return path.isAbsolute(file) ? file : path.join(this.cwd, file);
-    }
+export function formatMarkdown(source: string): string {
+    const safelyFormatted = String(processor.processSync(source));
+    return safelyFormatted === source ? source : removeInertEscapes(safelyFormatted);
 }

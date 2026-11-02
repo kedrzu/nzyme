@@ -6,7 +6,6 @@ import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 import { createTestContainer } from '@nzyme/ioc-testing/createTestContainer.js';
 
-import type { LoadSecretsResult } from './loadSecrets.js';
 import { loadSecrets } from './loadSecrets.js';
 import type { SecretsMapping } from './SecretsMapping.js';
 import type { SecretStore } from './SecretStore.js';
@@ -33,7 +32,7 @@ test('loads secrets from two stores with one read per store, resolvable through 
         },
     });
 
-    const result = await loadSecrets(container, provider);
+    await loadSecrets(container, provider);
 
     expect(bw.reads).toEqual([['TELEGRAM_TOKEN_UMBRA', 'DB_PASSWORD', 'API_KEY']]);
     expect(vault.reads).toEqual([['SMTP_PASSWORD', 'OTHER']]);
@@ -45,7 +44,10 @@ test('loads secrets from two stores with one read per store, resolvable through 
         OTHER: 'other',
     });
     expect(container.resolve(TELEGRAM_TOKEN)).toBe(SENTINEL);
-    expect(result.overridden).toEqual([]);
+    expect(logs.find(log => log.message === 'Secrets loaded')?.data).toEqual({
+        loaded: ['TELEGRAM_TOKEN', 'DB_PASSWORD', 'API_KEY', 'SMTP_PASSWORD', 'OTHER'],
+        overridden: [],
+    });
     expect(JSON.stringify(logs)).not.toContain(SENTINEL);
 });
 
@@ -124,10 +126,8 @@ test('a non-empty variable already set wins and is reported by name only', async
         secrets: { TELEGRAM_TOKEN: bw.store.secret(), EMPTY_SET: bw.store.secret() },
     });
 
-    const result = await loadSecrets(container, provider);
+    await loadSecrets(container, provider);
 
-    const expected: LoadSecretsResult = { loaded: ['EMPTY_SET'], overridden: ['TELEGRAM_TOKEN'] };
-    expect(result).toEqual(expected);
     expect(env).toEqual({ TELEGRAM_TOKEN: 'local-token', EMPTY_SET: 'fetched' });
     expect(bw.reads).toEqual([['EMPTY_SET']]);
     expect(logs.find(log => log.message === 'Secrets loaded')?.data).toEqual({

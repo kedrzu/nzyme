@@ -27,7 +27,7 @@ Healed has its own environments and AWS-account conventions, which other repos d
 > can tell a variable set by the shell from one set by a leftover `.env`.
 
 `defineEnvVariable` resolves through the container's `EnvVariables` interface
-(`packages/ioc/src/defineEnvVariable.ts:154`), which defaults to `process.env`.
+(the `resolve` function in `packages/ioc/src/defineEnvVariable.ts`), which defaults to `process.env`.
 
 ## Options Considered
 

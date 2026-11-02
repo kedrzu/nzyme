@@ -1,7 +1,6 @@
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
+
+import { readNzymeConfig } from '../readNzymeConfig.js';
 
 /**
  * Configuration of `nzyme index`, read from the `nzyme.index` field of the repo's root
@@ -72,8 +71,7 @@ export interface NzymeIndexEntitiesConfig {
  * an empty config; a malformed one throws, naming the offending path.
  */
 export async function readIndexConfig(root: string): Promise<NzymeIndexConfig> {
-    const packageJson: unknown = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
-    const nzyme = isPlainObject(packageJson) ? packageJson.nzyme : undefined;
+    const nzyme = await readNzymeConfig(root);
     const index = isPlainObject(nzyme) ? nzyme.index : undefined;
 
     return parseIndexConfig(index);

@@ -69,7 +69,7 @@ lower that bound in nzyme rather than overriding it.
   - Bun (`packageManager`);
   - `@types/bun` (with the override above);
   - `@typescript/native-preview`;
-  - `oxlint`, `oxlint-tsgolint`, `oxfmt`, `eslint`.
+  - `oxlint`, `oxlint-tsgolint`, `oxfmt`, `eslint`, `eslint-plugin-package-json`.
 - **Apply the `bun-types` patch.** Copy `nzyme/patches/bun-types@<version>.patch` into the product and
   declare it as above. Without it, nzyme's tests type `await expect(…).rejects` as non-awaitable and
   fail type-aware lint.
@@ -167,17 +167,23 @@ In the product:
 - `.oxfmtrc.json`: `"ignorePatterns": [..., "nzyme"]`
 - `eslint.config.mjs`: `globalIgnores([..., "nzyme/**"])`. ESLint does discover nested configs, but this
   stops a directory run from descending into `nzyme/`, so `nzyme/eslint.config.mjs` is never used. ESLint
-  is here only for the Vue rules oxlint does not cover.
+  is here for what oxlint does not cover: the presets from `@nzyme/eslint` — `vue()`, `packageJson()`
+  and `markdown()`, which formats Markdown on `eslint --fix` and skips gitignored files:
+
+  ```js
+  import { markdown, packageJson, vue } from '@nzyme/eslint';
+  import { globalIgnores } from 'eslint/config';
+
+  export default [globalIgnores(['nzyme/**', '.context/**']), ...markdown(), ...packageJson(), ...vue()];
+  ```
 - `package.json` scripts:
 
   ```json
   {
       "lint": "oxlint --type-aware --quiet --disable-nested-config --fix . && eslint --fix .",
       "lint:check": "oxlint --type-aware --quiet --disable-nested-config . && eslint .",
-      "format": "oxfmt --disable-nested-config . > /dev/null && bun run format:md",
-      "format:check": "oxfmt --check --disable-nested-config . && bun run format:md:check",
-      "format:md": "nzyme format-markdown . --exclude .context --exclude nzyme",
-      "format:md:check": "nzyme format-markdown --check . --exclude .context --exclude nzyme",
+      "format": "oxfmt --disable-nested-config . > /dev/null",
+      "format:check": "oxfmt --check --disable-nested-config .",
       "lint:nzyme": "bun run --cwd nzyme lint:check && bun run --cwd nzyme format:check"
   }
   ```

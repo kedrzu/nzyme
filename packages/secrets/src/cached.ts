@@ -75,16 +75,17 @@ export function cached(store: SecretStore, options: CachedOptions): SecretStore 
     async function readFromStore(entry: CacheEntry, keys: string[]) {
         const values = await store.read(keys);
         const now = Date.now();
+        const next = new Map(entry);
         for (const key of keys) {
             const value = values.get(key);
             if (value === undefined) {
-                entry.delete(key);
+                next.delete(key);
             } else {
-                entry.set(key, { value, at: now });
+                next.set(key, { value, at: now });
             }
         }
 
-        await saveEntry(entry);
+        await saveEntry(next);
         return values;
     }
 

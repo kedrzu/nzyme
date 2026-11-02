@@ -111,7 +111,9 @@ A migration that edits `nx.json` rewrites it as plain JSON and **drops every com
 keeps `nx` and `@nx/js` as `^` ranges.
 
 `nx.json` sets `affected.legacy: true`, what the Nx 24 migration writes: `nx affected` selects whole
-projects, as before 24. Deleting it switches to task-based selection.
+projects, as before 24. Deleting it switches to task-based selection, where a test-only edit no longer
+rebuilds the package. The owner's decision (2026-11-03): keep it for now, and try the switch as a
+separate change. It affects only the scoped `verify` step, so an update run need not raise it again.
 
 `nx release` runs only on the `release` branch, so nothing on a PR exercises it. After an Nx bump run
 `nx release version --dry-run` and `nx release changelog <next> --dry-run` by hand.

@@ -74,6 +74,7 @@
         "@nzyme/i18n-compiler": "workspace:*",
         "@nzyme/ioc": "workspace:*",
         "@nzyme/logging": "workspace:*",
+        "@nzyme/machine": "workspace:*",
         "@nzyme/node-utils": "workspace:*",
         "@nzyme/project-utils": "workspace:*",
         "@nzyme/utils": "workspace:*",

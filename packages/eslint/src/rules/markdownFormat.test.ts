@@ -10,7 +10,6 @@ import { markdownFormat } from './markdownFormat.js';
 
 RuleTester.describe = describe;
 RuleTester.it = it;
-RuleTester.itOnly = it.only;
 
 const PACKAGE_ROOT = path.resolve(import.meta.dirname, '../..');
 

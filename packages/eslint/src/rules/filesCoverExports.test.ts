@@ -6,7 +6,6 @@ import { filesCoverExports } from './filesCoverExports.js';
 
 RuleTester.describe = describe;
 RuleTester.it = it;
-RuleTester.itOnly = it.only;
 
 const tester = new RuleTester({
     languageOptions: { parser: jsoncParser },

@@ -36,16 +36,18 @@ Healed has its own environments and AWS-account conventions, which other repos d
   without running code. Rejected by the user: the core would have to model environments, and Healed's
   environment and AWS-account conventions do not fit a generic model. Config as code lets each repo
   express its own conventions in TypeScript.
-- **A `defineSecretsProvider` helper.** Rejected in favour of a plain ioc interface
-  (`SecretsProvider`) that a project implements with `defineService({ implements })`: no new
-  concept, and the mapping can depend on other services and env variables.
+- **A `defineSecretsProvider` helper.** Rejected in favour of a plain service,
+  `defineService<SecretsMapping>(…)`: no new concept, and the mapping can depend on other services
+  and env variables.
+- **A `SecretsProvider` ioc interface** for the project to implement. Dropped once `loadSecrets` and
+  the commands took the provider explicitly: nothing resolved the interface any more.
 - **A startup step as a command.** Rejected: see the root-container check above.
 - **A new source inside `defineEnvVariable`.** Rejected: writing into `EnvVariables` before anything
   resolves keeps `defineEnvVariable` unchanged.
 
 ## Decision
 
-`@nzyme/secrets` defines the `SecretStore` contract, the `SecretsProvider` interface (stores by alias,
+`@nzyme/secrets` defines the `SecretStore` contract, the `SecretsMapping` type (stores by alias,
 env-variable name to secret reference) and `loadSecrets(container, provider)`, a plain function an
 app calls at startup. It takes the provider explicitly, as `defineSecretsCommands({ provider })` does,
 so there is no registration to forget. It reads every mapped secret, one batch per store, and writes them into that container's

@@ -8,8 +8,7 @@ import { createTestContainer } from '@nzyme/ioc-testing/createTestContainer.js';
 
 import type { LoadSecretsResult } from './loadSecrets.js';
 import { loadSecrets } from './loadSecrets.js';
-import type { SecretsMapping } from './SecretsProvider.js';
-import { SecretsProvider } from './SecretsProvider.js';
+import type { SecretsMapping } from './SecretsMapping.js';
 import type { SecretStore } from './SecretStore.js';
 import { defineSecretStore } from './SecretStore.js';
 
@@ -23,7 +22,7 @@ test('loads secrets from two stores with one read per store, resolvable through 
     const { container, logs } = createTestContainer();
     const env: EnvVariables = {};
     container.set(EnvVariables, env);
-    const provider = defineSecretsProvider({
+    const provider = defineAppSecrets({
         stores: { bw: bw.store, vault: vault.store },
         secrets: {
             TELEGRAM_TOKEN: bw.store.secret('TELEGRAM_TOKEN_UMBRA'),
@@ -58,7 +57,7 @@ test('loads into the EnvVariables of a child container', async () => {
     const child = container.createChild(defineScope('request'));
     const childEnv: EnvVariables = {};
     child.set(EnvVariables, childEnv);
-    const provider = defineSecretsProvider({
+    const provider = defineAppSecrets({
         stores: { bw: bw.store },
         secrets: { TELEGRAM_TOKEN: bw.store.secret('TELEGRAM_TOKEN_UMBRA') },
     });
@@ -74,7 +73,7 @@ test('a missing or empty secret fails naming it and its reference, writing nothi
     const { container, logs } = createTestContainer();
     const env: EnvVariables = {};
     container.set(EnvVariables, env);
-    const provider = defineSecretsProvider({
+    const provider = defineAppSecrets({
         stores: { bw: bw.store },
         secrets: {
             PRESENT: bw.store.secret(),
@@ -105,7 +104,7 @@ test('a failing read in one store writes nothing from the others', async () => {
     const { container } = createTestContainer();
     const env: EnvVariables = {};
     container.set(EnvVariables, env);
-    const provider = defineSecretsProvider({
+    const provider = defineAppSecrets({
         stores: { bw: bw.store, broken },
         secrets: { TELEGRAM_TOKEN: bw.store.secret(), OTHER: broken.secret() },
     });
@@ -120,7 +119,7 @@ test('a non-empty variable already set wins and is reported by name only', async
     const { container, logs } = createTestContainer();
     const env: EnvVariables = { TELEGRAM_TOKEN: 'local-token', EMPTY_SET: '' };
     container.set(EnvVariables, env);
-    const provider = defineSecretsProvider({
+    const provider = defineAppSecrets({
         stores: { bw: bw.store },
         secrets: { TELEGRAM_TOKEN: bw.store.secret(), EMPTY_SET: bw.store.secret() },
     });
@@ -139,12 +138,8 @@ test('a non-empty variable already set wins and is reported by name only', async
     expect(JSON.stringify(logs)).not.toContain('local-token');
 });
 
-function defineSecretsProvider(mapping: SecretsMapping) {
-    return defineService({
-        name: 'AppSecrets',
-        implements: SecretsProvider,
-        setup: () => mapping,
-    });
+function defineAppSecrets(mapping: SecretsMapping) {
+    return defineService<SecretsMapping>({ name: 'AppSecrets', setup: () => mapping });
 }
 
 function createMemoryStore(id: string, data: Record<string, string>) {

@@ -17,19 +17,18 @@ Every `@nzyme/*` package in a repo, `@nzyme/cli` included, must be one version, 
 
 ## The mapping
 
-A project describes its secrets in a service implementing `SecretsProvider`: stores by alias, and the
-environment variable each secret is loaded into.
+A project describes its secrets in a service resolving to a `SecretsMapping`: stores by alias, and
+the environment variable each secret is loaded into.
 
 ```ts
 // packages/app/src/AppSecrets.ts
 import { defineService } from '@nzyme/ioc/Service.js';
 import { bitwarden } from '@nzyme/bitwarden/bitwarden.js';
-import { SecretsProvider } from '@nzyme/secrets/SecretsProvider.js';
 import { cached } from '@nzyme/secrets/cached.js';
+import type { SecretsMapping } from '@nzyme/secrets/SecretsMapping.js';
 
-export const AppSecrets = defineService({
+export const AppSecrets = defineService<SecretsMapping>({
     name: 'AppSecrets',
-    implements: SecretsProvider,
     setup() {
         const bw = cached(bitwarden({ project: '1f0c…' }), { ttl: 8 * 60 * 60 * 1000 });
 

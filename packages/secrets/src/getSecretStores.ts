@@ -1,4 +1,4 @@
-import type { SecretsMapping } from './SecretsProvider.js';
+import type { SecretsMapping } from './SecretsMapping.js';
 import type { SecretStore } from './SecretStore.js';
 
 /**

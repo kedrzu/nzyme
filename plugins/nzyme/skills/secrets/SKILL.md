@@ -13,7 +13,7 @@ description: >-
 # Secrets
 
 The repo keeps its secrets in a remote store (Bitwarden Secrets Manager today) behind a login.
-A service implementing `SecretsProvider` maps each env variable to a secret; the app calls
+A service resolving to a `SecretsMapping` maps each env variable to a secret; the app calls
 `loadSecrets(container, provider)` at startup, so the code reads secrets through `defineEnvVariable` like any
 other variable (`nzyme:ioc`). Values are cached in the OS keychain. There is no secrets file:
 every credential — the app's, a script's, a token a tool needs — is a mapped secret, so it has one

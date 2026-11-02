@@ -5,7 +5,7 @@
 import { execute } from '@nzyme/cli-core/execute.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 
-import { SecretsProvider } from '../../SecretsProvider.js';
+import type { SecretsMapping } from '../../SecretsMapping.js';
 import type { SecretRef, SecretStore } from '../../SecretStore.js';
 import { defineSecretStore } from '../../SecretStore.js';
 import { defineSecretsCommands } from '../defineSecretsCommands.js';
@@ -27,9 +27,8 @@ if (process.env.FIXTURE_MISSING) {
     secrets.MISSING_ONE = bw.secret('NO_SUCH_KEY');
 }
 
-const AppSecrets = defineService({
+const AppSecrets = defineService<SecretsMapping>({
     name: 'AppSecrets',
-    implements: SecretsProvider,
     setup: () => ({ stores: { bw }, secrets }),
 });
 

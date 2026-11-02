@@ -11,8 +11,7 @@ import { createContainer } from '@nzyme/ioc/Container.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 
-import type { SecretsMapping } from '../SecretsProvider.js';
-import { SecretsProvider } from '../SecretsProvider.js';
+import type { SecretsMapping } from '../SecretsMapping.js';
 import type { SecretStore, SecretStoreDefinition, SecretStoreEntry } from '../SecretStore.js';
 import { defineSecretStore } from '../SecretStore.js';
 import { SENTINEL as RUN_SENTINEL } from './__fixtures__/secretsCli.js';
@@ -477,7 +476,7 @@ interface RunCommandOptions {
 /** Runs a `secrets` command through clipanion in-process, with a real container and the given mapping. */
 async function runCommand(options: RunCommandOptions) {
     const { mapping, args } = options;
-    const provider = defineService({ name: 'AppSecrets', implements: SecretsProvider, setup: () => mapping });
+    const provider = defineService<SecretsMapping>({ name: 'AppSecrets', setup: () => mapping });
     const cli = new Cli<CommandContext>({ binaryName: 'nzyme' });
     for (const command of defineSecretsCommands({ provider })) {
         cli.register(command);

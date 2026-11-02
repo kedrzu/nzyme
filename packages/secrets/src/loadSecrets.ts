@@ -2,10 +2,10 @@ import type { Container } from '@nzyme/ioc/Container.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 import type { Injectable } from '@nzyme/ioc/Injectable.js';
 import { Logger } from '@nzyme/logging/Logger.js';
+import { LoggerTransport } from '@nzyme/logging/LoggerTransport.js';
 
 import { describeMissingSecrets, resolveSecrets } from './resolveSecrets.js';
-import type { SecretsMapping } from './SecretsProvider.js';
-import { SecretsProvider } from './SecretsProvider.js';
+import type { SecretsMapping } from './SecretsMapping.js';
 
 /**
  * The outcome of {@link loadSecrets}.
@@ -46,8 +46,8 @@ export async function loadSecrets(
     }
 
     const loaded = [...values.keys()];
-    // Named after the interface rather than the project's service, so the log reads the same in every project.
-    const logger = container.resolve(Logger, SecretsProvider);
+    // Named after the project's provider, the unit whose secrets these are.
+    const logger = Logger.create({ name: provider.name, transport: container.resolve(LoggerTransport) });
     logger.info('Secrets loaded', { loaded, overridden });
 
     return { loaded, overridden };

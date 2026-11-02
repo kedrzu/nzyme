@@ -7,7 +7,7 @@ Accepted
 ## Context
 
 Most of the repos adopting `@nzyme/secrets` have no CLI of their own. They still need the `secrets`
-commands, configured by the repo's own code (its `SecretsProvider`), not by static config read by
+commands, configured by the repo's own code (its secrets provider), not by static config read by
 the binary.
 
 > **Checked 2026-11-02:** with two copies of clipanion installed, options declared by a command from

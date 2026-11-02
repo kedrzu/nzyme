@@ -1,7 +1,7 @@
 import type { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 
 import { groupSecretsByStore } from './groupSecretsByStore.js';
-import type { SecretsMapping } from './SecretsProvider.js';
+import type { SecretsMapping } from './SecretsMapping.js';
 import type { SecretRef } from './SecretStore.js';
 
 /**

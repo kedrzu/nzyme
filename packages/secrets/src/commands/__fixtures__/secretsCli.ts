@@ -13,9 +13,9 @@ import { defineSecretsCommands } from '../defineSecretsCommands.js';
 /** The value of `API_KEY`, which must never reach anything but the child's environment. */
 export const SENTINEL = 'sentinel-secret-value-run-4b2d';
 
-const bw = createStore('bw', { API_KEY: SENTINEL, DB_PASSWORD: 'db-pass' }, ['BW_TOKEN']);
+const bw = createStore({ id: 'bw', data: { API_KEY: SENTINEL, DB_PASSWORD: 'db-pass' }, credentialEnv: ['BW_TOKEN'] });
 // Referenced by a secret but not listed under `stores`: its credentials must be stripped too.
-const vault = createStore('vault', { SMTP_PASSWORD: 'smtp-pass' }, ['VAULT_TOKEN']);
+const vault = createStore({ id: 'vault', data: { SMTP_PASSWORD: 'smtp-pass' }, credentialEnv: ['VAULT_TOKEN'] });
 
 const secrets: Record<string, SecretRef> = {
     API_KEY: bw.secret(),
@@ -37,7 +37,16 @@ if (import.meta.main) {
     await execute({ name: 'fixture', commands: defineSecretsCommands({ provider: AppSecrets }) });
 }
 
-function createStore(id: string, data: Record<string, string>, credentialEnv: string[]): SecretStore {
+/** Options of {@link createStore}. */
+interface CreateStoreOptions {
+    id: string;
+    /** The values the store holds, by key. */
+    data: Record<string, string>;
+    credentialEnv: string[];
+}
+
+function createStore(options: CreateStoreOptions): SecretStore {
+    const { id, data, credentialEnv } = options;
     return defineSecretStore({
         id,
         credentialEnv,

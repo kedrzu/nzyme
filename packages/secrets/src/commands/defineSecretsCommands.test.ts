@@ -143,8 +143,8 @@ test('set writes the stdin value, minus one trailing newline, to the ref’s sto
         secrets: { TELEGRAM_TOKEN: bw.store.secret('TELEGRAM_TOKEN_UMBRA'), API_KEY: bw.store.secret() },
     };
 
-    const first = await runCommand(mapping, ['secrets', 'set', 'TELEGRAM_TOKEN'], { stdin: `${SENTINEL}\n\n` });
-    const second = await runCommand(mapping, ['secrets', 'set', 'API_KEY'], { stdin: 'api-value' });
+    const first = await runCommand({ mapping, args: ['secrets', 'set', 'TELEGRAM_TOKEN'], stdin: `${SENTINEL}\n\n` });
+    const second = await runCommand({ mapping, args: ['secrets', 'set', 'API_KEY'], stdin: 'api-value' });
 
     expect(first.exitCode).toBe(0);
     expect(second.exitCode).toBe(0);
@@ -159,11 +159,11 @@ test('set writes the stdin value, minus one trailing newline, to the ref’s sto
 test('set of an unmapped name fails naming it and writes nothing', async () => {
     const bw = createMemoryStore({ id: 'bw' });
 
-    const result = await runCommand(
-        { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
-        ['secrets', 'set', 'NOT_MAPPED'],
-        { stdin: SENTINEL },
-    );
+    const result = await runCommand({
+        mapping: { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        args: ['secrets', 'set', 'NOT_MAPPED'],
+        stdin: SENTINEL,
+    });
 
     expect(result.exitCode).toBe(1);
     expect(result.errors).toContain('NOT_MAPPED');
@@ -174,8 +174,8 @@ test('set refuses an empty value and a value given as an argument', async () => 
     const bw = createMemoryStore({ id: 'bw' });
     const mapping: SecretsMapping = { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } };
 
-    const empty = await runCommand(mapping, ['secrets', 'set', 'API_KEY'], { stdin: '\n' });
-    const argument = await runCommand(mapping, ['secrets', 'set', 'API_KEY', SENTINEL], { stdin: 'from-stdin' });
+    const empty = await runCommand({ mapping, args: ['secrets', 'set', 'API_KEY'], stdin: '\n' });
+    const argument = await runCommand({ mapping, args: ['secrets', 'set', 'API_KEY', SENTINEL], stdin: 'from-stdin' });
 
     expect(empty.exitCode).toBe(1);
     expect(argument.exitCode).toBe(1);
@@ -192,7 +192,9 @@ test('set --prompt writes the trimmed dialog value, ignores stdin, and prints on
     };
     await standInDialog(`  ${SENTINEL}  \n`);
 
-    const result = await runCommand(mapping, ['secrets', 'set', 'TELEGRAM_TOKEN', '--prompt'], {
+    const result = await runCommand({
+        mapping,
+        args: ['secrets', 'set', 'TELEGRAM_TOKEN', '--prompt'],
         stdin: 'piped-value\n',
     });
 
@@ -210,12 +212,10 @@ test('set --prompt=<hint> shows the hint in the dialog', async () => {
     const hint = 'Settings → API → the live key';
     await standInDialog(SENTINEL);
 
-    const result = await runCommand({ stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } }, [
-        'secrets',
-        'set',
-        'API_KEY',
-        `--prompt=${hint}`,
-    ]);
+    const result = await runCommand({
+        mapping: { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        args: ['secrets', 'set', 'API_KEY', `--prompt=${hint}`],
+    });
 
     expect(result.exitCode).toBe(0);
     expect(await fs.readFile(path.join(dialogDir, 'dialog.argv'), 'utf8')).toContain(hint);
@@ -225,12 +225,10 @@ test('set --prompt refuses a multi-line value without printing it and writes not
     const bw = createMemoryStore({ id: 'bw' });
     await standInDialog(`${SENTINEL}\nsecond-line-value\n`);
 
-    const result = await runCommand({ stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } }, [
-        'secrets',
-        'set',
-        'API_KEY',
-        '--prompt',
-    ]);
+    const result = await runCommand({
+        mapping: { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        args: ['secrets', 'set', 'API_KEY', '--prompt'],
+    });
 
     expect(result.exitCode).toBe(1);
     expect(result.errors).toContain('several lines');
@@ -246,11 +244,11 @@ test.each([
     const bw = createMemoryStore({ id: 'bw' });
     await standInDialog(answer);
 
-    const result = await runCommand(
-        { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
-        ['secrets', 'set', 'API_KEY', '--prompt'],
-        { stdin: SENTINEL },
-    );
+    const result = await runCommand({
+        mapping: { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        args: ['secrets', 'set', 'API_KEY', '--prompt'],
+        stdin: SENTINEL,
+    });
 
     expect(result.exitCode).toBe(1);
     expect(result.errors).toContain('Nothing was entered for API_KEY');
@@ -263,11 +261,11 @@ test('set --prompt with no dialog tool and no terminal fails naming the command 
     // A PATH with no dialog tool on it; stdin is a stream, not a terminal.
     await useDialogDir();
 
-    const result = await runCommand(
-        { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
-        ['secrets', 'set', 'API_KEY', '--prompt'],
-        { stdin: SENTINEL },
-    );
+    const result = await runCommand({
+        mapping: { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        args: ['secrets', 'set', 'API_KEY', '--prompt'],
+        stdin: SENTINEL,
+    });
 
     expect(result.exitCode).toBe(1);
     expect(result.errors).toContain('nzyme secrets set API_KEY`');
@@ -279,12 +277,10 @@ test('set --prompt of an unmapped name fails naming it before opening a dialog',
     const bw = createMemoryStore({ id: 'bw' });
     await standInDialog(SENTINEL);
 
-    const result = await runCommand({ stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } }, [
-        'secrets',
-        'set',
-        'NOT_MAPPED',
-        '--prompt',
-    ]);
+    const result = await runCommand({
+        mapping: { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        args: ['secrets', 'set', 'NOT_MAPPED', '--prompt'],
+    });
 
     expect(result.exitCode).toBe(1);
     expect(result.errors).toContain('NOT_MAPPED');
@@ -305,7 +301,7 @@ test('list shows each name’s store, key and status, never a value, and fails w
         },
     };
 
-    const result = await runCommand(mapping, ['secrets', 'list'], { env: { DB_PASSWORD: 'env-value' } });
+    const result = await runCommand({ mapping, args: ['secrets', 'list'], env: { DB_PASSWORD: 'env-value' } });
 
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toBe(
@@ -323,10 +319,10 @@ test('list shows each name’s store, key and status, never a value, and fails w
 test('list exits 0 when every secret resolves', async () => {
     const bw = createMemoryStore({ id: 'bw', data: { API_KEY: SENTINEL } });
 
-    const result = await runCommand({ stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } }, [
-        'secrets',
-        'list',
-    ]);
+    const result = await runCommand({
+        mapping: { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        args: ['secrets', 'list'],
+    });
 
     expect(result.exitCode).toBe(0);
     expectNoLeak(result, SENTINEL);
@@ -343,7 +339,7 @@ test('import writes every non-empty variable in one call, skips empty and creden
     const content = `API_KEY=${SENTINEL}\nEMPTY=\nBW_TOKEN=bw-cred\nVAULT_TOKEN=vault-cred\nDB_URL=postgres://x\n`;
     await fs.writeFile(file, content);
 
-    const result = await runCommand(mapping, ['secrets', 'import', '--file', file]);
+    const result = await runCommand({ mapping, args: ['secrets', 'import', '--file', file] });
 
     expect(result.exitCode).toBe(0);
     expect(bw.writes).toEqual([
@@ -367,7 +363,7 @@ test('import of a file that does not exist fails and writes nothing', async () =
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'secrets-import-'));
     const mapping: SecretsMapping = { stores: { bw: bw.store }, secrets: {} };
 
-    const result = await runCommand(mapping, ['secrets', 'import', '--file', path.join(dir, '.env')]);
+    const result = await runCommand({ mapping, args: ['secrets', 'import', '--file', path.join(dir, '.env')] });
 
     expect(result.exitCode).toBe(1);
     expect(result.errors).toContain('does not exist');
@@ -382,8 +378,8 @@ test('import with several stores and no --store fails listing the aliases', asyn
     await fs.writeFile(file, 'API_KEY=x\n');
     const mapping: SecretsMapping = { stores: { bw: bw.store, vault: vault.store }, secrets: {} };
 
-    const failed = await runCommand(mapping, ['secrets', 'import', '--file', file]);
-    const chosen = await runCommand(mapping, ['secrets', 'import', '--file', file, '--store', 'vault']);
+    const failed = await runCommand({ mapping, args: ['secrets', 'import', '--file', file] });
+    const chosen = await runCommand({ mapping, args: ['secrets', 'import', '--file', file, '--store', 'vault'] });
 
     expect(failed.exitCode).toBe(1);
     expect(failed.errors).toContain('bw, vault');
@@ -399,8 +395,8 @@ test('login prompts once through stdin and calls the store’s login with the re
     const bw = createMemoryStore({ id: 'bw', login: true });
     const mapping: SecretsMapping = { stores: { bw: bw.store }, secrets: {} };
 
-    const read = await runCommand(mapping, ['secrets', 'login'], { stdin: `${SENTINEL}\n` });
-    const write = await runCommand(mapping, ['secrets', 'login', 'bw', '--write'], { stdin: 'write-token' });
+    const read = await runCommand({ mapping, args: ['secrets', 'login'], stdin: `${SENTINEL}\n` });
+    const write = await runCommand({ mapping, args: ['secrets', 'login', 'bw', '--write'], stdin: 'write-token' });
 
     expect(read.exitCode).toBe(0);
     expect(write.exitCode).toBe(0);
@@ -416,11 +412,14 @@ test('login fails naming the alias of a store without login, or listing aliases 
     const plain = createMemoryStore({ id: 'plain' });
     const bw = createMemoryStore({ id: 'bw', login: true });
 
-    const noLogin = await runCommand({ stores: { plain: plain.store }, secrets: {} }, ['secrets', 'login']);
-    const ambiguous = await runCommand({ stores: { plain: plain.store, bw: bw.store }, secrets: {} }, [
-        'secrets',
-        'login',
-    ]);
+    const noLogin = await runCommand({
+        mapping: { stores: { plain: plain.store }, secrets: {} },
+        args: ['secrets', 'login'],
+    });
+    const ambiguous = await runCommand({
+        mapping: { stores: { plain: plain.store, bw: bw.store }, secrets: {} },
+        args: ['secrets', 'login'],
+    });
 
     expect(noLogin.exitCode).toBe(1);
     expect(noLogin.errors).toContain('"plain"');
@@ -446,7 +445,7 @@ test('refresh calls every store’s refresh with its mapped keys and leaves a st
         },
     };
 
-    const result = await runCommand(mapping, ['secrets', 'refresh']);
+    const result = await runCommand({ mapping, args: ['secrets', 'refresh'] });
 
     expect(result.exitCode).toBe(0);
     expect(bw.refreshes).toEqual([['API_KEY', 'TOKEN_KEY']]);
@@ -464,12 +463,15 @@ interface CommandResult {
 }
 
 interface RunCommandOptions {
+    mapping: SecretsMapping;
+    args: string[];
     stdin?: string;
     env?: EnvVariables;
 }
 
 /** Runs a `secrets` command through clipanion in-process, with a real container and the given mapping. */
-async function runCommand(mapping: SecretsMapping, args: string[], options: RunCommandOptions = {}) {
+async function runCommand(options: RunCommandOptions) {
+    const { mapping, args } = options;
     const provider = defineService({ name: 'AppSecrets', implements: SecretsProvider, setup: () => mapping });
     const cli = new Cli<CommandContext>({ binaryName: 'nzyme' });
     for (const command of defineSecretsCommands({ provider })) {

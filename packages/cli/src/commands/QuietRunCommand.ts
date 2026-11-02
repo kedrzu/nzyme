@@ -1,10 +1,9 @@
-import { spawn } from 'node:child_process';
 import { mkdir, open, readFile } from 'node:fs/promises';
-import { constants } from 'node:os';
 import path from 'node:path';
 
 import { Option } from '@nzyme/cli-core';
 import { Command } from '@nzyme/cli-core/Command.js';
+import { spawnForExitCode } from '@nzyme/cli-core/spawnForExitCode.js';
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
 
 import { getQuietRunLogFileName, renderQuietRunReport } from '../quietRun/quietRunReport.js';
@@ -14,9 +13,6 @@ const DEFAULT_TAIL = 30;
 
 /** Default maximum of error-signature lines shown on failure. */
 const DEFAULT_MATCHES = 40;
-
-/** Exit code a shell uses for a command it cannot find — reused when the command cannot be spawned. */
-const COMMAND_NOT_FOUND = 127;
 
 /**
  * Runs a command while keeping its full output OUT of a coding agent's context.
@@ -126,35 +122,28 @@ interface RunToLogOptions {
 /**
  * Runs the command with stdout and stderr both going to the log file — the same file descriptor, so
  * their lines interleave in the order they were written, as `>log 2>&1` does. stdin stays attached,
- * so an interactive prompt still works. Resolves with the exit code: `128 + signal` for a command
- * killed by a signal and {@link COMMAND_NOT_FOUND} for one that could not be spawned, as a shell
- * reports them.
+ * so an interactive prompt still works. Resolves with the exit code a shell would report (see
+ * {@link spawnForExitCode}).
  */
 async function runToLog(options: RunToLogOptions): Promise<number> {
     const { executable, args, logPath } = options;
     const log = await open(logPath, 'w');
 
     try {
-        const outcome = await new Promise<{ code: number } | { error: Error }>(resolve => {
-            const child = spawn(executable, args, { stdio: ['inherit', log.fd, log.fd] });
-            child.on('error', error => resolve({ error }));
-            child.on('close', (code, signal) => resolve({ code: code ?? 128 + getSignalNumber(signal) }));
+        const { exitCode, error } = await spawnForExitCode({
+            executable,
+            args,
+            stdio: ['inherit', log.fd, log.fd],
         });
 
-        if ('error' in outcome) {
-            await log.write(`quiet-run: ${executable}: ${outcome.error.message}\n`);
-            return COMMAND_NOT_FOUND;
+        if (error) {
+            await log.write(`quiet-run: ${executable}: ${error.message}\n`);
         }
 
-        return outcome.code;
+        return exitCode;
     } finally {
         await log.close();
     }
-}
-
-/** The number of a signal, or 0 when unknown. */
-function getSignalNumber(signal: NodeJS.Signals | null): number {
-    return signal ? constants.signals[signal] : 0;
 }
 
 /** Reads a non-negative integer tunable from the environment, falling back to its default. */

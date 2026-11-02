@@ -1,18 +1,12 @@
-import { spawn } from 'node:child_process';
-import { constants } from 'node:os';
-import type { Writable } from 'node:stream';
-
 import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
+import { spawnForExitCode } from '@nzyme/cli-core/spawnForExitCode.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 
 import { getSecretStores } from '../getSecretStores.js';
 import { describeMissingSecrets, resolveSecrets } from '../resolveSecrets.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
-
-/** Exit code a shell uses for a command it cannot find — reused when the command cannot be spawned. */
-const COMMAND_NOT_FOUND = 127;
 
 /**
  * Defines `secrets run -- <command>`: runs a command with every mapped secret in its environment.
@@ -68,21 +62,18 @@ export function defineSecretsRunCommand(options: SecretsCommandsOptions): Comman
                 throw new UsageError('No command to run.');
             }
 
-            return await runInherited(executable, args, childEnv, this.context.stderr);
+            const { exitCode, error } = await spawnForExitCode({
+                executable,
+                args,
+                stdio: 'inherit',
+                env: childEnv,
+            });
+
+            if (error) {
+                this.context.stderr.write(`Could not start ${executable}: ${error.message}\n`);
+            }
+
+            return exitCode;
         }
     };
-}
-
-/** Runs a command on this process's terminal, resolving with its exit code. */
-function runInherited(executable: string, args: string[], env: EnvVariables, stderr: Writable) {
-    return new Promise<number>(resolve => {
-        const child = spawn(executable, args, { stdio: 'inherit', env });
-        child.on('error', error => {
-            stderr.write(`Could not start ${executable}: ${error.message}\n`);
-            resolve(COMMAND_NOT_FOUND);
-        });
-        child.on('close', (code, signal) => {
-            resolve(code ?? 128 + (signal ? constants.signals[signal] : 0));
-        });
-    });
 }

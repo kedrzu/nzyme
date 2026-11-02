@@ -46,6 +46,21 @@ interface DialogTexts {
     message: string;
 }
 
+/** Options of {@link getDialogTools}. */
+interface GetDialogToolsOptions {
+    platform: NodeJS.Platform;
+    env: Record<string, string | undefined>;
+    texts: DialogTexts;
+}
+
+/** Options of {@link runDialogTool}. */
+interface RunDialogToolOptions {
+    tool: DialogTool;
+    env: Record<string, string | undefined>;
+    /** Milliseconds after which the dialog is killed. */
+    timeout: number;
+}
+
 const NOTICE = 'Nothing you type here is visible to the agent.';
 const DIALOG_TIMEOUT_SECONDS = 300;
 
@@ -88,12 +103,14 @@ export async function promptSecret(params: PromptSecretParams): Promise<PromptSe
     const title = `${params.name} - nzyme secrets`;
     const message = [params.name, params.hint, NOTICE].filter(Boolean).join('\n\n');
 
-    for (const tool of getDialogTools(params.platform ?? process.platform, env, {
-        name: params.name,
-        title,
-        message,
-    })) {
-        const result = await runDialogTool(tool, env, timeout);
+    const tools = getDialogTools({
+        platform: params.platform ?? process.platform,
+        env,
+        texts: { name: params.name, title, message },
+    });
+
+    for (const tool of tools) {
+        const result = await runDialogTool({ tool, env, timeout });
         if (result) {
             return result;
         }
@@ -109,12 +126,9 @@ export async function promptSecret(params: PromptSecretParams): Promise<PromptSe
     return { status: 'unavailable' };
 }
 
-function getDialogTools(
-    platform: NodeJS.Platform,
-    env: Record<string, string | undefined>,
-    texts: DialogTexts,
-): DialogTool[] {
-    const { name, title, message } = texts;
+function getDialogTools(options: GetDialogToolsOptions): DialogTool[] {
+    const { platform, env } = options;
+    const { name, title, message } = options.texts;
     switch (platform) {
         case 'darwin':
             return [{ command: 'osascript', args: ['-', title, message], script: APPLESCRIPT, cancelCodes: [] }];
@@ -153,11 +167,8 @@ function getDialogTools(
 }
 
 /** Runs one dialog tool; `null` means it could not open here and the next one should be tried. */
-async function runDialogTool(
-    tool: DialogTool,
-    env: Record<string, string | undefined>,
-    timeout: number,
-): Promise<PromptSecretResult | null> {
+async function runDialogTool(options: RunDialogToolOptions): Promise<PromptSecretResult | null> {
+    const { tool, env, timeout } = options;
     // A bare `Bun.which` ignores a PATH assigned at runtime, so the lookup gets it explicitly.
     const executable = Bun.which(tool.command, { PATH: env.PATH ?? '' });
     if (!executable) {

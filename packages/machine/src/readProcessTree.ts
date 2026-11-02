@@ -8,7 +8,7 @@ export interface ProcessInfo {
     ppid: number;
     /** Resident set size in bytes. */
     rssBytes: number;
-    /** `ps` start time (`lstart`, whitespace-normalized); differs when a pid is reused by another process. */
+    /** `ps` start time (`lstart` in UTC, whitespace-normalized); differs when a pid is reused by another process. */
     startTime: string;
 }
 
@@ -19,7 +19,8 @@ export interface ProcessInfo {
 export function readProcessTable(): ProcessInfo[] {
     const output = execFileSync('ps', ['-A', '-o', 'pid=,ppid=,rss=,lstart='], {
         encoding: 'utf8',
-        env: { ...process.env, LC_ALL: 'C' },
+        // `lstart` prints in the reader's locale and timezone, but start times are compared across processes.
+        env: { ...process.env, LC_ALL: 'C', TZ: 'UTC' },
         maxBuffer: 64 * 1024 * 1024,
     });
 

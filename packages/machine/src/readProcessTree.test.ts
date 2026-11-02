@@ -52,4 +52,24 @@ describe('readProcessTable', () => {
         expect(sumProcessTreeRss(table, process.pid)).toBeGreaterThan(0);
         expect(getProcessStartTime(table, process.pid)).toBeString();
     });
+
+    it('reports a start time that does not depend on the timezone of the reader', () => {
+        const inherited = process.env.TZ;
+
+        try {
+            process.env.TZ = 'Asia/Tokyo';
+            const tokyo = getProcessStartTime(readProcessTable(), process.pid);
+            process.env.TZ = 'America/New_York';
+            const newYork = getProcessStartTime(readProcessTable(), process.pid);
+
+            expect(tokyo).toBeDefined();
+            expect(newYork).toBe(tokyo);
+        } finally {
+            if (inherited === undefined) {
+                delete process.env.TZ;
+            } else {
+                process.env.TZ = inherited;
+            }
+        }
+    });
 });

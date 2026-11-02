@@ -36,7 +36,8 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "@nzyme/logging": "workspace:*"
+        "@nzyme/logging": "workspace:*",
+        "@nzyme/utils": "workspace:*"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

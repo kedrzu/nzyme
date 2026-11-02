@@ -354,6 +354,7 @@
       "version": "0.15.1",
       "dependencies": {
         "@nzyme/logging": "workspace:*",
+        "@nzyme/utils": "workspace:*",
       },
       "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

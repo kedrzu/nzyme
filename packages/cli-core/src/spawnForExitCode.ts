@@ -47,22 +47,25 @@ export function spawnForExitCode(options: SpawnForExitCodeOptions): Promise<Spaw
 
     return new Promise<SpawnForExitCodeResult>(resolve => {
         const child = spawn(executable, args, { stdio, env });
-        const forward = (signal: NodeJS.Signals) => child.kill(signal);
         process.on('SIGINT', noop);
         for (const signal of FORWARDED_SIGNALS) {
             process.on(signal, forward);
         }
 
-        const settle = (result: SpawnForExitCodeResult) => {
+        child.on('error', error => settle({ exitCode: COMMAND_NOT_FOUND, error }));
+        child.on('close', (code, signal) => settle({ exitCode: code ?? 128 + getSignalNumber(signal) }));
+
+        function forward(signal: NodeJS.Signals) {
+            child.kill(signal);
+        }
+
+        function settle(result: SpawnForExitCodeResult) {
             process.off('SIGINT', noop);
             for (const signal of FORWARDED_SIGNALS) {
                 process.off(signal, forward);
             }
             resolve(result);
-        };
-
-        child.on('error', error => settle({ exitCode: COMMAND_NOT_FOUND, error }));
-        child.on('close', (code, signal) => settle({ exitCode: code ?? 128 + getSignalNumber(signal) }));
+        }
     });
 }
 

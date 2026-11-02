@@ -10,9 +10,9 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
 - **Vue:** `vue`, `vue-utils`, `vue-ioc`, `vue-forms`, `vue-i18n`, `vue-transitions`, `dom-utils`
 - **Tooling:**
   - `cli` (the `nzyme` binary: `monorepo`, `localise`, `index`, `quiet-run`, `submodule`,
-    `depcheck`)
+    `depcheck`, `machine`)
   - `tsconfig`, `eslint` (also the oxlint preset), `oxlint` (custom rules), `project-utils`,
-    `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`
+    `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `machine`, `vitest`
 - **Integrations:** `aws`, `pulumi`, `slack`, `apis`
 - **Private, never published:** `github-cli`, `linear`, `sentry-cli`, `logging-ui`
 

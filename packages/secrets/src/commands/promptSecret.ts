@@ -1,7 +1,7 @@
 import type { Readable } from 'node:stream';
 import { ReadStream } from 'node:tty';
 
-import { readHiddenInput } from './readHiddenInput.js';
+import { readHiddenInput } from './utils/readHiddenInput.js';
 
 /** Options of {@link promptSecret}. */
 export interface PromptSecretParams {

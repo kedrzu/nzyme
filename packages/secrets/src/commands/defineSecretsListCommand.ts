@@ -2,8 +2,8 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 
-import { getSecretKey } from '../getSecretKey.js';
-import { resolveSecrets } from '../resolveSecrets.js';
+import { getSecretKey } from '../utils/getSecretKey.js';
+import { resolveSecrets } from '../utils/resolveSecrets.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
 
 /**

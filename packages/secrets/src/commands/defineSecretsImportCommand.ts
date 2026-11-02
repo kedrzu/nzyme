@@ -5,10 +5,10 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { readEnvVariables } from '@nzyme/project-utils/readEnvVariables.js';
 
-import { getSecretStores } from '../getSecretStores.js';
+import { getSecretStores } from '../utils/getSecretStores.js';
 import type { SecretStoreEntry } from '../SecretStore.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
-import { selectSecretStore } from './selectSecretStore.js';
+import { selectSecretStore } from './utils/selectSecretStore.js';
 
 /**
  * Defines `secrets import`: moves the variables of a `.env` file into a store.

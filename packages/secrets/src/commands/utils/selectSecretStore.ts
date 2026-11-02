@@ -1,7 +1,7 @@
 import { UsageError } from '@nzyme/cli-core';
 
-import type { SecretsMapping } from '../SecretsMapping.js';
-import type { SecretStore } from '../SecretStore.js';
+import type { SecretsMapping } from '../../SecretsMapping.js';
+import type { SecretStore } from '../../SecretStore.js';
 
 /**
  * A store picked by its alias.

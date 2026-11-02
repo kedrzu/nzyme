@@ -1,5 +1,5 @@
 import { getSecretKey } from './getSecretKey.js';
-import type { SecretRef, SecretStore } from './SecretStore.js';
+import type { SecretRef, SecretStore } from '../SecretStore.js';
 
 /**
  * A mapped secret with its store key resolved.

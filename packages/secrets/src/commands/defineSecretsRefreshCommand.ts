@@ -1,8 +1,8 @@
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
-import { getSecretStores } from '../getSecretStores.js';
-import { groupSecretsByStore } from '../groupSecretsByStore.js';
+import { getSecretStores } from '../utils/getSecretStores.js';
+import { groupSecretsByStore } from '../utils/groupSecretsByStore.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
 
 /**

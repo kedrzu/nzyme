@@ -2,9 +2,9 @@ import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
-import { getSecretKey } from '../getSecretKey.js';
+import { getSecretKey } from '../utils/getSecretKey.js';
 import { promptSecret } from './promptSecret.js';
-import { readHiddenInput } from './readHiddenInput.js';
+import { readHiddenInput } from './utils/readHiddenInput.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
 
 /**

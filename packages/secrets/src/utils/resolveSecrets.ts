@@ -1,8 +1,8 @@
 import type { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 
 import { groupSecretsByStore } from './groupSecretsByStore.js';
-import type { SecretsMapping } from './SecretsMapping.js';
-import type { SecretRef } from './SecretStore.js';
+import type { SecretsMapping } from '../SecretsMapping.js';
+import type { SecretRef } from '../SecretStore.js';
 
 /**
  * A mapped secret its store does not have, or has empty.

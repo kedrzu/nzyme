@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { Option } from '@nzyme/cli-core';
 import { Command } from '@nzyme/cli-core/Command.js';
-import { spawnForExitCode } from '@nzyme/cli-core/spawnForExitCode.js';
+import { spawnForExitCode } from '@nzyme/cli-core/utils/spawnForExitCode.js';
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
 
 import { getQuietRunLogFileName, renderQuietRunReport } from '../quietRun/quietRunReport.js';

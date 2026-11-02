@@ -1,11 +1,11 @@
 import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
-import { spawnForExitCode } from '@nzyme/cli-core/spawnForExitCode.js';
+import { spawnForExitCode } from '@nzyme/cli-core/utils/spawnForExitCode.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 
-import { getSecretStores } from '../getSecretStores.js';
-import { describeMissingSecrets, resolveSecrets } from '../resolveSecrets.js';
+import { getSecretStores } from '../utils/getSecretStores.js';
+import { describeMissingSecrets, resolveSecrets } from '../utils/resolveSecrets.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
 
 /**

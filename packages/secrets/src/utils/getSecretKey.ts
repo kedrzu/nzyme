@@ -1,4 +1,4 @@
-import type { SecretRef } from './SecretStore.js';
+import type { SecretRef } from '../SecretStore.js';
 
 /**
  * The store key of a mapped secret: the ref's own key, or else the environment variable name it is

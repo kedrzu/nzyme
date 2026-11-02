@@ -4,7 +4,7 @@ import type { Injectable } from '@nzyme/ioc/Injectable.js';
 import { Logger } from '@nzyme/logging/Logger.js';
 import { LoggerTransport } from '@nzyme/logging/LoggerTransport.js';
 
-import { describeMissingSecrets, resolveSecrets } from './resolveSecrets.js';
+import { describeMissingSecrets, resolveSecrets } from './utils/resolveSecrets.js';
 import type { SecretsMapping } from './SecretsMapping.js';
 
 /**

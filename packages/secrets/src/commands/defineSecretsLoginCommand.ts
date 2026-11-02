@@ -2,9 +2,9 @@ import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
-import { readHiddenInput } from './readHiddenInput.js';
+import { readHiddenInput } from './utils/readHiddenInput.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
-import { selectSecretStore } from './selectSecretStore.js';
+import { selectSecretStore } from './utils/selectSecretStore.js';
 
 /**
  * Defines `secrets login [alias]`: has a store obtain its credentials.

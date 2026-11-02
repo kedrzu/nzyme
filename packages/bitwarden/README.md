@@ -11,7 +11,8 @@ const bw = bitwarden({ project: '1f0c…' });
 
 - `project` — the Secrets Manager project id; the store reads and writes only its secrets.
 - `server` — Bitwarden Cloud US by default. `https://vault.bitwarden.eu` for Cloud EU, or the base URL
-  of a self-hosted server (which serves `/identity` and `/api`).
+  of a self-hosted server (which serves `/identity` and `/api`). It must use `https:`, except on
+  localhost, so the token never travels unencrypted.
 
 A read costs at most three requests (login, project listing, one fetch), however many keys.
 

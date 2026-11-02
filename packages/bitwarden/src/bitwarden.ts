@@ -16,7 +16,8 @@ export interface BitwardenOptions {
     project: string;
     /**
      * The Bitwarden server: a cloud vault URL (`https://vault.bitwarden.com`, `https://vault.bitwarden.eu`)
-     * or the base URL of a self-hosted server, which serves `/identity` and `/api`.
+     * or the base URL of a self-hosted server, which serves `/identity` and `/api`. It must use
+     * `https:`, except on localhost.
      * Defaults to Bitwarden Cloud US.
      */
     server?: string;
@@ -29,6 +30,8 @@ export interface BitwardenOptions {
 const ACCESS_TOKEN_ENV = 'BWS_ACCESS_TOKEN';
 const DEFAULT_SERVER = 'https://vault.bitwarden.com';
 const CLOUD_VAULT_HOSTS = new Set(['vault.bitwarden.com', 'vault.bitwarden.eu']);
+/** Hosts a plain `http:` server may have: the token sent to them never crosses the network. */
+const LOOPBACK_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 /** The server's limits on EncString lengths (`EncryptedStringLength` on its request models). */
 const MAX_ENCRYPTED_KEY_LENGTH = 1000;
@@ -47,6 +50,10 @@ export function bitwarden(options: BitwardenOptions): SecretStore {
     const { project, keychain = osKeychain, env = process.env } = options;
     const server = (options.server ?? DEFAULT_SERVER).replace(/\/+$/, '');
     const serverUrl = new URL(server);
+    if (serverUrl.protocol !== 'https:' && !LOOPBACK_HOSTNAMES.has(serverUrl.hostname)) {
+        throw new Error(`Bitwarden server ${server} must use https: the access token would be sent unencrypted`);
+    }
+
     const host = serverUrl.host + serverUrl.pathname.replace(/\/+$/, '');
     const urls = getServerUrls(server, serverUrl);
     const keychainName = `bitwarden:${host}`;

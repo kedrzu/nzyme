@@ -149,6 +149,15 @@ test('a keychain token is only sent to the server it was stored for', async () =
     expect(await keychain.get(`bitwarden:${new URL(stored.url).host}`)).toBe(stored.tokens.machine);
 });
 
+test('a plain http server off localhost is rejected, so the token is never sent unencrypted', () => {
+    const options = { project: PROJECT, keychain: createMemoryKeychain(), env: {} };
+
+    expect(() => bitwarden({ ...options, server: 'http://vault.example.com' })).toThrow(
+        'Bitwarden server http://vault.example.com must use https: the access token would be sent unencrypted',
+    );
+    expect(() => bitwarden({ ...options, server: 'https://vault.example.com' })).not.toThrow();
+});
+
 test('login prompts once, proves the token against the server, then stores it for the host', async () => {
     const fake = await startFakeBitwarden();
     const keychain = createMemoryKeychain();

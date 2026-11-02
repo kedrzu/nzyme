@@ -50,4 +50,4 @@ leaked token exposes the Secrets Manager projects its machine account can access
 Tokens, and values cached by `cached()`, are stored with `Bun.secrets` under the service
 `nzyme-secrets`.
 
-<!-- TODO(smoke test): which other processes of the same user can read keychain items written by `bun`, on macOS and on Linux. -->
+Any `bun` process of the same user can read them without a prompt: on macOS (Bun 1.4.4, checked 2026-11-02) a separate `bun` script read the tokens that `nzyme secrets login` had stored. The keychain protects them from other users and from a stolen disk, not from code you run. Linux is not checked yet.

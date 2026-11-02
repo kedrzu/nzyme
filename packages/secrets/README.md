@@ -78,9 +78,7 @@ service `nzyme-secrets`), so restarting a dev server makes no store call. `ttl` 
 required. A keychain failure only warns; the read falls through to the store. `secrets refresh`
 re-reads before the TTL runs out.
 
-Values are kept only in the keychain, never in a file. Which other processes can read them:
-
-<!-- TODO(smoke test): which other processes of the same user can read keychain items written by `bun`, on macOS and on Linux. -->
+Values are kept only in the keychain, never in a file. Any `bun` process of the same user can read them without a prompt: on macOS (Bun 1.4.4, checked 2026-11-02) a separate `bun` script read the tokens that `nzyme secrets login` had stored. The keychain protects them from other users and from a stolen disk, not from code you run. Linux is not checked yet.
 
 ## Commands from a plugin
 

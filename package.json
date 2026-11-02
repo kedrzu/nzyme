@@ -32,7 +32,7 @@
         "watch": "tsgo --build --watch"
     },
     "dependencies": {
-        "tslib": "2.8.1"
+        "tslib": "2.9.1"
     },
     "devDependencies": {
         "@nx/js": "^24.0.3",

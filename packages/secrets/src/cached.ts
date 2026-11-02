@@ -1,7 +1,6 @@
 import type { Keychain } from './osKeychain.js';
 import { osKeychain } from './osKeychain.js';
 import type { SecretStore, SecretStoreEntry } from './SecretStore.js';
-import { defineSecretStore } from './SecretStore.js';
 
 /**
  * Options of {@link cached}.
@@ -29,14 +28,14 @@ interface CachedValue {
 export function cached(store: SecretStore, options: CachedOptions): SecretStore {
     const keychain = options.keychain ?? osKeychain;
 
-    return defineSecretStore({
+    return {
         id: store.id,
         read,
         write,
         refresh,
         login: store.login?.bind(store),
         credentialEnv: store.credentialEnv,
-    });
+    };
 
     async function read(keys: string[]) {
         const items = await Promise.all(keys.map(loadItem));

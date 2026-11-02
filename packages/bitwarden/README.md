@@ -33,7 +33,7 @@ A read costs at most three requests (login, project listing, one fetch), however
    nzyme secrets login
    ```
 
-   With several stores, name one: `nzyme secrets login bw`. The token is read from a hidden prompt
+   The token is read from a hidden prompt
    (or stdin), checked against the server, and stored in the OS keychain under the server's host, so a
    token is never sent to another server. One token serves reading and writing.
 

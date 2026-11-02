@@ -2,8 +2,7 @@ import { afterEach, expect, setSystemTime, spyOn, test } from 'bun:test';
 
 import { cached } from './cached.js';
 import type { Keychain } from './osKeychain.js';
-import type { SecretStoreEntry } from './SecretStore.js';
-import { defineSecretStore } from './SecretStore.js';
+import type { SecretStore, SecretStoreEntry } from './SecretStore.js';
 
 const HOUR = 60 * 60 * 1000;
 const SENTINEL = 'sentinel-secret-value-9c1e';
@@ -91,10 +90,13 @@ test('write updates the cached item, so the next read sees the new value without
 
 test('a failing inner write leaves the cache untouched', async () => {
     const inner = createMemoryStore('bw', { A: 'a' });
-    const store = cached(defineSecretStore({ ...inner.store, write: () => Promise.reject(new Error('denied')) }), {
-        ttl: HOUR,
-        keychain: createMemoryKeychain(),
-    });
+    const store = cached(
+        { ...inner.store, write: () => Promise.reject(new Error('denied')) },
+        {
+            ttl: HOUR,
+            keychain: createMemoryKeychain(),
+        },
+    );
 
     await store.read(['A']);
     await expect(store.write([{ key: 'A', value: 'a2' }])).rejects.toThrow('denied');
@@ -222,13 +224,13 @@ test('a corrupt or foreign-shaped item is treated as a miss with a warning', asy
 
 test('delegates login and credentialEnv to the inner store', async () => {
     const logins: string[] = [];
-    const inner = defineSecretStore({
+    const inner: SecretStore = {
         ...createMemoryStore('bw', {}).store,
         credentialEnv: ['BWS_ACCESS_TOKEN'],
         login: async prompt => {
             logins.push(await prompt('Access token'));
         },
-    });
+    };
     const store = cached(inner, { ttl: HOUR, keychain: createMemoryKeychain() });
 
     await store.login?.(() => Promise.resolve('token'));
@@ -241,7 +243,7 @@ test('delegates login and credentialEnv to the inner store', async () => {
 function createMemoryStore(id: string, initial: Record<string, string>) {
     const values = new Map(Object.entries(initial));
     const reads: string[][] = [];
-    const store = defineSecretStore({
+    const store: SecretStore = {
         id,
         read: keys => {
             reads.push(keys);
@@ -262,7 +264,7 @@ function createMemoryStore(id: string, initial: Record<string, string>) {
 
             return Promise.resolve();
         },
-    });
+    };
 
     return { store, values, reads };
 }

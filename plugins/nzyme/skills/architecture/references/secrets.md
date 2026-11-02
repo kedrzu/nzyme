@@ -11,11 +11,11 @@ API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-c
   Bitwarden Secrets Manager (`@nzyme/bitwarden`, setup in `nzyme/packages/bitwarden/README.md`:
   a dedicated organization, a project per repo or environment, a machine account per machine,
   read-only on a machine that only reads). Another store (AWS Secrets Manager, SSM Parameter Store, …) has no implementation yet:
-  choosing it means writing it in nzyme first, through `defineSecretStore`, before this element can
+  choosing it means writing it in nzyme first, as a `SecretStore`, before this element can
   be applied. Say so instead of wiring a store that does not exist.
 - **A provider** — a `defineService<SecretsMapping>(…)` beside the code that reads
-  the variables (the app package, or a shared package when several apps share secrets), wrapped in
-  `cached(store, { ttl })`. Environments are the repo's: the provider picks the project or keys from
+  the variables (the app package, or a shared package when several apps share secrets): one store,
+  wrapped in `cached(store, { ttl })`, and each variable mapped to its key in it. Environments are the repo's: the provider picks the project or keys from
   an env variable in its `deps` (the app's `ENV`, for example).
 - **Startup** — each process that reads secrets in development calls
   `await loadSecrets(container, AppSecrets)` with its provider before resolving anything that reads them. Production gets the variables

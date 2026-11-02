@@ -20,7 +20,7 @@ every credential — the app's, a script's, a token a tool needs — is a mapped
 home and one way in.
 
 The repo's own `.claude/skills/secrets/SKILL.md` says what is true only there: how the CLI is
-invoked (`bun nzyme secrets …` or the product's CLI), where the provider lives, which stores and
+invoked (`bun nzyme secrets …` or the product's CLI), where the provider lives, which store and
 environments exist, whose machines can write. Read it; this skill uses `secrets …` for the command.
 API and options: `@nzyme/secrets` README (`nzyme/packages/secrets/README.md` in a product repo).
 
@@ -47,7 +47,8 @@ To check a value is right without seeing it, run what uses it: the app, an API c
 
 ## Adding a secret
 
-1. Add the mapping line to the provider (`DATABASE_URL: bw.secret()`), and declare the variable
+1. Add the mapping line to the provider (`DATABASE_URL: 'DATABASE_URL'`, the variable name to its
+   key in the store), and declare the variable
    with `defineEnvVariable` where the code reads it.
 2. Ask the user for the value through a masked dialog. Tell them it is coming — it opens outside
    the terminal — then run:

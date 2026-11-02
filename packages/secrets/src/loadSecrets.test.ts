@@ -9,43 +9,38 @@ import { createTestContainer } from '@nzyme/ioc-testing/createTestContainer.js';
 import { loadSecrets } from './loadSecrets.js';
 import type { SecretsMapping } from './SecretsMapping.js';
 import type { SecretStore } from './SecretStore.js';
-import { defineSecretStore } from './SecretStore.js';
 
 const SENTINEL = 'sentinel-secret-value-7f3a';
 
 const TELEGRAM_TOKEN = defineEnvVariable('TELEGRAM_TOKEN');
 
-test('loads secrets from two stores with one read per store, resolvable through defineEnvVariable', async () => {
+test('loads secrets with one read of the store, a shared key read once, resolvable through defineEnvVariable', async () => {
     const bw = createMemoryStore('bw', { TELEGRAM_TOKEN_UMBRA: SENTINEL, DB_PASSWORD: 'db-pass', API_KEY: 'api' });
-    const vault = createMemoryStore('vault', { SMTP_PASSWORD: 'smtp', OTHER: 'other' });
     const { container, logs } = createTestContainer();
     const env: EnvVariables = {};
     container.set(EnvVariables, env);
     const provider = defineAppSecrets({
-        stores: { bw: bw.store, vault: vault.store },
+        store: bw.store,
         secrets: {
-            TELEGRAM_TOKEN: bw.store.secret('TELEGRAM_TOKEN_UMBRA'),
-            DB_PASSWORD: bw.store.secret(),
-            API_KEY: bw.store.secret(),
-            SMTP_PASSWORD: vault.store.secret(),
-            OTHER: vault.store.secret(),
+            TELEGRAM_TOKEN: 'TELEGRAM_TOKEN_UMBRA',
+            DB_PASSWORD: 'DB_PASSWORD',
+            API_KEY: 'API_KEY',
+            LEGACY_API_KEY: 'API_KEY',
         },
     });
 
     await loadSecrets(container, provider);
 
     expect(bw.reads).toEqual([['TELEGRAM_TOKEN_UMBRA', 'DB_PASSWORD', 'API_KEY']]);
-    expect(vault.reads).toEqual([['SMTP_PASSWORD', 'OTHER']]);
     expect(env).toEqual({
         TELEGRAM_TOKEN: SENTINEL,
         DB_PASSWORD: 'db-pass',
         API_KEY: 'api',
-        SMTP_PASSWORD: 'smtp',
-        OTHER: 'other',
+        LEGACY_API_KEY: 'api',
     });
     expect(container.resolve(TELEGRAM_TOKEN)).toBe(SENTINEL);
     expect(logs.find(log => log.message === 'Secrets loaded')?.data).toEqual({
-        loaded: ['TELEGRAM_TOKEN', 'DB_PASSWORD', 'API_KEY', 'SMTP_PASSWORD', 'OTHER'],
+        loaded: ['TELEGRAM_TOKEN', 'DB_PASSWORD', 'API_KEY', 'LEGACY_API_KEY'],
         overridden: [],
     });
     expect(JSON.stringify(logs)).not.toContain(SENTINEL);
@@ -60,8 +55,8 @@ test('loads into the EnvVariables of a child container', async () => {
     const childEnv: EnvVariables = {};
     child.set(EnvVariables, childEnv);
     const provider = defineAppSecrets({
-        stores: { bw: bw.store },
-        secrets: { TELEGRAM_TOKEN: bw.store.secret('TELEGRAM_TOKEN_UMBRA') },
+        store: bw.store,
+        secrets: { TELEGRAM_TOKEN: 'TELEGRAM_TOKEN_UMBRA' },
     });
 
     await loadSecrets(child, provider);
@@ -76,12 +71,8 @@ test('a missing or empty secret fails naming it and its reference, writing nothi
     const env: EnvVariables = {};
     container.set(EnvVariables, env);
     const provider = defineAppSecrets({
-        stores: { bw: bw.store },
-        secrets: {
-            PRESENT: bw.store.secret(),
-            EMPTY_ONE: bw.store.secret('EMPTY'),
-            ABSENT_ONE: bw.store.secret('ABSENT'),
-        },
+        store: bw.store,
+        secrets: { PRESENT: 'PRESENT', EMPTY_ONE: 'EMPTY', ABSENT_ONE: 'ABSENT' },
     });
 
     const error = await loadSecrets(container, provider).catch((e: unknown) => e);
@@ -96,20 +87,16 @@ test('a missing or empty secret fails naming it and its reference, writing nothi
     expect(JSON.stringify(logs)).not.toContain(SENTINEL);
 });
 
-test('a failing read in one store writes nothing from the others', async () => {
-    const bw = createMemoryStore('bw', { TELEGRAM_TOKEN: SENTINEL });
-    const broken = defineSecretStore({
+test('a failing store read writes nothing', async () => {
+    const broken: SecretStore = {
         id: 'broken',
         read: () => Promise.reject(new Error('Store unreachable')),
         write: () => Promise.resolve(),
-    });
+    };
     const { container } = createTestContainer();
     const env: EnvVariables = {};
     container.set(EnvVariables, env);
-    const provider = defineAppSecrets({
-        stores: { bw: bw.store, broken },
-        secrets: { TELEGRAM_TOKEN: bw.store.secret(), OTHER: broken.secret() },
-    });
+    const provider = defineAppSecrets({ store: broken, secrets: { TELEGRAM_TOKEN: 'TELEGRAM_TOKEN' } });
 
     await expect(loadSecrets(container, provider)).rejects.toThrow('Store unreachable');
 
@@ -122,8 +109,8 @@ test('a non-empty variable already set wins and is reported by name only', async
     const env: EnvVariables = { TELEGRAM_TOKEN: 'local-token', EMPTY_SET: '' };
     container.set(EnvVariables, env);
     const provider = defineAppSecrets({
-        stores: { bw: bw.store },
-        secrets: { TELEGRAM_TOKEN: bw.store.secret(), EMPTY_SET: bw.store.secret() },
+        store: bw.store,
+        secrets: { TELEGRAM_TOKEN: 'TELEGRAM_TOKEN', EMPTY_SET: 'EMPTY_SET' },
     });
 
     await loadSecrets(container, provider);
@@ -144,7 +131,7 @@ function defineAppSecrets(mapping: SecretsMapping) {
 
 function createMemoryStore(id: string, data: Record<string, string>) {
     const reads: string[][] = [];
-    const store: SecretStore = defineSecretStore({
+    const store: SecretStore = {
         id,
         read(keys) {
             reads.push(keys);
@@ -158,7 +145,7 @@ function createMemoryStore(id: string, data: Record<string, string>) {
             return Promise.resolve(found);
         },
         write: () => Promise.resolve(),
-    });
+    };
 
     return { store, reads };
 }

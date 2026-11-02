@@ -4,7 +4,6 @@ import { Command } from '@nzyme/cli-core/Command.js';
 import { spawnForExitCode } from '@nzyme/cli-core/utils/spawnForExitCode.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 
-import { getSecretStores } from '../utils/getSecretStores.js';
 import { describeMissingSecrets, resolveSecrets } from '../utils/resolveSecrets.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
 
@@ -21,7 +20,7 @@ export function defineSecretsRunCommand(options: SecretsCommandsOptions): Comman
             details: `
                 Reads every mapped secret (it never writes) and runs the command with them as
                 environment variables — never as arguments. A variable already set wins over its
-                secret. The credentials of every store are removed from the command's environment.
+                secret. The store's credentials are removed from the command's environment.
                 Nothing is started when a secret is missing. The exit code is the command's own,
                 \`128 + signal\` when a signal killed it. This command reports on stderr only, so the
                 command's stdout is its own.
@@ -47,10 +46,8 @@ export function defineSecretsRunCommand(options: SecretsCommandsOptions): Comman
             }
 
             const childEnv: EnvVariables = { ...env };
-            for (const store of getSecretStores(mapping)) {
-                for (const name of store.credentialEnv ?? []) {
-                    delete childEnv[name];
-                }
+            for (const name of mapping.store.credentialEnv ?? []) {
+                delete childEnv[name];
             }
 
             for (const [name, value] of values) {

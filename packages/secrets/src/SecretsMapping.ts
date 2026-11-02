@@ -1,4 +1,4 @@
-import type { SecretRef, SecretStore } from './SecretStore.js';
+import type { SecretStore } from './SecretStore.js';
 
 /**
  * A project's secrets configuration. A project declares a service resolving to it,
@@ -6,8 +6,8 @@ import type { SecretRef, SecretStore } from './SecretStore.js';
  * `defineSecretsCommands`.
  */
 export interface SecretsMapping {
-    /** Store aliases, used by `login` even before any secret references them. */
-    stores: Record<string, SecretStore>;
-    /** Environment variable name to the secret it is loaded from. */
-    secrets: Record<string, SecretRef>;
+    /** The one store every secret of the mapping is read from and written to. */
+    store: SecretStore;
+    /** Environment variable name to the key of its secret in the store. Several names may share a key. */
+    secrets: Record<string, string>;
 }

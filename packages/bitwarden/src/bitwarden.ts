@@ -1,5 +1,4 @@
 import type { SecretPrompt, SecretStore, SecretStoreEntry } from '@nzyme/secrets/SecretStore.js';
-import { defineSecretStore } from '@nzyme/secrets/SecretStore.js';
 import type { Keychain } from '@nzyme/secrets/osKeychain.js';
 import { osKeychain } from '@nzyme/secrets/osKeychain.js';
 
@@ -58,13 +57,13 @@ export function bitwarden(options: BitwardenOptions): SecretStore {
     const urls = getServerUrls(server, serverUrl);
     const keychainName = `bitwarden:${host}`;
 
-    return defineSecretStore({
+    return {
         id: `bitwarden:${host}:${project}`,
         credentialEnv: [ACCESS_TOKEN_ENV],
         read,
         write,
         login,
-    });
+    };
 
     async function read(keys: string[]) {
         const client = await connect();

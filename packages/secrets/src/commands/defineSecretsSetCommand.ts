@@ -2,7 +2,6 @@ import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
-import { getSecretKey } from '../utils/getSecretKey.js';
 import { promptSecret } from './promptSecret.js';
 import { readHiddenInput } from './utils/readHiddenInput.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
@@ -48,8 +47,8 @@ export function defineSecretsSetCommand(options: SecretsCommandsOptions): Comman
 
         override async run() {
             const mapping = this.container.resolve(options.provider);
-            const ref = mapping.secrets[this.name];
-            if (!ref) {
+            const key = mapping.secrets[this.name];
+            if (key === undefined) {
                 throw new UsageError(`${this.name} is not a mapped secret.`);
             }
 
@@ -61,10 +60,9 @@ export function defineSecretsSetCommand(options: SecretsCommandsOptions): Comman
                 throw new UsageError(`The value of ${this.name} is empty; nothing was written.`);
             }
 
-            const key = getSecretKey(this.name, ref);
-            await ref.store.write([{ key, value }]);
+            await mapping.store.write([{ key, value }]);
             const length = prompted ? ` (${value.length} characters)` : '';
-            this.context.stdout.write(`${this.name} written to key ${key} in store ${ref.store.id}${length}.\n`);
+            this.context.stdout.write(`${this.name} written to key ${key} in store ${mapping.store.id}${length}.\n`);
         }
 
         /** The trimmed one-line value from `promptSecret`; every other outcome throws. */

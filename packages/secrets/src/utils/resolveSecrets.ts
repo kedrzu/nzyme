@@ -1,8 +1,6 @@
 import type { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 
-import { groupSecretsByStore } from './groupSecretsByStore.js';
 import type { SecretsMapping } from '../SecretsMapping.js';
-import type { SecretRef } from '../SecretStore.js';
 
 /**
  * A mapped secret its store does not have, or has empty.
@@ -36,42 +34,36 @@ export interface ResolvedSecrets {
 }
 
 /**
- * Reads the mapped secrets, one `read` per store however many secrets it holds. An empty value
- * counts as missing. Prints nothing and writes nothing: the caller decides what to do with the result.
+ * Reads the mapped secrets in one `read` of the mapping's store. An empty value counts as missing.
+ * Prints nothing and writes nothing: the caller decides what to do with the result.
  * @util
  */
 export async function resolveSecrets(mapping: SecretsMapping, env: EnvVariables): Promise<ResolvedSecrets> {
     const overridden: string[] = [];
-    const wanted: Record<string, SecretRef> = {};
+    const wanted: [name: string, key: string][] = [];
 
-    for (const [name, ref] of Object.entries(mapping.secrets)) {
+    for (const [name, key] of Object.entries(mapping.secrets)) {
         if (env[name]) {
             overridden.push(name);
         } else {
-            wanted[name] = ref;
+            wanted.push([name, key]);
         }
     }
 
-    const byStore = groupSecretsByStore(wanted);
-    const reads = await Promise.all(
-        Array.from(byStore, async ([store, entries]) => {
-            const keys = [...new Set(entries.map(entry => entry.key))];
-            const found = await store.read(keys);
-            return { store, entries, found };
-        }),
-    );
-
     const values = new Map<string, string>();
     const missing: MissingSecret[] = [];
+    if (wanted.length === 0) {
+        return { values, missing, overridden };
+    }
 
-    for (const { store, entries, found } of reads) {
-        for (const { name, key } of entries) {
-            const value = found.get(key);
-            if (value) {
-                values.set(name, value);
-            } else {
-                missing.push({ name, storeId: store.id, key });
-            }
+    const { store } = mapping;
+    const found = await store.read([...new Set(wanted.map(([, key]) => key))]);
+    for (const [name, key] of wanted) {
+        const value = found.get(key);
+        if (value) {
+            values.set(name, value);
+        } else {
+            missing.push({ name, storeId: store.id, key });
         }
     }
 

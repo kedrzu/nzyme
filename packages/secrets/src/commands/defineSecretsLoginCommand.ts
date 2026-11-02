@@ -1,13 +1,12 @@
-import { Option, UsageError } from '@nzyme/cli-core';
+import { UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
 import { readHiddenInput } from './utils/readHiddenInput.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
-import { selectSecretStore } from './utils/selectSecretStore.js';
 
 /**
- * Defines `secrets login [alias]`: has a store obtain its credentials.
+ * Defines `secrets login`: has the mapping's store obtain its credentials.
  * @__NO_SIDE_EFFECTS__
  */
 export function defineSecretsLoginCommand(options: SecretsCommandsOptions): CommandClass {
@@ -15,25 +14,19 @@ export function defineSecretsLoginCommand(options: SecretsCommandsOptions): Comm
         static override paths = [['secrets', 'login']];
         static override usage = Command.Usage({
             category: 'Secrets',
-            description: 'Obtain credentials for a store',
+            description: 'Obtain credentials for the store',
             details: `
-                Logs in to the store with the given alias (optional with one store). The store asks
-                for what it needs through a hidden prompt on a terminal, otherwise reads it from stdin;
-                it is never taken from an argument.
+                Logs in to the store of the secrets mapping. The store asks for what it needs
+                through a hidden prompt on a terminal, otherwise reads it from stdin; it is never
+                taken from an argument.
             `,
-            examples: [
-                ['Log in to the only store', 'secrets login'],
-                ['Log in to the bw store', 'secrets login bw'],
-            ],
+            examples: [['Log in to the store', 'secrets login']],
         });
 
-        alias = Option.String({ required: false, name: 'alias' });
-
         override async run() {
-            const mapping = this.container.resolve(options.provider);
-            const { alias, store } = selectSecretStore(mapping, this.alias);
+            const { store } = this.container.resolve(options.provider);
             if (!store.login) {
-                throw new UsageError(`Store "${alias}" has no login.`);
+                throw new UsageError(`Store ${store.id} has no login.`);
             }
 
             const stdin = this.context.stdin;
@@ -44,7 +37,7 @@ export function defineSecretsLoginCommand(options: SecretsCommandsOptions): Comm
                 const answer = await readHiddenInput(label, stdin);
                 if (!answer.trim()) {
                     throw new UsageError(
-                        `Nothing was entered (cancelled or empty); the login of store "${alias}" was not changed.`,
+                        `Nothing was entered (cancelled or empty); the login of store ${store.id} was not changed.`,
                     );
                 }
 

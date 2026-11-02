@@ -17,8 +17,8 @@ Every `@nzyme/*` package in a repo, `@nzyme/cli` included, must be one version, 
 
 ## The mapping
 
-A project describes its secrets in a service resolving to a `SecretsMapping`: stores by alias, and
-the environment variable each secret is loaded into.
+A project describes its secrets in a service resolving to a `SecretsMapping`: the one store its
+secrets live in, and each environment variable with the key of its secret in that store.
 
 ```ts
 // packages/app/src/AppSecrets.ts
@@ -33,19 +33,20 @@ export const AppSecrets = defineService<SecretsMapping>({
         const bw = cached(bitwarden({ project: '1f0c…' }), { ttl: 8 * 60 * 60 * 1000 });
 
         return {
-            stores: { bw },
+            store: bw,
             secrets: {
-                DATABASE_URL: bw.secret(),
-                STRIPE_KEY: bw.secret('stripe-test-key'),
+                DATABASE_URL: 'DATABASE_URL',
+                STRIPE_KEY: 'stripe-test-key',
             },
         };
     },
 });
 ```
 
-`store.secret()` uses the variable name as the key in the store; `store.secret(key)` names another
-key. The core knows no environments: a project picks stores and keys however its own conventions
-require, for example by depending on an env variable in `deps`.
+Several variables may share a key. A mapping has one store, so every secret a process loads comes
+from one place and `login` needs no store name. The core knows no environments: a project picks the
+store and keys however its own conventions require, for example by depending on an env variable in
+`deps`.
 
 ## Loading at startup
 
@@ -55,7 +56,7 @@ import { loadSecrets } from '@nzyme/secrets/loadSecrets.js';
 await loadSecrets(container, AppSecrets);
 ```
 
-`loadSecrets` reads every mapped secret, one batch per store, and writes them into that container's
+`loadSecrets` reads every mapped secret in one batch, and writes them into that container's
 `EnvVariables`, so `defineEnvVariable` resolves them. It takes the provider explicitly, as the
 `secrets` commands do, and resolves it from that container. Call it before resolving anything that
 reads those variables. Production, whose platform provides the
@@ -118,8 +119,8 @@ await execute({
 
 Values are never taken from arguments and never printed.
 
-- **`secrets login [store]`** — stores credentials for a store (the alias is optional with one
-  store). The token is read from a hidden prompt, or from stdin.
+- **`secrets login`** — stores credentials for the mapping's store. The token is read from a hidden
+  prompt, or from stdin.
 - **`secrets set <NAME>`** — writes one mapped secret. The value comes from a
   hidden prompt, or from stdin: `nzyme secrets set DB_PASSWORD < password.txt`.
 - **`secrets set <NAME> --prompt[=<hint>]`** — how an agent asks the user for a secret: the user
@@ -131,13 +132,13 @@ Values are never taken from arguments and never printed.
   when nothing was entered (cancelled, blank or timed out after 5 minutes), when the value spans
   several lines, or when no dialog or terminal is available — then ask the user to run
   `nzyme secrets set <NAME>` in their own terminal and confirm with `nzyme secrets list`.
-- **`secrets list`** — each mapped name with its store, key and status (`resolves`, `missing`,
+- **`secrets list`** — each mapped name with its store id, key and status (`resolves`, `missing`,
   `overridden by environment`); exits non-zero when one is missing.
 - **`secrets run -- <command>`** — runs a command with the mapped secrets as environment variables.
-  A variable already set wins; store credentials (`BWS_ACCESS_TOKEN`) are removed
+  A variable already set wins; the store's credentials (`BWS_ACCESS_TOKEN`) are removed
   from the child's environment; nothing starts when a secret is missing. The exit code is the
   command's own.
-- **`secrets refresh`** — re-reads the mapped secrets of every caching store.
+- **`secrets refresh`** — re-reads the mapped secrets into the store's cache, when it has one.
 
 The startup step, `run` and `list` only read; only `set` writes. A store keeps one
 credential per machine, so a machine that only runs the app logs in with read-only credentials (for
@@ -147,5 +148,5 @@ Bitwarden, a read-only machine account) and its writes are refused.
 
 - [`@nzyme/bitwarden`](../bitwarden/README.md) — Bitwarden Secrets Manager.
 
-A store implements `SecretStore` (`read`, `write`, optional `login`, `refresh`, `credentialEnv`)
-through `defineSecretStore`, which adds `secret()`.
+A store is an object implementing `SecretStore` (`id`, `read`, `write`, optional `login`, `refresh`,
+`credentialEnv`).

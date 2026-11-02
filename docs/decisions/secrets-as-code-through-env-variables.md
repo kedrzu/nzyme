@@ -41,17 +41,21 @@ Healed has its own environments and AWS-account conventions, which other repos d
   and env variables.
 - **A `SecretsProvider` ioc interface** for the project to implement. Dropped once `loadSecrets` and
   the commands took the provider explicitly: nothing resolved the interface any more.
+- **A mapping drawing from several stores**, by alias, each secret referencing its store. Dropped in
+  review: only Bitwarden exists, and the aliases, the per-store grouping and `login <alias>` served
+  a second store no repo has yet. A mapping has one store; a second store, when one arrives, is a
+  new decision.
 - **A startup step as a command.** Rejected: see the root-container check above.
 - **A new source inside `defineEnvVariable`.** Rejected: writing into `EnvVariables` before anything
   resolves keeps `defineEnvVariable` unchanged.
 
 ## Decision
 
-`@nzyme/secrets` defines the `SecretStore` contract, the `SecretsMapping` type (stores by alias,
-env-variable name to secret reference) and `loadSecrets(container, provider)`, a plain function an
+`@nzyme/secrets` defines the `SecretStore` contract, the `SecretsMapping` type (one store, and
+each env-variable name to its key in that store) and `loadSecrets(container, provider)`, a plain function an
 app calls at startup. It takes the provider explicitly, as `defineSecretsCommands({ provider })` does,
-so there is no registration to forget. It reads every mapped secret, one batch per store, and writes them into that container's
-`EnvVariables`. The core knows no environments: a project's provider chooses stores and keys however
+so there is no registration to forget. It reads every mapped secret in one batch and writes them into that container's
+`EnvVariables`. The core knows no environments: a project's provider chooses the store and keys however
 its conventions require.
 
 - **Precedence:** a non-empty variable already set wins over its secret and is reported by name.

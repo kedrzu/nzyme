@@ -6,30 +6,31 @@ import { execute } from '@nzyme/cli-core/execute.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 
 import type { SecretsMapping } from '../../SecretsMapping.js';
-import type { SecretRef, SecretStore } from '../../SecretStore.js';
-import { defineSecretStore } from '../../SecretStore.js';
+import type { SecretStore } from '../../SecretStore.js';
 import { defineSecretsCommands } from '../defineSecretsCommands.js';
 
 /** The value of `API_KEY`, which must never reach anything but the child's environment. */
 export const SENTINEL = 'sentinel-secret-value-run-4b2d';
 
-const bw = createStore({ id: 'bw', data: { API_KEY: SENTINEL, DB_PASSWORD: 'db-pass' }, credentialEnv: ['BW_TOKEN'] });
-// Referenced by a secret but not listed under `stores`: its credentials must be stripped too.
-const vault = createStore({ id: 'vault', data: { SMTP_PASSWORD: 'smtp-pass' }, credentialEnv: ['VAULT_TOKEN'] });
+const bw = createStore({
+    id: 'bw',
+    data: { API_KEY: SENTINEL, DB_PASSWORD: 'db-pass', SMTP: 'smtp-pass' },
+    credentialEnv: ['BW_TOKEN', 'BW_ORGANIZATION'],
+});
 
-const secrets: Record<string, SecretRef> = {
-    API_KEY: bw.secret(),
-    DB_PASSWORD: bw.secret(),
-    SMTP_PASSWORD: vault.secret(),
+const secrets: Record<string, string> = {
+    API_KEY: 'API_KEY',
+    DB_PASSWORD: 'DB_PASSWORD',
+    SMTP_PASSWORD: 'SMTP',
 };
 
 if (process.env.FIXTURE_MISSING) {
-    secrets.MISSING_ONE = bw.secret('NO_SUCH_KEY');
+    secrets.MISSING_ONE = 'NO_SUCH_KEY';
 }
 
 const AppSecrets = defineService<SecretsMapping>({
     name: 'AppSecrets',
-    setup: () => ({ stores: { bw }, secrets }),
+    setup: () => ({ store: bw, secrets }),
 });
 
 if (import.meta.main) {
@@ -46,7 +47,7 @@ interface CreateStoreOptions {
 
 function createStore(options: CreateStoreOptions): SecretStore {
     const { id, data, credentialEnv } = options;
-    return defineSecretStore({
+    return {
         id,
         credentialEnv,
         read(keys) {
@@ -61,5 +62,5 @@ function createStore(options: CreateStoreOptions): SecretStore {
             return Promise.resolve(found);
         },
         write: () => Promise.resolve(),
-    });
+    };
 }

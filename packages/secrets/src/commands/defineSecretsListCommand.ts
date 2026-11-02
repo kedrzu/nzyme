@@ -2,7 +2,6 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 
-import { getSecretKey } from '../utils/getSecretKey.js';
 import { resolveSecrets } from '../utils/resolveSecrets.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
 
@@ -30,7 +29,7 @@ export function defineSecretsListCommand(options: SecretsCommandsOptions): Comma
             const missingNames = new Set(missing.map(secret => secret.name));
             const overriddenNames = new Set(overridden);
 
-            for (const [name, ref] of Object.entries(mapping.secrets)) {
+            for (const [name, key] of Object.entries(mapping.secrets)) {
                 let status = 'resolves';
                 if (overriddenNames.has(name)) {
                     status = 'overridden by environment';
@@ -38,7 +37,7 @@ export function defineSecretsListCommand(options: SecretsCommandsOptions): Comma
                     status = 'missing';
                 }
 
-                this.context.stdout.write(`${name}  ${ref.store.id}:${getSecretKey(name, ref)}  ${status}\n`);
+                this.context.stdout.write(`${name}  ${mapping.store.id}:${key}  ${status}\n`);
             }
 
             return missing.length > 0 ? 1 : 0;

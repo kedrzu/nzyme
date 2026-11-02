@@ -12,8 +12,7 @@ import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 
 import type { SecretsMapping } from '../SecretsMapping.js';
-import type { SecretStore, SecretStoreDefinition, SecretStoreEntry } from '../SecretStore.js';
-import { defineSecretStore } from '../SecretStore.js';
+import type { SecretStore, SecretStoreEntry } from '../SecretStore.js';
 import { SENTINEL as RUN_SENTINEL } from './__fixtures__/secretsCli.js';
 import { defineSecretsCommands } from './defineSecretsCommands.js';
 
@@ -68,15 +67,15 @@ const PRINT_ENV = `process.stdout.write(JSON.stringify({
     DB_PASSWORD: process.env.DB_PASSWORD,
     SMTP_PASSWORD: process.env.SMTP_PASSWORD,
     BW_TOKEN: process.env.BW_TOKEN ?? null,
-    VAULT_TOKEN: process.env.VAULT_TOKEN ?? null,
+    BW_ORGANIZATION: process.env.BW_ORGANIZATION ?? null,
     KEPT: process.env.KEPT,
     argv: process.argv,
 }))`;
 
-test('run passes every mapped secret via env, strips every store credential, and keeps stdout the child’s', async () => {
+test('run passes every mapped secret via env, strips the store’s credentials, and keeps stdout the child’s', async () => {
     const result = await runFixtureCli(['secrets', 'run', '--', process.execPath, '-e', PRINT_ENV, 'arg'], {
         BW_TOKEN: 'bw-credential',
-        VAULT_TOKEN: 'vault-credential',
+        BW_ORGANIZATION: 'bw-organization',
         KEPT: 'kept',
     });
 
@@ -88,7 +87,7 @@ test('run passes every mapped secret via env, strips every store credential, and
         DB_PASSWORD: 'db-pass',
         SMTP_PASSWORD: 'smtp-pass',
         BW_TOKEN: null,
-        VAULT_TOKEN: null,
+        BW_ORGANIZATION: null,
         KEPT: 'kept',
     });
     expect(JSON.stringify(child.argv)).not.toContain(RUN_SENTINEL);
@@ -135,11 +134,11 @@ test('run starts nothing when a secret is missing and names it on stderr', async
 
 // --- set ---
 
-test('set writes the stdin value, minus one trailing newline, to the ref’s store and key, and never prints it', async () => {
+test('set writes the stdin value, minus one trailing newline, to the mapped key, and never prints it', async () => {
     const bw = createMemoryStore({ id: 'bw' });
     const mapping: SecretsMapping = {
-        stores: { bw: bw.store },
-        secrets: { TELEGRAM_TOKEN: bw.store.secret('TELEGRAM_TOKEN_UMBRA'), API_KEY: bw.store.secret() },
+        store: bw.store,
+        secrets: { TELEGRAM_TOKEN: 'TELEGRAM_TOKEN_UMBRA', API_KEY: 'API_KEY' },
     };
 
     const first = await runCommand({ mapping, args: ['secrets', 'set', 'TELEGRAM_TOKEN'], stdin: `${SENTINEL}\n\n` });
@@ -159,7 +158,7 @@ test('set of an unmapped name fails naming it and writes nothing', async () => {
     const bw = createMemoryStore({ id: 'bw' });
 
     const result = await runCommand({
-        mapping: { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        mapping: { store: bw.store, secrets: { API_KEY: 'API_KEY' } },
         args: ['secrets', 'set', 'NOT_MAPPED'],
         stdin: SENTINEL,
     });
@@ -171,7 +170,7 @@ test('set of an unmapped name fails naming it and writes nothing', async () => {
 
 test('set refuses an empty value and a value given as an argument', async () => {
     const bw = createMemoryStore({ id: 'bw' });
-    const mapping: SecretsMapping = { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } };
+    const mapping: SecretsMapping = { store: bw.store, secrets: { API_KEY: 'API_KEY' } };
 
     const empty = await runCommand({ mapping, args: ['secrets', 'set', 'API_KEY'], stdin: '\n' });
     const argument = await runCommand({ mapping, args: ['secrets', 'set', 'API_KEY', SENTINEL], stdin: 'from-stdin' });
@@ -186,8 +185,8 @@ test('set refuses an empty value and a value given as an argument', async () => 
 test('set --prompt writes the trimmed dialog value, ignores stdin, and prints only name, key, store and length', async () => {
     const bw = createMemoryStore({ id: 'bw' });
     const mapping: SecretsMapping = {
-        stores: { bw: bw.store },
-        secrets: { TELEGRAM_TOKEN: bw.store.secret('TELEGRAM_TOKEN_UMBRA') },
+        store: bw.store,
+        secrets: { TELEGRAM_TOKEN: 'TELEGRAM_TOKEN_UMBRA' },
     };
     await standInDialog(`  ${SENTINEL}  \n`);
 
@@ -211,7 +210,7 @@ test('set --no-prompt reads the value from stdin and opens no dialog', async () 
     await standInDialog('dialog-value');
 
     const result = await runCommand({
-        mapping: { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        mapping: { store: bw.store, secrets: { API_KEY: 'API_KEY' } },
         args: ['secrets', 'set', 'API_KEY', '--no-prompt'],
         stdin: SENTINEL,
     });
@@ -227,7 +226,7 @@ test('set --prompt=<hint> shows the hint in the dialog', async () => {
     await standInDialog(SENTINEL);
 
     const result = await runCommand({
-        mapping: { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        mapping: { store: bw.store, secrets: { API_KEY: 'API_KEY' } },
         args: ['secrets', 'set', 'API_KEY', `--prompt=${hint}`],
     });
 
@@ -240,7 +239,7 @@ test('set --prompt refuses a multi-line value without printing it and writes not
     await standInDialog(`${SENTINEL}\nsecond-line-value\n`);
 
     const result = await runCommand({
-        mapping: { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        mapping: { store: bw.store, secrets: { API_KEY: 'API_KEY' } },
         args: ['secrets', 'set', 'API_KEY', '--prompt'],
     });
 
@@ -259,7 +258,7 @@ test.each([
     await standInDialog(answer);
 
     const result = await runCommand({
-        mapping: { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        mapping: { store: bw.store, secrets: { API_KEY: 'API_KEY' } },
         args: ['secrets', 'set', 'API_KEY', '--prompt'],
         stdin: SENTINEL,
     });
@@ -276,7 +275,7 @@ test('set --prompt with no dialog tool and no terminal fails naming the command 
     await useDialogDir();
 
     const result = await runCommand({
-        mapping: { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        mapping: { store: bw.store, secrets: { API_KEY: 'API_KEY' } },
         args: ['secrets', 'set', 'API_KEY', '--prompt'],
         stdin: SENTINEL,
     });
@@ -292,7 +291,7 @@ test('set --prompt of an unmapped name fails naming it before opening a dialog',
     await standInDialog(SENTINEL);
 
     const result = await runCommand({
-        mapping: { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        mapping: { store: bw.store, secrets: { API_KEY: 'API_KEY' } },
         args: ['secrets', 'set', 'NOT_MAPPED', '--prompt'],
     });
 
@@ -307,12 +306,8 @@ test('set --prompt of an unmapped name fails naming it before opening a dialog',
 test('list shows each name’s store, key and status, never a value, and fails when any is missing', async () => {
     const bw = createMemoryStore({ id: 'bw', data: { API_KEY: SENTINEL, DB: 'db-value' } });
     const mapping: SecretsMapping = {
-        stores: { bw: bw.store },
-        secrets: {
-            API_KEY: bw.store.secret(),
-            DB_PASSWORD: bw.store.secret('DB'),
-            GONE: bw.store.secret(),
-        },
+        store: bw.store,
+        secrets: { API_KEY: 'API_KEY', DB_PASSWORD: 'DB', GONE: 'GONE' },
     };
 
     const result = await runCommand({ mapping, args: ['secrets', 'list'], env: { DB_PASSWORD: 'env-value' } });
@@ -334,7 +329,7 @@ test('list exits 0 when every secret resolves', async () => {
     const bw = createMemoryStore({ id: 'bw', data: { API_KEY: SENTINEL } });
 
     const result = await runCommand({
-        mapping: { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        mapping: { store: bw.store, secrets: { API_KEY: 'API_KEY' } },
         args: ['secrets', 'list'],
     });
 
@@ -346,7 +341,7 @@ test('list exits 0 when every secret resolves', async () => {
 
 test('login prompts once through stdin and calls the store’s login with the answer', async () => {
     const bw = createMemoryStore({ id: 'bw', login: true });
-    const mapping: SecretsMapping = { stores: { bw: bw.store }, secrets: {} };
+    const mapping: SecretsMapping = { store: bw.store, secrets: {} };
 
     const result = await runCommand({ mapping, args: ['secrets', 'login'], stdin: `${SENTINEL}\n` });
 
@@ -357,7 +352,7 @@ test('login prompts once through stdin and calls the store’s login with the an
 
 test('login with an empty answer fails saying nothing was entered and never reaches the store', async () => {
     const bw = createMemoryStore({ id: 'bw', login: true });
-    const mapping: SecretsMapping = { stores: { bw: bw.store }, secrets: {} };
+    const mapping: SecretsMapping = { store: bw.store, secrets: {} };
 
     const result = await runCommand({ mapping, args: ['secrets', 'login'], stdin: ' \n' });
 
@@ -366,51 +361,41 @@ test('login with an empty answer fails saying nothing was entered and never reac
     expect(bw.logins).toEqual([]);
 });
 
-test('login fails naming the alias of a store without login, or listing aliases when ambiguous', async () => {
+test('login fails naming a store without login', async () => {
     const plain = createMemoryStore({ id: 'plain' });
-    const bw = createMemoryStore({ id: 'bw', login: true });
 
-    const noLogin = await runCommand({
-        mapping: { stores: { plain: plain.store }, secrets: {} },
-        args: ['secrets', 'login'],
-    });
-    const ambiguous = await runCommand({
-        mapping: { stores: { plain: plain.store, bw: bw.store }, secrets: {} },
-        args: ['secrets', 'login'],
-    });
+    const result = await runCommand({ mapping: { store: plain.store, secrets: {} }, args: ['secrets', 'login'] });
 
-    expect(noLogin.exitCode).toBe(1);
-    expect(noLogin.errors).toContain('"plain"');
-    expect(ambiguous.exitCode).toBe(1);
-    expect(ambiguous.errors).toContain('plain, bw');
-    expect(bw.logins).toEqual([]);
+    expect(result.exitCode).toBe(1);
+    expect(result.errors).toContain('Store plain has no login');
 });
 
 // --- refresh ---
 
-test('refresh calls every store’s refresh with its mapped keys and leaves a store without one alone', async () => {
+test('refresh calls the store’s refresh with every mapped key once', async () => {
     const bw = createMemoryStore({ id: 'bw', refresh: true });
-    // Only referenced, not listed under `stores`.
-    const vault = createMemoryStore({ id: 'vault', refresh: true });
-    const plain = createMemoryStore({ id: 'plain' });
     const mapping: SecretsMapping = {
-        stores: { bw: bw.store, plain: plain.store },
-        secrets: {
-            API_KEY: bw.store.secret(),
-            TOKEN: bw.store.secret('TOKEN_KEY'),
-            SMTP: vault.store.secret(),
-            OTHER: plain.store.secret(),
-        },
+        store: bw.store,
+        secrets: { API_KEY: 'API_KEY', TOKEN: 'TOKEN_KEY', LEGACY_TOKEN: 'TOKEN_KEY' },
     };
 
     const result = await runCommand({ mapping, args: ['secrets', 'refresh'] });
 
     expect(result.exitCode).toBe(0);
     expect(bw.refreshes).toEqual([['API_KEY', 'TOKEN_KEY']]);
-    expect(vault.refreshes).toEqual([['SMTP']]);
+    expect(result.stdout).toBe('Refreshed store bw.\n');
+});
+
+test('refresh leaves a store without a cache alone', async () => {
+    const plain = createMemoryStore({ id: 'plain' });
+
+    const result = await runCommand({
+        mapping: { store: plain.store, secrets: { API_KEY: 'API_KEY' } },
+        args: ['secrets', 'refresh'],
+    });
+
+    expect(result.exitCode).toBe(0);
     expect(plain.reads).toEqual([]);
-    expect(plain.writes).toEqual([]);
-    expect(result.stdout).toBe('Refreshed store bw.\nRefreshed store vault.\n');
 });
 
 interface CommandResult {
@@ -545,7 +530,7 @@ function createMemoryStore(options: MemoryStoreOptions) {
     const logins: string[] = [];
     const refreshes: string[][] = [];
 
-    const definition: SecretStoreDefinition = {
+    const store: SecretStore = {
         id: options.id,
         credentialEnv: options.credentialEnv,
         read(keys) {
@@ -567,18 +552,17 @@ function createMemoryStore(options: MemoryStoreOptions) {
     };
 
     if (options.login) {
-        definition.login = async prompt => {
+        store.login = async prompt => {
             logins.push(await prompt('Access token'));
         };
     }
 
     if (options.refresh) {
-        definition.refresh = keys => {
+        store.refresh = keys => {
             refreshes.push(keys);
             return Promise.resolve();
         };
     }
 
-    const store: SecretStore = defineSecretStore(definition);
     return { store, reads, writes, logins, refreshes };
 }

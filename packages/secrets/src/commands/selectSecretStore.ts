@@ -13,6 +13,7 @@ export interface SelectedSecretStore {
 
 /**
  * Picks the store a command acts on: the given alias, or the only listed store when there is one.
+ * @util
  */
 export function selectSecretStore(mapping: SecretsMapping, alias: string | undefined): SelectedSecretStore {
     const entries = Object.entries(mapping.stores);

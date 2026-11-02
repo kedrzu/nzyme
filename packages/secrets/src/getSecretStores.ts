@@ -3,6 +3,7 @@ import type { SecretStore } from './SecretStore.js';
 
 /**
  * Every store of a mapping: the listed ones plus those only a secret references, each once.
+ * @util
  * @__NO_SIDE_EFFECTS__
  */
 export function getSecretStores(mapping: SecretsMapping): SecretStore[] {

@@ -39,8 +39,19 @@ export function defineSecretsLoginCommand(options: SecretsCommandsOptions): Comm
 
             const access = this.write ? 'write' : 'read';
             const stdin = this.context.stdin;
-            await store.login({ access, prompt: label => readHiddenInput(label, stdin) });
+            await store.login({ access, prompt: readAnswer });
             this.context.stdout.write(`Logged in to store ${store.id} for ${access} access.\n`);
+
+            async function readAnswer(label: string) {
+                const answer = await readHiddenInput(label, stdin);
+                if (!answer.trim()) {
+                    throw new UsageError(
+                        `Nothing was entered (cancelled or empty); the login of store "${alias}" was not changed.`,
+                    );
+                }
+
+                return answer;
+            }
         }
     };
 }

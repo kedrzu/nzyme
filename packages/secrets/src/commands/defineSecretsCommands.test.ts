@@ -408,6 +408,17 @@ test('login prompts once through stdin and calls the store’s login with the re
     expectNoLeak(write, 'write-token');
 });
 
+test('login with an empty answer fails saying nothing was entered and never reaches the store', async () => {
+    const bw = createMemoryStore({ id: 'bw', login: true });
+    const mapping: SecretsMapping = { stores: { bw: bw.store }, secrets: {} };
+
+    const result = await runCommand({ mapping, args: ['secrets', 'login'], stdin: ' \n' });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.errors).toContain('Nothing was entered');
+    expect(bw.logins).toEqual([]);
+});
+
 test('login fails naming the alias of a store without login, or listing aliases when ambiguous', async () => {
     const plain = createMemoryStore({ id: 'plain' });
     const bw = createMemoryStore({ id: 'bw', login: true });

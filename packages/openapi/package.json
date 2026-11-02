@@ -40,15 +40,15 @@
         "@nzyme/fetch-utils": "workspace:*",
         "@nzyme/types": "workspace:*",
         "@nzyme/utils": "workspace:*",
-        "ufo": "1.6.4",
-        "undici-types": "8.12.2"
+        "ufo": "^1.6.4",
+        "undici-types": "^8.12.2"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
-        "@types/bun": "^1.4.3",
+        "@types/bun": "^1.4.4",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "openapi-typescript": "7.13.0",
-        "oxfmt": "0.73.0"
+        "oxfmt": "0.74.0"
     },
     "depcheck": {
         "ignoreDeps": [

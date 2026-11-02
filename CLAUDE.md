@@ -78,6 +78,9 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
   it touches (`ioc`, `logging`, `translations`, `forms`, `composables`, `testing`). These skills ship from
   this repo in `plugins/nzyme/` and are what consumer repos install too, so fix them here when they are
   wrong.
+- **User-invoked skills** in the same plugin serve product repos: `/nzyme:architecture` sets up or
+  updates a repo and routes to the practice skills `ui`, `drizzle` and `api-clients`. Here they matter
+  when you change them, or the packages and docs they link.
 - **ADRs** go to `docs/decisions/<title-slug>.md`, never numbered.
 
 # TypeScript rules
@@ -102,9 +105,22 @@ The `git-workflow` skill covers what a contributor does.
 `repository`, `publishConfig.access: "public"`, and `files` covering every `exports`/`main`/`types`
 target (`source` targets excepted). The rules are in `eslint.config.mjs` and `@nzyme/eslint`.
 
-Not linted: internal dependencies must be `workspace:*`, and a public package must not depend on a
-private one. `bun scripts/publish.ts --dry-run` checks the private dependency and that no `workspace:`
-specifier survives packing (versions already on npm are skipped, not packed).
+Not linted:
+
+- internal dependencies as `workspace:*`, and no dependency on a private package;
+- external dependencies as ranges (`^`), never exact pins: the product's lockfile chooses the version.
+
+Framework singletons (instances or types shared with the consumer, or the host of a plugin/preset:
+`vue`, `vue-router`, `@pulumi/*`, `nuxt`, `vite`, `rollup`, `vitest`, `eslint`) are
+`peerDependencies`, with the same range repeated in `devDependencies` (the submodule consumer installs
+dev dependencies too, so a different specifier makes a second copy).
+
+- Raise a range's lower bound only when the code needs the newer version, not because one exists.
+- Moving a range to a new major is a breaking change: `feat!`/`fix!` with a `BREAKING CHANGE:` footer.
+- `checkDependencyRanges()` in `scripts/publish.ts` enforces this and runs in `bun run test`.
+
+`bun scripts/publish.ts --dry-run` checks that the ranges hold, that no public package depends on a private one and
+that no `workspace:` specifier survives packing (versions already on npm are skipped, not packed).
 
 # Git
 

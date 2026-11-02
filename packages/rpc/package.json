@@ -42,14 +42,14 @@
         "@nzyme/logging": "workspace:*",
         "@nzyme/types": "workspace:*",
         "@nzyme/utils": "workspace:*",
-        "@standard-schema/spec": "1.1.0",
-        "ufo": "1.6.4",
-        "vitest": "4.1.10"
+        "@standard-schema/spec": "^1.1.0",
+        "ufo": "^1.6.4",
+        "vitest": "^4.1.10"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
         "@types/connect": "3.4.38",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-        "oxfmt": "0.73.0"
+        "oxfmt": "0.74.0"
     }
 }

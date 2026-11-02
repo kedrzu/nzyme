@@ -39,14 +39,14 @@
         "@nzyme/ioc": "workspace:*",
         "@nzyme/types": "workspace:*",
         "@nzyme/utils": "workspace:*",
-        "chalk": "6.0.1",
-        "cli-highlight": "2.1.11"
+        "chalk": "^6.0.1",
+        "cli-highlight": "^2.1.11"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
         "@types/node": "26.6.5",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-        "oxfmt": "0.73.0"
+        "oxfmt": "0.74.0"
     },
     "nzyme": {
         "cjs": true

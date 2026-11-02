@@ -1,0 +1,49 @@
+{
+    // oxfmt (through the oxc extension) formats everything, with the repo's `.oxfmtrc.json`. The
+    // per-language entries win over a user's own per-language formatter, which a global
+    // `editor.defaultFormatter` does not.
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.formatOnSave": true,
+    "[typescript]": { "editor.defaultFormatter": "oxc.oxc-vscode" },
+    "[typescriptreact]": { "editor.defaultFormatter": "oxc.oxc-vscode" },
+    "[javascript]": { "editor.defaultFormatter": "oxc.oxc-vscode" },
+    "[json]": { "editor.defaultFormatter": "oxc.oxc-vscode" },
+    "[jsonc]": { "editor.defaultFormatter": "oxc.oxc-vscode" },
+    "[vue]": { "editor.defaultFormatter": "oxc.oxc-vscode" },
+    "javascript.format.enable": false,
+    "typescript.format.enable": false,
+    "json.format.enable": false,
+    // Allows formatting XML and SVG files by oxfmt.
+    "files.associations": {
+        "*.xml": "html",
+        "*.svg": "html"
+    },
+    "files.exclude": {
+        "**/.git": true,
+        "**/node_modules/**": true,
+        "**/tsconfig.tsbuildinfo": true
+    },
+    "search.exclude": {
+        "**/dist": true,
+        "**/.output": true,
+        "**/.nuxt": true,
+        "**/.nx": true,
+        "**/node_modules/**": true,
+        "bun.lock": true,
+        ".context": true
+    },
+    // `.claude/skills/nzyme` is a symlink into the submodule.
+    "search.followSymlinks": true,
+    "npm.packageManager": "bun",
+    "npm.scriptExplorerAction": "run",
+    // ESLint covers Vue rules only; oxlint (via the oxc extension) covers everything else.
+    "eslint.useFlatConfig": true,
+    "eslint.ignoreUntitled": true,
+    "eslint.codeAction.showDocumentation": { "enable": true },
+    "eslint.validate": ["vue"],
+    "eslint.runtime": "bun",
+    "eslint.execArgv": ["--bun"],
+    "oxc.enable": true,
+    "oxc.lint.run": "onType",
+    "bun.test.filePattern": "**/*.test.ts"
+}

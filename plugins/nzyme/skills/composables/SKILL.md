@@ -23,8 +23,10 @@ independent instance whose watchers and listeners die with the calling component
 - **Logic used by exactly one component** → keep it in that component's setup; extraction without reuse
   only adds indirection.
 
-Before writing one, check `@nzyme/vue-utils` (and `@vueuse/core` if the project uses it) for a
-ready-made composable.
+Before writing one, check `@nzyme/vue-utils`, `@nzyme/vue` (and `@vueuse/core` if the project uses
+it) for a ready-made composable. `@nzyme/vue`'s README (`node_modules/@nzyme/vue/README.md`)
+catalogues its composables and components — scroll lock, sticky detection, modals, `Reveal`,
+`Collapse`, `Carousel`.
 
 A store and a composable often pair up: a singleton `CartStore` (service) owns the cache that outlives
 every view, while `useCart()` adds what must die with the view — a listener, a watcher — around it.

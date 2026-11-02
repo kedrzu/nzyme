@@ -1,0 +1,162 @@
+#!/bin/zsh
+# Full workspace setup for a fresh clone or worktree (Paseo runs it for every new worktree — see
+# paseo.json): checks the toolchain, catches a worktree up with main, checks out the pinned nzyme
+# submodule, then builds everything (setup.build.sh, which CI runs too).
+set -e
+
+cd "$(dirname "$0")"
+
+WARNINGS=()
+
+# Warn now and again at the very end, so a skipped step is not lost above the build output.
+warn() {
+    echo "⚠️  $1"
+    WARNINGS+=("$1")
+}
+
+# --- bun version floor ---
+#
+# `packageManager` in package.json is the bun version this repo is developed and built against.
+# Nothing at runtime enforces it, so a local runtime older than the pin would silently run every
+# build and test on a version nobody verified. Newer than the pin passes: the pin is a floor.
+# The version is read from package.json, so the pin has exactly one home.
+require_bun_floor() {
+    local want got older
+    want=$(sed -n 's/.*"packageManager": *"bun@\([^"]*\)".*/\1/p' package.json | head -1)
+
+    # No pin declared — nothing to enforce.
+    [ -z "$want" ] && return 0
+
+    if ! command -v bun > /dev/null 2>&1; then
+        echo ""
+        echo "❌ bun is not on PATH, and this repo runs on bun. Install the pinned version:"
+        echo "   curl -fsSL https://bun.sh/install | bash -s \"bun-v$want\""
+        echo ""
+        exit 1
+    fi
+
+    got=$(bun --version 2> /dev/null)
+    older=$(printf '%s\n%s\n' "$want" "$got" | sort -V | head -1)
+
+    if [ "$got" != "$want" ] && [ "$older" = "$got" ]; then
+        echo ""
+        echo "❌ bun $got is older than the pin (bun@$want) in package.json. Install the pinned version:"
+        echo "   curl -fsSL https://bun.sh/install | bash -s \"bun-v$want\""
+        echo ""
+        exit 1
+    fi
+}
+
+require_bun_floor
+
+# --- Worktree: catch up with origin/main, copy local files ---
+#
+# Worktrees only: in the main checkout the branch you are on is a deliberate choice, and setup has no
+# business merging into it. Done before the submodule checkout and the build, so both match the
+# commit the task's PR will sit on.
+repo_root=$(git rev-parse --path-format=absolute --git-common-dir | sed 's|/\.git\(/.*\)*$||')
+
+if [ "$CI" != "true" ] && [ "$repo_root" != "$(pwd -P)" ]; then
+    branch=$(git branch --show-current)
+
+    # Only a branch based on `main` catches up with it: merging `main` into a stacked node drags it into
+    # a PR that does not target `main`. The base, most authoritative first: the open PR's, then the one
+    # Paseo recorded when it cut the worktree. No answer means no merge.
+    base=$(gh pr view --json baseRefName --jq .baseRefName 2> /dev/null || true)
+    paseo_metadata="$(git rev-parse --git-dir)/paseo/worktree.json"
+    if [ -z "$base" ] && [ -f "$paseo_metadata" ]; then
+        base=$(sed -n 's/.*"baseRefName": *"\([^"]*\)".*/\1/p' "$paseo_metadata")
+    fi
+
+    if [ "$base" != main ]; then
+        warn "Not caught up: ${branch:-detached HEAD} is based on ${base:-an unknown branch}, not main."
+    elif ! git fetch --quiet origin main; then
+        warn "Could not fetch origin/main (offline?): the build reflects this branch as it is."
+    else
+        echo ""
+        echo "🔄 Catching up with origin/main..."
+        echo ""
+
+        # Fast-forward the local `main` too, so the NEXT worktree is not cut from a stale one. Git
+        # refuses to move a branch another worktree holds, so ask that worktree, and only when clean.
+        main_worktree=$(git worktree list --porcelain \
+            | awk '/^worktree /{wt=substr($0, 10)} $0 == "branch refs/heads/main" {print wt; exit}')
+
+        if [ -z "$main_worktree" ]; then
+            git fetch --quiet origin main:main \
+                || warn "Local main not fast-forwarded (diverged from origin/main)."
+        elif [ -n "$(git -C "$main_worktree" status --porcelain)" ]; then
+            warn "Local main left as it is: $main_worktree has uncommitted changes."
+        else
+            git -C "$main_worktree" merge --ff-only --quiet origin/main \
+                || warn "Local main not fast-forwarded (diverged from origin/main)."
+        fi
+
+        # A fresh worktree fast-forwards. A rerun on a branch carrying real work may not merge cleanly;
+        # a conflict under `set -e` would leave a half-merged tree, so an unclean merge is rolled back
+        # and reported instead.
+        if git merge --quiet --no-edit origin/main; then
+            echo "✅ Up to date with origin/main"
+        else
+            git merge --abort 2> /dev/null || true
+            warn "Could not merge origin/main into $branch: merge it by hand."
+        fi
+    fi
+
+    # Gitignored files that live only in the main checkout: personal instructions, personal Claude
+    # settings, env files. Templates (`*.example`) are committed and stay as they are; a file already
+    # in the worktree is not overwritten. `(N)` is zsh's nullglob: a pattern matching nothing is
+    # skipped, not fatal.
+    echo ""
+    echo "📋 Copying local files from the main checkout..."
+    echo ""
+    for src in "$repo_root"/CLAUDE.local.md "$repo_root"/.claude/settings.local.json \
+        "$repo_root"/.env(N) "$repo_root"/.env.*(N) \
+        "$repo_root"/packages/*/.env(N) "$repo_root"/packages/*/.env.*(N); do
+        rel=${src#$repo_root/}
+        case "$rel" in
+            *.example) continue ;;
+        esac
+        if [ -f "$src" ] && [ ! -e "$rel" ]; then
+            mkdir -p "$(dirname "$rel")"
+            cp "$src" "$rel"
+            echo "   $rel"
+        fi
+    done
+fi
+
+# --- Git submodules ---
+#
+# Every checkout builds exactly the submodule commit this repo pins (the gitlink), never a submodule
+# branch tip. Done before anything is installed: the workspace globs point into `nzyme/`. CI checks
+# submodules out itself (`actions/checkout` with `submodules: recursive`).
+if [ "$CI" != "true" ]; then
+    echo ""
+    echo "📦 Checking out the pinned submodule commits..."
+    echo ""
+    git submodule update --init --recursive --checkout
+fi
+
+# --- Build ---
+
+bash setup.build.sh
+
+# --- Code index (agent navigation) ---
+#
+# Not part of setup.build.sh: CI has no agent to read it. Non-fatal — an indexing failure must never
+# break workspace setup.
+echo ""
+echo "🗂️ Generating the code index..."
+echo ""
+bun run index || warn "Code indexing failed (non-fatal): run 'bun run index' by hand."
+
+echo ""
+if [ ${#WARNINGS[@]} -gt 0 ]; then
+    echo "⚠️  Setup finished with skipped steps:"
+    for warning in "${WARNINGS[@]}"; do
+        echo "   - $warning"
+    done
+    echo ""
+fi
+echo "✅ Setup complete."
+echo ""

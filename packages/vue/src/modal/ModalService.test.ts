@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { defineComponent } from 'vue';
+import { createRenderer, defineComponent, h, Suspense } from 'vue';
 
 import { createHistoryMock } from '@nzyme/dom-utils/createHistoryMock.js';
 import type { HistoryMock } from '@nzyme/dom-utils/createHistoryMock.js';
 import { createContainer } from '@nzyme/ioc/Container.js';
 import { CancelError } from '@nzyme/utils/CancelError.js';
+import { waitFor } from '@nzyme/utils/waitFor.js';
 
 import { ModalService } from './ModalService.js';
 
@@ -40,3 +41,48 @@ test('after Back has closed a modal, Back from a screen opened next returns to t
 
     expect(browser.url).toBe('/screen');
 });
+
+test('Escape closes a modal and rejects its promise like `close()`', async () => {
+    const modals = createContainer().resolve(ModalService);
+    const modal = modals.open(Dialog);
+    const app = createInertRenderer().createApp({
+        render: () => h(Suspense, null, { default: () => h(modal.component) }),
+    });
+    Object.defineProperty(globalThis, 'document', { value: new EventTarget(), configurable: true });
+    try {
+        app.mount({});
+        // The modal component's setup is async, so it renders only once Suspense has resolved it.
+        await waitFor(0);
+
+        document.dispatchEvent(Object.assign(new Event('keyup'), { key: 'Escape' }));
+        const outcome = await Promise.race([
+            modal.then(
+                () => 'resolved',
+                (error: unknown) => error,
+            ),
+            waitFor(50, 'unsettled'),
+        ]);
+
+        expect(modal.controller.open).toBe(false);
+        expect(outcome).toBeInstanceOf(CancelError);
+    } finally {
+        app.unmount();
+        Reflect.deleteProperty(globalThis, 'document');
+    }
+});
+
+/** A renderer that renders nothing, so that a component can be mounted and unmounted without a DOM. */
+function createInertRenderer() {
+    return createRenderer<object, object>({
+        insert() {},
+        remove() {},
+        createElement: () => ({}),
+        createText: () => ({}),
+        createComment: () => ({}),
+        setText() {},
+        setElementText() {},
+        parentNode: () => null,
+        nextSibling: () => null,
+        patchProp() {},
+    });
+}

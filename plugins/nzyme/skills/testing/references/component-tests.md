@@ -30,7 +30,7 @@ emits and pass-through needs no test — its story is enough.
 - **`await page.viewport(width, height)`** at the start of a test exercises a responsive branch.
 
 ```ts
-import { composeStories } from '@storybook/vue3';
+import { composeStories } from '@storybook/vue3-vite';
 import { expect, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 

@@ -28,6 +28,10 @@
         "build": "tsgo --build tsconfig.esm.json",
         "format": "oxfmt ./src > /dev/null"
     },
+    "dependencies": {
+        "@nzyme/openapi": "workspace:*",
+        "@nzyme/secrets": "workspace:*"
+    },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
         "@types/bun": "^1.4.3",

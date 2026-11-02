@@ -66,6 +66,10 @@
     "packages/bitwarden": {
       "name": "@nzyme/bitwarden",
       "version": "0.15.1",
+      "dependencies": {
+        "@nzyme/openapi": "workspace:*",
+        "@nzyme/secrets": "workspace:*",
+      },
       "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
         "@types/bun": "^1.4.3",

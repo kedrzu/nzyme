@@ -4,12 +4,13 @@ import path from 'node:path';
 
 import chalk from 'chalk';
 import { watch } from 'chokidar';
-import { Option } from '@nzyme/cli-core';
 import * as json from 'comment-json';
 import { pathExists } from 'fs-extra/esm';
 import merge from 'lodash.merge';
 import type { TsConfigJson } from 'type-fest';
 
+import { Option } from '@nzyme/cli-core';
+import { Command } from '@nzyme/cli-core/Command.js';
 import type { Package } from '@nzyme/project-utils/getPackages.js';
 import { getPackages } from '@nzyme/project-utils/getPackages.js';
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
@@ -18,7 +19,6 @@ import { saveFile } from '@nzyme/project-utils/saveFile.js';
 import { asArray } from '@nzyme/utils/array/asArray.js';
 import { debounceAsyncFunction } from '@nzyme/utils/debounceAsyncFunction.js';
 
-import { Command } from '@nzyme/cli-core/Command.js';
 import type { NzymePackageConfig } from '../NzymePackageConfig.js';
 
 interface TsConfig {

@@ -19,12 +19,13 @@
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
+            "source": "./src/index.ts",
             "default": "./dist/index.js"
         },
         "./*.js": {
             "types": "./dist/*.d.ts",
-            "import": "./dist/*.js",
             "source": "./src/*.ts",
+            "import": "./dist/*.js",
             "default": "./dist/*.js"
         }
     },
@@ -35,7 +36,7 @@
         "schema": "bun run scripts/fetchSchema.ts"
     },
     "dependencies": {
-        "@linear/sdk": "98.0.0",
+        "@linear/sdk": "99.0.0",
         "@nzyme/cli-core": "workspace:*",
         "@nzyme/github-cli": "workspace:*",
         "@nzyme/logging": "workspace:*",
@@ -45,10 +46,10 @@
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
-        "@types/bun": "^1.4.3",
+        "@types/bun": "^1.4.4",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "graphql": "17.0.2",
-        "oxfmt": "0.73.0"
+        "oxfmt": "0.74.0"
     },
     "depcheck": {
         "ignoreDeps": [

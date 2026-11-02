@@ -5,7 +5,6 @@ import { initialize } from '@nzyme/cli-core/initialize.js';
 import { loadEnvVariables } from '@nzyme/project-utils/loadEnvVariables.js';
 
 import { DepcheckCommand } from './commands/DepcheckCommand.js';
-import { FormatMarkdownCommand } from './commands/FormatMarkdownCommand.js';
 import { IndexCommand } from './commands/IndexCommand.js';
 import { LocaliseCommand } from './commands/LocaliseCommand.js';
 import { MonorepoCommand } from './commands/MonorepoCommand.js';
@@ -17,7 +16,6 @@ const builtinCommands = [
     MonorepoCommand,
     DepcheckCommand,
     LocaliseCommand,
-    FormatMarkdownCommand,
     IndexCommand,
     QuietRunCommand,
     SubmoduleBumpCommand,

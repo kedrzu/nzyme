@@ -18,14 +18,14 @@
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
+            "source": "./src/index.ts",
             "import": "./dist/index.js",
-            "default": "./dist/index.js",
-            "source": "./src/index.ts"
+            "default": "./dist/index.js"
         },
         "./*.js": {
             "types": "./dist/*.d.ts",
-            "import": "./dist/*.js",
             "source": "./src/*.ts",
+            "import": "./dist/*.js",
             "default": "./dist/*.js"
         }
     },
@@ -43,7 +43,7 @@
         "dotenv": "^18.0.8",
         "execa": "^10.2.0",
         "fs-extra": "^11.4.1",
-        "oxfmt": "^0.73.0",
+        "oxfmt": "^0.74.0",
         "parse-gitignore": "^2.0.0",
         "pkg-types": "^2.3.3"
     },

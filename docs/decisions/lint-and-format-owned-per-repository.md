@@ -50,8 +50,7 @@ Option C.
   extended by relative path, and plugins resolve through the product's hoisted `node_modules`.
 - Products exclude the submodule:
   - an `ignorePatterns`/`globalIgnores` entry in each config;
-  - `--disable-nested-config` (or an explicit ignore flag) on their oxlint and oxfmt CLI runs;
-  - `--exclude` for `nzyme format-markdown`.
+  - `--disable-nested-config` (or an explicit ignore flag) on their oxlint and oxfmt CLI runs.
 - Products run nzyme's own `lint:check`/`format:check` (`bun run --cwd nzyme …`) when they want it
   checked. nzyme's CI checks it anyway.
 - Editors keep nested-config discovery, so files opened under `nzyme/` get nzyme's rules.

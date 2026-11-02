@@ -9,11 +9,10 @@ import { remark } from 'remark';
 import remarkFrontmatter from 'remark-frontmatter';
 import remarkGfm from 'remark-gfm';
 
+import { Option } from '@nzyme/cli-core';
+import { Command } from '@nzyme/cli-core/Command.js';
 import { isFileIgnored } from '@nzyme/project-utils/isFileIgnored.js';
 import { forEachParalell } from '@nzyme/utils/array/forEachParalell.js';
-
-import { Command } from '@nzyme/cli-core/Command.js';
-import { Option } from '@nzyme/cli-core';
 
 const MARKDOWN_REGEX = /\.mdx?$/;
 

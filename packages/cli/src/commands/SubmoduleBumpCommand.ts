@@ -1,8 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { Command } from '@nzyme/cli-core/Command.js';
 import { Option } from '@nzyme/cli-core';
+import { Command } from '@nzyme/cli-core/Command.js';
+
 import { bumpSubmodule } from '../submodule/bumpSubmodule.js';
 import { renderBumpSummary } from '../submodule/renderBumpSummary.js';
 

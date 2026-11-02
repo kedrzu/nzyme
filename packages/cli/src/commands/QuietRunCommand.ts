@@ -3,10 +3,10 @@ import { mkdir, open, readFile } from 'node:fs/promises';
 import { constants } from 'node:os';
 import path from 'node:path';
 
+import { Option } from '@nzyme/cli-core';
+import { Command } from '@nzyme/cli-core/Command.js';
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
 
-import { Command } from '@nzyme/cli-core/Command.js';
-import { Option } from '@nzyme/cli-core';
 import { getQuietRunLogFileName, renderQuietRunReport } from '../quietRun/quietRunReport.js';
 
 /** Default lines of trailing output shown on failure. */

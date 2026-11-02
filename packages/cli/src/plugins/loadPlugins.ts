@@ -1,10 +1,11 @@
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
+
+import { readNzymeConfig } from '../readNzymeConfig.js';
 
 /**
  * Loads the commands of the plugins the repo lists under `nzyme.plugins`, as far as this invocation
@@ -52,8 +53,7 @@ function isBuiltinPath(firstArg: string, builtins: CommandClass[]) {
 }
 
 async function readPluginPaths(root: string) {
-    const manifest: unknown = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
-    const plugins = readProperty(readProperty(manifest, 'nzyme'), 'plugins');
+    const plugins = readProperty(await readNzymeConfig(root), 'plugins');
     if (plugins === undefined) {
         return [];
     }

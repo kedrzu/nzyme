@@ -6,7 +6,7 @@ import type { SecretRef, SecretStore } from './SecretStore.js';
  * `defineSecretsCommands`.
  */
 export interface SecretsMapping {
-    /** Store aliases, used by `import` and `login` even before any secret references them. */
+    /** Store aliases, used by `login` even before any secret references them. */
     stores: Record<string, SecretStore>;
     /** Environment variable name to the secret it is loaded from. */
     secrets: Record<string, SecretRef>;

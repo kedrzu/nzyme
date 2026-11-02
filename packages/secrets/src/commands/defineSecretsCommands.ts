@@ -1,6 +1,5 @@
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 
-import { defineSecretsImportCommand } from './defineSecretsImportCommand.js';
 import { defineSecretsListCommand } from './defineSecretsListCommand.js';
 import { defineSecretsLoginCommand } from './defineSecretsLoginCommand.js';
 import { defineSecretsRefreshCommand } from './defineSecretsRefreshCommand.js';
@@ -19,7 +18,6 @@ export function defineSecretsCommands(options: SecretsCommandsOptions): CommandC
         defineSecretsLoginCommand(options),
         defineSecretsSetCommand(options),
         defineSecretsListCommand(options),
-        defineSecretsImportCommand(options),
         defineSecretsRunCommand(options),
         defineSecretsRefreshCommand(options),
     ];

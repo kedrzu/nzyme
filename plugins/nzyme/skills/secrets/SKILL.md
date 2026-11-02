@@ -72,8 +72,8 @@ Writing needs a token that may write; a read-only one is refused, and the error 
 
 `secrets list` shows each mapped name with its store, key and status (`resolves`, `missing`,
 `overridden by environment`). A missing secret is added as above. A missing or rejected token is
-the user's to fix with `secrets login`, because only they hold it; tell them and stop. `overridden by environment` means a variable set in the shell
-wins over the store.
+the user's to fix with `secrets login`, because only they hold it; tell them and stop. `overridden by environment` means a variable set in the shell, or in
+a leftover `.env` that Bun loads on its own, wins over the store.
 
 ## A value pasted into the chat
 

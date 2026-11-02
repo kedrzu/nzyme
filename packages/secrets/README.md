@@ -133,16 +133,13 @@ Values are never taken from arguments and never printed.
   `nzyme secrets set <NAME>` in their own terminal and confirm with `nzyme secrets list`.
 - **`secrets list`** — each mapped name with its store, key and status (`resolves`, `missing`,
   `overridden by environment`); exits non-zero when one is missing.
-- **`secrets import [--file .env] [--store bw]`** — writes every non-empty variable of a dotenv file
-  to a store, skips store credentials, and prints the mapping lines to paste. The
-  file is left in place; delete it once the import is verified.
 - **`secrets run -- <command>`** — runs a command with the mapped secrets as environment variables.
   A variable already set wins; store credentials (`BWS_ACCESS_TOKEN`) are removed
   from the child's environment; nothing starts when a secret is missing. The exit code is the
   command's own.
 - **`secrets refresh`** — re-reads the mapped secrets of every caching store.
 
-The startup step, `run` and `list` only read; only `set` and `import` write. A store keeps one
+The startup step, `run` and `list` only read; only `set` writes. A store keeps one
 credential per machine, so a machine that only runs the app logs in with read-only credentials (for
 Bitwarden, a read-only machine account) and its writes are refused.
 

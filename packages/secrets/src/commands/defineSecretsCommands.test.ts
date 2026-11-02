@@ -342,67 +342,6 @@ test('list exits 0 when every secret resolves', async () => {
     expectNoLeak(result, SENTINEL);
 });
 
-// --- import ---
-
-test('import writes every non-empty variable in one call, skips empty and credential names, and leaves the file', async () => {
-    const bw = createMemoryStore({ id: 'bw', credentialEnv: ['BW_TOKEN'] });
-    const vault = createMemoryStore({ id: 'vault', credentialEnv: ['VAULT_TOKEN'] });
-    const mapping: SecretsMapping = { stores: { bw: bw.store }, secrets: { SMTP: vault.store.secret() } };
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'secrets-import-'));
-    const file = path.join(dir, 'app.env');
-    const content = `API_KEY=${SENTINEL}\nEMPTY=\nBW_TOKEN=bw-cred\nVAULT_TOKEN=vault-cred\nDB_URL=postgres://x\n`;
-    await fs.writeFile(file, content);
-
-    const result = await runCommand({ mapping, args: ['secrets', 'import', '--file', file] });
-
-    expect(result.exitCode).toBe(0);
-    expect(bw.writes).toEqual([
-        [
-            { key: 'API_KEY', value: SENTINEL },
-            { key: 'DB_URL', value: 'postgres://x' },
-        ],
-    ]);
-    expect(vault.writes).toEqual([]);
-    expect(result.stdout).toContain('Skipped, empty: EMPTY\n');
-    expect(result.stdout).toContain('Skipped, store credentials: BW_TOKEN, VAULT_TOKEN\n');
-    expect(result.stdout).toContain('API_KEY: bw.secret(),\nDB_URL: bw.secret(),\n');
-    expect(result.stdout).toContain(`${file} was left untouched`);
-    expect(await fs.readFile(file, 'utf8')).toBe(content);
-    expectNoLeak(result, SENTINEL);
-    expectNoLeak(result, 'bw-cred');
-});
-
-test('import of a file that does not exist fails and writes nothing', async () => {
-    const bw = createMemoryStore({ id: 'bw' });
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'secrets-import-'));
-    const mapping: SecretsMapping = { stores: { bw: bw.store }, secrets: {} };
-
-    const result = await runCommand({ mapping, args: ['secrets', 'import', '--file', path.join(dir, '.env')] });
-
-    expect(result.exitCode).toBe(1);
-    expect(result.errors).toContain('does not exist');
-    expect(bw.writes).toEqual([]);
-});
-
-test('import with several stores and no --store fails listing the aliases', async () => {
-    const bw = createMemoryStore({ id: 'bw' });
-    const vault = createMemoryStore({ id: 'vault' });
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'secrets-import-'));
-    const file = path.join(dir, '.env');
-    await fs.writeFile(file, 'API_KEY=x\n');
-    const mapping: SecretsMapping = { stores: { bw: bw.store, vault: vault.store }, secrets: {} };
-
-    const failed = await runCommand({ mapping, args: ['secrets', 'import', '--file', file] });
-    const chosen = await runCommand({ mapping, args: ['secrets', 'import', '--file', file, '--store', 'vault'] });
-
-    expect(failed.exitCode).toBe(1);
-    expect(failed.errors).toContain('bw, vault');
-    expect(chosen.exitCode).toBe(0);
-    expect(chosen.stdout).toContain('API_KEY: vault.secret(),\n');
-    expect(bw.writes).toEqual([]);
-    expect(vault.writes).toEqual([[{ key: 'API_KEY', value: 'x' }]]);
-});
-
 // --- login ---
 
 test('login prompts once through stdin and calls the store’s login with the answer', async () => {

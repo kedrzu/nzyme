@@ -41,9 +41,12 @@ API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-c
 ## Compare
 
 - Credentials read through `defineEnvVariable` with no `@nzyme/secrets` mapping: a difference.
-- A dotenv file holding credentials (`.env`, `.env.*`, `.dev.vars`): a difference. `secrets import`
-  writes its values to the store and prints the mapping lines; the file is deleted once
-  `secrets list` shows every name resolving.
+- A dotenv file holding credentials (`.env`, `.env.*`, `.dev.vars`): a difference. Migrate it
+  once, with no tool for it: map each name, then pipe its value from the file into
+  `secrets set <NAME>` (`sed -n 's/^NAME=//p' .env | secrets set NAME`, unquoting a quoted value in
+  the pipe) so it never reaches the transcript. Move the file aside — Bun loads the cwd `.env` into
+  every process, so `secrets list` would report its names `overridden by environment` — and delete it
+  once `secrets list` shows every name resolving.
 - `setup.sh` copying env files into worktrees: a difference; the keychain is shared by every
   worktree.
 - No `.claude/skills/secrets/SKILL.md`, or one that disagrees with the provider: a difference.

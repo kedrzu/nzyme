@@ -61,7 +61,7 @@ its conventions require.
 - **Cache:** `cached(store, { ttl })` keeps values in the OS keychain, so a dev server restart makes
   no store call. The user asked for it; the TTL is required, with no default, so every repo chooses
   how stale a value may be.
-- **Commands:** `defineSecretsCommands({ provider })` gives `secrets login|set|list|import|run|refresh`,
+- **Commands:** `defineSecretsCommands({ provider })` gives `secrets login|set|list|run|refresh`,
   registered as a plugin or in a product CLI.
 
 ## Consequences

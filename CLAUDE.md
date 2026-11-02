@@ -6,14 +6,14 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
 
 - **Core:** `utils`, `types`, `ioc`, `ioc-testing`, `logging`, `validation`, `crypto`, `money`,
   `i18n`, `i18n-core`, `i18n-compiler`, `rpc`, `openapi`, `fetch-utils`, `xml-utils`, `markdown`,
-  `typography`
+  `typography`, `secrets` (secret stores loaded into env variables, and the `secrets` commands)
 - **Vue:** `vue`, `vue-utils`, `vue-ioc`, `vue-forms`, `vue-i18n`, `vue-transitions`, `dom-utils`
 - **Tooling:**
   - `cli-core` (the clipanion-based `Command` framework behind every CLI), `cli` (the `nzyme` binary: `monorepo`, `localise`, `index`, `quiet-run`, `format-markdown`,
     `submodule`, `depcheck`)
   - `tsconfig`, `eslint` (also the oxlint preset), `oxlint` (custom rules), `project-utils`,
     `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`
-- **Integrations:** `aws`, `pulumi`, `slack`, `apis`
+- **Integrations:** `aws`, `pulumi`, `slack`, `apis`, `bitwarden` (a Secrets Manager store for `secrets`)
 - **Private, never published:** `github-cli`, `linear`, `sentry-cli`, `logging-ui`
 
 `bun run index` (also run by setup) generates a gitignored code map:

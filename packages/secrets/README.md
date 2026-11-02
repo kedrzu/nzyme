@@ -119,9 +119,9 @@ await execute({
 
 Values are never taken from arguments and never printed.
 
-- **`secrets login [store] [--write]`** — stores credentials for a store (the alias is optional with
-  one store), read-only unless `--write`. The token is read from a hidden prompt, or from stdin.
-- **`secrets set <NAME>`** — writes one mapped secret (read-write token). The value comes from a
+- **`secrets login [store]`** — stores credentials for a store (the alias is optional with one
+  store). The token is read from a hidden prompt, or from stdin.
+- **`secrets set <NAME>`** — writes one mapped secret. The value comes from a
   hidden prompt, or from stdin: `nzyme secrets set DB_PASSWORD < password.txt`.
 - **`secrets set <NAME> --prompt[=<hint>]`** — how an agent asks the user for a secret: the user
   types it into a native masked dialog (osascript on macOS, Get-Credential on Windows, zenity or
@@ -133,18 +133,19 @@ Values are never taken from arguments and never printed.
   several lines, or when no dialog or terminal is available — then ask the user to run
   `nzyme secrets set <NAME>` in their own terminal and confirm with `nzyme secrets list`.
 - **`secrets list`** — each mapped name with its store, key and status (`resolves`, `missing`,
-  `overridden by environment`); exits non-zero when one is missing. Read-only token.
+  `overridden by environment`); exits non-zero when one is missing.
 - **`secrets import [--file .env] [--store bw]`** — writes every non-empty variable of a dotenv file
-  to a store (read-write token), skips store credentials, and prints the mapping lines to paste. The
+  to a store, skips store credentials, and prints the mapping lines to paste. The
   file is left in place; delete it once the import is verified.
-- **`secrets run -- <command>`** — runs a command with the mapped secrets as environment variables
-  (read-only token). A variable already set wins; store credentials (`BWS_ACCESS_TOKEN`) are removed
+- **`secrets run -- <command>`** — runs a command with the mapped secrets as environment variables.
+  A variable already set wins; store credentials (`BWS_ACCESS_TOKEN`) are removed
   from the child's environment; nothing starts when a secret is missing. The exit code is the
   command's own.
 - **`secrets refresh`** — re-reads the mapped secrets of every caching store.
 
-The startup step, `run` and `list` use the read-only token; only `set` and `import` need the
-read-write one, so a machine that only runs the app needs no write access.
+The startup step, `run` and `list` only read; only `set` and `import` write. A store keeps one
+credential per machine, so a machine that only runs the app logs in with read-only credentials (for
+Bitwarden, a read-only machine account) and its writes are refused.
 
 ## Stores
 

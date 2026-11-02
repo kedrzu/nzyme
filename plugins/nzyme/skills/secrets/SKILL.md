@@ -21,7 +21,7 @@ home and one way in.
 
 The repo's own `.claude/skills/secrets/SKILL.md` says what is true only there: how the CLI is
 invoked (`bun nzyme secrets …` or the product's CLI), where the provider lives, which stores and
-environments exist, who holds the write token. Read it; this skill uses `secrets …` for the command.
+environments exist, whose machines can write. Read it; this skill uses `secrets …` for the command.
 API and options: `@nzyme/secrets` README (`nzyme/packages/secrets/README.md` in a product repo).
 
 ## A value never enters the transcript
@@ -66,14 +66,13 @@ To check a value is right without seeing it, run what uses it: the app, an API c
    - **no dialog or terminal** (ssh, a cloud session) — give the user the command from the error to
      run in their own terminal, then confirm with `secrets list`.
 
-Writing needs the read-write token; the error says when it is missing.
+Writing needs a token that may write; a read-only one is refused, and the error says so.
 
 ## When a secret is missing or a token is rejected
 
 `secrets list` shows each mapped name with its store, key and status (`resolves`, `missing`,
 `overridden by environment`). A missing secret is added as above. A missing or rejected token is
-the user's to fix — `secrets login`, or `secrets login --write` for writing — because only they hold
-it; tell them which one and stop. `overridden by environment` means a variable set in the shell
+the user's to fix with `secrets login`, because only they hold it; tell them and stop. `overridden by environment` means a variable set in the shell
 wins over the store.
 
 ## A value pasted into the chat

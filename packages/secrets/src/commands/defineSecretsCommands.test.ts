@@ -13,7 +13,7 @@ import { defineService } from '@nzyme/ioc/Service.js';
 
 import type { SecretsMapping } from '../SecretsProvider.js';
 import { SecretsProvider } from '../SecretsProvider.js';
-import type { SecretStore, SecretStoreDefinition, SecretStoreEntry, SecretStoreLoginContext } from '../SecretStore.js';
+import type { SecretStore, SecretStoreDefinition, SecretStoreEntry } from '../SecretStore.js';
 import { defineSecretStore } from '../SecretStore.js';
 import { SENTINEL as RUN_SENTINEL } from './__fixtures__/secretsCli.js';
 import { defineSecretsCommands } from './defineSecretsCommands.js';
@@ -391,21 +391,15 @@ test('import with several stores and no --store fails listing the aliases', asyn
 
 // --- login ---
 
-test('login prompts once through stdin and calls the store’s login with the requested access', async () => {
+test('login prompts once through stdin and calls the store’s login with the answer', async () => {
     const bw = createMemoryStore({ id: 'bw', login: true });
     const mapping: SecretsMapping = { stores: { bw: bw.store }, secrets: {} };
 
-    const read = await runCommand({ mapping, args: ['secrets', 'login'], stdin: `${SENTINEL}\n` });
-    const write = await runCommand({ mapping, args: ['secrets', 'login', 'bw', '--write'], stdin: 'write-token' });
+    const result = await runCommand({ mapping, args: ['secrets', 'login'], stdin: `${SENTINEL}\n` });
 
-    expect(read.exitCode).toBe(0);
-    expect(write.exitCode).toBe(0);
-    expect(bw.logins).toEqual([
-        { access: 'read', answer: SENTINEL },
-        { access: 'write', answer: 'write-token' },
-    ]);
-    expectNoLeak(read, SENTINEL);
-    expectNoLeak(write, 'write-token');
+    expect(result.exitCode).toBe(0);
+    expect(bw.logins).toEqual([SENTINEL]);
+    expectNoLeak(result, SENTINEL);
 });
 
 test('login with an empty answer fails saying nothing was entered and never reaches the store', async () => {
@@ -591,16 +585,11 @@ interface MemoryStoreOptions {
     refresh?: boolean;
 }
 
-interface MemoryLogin {
-    access: SecretStoreLoginContext['access'];
-    answer: string;
-}
-
 function createMemoryStore(options: MemoryStoreOptions) {
     const data = new Map(Object.entries(options.data ?? {}));
     const reads: string[][] = [];
     const writes: SecretStoreEntry[][] = [];
-    const logins: MemoryLogin[] = [];
+    const logins: string[] = [];
     const refreshes: string[][] = [];
 
     const definition: SecretStoreDefinition = {
@@ -625,8 +614,8 @@ function createMemoryStore(options: MemoryStoreOptions) {
     };
 
     if (options.login) {
-        definition.login = async ({ access, prompt }) => {
-            logins.push({ access, answer: await prompt('Access token') });
+        definition.login = async ({ prompt }) => {
+            logins.push(await prompt('Access token'));
         };
     }
 

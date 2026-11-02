@@ -57,7 +57,7 @@ export async function loginBitwarden(urls: BitwardenServerUrls, accessToken: str
 
     if (response.status === 400 || response.status === 401) {
         throw new Error(
-            `Bitwarden at ${identityHost} rejected the access token: run \`secrets login\` (\`secrets login --write\` for the write token) with a valid one`,
+            `Bitwarden at ${identityHost} rejected the access token: run \`secrets login\` with a valid one`,
         );
     }
 

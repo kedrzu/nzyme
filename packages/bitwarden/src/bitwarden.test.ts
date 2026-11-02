@@ -31,7 +31,7 @@ afterEach(() => {
     }
 });
 
-test('read logs in with the read token and costs three requests however many keys', async () => {
+test('read logs in with the stored token and costs three requests however many keys', async () => {
     const fake = await startFakeBitwarden();
     await fake.addSecret({ key: 'DB_URL', value: 'postgres://db-secret' });
     await fake.addSecret({ key: 'API_KEY', value: 'api-secret' });
@@ -51,7 +51,7 @@ test('read logs in with the read token and costs three requests however many key
         `GET /api/projects/${PROJECT}/secrets`,
         'POST /api/secrets/get-by-ids',
     ]);
-    expect(fake.requests.map(request => request.client)).toEqual(['read', 'read', 'read']);
+    expect(fake.requests.map(request => request.client)).toEqual(['machine', 'machine', 'machine']);
     fake.expectNoLeak(['postgres://db-secret', 'api-secret']);
 });
 
@@ -69,7 +69,7 @@ test('read sends two requests and reads absent keys as absent when none exists',
     ]);
 });
 
-test('write updates with the write token, keeping the note and the project, and creates in the project', async () => {
+test('write updates with the stored token, keeping the note and the project, and creates in the project', async () => {
     const fake = await startFakeBitwarden();
     const existingId = await fake.addSecret({ key: 'DB_URL', value: 'old-secret', note: 'rotated monthly' });
     const store = bitwarden({ project: PROJECT, server: fake.url, keychain: fake.keychain, env: {} });
@@ -79,7 +79,13 @@ test('write updates with the write token, keeping the note and the project, and 
         { key: 'API_KEY', value: 'created-secret' },
     ]);
 
-    expect(fake.requests.map(request => request.client)).toEqual(['write', 'write', 'write', 'write', 'write']);
+    expect(fake.requests.map(request => request.client)).toEqual([
+        'machine',
+        'machine',
+        'machine',
+        'machine',
+        'machine',
+    ]);
     expect(fake.requests.map(request => request.route)).toEqual([
         'POST /identity/connect/token',
         `GET /api/projects/${PROJECT}/secrets`,
@@ -135,53 +141,42 @@ test('a keychain token is only sent to the server it was stored for', async () =
     const storedStore = bitwarden({ project: PROJECT, server: stored.url, keychain, env: {} });
     const otherStore = bitwarden({ project: PROJECT, server: other.url, keychain, env: {} });
 
-    await storedStore.login!({ access: 'read', prompt: () => Promise.resolve(stored.tokens.read) });
+    await storedStore.login!({ prompt: () => Promise.resolve(stored.tokens.machine) });
     const error = await catchError(otherStore.read(['DB_URL']));
 
     expect(error.message).toContain('`secrets login`');
     expect(other.requests).toEqual([]);
-    expect(await keychain.get(`bitwarden:${new URL(stored.url).host}:read`)).toBe(stored.tokens.read);
+    expect(await keychain.get(`bitwarden:${new URL(stored.url).host}`)).toBe(stored.tokens.machine);
 });
 
-test('login prompts once, proves the token against the server, then stores it per access', async () => {
+test('login prompts once, proves the token against the server, then stores it for the host', async () => {
     const fake = await startFakeBitwarden();
     const keychain = createMemoryKeychain();
     const store = bitwarden({ project: PROJECT, server: fake.url, keychain, env: {} });
     const prompts: string[] = [];
 
     await store.login!({
-        access: 'write',
         prompt: label => {
             prompts.push(label);
-            return Promise.resolve(fake.tokens.write);
+            return Promise.resolve(fake.tokens.machine);
         },
     });
-    const rejected = await catchError(
-        store.login!({ access: 'read', prompt: () => Promise.resolve(fake.tokens.unknown) }),
-    );
+    const rejected = await catchError(store.login!({ prompt: () => Promise.resolve(fake.tokens.unknown) }));
 
-    const host = new URL(fake.url).host;
     expect(prompts).toHaveLength(1);
-    expect(fake.requests.map(request => request.client)).toEqual(['write', 'unknown']);
-    expect(await keychain.get(`bitwarden:${host}:write`)).toBe(fake.tokens.write);
-    expect(await keychain.get(`bitwarden:${host}:read`)).toBeNull();
+    expect(fake.requests.map(request => request.client)).toEqual(['machine', 'unknown']);
+    expect(await keychain.get(`bitwarden:${new URL(fake.url).host}`)).toBe(fake.tokens.machine);
     expect(rejected.message).toContain('rejected the access token');
     expectNoLeak(rejected, fake.tokens.unknown);
 });
 
-test.each([
-    ['read', '`secrets login`'],
-    ['write', '`secrets login --write`'],
-] as const)('a missing %s credential asks to run %s', async (access, command) => {
+test('a missing credential asks to run `secrets login`', async () => {
     const fake = await startFakeBitwarden();
-    const keychain = createMemoryKeychain();
-    // Holding the other access's token must not stand in for this one.
-    await keychain.set(`bitwarden:${new URL(fake.url).host}:${access === 'read' ? 'write' : 'read'}`, fake.tokens.read);
-    const store = bitwarden({ project: PROJECT, server: fake.url, keychain, env: {} });
+    const store = bitwarden({ project: PROJECT, server: fake.url, keychain: createMemoryKeychain(), env: {} });
 
-    const error = await catchError(access === 'read' ? store.read(['DB_URL']) : store.write([]));
+    const error = await catchError(store.write([]));
 
-    expect(error.message).toContain(command);
+    expect(error.message).toContain('`secrets login`');
     expect(fake.requests).toEqual([]);
 });
 
@@ -197,7 +192,7 @@ test('a rejected token fails with its own message', async () => {
     const error = await catchError(store.read(['DB_URL']));
 
     expect(error.message).toBe(
-        `Bitwarden at ${new URL(fake.url).host} rejected the access token: run \`secrets login\` (\`secrets login --write\` for the write token) with a valid one`,
+        `Bitwarden at ${new URL(fake.url).host} rejected the access token: run \`secrets login\` with a valid one`,
     );
     expectNoLeak(error, fake.tokens.unknown);
 });
@@ -211,7 +206,7 @@ test('an unreachable server fails with its own message', async () => {
     const error = await catchError(store.read(['DB_URL']));
 
     expect(error.message).toBe(`Cannot reach Bitwarden at ${new URL(url).host}: check the server and the network`);
-    expectNoLeak(error, fake.tokens.read);
+    expectNoLeak(error, fake.tokens.machine);
 });
 
 test('a duplicate key in the project fails naming the key, never a value', async () => {
@@ -296,8 +291,7 @@ interface AddSecretParams {
 async function startFakeBitwarden() {
     const organizationKeyBytes = crypto.getRandomValues(new Uint8Array(64));
     const tokens = {
-        read: createAccessToken(),
-        write: createAccessToken(),
+        machine: createAccessToken(),
         env: createAccessToken(),
         unknown: createAccessToken(),
     };
@@ -307,7 +301,7 @@ async function startFakeBitwarden() {
         clients.set(clientId, { client, secret: clientSecret, tokenKey });
     }
 
-    const { tokenKey } = await parseBitwardenAccessToken(tokens.read);
+    const { tokenKey } = await parseBitwardenAccessToken(tokens.machine);
     const organizationKey = await decryptOrganizationKey(
         await encryptEncString(
             JSON.stringify({ encryptionKey: Buffer.from(organizationKeyBytes).toString('base64') }),
@@ -328,9 +322,7 @@ async function startFakeBitwarden() {
     servers.push(server);
 
     const keychain = createMemoryKeychain();
-    const host = server.url.host;
-    await keychain.set(`bitwarden:${host}:read`, tokens.read);
-    await keychain.set(`bitwarden:${host}:write`, tokens.write);
+    await keychain.set(`bitwarden:${server.url.host}`, tokens.machine);
 
     return {
         url: server.url.origin,

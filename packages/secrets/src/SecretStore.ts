@@ -4,11 +4,9 @@
 export type SecretPrompt = (label: string) => Promise<string>;
 
 /**
- * What a store's `login` is given: which access it must obtain and how to ask the user for credentials.
+ * What a store's `login` is given: how to ask the user for credentials.
  */
 export interface SecretStoreLoginContext {
-    /** `read` for `read`, `write` for `write`: a store owns separate credentials for each. */
-    access: 'read' | 'write';
     prompt: SecretPrompt;
 }
 
@@ -30,8 +28,7 @@ export interface SecretRef {
 }
 
 /**
- * A remote (or local) place secrets are read from and written to. A store owns its credentials:
- * `read` uses read access, `write` uses write access.
+ * A remote (or local) place secrets are read from and written to. A store owns its credentials.
  */
 export interface SecretStore {
     /** Stable identity of the store (for Bitwarden: server and project); used as the cache key. */
@@ -42,7 +39,7 @@ export interface SecretStore {
     read(keys: string[]): Promise<Map<string, string>>;
     /** Creates or updates the given entries. */
     write(entries: SecretStoreEntry[]): Promise<void>;
-    /** Obtains credentials for the given access, prompting the user when needed. */
+    /** Obtains the store's credentials, prompting the user when needed. */
     login?(context: SecretStoreLoginContext): Promise<void>;
     /** Re-fetches the given keys; implemented only by stores that cache. */
     refresh?(keys: string[]): Promise<void>;

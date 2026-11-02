@@ -20,7 +20,7 @@ export interface BitwardenOptions {
      * Defaults to Bitwarden Cloud US.
      */
     server?: string;
-    /** Where `login` keeps access tokens; the OS keychain by default. */
+    /** Where `login` keeps the access token; the OS keychain by default. */
     keychain?: Keychain;
     /** Where `BWS_ACCESS_TOKEN` is read from; `process.env` by default. */
     env?: Record<string, string | undefined>;
@@ -38,8 +38,9 @@ const MAX_ENCRYPTED_VALUE_LENGTH = 35000;
  * A Bitwarden Secrets Manager project as a secret store. A read costs at most three requests (login,
  * project listing, one fetch of the wanted secrets), however many keys are read.
  *
- * Credentials: `BWS_ACCESS_TOKEN` when set, for both reading and writing; otherwise the token
- * `secrets login` stored for this server, a separate one for read and for write access.
+ * Credentials: `BWS_ACCESS_TOKEN` when set; otherwise the token `secrets login` stored for this
+ * server, one per machine. A machine that only reads logs in with a read-only machine account, and
+ * its writes fail.
  * @__NO_SIDE_EFFECTS__
  */
 export function bitwarden(options: BitwardenOptions): SecretStore {
@@ -48,6 +49,7 @@ export function bitwarden(options: BitwardenOptions): SecretStore {
     const serverUrl = new URL(server);
     const host = serverUrl.host + serverUrl.pathname.replace(/\/+$/, '');
     const urls = getServerUrls(server, serverUrl);
+    const keychainName = `bitwarden:${host}`;
 
     return defineSecretStore({
         id: `bitwarden:${host}:${project}`,
@@ -58,7 +60,7 @@ export function bitwarden(options: BitwardenOptions): SecretStore {
     });
 
     async function read(keys: string[]) {
-        const client = await connect('read');
+        const client = await connect();
         const idsByKey = await listProject(client);
         const wanted = new Map<string, string>();
         for (const key of keys) {
@@ -90,7 +92,7 @@ export function bitwarden(options: BitwardenOptions): SecretStore {
     }
 
     async function write(entries: SecretStoreEntry[]) {
-        const client = await connect('write');
+        const client = await connect();
         const idsByKey = await listProject(client);
         const updates: SecretStoreUpdate[] = [];
         const creates: SecretStoreEntry[] = [];
@@ -139,30 +141,25 @@ export function bitwarden(options: BitwardenOptions): SecretStore {
         }
     }
 
-    async function login({ access, prompt }: SecretStoreLoginContext) {
-        const token = (await prompt(`Bitwarden access token with ${access} access to ${host}`)).trim();
+    async function login({ prompt }: SecretStoreLoginContext) {
+        const token = (await prompt(`Bitwarden access token for ${host}`)).trim();
         // Proves the token works against this server before it is stored for it.
         await loginBitwarden(urls, token);
-        await keychain.set(keychainName(access), token);
+        await keychain.set(keychainName, token);
     }
 
-    async function connect(access: 'read' | 'write') {
+    async function connect() {
         const fromEnv = env[ACCESS_TOKEN_ENV];
         if (fromEnv != null && fromEnv !== '') {
             return await loginBitwarden(urls, fromEnv);
         }
 
-        const stored = await keychain.get(keychainName(access));
+        const stored = await keychain.get(keychainName);
         if (stored == null) {
-            const command = access === 'write' ? 'secrets login --write' : 'secrets login';
-            throw new Error(`No Bitwarden ${access} token for ${host}: run \`${command}\` or set ${ACCESS_TOKEN_ENV}`);
+            throw new Error(`No Bitwarden token for ${host}: run \`secrets login\` or set ${ACCESS_TOKEN_ENV}`);
         }
 
         return await loginBitwarden(urls, stored);
-    }
-
-    function keychainName(access: 'read' | 'write') {
-        return `bitwarden:${host}:${access}`;
     }
 
     /** Decrypts the project's keys into key → ids; more than one id means a duplicate key. */

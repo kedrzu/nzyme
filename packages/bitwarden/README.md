@@ -22,22 +22,22 @@ A read costs at most three requests (login, project listing, one fetch), however
    secrets by construction, not only by its permissions.
 2. **Projects.** One project per repo or per environment, as the repo's mapping expects. Copy the
    project id into `bitwarden({ project })`.
-3. **Two machine accounts:** one with read access to the project, one with read-write access.
-4. **Access tokens.** Create an access token for each machine account and give it to the developers
-   who need it.
+3. **A machine account per machine,** with read-write access to the project. A machine meant only to
+   read (a server, a CI runner) gets a read-only machine account; its writes fail with 403.
+4. **Access tokens.** Create an access token for each machine account and give it to whoever runs
+   that machine.
 5. **Log in** on each machine:
 
    ```bash
-   nzyme secrets login        # read-only token: startup, `secrets run`, `secrets list`
-   nzyme secrets login --write # read-write token: `secrets set`, `secrets import`
+   nzyme secrets login
    ```
 
    With several stores, name one: `nzyme secrets login bw`. The token is read from a hidden prompt
    (or stdin), checked against the server, and stored in the OS keychain under the server's host, so a
-   token is never sent to another server.
+   token is never sent to another server. One token serves reading and writing.
 
-In CI, or on Linux without a keychain, set `BWS_ACCESS_TOKEN` instead; it is used for both reading
-and writing, and `secrets run` removes it from the child's environment.
+In CI, or on Linux without a keychain, set `BWS_ACCESS_TOKEN` instead; it takes the place of the
+stored token, and `secrets run` removes it from the child's environment.
 
 ## Why a token cannot reach passwords
 

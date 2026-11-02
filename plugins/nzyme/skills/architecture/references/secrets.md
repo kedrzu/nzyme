@@ -9,8 +9,8 @@ API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-c
 
 - **A store**, chosen once and recorded with its reason in `ARCHITECTURE.md`. The one implemented is
   Bitwarden Secrets Manager (`@nzyme/bitwarden`, setup in `nzyme/packages/bitwarden/README.md`:
-  a dedicated organization, a project per repo or environment, a read-only and a read-write machine
-  account). Another store (AWS Secrets Manager, SSM Parameter Store, …) has no implementation yet:
+  a dedicated organization, a project per repo or environment, a machine account per machine,
+  read-only on a machine that only reads). Another store (AWS Secrets Manager, SSM Parameter Store, …) has no implementation yet:
   choosing it means writing it in nzyme first, through `defineSecretStore`, before this element can
   be applied. Say so instead of wiring a store that does not exist.
 - **A provider** — a `defineService({ implements: SecretsProvider })` beside the code that reads
@@ -24,7 +24,7 @@ API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-c
   product CLI, a plugin module (`tools/secrets.ts`) listed under `nzyme.plugins` in the root
   `package.json`, run as `bun nzyme secrets …`. Every `@nzyme/*` package, `@nzyme/cli` included, is
   one version installed in the repo.
-- **CI** — a job that needs secrets gets `BWS_ACCESS_TOKEN` (the read-only token) from a GitHub
+- **CI** — a job that needs secrets gets `BWS_ACCESS_TOKEN` (a read-only machine account's token) from a GitHub
   Actions secret and runs through `secrets run --`. The `Build` job needs none
   (`references/github.md`).
 - **The repo's skill** `.claude/skills/secrets/SKILL.md` — required, not offered: without it an

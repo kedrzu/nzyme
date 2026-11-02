@@ -17,18 +17,17 @@ export function defineSecretsLoginCommand(options: SecretsCommandsOptions): Comm
             category: 'Secrets',
             description: 'Obtain credentials for a store',
             details: `
-                Logs in to the store with the given alias (optional with one store), read access
-                unless \`--write\` is given. The store asks for what it needs through a hidden prompt
-                on a terminal, otherwise reads it from stdin; it is never taken from an argument.
+                Logs in to the store with the given alias (optional with one store). The store asks
+                for what it needs through a hidden prompt on a terminal, otherwise reads it from stdin;
+                it is never taken from an argument.
             `,
             examples: [
-                ['Log in for reading', 'secrets login'],
-                ['Log in to the bw store for writing', 'secrets login bw --write'],
+                ['Log in to the only store', 'secrets login'],
+                ['Log in to the bw store', 'secrets login bw'],
             ],
         });
 
         alias = Option.String({ required: false, name: 'alias' });
-        write = Option.Boolean('--write', false, { description: 'Obtain write access instead of read access' });
 
         override async run() {
             const mapping = this.container.resolve(options.provider);
@@ -37,10 +36,9 @@ export function defineSecretsLoginCommand(options: SecretsCommandsOptions): Comm
                 throw new UsageError(`Store "${alias}" has no login.`);
             }
 
-            const access = this.write ? 'write' : 'read';
             const stdin = this.context.stdin;
-            await store.login({ access, prompt: readAnswer });
-            this.context.stdout.write(`Logged in to store ${store.id} for ${access} access.\n`);
+            await store.login({ prompt: readAnswer });
+            this.context.stdout.write(`Logged in to store ${store.id}.\n`);
 
             async function readAnswer(label: string) {
                 const answer = await readHiddenInput(label, stdin);

@@ -42,10 +42,11 @@ without exposing them, and keep its credentials in the OS keychain.
 
 - API types are hand-written, because nzyme is MIT and a generated OpenAPI document is AGPL-derived.
   They were checked against a locally built document, which is not committed.
-- Two tokens per store: a read-only one for the startup step, `secrets run` and `secrets list`, and a
-  read-write one for `secrets set` and `secrets import`. `secrets login` stores each in the keychain,
-  keyed by server host, so a token is never sent to another server. `BWS_ACCESS_TOKEN` overrides both,
-  for CI and Linux.
+- One token per machine: `secrets login` stores it in the keychain, keyed by server host, so a token
+  is never sent to another server. `BWS_ACCESS_TOKEN` overrides it, for CI and Linux. A machine
+  meant only to read gets a read-only machine account, and its writes fail with 403. A separate read
+  and write token per machine was dropped in review (PR #258): any `bun` process of the user reads
+  both keychain items without a prompt, so the split protected little.
 
 ## Consequences
 

@@ -189,18 +189,17 @@ test('delegates login and credentialEnv to the inner store', async () => {
     const inner = defineSecretStore({
         ...createMemoryStore('bw', {}).store,
         credentialEnv: ['BWS_ACCESS_TOKEN'],
-        login: context => {
-            logins.push(context.access);
-            return Promise.resolve();
+        login: async context => {
+            logins.push(await context.prompt('Access token'));
         },
     });
     const store = cached(inner, { ttl: HOUR, keychain: createMemoryKeychain() });
 
-    await store.login?.({ access: 'write', prompt: () => Promise.resolve('') });
+    await store.login?.({ prompt: () => Promise.resolve('token') });
 
     expect(store.id).toBe('bw');
     expect(store.credentialEnv).toEqual(['BWS_ACCESS_TOKEN']);
-    expect(logins).toEqual(['write']);
+    expect(logins).toEqual(['token']);
 });
 
 function createMemoryStore(id: string, initial: Record<string, string>) {

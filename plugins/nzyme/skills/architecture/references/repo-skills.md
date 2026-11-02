@@ -23,7 +23,7 @@ in the repo then pick up the area's rules on their own, without anyone invoking 
 
 For `secrets` the paths and commands are the whole point: the exact prefix (`bun nzyme secrets` or
 the product CLI's), the provider file, each store and its environments, the variable that selects
-the environment and how to run a command against another one, who holds the read-write token, and
+the environment and how to run a command against another one, whose machines can write, and
 any secrets command the repo adds. The practice it links is `nzyme/plugins/nzyme/skills/secrets/SKILL.md`.
 
 It never restates a rule the linked skill or README owns. If a line would hold everywhere nzyme is

@@ -36,7 +36,7 @@ if (process.argv[2] !== 'quiet-run' && process.argv[2] !== 'submodule' && proces
 // Initialize the CLI environment
 initialize();
 
-const pluginCommands = await loadPlugins(process.argv.slice(2), builtinCommands);
+const pluginCommands = await loadPlugins();
 
 // Execute the CLI program
 await execute({

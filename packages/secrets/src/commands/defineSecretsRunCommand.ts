@@ -19,7 +19,7 @@ export function defineSecretsRunCommand(options: SecretsCommandsOptions): Comman
             category: 'Secrets',
             description: 'Run a command with the mapped secrets in its environment',
             details: `
-                Reads every mapped secret (read access only) and runs the command with them as
+                Reads every mapped secret (it never writes) and runs the command with them as
                 environment variables — never as arguments. A variable already set wins over its
                 secret. The credentials of every store are removed from the command's environment.
                 Nothing is started when a secret is missing. The exit code is the command's own,

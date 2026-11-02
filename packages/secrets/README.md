@@ -69,7 +69,7 @@ variables, skips it.
   empty, or a failed read, throws naming the variable, key and store, and leaves `EnvVariables`
   untouched.
 - **No values in output:** errors and logs carry names and references, never values.
-- **Read-only:** the startup step uses a store's read-only credentials.
+- **Reads only:** the startup step never writes to a store.
 
 ## Cache
 

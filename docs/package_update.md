@@ -41,8 +41,12 @@ API and have no TS7-compatible release: `@typescript-eslint/parser` in `packages
 `typescript-estree`), `vue-tsc` in `packages/logging-ui`, `vite-plugin-checker` in
 `packages/rollup-utils`, and `packages/cli`'s code index (`import ts from 'typescript'`). So classic
 `typescript@6` stays the resolvable `typescript` module, and native-preview's distinct `tsgo` name is
-what lets the native compiler coexist with it. Migrate to `typescript@7` in one step only once
-`vue-tsc` and `typescript-eslint` ship TS7-native builds. See the Known Issues.
+what lets the native compiler coexist with it.
+
+That 7.0 has no API is deliberate, and upstream names this side-by-side arrangement as the intended
+one for 7.0 — it is not a workaround awaiting a fix. The target is **7.1**, which carries the new API
+and content mappers: migrate in one step once typescript-eslint and vue-tsc ship releases built
+against it. The Known Issues track both projects' work and the failed 7.0 coexistence attempt.
 
 ### @types/bun / bun-types / `packageManager` — one version, three places
 
@@ -92,21 +96,14 @@ Version-specific failures from past attempts. Never retry a listed version; dele
 newer version fixes it. One `###` per package and attempted version. A `blocked-by-consumer` entry is
 never retried from inside this repository — only a run in a consumer can show it fixed.
 
-### nuxt 4.5+ / vite 8 (re-checked 2026-10-19)
+### nuxt 4.5+ / vite 8 (attempted by a consumer 2026-10-26, reverted)
 
-- **Problem**: a consumer is held on nuxt 4.4.8 and vite 7. nuxt, vite, `@unhead/vue` and
-  `@nuxt/image` move together (nuxt 4.5 requires vite 8 and unhead 3; unhead 3 requires
-  `@nuxt/image` 2.x), and `@nuxt/image` 2.1.0 breaks a built Nuxt server at runtime.
-- **Error**: `Cannot find package 'srvx'` from the built server's `node_modules/ipx` — `@nuxt/image`
-  2.1.0 needs `ipx: 4.0.0-beta.1`, and Nitro's trace never copies its `srvx` dependency.
-  `@nuxt/image` 1.11.0 does not compile against unhead 3.
+- **Problem**: a consumer is held on nuxt 4.4.8 and vite 7. nuxt 4.6 requires vite 8 (`@nuxt/vite-builder@4.6.2` depends on `vite: ^8.3.4`), and vite 8's bundler drops environment-gated branches from **dynamically imported** chunks even when the gate is true. A consumer that gates lazily-loaded, non-production-only code on build-time environment constants loses that code from its non-production builds.
+- **Error**: in the consumer's tree-shaking test, the lazy chunk builds down to its unconditional marker; both guarded markers are eliminated, while the entry chunk is correct. It happens with `minify: false` too, so it is the bundler, not terser. Typecheck and app builds stay green.
 - **Status**: blocked-by-consumer
-- **Notes**: do not raise the `nuxt` or `vite` ranges (or the exact pins in `packages/logging-ui`
-  and the Vue packages) past 4.4.x / 7.x, or the consumer gets a second Nuxt or Vite. Cheap
-  re-check: `npm view @nuxt/image@latest optionalDependencies` — while it still reads
-  `ipx: 4.0.0-beta.1`, the chain is still blocked. `crossws` rides this chain (General Rules).
+- **Notes**: do not raise the `nuxt` or `vite` ranges or pins (`packages/logging-ui`, `packages/nuxt-tools`, the Vue packages) past 4.4.x / 7.x, or the consumer gets a second Nuxt or Vite. nzyme's own share of the migration is known: nuxt 4.6 types the nitro hooks again, so the `@ts-expect-error nitro hooks are not typed` directive in `packages/nuxt-tools/src/outputFilesModule.ts` becomes an error (TS2578) and must go; `crossws` moves to the 0.4.x line with it (General Rules). The old blocker (`@nuxt/image` pinning a beta `ipx`) is gone.
 
-### rollup 4.62.3 through 4.64.10 (re-checked 2026-10-19)
+### rollup 4.62.3 through 4.65.0 (re-checked 2026-10-26)
 
 - **Problem**: `packages/pulumi/src/compileFunction.worker.ts` stops compiling — the
   `bundleStats()` plugin no longer satisfies `InputPluginOption`.
@@ -114,13 +111,55 @@ never retried from inside this repository — only a run in a consumer can show 
   the copy vendored in `rollup-plugin-stats` still declares `string`.
 - **Status**: blocked-by-rollup-plugin-bundle-stats
 - **Notes**: 4.62.2 is the last good version — 4.62.3, 4.62.4 and 4.63.3 all fail identically, and
-  nothing from 4.63.4 up to 4.64.10 was attempted, because the vendored type is unchanged:
-  `rollup-plugin-bundle-stats@4.22.3` (latest on 2026-10-19) hard-pins `rollup-plugin-stats@2.1.3`,
+  nothing from 4.63.4 up to 4.65.0 was attempted, because the vendored type is unchanged:
+  `rollup-plugin-bundle-stats@4.22.3` (latest on 2026-10-26) hard-pins `rollup-plugin-stats@2.1.3`,
   whose `dist/types.d.mts` still declares `file: string`. Bump `rollup-plugin-bundle-stats` freely;
   re-test rollup only when a release relaxes `SourceMap.file`. Verify with
   `grep -n 'file' node_modules/.bun/rollup-plugin-stats@*/node_modules/rollup-plugin-stats/dist/types.d.ts`.
 
-### typescript 7.0.2 (coexistence with TS6 attempted 2026-07-20, reverted; re-checked 2026-10-19)
+### typescript 7.x — the target is 7.1, not 7.0 (upstream checked 2026-10-26)
+
+**7.0 was never going to unblock this, by design.** It ships no programmatic API. From
+[Announcing TypeScript 7.0](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/#running-side-by-side-with-typescript-6.0):
+
+> While TypeScript 7.0 is here, it does not ship with an API. We expect TypeScript 7.1 to ship with a
+> new (and different) API, but until then we have made it a priority to ensure TypeScript can be run
+> side-by-side with TypeScript 6.0 for utilities that still need some programmatic access to the
+> compiler (such as typescript-eslint).
+
+Stop re-checking `typescript@7.0.x`; the question is only ever about 7.1 (`typescript@7.1.0-beta` is
+published, nightlies daily). Both blocking tools are building against it in the open:
+
+- **typescript-eslint** — [#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940),
+  implemented in [PR #12803](https://github.com/typescript-eslint/typescript-eslint/pull/12803): an
+  opt-in `projectService: { EXPERIMENTAL_backend: 'native' }` that talks to the TS 7.1 native parser
+  over IPC. Do not expect the headline 10x — the maintainer measures roughly parity with TS6, because
+  ESLint has no API for batch type queries
+  ([#11677](https://github.com/typescript-eslint/typescript-eslint/issues/11677)).
+- **vue-tsc / Volar** — [#5381](https://github.com/vuejs/language-tools/issues/5381) is closed as
+  completed, and that is misleading: it moved only Volar's own build onto TS7. "All published packages
+  (`vue-tsc`, the language server, the tsserver plugin) still require the TypeScript 6 JS API". Real
+  integration waits on 7.1 content mappers, in
+  [PR #6170](https://github.com/vuejs/language-tools/pull/6170) (draft). Once they land, `tsc` checks
+  `.vue` directly and `vue-tsc` gets deprecated.
+
+**A peer range will not warn you.** `vue-tsc@3.3.13` peers `typescript: >=5.0.0` with no upper bound,
+so under TS7 it installs cleanly and fails at runtime through `@volar/typescript`, which consumes the
+classic API. typescript-eslint states it honestly: `typescript-estree@8.72.0` peers
+`typescript: >=4.8.4 <6.1.0`.
+
+**Status**: skip — blocked-by-typescript-eslint + vue-tsc, both pending TS 7.1.
+
+**Re-check — three conditions, all required:**
+
+1. `npm view typescript dist-tags` → `latest` on a 7.1.x.
+2. typescript-eslint PR #12803 merged **and** released.
+3. Volar PR #6170 out of draft **and** released in a `vue-tsc` that drops the classic-API requirement.
+
+`@typescript/native-preview` is frozen meanwhile (`docs/dependency-health.md`) — expected, it is being
+superseded on schedule by this path.
+
+### typescript 7.0.2 (coexistence with TS6 attempted 2026-07-20, reverted)
 
 - **Problem**: moving the native build off `@typescript/native-preview` onto the official
   `typescript@7`, with the Vue toolchain kept on `typescript@6`, breaks lint.
@@ -129,16 +168,10 @@ never retried from inside this repository — only a run in a consumer can show 
   dies with `TypeError: Cannot read properties of undefined (reading 'Cjs')` at
   `create-program/shared.js`. Bun's `overrides` are global, so `typescript@6` cannot be scoped to that
   one transitive dependency.
-- **Status**: skip — blocked-by-typescript-eslint (+ vue-tsc through Volar)
+- **Status**: skip — superseded by the 7.1 entry above.
 - **Notes**: what worked: native TS7 `tsc --build` type-checks the graph clean, and `vue-tsc` (TS6)
-  consumes the TS7-emitted `.d.ts`. The only workaround — TS7 under an npm alias invoked by path — just
-  recreates the separate-binary setup `tsgo` already gives. Re-check with two commands; migrate in
-  one step when both clear:
-  - `npm view @typescript-eslint/typescript-estree@latest peerDependencies` — read
-    `typescript: >=4.8.4 <6.1.0` at 8.71.2, so TS7 (and TS 6.1) is excluded.
-  - `npm view typescript@7.0.2 exports` — `"."` is `./lib/version.cjs`; the compiler API is only
-    under `./unstable/*`, and `vue-tsc` reaches it through `@volar/typescript`, which uses the
-    classic API.
+  consumes the TS7-emitted `.d.ts`. The only workaround — TS7 under an npm alias invoked by path —
+  just recreates the separate-binary setup `tsgo` already gives.
 
 ### vitest 5.0.3 / 5.0.5 (attempted 2026-10-05 at 5.0.3, reverted)
 

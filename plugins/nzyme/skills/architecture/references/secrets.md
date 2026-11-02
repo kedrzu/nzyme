@@ -17,8 +17,8 @@ API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-c
   the variables (the app package, or a shared package when several apps share secrets), wrapped in
   `cached(store, { ttl })`. Environments are the repo's: the provider picks the project or keys from
   an env variable in its `deps` (the app's `ENV`, for example).
-- **Startup** — each process that reads secrets in development registers the provider and calls
-  `await loadSecrets(container)` before resolving anything that reads them. Production gets the variables
+- **Startup** — each process that reads secrets in development calls
+  `await loadSecrets(container, AppSecrets)` with its provider before resolving anything that reads them. Production gets the variables
   from its platform and skips it.
 - **Commands** — `defineSecretsCommands({ provider })` registered in the product's CLI, or, with no
   product CLI, a plugin module (`tools/secrets.ts`) listed under `nzyme.plugins` in the root

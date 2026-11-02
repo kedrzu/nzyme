@@ -53,13 +53,13 @@ require, for example by depending on an env variable in `deps`.
 ```ts
 import { loadSecrets } from '@nzyme/secrets/loadSecrets.js';
 
-container.register(AppSecrets);
-await loadSecrets(container);
+await loadSecrets(container, AppSecrets);
 ```
 
 `loadSecrets` reads every mapped secret, one batch per store, and writes them into that container's
-`EnvVariables`, so `defineEnvVariable` resolves them. Call it after registering the provider and
-before resolving anything that reads those variables. Production, whose platform provides the
+`EnvVariables`, so `defineEnvVariable` resolves them. It takes the provider explicitly, as the
+`secrets` commands do, and resolves it from that container. Call it before resolving anything that
+reads those variables. Production, whose platform provides the
 variables, skips it.
 
 - **Precedence:** a non-empty variable already set wins over its secret, and its name is reported in

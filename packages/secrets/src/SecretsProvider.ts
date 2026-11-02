@@ -13,7 +13,7 @@ export interface SecretsMapping {
 }
 
 /**
- * The project's secrets configuration. Register a service declaring `implements: SecretsProvider`
- * with `container.register()`.
+ * The project's secrets configuration. A project declares a service with
+ * `implements: SecretsProvider` and passes it to `loadSecrets` and `defineSecretsCommands`.
  */
 export const SecretsProvider = defineInterface<SecretsMapping>({ name: 'SecretsProvider' });

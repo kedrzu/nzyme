@@ -1,8 +1,10 @@
 import type { Container } from '@nzyme/ioc/Container.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
+import type { Injectable } from '@nzyme/ioc/Injectable.js';
 import { Logger } from '@nzyme/logging/Logger.js';
 
 import { describeMissingSecrets, resolveSecrets } from './resolveSecrets.js';
+import type { SecretsMapping } from './SecretsProvider.js';
 import { SecretsProvider } from './SecretsProvider.js';
 
 /**
@@ -16,9 +18,9 @@ export interface LoadSecretsResult {
 }
 
 /**
- * Loads the secrets mapped by the container's `SecretsProvider` into its `EnvVariables`, so that
- * `defineEnvVariable` resolves them. Run it at startup, after registering the provider and before
- * resolving anything that reads those variables.
+ * Loads the secrets mapped by `provider`, resolved from `container`, into the container's
+ * `EnvVariables`, so that `defineEnvVariable` resolves them. Run it at startup, before resolving
+ * anything that reads those variables.
  *
  * Every read completes before anything is written: when any secret is missing or any read fails,
  * it throws and `EnvVariables` is left untouched. A non-empty variable already set wins over its
@@ -27,15 +29,11 @@ export interface LoadSecretsResult {
  * A plain function rather than a command, because a scopeless command resolves its dependencies
  * on the root container, while this must work on any container.
  */
-export async function loadSecrets(container: Container): Promise<LoadSecretsResult> {
-    const mapping = container.tryResolve(SecretsProvider);
-    if (!mapping) {
-        throw new Error(
-            'No SecretsProvider is registered. Register a service declaring `implements: SecretsProvider` ' +
-                'with `container.register()` before calling loadSecrets().',
-        );
-    }
-
+export async function loadSecrets(
+    container: Container,
+    provider: Injectable<SecretsMapping>,
+): Promise<LoadSecretsResult> {
+    const mapping = container.resolve(provider);
     const env = container.resolve(EnvVariables);
     const { values, missing, overridden } = await resolveSecrets(mapping, env);
 
@@ -48,7 +46,7 @@ export async function loadSecrets(container: Container): Promise<LoadSecretsResu
     }
 
     const loaded = [...values.keys()];
-    // The interface as the caller names the logger after it.
+    // Named after the interface rather than the project's service, so the log reads the same in every project.
     const logger = container.resolve(Logger, SecretsProvider);
     logger.info('Secrets loaded', { loaded, overridden });
 

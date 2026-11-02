@@ -46,8 +46,9 @@ Healed has its own environments and AWS-account conventions, which other repos d
 ## Decision
 
 `@nzyme/secrets` defines the `SecretStore` contract, the `SecretsProvider` interface (stores by alias,
-env-variable name to secret reference) and `loadSecrets(container)`, a plain function an app calls at
-startup. It reads every mapped secret, one batch per store, and writes them into that container's
+env-variable name to secret reference) and `loadSecrets(container, provider)`, a plain function an
+app calls at startup. It takes the provider explicitly, as `defineSecretsCommands({ provider })` does,
+so there is no registration to forget. It reads every mapped secret, one batch per store, and writes them into that container's
 `EnvVariables`. The core knows no environments: a project's provider chooses stores and keys however
 its conventions require.
 

@@ -23,20 +23,18 @@ test('loads secrets from two stores with one read per store, resolvable through 
     const { container, logs } = createTestContainer();
     const env: EnvVariables = {};
     container.set(EnvVariables, env);
-    container.register(
-        defineSecretsProvider({
-            stores: { bw: bw.store, vault: vault.store },
-            secrets: {
-                TELEGRAM_TOKEN: bw.store.secret('TELEGRAM_TOKEN_UMBRA'),
-                DB_PASSWORD: bw.store.secret(),
-                API_KEY: bw.store.secret(),
-                SMTP_PASSWORD: vault.store.secret(),
-                OTHER: vault.store.secret(),
-            },
-        }),
-    );
+    const provider = defineSecretsProvider({
+        stores: { bw: bw.store, vault: vault.store },
+        secrets: {
+            TELEGRAM_TOKEN: bw.store.secret('TELEGRAM_TOKEN_UMBRA'),
+            DB_PASSWORD: bw.store.secret(),
+            API_KEY: bw.store.secret(),
+            SMTP_PASSWORD: vault.store.secret(),
+            OTHER: vault.store.secret(),
+        },
+    });
 
-    const result = await loadSecrets(container);
+    const result = await loadSecrets(container, provider);
 
     expect(bw.reads).toEqual([['TELEGRAM_TOKEN_UMBRA', 'DB_PASSWORD', 'API_KEY']]);
     expect(vault.reads).toEqual([['SMTP_PASSWORD', 'OTHER']]);
@@ -60,14 +58,12 @@ test('loads into the EnvVariables of a child container', async () => {
     const child = container.createChild(defineScope('request'));
     const childEnv: EnvVariables = {};
     child.set(EnvVariables, childEnv);
-    child.register(
-        defineSecretsProvider({
-            stores: { bw: bw.store },
-            secrets: { TELEGRAM_TOKEN: bw.store.secret('TELEGRAM_TOKEN_UMBRA') },
-        }),
-    );
+    const provider = defineSecretsProvider({
+        stores: { bw: bw.store },
+        secrets: { TELEGRAM_TOKEN: bw.store.secret('TELEGRAM_TOKEN_UMBRA') },
+    });
 
-    await loadSecrets(child);
+    await loadSecrets(child, provider);
 
     expect(child.resolve(TELEGRAM_TOKEN)).toBe(SENTINEL);
     expect(rootEnv).toEqual({});
@@ -78,18 +74,16 @@ test('a missing or empty secret fails naming it and its reference, writing nothi
     const { container, logs } = createTestContainer();
     const env: EnvVariables = {};
     container.set(EnvVariables, env);
-    container.register(
-        defineSecretsProvider({
-            stores: { bw: bw.store },
-            secrets: {
-                PRESENT: bw.store.secret(),
-                EMPTY_ONE: bw.store.secret('EMPTY'),
-                ABSENT_ONE: bw.store.secret('ABSENT'),
-            },
-        }),
-    );
+    const provider = defineSecretsProvider({
+        stores: { bw: bw.store },
+        secrets: {
+            PRESENT: bw.store.secret(),
+            EMPTY_ONE: bw.store.secret('EMPTY'),
+            ABSENT_ONE: bw.store.secret('ABSENT'),
+        },
+    });
 
-    const error = await loadSecrets(container).catch((e: unknown) => e);
+    const error = await loadSecrets(container, provider).catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(Error);
     const message = String(error);
@@ -111,14 +105,12 @@ test('a failing read in one store writes nothing from the others', async () => {
     const { container } = createTestContainer();
     const env: EnvVariables = {};
     container.set(EnvVariables, env);
-    container.register(
-        defineSecretsProvider({
-            stores: { bw: bw.store, broken },
-            secrets: { TELEGRAM_TOKEN: bw.store.secret(), OTHER: broken.secret() },
-        }),
-    );
+    const provider = defineSecretsProvider({
+        stores: { bw: bw.store, broken },
+        secrets: { TELEGRAM_TOKEN: bw.store.secret(), OTHER: broken.secret() },
+    });
 
-    await expect(loadSecrets(container)).rejects.toThrow('Store unreachable');
+    await expect(loadSecrets(container, provider)).rejects.toThrow('Store unreachable');
 
     expect(env).toEqual({});
 });
@@ -128,14 +120,12 @@ test('a non-empty variable already set wins and is reported by name only', async
     const { container, logs } = createTestContainer();
     const env: EnvVariables = { TELEGRAM_TOKEN: 'local-token', EMPTY_SET: '' };
     container.set(EnvVariables, env);
-    container.register(
-        defineSecretsProvider({
-            stores: { bw: bw.store },
-            secrets: { TELEGRAM_TOKEN: bw.store.secret(), EMPTY_SET: bw.store.secret() },
-        }),
-    );
+    const provider = defineSecretsProvider({
+        stores: { bw: bw.store },
+        secrets: { TELEGRAM_TOKEN: bw.store.secret(), EMPTY_SET: bw.store.secret() },
+    });
 
-    const result = await loadSecrets(container);
+    const result = await loadSecrets(container, provider);
 
     const expected: LoadSecretsResult = { loaded: ['EMPTY_SET'], overridden: ['TELEGRAM_TOKEN'] };
     expect(result).toEqual(expected);
@@ -147,13 +137,6 @@ test('a non-empty variable already set wins and is reported by name only', async
     });
     expect(JSON.stringify(logs)).not.toContain(SENTINEL);
     expect(JSON.stringify(logs)).not.toContain('local-token');
-});
-
-test('fails clearly when no SecretsProvider is registered', async () => {
-    const { container } = createTestContainer();
-    container.set(EnvVariables, {});
-
-    await expect(loadSecrets(container)).rejects.toThrow('No SecretsProvider is registered');
 });
 
 function defineSecretsProvider(mapping: SecretsMapping) {

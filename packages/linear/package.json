@@ -36,7 +36,7 @@
     },
     "dependencies": {
         "@linear/sdk": "98.0.0",
-        "@nzyme/cli": "workspace:*",
+        "@nzyme/cli-core": "workspace:*",
         "@nzyme/github-cli": "workspace:*",
         "@nzyme/logging": "workspace:*",
         "chalk": "6.0.1",

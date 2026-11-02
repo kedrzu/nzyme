@@ -1,4 +1,4 @@
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 
 /**
  * Extract task ID from a branch name.

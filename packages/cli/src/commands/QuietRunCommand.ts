@@ -5,8 +5,8 @@ import path from 'node:path';
 
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
 
-import { Command } from '../Command.js';
-import { Option } from '../index.js';
+import { Command } from '@nzyme/cli-core/Command.js';
+import { Option } from '@nzyme/cli-core';
 import { getQuietRunLogFileName, renderQuietRunReport } from '../quietRun/quietRunReport.js';
 
 /** Default lines of trailing output shown on failure. */

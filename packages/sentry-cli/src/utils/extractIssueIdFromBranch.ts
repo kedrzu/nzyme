@@ -1,4 +1,4 @@
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 
 /**
  * Extract Sentry issue ID from a branch name.

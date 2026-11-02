@@ -2,7 +2,7 @@ import type { LinearClient } from '@linear/sdk';
 import chalk from 'chalk';
 import enquirer from 'enquirer';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import { findInProgressState } from './findInProgressState.js';

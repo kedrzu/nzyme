@@ -1,7 +1,7 @@
 import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 
 /**
  * Information about git status.

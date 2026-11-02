@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 
 import { parseContainingBranches, resolveSubmoduleBranch } from './resolveSubmoduleBranch.js';
 

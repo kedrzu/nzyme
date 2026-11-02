@@ -1,4 +1,4 @@
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 
 /**
  * Parse a task identifier into a standardized issue ID.

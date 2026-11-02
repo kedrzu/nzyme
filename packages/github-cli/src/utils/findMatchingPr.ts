@@ -1,4 +1,4 @@
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import { extractBranchVersion, extractNodeIndex, getBaseBranchName } from './branchVersionHelpers.js';

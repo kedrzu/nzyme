@@ -9,7 +9,7 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
   `typography`
 - **Vue:** `vue`, `vue-utils`, `vue-ioc`, `vue-forms`, `vue-i18n`, `vue-transitions`, `dom-utils`
 - **Tooling:**
-  - `cli` (the `nzyme` binary: `monorepo`, `localise`, `index`, `quiet-run`, `format-markdown`,
+  - `cli-core` (the clipanion-based `Command` framework behind every CLI), `cli` (the `nzyme` binary: `monorepo`, `localise`, `index`, `quiet-run`, `format-markdown`,
     `submodule`, `depcheck`)
   - `tsconfig`, `eslint` (also the oxlint preset), `oxlint` (custom rules), `project-utils`,
     `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`

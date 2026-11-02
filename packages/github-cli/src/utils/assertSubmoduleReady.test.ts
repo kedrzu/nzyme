@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { simpleGit } from 'simple-git';
 import type { SimpleGit } from 'simple-git';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import { assertSubmoduleReady } from './assertSubmoduleReady.js';

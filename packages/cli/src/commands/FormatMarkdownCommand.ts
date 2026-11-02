@@ -12,8 +12,8 @@ import remarkGfm from 'remark-gfm';
 import { isFileIgnored } from '@nzyme/project-utils/isFileIgnored.js';
 import { forEachParalell } from '@nzyme/utils/array/forEachParalell.js';
 
-import { Command } from '../Command.js';
-import { Option } from '../index.js';
+import { Command } from '@nzyme/cli-core/Command.js';
+import { Option } from '@nzyme/cli-core';
 
 const MARKDOWN_REGEX = /\.mdx?$/;
 

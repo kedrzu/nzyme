@@ -1,7 +1,7 @@
 import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 
 /**
  * Push changes to remote, handling the case where no upstream is configured.

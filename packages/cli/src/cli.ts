@@ -9,8 +9,8 @@ import { LocaliseCommand } from './commands/LocaliseCommand.js';
 import { MonorepoCommand } from './commands/MonorepoCommand.js';
 import { QuietRunCommand } from './commands/QuietRunCommand.js';
 import { SubmoduleBumpCommand } from './commands/SubmoduleBumpCommand.js';
-import { execute } from './execute.js';
-import { initialize } from './initialize.js';
+import { execute } from '@nzyme/cli-core/execute.js';
+import { initialize } from '@nzyme/cli-core/initialize.js';
 
 // `quiet-run` wraps an arbitrary command: it hands that command the environment untouched (the
 // command loads its own `.env` if it wants one) and prints nothing beyond its own summary.

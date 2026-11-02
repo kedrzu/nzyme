@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import chalk from 'chalk';
 import { watch } from 'chokidar';
-import { Option } from 'clipanion';
+import { Option } from '@nzyme/cli-core';
 import * as json from 'comment-json';
 import { pathExists } from 'fs-extra/esm';
 import merge from 'lodash.merge';
@@ -18,7 +18,7 @@ import { saveFile } from '@nzyme/project-utils/saveFile.js';
 import { asArray } from '@nzyme/utils/array/asArray.js';
 import { debounceAsyncFunction } from '@nzyme/utils/debounceAsyncFunction.js';
 
-import { Command } from '../Command.js';
+import { Command } from '@nzyme/cli-core/Command.js';
 import type { NzymePackageConfig } from '../NzymePackageConfig.js';
 
 interface TsConfig {

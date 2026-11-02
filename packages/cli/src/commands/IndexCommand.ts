@@ -9,7 +9,7 @@ import { collectSymbols } from '../codeIndex/collectSymbols.js';
 import { getIndexSettings } from '../codeIndex/IndexSettings.js';
 import { readIndexConfig } from '../codeIndex/NzymeIndexConfig.js';
 import { renderMarkdown } from '../codeIndex/renderMarkdown.js';
-import { Command } from '../Command.js';
+import { Command } from '@nzyme/cli-core/Command.js';
 
 /**
  * Generates the repo's code index, so a coding agent has a fast, always-fresh map of the codebase

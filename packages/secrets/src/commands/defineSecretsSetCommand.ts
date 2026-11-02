@@ -53,7 +53,7 @@ export function defineSecretsSetCommand(options: SecretsCommandsOptions): Comman
                 throw new UsageError(`${this.name} is not a mapped secret.`);
             }
 
-            const prompted = this.prompt !== undefined;
+            const prompted = this.prompt !== undefined && this.prompt !== false;
             const value = prompted
                 ? await this.readFromDialog()
                 : await readHiddenInput(`Value of ${this.name}`, this.context.stdin);

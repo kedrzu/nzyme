@@ -206,6 +206,21 @@ test('set --prompt writes the trimmed dialog value, ignores stdin, and prints on
     expectNoLeak(result, 'piped-value');
 });
 
+test('set --no-prompt reads the value from stdin and opens no dialog', async () => {
+    const bw = createMemoryStore({ id: 'bw' });
+    await standInDialog('dialog-value');
+
+    const result = await runCommand({
+        mapping: { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        args: ['secrets', 'set', 'API_KEY', '--no-prompt'],
+        stdin: SENTINEL,
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(bw.writes).toEqual([[{ key: 'API_KEY', value: SENTINEL }]]);
+    expectNoLeak(result, SENTINEL);
+});
+
 test('set --prompt=<hint> shows the hint in the dialog', async () => {
     const bw = createMemoryStore({ id: 'bw' });
     const hint = 'Settings → API → the live key';

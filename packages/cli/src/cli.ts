@@ -1,5 +1,7 @@
 #!/usr/bin/env -S bun --enable-source-maps --conditions=source
 
+import { execute } from '@nzyme/cli-core/execute.js';
+import { initialize } from '@nzyme/cli-core/initialize.js';
 import { loadEnvVariables } from '@nzyme/project-utils/loadEnvVariables.js';
 
 import { DepcheckCommand } from './commands/DepcheckCommand.js';
@@ -10,8 +12,6 @@ import { MonorepoCommand } from './commands/MonorepoCommand.js';
 import { QuietRunCommand } from './commands/QuietRunCommand.js';
 import { SubmoduleBumpCommand } from './commands/SubmoduleBumpCommand.js';
 import { loadPlugins } from './plugins/loadPlugins.js';
-import { execute } from '@nzyme/cli-core/execute.js';
-import { initialize } from '@nzyme/cli-core/initialize.js';
 
 const builtinCommands = [
     MonorepoCommand,

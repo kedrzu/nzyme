@@ -10,8 +10,9 @@ import { readProperty } from '../utils/readProperty.js';
 
 /**
  * Loads the commands of every plugin the repo lists under `nzyme.plugins`, on every invocation.
- * A broken plugin, or a malformed `nzyme.plugins`, fails the whole CLI: it prints the path and the
- * cause on stderr and exits with 1.
+ * A plugin that fails to load, or a malformed `nzyme.plugins`, only prints a warning naming the path
+ * and the cause on stderr — never stdout, which `submodule` workflows parse — and the CLI runs on
+ * without it: invoking one of its commands then fails as an unknown command.
  */
 export async function loadPlugins(): Promise<CommandClass[]> {
     const root = getProjectRoot();
@@ -21,14 +22,14 @@ export async function loadPlugins(): Promise<CommandClass[]> {
     try {
         pluginPaths = await readPluginPaths(root);
     } catch (error) {
-        exitOnBrokenPlugin(path.join(root, 'package.json'), error);
+        warnBrokenPlugin(path.join(root, 'package.json'), error);
     }
 
     for (const pluginPath of pluginPaths) {
         try {
             commands.push(...(await importPluginCommands(root, pluginPath)));
         } catch (error) {
-            exitOnBrokenPlugin(pluginPath, error);
+            warnBrokenPlugin(pluginPath, error);
         }
     }
 
@@ -64,8 +65,7 @@ function isCommandClass(value: unknown): value is CommandClass {
     return typeof value === 'function';
 }
 
-function exitOnBrokenPlugin(pluginPath: string, cause: unknown): never {
+function warnBrokenPlugin(pluginPath: string, cause: unknown) {
     const reason = cause instanceof Error ? cause.message : String(cause);
-    console.error(`Cannot load the nzyme plugin ${pluginPath}: ${reason}`);
-    process.exit(1);
+    console.error(`Warning: cannot load the nzyme plugin ${pluginPath}: ${reason}`);
 }

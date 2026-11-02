@@ -56,13 +56,29 @@ test('a plugin command may start with the first word of a built-in', async () =>
     expect(result).toEqual({ exitCode: 0, stdout: 'hello world\n', stderr: '' });
 });
 
-test.each([[['index']], [['--help']], [[]]])('a broken plugin fails %j', async args => {
+test('a broken plugin only warns on stderr; the other commands still run', async () => {
+    const repo = await createRepo({ 'plugin.ts': WORKING_PLUGIN, 'broken.ts': THROWING_PLUGIN }, [
+        './broken.ts',
+        './plugin.ts',
+    ]);
+
+    const result = await runCli(repo, ['hello']);
+
+    expect(result).toEqual({
+        exitCode: 0,
+        stdout: 'hello world\n',
+        stderr: 'Warning: cannot load the nzyme plugin ./broken.ts: plugin blew up\n',
+    });
+});
+
+test('a command of a broken plugin fails as an unknown command', async () => {
     const repo = await createRepo({ 'plugin.ts': THROWING_PLUGIN }, ['./plugin.ts']);
 
-    const result = await runCli(repo, args);
+    const result = await runCli(repo, ['hello']);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain('Cannot load the nzyme plugin ./plugin.ts: plugin blew up');
+    expect(result.stdout).toContain('Command not found');
+    expect(result.stderr).toContain('./plugin.ts: plugin blew up');
 });
 
 test.each([
@@ -70,33 +86,33 @@ test.each([
     ['has no default export', 'export const commands = [];', 'default-export'],
     ['has no commands array', 'export default { commands: "hello" };', 'default-export'],
     ['lists a non-command', 'export default { commands: [{}] };', 'default-export'],
-])('the CLI fails when a plugin %s', async (_name, source, cause) => {
+])('the CLI warns with the path and the cause when a plugin %s', async (_name, source, cause) => {
     const repo = await createRepo({ 'plugin.ts': source }, ['./plugin.ts']);
 
-    const result = await runCli(repo, ['hello']);
+    const result = await runCli(repo, ['--help']);
 
-    expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain('./plugin.ts');
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toContain('Warning: cannot load the nzyme plugin ./plugin.ts');
     expect(result.stderr).toContain(cause);
 });
 
-test('the CLI fails with the path when a plugin file is missing', async () => {
+test('the CLI warns with the path when a plugin file is missing', async () => {
     const repo = await createRepo({}, ['./missing.ts']);
 
-    const result = await runCli(repo, ['hello']);
+    const result = await runCli(repo, ['--help']);
 
-    expect(result.exitCode).toBe(1);
+    expect(result.exitCode).toBe(0);
     expect(result.stderr).toContain('./missing.ts');
     expect(result.stderr).toContain('Cannot find module');
 });
 
-test('a malformed nzyme.plugins fails the CLI', async () => {
+test('a malformed nzyme.plugins only warns', async () => {
     const repo = await createRepo({});
     await fs.writeFile(path.join(repo, 'package.json'), JSON.stringify({ name: 'r', nzyme: { plugins: './a.ts' } }));
 
     const result = await runCli(repo, ['--help']);
 
-    expect(result.exitCode).toBe(1);
+    expect(result.exitCode).toBe(0);
     expect(result.stderr).toContain('`nzyme.plugins` must be an array of paths');
 });
 

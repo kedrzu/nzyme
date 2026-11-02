@@ -20,6 +20,7 @@ type Tool = 'osascript' | 'powershell.exe' | 'zenity' | 'kdialog';
 interface StandInOptions {
     code?: number;
     stdout?: string;
+    stderr?: string;
     /** Seconds to hang before answering, as a dialog the user leaves open. */
     sleep?: number;
 }
@@ -96,10 +97,25 @@ test('linux: kdialog is asked when zenity cannot open', async () => {
     expect((await readRecorded('kdialog')).argv).toEqual(['--title', TITLE, '--password', MESSAGE]);
 });
 
+test('linux: kdialog is asked when zenity has a display set that it cannot open', async () => {
+    await standIn('zenity', {
+        code: 1,
+        stderr: '(zenity:4242): Gtk-WARNING **: 10:00:00.000: cannot open display: :0',
+    });
+    await standIn('kdialog', { stdout: `${SENTINEL}\n` });
+
+    const result = await prompt('linux');
+
+    const expected: PromptSecretResult = { status: 'entered', value: SENTINEL };
+    expect(result).toEqual(expected);
+});
+
 test.each<[NodeJS.Platform, Tool, StandInOptions]>([
     ['darwin', 'osascript', { stdout: '\n' }],
     ['win32', 'powershell.exe', { code: 4 }],
     ['linux', 'zenity', { code: 1 }],
+    // GTK's routine noise on a dialog that did open must not turn a cancel into a fall-through.
+    ['linux', 'zenity', { code: 1, stderr: 'Gtk-Message: GtkDialog mapped without a transient parent.' }],
     ['linux', 'zenity', { code: 5 }],
 ])('%s: %s %o is a cancel, and nothing else is tried', async (platform, tool, options) => {
     await standIn(tool, options);
@@ -172,12 +188,13 @@ function prompt(platform: NodeJS.Platform) {
 
 /**
  * Writes an executable named like the dialog tool that records its argv (NUL-separated), env and
- * stdin next to itself, prints `stdout` and exits with `code`. PATH holds only `dir`, so every other
+ * stdin next to itself, prints `stdout` and `stderr` and exits with `code`. PATH holds only `dir`, so every other
  * program is called by absolute path.
  */
 async function standIn(tool: Tool, options: StandInOptions) {
     const base = path.join(dir, tool);
     await fs.writeFile(`${base}.out`, options.stdout ?? '');
+    await fs.writeFile(`${base}.err`, options.stderr ?? '');
     const script = [
         '#!/bin/sh',
         `printf '%s\\0' "$@" > '${base}.argv'`,
@@ -185,6 +202,7 @@ async function standIn(tool: Tool, options: StandInOptions) {
         `/bin/cat > '${base}.stdin'`,
         options.sleep ? `exec /bin/sleep ${options.sleep}` : '',
         `/bin/cat '${base}.out'`,
+        `/bin/cat '${base}.err' >&2`,
         `exit ${options.code ?? 0}`,
     ].join('\n');
     await fs.writeFile(base, script, { mode: 0o755 });

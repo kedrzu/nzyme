@@ -63,6 +63,11 @@ interface RunDialogToolOptions {
 
 const NOTICE = 'Nothing you type here is visible to the agent.';
 const DIALOG_TIMEOUT_SECONDS = 300;
+/**
+ * GTK's untranslated warning before it exits 1 when `DISPLAY`/`WAYLAND_DISPLAY` is set but
+ * unreachable (a stale ssh or tmux session). Without it, zenity's exit 1 would read as a cancel.
+ */
+const CANNOT_OPEN_DISPLAY = /cannot open display/i;
 
 /** Title and message arrive as argv items after `-`; a cancel (-128) or a timeout returns "". */
 const APPLESCRIPT = `
@@ -146,7 +151,9 @@ function getDialogTools(options: GetDialogToolsOptions): DialogTool[] {
                 return [];
             }
 
-            // 1 is a cancel for both, 5 a zenity timeout. `zenity --password` shows no message text.
+            // 1 is a cancel for both, 5 a zenity timeout; zenity also exits 1 when GTK cannot open the
+            // display, which runDialogTool tells apart by its stderr. kdialog aborts on that instead.
+            // `zenity --password` shows no message text.
             return [
                 {
                     command: 'zenity',
@@ -181,15 +188,20 @@ async function runDialogTool(options: RunDialogToolOptions): Promise<PromptSecre
             env: { ...env, ...tool.env },
             stdin: tool.script ? new TextEncoder().encode(tool.script) : 'ignore',
             stdout: 'pipe',
-            // Never forwarded: the tool's diagnostics are no business of the agent's transcript.
-            stderr: 'ignore',
+            // Only matched, never forwarded: the tool's diagnostics are no business of the agent's
+            // transcript.
+            stderr: 'pipe',
             timeout,
         });
     } catch {
         return null;
     }
 
-    const [stdout, exitCode] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
+    const [stdout, stderr, exitCode] = await Promise.all([
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text(),
+        proc.exited,
+    ]);
 
     if (proc.signalCode != null) {
         // Killed by our timeout: the user left the dialog open. Any other signal: it never worked.
@@ -201,6 +213,8 @@ async function runDialogTool(options: RunDialogToolOptions): Promise<PromptSecre
         return value ? { status: 'entered', value } : { status: 'cancelled' };
     }
 
-    // Any other code means no GUI session (ssh, a locked-down daemon): try the next way.
-    return tool.cancelCodes.includes(exitCode) ? { status: 'cancelled' } : null;
+    // Any other code, or a display that could not be opened, means no GUI session (ssh, a stale
+    // display, a locked-down daemon): try the next way.
+    const cancelled = tool.cancelCodes.includes(exitCode) && !CANNOT_OPEN_DISPLAY.test(stderr);
+    return cancelled ? { status: 'cancelled' } : null;
 }

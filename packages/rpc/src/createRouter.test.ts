@@ -112,7 +112,7 @@ function setupPage(handle: (http: HttpContext) => unknown) {
 
 async function readBlobBody(response: HttpResponse) {
     if (!(response.body instanceof Blob)) {
-        throw new Error('Expected a Blob body');
+        throw new TypeError('Expected a Blob body');
     }
 
     return response.body.text();

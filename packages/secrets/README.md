@@ -123,6 +123,15 @@ Values are never taken from arguments and never printed.
   one store), read-only unless `--write`. The token is read from a hidden prompt, or from stdin.
 - **`secrets set <NAME>`** — writes one mapped secret (read-write token). The value comes from a
   hidden prompt, or from stdin: `nzyme secrets set DB_PASSWORD < password.txt`.
+- **`secrets set <NAME> --prompt[=<hint>]`** — how an agent asks the user for a secret: the user
+  types it into a native masked dialog (osascript on macOS, Get-Credential on Windows, zenity or
+  kdialog on Linux; a hidden terminal prompt when none opens), so the value never reaches the
+  agent's transcript. Stdin is ignored. The hint says what the value is and where to find it, and
+  needs the `=`: `--prompt="Staging DB password, in 1Password"` (`--prompt "…"` is a usage error).
+  On success it prints only the name, key, store and character count. It exits 1, writing nothing,
+  when nothing was entered (cancelled, blank or timed out after 5 minutes), when the value spans
+  several lines, or when no dialog or terminal is available — then ask the user to run
+  `nzyme secrets set <NAME>` in their own terminal and confirm with `nzyme secrets list`.
 - **`secrets list`** — each mapped name with its store, key and status (`resolves`, `missing`,
   `overridden by environment`); exits non-zero when one is missing. Read-only token.
 - **`secrets import [--file .env] [--store bw]`** — writes every non-empty variable of a dotenv file

@@ -1,0 +1,195 @@
+import type { Readable } from 'node:stream';
+import { ReadStream } from 'node:tty';
+
+import { readHiddenInput } from './readHiddenInput.js';
+
+/** Options of {@link promptSecret}. */
+export interface PromptSecretParams {
+    /** The secret's name, shown as the dialog's title and first line. */
+    name: string;
+    /** What the value is and where to find it, shown under the name. */
+    hint: string | undefined;
+    /** Read only when it is a terminal and no desktop dialog could open. */
+    stdin: Readable;
+    /** Which dialog tools to try; a parameter so tests cover every platform on any host. */
+    platform?: NodeJS.Platform;
+    /** Where the dialog tools are looked up (`PATH`) and whether Linux has a display. */
+    env?: Record<string, string | undefined>;
+    /** Milliseconds after which a dialog still open is closed and counted as cancelled. */
+    timeout?: number;
+}
+
+/**
+ * What the user did: typed a value, closed the dialog without one, or could not be asked from here
+ * at all (no desktop dialog and no terminal — e.g. an agent's shell over ssh).
+ */
+export type PromptSecretResult =
+    | { status: 'entered'; value: string }
+    | { status: 'cancelled' }
+    | { status: 'unavailable' };
+
+/** A dialog tool, how to call it, and which of its exit codes mean the user cancelled. */
+interface DialogTool {
+    command: string;
+    args: string[];
+    /** The script, fed on stdin so nothing user-provided is ever part of script text. */
+    script?: string;
+    /** Extra variables the script reads its texts from. */
+    env?: Record<string, string>;
+    cancelCodes: number[];
+}
+
+/** What a dialog shows: the secret's name, the window title and the message under it. */
+interface DialogTexts {
+    name: string;
+    title: string;
+    message: string;
+}
+
+const NOTICE = 'Nothing you type here is visible to the agent.';
+const DIALOG_TIMEOUT_SECONDS = 300;
+
+/** Title and message arrive as argv items after `-`; a cancel (-128) or a timeout returns "". */
+const APPLESCRIPT = `
+on run argv
+    try
+        set answer to display dialog (item 2 of argv) with title (item 1 of argv) default answer "" with hidden answer with icon note giving up after ${DIALOG_TIMEOUT_SECONDS}
+    on error number -128
+        return ""
+    end try
+    if gave up of answer then return ""
+    return text returned of answer
+end run
+`;
+
+/**
+ * Windows PowerShell 5.1 shows Get-Credential as a GUI dialog; pwsh 7 asks in the console, which a
+ * non-interactive shell cannot answer, so only `powershell.exe` is tried. Texts come from env vars.
+ */
+const POWERSHELL = `
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+try {
+    $c = Get-Credential -UserName $env:NZYME_SECRET_PROMPT_NAME -Message $env:NZYME_SECRET_PROMPT_MESSAGE
+} catch { exit 5 }
+if ($null -eq $c) { exit 4 }
+[Console]::Out.Write($c.GetNetworkCredential().Password)
+`;
+
+/**
+ * Asks the user for a secret's value in a native masked dialog (osascript, PowerShell
+ * Get-Credential, zenity or kdialog), falling back to a hidden terminal prompt. The internal dialog
+ * layer of `secrets set --prompt`: the value is read inside this process, so it never reaches an
+ * agent's transcript, nor any argv or env. Returns the value untrimmed, with trailing newlines
+ * removed; validating it is the caller's job.
+ */
+export async function promptSecret(params: PromptSecretParams): Promise<PromptSecretResult> {
+    const env = params.env ?? process.env;
+    const timeout = params.timeout ?? DIALOG_TIMEOUT_SECONDS * 1000;
+    const title = `${params.name} - nzyme secrets`;
+    const message = [params.name, params.hint, NOTICE].filter(Boolean).join('\n\n');
+
+    for (const tool of getDialogTools(params.platform ?? process.platform, env, {
+        name: params.name,
+        title,
+        message,
+    })) {
+        const result = await runDialogTool(tool, env, timeout);
+        if (result) {
+            return result;
+        }
+    }
+
+    const stdin = params.stdin;
+    if (stdin instanceof ReadStream && stdin.isTTY) {
+        const label = params.hint ? `${params.name} (${params.hint})` : params.name;
+        const value = await readHiddenInput(label, stdin);
+        return value ? { status: 'entered', value } : { status: 'cancelled' };
+    }
+
+    return { status: 'unavailable' };
+}
+
+function getDialogTools(
+    platform: NodeJS.Platform,
+    env: Record<string, string | undefined>,
+    texts: DialogTexts,
+): DialogTool[] {
+    const { name, title, message } = texts;
+    switch (platform) {
+        case 'darwin':
+            return [{ command: 'osascript', args: ['-', title, message], script: APPLESCRIPT, cancelCodes: [] }];
+        case 'win32':
+            return [
+                {
+                    command: 'powershell.exe',
+                    args: ['-NoProfile', '-Command', POWERSHELL],
+                    env: { NZYME_SECRET_PROMPT_NAME: name, NZYME_SECRET_PROMPT_MESSAGE: message },
+                    cancelCodes: [4],
+                },
+            ];
+        case 'linux':
+            if (!env.DISPLAY && !env.WAYLAND_DISPLAY) {
+                return [];
+            }
+
+            // 1 is a cancel for both, 5 a zenity timeout. `zenity --password` shows no message text.
+            return [
+                {
+                    command: 'zenity',
+                    args: [
+                        '--entry',
+                        '--hide-text',
+                        `--title=${title}`,
+                        `--text=${message}`,
+                        `--timeout=${DIALOG_TIMEOUT_SECONDS}`,
+                    ],
+                    cancelCodes: [1, 5],
+                },
+                { command: 'kdialog', args: ['--title', title, '--password', message], cancelCodes: [1] },
+            ];
+        default:
+            return [];
+    }
+}
+
+/** Runs one dialog tool; `null` means it could not open here and the next one should be tried. */
+async function runDialogTool(
+    tool: DialogTool,
+    env: Record<string, string | undefined>,
+    timeout: number,
+): Promise<PromptSecretResult | null> {
+    // A bare `Bun.which` ignores a PATH assigned at runtime, so the lookup gets it explicitly.
+    const executable = Bun.which(tool.command, { PATH: env.PATH ?? '' });
+    if (!executable) {
+        return null;
+    }
+
+    let proc;
+    try {
+        proc = Bun.spawn([executable, ...tool.args], {
+            env: { ...env, ...tool.env },
+            stdin: tool.script ? new TextEncoder().encode(tool.script) : 'ignore',
+            stdout: 'pipe',
+            // Never forwarded: the tool's diagnostics are no business of the agent's transcript.
+            stderr: 'ignore',
+            timeout,
+        });
+    } catch {
+        return null;
+    }
+
+    const [stdout, exitCode] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
+
+    if (proc.signalCode != null) {
+        // Killed by our timeout: the user left the dialog open. Any other signal: it never worked.
+        return proc.killed ? { status: 'cancelled' } : null;
+    }
+
+    if (exitCode === 0) {
+        const value = stdout.replace(/[\r\n]+$/, '');
+        return value ? { status: 'entered', value } : { status: 'cancelled' };
+    }
+
+    // Any other code means no GUI session (ssh, a locked-down daemon): try the next way.
+    return tool.cancelCodes.includes(exitCode) ? { status: 'cancelled' } : null;
+}

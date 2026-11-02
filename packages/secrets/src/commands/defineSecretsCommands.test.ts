@@ -27,6 +27,10 @@ class ProcessExited extends Error {}
 /** What the base `Command.catch` printed through `console.error`, joined. */
 let errors = '';
 let exitCodes: (number | string | null | undefined)[] = [];
+/** The temp dir `set --prompt` tests put on PATH; empty when the test uses none. */
+let dialogDir = '';
+const ORIGINAL_PATH = process.env.PATH;
+const ORIGINAL_DISPLAY = process.env.DISPLAY;
 const spies: { mockRestore: () => void }[] = [];
 
 beforeEach(() => {
@@ -44,12 +48,18 @@ beforeEach(() => {
     );
 });
 
-afterEach(() => {
+afterEach(async () => {
     for (const spy of spies) {
         spy.mockRestore();
     }
 
     spies.length = 0;
+    restoreEnv('PATH', ORIGINAL_PATH);
+    restoreEnv('DISPLAY', ORIGINAL_DISPLAY);
+    if (dialogDir) {
+        await fs.rm(dialogDir, { recursive: true, force: true });
+        dialogDir = '';
+    }
 });
 
 // --- run (a real process, real stdio) ---
@@ -169,6 +179,116 @@ test('set refuses an empty value and a value given as an argument', async () => 
 
     expect(empty.exitCode).toBe(1);
     expect(argument.exitCode).toBe(1);
+    expect(bw.writes).toEqual([]);
+});
+
+// --- set --prompt (stand-ins for the dialog tools on PATH) ---
+
+test('set --prompt writes the trimmed dialog value, ignores stdin, and prints only name, key, store and length', async () => {
+    const bw = createMemoryStore({ id: 'bw' });
+    const mapping: SecretsMapping = {
+        stores: { bw: bw.store },
+        secrets: { TELEGRAM_TOKEN: bw.store.secret('TELEGRAM_TOKEN_UMBRA') },
+    };
+    await standInDialog(`  ${SENTINEL}  \n`);
+
+    const result = await runCommand(mapping, ['secrets', 'set', 'TELEGRAM_TOKEN', '--prompt'], {
+        stdin: 'piped-value\n',
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(bw.writes).toEqual([[{ key: 'TELEGRAM_TOKEN_UMBRA', value: SENTINEL }]]);
+    expect(result.stdout).toBe(
+        `TELEGRAM_TOKEN written to key TELEGRAM_TOKEN_UMBRA in store bw (${SENTINEL.length} characters).\n`,
+    );
+    expectNoLeak(result, SENTINEL);
+    expectNoLeak(result, 'piped-value');
+});
+
+test('set --prompt=<hint> shows the hint in the dialog', async () => {
+    const bw = createMemoryStore({ id: 'bw' });
+    const hint = 'Settings → API → the live key';
+    await standInDialog(SENTINEL);
+
+    const result = await runCommand({ stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } }, [
+        'secrets',
+        'set',
+        'API_KEY',
+        `--prompt=${hint}`,
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(await fs.readFile(path.join(dialogDir, 'dialog.argv'), 'utf8')).toContain(hint);
+});
+
+test('set --prompt refuses a multi-line value without printing it and writes nothing', async () => {
+    const bw = createMemoryStore({ id: 'bw' });
+    await standInDialog(`${SENTINEL}\nsecond-line-value\n`);
+
+    const result = await runCommand({ stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } }, [
+        'secrets',
+        'set',
+        'API_KEY',
+        '--prompt',
+    ]);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.errors).toContain('several lines');
+    expect(bw.writes).toEqual([]);
+    expectNoLeak(result, SENTINEL);
+    expectNoLeak(result, 'second-line-value');
+});
+
+test.each([
+    ['cancelled', ''],
+    ['blank', '   \n'],
+])('set --prompt with a %s dialog fails saying nothing was entered and writes nothing', async (_, answer) => {
+    const bw = createMemoryStore({ id: 'bw' });
+    await standInDialog(answer);
+
+    const result = await runCommand(
+        { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        ['secrets', 'set', 'API_KEY', '--prompt'],
+        { stdin: SENTINEL },
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.errors).toContain('Nothing was entered for API_KEY');
+    expect(bw.writes).toEqual([]);
+    expectNoLeak(result, SENTINEL);
+});
+
+test('set --prompt with no dialog tool and no terminal fails naming the command for the user to run', async () => {
+    const bw = createMemoryStore({ id: 'bw' });
+    // A PATH with no dialog tool on it; stdin is a stream, not a terminal.
+    await useDialogDir();
+
+    const result = await runCommand(
+        { stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } },
+        ['secrets', 'set', 'API_KEY', '--prompt'],
+        { stdin: SENTINEL },
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.errors).toContain('nzyme secrets set API_KEY`');
+    expect(bw.writes).toEqual([]);
+    expectNoLeak(result, SENTINEL);
+});
+
+test('set --prompt of an unmapped name fails naming it before opening a dialog', async () => {
+    const bw = createMemoryStore({ id: 'bw' });
+    await standInDialog(SENTINEL);
+
+    const result = await runCommand({ stores: { bw: bw.store }, secrets: { API_KEY: bw.store.secret() } }, [
+        'secrets',
+        'set',
+        'NOT_MAPPED',
+        '--prompt',
+    ]);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.errors).toContain('NOT_MAPPED');
+    expect(await Bun.file(path.join(dialogDir, 'dialog.argv')).exists()).toBe(false);
     expect(bw.writes).toEqual([]);
 });
 
@@ -351,7 +471,7 @@ interface RunCommandOptions {
 /** Runs a `secrets` command through clipanion in-process, with a real container and the given mapping. */
 async function runCommand(mapping: SecretsMapping, args: string[], options: RunCommandOptions = {}) {
     const provider = defineService({ name: 'AppSecrets', implements: SecretsProvider, setup: () => mapping });
-    const cli = new Cli<CommandContext>();
+    const cli = new Cli<CommandContext>({ binaryName: 'nzyme' });
     for (const command of defineSecretsCommands({ provider })) {
         cli.register(command);
     }
@@ -397,6 +517,43 @@ async function runFixtureCli(args: string[], env: Record<string, string> = {}) {
     ]);
 
     return { stdout, stderr, exitCode };
+}
+
+/**
+ * Puts a fresh temp dir alone on PATH, with DISPLAY set, so `promptSecret` finds only stand-ins
+ * placed there — never the host's real dialog tools — on macOS and Linux hosts alike.
+ */
+async function useDialogDir() {
+    dialogDir = await fs.mkdtemp(path.join(os.tmpdir(), 'secrets-set-prompt-'));
+    process.env.PATH = dialogDir;
+    process.env.DISPLAY = ':0';
+}
+
+/**
+ * Writes `osascript` and `zenity` stand-ins that record their argv to `dialog.argv`
+ * and answer `answer`, as a dialog the user typed it into. Other programs are called by absolute path.
+ */
+async function standInDialog(answer: string) {
+    await useDialogDir();
+    const out = path.join(dialogDir, 'dialog.out');
+    await fs.writeFile(out, answer);
+    const script = [
+        '#!/bin/sh',
+        `printf '%s\\0' "$@" > '${path.join(dialogDir, 'dialog.argv')}'`,
+        `/bin/cat > /dev/null`,
+        `/bin/cat '${out}'`,
+    ].join('\n');
+    for (const tool of ['osascript', 'zenity']) {
+        await fs.writeFile(path.join(dialogDir, tool), script, { mode: 0o755 });
+    }
+}
+
+function restoreEnv(name: string, value: string | undefined) {
+    if (value === undefined) {
+        delete process.env[name];
+    } else {
+        process.env[name] = value;
+    }
 }
 
 function expectNoLeak(result: CommandResult, value: string) {

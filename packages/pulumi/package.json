@@ -18,20 +18,23 @@
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
+            "source": "./src/index.ts",
             "default": "./dist/index.js"
         },
         "./aws": {
             "types": "./dist/aws.d.ts",
+            "source": "./src/aws.ts",
             "default": "./dist/aws.js"
         },
         "./cli": {
             "types": "./dist/cli.d.ts",
+            "source": "./src/cli.ts",
             "default": "./dist/cli.js"
         },
         "./*.js": {
             "types": "./dist/*.d.ts",
-            "import": "./dist/*.js",
             "source": "./src/*.ts",
+            "import": "./dist/*.js",
             "default": "./dist/*.js"
         }
     },

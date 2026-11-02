@@ -35,8 +35,11 @@ A repo lists plugin modules, as paths from the project root, under `nzyme.plugin
 the binary adds those commands to its own.
 
 - Every invocation loads every plugin, built-in commands and `--help` included.
-- A broken plugin, or a malformed `nzyme.plugins`, fails the CLI: it exits with 1, naming the
-  plugin's path and the cause.
+- A plugin that fails to load, or a malformed `nzyme.plugins`, only prints a warning on stderr
+  naming the plugin's path and the cause; the CLI runs on without it. Invoking one of its commands
+  then fails as an unknown command. This replaces an earlier "a broken plugin fails the CLI": the
+  `consumer-bump` workflow runs `nzyme submodule bump` in a product checkout with no dependencies
+  installed, where the product's plugins cannot load.
 
 ## Consequences
 
@@ -44,5 +47,7 @@ the binary adds those commands to its own.
   globally installed `nzyme` with a repo's plugin is unsupported.
 - A plugin module is imported on every invocation; it should only define commands, and do work only
   when they run.
-- A broken plugin stops built-in commands too, until it is fixed or removed from `nzyme.plugins`.
+- A broken plugin never stops built-in commands, and a missing command is reported next to the
+  warning that explains it. The warning goes to stderr only, because `submodule`'s stdout is a
+  contract workflows parse.
 - Plugins depend on `@nzyme/cli-core`, not on the binary (`cli-framework-split-from-binary.md`).

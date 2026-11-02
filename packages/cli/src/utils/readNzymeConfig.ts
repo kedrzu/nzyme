@@ -9,6 +9,7 @@ import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
  *
  * @param root - The repo root.
  * @returns The field's value, or `undefined` when the manifest has none.
+ * @util
  */
 export async function readNzymeConfig(root: string): Promise<unknown> {
     const packageJson: unknown = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));

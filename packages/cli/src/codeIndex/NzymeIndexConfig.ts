@@ -1,6 +1,6 @@
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
-import { readNzymeConfig } from '../readNzymeConfig.js';
+import { readNzymeConfig } from '../utils/readNzymeConfig.js';
 
 /**
  * Configuration of `nzyme index`, read from the `nzyme.index` field of the repo's root

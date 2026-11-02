@@ -141,7 +141,7 @@ test('a keychain token is only sent to the server it was stored for', async () =
     const storedStore = bitwarden({ project: PROJECT, server: stored.url, keychain, env: {} });
     const otherStore = bitwarden({ project: PROJECT, server: other.url, keychain, env: {} });
 
-    await storedStore.login!({ prompt: () => Promise.resolve(stored.tokens.machine) });
+    await storedStore.login!(() => Promise.resolve(stored.tokens.machine));
     const error = await catchError(otherStore.read(['DB_URL']));
 
     expect(error.message).toContain('`secrets login`');
@@ -164,13 +164,11 @@ test('login prompts once, proves the token against the server, then stores it fo
     const store = bitwarden({ project: PROJECT, server: fake.url, keychain, env: {} });
     const prompts: string[] = [];
 
-    await store.login!({
-        prompt: label => {
-            prompts.push(label);
-            return Promise.resolve(fake.tokens.machine);
-        },
+    await store.login!(label => {
+        prompts.push(label);
+        return Promise.resolve(fake.tokens.machine);
     });
-    const rejected = await catchError(store.login!({ prompt: () => Promise.resolve(fake.tokens.unknown) }));
+    const rejected = await catchError(store.login!(() => Promise.resolve(fake.tokens.unknown)));
 
     expect(prompts).toHaveLength(1);
     expect(fake.requests.map(request => request.client)).toEqual(['machine', 'unknown']);

@@ -1,4 +1,4 @@
-import type { SecretStore, SecretStoreEntry, SecretStoreLoginContext } from '@nzyme/secrets/SecretStore.js';
+import type { SecretPrompt, SecretStore, SecretStoreEntry } from '@nzyme/secrets/SecretStore.js';
 import { defineSecretStore } from '@nzyme/secrets/SecretStore.js';
 import type { Keychain } from '@nzyme/secrets/osKeychain.js';
 import { osKeychain } from '@nzyme/secrets/osKeychain.js';
@@ -148,7 +148,7 @@ export function bitwarden(options: BitwardenOptions): SecretStore {
         }
     }
 
-    async function login({ prompt }: SecretStoreLoginContext) {
+    async function login(prompt: SecretPrompt) {
         const token = (await prompt(`Bitwarden access token for ${host}`)).trim();
         // Proves the token works against this server before it is stored for it.
         await loginBitwarden(urls, token);

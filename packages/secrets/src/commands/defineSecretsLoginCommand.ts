@@ -37,7 +37,7 @@ export function defineSecretsLoginCommand(options: SecretsCommandsOptions): Comm
             }
 
             const stdin = this.context.stdin;
-            await store.login({ prompt: readAnswer });
+            await store.login(readAnswer);
             this.context.stdout.write(`Logged in to store ${store.id}.\n`);
 
             async function readAnswer(label: string) {

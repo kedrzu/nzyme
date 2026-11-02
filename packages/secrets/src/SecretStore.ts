@@ -4,13 +4,6 @@
 export type SecretPrompt = (label: string) => Promise<string>;
 
 /**
- * What a store's `login` is given: how to ask the user for credentials.
- */
-export interface SecretStoreLoginContext {
-    prompt: SecretPrompt;
-}
-
-/**
  * One entry passed to {@link SecretStore.write}.
  */
 export interface SecretStoreEntry {
@@ -39,8 +32,8 @@ export interface SecretStore {
     read(keys: string[]): Promise<Map<string, string>>;
     /** Creates or updates the given entries. */
     write(entries: SecretStoreEntry[]): Promise<void>;
-    /** Obtains the store's credentials, prompting the user when needed. */
-    login?(context: SecretStoreLoginContext): Promise<void>;
+    /** Obtains the store's credentials, asking the user through `prompt` when needed. */
+    login?(prompt: SecretPrompt): Promise<void>;
     /** Re-fetches the given keys; implemented only by stores that cache. */
     refresh?(keys: string[]): Promise<void>;
     /** Environment variable names holding this store's credentials, stripped from a child process. */

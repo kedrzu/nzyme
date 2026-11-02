@@ -628,7 +628,7 @@ function createMemoryStore(options: MemoryStoreOptions) {
     };
 
     if (options.login) {
-        definition.login = async ({ prompt }) => {
+        definition.login = async prompt => {
             logins.push(await prompt('Access token'));
         };
     }

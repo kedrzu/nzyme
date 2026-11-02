@@ -37,7 +37,7 @@
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-        "oxfmt": "0.73.0"
+        "oxfmt": "0.74.0"
     },
     "nzyme": {
         "cjs": true

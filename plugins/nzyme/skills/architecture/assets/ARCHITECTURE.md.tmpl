@@ -1,0 +1,42 @@
+# {{name}} architecture
+
+{{summary — what the product is, who uses it, and the shape of the system in two or three sentences}}
+
+## Stack
+
+- **Runtime and package manager:** Bun, with Bun workspaces.
+- **Language:** TypeScript, ESM.
+- **Framework packages:** `@nzyme/*` (dependency injection, logging, validation, i18n, Vue
+  utilities), built from source from the `nzyme/` git submodule.
+- **Build orchestration:** Nx, cache scoped to each worktree.
+- {{frontend — e.g. Nuxt in SPA or SSR mode, Vue, SCSS}}
+- {{data — e.g. Postgres through Drizzle; omit when there is none}}
+- {{hosting — where each deployable runs; omit when nothing is deployed yet}}
+
+## Packages
+
+|Package|Path|Owns|
+|-|-|-|
+|`{{scope}}/{{package}}`|`packages/{{package}}`|{{what it owns and what it must not contain}}|
+
+## App and UI
+
+{{how the app is structured — rendering mode, routing, how pages reach data and services, where
+components live, the design tokens, the story-and-test requirement for components}}
+
+## Integrations
+
+{{each external service — what the repo uses it for, which package holds its client, where its
+credentials come from}}
+
+## Tooling and workflow
+
+- **Setup:** `zsh setup.sh` — submodule, install, generated files, build; run for every clone and
+  worktree.
+- **Checks:** {{the scripts that lint, format, typecheck and test, and where CI runs them}}
+- **Git:** {{branching, pull requests, how the nzyme submodule pin moves}}
+- **Agents:** `CLAUDE.md`, the skills under `.claude/skills/`.
+
+## Decisions
+
+- **{{choice}}** {{reason}}

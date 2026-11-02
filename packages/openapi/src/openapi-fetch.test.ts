@@ -195,6 +195,37 @@ describe('openApiFetch', () => {
         expect(headers.get('X-Custom-Header')).toBe('custom-value');
     });
 
+    it('should not send headers whose value is undefined', async () => {
+        const mockResponse = {
+            ok: true,
+            status: 200,
+            headers: new Headers({ 'content-type': 'application/json' }),
+            json: () => Promise.resolve({}),
+        };
+        mockFetch.mockResolvedValue(mockResponse);
+
+        const client = createOpenApiFetch<paths>({
+            fetch: mockFetch,
+            headers: { authorization: undefined, 'X-Default': 'default', 'X-Kept': 'kept' },
+        });
+
+        await client({
+            method: 'DELETE',
+            path: '/pet/{petId}',
+            baseUrl: 'https://api.example.com',
+            pathParams: { petId: 123 },
+            headers: { api_key: undefined, 'X-Custom-Header': 'custom-value', 'X-Kept': undefined },
+        });
+
+        const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+        const headers = options.headers as Headers;
+        expect(headers.has('authorization')).toBe(false);
+        expect(headers.has('api_key')).toBe(false);
+        expect(headers.get('X-Default')).toBe('default');
+        expect(headers.get('X-Custom-Header')).toBe('custom-value');
+        expect(headers.get('X-Kept')).toBe('kept');
+    });
+
     it('should handle text responses', async () => {
         const mockResponse = {
             ok: true,

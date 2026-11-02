@@ -1,173 +1,114 @@
-import { createHash } from 'node:crypto';
-
 import * as aws from '@pulumi/aws';
 import * as pulumi from '@pulumi/pulumi';
 import * as random from '@pulumi/random';
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** Inputs for the RotatedSecret component */
 export interface RotatedSecretArgs {
     /** Stable name for the secret in Secrets Manager (e.g., "myapp/primary-secret") */
     secretName?: string;
 
-    /** Length of generated secret (default 48) */
-    secretLength?: number;
+    /** Length of the rotation window in days; one key is replaced per window (default 90) */
+    rotationDays?: number;
 
-    /** Rotate on the first pulumi up after this many days have elapsed (default 30) */
-    expiryDays?: number;
+    /**
+     * How many keys the set holds (default 6). A key stays in the set for `keyCount` windows, so it
+     * remains verifiable for at least `(keyCount - 1) * rotationDays` days after it stops being current.
+     */
+    keyCount?: number;
 
-    /** How many most-recent secrets to keep in the JSON payload (default 2: current + previous) */
-    historySize?: number;
-
-    /** Character set options */
-    minLower?: number;
-    /**
-     * Minimum number of uppercase characters
-     */
-    minUpper?: number;
-    /**
-     * Minimum number of numeric characters
-     */
-    minNumeric?: number;
-    /**
-     * Minimum number of special characters
-     */
-    minSpecial?: number;
-    /**
-     * Override the special characters
-     */
-    overrideSpecial?: string;
+    /** Length of each generated key; keys contain no special characters (default 64) */
+    length?: number;
 
     /** Optional KMS key for the secret */
     kmsKeyId?: pulumi.Input<string>;
 }
 
+/** A rotated key set: the id of the key to sign with, and every key by id. */
+export interface RotatedKeySet {
+    /** Id of the key to sign with now */
+    current: string;
+
+    /** Key values by key id; the ids are rotation window numbers as strings */
+    keys: Record<string, string>;
+}
+
 /**
- * The secret payload stored in Secrets Manager is a JSON object like:
- * {
- *   "versions": [
- *     { "id": 5, "value": "...." },       // index 0 is AWSCURRENT
- *     { "id": 4, "value": "...." },       // previous
- *     ...
- *   ]
- * }
+ * Maps every key slot to the rotation window whose key it holds: slot `j` holds the key of the most
+ * recent window `w <= window` with `w mod keyCount == j`. A window flip therefore changes exactly one
+ * slot (the oldest), and the same window always yields the same assignment, so no state is needed.
+ */
+export function getRotatedKeyWindows(window: number, keyCount: number): number[] {
+    return Array.from({ length: keyCount }, (_, slot) => {
+        const age = (((window - slot) % keyCount) + keyCount) % keyCount;
+        return window - age;
+    });
+}
+
+/**
+ * A key set rotated by deploys: the newest key signs, older ones stay verifiable. The set is stored as
+ * JSON in Secrets Manager and exposed as the secret output `keySet`.
+ *
+ * Each slot is a `random.RandomPassword` whose `keepers` is its window, so a deploy inside the current
+ * window changes nothing and a window flip regenerates exactly one slot. Keys only rotate when a deploy
+ * runs, so the retention guarantee assumes at least one deploy per window.
  */
 export class RotatedSecret extends pulumi.ComponentResource {
-    /** ARN of the Secrets Manager secret */
+    /** ARN of the Secrets Manager secret holding the JSON key set */
     public readonly secretArn: pulumi.Output<string>;
 
-    /** ID of the current SecretVersion resource */
-    public readonly currentVersionId: pulumi.Output<string>;
+    /** The key set (marked secret) */
+    public readonly keySet: pulumi.Output<RotatedKeySet>;
 
-    /** Convenience: current secret value (marked secret) */
-    public readonly currentSecret: pulumi.Output<string>;
-
-    /** History secret values (marked secret) */
-    public readonly history: pulumi.Output<Record<string, string>>;
-
-    /**
-     * Creates a new rotated secret with automatic rotation via AWS Lambda.
-     */
     constructor(name: string, args: RotatedSecretArgs, opts?: pulumi.ComponentResourceOptions) {
-        super('examples:secrets:RotatedSecret', name, {}, opts);
+        super('nzyme:aws:RotatedSecret', name, {}, opts);
 
-        const {
-            secretName,
-            secretLength = 48,
-            expiryDays = 30,
-            historySize = 2,
-            minLower = 1,
-            minUpper = 1,
-            minNumeric = 1,
-            minSpecial = 1,
-            overrideSpecial = '_-!@#$%^&*()[]{}',
-            kmsKeyId,
-        } = args;
+        const { secretName, rotationDays = 90, keyCount = 6, length = 64, kmsKeyId } = args;
 
-        // Stable secret container
+        const window = Math.floor(Date.now() / (rotationDays * MS_PER_DAY));
+        const slotWindows = getRotatedKeyWindows(window, keyCount);
+
+        const slots = slotWindows.map(
+            (slotWindow, slot) =>
+                new random.RandomPassword(
+                    `${name}Key${slot}`,
+                    { length, special: false, keepers: { window: String(slotWindow) } },
+                    { parent: this },
+                ),
+        );
+
+        this.keySet = pulumi.secret(
+            pulumi.all(slots.map(slot => slot.result)).apply(values => {
+                const keys: Record<string, string> = {};
+                for (const [slot, value] of values.entries()) {
+                    keys[String(slotWindows[slot])] = value;
+                }
+                return { current: String(window), keys };
+            }),
+        );
+
         const secret = new aws.secretsmanager.Secret(
             `${name}Secret`,
             {
                 name: secretName,
-                description: `Rotated by Pulumi (no rotation Lambda). Keeps last ${historySize} versions in JSON payload.`,
+                description: `Key set rotated by Pulumi: ${keyCount} keys, one replaced every ${rotationDays} days.`,
                 kmsKeyId,
             },
             { parent: this },
         );
 
-        // Compute a "time window id" that flips every expiryDays since anchor.
-        const periodMs = expiryDays * 24 * 60 * 60 * 1000;
-        const windowId = Math.floor(Date.now() / periodMs).toString();
-
-        const generated = new random.RandomPassword(
-            `${name}Value`,
-            {
-                length: secretLength,
-                minLower,
-                minUpper,
-                minNumeric,
-                minSpecial,
-                overrideSpecial,
-                keepers: { windowId },
-            },
-            { parent: this },
-        );
-
-        // Create a new SecretVersion (this becomes AWSCURRENT)
-        const version = new aws.secretsmanager.SecretVersion(
+        new aws.secretsmanager.SecretVersion(
             `${name}Version`,
             {
                 secretId: secret.id,
-                secretString: generated.result,
-                // versionStages defaults to ["AWSCURRENT"]
+                secretString: pulumi.secret(this.keySet.apply(keySet => JSON.stringify(keySet))),
             },
             { parent: this },
         );
 
-        const history = pulumi.secret(
-            pulumi.all([secret.id, version.secretString]).apply(async ([secretId, secretString]) => {
-                const versionsOutput = await aws.secretsmanager.getSecretVersions({ secretId }, { parent: this });
-                const versions = versionsOutput.versions.toSorted(
-                    (a, b) => new Date(a.createdTime).getTime() - new Date(b.createdTime).getTime(),
-                );
-
-                const secrets = await Promise.all(
-                    versions.slice(0, historySize).map(async versionInfo => {
-                        const result = await aws.secretsmanager.getSecretVersion(
-                            {
-                                secretId,
-                                versionId: versionInfo.versionId,
-                            },
-                            { parent: this },
-                        );
-
-                        return result.secretString;
-                    }),
-                );
-
-                if (!secrets.some(v => v === secretString) && secretString) {
-                    secrets.unshift(secretString);
-                }
-
-                // Map to object with 8-char MD5 hash keys
-                const historyMap: Record<string, string> = {};
-                for (const secretEntry of secrets) {
-                    const hash = createHash('md5').update(secretEntry).digest('hex').substring(0, 8);
-                    historyMap[hash] = secretEntry;
-                }
-
-                return historyMap;
-            }),
-        );
-
-        // Mark sensitive outputs as Pulumi secrets
-        this.currentSecret = pulumi.secret(generated.result);
-        this.history = pulumi.secret(history);
-        this.currentVersionId = version.versionId;
         this.secretArn = secret.arn;
 
-        this.registerOutputs({
-            secretArn: this.secretArn,
-            currentVersionId: this.currentVersionId,
-        });
+        this.registerOutputs({ secretArn: this.secretArn, keySet: this.keySet });
     }
 }

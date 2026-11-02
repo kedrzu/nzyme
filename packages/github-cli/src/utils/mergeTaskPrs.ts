@@ -26,7 +26,7 @@ import { parkSubmoduleOnBase } from './parkSubmoduleOnBase.js';
 import { refreshMainAfterSubmoduleMerge } from './refreshMainAfterSubmoduleMerge.js';
 import { describeSubmodulePin, resolveSubmoduleBase } from './resolveSubmoduleBase.js';
 import { resolveSubmoduleCurrentBranch } from './resolveSubmoduleCurrentBranch.js';
-import type { MergeAsyncResult } from './stacksApi.js';
+import type { MergeAsyncResult, PullRequestStack, StackPullRequest } from './stacksApi.js';
 import { findStackForPr, getMergeAsyncStatus, mergeStackAsync } from './stacksApi.js';
 import { waitForRequiredChecks } from './waitForRequiredChecks.js';
 
@@ -255,16 +255,49 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
             autoYes: true,
             logger,
         });
+
+        // GitHub refuses the plain merge endpoint for a pull request kept in a stack. Merging the
+        // pinned node through merge-async lands it and every open node below it — exactly what the
+        // pin contains; nodes above it are not pinned and stay open.
+        const submoduleStack = await findStackForPr(githubClient, target.config, target.openPr.number);
+        const landingNodes = submoduleStack
+            ? getOpenNodesUpTo(submoduleStack, target.openPr.number)
+            : [{ number: target.openPr.number, headRef: target.openPr.head.ref }];
+
         await waitForRequiredChecks({
             client: githubClient,
             config: target.config,
-            prs: [{ number: target.openPr.number, label: target.name }],
+            prs: landingNodes.map(node => ({ number: node.number, label: `${target.name} ${node.headRef}` })),
             logger,
             intervalMs: checkPollIntervalMs,
             timeoutMs: checkPollTimeoutMs,
         });
-        await mergePullRequestSquash(githubClient, target.config, target.openPr.number);
-        logger.info(`   ${chalk.green('✓')} Squash-merged submodule ${chalk.magenta(target.name)} PR`);
+
+        if (submoduleStack) {
+            const submitted = await mergeStackAsync(
+                githubClient,
+                target.config,
+                target.openPr.number,
+                target.openPr.head.sha,
+            );
+            await waitForStackMerge({
+                githubClient,
+                githubConfig: target.config,
+                prNumber: target.openPr.number,
+                submitted,
+                nodeCount: landingNodes.length,
+                logger,
+                intervalMs: checkPollIntervalMs,
+                timeoutMs: checkPollTimeoutMs,
+            });
+            logger.info(
+                `   ${chalk.green('✓')} Squash-merged ${chalk.bold(landingNodes.length.toString())} stacked ` +
+                    `${chalk.magenta(target.name)} PRs`,
+            );
+        } else {
+            await mergePullRequestSquash(githubClient, target.config, target.openPr.number);
+            logger.info(`   ${chalk.green('✓')} Squash-merged submodule ${chalk.magenta(target.name)} PR`);
+        }
     }
 
     // === Refresh the main branch so gitlinks point at the merged submodule commits ===
@@ -525,6 +558,22 @@ async function waitForStackMerge(params: WaitForStackMergeParams): Promise<void>
             );
         },
     });
+}
+
+/**
+ * The still-open nodes of `stack` from its bottom up to and including `prNumber` — what merging that
+ * pull request through merge-async lands.
+ * @__NO_SIDE_EFFECTS__
+ */
+function getOpenNodesUpTo(stack: PullRequestStack, prNumber: number): StackPullRequest[] {
+    const index = stack.pullRequests.findIndex(node => node.number === prNumber);
+    if (index === -1) {
+        throw new UsageError(
+            `GitHub listed PR #${prNumber} in stack #${stack.number}, but not among its pull requests.`,
+        );
+    }
+
+    return stack.pullRequests.slice(0, index + 1).filter(node => node.state === 'open');
 }
 
 /**

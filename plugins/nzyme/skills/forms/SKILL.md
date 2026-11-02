@@ -15,6 +15,10 @@ description: >-
 `@nzyme/vue-forms` holds form state and validation; `@nzyme/validation` holds framework-free validators
 and rules that the form validators wrap. Both are headless — the app owns the input components.
 
+The catalogue of what `@nzyme/vue-forms` exports — every input primitive with its props and returned
+state, `useButton`'s busy mechanics, each validator's options — is its README
+(`node_modules/@nzyme/vue-forms/README.md`). This skill is the practice.
+
 `useForm` reads the current language through `useLanguage()`, so forms need the app's IoC container
 (`IocPlugin` from `@nzyme/vue-ioc`) with a `LanguageContext` registered (translations skill).
 
@@ -87,7 +91,8 @@ Default to `type="submit"`; the rest are exceptions.
 `@nzyme/vue-forms/components/` ships headless composables — `useTextInput`, `usePasswordInput`,
 `useNumberInput`, `useMoneyInput`, `useMaskedInput`, `usePhoneInput`, `usePostCodeInput`,
 `useDateInput`, `useSelectInput`, `useCheckbox`, `useRadioGroup`/`useRadio`, `useTextArea`, and
-`useButton`. Each carries `.props`/`.emits` to spread into the component and returns a render function
+`useButton`. Each carries `.props`/`.emits` to spread into the component (the radio pair instead
+takes `props` as an argument, with `getRadio*Props()`/`getRadio*Emits()`) and returns a render function
 plus a field controller (`value`, `errors`, `focused`, `ok`). The app wraps each **once** into a styled
 component and uses only those:
 

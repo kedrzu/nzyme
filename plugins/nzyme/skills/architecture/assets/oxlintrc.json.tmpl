@@ -1,0 +1,39 @@
+{
+    "$schema": "./node_modules/oxlint/configuration_schema.json",
+    // Rules live in the shared preset; this file adds only what is specific to this repo's layout.
+    //
+    // `nzyme/` is linted by nzyme's own config, through `lint:nzyme` (`package.json`), never by this
+    // one: each repository owns its lint rules (nzyme/docs/submodule-setup.md#lint-and-format). An
+    // ignore entry alone is not enough — oxlint discovers nested configs and a nested config REPLACES
+    // this one, ignore list included, for its subtree — so this repo's runs also pass
+    // `--disable-nested-config`.
+    "extends": ["./node_modules/@nzyme/eslint/oxlintrc.json"],
+    // Oxlint already skips gitignored paths on its own, so only what no `.gitignore` covers is
+    // listed here.
+    "ignorePatterns": [
+        // Generated from `.loc.yaml`; only the `.ts` output is gitignored.
+        "**/*.loc.js",
+        // Everything a generator writes carries the `.gen` infix; a finding there belongs to the
+        // generator.
+        "**/*.gen.ts",
+        "**/*.gen.d.ts",
+        // The `kedrzu/nzyme` submodule, linted by its own config (see the top of this file).
+        "nzyme/**"
+    ],
+    "overrides": [
+        {
+            // Packages that import `.vue` single-file components. Neither tsgo nor tsgolint can
+            // resolve SFC module types, so every value crossing a `.vue` import boundary degrades to
+            // `any`/error-typed and the `no-unsafe-*` family reports the tooling gap rather than real
+            // unsafety.
+            "files": ["{{vuePackage}}/**"],
+            "rules": {
+                "typescript/no-unsafe-argument": "off",
+                "typescript/no-unsafe-assignment": "off",
+                "typescript/no-unsafe-call": "off",
+                "typescript/no-unsafe-member-access": "off",
+                "typescript/no-unsafe-return": "off"
+            }
+        }
+    ]
+}

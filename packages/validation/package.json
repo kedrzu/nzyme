@@ -39,9 +39,9 @@
         "@nzyme/i18n-core": "workspace:*",
         "@nzyme/ioc": "workspace:*",
         "@nzyme/utils": "workspace:*",
-        "libphonenumber-js": "1.13.15",
-        "postal-codes-js": "2.5.2",
-        "vitest": "4.1.10"
+        "libphonenumber-js": "^1.13.15",
+        "postal-codes-js": "^2.5.2",
+        "vitest": "^4.1.10"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

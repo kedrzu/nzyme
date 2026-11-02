@@ -1,0 +1,39 @@
+# Proposes the latest nzyme `main` to this repo's `main` as a pull request, every weekday and on
+# demand. The repo owns its nzyme pin (nzyme/docs/consumers.md): only `main` is bumped automatically,
+# and only through a PR this repo's CI must pass. With `auto-merge` a green bump merges itself once
+# the required checks pass — that needs the repository's "Allow auto-merge" setting and those checks
+# being required.
+#
+# The bump runs as a GitHub App with no ruleset bypass, so its PRs wait on CI like anyone's. Its
+# private key is a secret of the `submodule-bump` environment, which admits only `main`; the client ID
+# is a repository variable, because the caller's `with:` is evaluated outside any environment. Not
+# GITHUB_TOKEN: a PR opened or pushed with it triggers no workflows, so CI would never gate the bump.
+#
+# `consumer-bump.yml` is pinned by commit SHA, not by branch or tag: it runs with the App's key, and a
+# moved ref would change that code with no change here. `cli-version` is the exact `@nzyme/cli` npm
+# release it runs, independent of the SHA.
+name: Bump nzyme
+
+on:
+  schedule:
+    - cron: '0 6 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nzyme:
+    uses: kedrzu/nzyme/.github/workflows/consumer-bump.yml@{{nzymeSha}} # nzyme main
+    with:
+      source-ref: main
+      base-branch: main
+      submodule-path: nzyme
+      cli-version: {{cliVersion}}
+      auto-merge: true
+      # The workspaces include nzyme/packages/*, so a gitlink-only bump would leave bun.lock stale.
+      refresh-lockfile: true
+      app-client-id: ${{ vars.BUMP_APP_CLIENT_ID }}
+      environment: submodule-bump
+    secrets:
+      app-private-key: ${{ secrets.BUMP_APP_PRIVATE_KEY }}

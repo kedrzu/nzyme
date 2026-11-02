@@ -22,9 +22,12 @@ import { getGitStatusInfo } from './getGitStatusInfo.js';
 import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 import { getSubmoduleGithubConfig } from './getSubmoduleGithubConfig.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
+import { GitMergeConflictError } from './GitMergeConflictError.js';
 import { handleMergeConflict } from './handleMergeConflict.js';
 import { pushSubmoduleUpdates } from './pushSubmoduleUpdates.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
+import type { RefreshedSubmodulePr } from './refreshSubmoduleChain.js';
+import { refreshSubmoduleChain } from './refreshSubmoduleChain.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 import { describeSubmodulePin } from './resolveSubmoduleBase.js';
 import { switchDetachedSubmoduleToBaseBranch } from './switchDetachedSubmoduleToBaseBranch.js';
@@ -119,6 +122,12 @@ export interface SyncAllReposResult {
     submodules: SyncedSubmoduleInfo[];
 
     /**
+     * Every pull request of every task-branch submodule's chain, with the head this sync left on it
+     * — see `refreshSubmoduleChain`.
+     */
+    submodulePrs: RefreshedSubmodulePr[];
+
+    /**
      * Whether the base branch was ahead of the main task branch.
      */
     wasBaseBranchAhead: boolean;
@@ -145,7 +154,7 @@ export interface SyncAllReposResult {
  *    current + base branch)
  * 4. Rebase current branches (task branches: rebase; detached: switch onto base; non-task: pull/ff)
  * 5. Fast-forward base branch in main + task-branch submodules
- * 6. Merge base branch into task-branch submodules + push
+ * 6. Refresh each task-branch submodule's chain of pull requests against the trunk + push
  * 7. Commit & push all submodule reference updates (from rebase, pull, or merge)
  * 8. Merge base branch into main task branch + push
  */
@@ -323,26 +332,61 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
         }
     }
 
-    // === Phase 6: Merge base into task-branch submodules + push ===
+    // === Phase 7: Commit & push all submodule reference updates ===
+    // Runs after Phase 6, and from inside it when a submodule conflicts.
+    // Submodule refs may change from Phase 4 (rebase/pull) or Phase 6 (merge).
+    // Detect and commit any changed gitlinks so the main repo stays clean. Never while pinned: the
+    // phases above moved nothing, so a gitlink that differs here was moved by someone else, and
+    // committing it would re-point the pin.
+    const commitSubmoduleRefs = async () => {
+        if (followsTrunk) {
+            logger.info('');
+            await mainGuard.beforeWrite();
+            await pushSubmoduleUpdates({ logger, beforePush: mainGuard.beforePush });
+        }
+    };
+
+    // === Phase 6: Refresh task-branch submodules' chains + push ===
+    // The trunk goes into the bottom pull request of each submodule's chain and is carried up, never
+    // straight into the checked-out branch: that branch may sit on other open pull requests.
     const taskBranchSubmodules = syncedSubmodules.filter(s => s.isOnTaskBranch);
+    const submodulePrs: RefreshedSubmodulePr[] = [];
 
     if (taskBranchSubmodules.length > 0) {
         logger.info('');
         logger.info(chalk.bold('🔀 Merging base branch into submodules...'));
 
-        await mergeBaseIntoSubmodules(taskBranchSubmodules, submoduleBase.trunk, logger);
+        for (const synced of taskBranchSubmodules) {
+            const submoduleConfig = assertValue(
+                getSubmoduleGithubConfig(synced.submodule.url, githubConfig.token),
+                `${synced.submodule.name} is on a task branch but has no GitHub remote`,
+            );
+
+            try {
+                submodulePrs.push(
+                    ...(await refreshSubmoduleChain({
+                        submodule: synced.submodule,
+                        trunk: submoduleBase.trunk,
+                        githubClient,
+                        githubConfig: submoduleConfig,
+                        logger,
+                    })),
+                );
+            } catch (error) {
+                // A conflict leaves every submodule back on its branch at a head its remote holds,
+                // and possibly moved there — commit that gitlink now, or the next checkout carries
+                // it onto another node to be auto-committed there. Any other failure (a rejected
+                // push) may leave the branch ahead of its remote, which no gitlink may point at;
+                // the re-run commits it once the branch is pushed.
+                if (error instanceof GitMergeConflictError) {
+                    await commitSubmoduleRefs();
+                }
+                throw error;
+            }
+        }
     }
 
-    // === Phase 7: Commit & push all submodule reference updates ===
-    // Submodule refs may change from Phase 4 (rebase/pull) or Phase 6 (merge).
-    // Detect and commit any changed gitlinks so the main repo stays clean. Never while pinned: the
-    // phases above moved nothing, so a gitlink that differs here was moved by someone else, and
-    // committing it would re-point the pin.
-    if (followsTrunk) {
-        logger.info('');
-        await mainGuard.beforeWrite();
-        await pushSubmoduleUpdates({ logger, beforePush: mainGuard.beforePush });
-    }
+    await commitSubmoduleRefs();
 
     // === Phase 8: Merge base into main task branch + push ===
     logger.info('');
@@ -358,6 +402,7 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
 
     return {
         submodules: syncedSubmodules,
+        submodulePrs,
         wasBaseBranchAhead: wasAhead,
         baseMergePerformed: merged,
         baseBranchCommitsAhead: commitsAhead,
@@ -802,59 +847,6 @@ async function fastForwardBranch(
         logger.info(`   ${chalk.green('✓')} Fast-forwarded ${chalk.cyan(branch)} in ${repoDisplayName}`);
     } catch {
         logger.warn(`   ⚠️  Could not fast-forward ${chalk.cyan(branch)} in ${repoDisplayName}`);
-    }
-}
-
-/**
- * Merge base into task-branch submodules and push.
- */
-async function mergeBaseIntoSubmodules(
-    taskBranchSubmodules: SyncedSubmoduleInfo[],
-    baseBranch: string,
-    logger: Logger,
-): Promise<void> {
-    const remoteBaseBranch = `origin/${baseBranch}`;
-
-    for (const synced of taskBranchSubmodules) {
-        const sub = synced.submodule;
-        const subGit = simpleGit({ baseDir: sub.path });
-        // `isOnTaskBranch` is only true for an attached HEAD on a non-base branch, so every
-        // submodule reaching this loop has a branch to merge into and push.
-        const currentBranch = assertValue(sub.currentBranch, `${sub.name} reached the merge with no current branch`);
-
-        // Check if remote base branch is ahead of current branch
-        let commitsAhead: number;
-        try {
-            const result = await subGit.raw(['rev-list', '--count', `${currentBranch}..${remoteBaseBranch}`]);
-            commitsAhead = Number.parseInt(result.trim(), 10);
-        } catch {
-            commitsAhead = 0;
-        }
-
-        if (commitsAhead === 0) {
-            logger.info(`   ${chalk.magenta(sub.name)}: up to date with ${chalk.cyan(baseBranch)}`);
-            continue;
-        }
-
-        logger.info(
-            `   ${chalk.magenta(sub.name)}: ${chalk.cyan(baseBranch)} is ${chalk.yellow(commitsAhead.toString())} commit${commitsAhead === 1 ? '' : 's'} ahead`,
-        );
-        logger.info(`   Merging ${chalk.cyan(remoteBaseBranch)} into ${chalk.cyan(currentBranch)}...`);
-
-        try {
-            await subGit.merge([remoteBaseBranch]);
-        } catch (error) {
-            await handleMergeConflict(
-                { git: subGit, repoDisplayName: chalk.magenta(sub.name), operation: 'merge', logger },
-                error,
-            );
-        }
-
-        await assertNoConflicts({ git: subGit, repoDisplayName: chalk.magenta(sub.name), operation: 'merge', logger });
-        logger.info(`   ${chalk.green('✓')} Merged ${chalk.cyan(baseBranch)} into ${chalk.magenta(sub.name)}`);
-
-        await pushWithUpstream(subGit);
-        logger.info(`   ${chalk.green('✓')} Pushed ${chalk.magenta(sub.name)}`);
     }
 }
 

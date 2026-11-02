@@ -12,7 +12,7 @@ import type { Modal, ModalComponent, ModalProps } from './ModalTypes.js';
 export interface UseModalOpenOptions {
     /**
      * Close all open modals when component is unmounted.
-     * @default true
+     * @default false
      */
     closeOnUnmounted?: boolean;
 }

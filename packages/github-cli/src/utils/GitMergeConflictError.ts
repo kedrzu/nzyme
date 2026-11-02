@@ -25,6 +25,12 @@ export interface StackConflictContext {
      * Branch being merged into the node — the trunk for the bottom node, the parent node otherwise.
      */
     against: string;
+
+    /**
+     * The submodule whose own chain of pull requests this is; absent for the main repository's
+     * stack.
+     */
+    submodule?: string;
 }
 
 /**

@@ -85,7 +85,7 @@ export const ModalService = defineService({
             modal.component = defineComponent({
                 async setup() {
                     provideContext(ModalContext, modal.controller as unknown as ModalController);
-                    onKeyUp('Escape', handleClose);
+                    onKeyUp('Escape', () => modal.controller.close());
 
                     const view = await unwrapModalComponent(component);
 

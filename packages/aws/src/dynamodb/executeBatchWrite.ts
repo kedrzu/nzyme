@@ -1,6 +1,10 @@
 import { BatchWriteItemCommand } from '@aws-sdk/client-dynamodb';
 import type { DynamoDBClient, WriteRequest } from '@aws-sdk/client-dynamodb';
 
+import { createExponentialBackoff } from '@nzyme/utils/createExponentialBackoff.js';
+
+import { UNPROCESSED_RETRY_BACKOFF } from './unprocessedRetryBackoff.js';
+
 type BatchWriteRequest = {
     client: DynamoDBClient;
     items: Record<string, WriteRequest[]>;
@@ -9,54 +13,44 @@ type BatchWriteRequest = {
 const MAX_BATCH_SIZE = 25;
 
 /**
- * Executes a batch write operation on a DynamoDB table.
- * @param request - The request object containing the DynamoDB client, table name, and items to write.
+ * Executes a batch write operation on DynamoDB tables, in batches of 25. Items DynamoDB returns as
+ * unprocessed (throttling, a hot partition) are retried with exponential backoff until every one is
+ * written; when some are still unprocessed after the last retry it throws, so a write is never lost
+ * silently.
+ * @param request - The request object containing the DynamoDB client and the write requests per table.
  */
 export async function executeBatchWrite(request: BatchWriteRequest) {
-    let batch: Record<string, WriteRequest[]> = {};
-    let batchCount = 0;
+    const requests = Object.entries(request.items).flatMap(([tableName, items]) =>
+        items.map(item => ({ tableName, item })),
+    );
 
-    for (const [tableName, items] of Object.entries(request.items)) {
-        for (const item of items) {
-            if (!batch[tableName]) {
-                batch[tableName] = [];
-            }
-
-            batch[tableName].push(item);
-            batchCount++;
-
-            if (batchCount === MAX_BATCH_SIZE) {
-                batch = await executeSingleBatch({
-                    client: request.client,
-                    items: batch,
-                });
-                batchCount = countBatch(batch);
-            }
-
-            if (batchCount >= MAX_BATCH_SIZE) {
-                throw new Error('Too many unprocessed items after single batch execution');
-            }
+    for (let i = 0; i < requests.length; i += MAX_BATCH_SIZE) {
+        const batch: Record<string, WriteRequest[]> = {};
+        for (const { tableName, item } of requests.slice(i, i + MAX_BATCH_SIZE)) {
+            (batch[tableName] ??= []).push(item);
         }
-    }
 
-    if (batchCount > 0) {
-        await executeSingleBatch({
-            client: request.client,
-            items: batch,
-        });
+        await executeBatchUntilProcessed(request.client, batch);
     }
 }
 
-async function executeSingleBatch(request: BatchWriteRequest) {
-    const command = new BatchWriteItemCommand({
-        RequestItems: request.items,
-    });
+async function executeBatchUntilProcessed(client: DynamoDBClient, batch: Record<string, WriteRequest[]>) {
+    const backoff = createExponentialBackoff(UNPROCESSED_RETRY_BACKOFF);
+    let pending = batch;
 
-    const result = await request.client.send(command);
+    while (true) {
+        const result = await client.send(new BatchWriteItemCommand({ RequestItems: pending }));
+        pending = result.UnprocessedItems ?? {};
 
-    return result.UnprocessedItems ?? {};
-}
+        const unprocessedCount = Object.values(pending).reduce((acc, items) => acc + items.length, 0);
+        if (unprocessedCount === 0) {
+            return;
+        }
 
-function countBatch(batch: Record<string, WriteRequest[]>) {
-    return Object.values(batch).reduce((acc, items) => acc + items.length, 0);
+        if (!backoff.canRetry()) {
+            throw new Error(`DynamoDB left ${unprocessedCount} items unprocessed after ${backoff.retries} retries`);
+        }
+
+        await backoff.backoff();
+    }
 }

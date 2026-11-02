@@ -11,7 +11,7 @@
         {
             "name": "nzyme",
             "source": "./plugins/nzyme",
-            "description": "How to use the @nzyme framework packages — dependency injection, logging, translations, Vue forms and composables — plus the TypeScript conventions and testing practice they are written for",
+            "description": "How to use the @nzyme framework packages — dependency injection, logging, translations, Vue forms and composables — plus the TypeScript conventions and testing practice they are written for, and the reference architecture of a product repo (/nzyme:architecture) with its UI, Drizzle and API-client practice",
             "category": "development"
         }
     ]

@@ -1,0 +1,58 @@
+{
+    "name": "{{scope}}/{{app}}",
+    "private": true,
+    "description": "{{description}}",
+    "type": "module",
+    "exports": {
+        "./package.json": "./package.json",
+        "./*.js": "./*.ts",
+        "./*.vue": "./*.vue"
+    },
+    "scripts": {
+        "dev": "nuxt dev --bun",
+        "build": "nuxt generate --bun",
+        "prep": "nuxt prepare",
+        "typecheck": "nuxi typecheck"
+    },
+    "dependencies": {
+        "{{scope}}/ui": "workspace:*",
+        "@nzyme/i18n": "workspace:*",
+        "@nzyme/i18n-core": "workspace:*",
+        "@nzyme/ioc": "workspace:*",
+        "@nzyme/utils": "workspace:*",
+        "@nzyme/vue": "workspace:*",
+        "@nzyme/vue-forms": "workspace:*",
+        "@nzyme/vue-i18n": "workspace:*",
+        "@nzyme/vue-ioc": "workspace:*",
+        "@nzyme/vue-utils": "workspace:*",
+        "nuxt": "{{nzyme:nuxt}}",
+        "reka-ui": "2.10.5",
+        "vue": "{{nzyme:vue}}",
+        "vue-router": "{{nzyme:vue-router}}"
+    },
+    "devDependencies": {
+        "@nzyme/nuxt-tools": "workspace:*",
+        "@nzyme/project-utils": "workspace:*",
+        "sass": "1.105.1",
+        "typescript": "{{nzyme:typescript}}",
+        "vite": "{{nzyme:vite}}",
+        "vue-tsc": "{{nzyme:vue-tsc}}"
+    },
+    "nx": {
+        "namedInputs": {
+            "appEnvironment": [
+                {
+                    "runtime": "cat packages/{{app}}/.env packages/{{app}}/.env.${ENV:-dev} 2>/dev/null | git hash-object --stdin"
+                }
+            ]
+        },
+        "targets": {
+            "build": {
+                "dependsOn": [
+                    "^build",
+                    "typecheck"
+                ]
+            }
+        }
+    }
+}

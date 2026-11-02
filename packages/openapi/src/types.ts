@@ -291,9 +291,9 @@ type FetchOptionsBody<Paths, Path extends keyof Paths, Method extends HttpMethod
  */
 type HeadersFromParams<Parameters> = Parameters extends { header: infer H }
     ? H extends Record<string, unknown>
-        ? HeadersOmitContentType<H> & Record<string, string>
-        : Record<string, string>
-    : Record<string, string>;
+        ? HeadersOmitContentType<H> & Record<string, string | undefined>
+        : Record<string, string | undefined>
+    : Record<string, string | undefined>;
 
 type HeadersOmitContentType<H> = {
     [K in keyof H as K extends string ? (Lowercase<K> extends 'content-type' ? never : K) : never]: H[K];

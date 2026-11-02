@@ -1,0 +1,66 @@
+# Production builds exactly the commit each submodule gitlink pins, and runs only pins `main` has run
+# (nzyme/docs/consumers.md, rule 3). So a pull request into `{{productionBranch}}` may, for every
+# submodule, keep the pin or move it to a commit this repo's `main` has pinned at some point — a
+# promotion, or a rollback to an older `main` pin. An nzyme hotfix reaches production through `main`
+# first (nzyme/docs/consumers.md#hotfix-for-a-products-production).
+#
+# The job name is the required check on the `{{productionBranch}}` ruleset — keep it stable. It runs
+# from the PR's own tree, so a PR that edits this workflow can turn it off: read any such change in a PR
+# into `{{productionBranch}}` as a change to the rule. Filtered by trunk with a job-level `if:` rather
+# than `branches:`, so the required check also reports on the upper nodes of a stack.
+name: Release submodule pin guard
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  release-submodule-pins:
+    name: Release submodule pins
+    runs-on: ubuntu-latest
+    if: (github.event.pull_request.stack.base.ref || github.event.pull_request.base.ref) == '{{productionBranch}}'
+    steps:
+      # Full history: every pin `main` has had, and the commits between two pins for the summary.
+      - name: Checkout with submodules
+        uses: actions/checkout@{{ref:actions/checkout}}
+        with:
+          fetch-depth: 0
+          submodules: true
+          persist-credentials: false
+
+      - name: Verify the submodule pins
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          status=0
+          while read -r _ path; do
+            pin=$(git rev-parse "HEAD:$path")
+            base=$(git rev-parse --verify --quiet "origin/$BASE_REF:$path" || true)
+            if [ "$pin" = "$base" ]; then
+              continue
+            fi
+            # Every pin `main` has had, from its first-parent history: the pins `main` has run. Read
+            # into a variable first: under pipefail, `grep -q` closing the pipe early fails it.
+            main_pins=$(git log --first-parent --format= -p origin/main -- "$path" | sed -n 's/^+Subproject commit //p')
+            if grep -qx "$pin" <<< "$main_pins"; then
+              {
+                echo "### $path ${base:0:12} → ${pin:0:12}"
+                echo
+                if [ -n "$base" ] && git -C "$path" merge-base --is-ancestor "$base" "$pin"; then
+                  git -C "$path" log --oneline "$base..$pin"
+                elif [ -n "$base" ]; then
+                  echo "A rollback; it drops:"
+                  git -C "$path" log --oneline "$pin..$base"
+                else
+                  git -C "$path" log --oneline -20 "$pin"
+                fi
+              } >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::error::$path $pin has never been pinned on main, so main never ran it. Land the change in $path, bump main to it, then promote."
+              status=1
+            fi
+          done < <(git config -f .gitmodules --get-regexp '\.path$')
+          exit $status

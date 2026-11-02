@@ -1,6 +1,6 @@
 {
     "name": "nzyme",
-    "description": "How to use the @nzyme framework packages — dependency injection (@nzyme/ioc), logging (@nzyme/logging), translations (@nzyme/i18n, @nzyme/vue-i18n), Vue forms (@nzyme/vue-forms, @nzyme/validation) and composables (@nzyme/vue-utils, @nzyme/vue-ioc) — plus the TypeScript conventions and testing practice they are written for",
+    "description": "How to use the @nzyme framework packages — dependency injection (@nzyme/ioc), logging (@nzyme/logging), translations (@nzyme/i18n, @nzyme/vue-i18n), Vue forms (@nzyme/vue-forms, @nzyme/validation) and composables (@nzyme/vue-utils, @nzyme/vue-ioc) — plus the TypeScript conventions and testing practice they are written for, and user-invoked skills for the reference architecture of a product repo (/nzyme:architecture) and its UI components, Drizzle SQL and third-party API clients",
     "version": "0.15.1",
     "author": {
         "name": "Michał Kędrzyński"
@@ -8,5 +8,18 @@
     "homepage": "https://github.com/kedrzu/nzyme",
     "repository": "https://github.com/kedrzu/nzyme",
     "license": "MIT",
-    "keywords": ["nzyme", "typescript", "vue", "dependency-injection", "i18n", "forms", "testing"]
+    "keywords": [
+        "nzyme",
+        "typescript",
+        "vue",
+        "dependency-injection",
+        "i18n",
+        "forms",
+        "testing",
+        "architecture",
+        "monorepo",
+        "nx",
+        "drizzle",
+        "openapi"
+    ]
 }

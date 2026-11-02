@@ -19,17 +19,15 @@ interface CachedValue {
     at: number;
 }
 
-type CacheEntry = Map<string, CachedValue>;
-
 /**
  * Wraps a store with a cache in the keychain, so a repeated read within `ttl` makes no store call.
- * The cache is one keychain entry per `store.id`, with a timestamp per key, so repos reading different
- * keys of one store do not evict each other. A keychain failure only warns: the read falls through to
- * the store. Values are kept only in the keychain, never in a file.
+ * Each key is its own keychain item, `cache:<store.id>:<key>` with a timestamp, so repos reading
+ * different keys of one store do not evict each other, and no item outgrows a per-item size cap
+ * (Windows Credential Manager holds 2560 bytes). A keychain failure only warns: the read falls through
+ * to the store. Values are kept only in the keychain, never in a file.
  */
 export function cached(store: SecretStore, options: CachedOptions): SecretStore {
     const keychain = options.keychain ?? osKeychain;
-    const entryName = `cache:${store.id}`;
 
     return defineSecretStore({
         id: store.id,
@@ -41,13 +39,13 @@ export function cached(store: SecretStore, options: CachedOptions): SecretStore 
     });
 
     async function read(keys: string[]) {
-        const entry = await loadEntry();
+        const items = await Promise.all(keys.map(loadItem));
         const now = Date.now();
         const hit = new Map<string, string>();
-        for (const key of keys) {
-            const item = entry.get(key);
+        for (const [index, key] of keys.entries()) {
+            const item = items[index];
             if (!item || now - item.at >= options.ttl) {
-                return await readFromStore(entry, keys);
+                return await readFromStore(keys);
             }
 
             hit.set(key, item.value);
@@ -57,70 +55,74 @@ export function cached(store: SecretStore, options: CachedOptions): SecretStore 
     }
 
     async function refresh(keys: string[]) {
-        await readFromStore(await loadEntry(), keys);
+        await readFromStore(keys);
     }
 
     async function write(entries: SecretStoreEntry[]) {
         await store.write(entries);
 
-        const entry = await loadEntry();
         const now = Date.now();
-        for (const { key, value } of entries) {
-            entry.set(key, { value, at: now });
-        }
-
-        await saveEntry(entry);
+        await Promise.all(entries.map(({ key, value }) => saveItem(key, { value, at: now })));
     }
 
-    async function readFromStore(entry: CacheEntry, keys: string[]) {
+    async function readFromStore(keys: string[]) {
         const values = await store.read(keys);
         const now = Date.now();
-        const next = new Map(entry);
-        for (const key of keys) {
-            const value = values.get(key);
-            if (value === undefined) {
-                next.delete(key);
-            } else {
-                next.set(key, { value, at: now });
-            }
-        }
+        await Promise.all(
+            keys.map(key => {
+                const value = values.get(key);
+                return value === undefined ? deleteItem(key) : saveItem(key, { value, at: now });
+            }),
+        );
 
-        await saveEntry(next);
         return values;
     }
 
-    async function loadEntry(): Promise<CacheEntry> {
+    async function loadItem(key: string): Promise<CachedValue | undefined> {
         let raw: string | null;
         try {
-            raw = await keychain.get(entryName);
+            raw = await keychain.get(itemName(key));
         } catch {
-            console.warn(`Secrets cache of store ${store.id}: reading the keychain failed, reading the store`);
-            return new Map();
+            console.warn(
+                `Secrets cache of store ${store.id}: reading the keychain failed for ${key}, reading the store`,
+            );
+            return undefined;
         }
 
         if (raw === null) {
-            return new Map();
+            return undefined;
         }
 
-        const entry = parseEntry(raw);
-        if (!entry) {
-            console.warn(`Secrets cache of store ${store.id}: the keychain entry is malformed, ignoring it`);
-            return new Map();
+        const item = parseItem(raw);
+        if (!item) {
+            console.warn(`Secrets cache of store ${store.id}: the keychain item of ${key} is malformed, ignoring it`);
         }
 
-        return entry;
+        return item;
     }
 
-    async function saveEntry(entry: CacheEntry) {
+    async function saveItem(key: string, item: CachedValue) {
         try {
-            await keychain.set(entryName, JSON.stringify(Object.fromEntries(entry)));
+            await keychain.set(itemName(key), JSON.stringify(item));
         } catch {
-            console.warn(`Secrets cache of store ${store.id}: writing the keychain failed`);
+            console.warn(`Secrets cache of store ${store.id}: writing the keychain failed for ${key}`);
         }
+    }
+
+    async function deleteItem(key: string) {
+        try {
+            await keychain.delete(itemName(key));
+        } catch {
+            console.warn(`Secrets cache of store ${store.id}: deleting from the keychain failed for ${key}`);
+        }
+    }
+
+    function itemName(key: string) {
+        return `cache:${store.id}:${key}`;
     }
 }
 
-function parseEntry(raw: string): CacheEntry | undefined {
+function parseItem(raw: string): CachedValue | undefined {
     let parsed: unknown;
     try {
         parsed = JSON.parse(raw);
@@ -128,26 +130,16 @@ function parseEntry(raw: string): CacheEntry | undefined {
         return undefined;
     }
 
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    if (
+        typeof parsed !== 'object' ||
+        parsed === null ||
+        !('value' in parsed) ||
+        typeof parsed.value !== 'string' ||
+        !('at' in parsed) ||
+        typeof parsed.at !== 'number'
+    ) {
         return undefined;
     }
 
-    const entry: CacheEntry = new Map();
-    const items: [string, unknown][] = Object.entries(parsed);
-    for (const [key, item] of items) {
-        if (
-            typeof item !== 'object' ||
-            item === null ||
-            !('value' in item) ||
-            typeof item.value !== 'string' ||
-            !('at' in item) ||
-            typeof item.at !== 'number'
-        ) {
-            return undefined;
-        }
-
-        entry.set(key, { value: item.value, at: item.at });
-    }
-
-    return entry;
+    return { value: parsed.value, at: parsed.at };
 }

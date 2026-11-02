@@ -3,8 +3,10 @@ import { pathToFileURL } from 'node:url';
 
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
+import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
 import { readNzymeConfig } from '../readNzymeConfig.js';
+import { readProperty } from '../utils/readProperty.js';
 
 /**
  * Loads the commands of every plugin the repo lists under `nzyme.plugins`, on every invocation.
@@ -34,7 +36,8 @@ export async function loadPlugins(): Promise<CommandClass[]> {
 }
 
 async function readPluginPaths(root: string) {
-    const plugins = readProperty(await readNzymeConfig(root), 'plugins');
+    const nzyme = await readNzymeConfig(root);
+    const plugins = isPlainObject(nzyme) ? nzyme.plugins : undefined;
     if (plugins === undefined) {
         return [];
     }
@@ -59,14 +62,6 @@ async function importPluginCommands(root: string, pluginPath: string) {
 /** Only the shape is checked: a plugin built on another copy of `@nzyme/cli-core` is unsupported. */
 function isCommandClass(value: unknown): value is CommandClass {
     return typeof value === 'function';
-}
-
-function readProperty(value: unknown, key: string): unknown {
-    if (typeof value !== 'object' || value === null || !(key in value)) {
-        return undefined;
-    }
-
-    return Object.getOwnPropertyDescriptor(value, key)?.value;
 }
 
 function exitOnBrokenPlugin(pluginPath: string, cause: unknown): never {

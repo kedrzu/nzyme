@@ -2,6 +2,7 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 
+import { getSecretKey } from '../getSecretKey.js';
 import { resolveSecrets } from '../resolveSecrets.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
 
@@ -37,7 +38,7 @@ export function defineSecretsListCommand(options: SecretsCommandsOptions): Comma
                     status = 'missing';
                 }
 
-                this.context.stdout.write(`${name}  ${ref.store.id}:${ref.key ?? name}  ${status}\n`);
+                this.context.stdout.write(`${name}  ${ref.store.id}:${getSecretKey(name, ref)}  ${status}\n`);
             }
 
             return missing.length > 0 ? 1 : 0;

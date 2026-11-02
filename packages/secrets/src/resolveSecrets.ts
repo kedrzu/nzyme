@@ -1,7 +1,8 @@
 import type { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 
+import { groupSecretsByStore } from './groupSecretsByStore.js';
 import type { SecretsMapping } from './SecretsProvider.js';
-import type { SecretStore } from './SecretStore.js';
+import type { SecretRef } from './SecretStore.js';
 
 /**
  * A mapped secret its store does not have, or has empty.
@@ -14,9 +15,6 @@ export interface MissingSecret {
 }
 
 /**
- * The outcome of {@link resolveSecrets}.
- */
-/**
  * Describes missing secrets for an error message: each name with its key and store, and how to
  * store them. Never a value.
  */
@@ -25,6 +23,9 @@ export function describeMissingSecrets(missing: MissingSecret[]): string {
     return `${list.join(', ')}. Store them with \`secrets set <NAME>\`.`;
 }
 
+/**
+ * The outcome of {@link resolveSecrets}.
+ */
 export interface ResolvedSecrets {
     /** Fetched values by environment variable name; only names neither missing nor overridden. */
     values: Map<string, string>;
@@ -39,23 +40,17 @@ export interface ResolvedSecrets {
  */
 export async function resolveSecrets(mapping: SecretsMapping, env: EnvVariables): Promise<ResolvedSecrets> {
     const overridden: string[] = [];
-    const byStore = new Map<SecretStore, { name: string; key: string }[]>();
+    const wanted: Record<string, SecretRef> = {};
 
     for (const [name, ref] of Object.entries(mapping.secrets)) {
         if (env[name]) {
             overridden.push(name);
-            continue;
+        } else {
+            wanted[name] = ref;
         }
-
-        let entries = byStore.get(ref.store);
-        if (!entries) {
-            entries = [];
-            byStore.set(ref.store, entries);
-        }
-
-        entries.push({ name, key: ref.key ?? name });
     }
 
+    const byStore = groupSecretsByStore(wanted);
     const reads = await Promise.all(
         Array.from(byStore, async ([store, entries]) => {
             const keys = [...new Set(entries.map(entry => entry.key))];

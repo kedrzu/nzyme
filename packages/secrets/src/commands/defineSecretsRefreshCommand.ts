@@ -2,6 +2,7 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
 import { getSecretStores } from '../getSecretStores.js';
+import { groupSecretsByStore } from '../groupSecretsByStore.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
 
 /**
@@ -21,18 +22,15 @@ export function defineSecretsRefreshCommand(options: SecretsCommandsOptions): Co
         override async run() {
             const mapping = this.container.resolve(options.provider);
 
+            const byStore = groupSecretsByStore(mapping.secrets);
+
             for (const store of getSecretStores(mapping)) {
                 if (!store.refresh) {
                     continue;
                 }
 
-                const keys = new Set<string>();
-                for (const [name, ref] of Object.entries(mapping.secrets)) {
-                    if (ref.store === store) {
-                        keys.add(ref.key ?? name);
-                    }
-                }
-
+                const entries = byStore.get(store) ?? [];
+                const keys = new Set(entries.map(entry => entry.key));
                 await store.refresh([...keys]);
                 this.context.stdout.write(`Refreshed store ${store.id}.\n`);
             }

@@ -2,6 +2,7 @@ import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
+import { getSecretKey } from '../getSecretKey.js';
 import { promptSecret } from './promptSecret.js';
 import { readHiddenInput } from './readHiddenInput.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
@@ -60,7 +61,7 @@ export function defineSecretsSetCommand(options: SecretsCommandsOptions): Comman
                 throw new UsageError(`The value of ${this.name} is empty; nothing was written.`);
             }
 
-            const key = ref.key ?? this.name;
+            const key = getSecretKey(this.name, ref);
             await ref.store.write([{ key, value }]);
             const length = prompted ? ` (${value.length} characters)` : '';
             this.context.stdout.write(`${this.name} written to key ${key} in store ${ref.store.id}${length}.\n`);

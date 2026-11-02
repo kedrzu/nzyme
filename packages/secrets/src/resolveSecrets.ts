@@ -17,6 +17,7 @@ export interface MissingSecret {
 /**
  * Describes missing secrets for an error message: each name with its key and store, and how to
  * store them. Never a value.
+ * @util
  */
 export function describeMissingSecrets(missing: MissingSecret[]): string {
     const list = missing.map(secret => `${secret.name} (key ${secret.key} in store ${secret.storeId})`);
@@ -37,6 +38,7 @@ export interface ResolvedSecrets {
 /**
  * Reads the mapped secrets, one `read` per store however many secrets it holds. An empty value
  * counts as missing. Prints nothing and writes nothing: the caller decides what to do with the result.
+ * @util
  */
 export async function resolveSecrets(mapping: SecretsMapping, env: EnvVariables): Promise<ResolvedSecrets> {
     const overridden: string[] = [];

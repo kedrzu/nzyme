@@ -8,6 +8,7 @@ import enquirer from 'enquirer';
  * otherwise all of `stdin` with one trailing newline removed (so `echo value | …` works). A
  * cancelled prompt reads as an empty string. Never takes the value from an argument, where it would
  * land in shell history and the process list.
+ * @util
  */
 export async function readHiddenInput(label: string, stdin: Readable): Promise<string> {
     if (stdin instanceof ReadStream && stdin.isTTY) {

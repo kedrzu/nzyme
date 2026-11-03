@@ -1,9 +1,9 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
 
-import { Option, UsageError } from '@nzyme/cli';
-import type { CommandClass } from '@nzyme/cli/Command.js';
-import { Command } from '@nzyme/cli/Command.js';
+import { Option, UsageError } from '@nzyme/cli-core';
+import type { CommandClass } from '@nzyme/cli-core/Command.js';
+import { Command } from '@nzyme/cli-core/Command.js';
 import { getAllDeps } from '@nzyme/ioc/utils/getAllDeps.js';
 import { isDependentOn } from '@nzyme/ioc/utils/isDependentOn.js';
 import { sortByDependency } from '@nzyme/ioc/utils/sortByDependency.js';

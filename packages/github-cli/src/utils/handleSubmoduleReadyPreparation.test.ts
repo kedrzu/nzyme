@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, mock, test } from 'bun:test';
 import { simpleGit } from 'simple-git';
 import type { SimpleGit } from 'simple-git';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 import { createTestLogger } from '@nzyme/logging';
 import { assertValue } from '@nzyme/utils';
 

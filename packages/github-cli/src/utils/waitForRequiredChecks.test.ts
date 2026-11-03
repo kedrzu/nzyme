@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 import { createTestLogger } from '@nzyme/logging';
 
 import type { GithubConfig } from '../GithubConfig.js';

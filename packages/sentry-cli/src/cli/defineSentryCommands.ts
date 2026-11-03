@@ -1,9 +1,9 @@
 import chalk from 'chalk';
 import open from 'open';
 
-import { Option, UsageError } from '@nzyme/cli';
-import type { CommandClass } from '@nzyme/cli/Command.js';
-import { Command } from '@nzyme/cli/Command.js';
+import { Option, UsageError } from '@nzyme/cli-core';
+import type { CommandClass } from '@nzyme/cli-core/Command.js';
+import { Command } from '@nzyme/cli-core/Command.js';
 import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
 import { convertAllPrsToReady } from '@nzyme/github-cli/utils/convertAllPrsToReady.js';
 import { createGithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';

@@ -1,7 +1,7 @@
 import type { LinearClient } from '@linear/sdk';
 import chalk from 'chalk';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
 import { checkoutExistingBranch } from '@nzyme/github-cli/utils/checkoutExistingBranch.js';
 import { createBranchAndPr } from '@nzyme/github-cli/utils/createBranchAndPr.js';

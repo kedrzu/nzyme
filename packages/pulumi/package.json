@@ -50,7 +50,7 @@
         "@aws-sdk/credential-provider-node": "^3.972.86",
         "@babel/core": "^8.0.7",
         "@babel/preset-env": "^8.0.7",
-        "@nzyme/cli": "workspace:*",
+        "@nzyme/cli-core": "workspace:*",
         "@nzyme/esm": "workspace:*",
         "@nzyme/ioc": "workspace:*",
         "@nzyme/logging": "workspace:*",

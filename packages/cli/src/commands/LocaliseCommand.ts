@@ -3,13 +3,12 @@ import * as path from 'node:path';
 
 import chalk from 'chalk';
 import { watch } from 'chokidar';
-import { Option } from 'clipanion';
 import * as fsExtra from 'fs-extra';
 
+import { Option } from '@nzyme/cli-core';
+import { Command } from '@nzyme/cli-core/Command.js';
 import { compileTranslationFile } from '@nzyme/i18n-compiler/compileTranslationFile.js';
 import { isFileIgnored } from '@nzyme/project-utils/isFileIgnored.js';
-
-import { Command } from '../Command.js';
 
 const I18N_REGEX = /\.loc\.ya?ml$/;
 

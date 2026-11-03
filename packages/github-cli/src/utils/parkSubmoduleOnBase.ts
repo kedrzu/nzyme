@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import type { SimpleGit } from 'simple-git';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 /**

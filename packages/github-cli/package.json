@@ -33,7 +33,7 @@
         "access": "public"
     },
     "dependencies": {
-        "@nzyme/cli": "workspace:*",
+        "@nzyme/cli-core": "workspace:*",
         "@nzyme/logging": "workspace:*",
         "@nzyme/utils": "workspace:*",
         "@octokit/rest": "22.0.1",

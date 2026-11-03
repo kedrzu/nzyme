@@ -120,7 +120,7 @@ test(
             stallTimeoutMs: 1000,
         });
         // Caught here: bun's `expect(promise).rejects` blocks the test until the promise settles.
-        const headFailure = head.catch((error: Error) => error.message);
+        const headFailure = head.catch((error: unknown) => String(error));
         await waitUntil(() => readMachineCapacityStatus(environment(rootDir)).waiters.length === 1);
 
         let clock = Date.now() + 1000;
@@ -135,9 +135,9 @@ test(
             stallTimeoutMs: 1000,
             statusIntervalMs: 0,
             onStatus: line => lines.push(line),
-        }).catch((error: Error) => {
+        }).catch((error: unknown) => {
             settled = true;
-            return error.message;
+            return String(error);
         });
         await waitUntil(() => lines.some(line => line.includes('position 2')));
 

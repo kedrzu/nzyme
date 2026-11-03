@@ -59,7 +59,7 @@
         "@types/node": "26.6.6",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "clipanion": "^4.0.0-rc.4",
-        "oxfmt": "0.75.0"
+        "oxfmt": "0.76.0"
     },
     "engines": {
         "node": ">=20"

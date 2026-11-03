@@ -46,7 +46,9 @@ without exposing them, and keep its credentials in the OS keychain.
   is never sent to another server. `BWS_ACCESS_TOKEN` overrides it, for CI and Linux. A machine
   meant only to read gets a read-only machine account, and its writes fail with 403. A separate read
   and write token per machine was dropped in review (PR #258): any `bun` process of the user reads
-  both keychain items without a prompt, so the split protected little.
+  both keychain items without a prompt, so the split protected little. Later, `keychainSuffix` let a
+  store select a separate token, so projects on one server need not share it; the token stays keyed
+  by server host as well.
 
 ## Consequences
 

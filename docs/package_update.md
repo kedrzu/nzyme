@@ -155,7 +155,7 @@ never retried from inside this repository — only a run in a consumer can show 
 - **Status**: blocked-by-consumer
 - **Notes**: do not raise the `nuxt` or `vite` ranges or pins (`packages/logging-ui`, `packages/nuxt-tools`, the Vue packages) past 4.4.x / 7.x, or the consumer gets a second Nuxt or Vite. nzyme's own share of the migration is known: nuxt 4.6 types the nitro hooks again, so the `@ts-expect-error nitro hooks are not typed` directive in `packages/nuxt-tools/src/outputFilesModule.ts` becomes an error (TS2578) and must go; `crossws` moves to the 0.4.x line with it (General Rules). The old blocker (`@nuxt/image` pinning a beta `ipx`) is gone.
 
-### rollup 4.62.3 through 4.65.0 (re-checked 2026-11-02)
+### rollup 4.62.3 through 4.67.4 (re-checked 2026-11-03)
 
 - **Problem**: `packages/pulumi/src/compileFunction.worker.ts` stops compiling — the
   `bundleStats()` plugin no longer satisfies `InputPluginOption`.
@@ -163,9 +163,10 @@ never retried from inside this repository — only a run in a consumer can show 
   the copy vendored in `rollup-plugin-stats` still declares `string`.
 - **Status**: blocked-by-rollup-plugin-bundle-stats
 - **Notes**: 4.62.2 is the last good version — 4.62.3, 4.62.4 and 4.63.3 all fail identically, and
-  nothing from 4.63.4 up to 4.65.0 was attempted, because the vendored type is unchanged:
+  nothing from 4.63.4 up to 4.67.4 was attempted, because the vendored type is unchanged:
   `rollup-plugin-bundle-stats` hard-pins `rollup-plugin-stats@2.1.3`, whose `dist/types.d.mts` still
-  declares `file: string`, in 4.23.1 (published 2026-11-02) as in 4.22.3. Re-test rollup only when a
+  declares `file: string`, in 4.23.1 (published 2026-11-02) as in 4.22.3. Moving to the newest
+  `rollup-plugin-stats` would not help: 3.0.2 declares `file: string` too. Re-test rollup only when a
   release relaxes `SourceMap.file`. Verify with
   `grep -n 'file' node_modules/.bun/rollup-plugin-stats@*/node_modules/rollup-plugin-stats/dist/types.d.*`.
 

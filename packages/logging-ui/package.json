@@ -8,7 +8,7 @@
         "build": "nuxt build"
     },
     "dependencies": {
-        "@lucide/vue": "1.66.0",
+        "@lucide/vue": "1.67.0",
         "@nuxt/schema": "4.4.8",
         "@nzyme/ioc": "workspace:*",
         "@nzyme/logging": "workspace:*",
@@ -27,7 +27,7 @@
         "vue-router": "^5.4.0"
     },
     "devDependencies": {
-        "oxfmt": "0.75.0",
+        "oxfmt": "0.76.0",
         "typescript": "6.0.3",
         "vue-tsc": "^3.3.13"
     },

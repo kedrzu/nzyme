@@ -1,7 +1,7 @@
 {
     "name": "@nzyme/cli",
     "version": "0.15.1",
-    "description": "CLI framework (clipanion-based Command base)",
+    "description": "The nzyme binary: monorepo, localise, index, quiet-run and other repo commands",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {
@@ -17,12 +17,6 @@
     ],
     "type": "module",
     "exports": {
-        ".": {
-            "types": "./dist/index.d.ts",
-            "source": "./src/index.ts",
-            "import": "./dist/index.js",
-            "default": "./dist/index.js"
-        },
         "./*.js": {
             "types": "./dist/*.d.ts",
             "source": "./src/*.ts",
@@ -38,17 +32,15 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
+        "@nzyme/cli-core": "workspace:*",
         "@nzyme/i18n-compiler": "workspace:*",
-        "@nzyme/ioc": "workspace:*",
         "@nzyme/logging": "workspace:*",
         "@nzyme/machine": "workspace:*",
-        "@nzyme/node-utils": "workspace:*",
         "@nzyme/project-utils": "workspace:*",
         "@nzyme/utils": "workspace:*",
         "@types/fs-extra": "^11.0.4",
         "chalk": "^6.0.1",
         "chokidar": "^6.0.0",
-        "clipanion": "^4.0.0-rc.4",
         "comment-json": "^5.0.0",
         "compare-versions": "^6.1.1",
         "depcheck": "^1.4.7",
@@ -57,7 +49,6 @@
         "fs-extra": "^11.4.1",
         "latest-version": "^9.0.0",
         "lodash.merge": "^4.6.2",
-        "source-map-support": "^0.5.21",
         "type-fest": "^5.10.0",
         "typescript": "^6.0.3"
     },
@@ -65,7 +56,6 @@
         "@nzyme/tsconfig": "workspace:*",
         "@types/lodash.merge": "4.6.9",
         "@types/node": "26.6.6",
-        "@types/source-map-support": "0.5.10",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "oxfmt": "0.75.0"
     },

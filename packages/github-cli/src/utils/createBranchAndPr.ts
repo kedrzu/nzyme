@@ -1,6 +1,6 @@
 import { simpleGit } from 'simple-git';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import { buildPrBody, createDraftPr } from './createDraftPr.js';

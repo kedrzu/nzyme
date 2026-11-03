@@ -1,9 +1,8 @@
+import { Option } from '@nzyme/cli-core';
+import { Command } from '@nzyme/cli-core/Command.js';
 import { formatMachineCapacityStatus } from '@nzyme/machine/formatMachineCapacityStatus.js';
 import type { MachineCapacityEnvironmentOptions } from '@nzyme/machine/MachineCapacityTypes.js';
 import { readMachineCapacityStatus } from '@nzyme/machine/readMachineCapacityStatus.js';
-
-import { Command } from '../Command.js';
-import { Option } from '../index.js';
 
 /** Shows who holds and who waits for machine capacity, and what is free — without changing anything. */
 export class MachineStatusCommand extends Command {

@@ -1,6 +1,6 @@
 import type { LinearClient } from '@linear/sdk';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 
 /**
  * Parameters for creating a Linear issue.

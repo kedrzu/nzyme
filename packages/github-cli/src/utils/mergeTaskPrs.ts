@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import enquirer from 'enquirer';
 import { simpleGit } from 'simple-git';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 import type { Logger } from '@nzyme/logging/Logger.js';
 import { waitFor } from '@nzyme/utils/waitFor.js';
 import { withTimeout } from '@nzyme/utils/withTimeout.js';

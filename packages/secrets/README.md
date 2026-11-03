@@ -1,0 +1,152 @@
+# @nzyme/secrets
+
+Development secrets kept in a remote store behind a login, configured as code and loaded into the
+environment variables an app already reads through `defineEnvVariable`. No plaintext `.env`, nothing
+encrypted in the repo.
+
+Why it works this way: `docs/decisions/secrets-as-code-through-env-variables.md`.
+
+## Installation
+
+```bash
+bun add @nzyme/secrets @nzyme/bitwarden
+```
+
+Every `@nzyme/*` package in a repo, `@nzyme/cli` included, must be one version, installed in the repo
+(see [Commands from a plugin](#commands-from-a-plugin)).
+
+## The mapping
+
+A project describes its secrets in a service resolving to a `SecretsMapping`: the one store its
+secrets live in, and each environment variable with the key of its secret in that store.
+
+```ts
+// packages/app/src/AppSecrets.ts
+import { defineService } from '@nzyme/ioc/Service.js';
+import { bitwarden } from '@nzyme/bitwarden/bitwarden.js';
+import { cached } from '@nzyme/secrets/cached.js';
+import type { SecretsMapping } from '@nzyme/secrets/SecretsMapping.js';
+
+export const AppSecrets = defineService<SecretsMapping>({
+    name: 'AppSecrets',
+    setup() {
+        const bw = cached(bitwarden({ project: '1f0c…' }), { ttl: 8 * 60 * 60 * 1000 });
+
+        return {
+            store: bw,
+            secrets: {
+                DATABASE_URL: 'DATABASE_URL',
+                STRIPE_KEY: 'stripe-test-key',
+            },
+        };
+    },
+});
+```
+
+Several variables may share a key. A mapping has one store, so every secret a process loads comes
+from one place and `login` needs no store name. The core knows no environments: a project picks the
+store and keys however its own conventions require, for example by depending on an env variable in
+`deps`.
+
+## Loading at startup
+
+```ts
+import { loadSecrets } from '@nzyme/secrets/loadSecrets.js';
+
+await loadSecrets(container, AppSecrets);
+```
+
+`loadSecrets` reads every mapped secret in one batch, and writes them into that container's
+`EnvVariables`, so `defineEnvVariable` resolves them. It takes the provider explicitly, as the
+`secrets` commands do, and resolves it from that container. Call it before resolving anything that
+reads those variables. Production, whose platform provides the
+variables, skips it.
+
+- **Precedence:** a non-empty variable already set wins over its secret, and its name is reported in
+  the `Secrets loaded` log (`overridden`). Bun loads `.env` before any code runs, so a name listed
+  there usually means a leftover `.env`.
+- **All or nothing:** every read completes before anything is written. A secret that is missing or
+  empty, or a failed read, throws naming the variable, key and store, and leaves `EnvVariables`
+  untouched.
+- **No values in output:** errors and logs carry names and references, never values.
+- **Reads only:** the startup step never writes to a store.
+
+## Cache
+
+`cached(store, { ttl })` keeps the values of a store in the OS keychain (through `Bun.secrets`,
+service `nzyme-secrets`), so restarting a dev server makes no store call. `ttl` is in milliseconds and
+required. A keychain failure only warns; the read falls through to the store. `secrets refresh`
+re-reads before the TTL runs out.
+
+Values are kept only in the keychain, never in a file. Any `bun` process of the same user can read them without a prompt: on macOS (Bun 1.4.4, checked 2026-11-02) a separate `bun` script read the tokens that `nzyme secrets login` had stored. The keychain protects them from other users and from a stolen disk, not from code you run. Linux is not checked yet.
+
+## Commands from a plugin
+
+A repo without its own CLI gets the commands from the `nzyme` binary through a plugin module:
+
+```ts
+// tools/secrets.ts
+import type { NzymePlugin } from '@nzyme/cli-core/NzymePlugin.js';
+import { defineSecretsCommands } from '@nzyme/secrets/commands/defineSecretsCommands.js';
+
+import { AppSecrets } from '../packages/app/src/AppSecrets.js';
+
+export default { commands: defineSecretsCommands({ provider: AppSecrets }) } satisfies NzymePlugin;
+```
+
+```json
+{
+    "nzyme": {
+        "plugins": ["./tools/secrets.ts"]
+    }
+}
+```
+
+`@nzyme/cli` and every other `@nzyme/*` package must be one version, installed in the repo: the
+plugin's commands must extend the `Command` of the same `@nzyme/cli-core` the binary runs. Why:
+`docs/decisions/nzyme-cli-plugins.md`.
+
+A product CLI registers the same commands itself:
+
+```ts
+await execute({
+    name: 'app',
+    commands: [...appCommands, ...defineSecretsCommands({ provider: AppSecrets })],
+});
+```
+
+## Commands
+
+Values are never taken from arguments and never printed.
+
+- **`secrets login`** — stores credentials for the mapping's store. The token is read from a hidden
+  prompt, or from stdin.
+- **`secrets set <NAME>`** — writes one mapped secret. The value comes from a
+  hidden prompt, or from stdin: `nzyme secrets set DB_PASSWORD < password.txt`.
+- **`secrets set <NAME> --prompt[=<hint>]`** — how an agent asks the user for a secret: the user
+  types it into a native masked dialog (osascript on macOS, Get-Credential on Windows, zenity or
+  kdialog on Linux; a hidden terminal prompt when none opens), so the value never reaches the
+  agent's transcript. Stdin is ignored. The hint says what the value is and where to find it, and
+  needs the `=`: `--prompt="Staging DB password, in 1Password"` (`--prompt "…"` is a usage error).
+  On success it prints only the name, key, store and character count. It exits 1, writing nothing,
+  when nothing was entered (cancelled, blank or timed out after 5 minutes), when the value spans
+  several lines, or when no dialog or terminal is available — then ask the user to run
+  `nzyme secrets set <NAME>` in their own terminal and confirm with `nzyme secrets list`.
+- **`secrets list`** — each mapped name with its store id, key and status (`resolves`, `missing`,
+  `overridden by environment`); exits non-zero when one is missing.
+- **`secrets run -- <command>`** — runs a command with the mapped secrets as environment variables.
+  A variable already set wins; the store's credentials (`BWS_ACCESS_TOKEN`) are removed
+  from the child's environment; nothing starts when a secret is missing. The exit code is the
+  command's own.
+- **`secrets refresh`** — re-reads the mapped secrets into the store's cache, when it has one.
+
+The startup step, `run` and `list` only read; only `set` writes. A store keeps one
+credential per machine, so a machine that only runs the app logs in with read-only credentials (for
+Bitwarden, a read-only machine account) and its writes are refused.
+
+## Stores
+
+- [`@nzyme/bitwarden`](../bitwarden/README.md) — Bitwarden Secrets Manager.
+
+A store is an object implementing `SecretStore` (`id`, `read`, `write`, optional `login`, `refresh`,
+`credentialEnv`).

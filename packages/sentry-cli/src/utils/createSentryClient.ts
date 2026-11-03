@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 
 import type { SentryConfig } from '../cli/defineSentryCommands.js';
 

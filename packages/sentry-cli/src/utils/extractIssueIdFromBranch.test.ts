@@ -1,6 +1,6 @@
 import { expect, it } from 'bun:test';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 
 import { extractIssueIdFromBranch } from './extractIssueIdFromBranch.js';
 

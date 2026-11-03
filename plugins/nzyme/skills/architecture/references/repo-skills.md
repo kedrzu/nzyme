@@ -1,7 +1,9 @@
 # Repo-owned skills
 
 When work enters an area that has a practice skill (`ui`, `drizzle`, `api-clients`) or the Nuxt app,
-offer to write — or bring up to date — a skill that lives in the repo. The nzyme skill holds the
+offer to write — or bring up to date — a skill that lives in the repo. A repo with secrets always has
+one (`secrets`): an agent cannot add or use a secret without knowing how this repo invokes the
+commands and which environments exist. The nzyme skill holds the
 practice; the repo skill holds what is true only here, and links the nzyme skill for the rest. Agents
 in the repo then pick up the area's rules on their own, without anyone invoking `architecture`.
 
@@ -18,6 +20,11 @@ in the repo then pick up the area's rules on their own, without anyone invoking 
   story-based test per component, WCAG 2.2 AA through axe in those tests).
 - **Commands** — how to run this area's checks, codegen or migrations.
 - **Links** — the nzyme practice skill and the package READMEs, with a line on when to read each.
+
+For `secrets` the paths and commands are the whole point: the exact prefix (`bun nzyme secrets` or
+the product CLI's), the provider file, each store and its environments, the variable that selects
+the environment and how to run a command against another one, whose machines can write, and
+any secrets command the repo adds. The practice it links is `nzyme/plugins/nzyme/skills/secrets/SKILL.md`.
 
 It never restates a rule the linked skill or README owns. If a line would hold everywhere nzyme is
 used, it belongs in the nzyme skill, not here.

@@ -1,5 +1,5 @@
-import { UsageError } from 'clipanion';
-
+import { Option, UsageError } from '@nzyme/cli-core';
+import { Command } from '@nzyme/cli-core/Command.js';
 import { ApplicationError } from '@nzyme/logging/ApplicationError.js';
 import { acquireMachineCapacity, assertMachineCapacity } from '@nzyme/machine/acquireMachineCapacity.js';
 import { formatBytes } from '@nzyme/machine/formatBytes.js';
@@ -9,8 +9,6 @@ import type {
     MachineCapacityRequestOptions,
 } from '@nzyme/machine/MachineCapacityTypes.js';
 
-import { Command } from '../Command.js';
-import { Option } from '../index.js';
 import { parseByteSize } from '../machine/parseByteSize.js';
 
 /** Exit codes a shell reports for a process ended by these signals (`128 + signal number`). */

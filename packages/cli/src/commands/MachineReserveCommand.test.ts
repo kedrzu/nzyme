@@ -15,7 +15,7 @@ import { readMachineCapacityStatus } from '@nzyme/machine/readMachineCapacitySta
 import { assert } from '@nzyme/utils/assert.js';
 import { waitUntil } from '@nzyme/utils/waitUntil.js';
 
-import type { CommandContext } from '../Command.js';
+import type { CommandContext } from '@nzyme/cli-core/Command.js';
 import { MachineReserveCommand } from './MachineReserveCommand.js';
 
 const TIMEOUT_MS = 10_000;

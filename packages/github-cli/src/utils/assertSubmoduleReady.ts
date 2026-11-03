@@ -1,7 +1,7 @@
 import { simpleGit } from 'simple-git';
 import type { SimpleGit } from 'simple-git';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 import { assertValue } from '@nzyme/utils';
 
 import type { GithubConfig } from '../GithubConfig.js';

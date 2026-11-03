@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 
 import type { GitHubPR } from './findMatchingPr.js';
 import type { PullRequestStack } from './stacksApi.js';

@@ -4,7 +4,7 @@ description: >-
     The reference architecture of a product repo built on @nzyme — sets up a new repo, brings an
     existing one up to date element by element (monorepo layout, Nx and parallel worktrees, the nzyme
     submodule, setup scripts, lint and format, VS Code, Claude Code, GitHub, Nuxt app, UI package, e2e,
-    and technologies such as Drizzle), keeps the repo's `ARCHITECTURE.md`, and when big work starts
+    secrets, and technologies such as Drizzle), keeps the repo's `ARCHITECTURE.md`, and when big work starts
     routes to the practice skill for that area (ui, drizzle, api-clients) and offers a repo-owned skill.
     Takes a free-form request; there are no modes or subcommands to remember.
 disable-model-invocation: true
@@ -44,7 +44,7 @@ table below. The result is one of these situations, or a combination of them:
   package → propose the UI package element), read its practice skill, offer a repo-owned skill
   (`references/repo-skills.md`), then hand over. This skill does not build the feature; code-level
   work follows the practice skill and the `nzyme:*` skills (`ioc`, `forms`, `composables`,
-  `translations`, `logging`, `testing`, `code-conventions`), which load on their own.
+  `translations`, `logging`, `secrets`, `testing`, `code-conventions`), which load on their own.
 
 **Ask when it is unsettled:** no row matches, or two readings of the request would write different
 files. Ask one question that names the readings. A choice `ARCHITECTURE.md` records with a reason is
@@ -93,6 +93,7 @@ platform or technology (Cloudflare, Supabase, …) is added here as one more row
 |Element|Request signals|Repo signals|Reference|Practice skill|
 |-|-|-|-|-|
 |SQL with Drizzle|database, Postgres, SQL, Drizzle, migrations|`drizzle-orm` or `drizzle-kit` in a `package.json`|`../drizzle/SKILL.md`|`../drizzle/SKILL.md`|
+|Secrets|secret, API key, token, credentials, password|`@nzyme/secrets`, `defineEnvVariable` holding credentials, a dotenv file with credentials|`references/secrets.md`|`../secrets/SKILL.md`|
 |Third-party APIs|integration, vendor API, OpenAPI, GraphQL, webhook client|an OpenAPI spec or `.graphql` SDL in a package, `@nzyme/openapi`|`../api-clients/SKILL.md`|`../api-clients/SKILL.md`|
 
 A backend (server package, hosting, deployment) is not part of the default architecture and has no

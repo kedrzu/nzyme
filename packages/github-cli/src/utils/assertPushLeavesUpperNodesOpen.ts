@@ -1,6 +1,6 @@
 import type { SimpleGit } from 'simple-git';
 
-import { UsageError } from '@nzyme/cli';
+import { UsageError } from '@nzyme/cli-core';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import { countCommits } from './countCommits.js';

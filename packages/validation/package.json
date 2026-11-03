@@ -42,12 +42,12 @@
         "@nzyme/utils": "workspace:*",
         "libphonenumber-js": "^1.13.15",
         "postal-codes-js": "^2.5.2",
-        "vitest": "^4.1.10"
+        "vitest": "^4.1.12"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-        "oxfmt": "0.74.0"
+        "oxfmt": "0.75.0"
     },
     "nzyme": {
         "cjs": true

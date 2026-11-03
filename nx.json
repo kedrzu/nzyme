@@ -87,5 +87,10 @@
     // nzyme is checked out as a submodule in many repos and worktrees, and every copy spawned its own
     // daemon that never exits and keeps watching the file tree (CPU and battery drain). Only an
     // explicit `NX_DAEMON=true` overrides this.
-    "useDaemonProcess": false
+    "useDaemonProcess": false,
+    // Nx 24 selects individual affected tasks by default; the upgrade migration keeps whole-project
+    // selection, so `nx affected -t build` still rebuilds a package whose tests alone changed.
+    "affected": {
+        "legacy": true
+    }
 }

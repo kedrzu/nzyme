@@ -226,6 +226,24 @@ test('warns on release when the process tree peaked above the reservation', asyn
     expect(lines[0]).toStartWith('[nzyme machine] tiny peaked at');
 });
 
+test(
+    'warns when the owner exits without releasing, as a run that holds its reservation to the end does',
+    async () => {
+        const rootDir = createRootDir();
+
+        const child = spawnChild({
+            rootDir,
+            mode: 'acquire',
+            memory: { base: 1 * MiB, perWorker: 0 },
+            exitAfterGrant: true,
+        });
+        await waitUntil(() => child.exitCode != null);
+
+        expect(child.events.some(event => event.message?.includes('child peaked at'))).toBe(true);
+    },
+    TIMEOUT_MS,
+);
+
 interface ChildConfig {
     rootDir: string;
     mode: 'acquire' | 'assert' | 'idle';
@@ -235,7 +253,7 @@ interface ChildConfig {
 }
 
 interface ChildEvent {
-    kind: 'granted' | 'error' | 'ready';
+    kind: 'granted' | 'error' | 'ready' | 'status';
     message?: string;
 }
 
@@ -313,10 +331,12 @@ function writeChildScript(): string {
     writeFileSync(
         childScript,
         `
+import { writeSync } from 'node:fs';
+
 import { acquireMachineCapacity, assertMachineCapacity } from ${JSON.stringify(libraryPath)};
 
 const config = JSON.parse(process.argv[2]);
-const emit = event => process.stdout.write(JSON.stringify(event) + '\\n');
+const emit = event => writeSync(1, JSON.stringify(event) + '\\n');
 const controller = new AbortController();
 process.once('SIGTERM', () => controller.abort());
 setInterval(() => {}, 60_000);
@@ -338,7 +358,7 @@ if (config.mode === 'idle') {
             readTotalMemory: () => config.totalBytes,
             readCpuLoad: () => ({ cores: 8, load1m: 0, load5m: 0, load15m: 0 }),
             signal: controller.signal,
-            onStatus: () => {},
+            onStatus: message => emit({ kind: 'status', message }),
         });
         emit({ kind: 'granted', workers: reservation.workers });
         if (config.exitAfterGrant) {

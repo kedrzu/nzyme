@@ -307,7 +307,7 @@ function createReservation(request: PreparedRequest, record: CapacityReservation
     let sampler: NodeJS.Timeout | undefined;
 
     if (ownedHere) {
-        process.on('exit', removeOnExit);
+        process.on('exit', release);
         sampler = setInterval(samplePeak, options.sampleIntervalMs ?? DEFAULT_SAMPLE_INTERVAL_MS);
         sampler.unref();
     }
@@ -325,7 +325,7 @@ function createReservation(request: PreparedRequest, record: CapacityReservation
             return;
         }
 
-        process.off('exit', removeOnExit);
+        process.off('exit', release);
         clearInterval(sampler);
         samplePeak();
         if (peakBytes > record.bytes) {
@@ -335,10 +335,6 @@ function createReservation(request: PreparedRequest, record: CapacityReservation
                     `${formatBytes(options.memory.perWorker)} per worker); raise memory.base or memory.perWorker`,
             ]);
         }
-    }
-
-    function removeOnExit(): void {
-        registry.removeReservation(record.id);
     }
 
     function samplePeak(): void {

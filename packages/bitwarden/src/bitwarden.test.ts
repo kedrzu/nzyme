@@ -149,6 +149,77 @@ test('a keychain token is only sent to the server it was stored for', async () =
     expect(await keychain.get(`bitwarden:${new URL(stored.url).host}`)).toBe(stored.tokens.machine);
 });
 
+test('a suffixed store keeps its own token, bound to its server, and never falls back to the unsuffixed one', async () => {
+    const fake = await startFakeBitwarden();
+    const keychain = createMemoryKeychain();
+    const options = { project: PROJECT, keychain, env: {} };
+    const plain = bitwarden({ ...options, server: fake.url });
+    const alpha = bitwarden({ ...options, server: fake.url, keychainSuffix: 'alpha' });
+    const beta = bitwarden({ ...options, server: fake.url, keychainSuffix: 'beta' });
+    const prompts: string[] = [];
+
+    await plain.login!(() => Promise.resolve(fake.tokens.machine));
+    const sentByLogin = fake.requests.length;
+    const missing = await catchError(alpha.read(['DB_URL']));
+    expect(missing.message).toContain('`secrets login`');
+    expect(missing.message).toContain('#alpha');
+    expect(fake.requests).toHaveLength(sentByLogin);
+
+    await alpha.login!(label => {
+        prompts.push(label);
+        return Promise.resolve(fake.tokens.env);
+    });
+    await beta.login!(() => Promise.resolve(fake.tokens.machine));
+
+    await alpha.read(['DB_URL']);
+    expect(fake.requests.at(-1)?.client).toBe('env');
+    await beta.read(['DB_URL']);
+    expect(fake.requests.at(-1)?.client).toBe('machine');
+
+    expect(prompts[0]).toContain('#alpha');
+    expect(await keychain.get(`bitwarden:${new URL(fake.url).host}`)).toBe(fake.tokens.machine);
+});
+
+test('a suffix cannot make a token reach another server, even one that looks like a port', async () => {
+    const fake = await startFakeBitwarden();
+    const other = await startFakeBitwarden();
+    const keychain = createMemoryKeychain();
+    const { port } = new URL(fake.url);
+    await bitwarden({ project: PROJECT, server: fake.url, keychain, env: {} }).login!(() =>
+        Promise.resolve(fake.tokens.machine),
+    );
+    await bitwarden({ project: PROJECT, server: fake.url, keychain, env: {}, keychainSuffix: 'shared' }).login!(() =>
+        Promise.resolve(fake.tokens.machine),
+    );
+
+    const portLike = bitwarden({
+        project: PROJECT,
+        server: `http://${new URL(fake.url).hostname}`,
+        keychain,
+        env: {},
+        keychainSuffix: port,
+    });
+    const sameSuffix = bitwarden({ project: PROJECT, server: other.url, keychain, env: {}, keychainSuffix: 'shared' });
+
+    expect((await catchError(portLike.read(['DB_URL']))).message).toContain('No Bitwarden token');
+    expect((await catchError(sameSuffix.read(['DB_URL']))).message).toContain('No Bitwarden token');
+    expect(other.requests).toEqual([]);
+});
+
+test('BWS_ACCESS_TOKEN wins over a suffixed stored token, and a blank suffix is rejected', async () => {
+    const fake = await startFakeBitwarden();
+    const keychain = createMemoryKeychain();
+    const options = { project: PROJECT, server: fake.url, keychain, keychainSuffix: 'alpha' };
+    await bitwarden({ ...options, env: {} }).login!(() => Promise.resolve(fake.tokens.machine));
+
+    const sentByLogin = fake.requests.length;
+    await bitwarden({ ...options, env: { BWS_ACCESS_TOKEN: fake.tokens.env } }).read(['DB_URL']);
+
+    expect(new Set(fake.requests.slice(sentByLogin).map(request => request.client))).toEqual(new Set(['env']));
+    expect(() => bitwarden({ ...options, env: {}, keychainSuffix: '' })).toThrow('keychainSuffix must not be blank');
+    expect(() => bitwarden({ ...options, env: {}, keychainSuffix: '  ' })).toThrow('keychainSuffix must not be blank');
+});
+
 test('a plain http server off localhost is rejected, so the token is never sent unencrypted', () => {
     const options = { project: PROJECT, keychain: createMemoryKeychain(), env: {} };
 

@@ -20,6 +20,13 @@ export interface BitwardenOptions {
      * Defaults to Bitwarden Cloud US.
      */
     server?: string;
+    /**
+     * Isolates the stored access token: stores with different suffixes on one server keep separate
+     * tokens, e.g. one per project. Without it every store on the server shares one. The token stays
+     * bound to its server whatever the suffix, and a suffixed store never falls back to the unsuffixed
+     * token. Must not be blank.
+     */
+    keychainSuffix?: string;
     /** Where `login` keeps the access token; the OS keychain by default. */
     keychain?: Keychain;
     /** Where `BWS_ACCESS_TOKEN` is read from; `process.env` by default. */
@@ -41,21 +48,27 @@ const MAX_ENCRYPTED_VALUE_LENGTH = 35000;
  * project listing, one fetch of the wanted secrets), however many keys are read.
  *
  * Credentials: `BWS_ACCESS_TOKEN` when set; otherwise the token `secrets login` stored for this
- * server, one per machine. A machine that only reads logs in with a read-only machine account, and
- * its writes fail.
+ * server and `keychainSuffix`, so one per machine unless a suffix separates them. A machine that only
+ * reads logs in with a read-only machine account, and its writes fail.
  * @__NO_SIDE_EFFECTS__
  */
 export function bitwarden(options: BitwardenOptions): SecretStore {
-    const { project, keychain = osKeychain, env = process.env } = options;
+    const { project, keychainSuffix, keychain = osKeychain, env = process.env } = options;
     const server = (options.server ?? DEFAULT_SERVER).replace(/\/+$/, '');
     const serverUrl = new URL(server);
     if (serverUrl.protocol !== 'https:' && !LOOPBACK_HOSTNAMES.has(serverUrl.hostname)) {
         throw new Error(`Bitwarden server ${server} must use https: the access token would be sent unencrypted`);
     }
 
+    if (keychainSuffix != null && keychainSuffix.trim() === '') {
+        throw new Error('Bitwarden keychainSuffix must not be blank');
+    }
+
     const host = serverUrl.host + serverUrl.pathname.replace(/\/+$/, '');
     const urls = getServerUrls(server, serverUrl);
-    const keychainName = `bitwarden:${host}`;
+    // `#` cannot occur in a host or path, so a suffixed item never equals another server's item.
+    const label = keychainSuffix == null ? host : `${host}#${keychainSuffix}`;
+    const keychainName = `bitwarden:${label}`;
 
     return {
         id: `bitwarden:${host}:${project}`,
@@ -148,7 +161,7 @@ export function bitwarden(options: BitwardenOptions): SecretStore {
     }
 
     async function login(prompt: SecretPrompt) {
-        const token = (await prompt(`Bitwarden access token for ${host}`)).trim();
+        const token = (await prompt(`Bitwarden access token for ${label}`)).trim();
         // Proves the token works against this server before it is stored for it.
         await loginBitwarden(urls, token);
         await keychain.set(keychainName, token);
@@ -162,7 +175,7 @@ export function bitwarden(options: BitwardenOptions): SecretStore {
 
         const stored = await keychain.get(keychainName);
         if (stored == null) {
-            throw new Error(`No Bitwarden token for ${host}: run \`secrets login\` or set ${ACCESS_TOKEN_ENV}`);
+            throw new Error(`No Bitwarden token for ${label}: run \`secrets login\` or set ${ACCESS_TOKEN_ENV}`);
         }
 
         return await loginBitwarden(urls, stored);

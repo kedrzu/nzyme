@@ -1,6 +1,6 @@
 # Package Update Notes
 
-Last updated: 2026-11-02
+Last updated: 2026-11-03
 
 Read by every dependency update that touches this repository — a run started here, or one started in
 a project that consumes nzyme as a submodule. Entries never name a consumer: one that holds nzyme
@@ -81,6 +81,58 @@ installed version exits 0 and applies nothing; lint then reports `await-thenable
 value is `undefined`. Use an argument-free matcher (`toBeUndefined()`) whenever the asserted value's
 type is `never` by design; do not widen the type.
 
+### The root manifest is invisible to a consumer's `bun outdated -r`
+
+A consumer puts `nzyme/packages/*` in its workspaces, never `nzyme/` itself, so this repository's
+**root** `package.json` is in no consumer's workspace graph and `bun outdated -r` run there never
+reports it. Its dev toolchain therefore drifts silently while every package manifest stays current —
+found on 2026-11-02 at `oxfmt` 0.72.0, `oxlint` 1.86.0 and `eslint` 10.12.0 against package-level
+pins already three releases ahead.
+
+A consumer's run cannot verify these either: it never installs this root's `devDependencies`, so its
+in-place `lint` and `format` resolve the binaries from the consumer's own hoisted copy. Aligning them
+is still correct — it is what standalone development and this repository's CI use — and **the nzyme
+PR's own CI is their verification**, not the consumer's protocol.
+
+So a run started in a consumer checks this manifest explicitly, with `bun outdated` from `nzyme/`,
+and treats anything only this root declares (`nx`, `@swc/core`, `@swc-node/register`, `del-cli`) as
+nzyme-side work: either a batch proven by this repository's CI, or an escalation. Never bump one of
+those blind and call it verified because the consumer's protocol was green.
+
+### nx — through `nx migrate`, and keep `nx.json`'s comments
+
+Move `nx` and `@nx/js` with `nx migrate <version>`, `bun install`, then
+`nx migrate --run-migrations`, and delete the generated `migrations.json` and `tools/ai-migrations/`.
+Without a terminal the first command stops at an Nx Cloud prompt after writing its files; nothing here
+uses Nx Cloud, so ignore it.
+
+A migration that edits `nx.json` rewrites it as plain JSON and **drops every comment** (seen with
+24.0.3). Restore the file and apply the change by hand. `nx migrate` also pins exact versions; the root
+keeps `nx` and `@nx/js` as `^` ranges.
+
+`nx.json` sets `affected.legacy: true`, what the Nx 24 migration writes: `nx affected` selects whole
+projects, as before 24. Deleting it switches to task-based selection, where a test-only edit no longer
+rebuilds the package. The owner's decision (2026-11-03): keep it for now, and try the switch as a
+separate change. It affects only the scoped `verify` step, so an update run need not raise it again.
+
+`nx release` runs only on the `release` branch, so nothing on a PR exercises it. After an Nx bump run
+`nx release version --dry-run` and `nx release changelog <next> --dry-run` by hand.
+
+### Moving a locked version inside its range
+
+`bun install` does not re-resolve a range the lockfile already satisfies, and a bare `bun update`
+would take `nuxt`, `vite` and `rollup` past their walls, since their ranges allow it. To move one
+package and leave its published range alone: pin the exact version in each workspace that declares it,
+`bun install`, restore the manifests, `bun install` again.
+
+Compare the lockfile's keys before and after; a pinned move can leave a nested second copy behind.
+**Never delete entries from `bun.lock` to force a re-resolve.** Deleting the `@babel/*` 8.x entries
+re-resolved the whole file, downgrading `@aws-sdk/abort-controller` among others. Deleting only the
+nested ones left `@babel/helper-globals` with no 8.x entry, and `packages/pulumi` tests failed inside
+`@babel/traverse` 7.29.8 with this error (the exact mechanism was not traced; the same versions pass
+without the deletion):
+`Spread syntax requires ...iterable[Symbol.iterator] to be a function`.
+
 ### vitest — all `@vitest/*` move together
 
 `vitest`, `@vitest/browser`, `@vitest/browser-playwright` and `@vitest/expect` move as one.
@@ -96,14 +148,14 @@ Version-specific failures from past attempts. Never retry a listed version; dele
 newer version fixes it. One `###` per package and attempted version. A `blocked-by-consumer` entry is
 never retried from inside this repository — only a run in a consumer can show it fixed.
 
-### nuxt 4.5+ / vite 8 (attempted by a consumer 2026-10-26, reverted)
+### nuxt 4.5+ / vite 8 (attempted by a consumer 2026-10-26, reverted; re-checked 2026-11-02)
 
 - **Problem**: a consumer is held on nuxt 4.4.8 and vite 7. nuxt 4.6 requires vite 8 (`@nuxt/vite-builder@4.6.2` depends on `vite: ^8.3.4`), and vite 8's bundler drops environment-gated branches from **dynamically imported** chunks even when the gate is true. A consumer that gates lazily-loaded, non-production-only code on build-time environment constants loses that code from its non-production builds.
 - **Error**: in the consumer's tree-shaking test, the lazy chunk builds down to its unconditional marker; both guarded markers are eliminated, while the entry chunk is correct. It happens with `minify: false` too, so it is the bundler, not terser. Typecheck and app builds stay green.
 - **Status**: blocked-by-consumer
 - **Notes**: do not raise the `nuxt` or `vite` ranges or pins (`packages/logging-ui`, `packages/nuxt-tools`, the Vue packages) past 4.4.x / 7.x, or the consumer gets a second Nuxt or Vite. nzyme's own share of the migration is known: nuxt 4.6 types the nitro hooks again, so the `@ts-expect-error nitro hooks are not typed` directive in `packages/nuxt-tools/src/outputFilesModule.ts` becomes an error (TS2578) and must go; `crossws` moves to the 0.4.x line with it (General Rules). The old blocker (`@nuxt/image` pinning a beta `ipx`) is gone.
 
-### rollup 4.62.3 through 4.65.0 (re-checked 2026-10-26)
+### rollup 4.62.3 through 4.65.0 (re-checked 2026-11-02)
 
 - **Problem**: `packages/pulumi/src/compileFunction.worker.ts` stops compiling — the
   `bundleStats()` plugin no longer satisfies `InputPluginOption`.
@@ -112,10 +164,38 @@ never retried from inside this repository — only a run in a consumer can show 
 - **Status**: blocked-by-rollup-plugin-bundle-stats
 - **Notes**: 4.62.2 is the last good version — 4.62.3, 4.62.4 and 4.63.3 all fail identically, and
   nothing from 4.63.4 up to 4.65.0 was attempted, because the vendored type is unchanged:
-  `rollup-plugin-bundle-stats@4.22.3` (latest on 2026-10-26) hard-pins `rollup-plugin-stats@2.1.3`,
-  whose `dist/types.d.mts` still declares `file: string`. Bump `rollup-plugin-bundle-stats` freely;
-  re-test rollup only when a release relaxes `SourceMap.file`. Verify with
-  `grep -n 'file' node_modules/.bun/rollup-plugin-stats@*/node_modules/rollup-plugin-stats/dist/types.d.ts`.
+  `rollup-plugin-bundle-stats` hard-pins `rollup-plugin-stats@2.1.3`, whose `dist/types.d.mts` still
+  declares `file: string`, in 4.23.1 (published 2026-11-02) as in 4.22.3. Re-test rollup only when a
+  release relaxes `SourceMap.file`. Verify with
+  `grep -n 'file' node_modules/.bun/rollup-plugin-stats@*/node_modules/rollup-plugin-stats/dist/types.d.*`.
+
+### rollup-plugin-bundle-stats 4.23.1 (not attempted, 2026-11-02)
+
+- **Problem**: it adds optional peers `rollup: ^4.66.0` and `vite: ^8.3.5`, both past this repository's
+  walls (rollup 4.62.2, vite 7.x), and fixes nothing here: the pin on `rollup-plugin-stats@2.1.3` is
+  unchanged.
+- **Status**: skip — blocked-by-rollup and blocked-by-consumer (the two entries above).
+- **Notes**: stay on 4.22.3 until rollup and vite can both meet the peers. `^4.22.3` lets a consumer's
+  lockfile take 4.23.1 on its own; the peers are optional, so that only warns.
+
+### @babel/core 8.1.0 (attempted 2026-11-02, reverted)
+
+- **Problem**: `@babel/preset-env` has no 8.1.0 (`latest` is 8.0.7), so moving `@babel/core` alone
+  installs a second Babel 8 tree: `@babel/types` 8.0.6 beside 8.1.0, nested `@babel/*` lockfile keys
+  149 → 200. Tests stay green with that tree.
+- **Status**: skip — retry once `@babel/preset-env` publishes 8.1.x.
+- **Notes**: do not collapse the tree by deleting lockfile entries (General Rules → moving a locked
+  version).
+
+### vue-tsc 3.3.14 and unist-util-visit 5.2.0 (attempted 2026-11-03, reverted)
+
+- **Problem**: both patches stay green but install a second copy of a transitive dependency.
+  `vue-tsc` moves `@volar/*` to 2.4.30 and leaves `unplugin-dts` on a nested 2.4.28.
+  `unist-util-visit` moves `unist-util-visit-parents` to 6.1.0 and leaves `mdast-util-directive` and
+  `mdast-util-find-and-replace` on a nested 6.0.2.
+- **Status**: skip — nothing here needs either patch.
+- **Notes**: retry `vue-tsc` when `unplugin-dts` moves its `@volar/*`, and `unist-util-visit` when a
+  later install no longer nests. Check with the lockfile key count before and after.
 
 ### typescript 7.x — the target is 7.1, not 7.0 (upstream checked 2026-10-26)
 

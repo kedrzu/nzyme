@@ -64,7 +64,7 @@
         "@types/connect": "3.4.38",
         "@types/source-map-support": "0.5.10",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-        "oxfmt": "0.74.0",
+        "oxfmt": "0.75.0",
         "rollup": "^4.62.2",
         "vite": "^7.3.6"
     },

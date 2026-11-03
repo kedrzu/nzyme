@@ -1,5 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import {
+    mkdirSync,
+    readdirSync,
+    readFileSync,
+    renameSync,
+    rmdirSync,
+    statSync,
+    unlinkSync,
+    writeFileSync,
+} from 'node:fs';
 import { homedir, totalmem } from 'node:os';
 import * as path from 'node:path';
 
@@ -221,7 +230,14 @@ export function createCapacityRegistry(options: MachineCapacityEnvironmentOption
     }
 
     function removeLock(): void {
-        rmSync(lockDir, { recursive: true, force: true });
+        try {
+            // Not `rmSync`: racing another remover it throws EPERM on macOS, failing a run for nothing.
+            rmdirSync(lockDir);
+        } catch (error) {
+            if (errnoCode(error) !== 'ENOENT') {
+                throw error;
+            }
+        }
     }
 
     function writeWaiter(record: CapacityWaiterRecord): void {

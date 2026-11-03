@@ -9,6 +9,7 @@ import type { HttpContext } from './services/HttpContextProvider.js';
 import { HttpContextProvider } from './services/HttpContextProvider.js';
 import type { HttpRequest } from './types/HttpRequest.js';
 import type { HttpResponse } from './types/HttpResponse.js';
+import type { RpcErrorData } from './types/RpcError.js';
 import { CACHE_CONTROL_DISABLED } from './utils/cacheControl.js';
 
 const pingEndpoint = defineEndpoint<void, { pong: true }>({
@@ -176,5 +177,60 @@ describe('createRouter responses', () => {
 
         expect(response.headers['set-cookie']).toEqual(['early=1; Path=/', 'late=2; Path=/']);
         expect(response.headers['x-from-context']).toBe('yes');
+    });
+});
+
+/**
+ * Builds a router with one endpoint that throws a non-`HttpError`, whose message quotes a value the
+ * way a database error does.
+ */
+function setupFailing(stackTraces: boolean | undefined) {
+    const failure = new TypeError('invalid input syntax for type date: "SENSITIVE_VALUE"');
+    const failingHandler = defineEndpointHandler({
+        endpoint: pageEndpoint,
+        setup() {
+            return () => {
+                throw failure;
+            };
+        },
+    });
+
+    const router = createRouter({ container: createContainer(), handlers: [failingHandler], stackTraces });
+    const emitted: unknown[] = [];
+    router.events.error.on(error => emitted.push(error));
+
+    return { router, failure, emitted };
+}
+
+function readTextBody(response: HttpResponse) {
+    if (typeof response.body !== 'string') {
+        throw new TypeError('Expected a string body');
+    }
+
+    return response.body;
+}
+
+describe('createRouter unhandled failures', () => {
+    it('answers with the real error while debugging', async () => {
+        const { router, failure, emitted } = setupFailing(true);
+
+        const response = await router.execute(request('page'));
+
+        const expected: RpcErrorData = { error: 'TypeError', message: failure.message, stack: failure.stack };
+        expect(response.status).toBe(500);
+        expect(JSON.parse(readTextBody(response))).toEqual(expected);
+        expect(emitted).toEqual([failure]);
+    });
+
+    it('answers with a constant error otherwise, and still reports the real one', async () => {
+        const { router, failure, emitted } = setupFailing(undefined);
+
+        const response = await router.execute(request('page'));
+
+        const expected: RpcErrorData = { error: 'UnknownError', message: 'Unknown error' };
+        expect(response.status).toBe(500);
+        expect(JSON.parse(readTextBody(response))).toEqual(expected);
+        expect(readTextBody(response)).not.toContain('SENSITIVE_VALUE');
+        expect(emitted).toEqual([failure]);
     });
 });

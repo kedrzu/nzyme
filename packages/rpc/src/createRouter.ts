@@ -71,7 +71,10 @@ export interface RouterOptions {
     handlers: readonly EndpointHandlerService[];
 
     /**
-     * Whether to include stack traces in the response.
+     * The RPC debugging switch: whether a response exposes what actually broke. On, an unhandled
+     * failure answers with its real `name`, `message` and `stack`, and an `HttpError` with its
+     * `stack`. Off, which is what production must run, an unhandled failure answers with a constant
+     * `UnknownError`, because its message can quote request or database values.
      */
     stackTraces?: boolean;
 
@@ -181,12 +184,12 @@ export function createRouter(options: RouterOptions): Router {
 
             eventError.emit(error);
 
-            if (error instanceof Error) {
+            if (stackTraces && error instanceof Error) {
                 return createJsonResponse<RpcErrorData>({
                     body: {
                         error: error.name,
                         message: error.message,
-                        stack: stackTraces ? error.stack : undefined,
+                        stack: error.stack,
                     },
                     status: 500,
                 });

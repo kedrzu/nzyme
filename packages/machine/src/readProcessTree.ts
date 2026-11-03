@@ -53,7 +53,10 @@ export function parseProcessTable(text: string): ProcessInfo[] {
     return table;
 }
 
-/** Sums RSS (bytes) of `pid` and all its descendants, walking ppid links of one snapshot. */
+/**
+ * Sums RSS (bytes) of `pid` and all its descendants, walking ppid links of one snapshot.
+ * @util
+ */
 export function sumProcessTreeRss(table: readonly ProcessInfo[], pid: number): number {
     const children = new Map<number, ProcessInfo[]>();
     const byPid = new Map<number, ProcessInfo>();
@@ -83,7 +86,10 @@ export function sumProcessTreeRss(table: readonly ProcessInfo[], pid: number): n
     return total;
 }
 
-/** Returns the start time of `pid` in the snapshot, or `undefined` when it is not running. */
+/**
+ * Returns the start time of `pid` in the snapshot, or `undefined` when it is not running.
+ * @util
+ */
 export function getProcessStartTime(table: readonly ProcessInfo[], pid: number): string | undefined {
     return table.find(info => info.pid === pid)?.startTime;
 }

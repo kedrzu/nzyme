@@ -6,14 +6,14 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
 
 - **Core:** `utils`, `types`, `ioc`, `ioc-testing`, `logging`, `validation`, `crypto`, `money`,
   `i18n`, `i18n-core`, `i18n-compiler`, `rpc`, `openapi`, `fetch-utils`, `xml-utils`, `markdown`,
-  `typography`
+  `typography`, `secrets` (secret stores loaded into env variables, and the `secrets` commands)
 - **Vue:** `vue`, `vue-utils`, `vue-ioc`, `vue-forms`, `vue-i18n`, `vue-transitions`, `dom-utils`
 - **Tooling:**
   - `cli-core` (the clipanion-based `Command` framework behind every CLI), `cli` (the `nzyme` binary: `monorepo`, `localise`, `index`, `quiet-run`,
     `submodule`, `depcheck`)
   - `tsconfig`, `eslint` (also the oxlint preset), `oxlint` (custom rules), `project-utils`,
     `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`
-- **Integrations:** `aws`, `pulumi`, `slack`, `apis`
+- **Integrations:** `aws`, `pulumi`, `slack`, `apis`, `bitwarden` (a Secrets Manager store for `secrets`)
 - **Private, never published:** `github-cli`, `linear`, `sentry-cli`, `logging-ui`
 
 `bun run index` (also run by setup) generates a gitignored code map:
@@ -75,7 +75,7 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
 - Both are the contracts of the `dev` plugin (`/dev:fix`, `/dev:task`, `/dev:feature`, `/dev:build`,
   `/dev:deliver`), which is installed from the `kedrzu-skills` marketplace in `.claude/settings.json`.
 - **Every implementation task reads `nzyme:code-conventions`**, plus the `nzyme:*` skill for the package
-  it touches (`ioc`, `logging`, `translations`, `forms`, `composables`, `testing`). These skills ship from
+  it touches (`ioc`, `logging`, `translations`, `forms`, `composables`, `secrets`, `testing`). These skills ship from
   this repo in `plugins/nzyme/` and are what consumer repos install too, so fix them here when they are
   wrong.
 - **User-invoked skills** in the same plugin serve product repos: `/nzyme:architecture` sets up or

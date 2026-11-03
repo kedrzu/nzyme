@@ -77,6 +77,15 @@ In tests, provide values through the container — `container.set(EnvVariables, 
 the variable itself has no effect: env variables are plain injectables whose `resolve` ignores the
 container.
 
+## Secrets
+
+Secrets from a remote store reach env variables through `EnvVariables`, so declare and inject them
+like any other variable. An app calls `await loadSecrets(container, AppSecrets)` with its
+secrets provider (a service resolving to `SecretsMapping`) at startup, before resolving anything that reads them; a variable
+already set wins. Adding a secret and keeping its value out of the transcript: `nzyme:secrets`.
+Setup, precedence and the `secrets` commands: `@nzyme/secrets` README
+(`packages/secrets/README.md` in nzyme).
+
 ## Bad patterns
 
 ```ts

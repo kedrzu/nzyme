@@ -82,7 +82,6 @@ adds skills, commands or hooks to every session, so a project enables what it us
 |`playwright`|`kedrzu-skills`|the browser MCP: e2e, story debugging, checking a page|
 |`handoff`|`kedrzu-skills`|handing work to a fresh Paseo agent with a pointer summary|
 |`retro`|`kedrzu-skills`|retrospectives on how agents worked in this repo|
-|`secrets`|`kedrzu-skills`|API keys collected through a masked dialog, never pasted into the chat|
 |`claude-md-management`|`claude-plugins-official`|auditing and updating `CLAUDE.md`|
 |`skill-creator`|`claude-plugins-official`|writing and evaluating the repo's own skills|
 
@@ -124,6 +123,8 @@ marketplace is a difference (remove it from `enabledPlugins`).
   always a difference. Remove both and add the symlink: a marketplace install of the same plugin
   wins over the symlinked copy, so the skills would silently follow nzyme `main` instead of the pin.
   Plugins the repo loads through committed symlinks into another submodule stay as they are.
+- `secrets@kedrzu-skills` in `enabledPlugins`: a difference. Remove it; the `nzyme:secrets` skill and
+  `secrets set --prompt` replace it, so every credential goes to the repo's store.
 - No `.claude/git.json`: a difference.
 - `CLAUDE.md`: by heading section. The repo's own sections (language rules, a standing authorization
   for commits and PRs in worktrees, gotchas) stay. A shared section that differs from nzyme's text at

@@ -14,10 +14,9 @@ build half of that same command. Paseo runs it for every worktree it cuts.
      `main` merges `origin/main` in. A stacked node never takes `main`: it would drag `main` into a PR
      that does not target it. The local `main` is fast-forwarded too, so the next worktree is not cut
      from a stale one. A conflicting merge is aborted and reported, never left half-done.
-  3. **Local files** (worktrees only): copies `CLAUDE.local.md`, `.claude/settings.local.json`, and
-     `.env`/`.env.*` at the root and in each package from the main checkout. Never overwrites, skips
-     `*.example`. Add a technology's local secrets to the loop (`packages/*/.dev.vars(N)` for
-     Cloudflare Workers).
+  3. **Local files** (worktrees only): copies `CLAUDE.local.md` and `.claude/settings.local.json` from
+     the main checkout. Never overwrites. Secrets are not files: they come from the store and the
+     keychain every worktree shares (`references/secrets.md`).
   4. **Submodule checkout** (not in CI): `references/submodule.md`.
   5. **`bash setup.build.sh`.**
   6. **`bun run index`**, non-fatal: the code map is for agents, so CI skips it and a failure only
@@ -48,8 +47,7 @@ build half of that same command. Paseo runs it for every worktree it cuts.
 
 Older alternatives found in product repos and not used: a monolithic `setup.sh` that CI cannot share,
 `sh` scripts called from CI workflows directly, a Conductor config instead of `paseo.json`, and
-symlinked `.env` files (fine for a rarely edited file, but a worktree's edit then leaks into all of
-them).
+`.env` files copied or symlinked into worktrees (`references/secrets.md`).
 
 ## Placeholders
 
@@ -75,7 +73,7 @@ them).
 - `setup.sh`, `setup.build.sh`: by `# --- section ---` and by step. A step the reference has and the
   repo lacks, or one in the wrong file (a submodule checkout or catch-up in `setup.build.sh`,
   anything needing credentials in it), is a difference. Repo-only steps (local infrastructure,
-  secrets decryption, a database) stay in `setup.sh`, after the build.
+  a database) stay in `setup.sh`, after the build.
 - CI that runs `setup.sh`, or its own copy of the build commands, instead of `bash setup.build.sh`: a
   difference (`references/github.md`).
 - `paseo.json`: key-wise; the repo's instruction texts, teardown and scripts stay. A missing

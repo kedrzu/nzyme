@@ -1,14 +1,14 @@
 import { afterEach, expect, test } from 'bun:test';
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, realpathSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 
 import { waitFor } from '@nzyme/utils/waitFor.js';
 import { waitUntil } from '@nzyme/utils/waitUntil.js';
 
-import { acquireMachineCapacity, assertMachineCapacity } from './acquireMachineCapacity.js';
+import { acquireMachineCapacity } from './acquireMachineCapacity.js';
 import { GiB, MiB } from './byteUnits.js';
 import type { CapacityMemoryRequest } from './computeCapacity.js';
 import type { MachineCapacityRequestOptions } from './MachineCapacityTypes.js';
@@ -63,43 +63,28 @@ test(
 );
 
 test(
-    'a waiter interrupted by SIGTERM or an aborted signal leaves the queue',
+    'a waiter killed by a signal stops counting',
     async () => {
         const rootDir = createRootDir();
         const blocker = await acquireMachineCapacity({ ...environment(rootDir), ...blockerRequest() });
 
         const child = spawnChild({ rootDir, mode: 'acquire' });
-        await waitUntil(() => listStateFiles(rootDir, 'waiters').length === 1);
+        await waitUntil(() => readMachineCapacityStatus(environment(rootDir)).waiters.length === 1);
         child.process.kill('SIGTERM');
         await waitUntil(() => child.exitCode != null);
 
-        expect(child.exitCode).toBe(143);
-        expect(listStateFiles(rootDir, 'waiters')).toEqual([]);
-
-        const controller = new AbortController();
-        const pending = acquireMachineCapacity({
-            ...environment(rootDir),
-            label: 'aborted',
-            memory: CHILD_MEMORY,
-            workers: { min: 1, max: 1 },
-            signal: controller.signal,
-        });
-        await waitUntil(() => listStateFiles(rootDir, 'waiters').length === 1);
-        controller.abort();
-
-        await expect(pending).rejects.toThrow('aborted');
-        expect(listStateFiles(rootDir, 'waiters')).toEqual([]);
+        expect(readMachineCapacityStatus(environment(rootDir)).waiters).toEqual([]);
         blocker.release();
     },
     TIMEOUT_MS,
 );
 
 test(
-    'reservations from different working directories see each other; assert reports numbers and holders',
+    'reservations from different working directories see each other; a stalled request reports numbers and holders',
     async () => {
         const rootDir = createRootDir();
         const holderCwd = createRootDir();
-        const assertingCwd = createRootDir();
+        const stalledCwd = createRootDir();
 
         const holder = spawnChild({
             rootDir,
@@ -109,11 +94,11 @@ test(
         });
         await waitUntil(() => holder.events.some(event => event.kind === 'granted'));
 
-        const asserting = spawnChild({ rootDir, mode: 'assert', cwd: assertingCwd });
-        await waitUntil(() => asserting.exitCode != null);
+        const stalled = spawnChild({ rootDir, mode: 'acquire', cwd: stalledCwd, stallTimeoutMs: 200 });
+        await waitUntil(() => stalled.exitCode != null);
 
-        const failure = asserting.events.find(event => event.kind === 'error');
-        expect(failure?.message).toContain('Not enough machine capacity for child');
+        const failure = stalled.events.find(event => event.kind === 'error');
+        expect(failure?.message).toContain('Machine capacity request child made no progress in the queue');
         expect(failure?.message).toContain('missing');
         expect(failure?.message).toContain(`child pid ${holder.process.pid} in ${holderCwd}: reserved 4.0 GiB`);
         expect(listStateFiles(rootDir, 'waiters')).toEqual([]);
@@ -121,6 +106,82 @@ test(
     },
     TIMEOUT_MS,
 );
+
+test(
+    'moving up the queue restarts the stall timeout',
+    async () => {
+        const rootDir = createRootDir();
+        const blocker = await acquireMachineCapacity({ ...environment(rootDir), ...blockerRequest() });
+        const head = acquireMachineCapacity({
+            ...environment(rootDir),
+            label: 'head',
+            memory: CHILD_MEMORY,
+            workers: { min: 1, max: 1 },
+            stallTimeoutMs: 1000,
+        });
+        // Caught here: bun's `expect(promise).rejects` blocks the test until the promise settles.
+        const headFailure = head.catch((error: Error) => error.message);
+        await waitUntil(() => readMachineCapacityStatus(environment(rootDir)).waiters.length === 1);
+
+        let clock = Date.now() + 1000;
+        const lines: string[] = [];
+        let settled = false;
+        const failure = acquireMachineCapacity({
+            ...environment(rootDir),
+            label: 'behind',
+            memory: CHILD_MEMORY,
+            workers: { min: 1, max: 1 },
+            now: () => clock,
+            stallTimeoutMs: 1000,
+            statusIntervalMs: 0,
+            onStatus: line => lines.push(line),
+        }).catch((error: Error) => {
+            settled = true;
+            return error.message;
+        });
+        await waitUntil(() => lines.some(line => line.includes('position 2')));
+
+        clock += 900;
+        expect(await headFailure).toContain('made no progress');
+        await waitUntil(() => lines.some(line => line.includes('position 1')));
+
+        clock += 900;
+        await waitFor(200);
+        expect(settled).toBe(false);
+
+        clock += 200;
+        expect(await failure).toContain('made no progress');
+        blocker.release();
+    },
+    TIMEOUT_MS,
+);
+
+test('a fresh lock makes others wait and a stale one is removed', async () => {
+    const rootDir = createRootDir();
+    const lockDir = path.join(rootDir, 'v1', 'lock');
+    mkdirSync(lockDir, { recursive: true });
+
+    let granted = false;
+    const pending = acquireMachineCapacity({
+        ...environment(rootDir),
+        label: 'locked-out',
+        memory: CHILD_MEMORY,
+        workers: { min: 1, max: 1 },
+    }).then(reservation => {
+        granted = true;
+        return reservation;
+    });
+    await waitFor(200);
+    expect(granted).toBe(false);
+
+    const longAgo = new Date(Date.now() - 60_000);
+    utimesSync(lockDir, longAgo, longAgo);
+    const reservation = await pending;
+
+    expect(reservation.workers).toBe(1);
+    expect(listStateFiles(rootDir, 'reservations')).toEqual([`${reservation.id}.json`]);
+    reservation.release();
+});
 
 test(
     'the owner process releases its reservation when it exits',
@@ -185,11 +246,12 @@ test('a live reservation kept by another state version blocks admission', async 
     mkdirSync(path.join(rootDir, 'v2', 'reservations'), { recursive: true });
     writeFileSync(path.join(rootDir, 'v2', 'reservations', 'x.json'), JSON.stringify({ ownerPid: process.pid }));
 
-    const request = assertMachineCapacity({
+    const request = acquireMachineCapacity({
         ...environment(rootDir),
         label: 'old',
         memory: CHILD_MEMORY,
         workers: { min: 1, max: 1 },
+        stallTimeoutMs: 100,
     });
 
     await expect(request).rejects.toThrow('another nzyme version (v2) holds reservations; update nzyme');
@@ -246,10 +308,11 @@ test(
 
 interface ChildConfig {
     rootDir: string;
-    mode: 'acquire' | 'assert' | 'idle';
+    mode: 'acquire' | 'idle';
     cwd?: string;
     memory?: CapacityMemoryRequest;
     exitAfterGrant?: boolean;
+    stallTimeoutMs?: number;
 }
 
 interface ChildEvent {
@@ -292,6 +355,7 @@ function spawnChild(config: ChildConfig): TestChild {
                 mode: config.mode,
                 memory: config.memory ?? CHILD_MEMORY,
                 exitAfterGrant: config.exitAfterGrant ?? false,
+                stallTimeoutMs: config.stallTimeoutMs,
                 availableBytes: AVAILABLE_BYTES,
                 totalBytes: TOTAL_BYTES,
             }),
@@ -333,20 +397,17 @@ function writeChildScript(): string {
         `
 import { writeSync } from 'node:fs';
 
-import { acquireMachineCapacity, assertMachineCapacity } from ${JSON.stringify(libraryPath)};
+import { acquireMachineCapacity } from ${JSON.stringify(libraryPath)};
 
 const config = JSON.parse(process.argv[2]);
 const emit = event => writeSync(1, JSON.stringify(event) + '\\n');
-const controller = new AbortController();
-process.once('SIGTERM', () => controller.abort());
 setInterval(() => {}, 60_000);
 
 if (config.mode === 'idle') {
     emit({ kind: 'ready' });
 } else {
-    const request = config.mode === 'assert' ? assertMachineCapacity : acquireMachineCapacity;
     try {
-        const reservation = await request({
+        const reservation = await acquireMachineCapacity({
             label: 'child',
             memory: config.memory,
             workers: { min: 1, max: 1 },
@@ -357,7 +418,7 @@ if (config.mode === 'idle') {
             readAvailableMemory: () => config.availableBytes,
             readTotalMemory: () => config.totalBytes,
             readCpuLoad: () => ({ cores: 8, load1m: 0, load5m: 0, load15m: 0 }),
-            signal: controller.signal,
+            stallTimeoutMs: config.stallTimeoutMs,
             onStatus: message => emit({ kind: 'status', message }),
         });
         emit({ kind: 'granted', workers: reservation.workers });
@@ -366,7 +427,7 @@ if (config.mode === 'idle') {
         }
     } catch (error) {
         emit({ kind: 'error', message: error.message });
-        process.exit(controller.signal.aborted ? 143 : 1);
+        process.exit(1);
     }
 }
 `,

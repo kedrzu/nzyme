@@ -13,12 +13,9 @@ import { GiB } from '@nzyme/machine/byteUnits.js';
 import type { MachineCapacityEnvironmentOptions } from '@nzyme/machine/MachineCapacityTypes.js';
 import { readMachineCapacityStatus } from '@nzyme/machine/readMachineCapacityStatus.js';
 import { assert } from '@nzyme/utils/assert.js';
-import { waitUntil } from '@nzyme/utils/waitUntil.js';
 
 import type { CommandContext } from '@nzyme/cli-core/Command.js';
 import { MachineReserveCommand } from './MachineReserveCommand.js';
-
-const TIMEOUT_MS = 10_000;
 
 const owners: ChildProcess[] = [];
 
@@ -26,6 +23,31 @@ afterEach(() => {
     for (const owner of owners.splice(0)) {
         owner.kill('SIGKILL');
     }
+});
+
+test('a request that can never fit exits 1 with the numbers on stderr', async () => {
+    const environment = await createEnvironment(1 * GiB);
+    const owner = spawnOwner();
+
+    const result = await runReserve(environment, [
+        '--label',
+        'tests',
+        '--pid',
+        String(owner.pid),
+        '--base',
+        '32GiB',
+        '--per-worker',
+        '1GiB',
+        '--min',
+        '1',
+        '--max',
+        '1',
+    ]);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('nzyme machine reserve: Machine capacity request tests needs at least');
+    expect(readMachineCapacityStatus(environment).holders).toEqual([]);
 });
 
 test('prints only the worker count on stdout and leaves the reservation to --pid', async () => {
@@ -54,59 +76,6 @@ test('prints only the worker count on stdout and leaves the reservation to --pid
     expect(readMachineCapacityStatus(environment).holders).toMatchObject([
         { label: 'tests', ownerPid: owner.pid, workers: 2, bytes: 5 * GiB },
     ]);
-});
-
-test('--no-wait fails at once with the numbers on stderr when capacity is not free', async () => {
-    const environment = await createEnvironment(1 * GiB);
-    const owner = spawnOwner();
-
-    const result = await runReserve(environment, [
-        '--label',
-        'tests',
-        '--pid',
-        String(owner.pid),
-        '--no-wait',
-        '--base',
-        '2GiB',
-        '--per-worker',
-        '1GiB',
-        '--min',
-        '1',
-        '--max',
-        '1',
-    ]);
-
-    expect(result.exitCode).toBe(1);
-    expect(result.stdout).toBe('');
-    expect(result.stderr).toContain('nzyme machine reserve: Not enough machine capacity for tests');
-    expect(readMachineCapacityStatus(environment).holders).toEqual([]);
-});
-
-test('SIGTERM while waiting leaves the queue and exits 143', async () => {
-    const environment = await createEnvironment(1 * GiB);
-    const owner = spawnOwner();
-
-    const running = runReserve(environment, [
-        '--label',
-        'tests',
-        '--pid',
-        String(owner.pid),
-        '--base',
-        '2GiB',
-        '--per-worker',
-        '1GiB',
-        '--min',
-        '1',
-        '--max',
-        '1',
-    ]);
-    await waitUntil(() => readMachineCapacityStatus(environment).waiters.length === 1, { timeoutMs: TIMEOUT_MS });
-    process.emit('SIGTERM', 'SIGTERM');
-
-    const result = await running;
-    expect(result.exitCode).toBe(143);
-    expect(result.stdout).toBe('');
-    expect(readMachineCapacityStatus(environment).waiters).toEqual([]);
 });
 
 /** A private registry on a machine with `availableBytes` free of 16 GiB, idle CPU and no settle delay. */

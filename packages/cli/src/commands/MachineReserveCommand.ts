@@ -1,18 +1,12 @@
 import { Option, UsageError } from '@nzyme/cli-core';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { ApplicationError } from '@nzyme/logging/ApplicationError.js';
-import { acquireMachineCapacity, assertMachineCapacity } from '@nzyme/machine/acquireMachineCapacity.js';
+import { acquireMachineCapacity } from '@nzyme/machine/acquireMachineCapacity.js';
 import { formatBytes } from '@nzyme/machine/formatBytes.js';
 import { MACHINE_STATUS_PREFIX } from '@nzyme/machine/formatMachineCapacityStatus.js';
-import type {
-    MachineCapacityEnvironmentOptions,
-    MachineCapacityRequestOptions,
-} from '@nzyme/machine/MachineCapacityTypes.js';
+import type { MachineCapacityEnvironmentOptions } from '@nzyme/machine/MachineCapacityTypes.js';
 
 import { parseByteSize } from '../machine/parseByteSize.js';
-
-/** Exit codes a shell reports for a process ended by these signals (`128 + signal number`). */
-const SIGNAL_EXIT_CODES = { SIGINT: 130, SIGTERM: 143 } as const;
 
 /**
  * Reserves machine capacity for a heavy run that a shell starts next, and prints its worker count.
@@ -37,9 +31,9 @@ export class MachineReserveCommand extends Command {
             The reservation is held until \`--pid\` exits — this command exits right after printing.
             Sizes accept plain bytes or a binary unit: \`512MiB\`, \`2GiB\`.
 
-            With \`--no-wait\`, does not queue: reserves only if the capacity is free right now,
-            otherwise exits 1 with the numbers on stderr. SIGINT/SIGTERM while waiting leave the
-            queue and exit 130/143.
+            Exits 1 with the numbers on stderr when the request can never fit this machine, or when
+            its place in the queue has not improved for 30 minutes. A waiter killed by a signal stops
+            counting, because its pid is dead.
         `,
         examples: [
             [
@@ -61,8 +55,6 @@ export class MachineReserveCommand extends Command {
 
     max = Option.String('--max', { required: true, description: 'Most workers the run can use' });
 
-    wait = Option.Boolean('--wait', true, { description: 'Queue for capacity (--no-wait fails at once instead)' });
-
     /** Where the registry lives and how the machine is read; tests override it. */
     environment: MachineCapacityEnvironmentOptions = {};
 
@@ -70,24 +62,13 @@ export class MachineReserveCommand extends Command {
      * Execute the command.
      */
     override async run() {
-        const controller = new AbortController();
-        let signalExitCode: number | undefined;
-        const onSigint = () => abortOn('SIGINT');
-        const onSigterm = () => abortOn('SIGTERM');
-        process.once('SIGINT', onSigint);
-        process.once('SIGTERM', onSigterm);
-
         try {
             const request = this.readRequest();
-            const options: MachineCapacityRequestOptions = {
+            const reservation = await acquireMachineCapacity({
                 ...this.environment,
                 ...request,
-                signal: controller.signal,
                 onStatus: line => this.context.stderr.write(`${line}\n`),
-            };
-            const reservation = this.wait
-                ? await acquireMachineCapacity(options)
-                : await assertMachineCapacity(options);
+            });
 
             this.context.stderr.write(
                 `${MACHINE_STATUS_PREFIX}${request.label}: reserved ${formatBytes(reservation.bytes)} for ` +
@@ -96,25 +77,12 @@ export class MachineReserveCommand extends Command {
             this.context.stdout.write(`${reservation.workers}\n`);
             return 0;
         } catch (error) {
-            if (signalExitCode != null) {
-                this.context.stderr.write(`${MACHINE_STATUS_PREFIX}${this.label}: left the queue\n`);
-                return signalExitCode;
-            }
-
             if (error instanceof ApplicationError || error instanceof UsageError) {
                 this.context.stderr.write(`nzyme machine reserve: ${error.message}\n`);
                 return 1;
             }
 
             throw error;
-        } finally {
-            process.off('SIGINT', onSigint);
-            process.off('SIGTERM', onSigterm);
-        }
-
-        function abortOn(signal: keyof typeof SIGNAL_EXIT_CODES) {
-            signalExitCode = SIGNAL_EXIT_CODES[signal];
-            controller.abort(signal);
         }
     }
 

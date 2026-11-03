@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir, totalmem } from 'node:os';
 import * as path from 'node:path';
 
@@ -25,10 +25,10 @@ const DEFAULT_RESERVE_BYTES = 8 * GiB;
 const DEFAULT_CPU_THRESHOLD = 0.85;
 const DEFAULT_SETTLE_MS = 20_000;
 /**
- * A lock is held for one admission decision (well under a second). Past this age its live-looking
- * owner is checked against the process table, which also catches a reused pid.
+ * A lock is held for one admission decision (tens of milliseconds). Past this age its holder is taken
+ * to have died or to be suspended, and the lock is removed.
  */
-const LOCK_SUSPECT_AGE_MS = 10_000;
+const LOCK_STALE_MS = 30_000;
 
 /** A reservation as stored in `reservations/<id>.json`. */
 export interface CapacityReservationRecord {
@@ -74,7 +74,7 @@ export interface CapacityRegistry {
      */
     readState(prune: boolean): CapacityRegistryState;
     /** Runs `fn` under the registry lock, or returns `undefined` when a live process holds it. */
-    tryWithLock<T>(selfStartedAt: string, fn: (holdsLock: () => boolean) => T): { value: T } | undefined;
+    tryWithLock<T>(fn: () => T): { value: T } | undefined;
     writeWaiter(record: CapacityWaiterRecord): void;
     removeWaiter(ticket: string): void;
     writeReservation(record: CapacityReservationRecord): void;
@@ -82,21 +82,12 @@ export interface CapacityRegistry {
     writeLastAdmission(at: number): void;
 }
 
-interface LockOwner {
-    pid: number;
-    startedAt: string;
-    nonce: string;
-    createdAt: number;
-}
-
 /**
  * Binds the machine-global capacity registry to its state directory and machine readers.
  *
- * Mutations of the shared decision state happen under a lock: a `lock/` directory published with its
- * `owner.json` already inside by one atomic `rename`, so the lock never exists without an owner. A lock
- * whose owner is dead (pid gone, or alive with another start time) is moved aside to a unique name before
- * deletion; a stealer that finds it moved a fresh lock instead puts it back, and each lock holder checks
- * it still holds the lock right before writing a grant.
+ * Mutations of the shared decision state happen under a lock, a `lock/` directory created by an atomic
+ * `mkdir`. Waiters remove a lock older than `LOCK_STALE_MS`. A holder stalled past that age could then
+ * share the lock with another process, which costs at most one grant over the limit.
  */
 export function createCapacityRegistry(options: MachineCapacityEnvironmentOptions): CapacityRegistry {
     const rootDir = options.rootDir ?? path.join(homedir(), '.nzyme', 'machine', 'capacity');
@@ -195,70 +186,28 @@ export function createCapacityRegistry(options: MachineCapacityEnvironmentOption
         return { status, table };
     }
 
-    function tryWithLock<T>(selfStartedAt: string, fn: (holdsLock: () => boolean) => T): { value: T } | undefined {
-        const owner: LockOwner = {
-            pid: process.pid,
-            startedAt: selfStartedAt,
-            nonce: randomUUID(),
-            createdAt: Date.now(),
-        };
-
-        if (!publishLock(owner)) {
+    function tryWithLock<T>(fn: () => T): { value: T } | undefined {
+        try {
+            mkdirSync(lockDir);
+        } catch (error) {
+            if (errnoCode(error) !== 'EEXIST') {
+                throw error;
+            }
             removeStaleLock();
             return undefined;
         }
 
         try {
-            return { value: fn(() => readLockOwner(lockDir)?.nonce === owner.nonce) };
+            return { value: fn() };
         } finally {
-            releaseLock(owner);
+            removeLock();
         }
-    }
-
-    function publishLock(owner: LockOwner): boolean {
-        const pending = path.join(stateDir, `.lock-${owner.nonce}`);
-        mkdirSync(pending, { recursive: true });
-        writeFileSync(path.join(pending, 'owner.json'), JSON.stringify(owner));
-
-        try {
-            renameSync(pending, lockDir);
-            return true;
-        } catch (error) {
-            rmSync(pending, { recursive: true, force: true });
-            const code = errnoCode(error);
-            if (code === 'ENOTEMPTY' || code === 'EEXIST') {
-                return false;
-            }
-            throw error;
-        }
-    }
-
-    function releaseLock(owner: LockOwner): void {
-        if (readLockOwner(lockDir)?.nonce !== owner.nonce) {
-            return;
-        }
-
-        const released = path.join(stateDir, `.released-${owner.nonce}`);
-        try {
-            renameSync(lockDir, released);
-        } catch (error) {
-            if (errnoCode(error) === 'ENOENT') {
-                return;
-            }
-            throw error;
-        }
-        rmSync(released, { recursive: true, force: true });
     }
 
     function removeStaleLock(): void {
-        const owner = readLockOwner(lockDir);
-        if (!owner || !isLockOwnerDead(owner)) {
-            return;
-        }
-
-        const grave = path.join(stateDir, `.stale-${randomUUID()}`);
+        let modifiedAt: number;
         try {
-            renameSync(lockDir, grave);
+            modifiedAt = statSync(lockDir).mtimeMs;
         } catch (error) {
             if (errnoCode(error) === 'ENOENT') {
                 return;
@@ -266,31 +215,13 @@ export function createCapacityRegistry(options: MachineCapacityEnvironmentOption
             throw error;
         }
 
-        if (readLockOwner(grave)?.nonce !== owner.nonce) {
-            // Another stealer replaced the dead lock and a live process published a fresh one in
-            // between: put that one back. If yet another lock appeared meanwhile, the displaced holder
-            // notices through `holdsLock` before it writes anything.
-            try {
-                renameSync(grave, lockDir);
-                return;
-            } catch {
-                // Fall through and discard it.
-            }
+        if (Date.now() - modifiedAt >= LOCK_STALE_MS) {
+            removeLock();
         }
-        rmSync(grave, { recursive: true, force: true });
     }
 
-    function isLockOwnerDead(owner: LockOwner): boolean {
-        if (!isPidRunning(owner.pid)) {
-            return true;
-        }
-
-        if (Date.now() - owner.createdAt < LOCK_SUSPECT_AGE_MS) {
-            return false;
-        }
-
-        const table = readTable();
-        return getProcessStartTime(table, owner.pid) !== owner.startedAt;
+    function removeLock(): void {
+        rmSync(lockDir, { recursive: true, force: true });
     }
 
     function writeWaiter(record: CapacityWaiterRecord): void {
@@ -498,37 +429,10 @@ function parseOtherVersionOwner(value: unknown): OtherVersionOwner | undefined {
     };
 }
 
-function readLockOwner(dir: string): LockOwner | undefined {
-    const raw = readFileOrUndefined(path.join(dir, 'owner.json'));
-    const value: unknown = raw == null ? undefined : parseJson(raw);
-
-    if (
-        !isObject(value) ||
-        typeof value.pid !== 'number' ||
-        typeof value.startedAt !== 'string' ||
-        typeof value.nonce !== 'string' ||
-        typeof value.createdAt !== 'number'
-    ) {
-        return undefined;
-    }
-
-    return { pid: value.pid, startedAt: value.startedAt, nonce: value.nonce, createdAt: value.createdAt };
-}
-
 function writeFileAtomically(dir: string, name: string, content: string): void {
     const pending = path.join(dir, `.${name}.${randomUUID()}.tmp`);
     writeFileSync(pending, content);
     renameSync(pending, path.join(dir, name));
-}
-
-function isPidRunning(pid: number): boolean {
-    try {
-        process.kill(pid, 0);
-        return true;
-    } catch (error) {
-        // EPERM: the process exists but belongs to someone we may not signal.
-        return errnoCode(error) === 'EPERM';
-    }
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

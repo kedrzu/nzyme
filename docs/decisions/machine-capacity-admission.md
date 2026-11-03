@@ -18,9 +18,7 @@ and that agents had to remember to use.
 **Checked 2026-11-02, on macOS with 64 GB:** `os.freemem()` reported about 1.9 GB while `vm_stat` showed
 18.7 GB of reclaimable inactive pages, so it cannot measure what new work can use.
 
-**Checked 2026-11-02:** a Playwright config can use top-level await (1.64.1). Workers re-evaluate it with
-`TEST_WORKER_INDEX` set, and UI mode evaluates it in an extra process without that variable. `ps` prints
-`lstart` in the reader's timezone.
+**Checked 2026-11-02:** `ps` prints `lstart` in the reader's timezone.
 
 ## Options Considered
 
@@ -44,7 +42,12 @@ We chose the library, `@nzyme/machine`, with a thin `nzyme machine` CLI for shel
 - Memory decides how many workers fit. CPU only gates admission (1-minute load below 85% of cores), with a
   settle delay after each admission because load average lags.
 - State lives in the user's home directory, so every repository on the machine shares one FIFO queue. A
-  directory lock is held only for one admission decision.
+  directory lock is held only for one admission decision, and one older than 30 s is removed: a holder
+  stalled that long (a suspended laptop) can cost one grant over the limit, which the reserve absorbs. A lock
+  that names its owner would avoid that at the price of far more concurrency logic.
+- A request whose place in the queue has not improved for 30 minutes (longer than any measured run) fails with
+  the numbers. Waiting has no other limit, so a long queue that keeps moving is fine, and FIFO stays strict:
+  letting smaller requests pass would starve the large ones.
 - A reservation is owned by a pid and its start time, compared in UTC, and stops counting when that process
   is gone. No daemon and no wrapper: a JavaScript caller owns its own reservation; a shell script reserves
   for its own pid and runs the heavy command under it.

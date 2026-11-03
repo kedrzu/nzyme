@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
 import { ApplicationError } from '@nzyme/logging/ApplicationError.js';
+import { formatDurationMs } from '@nzyme/utils/formatDurationMs.js';
+import { waitFor } from '@nzyme/utils/waitFor.js';
 
 import { computeCapacity } from './computeCapacity.js';
 import { createCapacityRegistry } from './createCapacityRegistry.js';
@@ -17,9 +19,8 @@ import { getProcessStartTime, sumProcessTreeRss } from './readProcessTree.js';
 const DEFAULT_POLL_MS = 500;
 const DEFAULT_STATUS_INTERVAL_MS = 15_000;
 const DEFAULT_SAMPLE_INTERVAL_MS = 5_000;
-/** How long `assertMachineCapacity` waits for another process's admission decision to finish. */
-const ASSERT_LOCK_TIMEOUT_MS = 5_000;
-const LOCK_RETRY_MS = 20;
+/** Longer than any measured heavy run, so a queue only stalls this long when something is stuck. */
+const DEFAULT_STALL_TIMEOUT_MS = 30 * 60_000;
 
 /**
  * Waits in the machine-global FIFO queue until memory and CPU allow at least `workers.min` workers, then
@@ -27,9 +28,9 @@ const LOCK_RETRY_MS = 20;
  * against every other heavy run on the machine, from any repository, until it is released or its owner
  * exits.
  *
- * Throws at once when the request can never fit this machine. The library installs no signal handlers:
- * to leave the queue on SIGINT/SIGTERM, abort `signal` from your handler. A waiter killed outright stops
- * counting anyway, because its pid is dead.
+ * Throws at once when the request can never fit this machine, and with the numbers, the holders and the
+ * queue when its place in the queue has not improved for `stallTimeoutMs`: a run behind a stuck head of
+ * the queue fails instead of hanging. A waiter killed by a signal stops counting, because its pid is dead.
  */
 export async function acquireMachineCapacity(
     options: MachineCapacityRequestOptions,
@@ -38,6 +39,7 @@ export async function acquireMachineCapacity(
     const { registry } = request;
     const pollMs = options.pollMs ?? DEFAULT_POLL_MS;
     const statusIntervalMs = options.statusIntervalMs ?? DEFAULT_STATUS_INTERVAL_MS;
+    const stallTimeoutMs = options.stallTimeoutMs ?? DEFAULT_STALL_TIMEOUT_MS;
 
     registry.ensureDirs();
     const nonce = randomUUID();
@@ -56,18 +58,13 @@ export async function acquireMachineCapacity(
     };
     registry.writeWaiter(waiter);
 
-    const removeWaiter = () => registry.removeWaiter(waiter.ticket);
-    process.on('exit', removeWaiter);
-
     try {
         let lastStatusAt = Number.NEGATIVE_INFINITY;
+        let bestPosition = Number.POSITIVE_INFINITY;
+        let progressAt = waitingSince;
 
         for (;;) {
-            throwIfAborted(options);
-
-            const attempt = registry.tryWithLock(request.selfStartedAt, holdsLock =>
-                decide(request, holdsLock, waiter),
-            );
+            const attempt = registry.tryWithLock(() => decide(request, waiter));
             if (attempt) {
                 const outcome = attempt.value;
                 switch (outcome.kind) {
@@ -77,6 +74,20 @@ export async function acquireMachineCapacity(
                         throw outcome.error;
                     case 'wait': {
                         const now = registry.now();
+                        if (outcome.position < bestPosition) {
+                            bestPosition = outcome.position;
+                            progressAt = now;
+                        }
+                        if (now - progressAt >= stallTimeoutMs) {
+                            throw new ApplicationError(
+                                [
+                                    `Machine capacity request ${options.label} made no progress in the queue for ` +
+                                        `${formatDurationMs(now - progressAt)}: ${outcome.reason}`,
+                                    ...formatMachineCapacityStatus(outcome.status, now),
+                                ].join('\n'),
+                                { label: options.label, status: outcome.status },
+                            );
+                        }
                         if (now - lastStatusAt >= statusIntervalMs) {
                             lastStatusAt = now;
                             emitLines(request, describeWait(options.label, outcome, now));
@@ -86,56 +97,10 @@ export async function acquireMachineCapacity(
                 }
             }
 
-            await sleep(pollMs, options.signal);
+            await waitFor(pollMs);
         }
     } finally {
-        process.off('exit', removeWaiter);
-        removeWaiter();
-    }
-}
-
-/**
- * Makes one admission decision without queueing: reserves capacity like `acquireMachineCapacity` when
- * it is available right now and nobody is queued, otherwise throws with the numbers, the holders and the
- * queue. Every admission rule applies, including the settle delay after the previous admission.
- */
-export async function assertMachineCapacity(
-    options: MachineCapacityRequestOptions,
-): Promise<MachineCapacityReservation> {
-    const request = prepareRequest(options);
-    const { registry } = request;
-    registry.ensureDirs();
-
-    const deadline = Date.now() + ASSERT_LOCK_TIMEOUT_MS;
-    for (;;) {
-        throwIfAborted(options);
-
-        const attempt = registry.tryWithLock(request.selfStartedAt, holdsLock => decide(request, holdsLock, undefined));
-        if (attempt) {
-            const outcome = attempt.value;
-            switch (outcome.kind) {
-                case 'grant':
-                    return createReservation(request, outcome.record);
-                case 'refuse':
-                    throw outcome.error;
-                case 'wait':
-                    throw new ApplicationError(
-                        [
-                            `Not enough machine capacity for ${options.label}: ${outcome.reason}`,
-                            ...formatMachineCapacityStatus(outcome.status, registry.now()),
-                        ].join('\n'),
-                        { label: options.label, status: outcome.status },
-                    );
-            }
-        }
-
-        if (Date.now() >= deadline) {
-            throw new ApplicationError('The machine capacity registry stayed locked by another process', {
-                label: options.label,
-            });
-        }
-
-        await sleep(LOCK_RETRY_MS, options.signal);
+        registry.removeWaiter(waiter.ticket);
     }
 }
 
@@ -151,7 +116,7 @@ interface WaitOutcome {
     kind: 'wait';
     reason: string;
     status: MachineCapacityStatus;
-    /** 1-based place in the queue; an assertion counts as last. */
+    /** 1-based place in the queue. */
     position: number;
 }
 
@@ -203,12 +168,8 @@ function validateRequest(options: MachineCapacityRequestOptions): void {
     }
 }
 
-/** One admission decision; runs under the registry lock. `waiter` is absent for an assertion. */
-function decide(
-    request: PreparedRequest,
-    holdsLock: () => boolean,
-    waiter: CapacityWaiterRecord | undefined,
-): DecisionOutcome {
+/** One admission decision; runs under the registry lock. */
+function decide(request: PreparedRequest, waiter: CapacityWaiterRecord): DecisionOutcome {
     const { registry, options } = request;
     const { status, table } = registry.readState(true);
     const now = registry.now();
@@ -248,14 +209,11 @@ function decide(
         };
     }
 
-    let ahead = status.waiters.length;
-    if (waiter) {
-        ahead = status.waiters.findIndex(entry => entry.ticket === waiter.ticket);
-        if (ahead === -1) {
-            // Our ticket was deleted by hand; requeue it with the original wait start.
-            registry.writeWaiter(waiter);
-            ahead = status.waiters.filter(entry => entry.waitingSince <= waiter.waitingSince).length;
-        }
+    let ahead = status.waiters.findIndex(entry => entry.ticket === waiter.ticket);
+    if (ahead === -1) {
+        // Our ticket was deleted by hand; requeue it with the original wait start.
+        registry.writeWaiter(waiter);
+        ahead = status.waiters.filter(entry => entry.waitingSince <= waiter.waitingSince).length;
     }
     const position = ahead + 1;
 
@@ -276,10 +234,6 @@ function decide(
         return { kind: 'wait', reason: decision.reason, status, position };
     }
 
-    if (!holdsLock()) {
-        return { kind: 'wait', reason: 'lost the registry lock to another process', status, position };
-    }
-
     const record: CapacityReservationRecord = {
         id: randomUUID(),
         label: options.label,
@@ -291,9 +245,7 @@ function decide(
         createdAt: now,
     };
     registry.writeReservation(record);
-    if (waiter) {
-        registry.removeWaiter(waiter.ticket);
-    }
+    registry.removeWaiter(waiter.ticket);
     registry.writeLastAdmission(now);
 
     return { kind: 'grant', record };
@@ -369,29 +321,6 @@ function writeToStderr(line: string): void {
     process.stderr.write(`${line}\n`);
 }
 
-function throwIfAborted(options: MachineCapacityRequestOptions): void {
-    if (options.signal?.aborted) {
-        throw new ApplicationError(`Machine capacity request ${options.label} was aborted`, {
-            label: options.label,
-            cause: options.signal.reason,
-        });
-    }
-}
-
 function isNonNegativeNumber(value: number): boolean {
     return Number.isFinite(value) && value >= 0;
-}
-
-/** Resolves after `ms`, or early when `signal` aborts; the caller checks the signal afterwards. */
-function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
-    return new Promise<void>(resolve => {
-        const timer = setTimeout(done, ms);
-        signal?.addEventListener('abort', done, { once: true });
-
-        function done(): void {
-            clearTimeout(timer);
-            signal?.removeEventListener('abort', done);
-            resolve();
-        }
-    });
 }

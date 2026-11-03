@@ -36,8 +36,8 @@ export interface MachineCapacityRequestOptions extends MachineCapacityEnvironmen
      * owned by another process has no release hook here: it ends when that process exits.
      */
     ownerPid?: number;
-    /** Aborting removes the request from the queue and rejects with an error. */
-    signal?: AbortSignal;
+    /** How long a waiting request tolerates its place in the queue not improving before it fails; defaults to 30 min. */
+    stallTimeoutMs?: number;
     /** Receives `[nzyme machine]` status lines; defaults to writing them to stderr. */
     onStatus?: (line: string) => void;
     /** How often a waiting request re-checks capacity; defaults to 500 ms. */

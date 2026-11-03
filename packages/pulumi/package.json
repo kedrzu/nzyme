@@ -80,7 +80,7 @@
         "@pulumi/random": "^4.21.4",
         "@types/node": "26.6.6",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-        "oxfmt": "0.75.0"
+        "oxfmt": "0.76.0"
     },
     "peerDependencies": {
         "@pulumi/aws": "^7.51.1",

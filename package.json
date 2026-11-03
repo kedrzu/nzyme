@@ -46,9 +46,9 @@
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "del-cli": "8.0.1",
         "eslint": "10.14.0",
-        "eslint-plugin-package-json": "1.13.0",
+        "eslint-plugin-package-json": "1.14.0",
         "nx": "^24.0.3",
-        "oxfmt": "0.75.0",
+        "oxfmt": "0.76.0",
         "oxlint": "1.90.0",
         "oxlint-tsgolint": "7.0.2005"
     },

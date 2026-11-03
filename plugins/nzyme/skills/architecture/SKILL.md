@@ -115,7 +115,8 @@ The same steps for every element, in a new repo and an old one:
      only where it differs; leave the repo's own sections alone.
    - A file the repo lacks: the whole asset, filled.
 4. **Show the diff** for each file before writing it — a unified diff, or the full content of a new
-   file — with one line on why the reference wants it. Nothing is written unseen.
+   file — with one line on why the reference wants it. Nothing is written unseen. A change to
+   `CLAUDE.md` is checked first (`references/claude-code.md`, "Proposing a `CLAUDE.md` change").
 5. **Get the decision.** Interactively, ask per element ("apply all" is fine). When the prompt already
    carries approvals and declines (a headless run), follow them; a difference the prompt does not
    cover is reported, not written.
@@ -133,9 +134,16 @@ diff and writes nothing.
 1. Run `zsh setup.sh`, then the repo's lint check, format check and typecheck. Fix what the applied
    changes broke; report anything else.
 2. `CLAUDE.md` links `ARCHITECTURE.md`.
-3. If `.claude/skills/git-workflow/SKILL.md` or `.claude/skills/verify/SKILL.md` is missing, tell the
-   user to run `/git:setup` and then `/dev:setup`. Those commands write them; this skill cannot run
-   them.
+3. When the run covers the Claude Code element, follow `git:setup` and then `dev:setup`: `dev:setup`
+   checks what `git:setup` writes, and both record only commands they have run, which is why they
+   come after the checks. They are user-invoked, so read them by path:
+   `~/.claude/plugins/marketplaces/kedrzu-skills/plugins/{git,dev}/skills/setup/SKILL.md`, or
+   `gh api repos/kedrzu/skills/contents/plugins/<plugin>/skills/setup/SKILL.md --jq .content | base64 -d`.
+   Read this way nothing gets substituted: `${CLAUDE_PLUGIN_ROOT}` is that plugin's directory and
+   `$ARGUMENTS` is empty. Both stop without writing on a repo already covered. What they would write
+   is a difference like any other: steps 4-6 of the apply protocol, ahead of their own "write and
+   report". If neither source is reachable, say so and name the two commands for the user to run.
+   On a request about a piece of work, a missing `git-workflow` or `verify` is one line in the report.
 4. Report: elements applied, differences declined (and where they are recorded), differences left
    open, check results. Commit only when the user asks; once `git-workflow` exists, it owns commits.
 

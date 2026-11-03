@@ -2,12 +2,12 @@
 
 GitHub gates every pull request with the same build and checks the repo runs locally, and keeps the
 nzyme pin moving through PRs that gate too. How a change becomes a branch, a commit and a PR is not
-this element's: it belongs to the repo's `git-workflow` skill, written by `/git:setup`.
+this element's: it belongs to the repo's `git-workflow` skill, written by following `git:setup`.
 
 ## Reference state
 
 - **PR flow** — `.claude/skills/git-workflow/SKILL.md`. If it is missing, `SKILL.md`'s Finish step
-  sends the user to `/git:setup`. The PR title becomes the squash commit, so `paseo.json`'s
+  writes it by following `git:setup`. The PR title becomes the squash commit, so `paseo.json`'s
   instructions and the skill agree on the commit style (`references/setup-scripts.md`).
 - **`.github/workflows/build.yml`** — `assets/workflows/build.yml.tmpl`, the merge gate on every PR:
   checkout with `submodules: recursive` (the gitlink, never `--remote`), bun from `packageManager`,

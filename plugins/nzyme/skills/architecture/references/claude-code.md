@@ -32,9 +32,10 @@ clone or a new worktree behaves the same for every agent, with no per-machine se
     with several agents in parallel worktrees they are noise.
   - `extraKnownMarketplaces.kedrzu-skills` (GitHub `kedrzu/skills`, auto-updated) and
     `enabledPlugins` — the plugin set in "Plugins" below.
-- **`.claude/git.json`** — `assets/git.json.tmpl`: `protectedBranches` lists `main`. The `git`
-  plugin's hook refuses an agent's push to a listed branch; with no file every branch is pushable.
-  `/git:setup` writes the same file.
+- **`.claude/git.json`** — written by `git:setup` (`SKILL.md`, Finish), because it follows from whether
+  the main line takes direct pushes: `protectedBranches` lists it when it takes only PRs, plus a
+  production branch (e.g. `release`) if the repo has one. The `git` plugin's hook refuses an agent's
+  push to a listed branch; with no file every branch is pushable.
 - **`.claude/skills/nzyme`** — a committed symlink to `../../nzyme/plugins/nzyme`:
 
   ```sh
@@ -45,7 +46,7 @@ clone or a new worktree behaves the same for every agent, with no per-machine se
   repo pins (`docs/submodule-setup.md#agents`); a marketplace copy would follow nzyme `main`, not the
   pin.
 - **`.claude/skills/verify/`, `.claude/skills/git-workflow/`** — the `dev` plugin's contracts,
-  written by `/dev:setup` and `/git:setup` (`SKILL.md`, Finish). Area skills:
+  written by following `dev:setup` and `git:setup` (`SKILL.md`, Finish). Area skills:
   `references/repo-skills.md`.
 - **`CLAUDE.md`** — `assets/CLAUDE.md.tmpl`. nzyme's own section skeleton, adapted to a product:
 
@@ -108,7 +109,6 @@ marketplace is a difference (remove it from `enabledPlugins`).
 - `CLAUDE.md`: `{{summary — …}}` from `ARCHITECTURE.md`'s opening, or ask; `{{repo skills — …}}`
   from `.claude/skills/*/` other than `nzyme`, `verify` and `git-workflow` (drop the bullet when there
   are none).
-- `git.json`: add the production branch (e.g. `release`) when the repo has one besides `main`.
 - `settings.json`: the allow list follows the root `package.json`. An element that adds a script adds
   its allow (`Bash(bun run e2e:*)`, `Bash(bun run storybook:*)`, a database script).
 
@@ -125,7 +125,8 @@ marketplace is a difference (remove it from `enabledPlugins`).
   Plugins the repo loads through committed symlinks into another submodule stay as they are.
 - `secrets@kedrzu-skills` in `enabledPlugins`: a difference. Remove it; the `nzyme:secrets` skill and
   `secrets set --prompt` replace it, so every credential goes to the repo's store.
-- No `.claude/git.json`: a difference.
+- `.claude/git.json`: not compared here. A repo without it may simply push to `main`; `git:setup`
+  decides.
 - `CLAUDE.md`: by heading section. The repo's own sections (language rules, a standing authorization
   for commits and PRs in worktrees, gotchas) stay. A shared section that differs from nzyme's text at
   the pinned commit is shown with nzyme's version.
@@ -134,3 +135,16 @@ marketplace is a difference (remove it from `enabledPlugins`).
   a one-line pointer to `CLAUDE.md`. Fix references to a `nzyme/AGENTS.md`, which does not exist.
 - A tracked `.claude/settings.local.json` or `CLAUDE.local.md`: propose `git rm --cached` and the
   ignore entries.
+
+## Proposing a `CLAUDE.md` change
+
+From any element, check the change first against the "Update Guidelines" in `SKILL.md` and against
+`references/update-guidelines.md`, both in
+`~/.claude/plugins/marketplaces/claude-plugins-official/plugins/claude-md-management/skills/claude-md-improver/`.
+Read only those: that skill's full workflow also audits `nzyme/CLAUDE.md` and scores every file, and
+step 4 of the apply protocol already shows the diff with its reason.
+
+They judge the repo's own sections and the filled placeholders. The sections shared with nzyme stay
+word for word, so a problem found in one is fixed in nzyme's `CLAUDE.md`, not in the product's. The
+local file here is `CLAUDE.local.md`, whatever name that skill uses. If the files are not there, say
+so in the report and carry on.

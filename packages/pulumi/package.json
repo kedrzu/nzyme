@@ -68,7 +68,7 @@
         "cli-table3": "^0.6.5",
         "execa": "^10.2.0",
         "fs-extra": "^11.4.1",
-        "rollup": "^4.62.2",
+        "rollup": "^4.67.2",
         "rollup-plugin-bundle-stats": "^4.22.3",
         "rollup-plugin-sourcemaps": "^0.6.3",
         "terser": "^5.51.2"

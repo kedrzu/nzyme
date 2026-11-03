@@ -13,6 +13,9 @@ const bw = bitwarden({ project: '1f0c…' });
 - `server` — Bitwarden Cloud US by default. `https://vault.bitwarden.eu` for Cloud EU, or the base URL
   of a self-hosted server (which serves `/identity` and `/api`). It must use `https:`, except on
   localhost, so the token never travels unencrypted.
+- `keychainSuffix` — keeps this store's token apart from other stores on the same server, for example
+  one token per project or per Bitwarden organization. See [Several tokens on one
+  machine](#several-tokens-on-one-machine).
 
 A read costs at most three requests (login, project listing, one fetch), however many keys.
 
@@ -39,6 +42,24 @@ A read costs at most three requests (login, project listing, one fetch), however
 
 In CI, or on Linux without a keychain, set `BWS_ACCESS_TOKEN` instead; it takes the place of the
 stored token, and `secrets run` removes it from the child's environment.
+
+## Several tokens on one machine
+
+Without a suffix, every store on a server shares one stored token, so logging in from one project
+replaces it for the others. Give a project its own:
+
+```ts
+const bw = bitwarden({ project: '1f0c…', keychainSuffix: 'healed' });
+```
+
+The token is stored as `bitwarden:<host>#healed`, so it stays bound to its server: the same suffix on
+another server is a separate token.
+
+- A project that adds a suffix runs `secrets login` again. The unsuffixed token stays for the projects
+  still using it, and a suffixed store never falls back to it.
+- `BWS_ACCESS_TOKEN`, when set, still takes the place of any stored token.
+- Values cached by `cached()` are kept per server and project, so stores with different suffixes
+  reading one project share them.
 
 ## Why a token cannot reach passwords
 

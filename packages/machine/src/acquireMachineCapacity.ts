@@ -7,18 +7,16 @@ import { waitFor } from '@nzyme/utils/waitFor.js';
 import { computeCapacity } from './computeCapacity.js';
 import { createCapacityRegistry } from './createCapacityRegistry.js';
 import type { CapacityRegistry, CapacityReservationRecord, CapacityWaiterRecord } from './createCapacityRegistry.js';
-import { formatBytes } from './formatBytes.js';
 import { formatMachineCapacityStatus, MACHINE_STATUS_PREFIX } from './formatMachineCapacityStatus.js';
 import type {
     MachineCapacityRequestOptions,
     MachineCapacityReservation,
     MachineCapacityStatus,
 } from './MachineCapacityTypes.js';
-import { getProcessStartTime, sumProcessTreeRss } from './readProcessTree.js';
+import { getProcessStartTime } from './readProcessTree.js';
 
 const DEFAULT_POLL_MS = 500;
 const DEFAULT_STATUS_INTERVAL_MS = 15_000;
-const DEFAULT_SAMPLE_INTERVAL_MS = 5_000;
 /** Longer than any measured heavy run, so a queue only stalls this long when something is stuck. */
 const DEFAULT_STALL_TIMEOUT_MS = 30 * 60_000;
 
@@ -252,16 +250,12 @@ function decide(request: PreparedRequest, waiter: CapacityWaiterRecord): Decisio
 }
 
 function createReservation(request: PreparedRequest, record: CapacityReservationRecord): MachineCapacityReservation {
-    const { registry, options } = request;
+    const { registry } = request;
     const ownedHere = record.ownerPid === process.pid;
     let released = false;
-    let peakBytes = 0;
-    let sampler: NodeJS.Timeout | undefined;
 
     if (ownedHere) {
         process.on('exit', release);
-        sampler = setInterval(samplePeak, options.sampleIntervalMs ?? DEFAULT_SAMPLE_INTERVAL_MS);
-        sampler.unref();
     }
 
     return { id: record.id, workers: record.workers, bytes: record.bytes, release };
@@ -273,32 +267,7 @@ function createReservation(request: PreparedRequest, record: CapacityReservation
         released = true;
 
         registry.removeReservation(record.id);
-        if (!ownedHere) {
-            return;
-        }
-
         process.off('exit', release);
-        clearInterval(sampler);
-        samplePeak();
-        if (peakBytes > record.bytes) {
-            emitLines(request, [
-                `${MACHINE_STATUS_PREFIX}${options.label} peaked at ${formatBytes(peakBytes)}, above its reservation of ` +
-                    `${formatBytes(record.bytes)} (base ${formatBytes(options.memory.base)} + ${record.workers} × ` +
-                    `${formatBytes(options.memory.perWorker)} per worker); raise memory.base or memory.perWorker`,
-            ]);
-        }
-    }
-
-    function samplePeak(): void {
-        try {
-            peakBytes = Math.max(peakBytes, sumProcessTreeRss(registry.readProcessTable(), process.pid));
-        } catch (error) {
-            // Sampling only feeds the retuning hint; a failing `ps` must not crash the run it measures.
-            clearInterval(sampler);
-            emitLines(request, [
-                `${MACHINE_STATUS_PREFIX}${options.label}: stopped measuring peak memory (${String(error)})`,
-            ]);
-        }
     }
 }
 

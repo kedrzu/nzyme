@@ -55,9 +55,8 @@ We chose the library, `@nzyme/machine`, with a thin `nzyme machine` CLI for shel
 ## Consequences
 
 - Costs are declared by each caller from measured peaks, and go stale as suites grow. Exceeding a reservation
-  costs other runs nothing, because the system memory reading already reflects the real usage. Only a
-  JavaScript owner gets a warning; a shell script's holder shows reserved against current memory in
-  `nzyme machine status`.
+  costs other runs nothing, because the system memory reading already reflects the real usage. Nothing warns
+  about it: `nzyme machine status` shows each holder's reserved against current memory.
 - A shell script's owner is the script's process when it runs several commands in sequence. That costs a few
   megabytes of shell, not a runtime.
 - Memory of long-lived shared services (a Docker VM, for example) is not attributed to any run. It is simply

@@ -44,8 +44,6 @@ export interface MachineCapacityRequestOptions extends MachineCapacityEnvironmen
     pollMs?: number;
     /** Minimum time between two status reports while waiting; defaults to 15 s. */
     statusIntervalMs?: number;
-    /** How often the owner's peak memory is sampled while the reservation is held; defaults to 5 s. */
-    sampleIntervalMs?: number;
 }
 
 /** A granted reservation. */
@@ -57,7 +55,7 @@ export interface MachineCapacityReservation {
     bytes: number;
     /**
      * Removes the reservation; idempotent. When the caller owns the reservation it also runs on
-     * process exit, and warns when the process tree peaked above the reservation.
+     * process exit.
      */
     release(): void;
 }

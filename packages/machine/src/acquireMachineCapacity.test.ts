@@ -271,41 +271,6 @@ test('a request that can never fit fails at once and leaves no waiter', async ()
     expect(listStateFiles(rootDir, 'waiters')).toEqual([]);
 });
 
-test('warns on release when the process tree peaked above the reservation', async () => {
-    const rootDir = createRootDir();
-    const lines: string[] = [];
-
-    const reservation = await acquireMachineCapacity({
-        ...environment(rootDir),
-        label: 'tiny',
-        memory: { base: 1 * MiB, perWorker: 0 },
-        workers: { min: 1, max: 1 },
-        onStatus: line => lines.push(line),
-    });
-    reservation.release();
-
-    expect(lines).toHaveLength(1);
-    expect(lines[0]).toStartWith('[nzyme machine] tiny peaked at');
-});
-
-test(
-    'warns when the owner exits without releasing, as a run that holds its reservation to the end does',
-    async () => {
-        const rootDir = createRootDir();
-
-        const child = spawnChild({
-            rootDir,
-            mode: 'acquire',
-            memory: { base: 1 * MiB, perWorker: 0 },
-            exitAfterGrant: true,
-        });
-        await waitUntil(() => child.exitCode != null);
-
-        expect(child.events.some(event => event.message?.includes('child peaked at'))).toBe(true);
-    },
-    TIMEOUT_MS,
-);
-
 interface ChildConfig {
     rootDir: string;
     mode: 'acquire' | 'idle';

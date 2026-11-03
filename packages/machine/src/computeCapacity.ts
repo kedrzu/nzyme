@@ -35,11 +35,6 @@ export interface ComputeCapacityParams {
     cpu: CpuLoad;
     /** Fraction of cores the 1-minute load must stay below for an admission. */
     cpuThreshold: number;
-    now: number;
-    /** When the previous admission happened, if ever. */
-    lastAdmissionAt: number | undefined;
-    /** Minimum time between admissions: load average lags behind a run that just started. */
-    settleMs: number;
 }
 
 /** Outcome of one admission decision. */
@@ -92,16 +87,6 @@ export function computeCapacity(params: ComputeCapacityParams): CapacityDecision
                 `CPU load ${params.cpu.load1m.toFixed(1)} is at or above ${loadLimit.toFixed(1)} ` +
                 `(${Math.round(params.cpuThreshold * 100)}% of ${params.cpu.cores} cores)`,
         };
-    }
-
-    if (params.lastAdmissionAt != null) {
-        const settleLeftMs = params.lastAdmissionAt + params.settleMs - params.now;
-        if (settleLeftMs > 0) {
-            return {
-                kind: 'wait',
-                reason: `letting the load average settle after the previous admission (${Math.ceil(settleLeftMs / 1000)}s left)`,
-            };
-        }
     }
 
     return { kind: 'grant', workers: fittingWorkers, bytes: memory.base + fittingWorkers * memory.perWorker };

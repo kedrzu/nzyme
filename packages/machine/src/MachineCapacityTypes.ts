@@ -16,8 +16,6 @@ export interface MachineCapacityEnvironmentOptions {
     reserveBytes?: number;
     /** Fraction of cores the 1-minute load must stay below for an admission; defaults to 0.85. */
     cpuThreshold?: number;
-    /** Minimum time between two admissions on the machine; defaults to 20 s. */
-    settleMs?: number;
     readAvailableMemory?: () => number;
     readTotalMemory?: () => number;
     readCpuLoad?: () => CpuLoad;
@@ -97,7 +95,6 @@ export interface MachineCapacityStatus {
     freeBytes: number;
     cpu: CpuLoad;
     cpuThreshold: number;
-    lastAdmissionAt: number | undefined;
     holders: MachineCapacityHolder[];
     /** In admission order. */
     waiters: MachineCapacityWaiter[];

@@ -49,12 +49,6 @@ test('waits while the 1-minute load is at or above the threshold', () => {
     expect(computeCapacity(params({ cpu: { cores: 10, load1m: 8.4, load5m: 0, load15m: 0 } })).kind).toBe('grant');
 });
 
-test('waits until the settle delay after the previous admission has passed', () => {
-    expectWait(computeCapacity(params({ now: 100_000, lastAdmissionAt: 85_000 })), '5s left');
-
-    expect(computeCapacity(params({ now: 105_000, lastAdmissionAt: 85_000 })).kind).toBe('grant');
-});
-
 test('never fits when base plus min workers exceeds total memory minus the reserve', () => {
     const decision = computeCapacity(
         params({ totalBytes: 16 * GiB, reserveBytes: 8 * GiB, workers: { min: 7, max: 8 }, availableBytes: 64 * GiB }),
@@ -86,9 +80,6 @@ function params(overrides: Partial<ComputeCapacityParams>): ComputeCapacityParam
         holders: [],
         cpu: { cores: 10, load1m: 1, load5m: 1, load15m: 1 },
         cpuThreshold: 0.85,
-        now: 1_000_000,
-        lastAdmissionAt: undefined,
-        settleMs: 20_000,
         ...overrides,
     };
 }

@@ -32,7 +32,6 @@ import type { ProcessInfo } from './readProcessTree.js';
 const STATE_VERSION = 'v1';
 const DEFAULT_RESERVE_BYTES = 8 * GiB;
 const DEFAULT_CPU_THRESHOLD = 0.85;
-const DEFAULT_SETTLE_MS = 20_000;
 /**
  * A lock is held for one admission decision (tens of milliseconds). Past this age its holder is taken
  * to have died or to be suspended, and the lock is removed.
@@ -73,7 +72,6 @@ export interface CapacityRegistryState {
 
 /** The registry bound to one environment. */
 export interface CapacityRegistry {
-    settleMs: number;
     readProcessTable: () => ProcessInfo[];
     now: () => number;
     ensureDirs(): void;
@@ -88,7 +86,6 @@ export interface CapacityRegistry {
     removeWaiter(ticket: string): void;
     writeReservation(record: CapacityReservationRecord): void;
     removeReservation(id: string): void;
-    writeLastAdmission(at: number): void;
 }
 
 /**
@@ -104,7 +101,6 @@ export function createCapacityRegistry(options: MachineCapacityEnvironmentOption
     const lockDir = path.join(stateDir, 'lock');
     const reservationsDir = path.join(stateDir, 'reservations');
     const waitersDir = path.join(stateDir, 'waiters');
-    const lastAdmissionFile = path.join(stateDir, 'last-admission');
 
     const readMemory = options.readAvailableMemory ?? readAvailableMemory;
     const readTotal = options.readTotalMemory ?? totalmem;
@@ -114,7 +110,6 @@ export function createCapacityRegistry(options: MachineCapacityEnvironmentOption
     const cpuThreshold = options.cpuThreshold ?? DEFAULT_CPU_THRESHOLD;
 
     return {
-        settleMs: options.settleMs ?? DEFAULT_SETTLE_MS,
         readProcessTable: readTable,
         now: options.now ?? Date.now,
         ensureDirs,
@@ -124,7 +119,6 @@ export function createCapacityRegistry(options: MachineCapacityEnvironmentOption
         removeWaiter,
         writeReservation,
         removeReservation,
-        writeLastAdmission,
     };
 
     function ensureDirs(): void {
@@ -186,7 +180,6 @@ export function createCapacityRegistry(options: MachineCapacityEnvironmentOption
             freeBytes: availableBytes - unmetBytes - reserveBytes,
             cpu: readCpu(),
             cpuThreshold,
-            lastAdmissionAt: readLastAdmission(),
             holders,
             waiters: liveWaiters.map(toWaiterStatus),
             otherVersions,
@@ -254,17 +247,6 @@ export function createCapacityRegistry(options: MachineCapacityEnvironmentOption
 
     function removeReservation(id: string): void {
         removeFile(path.join(reservationsDir, `${id}.json`));
-    }
-
-    function writeLastAdmission(at: number): void {
-        writeFileAtomically(stateDir, 'last-admission', String(at));
-    }
-
-    function readLastAdmission(): number | undefined {
-        const raw = readFileOrUndefined(lastAdmissionFile);
-        const value = Number(raw);
-
-        return raw != null && Number.isFinite(value) ? value : undefined;
     }
 
     /** Owners of reservations kept by other state versions; their files are read leniently, by pid only. */

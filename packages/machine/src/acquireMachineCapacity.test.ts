@@ -9,7 +9,7 @@ import { waitFor } from '@nzyme/utils/waitFor.js';
 import { waitUntil } from '@nzyme/utils/waitUntil.js';
 
 import { acquireMachineCapacity } from './acquireMachineCapacity.js';
-import { GiB, MiB } from './byteUnits.js';
+import { GiB } from './byteUnits.js';
 import type { CapacityMemoryRequest } from './computeCapacity.js';
 import type { MachineCapacityRequestOptions } from './MachineCapacityTypes.js';
 import { readMachineCapacityStatus } from './readMachineCapacityStatus.js';
@@ -295,7 +295,6 @@ function environment(rootDir: string): Omit<MachineCapacityRequestOptions, 'labe
     return {
         rootDir,
         reserveBytes: 0,
-        settleMs: 0,
         readAvailableMemory: () => AVAILABLE_BYTES,
         readTotalMemory: () => TOTAL_BYTES,
         readCpuLoad: () => ({ cores: 8, load1m: 0, load5m: 0, load15m: 0 }),
@@ -378,8 +377,7 @@ if (config.mode === 'idle') {
             workers: { min: 1, max: 1 },
             rootDir: config.rootDir,
             reserveBytes: 0,
-            settleMs: 0,
-            pollMs: 25,
+                pollMs: 25,
             readAvailableMemory: () => config.availableBytes,
             readTotalMemory: () => config.totalBytes,
             readCpuLoad: () => ({ cores: 8, load1m: 0, load5m: 0, load15m: 0 }),

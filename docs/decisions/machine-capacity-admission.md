@@ -39,8 +39,9 @@ We chose the library, `@nzyme/machine`, with a thin `nzyme machine` CLI for shel
   the largest worker count that fits in `available − Σ unmet reservations − reserve`, where a reservation's
   unmet part is what it reserved minus the current RSS of its owner's process tree. The unmet part is what
   stops a run that is still warming up from counting as free memory.
-- Memory decides how many workers fit. CPU only gates admission (1-minute load below 85% of cores), with a
-  settle delay after each admission because load average lags.
+- Memory decides how many workers fit. CPU only gates admission (1-minute load below 85% of cores). Load
+  average lags, so runs starting together all pass that gate. A 20 s gap between admissions showed no clear
+  benefit over five rounds of two heavy runs started together, too few to detect a small one.
 - State lives in the user's home directory, so every repository on the machine shares one FIFO queue. A
   directory lock is held only for one admission decision, and one older than 30 s is removed: a holder
   stalled that long (a suspended laptop) can cost one grant over the limit, which the reserve absorbs. A lock

@@ -191,9 +191,6 @@ function decide(request: PreparedRequest, waiter: CapacityWaiterRecord): Decisio
         holders: status.holders,
         cpu: status.cpu,
         cpuThreshold: status.cpuThreshold,
-        now,
-        lastAdmissionAt: status.lastAdmissionAt,
-        settleMs: registry.settleMs,
     });
 
     if (decision.kind === 'never-fits') {
@@ -244,7 +241,6 @@ function decide(request: PreparedRequest, waiter: CapacityWaiterRecord): Decisio
     };
     registry.writeReservation(record);
     registry.removeWaiter(waiter.ticket);
-    registry.writeLastAdmission(now);
 
     return { kind: 'grant', record };
 }

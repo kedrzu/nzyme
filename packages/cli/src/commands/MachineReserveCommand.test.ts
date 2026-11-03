@@ -78,12 +78,11 @@ test('prints only the worker count on stdout and leaves the reservation to --pid
     ]);
 });
 
-/** A private registry on a machine with `availableBytes` free of 16 GiB, idle CPU and no settle delay. */
+/** A private registry on a machine with `availableBytes` free of 16 GiB, and idle CPU. */
 async function createEnvironment(availableBytes: number): Promise<MachineCapacityEnvironmentOptions> {
     return {
         rootDir: await mkdtemp(path.join(os.tmpdir(), 'machine-reserve-')),
         reserveBytes: 0,
-        settleMs: 0,
         readAvailableMemory: () => availableBytes,
         readTotalMemory: () => 16 * GiB,
         readCpuLoad: () => ({ cores: 8, load1m: 0, load5m: 0, load15m: 0 }),

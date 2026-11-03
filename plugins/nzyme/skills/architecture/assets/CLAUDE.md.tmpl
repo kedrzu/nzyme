@@ -25,10 +25,10 @@ Run from the repo root:
 - `bun run typecheck` — build, then each package's own typecheck.
 - `bun run tests` — all tests (`bun:test`); `bun test packages/<pkg>/src` for one package. Not bare
   `bun test` for the whole suite: it skips the script's flags.
-- `bun run lint` / `bun run lint:check` — oxlint (type-aware) plus ESLint for Vue, this repo's code
-  only. `bun run lint:nzyme` checks the submodule with nzyme's own config.
-- `bun run format` / `bun run format:check` — oxfmt plus `nzyme format-markdown`. Never hand-apply
-  formatting.
+- `bun run lint` / `bun run lint:check` — oxlint (type-aware) plus ESLint for Vue, `package.json` and
+  Markdown, this repo's code only. `bun run lint:nzyme` checks the submodule with nzyme's own config.
+- `bun run format` / `bun run format:check` — oxfmt plus Markdown through ESLint (`format:md`). Never
+  hand-apply formatting.
 - `bun run reinstall` — clean reinstall after dependency trouble.
 
 ## Keep command output out of context

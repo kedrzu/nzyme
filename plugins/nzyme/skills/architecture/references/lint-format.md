@@ -1,8 +1,8 @@
 # Lint and format
 
-oxlint does all the linting (type-aware), ESLint runs only the Vue rules oxlint lacks, oxfmt formats
-code and `nzyme format-markdown` formats markdown. The rules are nzyme's: the repo's configs extend
-the shared preset and add only what the repo's layout needs. The repo lints and formats its own tree
+oxlint does all the linting (type-aware), ESLint runs what oxlint lacks (the Vue rules and the
+`package.json` checks) and formats Markdown, and oxfmt formats code. The rules are nzyme's: the
+repo's configs extend the shared preset and add only what the repo's layout needs. The repo lints and formats its own tree
 and never nzyme's.
 
 ## Reference state
@@ -13,21 +13,22 @@ and never nzyme's.
   `nzyme/**`. One override turns off the `no-unsafe-*` family for packages that import `.vue` files:
   tsgo cannot type SFC imports, so those rules report the tooling gap, not real unsafety.
 - **`.oxfmtrc.json`** — `assets/oxfmtrc.json.tmpl`. nzyme's formatting options, ignoring build
-  output, markdown (formatted by `format:md`), `.context` and `nzyme`.
-- **`eslint.config.mjs`** — `assets/eslint.config.mjs.tmpl`: `vue()` from `@nzyme/eslint` behind
-  `globalIgnores`. ESLint does not read `.gitignore`, so build output, `.claude/worktrees/**` (agent
-  worktrees are full checkouts) and `nzyme/**` are listed.
+  output, Markdown (formatted by ESLint), `.context` and `nzyme`.
+- **`eslint.config.mjs`** — `assets/eslint.config.mjs.tmpl`: `markdown()`, `packageJson()` and
+  `vue()` from `@nzyme/eslint` behind `globalIgnores`. ESLint does not read `.gitignore`, so build
+  output, `.claude/worktrees/**` (agent worktrees are full checkouts), `.context/**` (agent scratch
+  space) and `nzyme/**` are listed. `markdown()` formats on `eslint --fix` and skips gitignored files.
 - **Scripts** in the root `package.json` (`assets/package.json.tmpl`): `lint`, `lint:check`,
   `lint:warnings`, `format`, `format:check`, `format:md`, `format:md:check`, `lint:nzyme`.
   - `--quiet` reports errors only; `lint:warnings` is the opt-in view of the warning backlog, never
     part of verification.
   - The flags that keep nzyme out: below.
-  - `--exclude .context` on `format-markdown`: `.context/` is agent scratch space. The formatter
-    already skips gitignored paths; the flag keeps the scratch space out even where `.gitignore`
-    lacks it, as nzyme's own scripts do.
+  - `format:md` and `format:md:check` run ESLint on Markdown alone, so `format` handles every file
+    type. `lint` and `lint:check` cover Markdown too.
   - `lint:nzyme` runs nzyme's own `lint:check` and `format:check` in place, for changes made inside
     `nzyme/`.
-- **Dev dependencies:** `@nzyme/eslint`, `eslint`, `oxlint`, `oxlint-tsgolint` (type-aware rules),
+- **Dev dependencies:** `@nzyme/eslint`, `eslint`, `eslint-plugin-package-json` (for `packageJson()`),
+  `oxlint`, `oxlint-tsgolint` (type-aware rules),
   `oxfmt`, all in `assets/package.json.tmpl`. `@nzyme/oxlint` arrives through `@nzyme/eslint`.
 
 ## Keeping nzyme out
@@ -58,7 +59,9 @@ Editors keep discovering nested configs, so a file opened under `nzyme/` gets nz
   `./node_modules/@nzyme/eslint/oxlintrc.json`: a difference; the package path is the one that
   survives a layout change.
 - Scripts: by name. Stricter flags the repo chose (`--deny-warnings`, `--max-warnings 0`) are a
-  recorded choice, not a difference. A missing `format:md`, `format:md:check` or `lint:nzyme` is.
+  recorded choice, not a difference. A missing `format:md`, `format:md:check` or `lint:nzyme` is, and so is a
+  missing `markdown()` in `eslint.config.mjs`. A leftover `nzyme format-markdown` call is a difference:
+  the command no longer exists.
 - Leftovers of the previous toolchain (`.prettierrc`, `.prettierignore`, `.eslintrc*`, a
   `prettier` dependency): propose deleting them.
 - A custom check the repo runs beside lint (a TODO format check, an import-cycle check) is the

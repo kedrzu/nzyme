@@ -8,6 +8,7 @@ import { waitFor } from '@nzyme/utils/waitFor.js';
 import type { Stack, StackOutput } from '../defineStack.js';
 import type { PulumiConfig } from '../PulumiConfig.js';
 import { buildAwsStackConfig } from './buildAwsStackConfig.js';
+import { writeProjectSettings } from './writeProjectSettings.js';
 
 /**
  * Arguments for `automation.LocalWorkspace.createOrSelectStack` / `selectStack`.
@@ -62,6 +63,8 @@ export async function buildStackWorkspace<TOutput extends StackOutput>(
         envVars.PULUMI_CONFIG_PASSPHRASE = config.secretsPassphrase;
     }
 
+    await writeProjectSettings(cwd, config.project);
+
     return {
         args: {
             projectName: config.project,
@@ -90,10 +93,8 @@ export async function buildStackWorkspace<TOutput extends StackOutput>(
                 },
             },
             secretsProvider: config.secretsProvider,
-            projectSettings: {
-                name: config.project,
-                runtime: 'nodejs',
-            },
+            // Deliberately no `projectSettings`: LocalWorkspace would rewrite the shared Pulumi.yaml in
+            // place for every stack. Without them it loads the file written above.
         },
     };
 }

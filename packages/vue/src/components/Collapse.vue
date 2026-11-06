@@ -4,6 +4,11 @@
  */
 import { isBrowser } from '@nzyme/dom-utils/isBrowser.js';
 import { assertTruthy } from '@nzyme/utils/assert.js';
+// Not the built-in `v-show`: hydrated while already shown (the `LazyHydrate` path below), the built-in
+// leaves the server-rendered `display: none` in place for the transition to clear, which it never does
+// (https://github.com/vuejs/core/pull/8371). Imported under another name because `v-show` always
+// compiles to the built-in.
+import { vShow as vShowHydrated } from '@nzyme/vue-utils/directives/vShow.js';
 import { computed, getCurrentInstance, Transition, useCssModule } from 'vue';
 import type { TransitionProps } from 'vue';
 
@@ -11,7 +16,7 @@ import { LazyHydrate } from './LazyHydrate.js';
 
 interface CollapseProps {
   /**
-   * `always` renders the content up front and toggles it with `v-show`;
+   * `always` renders the content up front and toggles its visibility;
    * `lazy` renders it only while shown, unless it has to be hydrated from SSR.
    * @default 'lazy'
    */
@@ -124,7 +129,7 @@ function asHTMLElement(el: Element) {
   >
     <Transition v-bind="transition">
       <div
-        v-show="show"
+        v-show-hydrated="show"
         :class="css.collapse"
       >
         <slot />

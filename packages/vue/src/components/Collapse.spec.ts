@@ -1,11 +1,17 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, onTestFinished, test, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-vue';
-import { h } from 'vue';
+import { createSSRApp, h, reactive } from 'vue';
+import { renderToString } from 'vue/server-renderer';
 
 import Collapse from './Collapse.vue';
 
 const CONTENT_HEIGHT = 120;
+
+// `renderToString` runs in the test browser, so `isBrowser()` is switched off while it does to make
+// the components take their server-side paths.
+const environment = vi.hoisted(() => ({ ssr: false }));
+vi.mock('@nzyme/dom-utils/isBrowser.js', () => ({ isBrowser: () => !environment.ssr }));
 
 /** The element's state captured synchronously in each `heightChange` handler, i.e. mid-transition. */
 interface HeightChangeSnapshot {
@@ -93,7 +99,80 @@ describe('Collapse', () => {
         await expect.element(page.getByTestId('content')).toBeInTheDocument();
         await expect.element(page.getByTestId('content')).not.toBeVisible();
     });
+
+    describe.each(['always', 'lazy'] as const)('hydrated from SSR with `render="%s"` and hidden', renderMode => {
+        test('renders the content hidden on the server', async () => {
+            const { container } = await hydrateCollapse({ show: false, render: renderMode });
+
+            expect(collapseElement().style.display).toBe('none');
+            expect(container.dataset.ssrHtml).toContain('display:none');
+        });
+
+        test('shows the content with an animated height once shown, and hides it again', async () => {
+            const { props, emitted } = await hydrateCollapse({ show: false, render: renderMode });
+
+            props.show = true;
+            await expect.poll(() => emitted.afterEnter).toBe(1);
+
+            const element = collapseElement();
+            expect(element.style.display).toBe('');
+            expect(element.offsetHeight).toBe(CONTENT_HEIGHT);
+            expect(emitted.heightChange).toEqual([CONTENT_HEIGHT]);
+            await expect.element(page.getByTestId('content')).toBeVisible();
+
+            props.show = false;
+            await expect.poll(() => emitted.afterLeave).toBe(1);
+
+            expect(emitted.heightChange).toEqual([CONTENT_HEIGHT, 0]);
+            await expect.element(page.getByTestId('content')).not.toBeVisible();
+        });
+    });
 });
+
+/**
+ * Renders Collapse to HTML the way a server would, then hydrates that HTML in the browser —
+ * the path a prerendered page takes. Mutate the returned `props` to update the hydrated app.
+ */
+async function hydrateCollapse(initialProps: { show: boolean; render: 'always' | 'lazy' }) {
+    const props = reactive({ ...initialProps });
+    const emitted = { heightChange: [] as number[], afterEnter: 0, afterLeave: 0 };
+    const app = () =>
+        createSSRApp({
+            render: () =>
+                h(
+                    Collapse,
+                    {
+                        ...props,
+                        onHeightChange: (height: number) => emitted.heightChange.push(height),
+                        onAfterEnter: () => emitted.afterEnter++,
+                        onAfterLeave: () => emitted.afterLeave++,
+                    },
+                    () => h('div', { 'data-testid': 'content', style: { height: `${CONTENT_HEIGHT}px` } }, 'Content'),
+                ),
+        });
+
+    environment.ssr = true;
+    let html: string;
+    try {
+        html = await renderToString(app());
+    } finally {
+        environment.ssr = false;
+    }
+
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    container.dataset.ssrHtml = html;
+    document.body.append(container);
+
+    const hydrated = app();
+    hydrated.mount(container);
+    onTestFinished(() => {
+        hydrated.unmount();
+        container.remove();
+    });
+
+    return { props, emitted, container };
+}
 
 async function renderCollapse(props: { show: boolean; fade?: boolean; render?: 'always' | 'lazy' }) {
     const snapshots: HeightChangeSnapshot[] = [];

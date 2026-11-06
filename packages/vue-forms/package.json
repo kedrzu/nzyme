@@ -12,6 +12,7 @@
         "src",
         "!src/**/*.test.ts",
         "!src/**/*.test.tsx",
+        "!src/**/*.spec.ts",
         "css"
     ],
     "type": "module",
@@ -49,7 +50,8 @@
     },
     "scripts": {
         "build": "tsgo --build tsconfig.esm.json",
-        "format": "oxfmt ./src > /dev/null"
+        "format": "oxfmt ./src > /dev/null",
+        "test:components": "vitest run"
     },
     "dependencies": {
         "@nzyme/dom-utils": "workspace:*",
@@ -73,8 +75,14 @@
         "@types/bun": "^1.4.4",
         "@types/node": "26.6.6",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+        "@vitejs/plugin-vue": "^6.0.10",
+        "@vitejs/plugin-vue-jsx": "^5.1.6",
+        "@vitest/browser-playwright": "^4.1.12",
         "oxfmt": "0.76.0",
+        "playwright": "^1.64.1",
         "vite": "7.3.7",
+        "vitest": "^4.1.12",
+        "vitest-browser-vue": "^3.1.0",
         "vue": "^3.5.44",
         "vue-router": "^5.4.0"
     },

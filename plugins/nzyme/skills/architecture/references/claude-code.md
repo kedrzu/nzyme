@@ -91,6 +91,21 @@ adds skills, commands or hooks to every session, so a project enables what it us
 |`claude-md-management`|`claude-plugins-official`|auditing and updating `CLAUDE.md`|
 |`skill-creator`|`claude-plugins-official`|writing and evaluating the repo's own skills|
 
+**Practice plugins** — one per area, because a plugin is the unit a repo can enable. Each holds the
+same skill as the user-invoked one in `nzyme`, without `disable-model-invocation`, so its description
+is in every session's context and the agent loads it on its own. A repo links only those it has the
+element for, next to `.claude/skills/nzyme`, and a repo without UI or SQL pays nothing for them:
+
+|Plugin|Skill|Linked when the repo has|
+|-|-|-|
+|`nzyme-ui`|`nzyme-ui:ui`|the UI package element|
+|`nzyme-drizzle`|`nzyme-drizzle:drizzle`|the SQL with Drizzle element|
+|`nzyme-api-clients`|`nzyme-api-clients:api-clients`|the third-party APIs element|
+
+```sh
+ln -s ../../nzyme/plugins/nzyme-ui .claude/skills/nzyme-ui
+```
+
 **When the repo uses it** — added with the element or integration that needs it, and recorded in
 `ARCHITECTURE.md`:
 
@@ -111,7 +126,8 @@ marketplace is a difference (remove it from `enabledPlugins`).
 
 ## Placeholders
 
-- `CLAUDE.md`: `{{summary — …}}` from `ARCHITECTURE.md`'s opening, or ask.
+- `CLAUDE.md`: `{{summary — …}}` from `ARCHITECTURE.md`'s opening, or ask; `{{practice skills — …}}`
+  from the practice plugins the repo links (drop the sentence when there are none).
 - `settings.json`: the allow list follows the root `package.json`. An element that adds a script adds
   its allow (`Bash(bun run e2e:*)`, `Bash(bun run storybook:*)`, a database script).
 
@@ -128,6 +144,9 @@ marketplace is a difference (remove it from `enabledPlugins`).
   Plugins the repo loads through committed symlinks into another submodule stay as they are.
 - `secrets@kedrzu-skills` in `enabledPlugins`: a difference. Remove it; the `nzyme:secrets` skill and
   `secrets set --prompt` replace it, so every credential goes to the repo's store.
+- Practice plugins: an element in play without its symlink is a difference, and so is a symlink
+  without the element. A marketplace entry for one would follow nzyme `main` instead of the pin, like
+  `nzyme@nzyme`: replace it with the symlink.
 - `.claude/git.json`: not compared here. A repo without it may simply push to `main`; `git:setup`
   decides.
 - `CLAUDE.md`: by heading section. The repo's own sections (language rules, a standing authorization

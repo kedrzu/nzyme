@@ -77,7 +77,7 @@ menus, listbox), the parts wrap reka parts and the context carries only what rek
   `.tsx` sources, which Nuxt's per-component SSR style inlining does not pick up. On a server-rendered
   page their styles arrive only with the client bundle — carousel slides render stacked until
   hydration (layout shift). An SSR app built on them needs the style settings in
-  `../architecture/references/nuxt-app.md` (SPA or SSR). An SPA is unaffected.
+  the `architecture` skill, `references/nuxt-app.md` (SPA or SSR). An SPA is unaffected.
 
 ## Modals
 

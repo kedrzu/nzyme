@@ -5,7 +5,7 @@
  */
 import { forceReflow } from '@nzyme/dom-utils/forceReflow.js';
 import { getOuterHeight } from '@nzyme/dom-utils/getOuterHeight.js';
-import { assertTruthy, assertValue } from '@nzyme/utils/assert.js';
+import { assertValue } from '@nzyme/utils/assert.js';
 import { getCurrentInstance, useCssModule, useTemplateRef } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
 
@@ -66,8 +66,11 @@ function afterLeave() {
 }
 
 function fixedHeight(el: Element) {
-  // The transitioned element is the slot's root node or the fallback `<div>`.
-  assertTruthy(el instanceof HTMLElement, 'Reveal transitions an HTML element.');
+  // The transitioned element is the slot's root node or the fallback `<div>`. A non-HTML root (such as an
+  // SVG) has no `offsetHeight` to measure, so the wrapper keeps its auto height.
+  if (!(el instanceof HTMLElement)) {
+    return;
+  }
   const element = assertValue(wrapper.value);
 
   element.style.height = `${getOuterHeight(el)}px`;

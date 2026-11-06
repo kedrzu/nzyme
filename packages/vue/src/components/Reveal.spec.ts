@@ -95,6 +95,19 @@ describe('Reveal', () => {
         expect(getComputedStyle(wrapper).transitionDuration).toBe('0.2s');
     });
 
+    test('swaps an SVG slot root without errors and still emits the transition events', async () => {
+        const errors: unknown[] = [];
+        const { content, screen } = await renderReveal('svg', DURATION, error => errors.push(error));
+
+        content.value = 'tall';
+        await expect.poll(() => screen.emitted('afterEnter')).toHaveLength(1);
+        await expect.poll(() => screen.emitted('afterLeave')).toHaveLength(1);
+
+        expect(errors).toEqual([]);
+        expect(screen.emitted('beforeLeave')).toHaveLength(1);
+        expect(screen.emitted('enter')).toHaveLength(1);
+    });
+
     test('animates from and to an empty slot', async () => {
         const { content, snapshots, screen } = await renderReveal('none');
         expect(wrapperElement(screen.container).getBoundingClientRect().height).toBe(0);
@@ -117,7 +130,11 @@ describe('Reveal', () => {
     });
 });
 
-async function renderReveal(initial: 'none' | 'short' | 'tall', duration: number | null = DURATION) {
+async function renderReveal(
+    initial: 'none' | 'short' | 'tall' | 'svg',
+    duration: number | null = DURATION,
+    onError?: (error: unknown) => void,
+) {
     const content = ref(initial);
     const snapshots: RevealSnapshot[] = [];
 
@@ -139,7 +156,10 @@ async function renderReveal(initial: 'none' | 'short' | 'tall', duration: number
     const screen = await render(Reveal, {
         // `@vue/test-utils` (under `vitest-browser-vue`) stubs `<Transition>` by default, which skips
         // every transition hook this component is built on.
-        global: { stubs: { transition: false } },
+        global: {
+            stubs: { transition: false },
+            config: { errorHandler: onError },
+        },
         props: {
             duration: duration ?? undefined,
             onBeforeEnter: snapshot('beforeEnter'),
@@ -153,11 +173,13 @@ async function renderReveal(initial: 'none' | 'short' | 'tall', duration: number
             default: () =>
                 content.value === 'none'
                     ? undefined
-                    : h('div', {
-                          key: content.value,
-                          'data-content': content.value,
-                          style: { height: content.value === 'short' ? '40px' : '100px' },
-                      }),
+                    : content.value === 'svg'
+                      ? h('svg', { key: 'svg', 'data-content': 'svg', width: 40, height: 40 })
+                      : h('div', {
+                            key: content.value,
+                            'data-content': content.value,
+                            style: { height: content.value === 'short' ? '40px' : '100px' },
+                        }),
         },
     });
 

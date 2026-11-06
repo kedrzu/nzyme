@@ -160,6 +160,15 @@ jobs:
       - name: Test
         run: bun run test
 
+      # The browser build has to match the `playwright` that `@nzyme/vue` installed, so it is installed
+      # through that package's own binary rather than a global `playwright`.
+      - name: Install Chromium
+        working-directory: packages/vue
+        run: bun x playwright install --with-deps chromium
+
+      - name: Component tests
+        run: bun run test:components
+
       # Only needed to bootstrap packages that are not on npm yet (trusted publishing can only be
       # configured for an existing package). Without the secret, npm authenticates through OIDC.
       - name: Configure npm token

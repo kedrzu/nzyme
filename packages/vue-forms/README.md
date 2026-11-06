@@ -120,7 +120,7 @@ const skuValidator = defineValidator<string>({
 Validator types (`FormValidator`, `FormValidatorSync`, `FormValidatorAsync`, `FormValidatorBehavior`,
 `FormValidationContext`, …) come from `types.js`.
 
-## `Form` component — `components/Form.jsx`
+## `Form` component — `components/Form.vue`
 
 Wraps a native `<form novalidate>` and provides `FormContext` to everything inside.
 

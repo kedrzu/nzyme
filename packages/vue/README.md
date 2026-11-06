@@ -10,13 +10,13 @@ bun add @nzyme/vue
 ```
 
 Everything is exported from the package root. Each module is also importable on its own: `.ts` files as
-`@nzyme/vue/<path>.js`, `.tsx` as `@nzyme/vue/<path>.jsx`, SFCs as `@nzyme/vue/<path>.vue`. `Reveal`,
-`Collapse`, `Carousel` and `useScrollLock` import `*.module.scss`, so the bundler must process SCSS
-modules from dependencies.
+`@nzyme/vue/<path>.js`, `.tsx` as `@nzyme/vue/<path>.jsx`, SFCs as `@nzyme/vue/<path>.vue`. `Reveal`, `Collapse` and
+`Carousel` are default exports of `.vue` files (`import Collapse from '@nzyme/vue/components/Collapse.vue'`);
+their styles are SCSS, so the bundler must process SCSS from dependencies.
 
 ## Animated containers
 
-### `Reveal` — `components/Reveal.jsx`
+### `Reveal` — `components/Reveal.vue`
 
 Animates the height of its box while its single child enters or leaves — wrap a `v-if` (or a keyed
 child to swap content).
@@ -33,7 +33,7 @@ child to swap content).
 </Reveal>
 ```
 
-### `Collapse` — `components/Collapse.jsx`
+### `Collapse` — `components/Collapse.vue`
 
 Expands and collapses its content with a height animation.
 
@@ -50,7 +50,7 @@ Expands and collapses its content with a height animation.
 Under SSR, hidden `'lazy'` content is server-rendered with `v-show` and its hydration is deferred
 (`LazyHydrate`) until `show` turns `true`.
 
-### `Carousel` — `components/Carousel.jsx`
+### `Carousel` — `components/Carousel.vue`
 
 Paginated horizontal carousel: splits its items into pages of as many as fit the width, with swipe
 (touch and mouse), auto-play and keyboard support. It re-measures on resize, on DOM changes inside and
@@ -87,8 +87,9 @@ it while the layout settles). The instance exposes `goToPage`, `moveBy`, `showIt
 </Carousel>
 ```
 
-`getCarouselPages({ items, width, align, alignFirstPageToStart? })` is the pure pagination it uses
-(`GetCarouselPagesParams`, `CarouselItemBox`, `CarouselPage`, `CarouselAlign` types).
+`getCarouselPages({ items, width, align, alignFirstPageToStart? })` (`components/getCarouselPages.js`) is
+the pure pagination it uses; the `GetCarouselPagesParams`, `CarouselItemBox`, `CarouselPage` and
+`CarouselAlign` types are in `components/CarouselTypes.js`.
 
 ### `LazyHydrate` — `components/LazyHydrate.js`
 

@@ -82,7 +82,7 @@ import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-vue';
 import { h } from 'vue';
 
-import { Collapse } from './Collapse.jsx';
+import Collapse from './Collapse.vue';
 
 test('does not render lazy content until first shown', async () => {
     const screen = await render(Collapse, {

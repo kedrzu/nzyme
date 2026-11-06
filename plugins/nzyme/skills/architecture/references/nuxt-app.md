@@ -50,9 +50,10 @@ Ask it in a new repo; in an existing one the config already answers it.
   Nuxt inlines each rendered SFC's `<style>` (`Reveal`, `Collapse`, `Carousel`, `Form` are SFCs).
   `@nuxtjs/critters` then inlines into one `<style>` only the rules matching the prerendered DOM and
   makes the remaining stylesheet links non-blocking (`media="print"` plus `onload`, with a `<noscript>`
-  fallback). The `@nzyme/vue-transitions` components are still `.tsx` with CSS modules, so their CSS is
-  not inlined per component; whether that matters has not been verified (it reaches the page through
-  linked stylesheets, which critters scans). Add `@nuxtjs/critters` to the app's `devDependencies`.
+  fallback). The `@nzyme/vue-transitions` components are still `.tsx` with CSS modules. Whether Nuxt
+  inlines their CSS per component has not been measured: the one `.tsx` CSS module measured, on a
+  single prerendered page, was inlined, and why is unverified. Whatever is not inlined reaches the
+  page through linked stylesheets, which critters scans. Add `@nuxtjs/critters` to the app's `devDependencies`.
 
   `failOnError` turns a page that fails to render into a failed build, not a missing file. A page
   rendered on every request needs `nuxt build` and a server to run it; choose that only when
@@ -264,7 +265,7 @@ A build that reads any other gitignored file (a key, a per-worktree config) adds
   a `{projectRoot}` path, is always a difference — and so is a missing guard row. Repo scripts and
   dependencies stay.
 - `nuxt.config.ts`: by option. Auto-imports on, `pages/` routing, a `~`/`@@` alias in use, `ssr`
-  missing (Nuxt's default is SSR), or an SSR app without `@nuxtjs/critters` in
+  missing (Nuxt's default is SSR), or a prerendered SSR app without `@nuxtjs/critters` in
   `modules`: each a difference. Repo modules,
   `app.head`, route rules and hooks stay.
 - Plugins: a container created anywhere but one `ioc-plugin`, or a plugin that resolves services

@@ -100,6 +100,18 @@ describe('Collapse', () => {
         await expect.element(page.getByTestId('content')).not.toBeVisible();
     });
 
+    test.each(['always', 'lazy'] as const)(
+        'with `render="%s"` puts the parent `class` on the element next to its own',
+        async renderMode => {
+            await renderCollapse({ show: true, render: renderMode, attrs: { class: 'parent' } });
+
+            const element = collapseElement();
+            // Merged with the component's own CSS-module class, not replacing it.
+            expect(element.classList).toContain('parent');
+            expect(element.classList.length).toBeGreaterThan(1);
+        },
+    );
+
     describe.each(['always', 'lazy'] as const)('hydrated from SSR with `render="%s"` and hidden', renderMode => {
         test('renders the content hidden on the server', async () => {
             const { container } = await hydrateCollapse({ show: false, render: renderMode });
@@ -174,12 +186,21 @@ async function hydrateCollapse(initialProps: { show: boolean; render: 'always' |
     return { props, emitted, container };
 }
 
-async function renderCollapse(props: { show: boolean; fade?: boolean; render?: 'always' | 'lazy' }) {
+async function renderCollapse({
+    attrs,
+    ...props
+}: {
+    show: boolean;
+    fade?: boolean;
+    render?: 'always' | 'lazy';
+    attrs?: Record<string, string>;
+}) {
     const snapshots: HeightChangeSnapshot[] = [];
     const screen = await render(Collapse, {
         // `@vue/test-utils` (under `vitest-browser-vue`) stubs `<Transition>` by default, which skips
         // every transition hook this component is built on.
         global: { stubs: { transition: false } },
+        attrs,
         props: {
             ...props,
             onHeightChange: (height: number) => {

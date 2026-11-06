@@ -28,6 +28,10 @@ interface CollapseProps {
   fade?: boolean;
 }
 
+// `<Transition>` is compiled away on the server and does not forward `_attrs` to its child, so the
+// attributes are bound to the `<div>` explicitly.
+defineOptions({ inheritAttrs: false });
+
 const props = withDefaults(defineProps<CollapseProps>(), { render: 'lazy' });
 const emit = defineEmits<{
   heightChange: [height: number];
@@ -124,6 +128,7 @@ function asHTMLElement(el: Element) {
     <Transition v-bind="transition">
       <div
         v-show-hydrated="show"
+        v-bind="$attrs"
         :class="css.collapse"
       >
         <slot />
@@ -136,6 +141,7 @@ function asHTMLElement(el: Element) {
   >
     <div
       v-if="show"
+      v-bind="$attrs"
       :class="css.collapse"
     >
       <slot />

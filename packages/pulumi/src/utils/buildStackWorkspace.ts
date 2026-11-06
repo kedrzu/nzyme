@@ -8,7 +8,6 @@ import { waitFor } from '@nzyme/utils/waitFor.js';
 import type { Stack, StackOutput } from '../defineStack.js';
 import type { PulumiConfig } from '../PulumiConfig.js';
 import { buildAwsStackConfig } from './buildAwsStackConfig.js';
-import { writeProjectSettings } from './writeProjectSettings.js';
 
 /**
  * Arguments for `automation.LocalWorkspace.createOrSelectStack` / `selectStack`.
@@ -63,8 +62,6 @@ export async function buildStackWorkspace<TOutput extends StackOutput>(
         envVars.PULUMI_CONFIG_PASSPHRASE = config.secretsPassphrase;
     }
 
-    await writeProjectSettings(cwd, config.project);
-
     return {
         args: {
             projectName: config.project,
@@ -83,7 +80,9 @@ export async function buildStackWorkspace<TOutput extends StackOutput>(
         },
         options: {
             envVars,
-            workDir: cwd,
+            // No `workDir`: each workspace gets its own temp directory for the Pulumi.yaml and
+            // Pulumi.<stack>.yaml that the CLI needs. Stacks deploy in parallel, and in one shared directory
+            // they rewrote each other's files while another stack's CLI was reading them.
             pulumiHome,
             pulumiCommand,
             stackSettings: {
@@ -93,8 +92,12 @@ export async function buildStackWorkspace<TOutput extends StackOutput>(
                 },
             },
             secretsProvider: config.secretsProvider,
-            // Deliberately no `projectSettings`: LocalWorkspace would rewrite the shared Pulumi.yaml in
-            // place for every stack. Without them it loads the file written above.
+            projectSettings: {
+                name: config.project,
+                runtime: 'nodejs',
+                // The program directory; Pulumi's own default for an inline program is process.cwd().
+                main: cwd,
+            },
         },
     };
 }

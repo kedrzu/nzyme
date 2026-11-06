@@ -7,8 +7,8 @@ import type { AwsConfig } from './AwsConfig.js';
  */
 export interface PulumiConfig {
     /**
-     * The program directory (the project's `main`). Workspace files (`Pulumi.yaml`) are not written here: each
-     * stack's workspace gets its own temp directory.
+     * The program directory (the project's `main`); a relative path is resolved against `process.cwd()`.
+     * Workspace files (`Pulumi.yaml`) are not written here: each stack's workspace gets its own temp directory.
      * @default process.cwd()
      */
     cwd?: string;

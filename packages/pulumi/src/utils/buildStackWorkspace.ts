@@ -32,7 +32,8 @@ export async function buildStackWorkspace<TOutput extends StackOutput>(
     stack: Stack<TOutput>,
     config: PulumiConfig,
 ): Promise<StackWorkspace> {
-    const cwd = config.cwd ?? process.cwd();
+    // Absolute, because `main` is resolved against the workspace's temp directory, not against process.cwd().
+    const cwd = path.resolve(config.cwd ?? process.cwd());
     const envVars = { ...process.env } as Record<string, string>;
 
     // Resolve the node_modules directory containing @pulumi/pulumi.

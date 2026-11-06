@@ -4,8 +4,8 @@ import { render } from 'vitest-browser-vue';
 import { defineComponent, h, ref } from 'vue';
 import type { VNode } from 'vue';
 
-import { Carousel } from './Carousel.jsx';
-import type { CarouselAlign, CarouselSlot } from './Carousel.jsx';
+import Carousel from './Carousel.vue';
+import type { CarouselAlign, CarouselSlot } from './CarouselTypes.js';
 
 const CAROUSEL_WIDTH = 300;
 const ITEM_WIDTH = 100;

@@ -1,6 +1,8 @@
 export * from './App.js';
 export { CommonPlugin } from './CommonPlugin.js';
-export * from './components/Carousel.jsx';
+export { default as Carousel } from './components/Carousel.vue';
+export * from './components/CarouselTypes.js';
+export * from './components/getCarouselPages.js';
 export { default as Collapse } from './components/Collapse.vue';
 export { LazyHydrate } from './components/LazyHydrate.js';
 export { default as Reveal } from './components/Reveal.vue';

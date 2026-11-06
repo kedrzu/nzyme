@@ -7,6 +7,7 @@ clone or a new worktree behaves the same for every agent, with no per-machine se
 
 ## Reference state
 
+- **`.claude/.gitignore`** — `assets/claude-gitignore.tmpl`: personal settings and agent worktrees.
 - **`.claude/settings.json`** — `assets/claude-settings.json.tmpl`, nzyme's own committed settings
   (`../../../../.claude/settings.json`) adapted to the product's scripts. Each part:
   - `$schema` — completion and validation in the editor.
@@ -61,7 +62,8 @@ clone or a new worktree behaves the same for every agent, with no per-machine se
   that Git leaves the commit style to `git-workflow`. The file stays a hub: detail lives in the skills
   and `ARCHITECTURE.md`.
 - **Local files** — `CLAUDE.local.md` (personal instructions, e.g. a reply language) and
-  `.claude/settings.local.json` (personal grants, MCP servers) are gitignored (`assets/gitignore.tmpl`)
+  `.claude/settings.local.json` (personal grants, MCP servers) are gitignored, the first in the root
+  `.gitignore`, the second with `worktrees/` in `.claude/.gitignore` (`assets/claude-gitignore.tmpl`),
   and copied into each new worktree by `setup.sh` (`references/setup-scripts.md`).
 - **`.mcp.json`** — none by default; a product adds its own servers and enables them with
   `enabledMcpjsonServers`. The browser MCP comes from the `playwright` plugin.

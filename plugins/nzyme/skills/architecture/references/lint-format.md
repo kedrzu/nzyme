@@ -14,6 +14,10 @@ and never nzyme's.
   tsgo cannot type SFC imports, so those rules report the tooling gap, not real unsafety.
 - **`.oxfmtrc.json`** — `assets/oxfmtrc.json.tmpl`. nzyme's formatting options, ignoring build
   output, Markdown (formatted by ESLint), `.context` and `nzyme`.
+- **Build output in the ignores is the repo's own**, like `.gitignore` (`references/monorepo.md`):
+  the assets list `dist`; add `.output` and `.nuxt` when the repo has a Nuxt app, `storybook-static`,
+  `test-results`, `playwright-report` when it produces them — to both `.oxfmtrc.json` and
+  `eslint.config.mjs`.
 - **`eslint.config.mjs`** — `assets/eslint.config.mjs.tmpl`: `markdown()`, `packageJson()` and
   `vue()` from `@nzyme/eslint` behind `globalIgnores`. ESLint does not read `.gitignore`, so build
   output, `.claude/worktrees/**` (agent worktrees are full checkouts), `.context/**` (agent scratch

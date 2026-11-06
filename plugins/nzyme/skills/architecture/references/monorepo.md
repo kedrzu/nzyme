@@ -12,7 +12,7 @@ reference adds the files around them.
 |`package.json`|`assets/package.json.tmpl`|every key except `scripts` (`references/setup-scripts.md` owns those)|
 |`tsconfig.esm.json`|`assets/tsconfig.esm.json.tmpl`|the whole file|
 |`bunfig.toml`|`assets/bunfig.toml.tmpl`|the three `jsx` lines|
-|`.gitignore`|`assets/gitignore.tmpl`|every line|
+|`.gitignore`|`assets/gitignore.tmpl`|the lines for what every nzyme repo produces|
 |`.gitattributes`|`assets/gitattributes.tmpl`|every line|
 |`.editorconfig`|`assets/editorconfig.tmpl`|the whole file|
 |`patches/bun-types@<version>.patch`|copied from `nzyme/patches/`|the file and its `patchedDependencies` entry|
@@ -23,10 +23,9 @@ reference adds the files around them.
 - **Workspaces, `workspace:*` dependencies, the toolchain versions and the `bun-types` patch:**
   `docs/submodule-setup.md#workspace-and-dependencies`.
 - **`tsconfig.esm.json` is the only committed root tsconfig.** `nzyme monorepo` generates every
-  `tsconfig.json` and `tsconfig.cjs.json`, which stay gitignored:
-  `docs/submodule-setup.md#typescript-and-generated-files`. A package whose tsconfig is hand-written
-  (a Nuxt app extending `.nuxt/tsconfig.json`) gets a `!/packages/<package>/tsconfig.json` line; so
-  does `scripts/` for the Nx guard test (`references/nx.md`).
+  `tsconfig.json`, which stays gitignored: `docs/submodule-setup.md#typescript-and-generated-files`.
+  A directory whose tsconfig is hand-written (a Nuxt app extending `.nuxt/tsconfig.json`, `scripts/`
+  for the Nx guard test) un-ignores it in its own `.gitignore`: `!tsconfig.json`.
 - **`nx.includedScripts: []`** in the root `package.json` — why: `docs/submodule-setup.md#nx`. Root
   targets live in `project.json` only.
 - **`bunfig.toml`:** bun reads JSX options only from the `bunfig.toml` of the directory it runs in,
@@ -37,9 +36,20 @@ reference adds the files around them.
   merged.
 - **`.editorconfig`** matches `.oxfmtrc.json` (4 spaces; 2 for YAML, HTML and Vue), so an editor
   without the oxc extension writes what the formatter would.
-- **`.gitignore`** covers build output, tool caches, generated files, env files and local agent
-  files. Add per technology: `.wrangler/`, `.dev.vars`, `.dev.vars.*`, `!.dev.vars.example` for
-  Cloudflare Workers; `target/` for Rust.
+- **`.gitignore` lists what this repo actually produces**, nothing from a catalogue. The asset holds
+  what every nzyme repo produces: dependencies, `dist`, tool caches, nzyme's generated files, env
+  files, `CLAUDE.local.md`, `.context/`. Everything else is added when the repo has its source:
+  - **Owned by one directory → that directory's own `.gitignore`**, never a nested path in the root
+    one: a Nuxt app ignores `.nuxt/` and `.output/` in `packages/<app>/.gitignore`, the UI package
+    ignores `storybook-static/` when it builds Storybook, `packages/e2e/.gitignore` ignores
+    `test-results/` and `playwright-report/`, `.claude/.gitignore` ignores `settings.local.json` and
+    `worktrees/` (`assets/claude-gitignore.tmpl`). The rule moves and disappears with the directory.
+  - **Produced anywhere in the tree → the root**, e.g. `.wrangler/`, `.dev.vars`, `.dev.vars.*` for
+    Cloudflare Workers; `target/` for Rust; `.playwright-mcp/` when agents use the Playwright MCP;
+    `!.env.example` when the repo commits one.
+  - **OS and editor files** (`.DS_Store`, `.idea/`, swap files) come from a developer's machine, not
+    the project: they belong in that developer's global gitignore (`core.excludesFile`). `.vscode/`
+    holds the repo's shared settings and is committed (`references/vscode.md`).
 
 ## Placeholders
 
@@ -60,7 +70,11 @@ reference adds the files around them.
   dependencies and extra `overrides` stay.
 - A hand-rolled tsconfig generator or committed `tsconfig.json` files: a difference — `nzyme monorepo`
   replaces them.
-- `.gitignore`, `.gitattributes`: add the lines the asset has and the repo lacks; never remove the
-  repo's.
+- `.gitignore`: a missing asset line, or a missing entry for an output the repo does produce, is a
+  difference. So is a line nothing in the repo produces (a leftover, a copied catalogue, OS or editor
+  files), and a nested path that belongs in that directory's own `.gitignore`: propose removing or
+  moving it. Check with `git check-ignore --no-index -v <path>` before claiming a file is or is not
+  covered.
+- `.gitattributes`: add the lines the asset has and the repo lacks; never remove the repo's.
 - A missing `.editorconfig` or `bunfig.toml` is a whole-file difference.
 - Turbo (`turbo.json`) instead of Nx: a difference owned by `references/nx.md`.

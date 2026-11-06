@@ -3,6 +3,7 @@ export * from './canScrollHorizontally.js';
 export * from './clearFocus.js';
 export * from './createHistoryMock.js';
 export * from './downloadFile.js';
+export * from './forceReflow.js';
 export * from './getBrowserLanguage.js';
 export * from './getChildrenHeight.js';
 export * from './getCookie.js';

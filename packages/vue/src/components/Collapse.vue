@@ -2,6 +2,7 @@
 /**
  * Animated collapse/expand component with optional lazy rendering and fade transitions.
  */
+import { forceReflow } from '@nzyme/dom-utils/forceReflow.js';
 import { isBrowser } from '@nzyme/dom-utils/isBrowser.js';
 import { assertTruthy } from '@nzyme/utils/assert.js';
 // Not the built-in `v-show`: hydrated while already shown (the `LazyHydrate` path below), the built-in
@@ -94,25 +95,18 @@ function afterLeave(el: Element) {
 function fixedHeight(el: HTMLElement) {
   el.style.height = `${el.scrollHeight}px`;
   el.style.overflow = 'hidden';
-  forceRepaint(el);
+  forceReflow(el);
 }
 
 function autoHeight(el: HTMLElement) {
   el.style.overflow = '';
   el.style.height = '';
-  forceRepaint(el);
+  forceReflow(el);
 }
 
 function zeroHeight(el: HTMLElement) {
   el.style.height = '0';
-  forceRepaint(el);
-}
-
-function forceRepaint(el: HTMLElement) {
-  // Reading the computed height forces a reflow, so the browser registers the height
-  // set just before as the transition's starting point. Returned only so the read is not
-  // an unused expression.
-  return getComputedStyle(el).height;
+  forceReflow(el);
 }
 
 function asHTMLElement(el: Element) {

@@ -3,6 +3,7 @@
  * Animates its wrapper's height when the default slot's content is swapped (a change of the root
  * node's `key`), cross-fading the leaving and entering content. An empty slot animates to zero height.
  */
+import { forceReflow } from '@nzyme/dom-utils/forceReflow.js';
 import { getOuterHeight } from '@nzyme/dom-utils/getOuterHeight.js';
 import { assertTruthy, assertValue } from '@nzyme/utils/assert.js';
 import { getCurrentInstance, useCssModule, useTemplateRef } from 'vue';
@@ -71,20 +72,13 @@ function fixedHeight(el: Element) {
 
   element.style.height = `${getOuterHeight(el)}px`;
   element.style.overflow = 'hidden';
-  forceRepaint(el);
+  forceReflow(el);
 }
 
 function autoHeight() {
   const element = assertValue(wrapper.value);
   element.style.overflow = '';
   element.style.height = '';
-}
-
-function forceRepaint(el: HTMLElement) {
-  // Reading the computed height forces a reflow, so the browser registers the height
-  // set just before as the transition's starting point. Returned only so the read is not
-  // an unused expression.
-  return getComputedStyle(el).height;
 }
 </script>
 

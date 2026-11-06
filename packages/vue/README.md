@@ -10,9 +10,9 @@ bun add @nzyme/vue
 ```
 
 Everything is exported from the package root. Each module is also importable on its own: `.ts` files as
-`@nzyme/vue/<path>.js`, `.tsx` as `@nzyme/vue/<path>.jsx`, SFCs as `@nzyme/vue/<path>.vue`. `Reveal`, `Collapse` and
-`Carousel` are default exports of `.vue` files (`import Collapse from '@nzyme/vue/components/Collapse.vue'`);
-their styles are SCSS, so the bundler must process SCSS from dependencies.
+`@nzyme/vue/<path>.js`, SFCs as `@nzyme/vue/<path>.vue`. `Reveal`, `Collapse` and `Carousel` are default exports of
+`.vue` files (`import Collapse from '@nzyme/vue/components/Collapse.vue'`); their styles are SCSS, so the bundler must
+process SCSS from dependencies.
 
 ## Animated containers
 

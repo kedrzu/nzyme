@@ -88,6 +88,8 @@
       "dependencies": {
         "@nzyme/cli-core": "workspace:*",
         "@nzyme/i18n-compiler": "workspace:*",
+        "@nzyme/logging": "workspace:*",
+        "@nzyme/machine": "workspace:*",
         "@nzyme/project-utils": "workspace:*",
         "@nzyme/utils": "workspace:*",
         "@types/fs-extra": "^11.0.4",
@@ -105,10 +107,12 @@
         "typescript": "^6.0.3",
       },
       "devDependencies": {
+        "@nzyme/ioc": "workspace:*",
         "@nzyme/tsconfig": "workspace:*",
         "@types/lodash.merge": "4.6.9",
         "@types/node": "26.6.6",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+        "clipanion": "^4.0.0-rc.4",
         "oxfmt": "0.76.0",
       },
     },
@@ -376,6 +380,20 @@
         "oxfmt": "0.76.0",
         "typescript": "6.0.3",
         "vue-tsc": "^3.3.13",
+      },
+    },
+    "packages/machine": {
+      "name": "@nzyme/machine",
+      "version": "0.15.1",
+      "dependencies": {
+        "@nzyme/logging": "workspace:*",
+        "@nzyme/utils": "workspace:*",
+      },
+      "devDependencies": {
+        "@nzyme/tsconfig": "workspace:*",
+        "@types/node": "26.6.6",
+        "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+        "oxfmt": "0.76.0",
       },
     },
     "packages/markdown": {
@@ -1479,6 +1497,8 @@
     "@nzyme/logging": ["@nzyme/logging@workspace:packages/logging"],
 
     "@nzyme/logging-ui": ["@nzyme/logging-ui@workspace:packages/logging-ui"],
+
+    "@nzyme/machine": ["@nzyme/machine@workspace:packages/machine"],
 
     "@nzyme/markdown": ["@nzyme/markdown@workspace:packages/markdown"],
 

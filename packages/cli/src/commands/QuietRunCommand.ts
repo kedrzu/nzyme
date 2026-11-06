@@ -4,8 +4,10 @@ import path from 'node:path';
 import { Option } from '@nzyme/cli-core';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { spawnForExitCode } from '@nzyme/cli-core/utils/spawnForExitCode.js';
+import { MACHINE_STATUS_PREFIX } from '@nzyme/machine/formatMachineCapacityStatus.js';
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
 
+import { followLogLines } from '../quietRun/followLogLines.js';
 import { getQuietRunLogFileName, renderQuietRunReport } from '../quietRun/quietRunReport.js';
 
 /** Default lines of trailing output shown on failure. */
@@ -13,6 +15,9 @@ const DEFAULT_TAIL = 30;
 
 /** Default maximum of error-signature lines shown on failure. */
 const DEFAULT_MATCHES = 40;
+
+/** How often the log is checked for lines to pass through while the command runs. */
+const PASS_THROUGH_POLL_MS = 1000;
 
 /**
  * Runs a command while keeping its full output OUT of a coding agent's context.
@@ -32,7 +37,9 @@ export class QuietRunCommand extends Command {
         description: 'Run a command with its output sent to a log file, printing only a summary',
         details: `
             Runs the command with its combined stdout/stderr written to a log file in
-            \`<project root>/.context/cmd-logs/\`. On success prints one line (command, line
+            \`<project root>/.context/cmd-logs/\`. Lines starting with \`${MACHINE_STATUS_PREFIX}\`
+            (machine capacity queue status) are also passed through to stderr live, so a run
+            waiting for capacity says so. On success prints one line (command, line
             count, duration, log path). On failure prints the error-looking lines, the last
             lines of output and the log path. The exit code is the command's own — except that
             bun's "Usage: bun run" banner (an invalid invocation that exits 0 without running
@@ -68,7 +75,16 @@ export class QuietRunCommand extends Command {
         const logPath = path.join(logDir, getQuietRunLogFileName({ executable, date: new Date(), pid: process.pid }));
 
         const startedAt = Date.now();
-        const exitCode = await runToLog({ executable, args, logPath });
+        const exitCode = await runToLog({
+            executable,
+            args,
+            logPath,
+            onLine: line => {
+                if (line.startsWith(MACHINE_STATUS_PREFIX)) {
+                    this.context.stderr.write(`${line}\n`);
+                }
+            },
+        });
         const seconds = Math.floor((Date.now() - startedAt) / 1000);
 
         const report = renderQuietRunReport({
@@ -117,6 +133,8 @@ interface RunToLogOptions {
     executable: string;
     args: string[];
     logPath: string;
+    /** Receives every line of the log while the command runs (polled), the rest once it exits. */
+    onLine: (line: string) => void;
 }
 
 /**
@@ -128,6 +146,8 @@ interface RunToLogOptions {
 async function runToLog(options: RunToLogOptions): Promise<number> {
     const { executable, args, logPath } = options;
     const log = await open(logPath, 'w');
+    const follower = await followLogLines({ path: logPath, onLine: options.onLine });
+    const timer = setInterval(() => void follower.poll(), PASS_THROUGH_POLL_MS);
 
     try {
         const { exitCode, error } = await spawnForExitCode({
@@ -142,7 +162,9 @@ async function runToLog(options: RunToLogOptions): Promise<number> {
 
         return exitCode;
     } finally {
+        clearInterval(timer);
         await log.close();
+        await follower.finish();
     }
 }
 

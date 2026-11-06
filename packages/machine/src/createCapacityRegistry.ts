@@ -1,0 +1,474 @@
+import { randomUUID } from 'node:crypto';
+import {
+    mkdirSync,
+    readdirSync,
+    readFileSync,
+    renameSync,
+    rmdirSync,
+    statSync,
+    unlinkSync,
+    writeFileSync,
+} from 'node:fs';
+import { homedir, totalmem } from 'node:os';
+import * as path from 'node:path';
+
+import { ApplicationError } from '@nzyme/logging/ApplicationError.js';
+
+import { GiB } from './byteUnits.js';
+import { sumUnmetReservationBytes } from './computeCapacity.js';
+import type { CapacityMemoryRequest, CapacityWorkerRange } from './computeCapacity.js';
+import type {
+    MachineCapacityEnvironmentOptions,
+    MachineCapacityHolder,
+    MachineCapacityStatus,
+    MachineCapacityWaiter,
+} from './MachineCapacityTypes.js';
+import { readAvailableMemory } from './readAvailableMemory.js';
+import { readCpuLoad } from './readCpuLoad.js';
+import { getProcessStartTime, readProcessTable, sumProcessTreeRss } from './readProcessTree.js';
+import type { ProcessInfo } from './readProcessTree.js';
+
+/** Bumped whenever the on-disk format changes; other versions are detected, never silently ignored. */
+const STATE_VERSION = 'v1';
+const DEFAULT_RESERVE_BYTES = 8 * GiB;
+const DEFAULT_CPU_THRESHOLD = 0.85;
+/**
+ * A lock is held for one admission decision (tens of milliseconds). Past this age its holder is taken
+ * to have died or to be suspended, and the lock is removed.
+ */
+const LOCK_STALE_MS = 30_000;
+
+/** A reservation as stored in `reservations/<id>.json`. */
+export interface CapacityReservationRecord {
+    id: string;
+    label: string;
+    cwd: string;
+    ownerPid: number;
+    ownerStartedAt: string;
+    bytes: number;
+    workers: number;
+    createdAt: number;
+}
+
+/** A queued request as stored in `waiters/<ticket>.json`. */
+export interface CapacityWaiterRecord {
+    ticket: string;
+    label: string;
+    cwd: string;
+    pid: number;
+    startedAt: string;
+    ownerPid: number;
+    waitingSince: number;
+    nonce: string;
+    memory: CapacityMemoryRequest;
+    workers: CapacityWorkerRange;
+}
+
+/** Live registry state plus the machine readings taken with it. */
+export interface CapacityRegistryState {
+    status: MachineCapacityStatus;
+    table: ProcessInfo[];
+}
+
+/** The registry bound to one environment. */
+export interface CapacityRegistry {
+    readProcessTable: () => ProcessInfo[];
+    now: () => number;
+    ensureDirs(): void;
+    /**
+     * Reads live records, then the process table, so every record listed was written by a process that
+     * already existed when the table was taken. With `prune`, dead records are deleted (lock holders only).
+     */
+    readState(prune: boolean): CapacityRegistryState;
+    /** Runs `fn` under the registry lock, or returns `undefined` when a live process holds it. */
+    tryWithLock<T>(fn: () => T): { value: T } | undefined;
+    writeWaiter(record: CapacityWaiterRecord): void;
+    removeWaiter(ticket: string): void;
+    writeReservation(record: CapacityReservationRecord): void;
+    removeReservation(id: string): void;
+}
+
+/**
+ * Binds the machine-global capacity registry to its state directory and machine readers.
+ *
+ * Mutations of the shared decision state happen under a lock, a `lock/` directory created by an atomic
+ * `mkdir`. Waiters remove a lock older than `LOCK_STALE_MS`. A holder stalled past that age could then
+ * share the lock with another process, which costs at most one grant over the limit.
+ */
+export function createCapacityRegistry(options: MachineCapacityEnvironmentOptions): CapacityRegistry {
+    const rootDir = options.rootDir ?? path.join(homedir(), '.nzyme', 'machine', 'capacity');
+    const stateDir = path.join(rootDir, STATE_VERSION);
+    const lockDir = path.join(stateDir, 'lock');
+    const reservationsDir = path.join(stateDir, 'reservations');
+    const waitersDir = path.join(stateDir, 'waiters');
+
+    const readMemory = options.readAvailableMemory ?? readAvailableMemory;
+    const readTotal = options.readTotalMemory ?? totalmem;
+    const readCpu = options.readCpuLoad ?? readCpuLoad;
+    const readTable = options.readProcessTable ?? readProcessTable;
+    const reserveBytes = options.reserveBytes ?? DEFAULT_RESERVE_BYTES;
+    const cpuThreshold = options.cpuThreshold ?? DEFAULT_CPU_THRESHOLD;
+
+    return {
+        readProcessTable: readTable,
+        now: options.now ?? Date.now,
+        ensureDirs,
+        readState,
+        tryWithLock,
+        writeWaiter,
+        removeWaiter,
+        writeReservation,
+        removeReservation,
+    };
+
+    function ensureDirs(): void {
+        mkdirSync(reservationsDir, { recursive: true });
+        mkdirSync(waitersDir, { recursive: true });
+    }
+
+    function readState(prune: boolean): CapacityRegistryState {
+        const reservations = listRecords(reservationsDir, parseReservation, prune);
+        const waiters = listRecords(waitersDir, parseWaiter, prune);
+        const otherVersionOwners = listOtherVersionOwners();
+        const table = readTable();
+
+        const holders: MachineCapacityHolder[] = [];
+        for (const { file, record } of reservations) {
+            if (getProcessStartTime(table, record.ownerPid) !== record.ownerStartedAt) {
+                if (prune) {
+                    removeFile(file);
+                }
+                continue;
+            }
+
+            holders.push({
+                id: record.id,
+                label: record.label,
+                cwd: record.cwd,
+                ownerPid: record.ownerPid,
+                bytes: record.bytes,
+                workers: record.workers,
+                createdAt: record.createdAt,
+                currentRssBytes: sumProcessTreeRss(table, record.ownerPid),
+            });
+        }
+
+        const liveWaiters: CapacityWaiterRecord[] = [];
+        for (const { file, record } of waiters) {
+            if (getProcessStartTime(table, record.pid) !== record.startedAt) {
+                if (prune) {
+                    removeFile(file);
+                }
+                continue;
+            }
+            liveWaiters.push(record);
+        }
+        liveWaiters.sort(compareWaiters);
+
+        const otherVersions = otherVersionOwners
+            .filter(({ owners }) => owners.some(owner => isOwnerAlive(table, owner)))
+            .map(({ version }) => version);
+
+        const availableBytes = readMemory();
+        const unmetBytes = sumUnmetReservationBytes(holders);
+
+        const status: MachineCapacityStatus = {
+            availableBytes,
+            totalBytes: readTotal(),
+            reserveBytes,
+            unmetBytes,
+            freeBytes: availableBytes - unmetBytes - reserveBytes,
+            cpu: readCpu(),
+            cpuThreshold,
+            holders,
+            waiters: liveWaiters.map(toWaiterStatus),
+            otherVersions,
+        };
+
+        return { status, table };
+    }
+
+    function tryWithLock<T>(fn: () => T): { value: T } | undefined {
+        try {
+            mkdirSync(lockDir);
+        } catch (error) {
+            if (errnoCode(error) !== 'EEXIST') {
+                throw error;
+            }
+            removeStaleLock();
+            return undefined;
+        }
+
+        try {
+            return { value: fn() };
+        } finally {
+            removeLock();
+        }
+    }
+
+    function removeStaleLock(): void {
+        let modifiedAt: number;
+        try {
+            modifiedAt = statSync(lockDir).mtimeMs;
+        } catch (error) {
+            if (errnoCode(error) === 'ENOENT') {
+                return;
+            }
+            throw error;
+        }
+
+        if (Date.now() - modifiedAt >= LOCK_STALE_MS) {
+            removeLock();
+        }
+    }
+
+    function removeLock(): void {
+        try {
+            // Not `rmSync`: racing another remover it throws EPERM on macOS, failing a run for nothing.
+            rmdirSync(lockDir);
+        } catch (error) {
+            if (errnoCode(error) !== 'ENOENT') {
+                throw error;
+            }
+        }
+    }
+
+    function writeWaiter(record: CapacityWaiterRecord): void {
+        writeFileAtomically(waitersDir, `${record.ticket}.json`, JSON.stringify(record));
+    }
+
+    function removeWaiter(ticket: string): void {
+        removeFile(path.join(waitersDir, `${ticket}.json`));
+    }
+
+    function writeReservation(record: CapacityReservationRecord): void {
+        writeFileAtomically(reservationsDir, `${record.id}.json`, JSON.stringify(record));
+    }
+
+    function removeReservation(id: string): void {
+        removeFile(path.join(reservationsDir, `${id}.json`));
+    }
+
+    /** Owners of reservations kept by other state versions; their files are read leniently, by pid only. */
+    function listOtherVersionOwners(): { version: string; owners: OtherVersionOwner[] }[] {
+        let entries: string[];
+        try {
+            entries = readdirSync(rootDir);
+        } catch (error) {
+            if (errnoCode(error) === 'ENOENT') {
+                return [];
+            }
+            throw error;
+        }
+
+        const result: { version: string; owners: OtherVersionOwner[] }[] = [];
+        for (const version of entries) {
+            if (version === STATE_VERSION || !/^v\d+$/.test(version)) {
+                continue;
+            }
+
+            const owners = listRecords(path.join(rootDir, version, 'reservations'), parseOtherVersionOwner, false).map(
+                ({ record }) => record,
+            );
+            result.push({ version, owners });
+        }
+
+        return result;
+    }
+}
+
+interface OtherVersionOwner {
+    ownerPid: number;
+    ownerStartedAt: string | undefined;
+}
+
+/** FIFO by wait start, tie-broken by pid then nonce for a total order every process agrees on. */
+function compareWaiters(a: CapacityWaiterRecord, b: CapacityWaiterRecord): number {
+    if (a.waitingSince !== b.waitingSince) {
+        return a.waitingSince - b.waitingSince;
+    }
+    if (a.pid !== b.pid) {
+        return a.pid - b.pid;
+    }
+    return a.nonce < b.nonce ? -1 : a.nonce > b.nonce ? 1 : 0;
+}
+
+function toWaiterStatus(record: CapacityWaiterRecord): MachineCapacityWaiter {
+    return {
+        ticket: record.ticket,
+        label: record.label,
+        cwd: record.cwd,
+        pid: record.pid,
+        ownerPid: record.ownerPid,
+        waitingSince: record.waitingSince,
+        memory: record.memory,
+        workers: record.workers,
+    };
+}
+
+function isOwnerAlive(table: readonly ProcessInfo[], owner: OtherVersionOwner): boolean {
+    const startedAt = getProcessStartTime(table, owner.ownerPid);
+
+    return startedAt != null && (owner.ownerStartedAt == null || owner.ownerStartedAt === startedAt);
+}
+
+/**
+ * Lists the `*.json` records of a directory. Records are published by rename, so an unparseable one is
+ * corrupt rather than half-written: it counts for nothing and is deleted when pruning.
+ */
+function listRecords<T>(
+    dir: string,
+    parse: (value: unknown) => T | undefined,
+    prune: boolean,
+): { file: string; record: T }[] {
+    let entries: string[];
+    try {
+        entries = readdirSync(dir);
+    } catch (error) {
+        if (errnoCode(error) === 'ENOENT') {
+            return [];
+        }
+        throw error;
+    }
+
+    const records: { file: string; record: T }[] = [];
+    for (const entry of entries) {
+        if (!entry.endsWith('.json') || entry.startsWith('.')) {
+            continue;
+        }
+
+        const file = path.join(dir, entry);
+        const raw = readFileOrUndefined(file);
+        if (raw == null) {
+            continue;
+        }
+
+        const record = parse(parseJson(raw));
+        if (record) {
+            records.push({ file, record });
+        } else if (prune) {
+            removeFile(file);
+        }
+    }
+
+    return records;
+}
+
+function parseReservation(value: unknown): CapacityReservationRecord | undefined {
+    if (
+        !isObject(value) ||
+        typeof value.id !== 'string' ||
+        typeof value.label !== 'string' ||
+        typeof value.cwd !== 'string' ||
+        typeof value.ownerPid !== 'number' ||
+        typeof value.ownerStartedAt !== 'string' ||
+        typeof value.bytes !== 'number' ||
+        typeof value.workers !== 'number' ||
+        typeof value.createdAt !== 'number'
+    ) {
+        return undefined;
+    }
+
+    return {
+        id: value.id,
+        label: value.label,
+        cwd: value.cwd,
+        ownerPid: value.ownerPid,
+        ownerStartedAt: value.ownerStartedAt,
+        bytes: value.bytes,
+        workers: value.workers,
+        createdAt: value.createdAt,
+    };
+}
+
+function parseWaiter(value: unknown): CapacityWaiterRecord | undefined {
+    if (
+        !isObject(value) ||
+        typeof value.ticket !== 'string' ||
+        typeof value.label !== 'string' ||
+        typeof value.cwd !== 'string' ||
+        typeof value.pid !== 'number' ||
+        typeof value.startedAt !== 'string' ||
+        typeof value.ownerPid !== 'number' ||
+        typeof value.waitingSince !== 'number' ||
+        typeof value.nonce !== 'string' ||
+        !isObject(value.memory) ||
+        typeof value.memory.base !== 'number' ||
+        typeof value.memory.perWorker !== 'number' ||
+        !isObject(value.workers) ||
+        typeof value.workers.min !== 'number' ||
+        typeof value.workers.max !== 'number'
+    ) {
+        return undefined;
+    }
+
+    return {
+        ticket: value.ticket,
+        label: value.label,
+        cwd: value.cwd,
+        pid: value.pid,
+        startedAt: value.startedAt,
+        ownerPid: value.ownerPid,
+        waitingSince: value.waitingSince,
+        nonce: value.nonce,
+        memory: { base: value.memory.base, perWorker: value.memory.perWorker },
+        workers: { min: value.workers.min, max: value.workers.max },
+    };
+}
+
+function parseOtherVersionOwner(value: unknown): OtherVersionOwner | undefined {
+    if (!isObject(value) || typeof value.ownerPid !== 'number') {
+        return undefined;
+    }
+
+    return {
+        ownerPid: value.ownerPid,
+        ownerStartedAt: typeof value.ownerStartedAt === 'string' ? value.ownerStartedAt : undefined,
+    };
+}
+
+function writeFileAtomically(dir: string, name: string, content: string): void {
+    const pending = path.join(dir, `.${name}.${randomUUID()}.tmp`);
+    writeFileSync(pending, content);
+    renameSync(pending, path.join(dir, name));
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+}
+
+function parseJson(raw: string): unknown {
+    try {
+        return JSON.parse(raw);
+    } catch {
+        return undefined;
+    }
+}
+
+function readFileOrUndefined(file: string): string | undefined {
+    try {
+        return readFileSync(file, 'utf8');
+    } catch (error) {
+        if (errnoCode(error) === 'ENOENT') {
+            return undefined;
+        }
+        throw new ApplicationError('Cannot read machine capacity state', { file, cause: error });
+    }
+}
+
+function removeFile(file: string): void {
+    try {
+        unlinkSync(file);
+    } catch (error) {
+        if (errnoCode(error) !== 'ENOENT') {
+            throw error;
+        }
+    }
+}
+
+function errnoCode(error: unknown): string | undefined {
+    if (isObject(error) && typeof error.code === 'string') {
+        return error.code;
+    }
+    return undefined;
+}

@@ -1,8 +1,11 @@
+import { writeFileSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
 import { expect, test } from 'bun:test';
+
+import { waitUntil } from '@nzyme/utils/waitUntil.js';
 
 const CLI_PATH = new URL('../cli.ts', import.meta.url).pathname;
 
@@ -46,17 +49,63 @@ test('reports a command that cannot be found with the shell exit code', async ()
     expect(result.stdout).toMatch(/^✗ FAILED \(exit 127\) · /);
 });
 
-async function runQuietRun(logDir: string, command: string[]) {
-    // The CLI resolves the project root on start-up, so it has to run inside a project.
-    await fs.writeFile(path.join(logDir, 'package.json'), '{ "name": "fixture" }');
+test('passes machine status lines through to stderr while the command runs, keeping the rest in the log', async () => {
+    const logDir = await fs.mkdtemp(path.join(os.tmpdir(), 'quiet-run-'));
+    const proceed = path.join(logDir, 'proceed');
+    // Prints a status line, then blocks until the test has seen it — proving it arrived live.
+    const script = [
+        'const { existsSync } = require("node:fs");',
+        'console.error("[nzyme machine] waiting for capacity");',
+        'console.log("other output");',
+        `while (!existsSync(${JSON.stringify(proceed)})) await Bun.sleep(50);`,
+        'process.stdout.write("[nzyme machine] granted");',
+    ].join('\n');
 
-    const child = Bun.spawn([process.execPath, '--conditions=source', CLI_PATH, 'quiet-run', ...command], {
+    const child = startQuietRun(logDir, [process.execPath, '-e', script]);
+    const stderr = readText(child.stderr);
+    await waitUntil(() => stderr.text().includes('waiting for capacity'), { timeoutMs: 10_000 });
+    await fs.writeFile(proceed, '');
+
+    const [stdout, exitCode] = await Promise.all([new Response(child.stdout).text(), child.exited]);
+    await stderr.done;
+
+    expect(exitCode).toBe(0);
+    expect(stderr.text()).toBe('[nzyme machine] waiting for capacity\n[nzyme machine] granted\n');
+    expect(stdout).toMatch(/^✓ passed · /);
+
+    const logFile = (await fs.readdir(logDir)).find(file => file.endsWith('.log'));
+    expect(await fs.readFile(path.join(logDir, String(logFile)), 'utf8')).toBe(
+        '[nzyme machine] waiting for capacity\nother output\n[nzyme machine] granted',
+    );
+});
+
+async function runQuietRun(logDir: string, command: string[]) {
+    const child = startQuietRun(logDir, command);
+    const [stdout, exitCode] = await Promise.all([new Response(child.stdout).text(), child.exited]);
+    return { stdout, exitCode };
+}
+
+function startQuietRun(logDir: string, command: string[]) {
+    // The CLI resolves the project root on start-up, so it has to run inside a project.
+    writeFileSync(path.join(logDir, 'package.json'), '{ "name": "fixture" }');
+
+    return Bun.spawn([process.execPath, '--conditions=source', CLI_PATH, 'quiet-run', ...command], {
         cwd: logDir,
         env: { ...process.env, QUIET_RUN_LOGDIR: logDir },
         stdout: 'pipe',
         stderr: 'pipe',
     });
+}
 
-    const [stdout, exitCode] = await Promise.all([new Response(child.stdout).text(), child.exited]);
-    return { stdout, exitCode };
+/** Collects a stream's text as it arrives, so a test can look at it before the stream ends. */
+function readText(stream: ReadableStream<Uint8Array>) {
+    let text = '';
+    const decoder = new TextDecoder();
+    const done = (async () => {
+        for await (const chunk of stream) {
+            text += decoder.decode(chunk, { stream: true });
+        }
+    })();
+
+    return { text: () => text, done };
 }

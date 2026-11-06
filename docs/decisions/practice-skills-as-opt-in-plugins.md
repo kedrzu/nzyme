@@ -45,6 +45,9 @@ marketplace) and an in-place load follows.
 
 - A repo that links a practice plugin has its description in every session, and pays up to 1,536
   characters of the skill listing's budget for it.
+- The listing has a budget, 1% of the context window by default. In healed, with 62 skills, the three new
+  plugins and `nzyme:forms` lost their descriptions until `skillListingBudgetFraction` went to `0.015`
+  (checked 2026-11-06).
 - A description alone does not get a body loaded: `nzyme:code-conventions`, model-invocable, reached 12%
   of the main agents that edited a `.ts` file. The product's `CLAUDE.md` therefore names the practice
   skill for its area.

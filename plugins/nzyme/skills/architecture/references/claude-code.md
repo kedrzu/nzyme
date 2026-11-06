@@ -106,6 +106,12 @@ element for, next to `.claude/skills/nzyme`, and a repo without UI or SQL pays n
 ln -s ../../nzyme/plugins/nzyme-ui .claude/skills/nzyme-ui
 ```
 
+A linked skill can still lose its description: past the skill listing's budget (1% of the context
+window) Claude Code keeps the name and silently drops descriptions, the least used first, and a new
+plugin is the least used. After linking, ask a fresh `claude -p` which skills have no description; if
+any of the repo's own do, set `skillListingBudgetFraction` in `.claude/settings.json` to the lowest
+value that fits.
+
 **When the repo uses it** — added with the element or integration that needs it, and recorded in
 `ARCHITECTURE.md`:
 

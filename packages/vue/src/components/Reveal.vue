@@ -79,7 +79,11 @@ function fixedHeight(el: Element) {
 }
 
 function autoHeight() {
-  const element = assertValue(wrapper.value);
+  // The after-hooks still fire when the component unmounts mid-transition, and the template ref is `null` by then.
+  const element = wrapper.value;
+  if (!element) {
+    return;
+  }
   element.style.overflow = '';
   element.style.height = '';
 }

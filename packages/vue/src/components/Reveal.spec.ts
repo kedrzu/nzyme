@@ -1,3 +1,4 @@
+import { waitFor } from '@nzyme/utils/waitFor.js';
 import { describe, expect, test } from 'vitest';
 import { render } from 'vitest-browser-vue';
 import { h, ref } from 'vue';
@@ -106,6 +107,18 @@ describe('Reveal', () => {
         expect(errors).toEqual([]);
         expect(screen.emitted('beforeLeave')).toHaveLength(1);
         expect(screen.emitted('enter')).toHaveLength(1);
+    });
+
+    test('does not throw when unmounted mid-transition', async () => {
+        const errors: unknown[] = [];
+        const { content, screen } = await renderReveal('short', DURATION, error => errors.push(error));
+
+        content.value = 'tall';
+        await expect.poll(() => screen.emitted('beforeLeave')).toHaveLength(1);
+        await screen.unmount();
+        await waitFor(DURATION * 3);
+
+        expect(errors).toEqual([]);
     });
 
     test('animates from and to an empty slot', async () => {

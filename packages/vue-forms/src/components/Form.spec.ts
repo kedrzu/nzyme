@@ -10,7 +10,7 @@ import { defineComponent, h } from 'vue';
 
 import { useForm } from '../useForm.js';
 import { useFormFields } from '../useFormFields.js';
-import { Form } from './Form.jsx';
+import Form from './Form.vue';
 import { useTextInput } from './useTextInput.jsx';
 
 const PENDING_CLASS = 'is-pending';

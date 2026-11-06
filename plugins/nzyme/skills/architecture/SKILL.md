@@ -19,7 +19,7 @@ repo decide what is in play. There is nothing to choose up front.
 
 Every path below is relative to this skill's directory (the base directory Claude Code announces when
 the skill loads): `references/nx.md`, `assets/ARCHITECTURE.md.tmpl`, `../ui/SKILL.md`. The practice
-skills are user-invoked, so read their `SKILL.md` by path; the Skill tool cannot load them.
+skills are user-invoked in this plugin, so read their `SKILL.md` by path; the Skill tool cannot load them.
 
 When this skill runs inside a repo whose `nzyme/plugins/nzyme/skills/architecture/` exists, that copy
 is the reference: it matches the nzyme commit the repo pins. Read references and assets from there.
@@ -41,7 +41,7 @@ table below. The result is one of these situations, or a combination of them:
   reference gets "no differences" and no writes.
 - **A request about a piece of work** ("starting the settings screen", "adding Stripe", "we need a
   database") → the element whose signals match. Check that its setup is in place (UI work with no UI
-  package → propose the UI package element), read its practice skill, offer a repo-owned skill
+  package → propose the UI package element), read its practice skill, link its practice plugin (`references/claude-code.md`), offer a repo-owned skill
   (`references/repo-skills.md`), then hand over. This skill does not build the feature; code-level
   work follows the practice skill and the `nzyme:*` skills (`ioc`, `forms`, `composables`,
   `translations`, `logging`, `secrets`, `testing`, `code-conventions`), which load on their own.

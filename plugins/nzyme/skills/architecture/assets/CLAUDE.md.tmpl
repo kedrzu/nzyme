@@ -49,7 +49,8 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
   `/dev:deliver`), installed from the `kedrzu-skills` marketplace in `.claude/settings.json`.
 - **Every implementation task reads `nzyme:code-conventions`**, plus the `nzyme:*` skill for the area
   it touches (`ioc`, `logging`, `translations`, `forms`, `composables`, `testing`). They load from
-  the submodule through `.claude/skills/nzyme`.
+  the submodule through `.claude/skills/nzyme`. {{practice skills — e.g. A task on a component also
+  reads `nzyme-ui:ui`, one on SQL `nzyme-drizzle:drizzle`.}}
 - **ADRs** go to `docs/decisions/<title-slug>.md`, never numbered.
 
 # TypeScript rules

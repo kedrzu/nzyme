@@ -3,7 +3,7 @@ import { render } from 'vitest-browser-vue';
 import { h, ref } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
 
-import { Reveal } from './Reveal.jsx';
+import Reveal from './Reveal.vue';
 
 const DURATION = 50;
 

@@ -13,6 +13,7 @@ packages/ui/
 ├── tsconfig.esm.json   # hand-written; nzyme monorepo generates tsconfig.json from it
 ├── viteShared.ts       # cssOptions, shared by Nuxt, Storybook and Vitest
 ├── vitest.config.ts
+├── .gitignore          # storybook-static/, *storybook.log — what `build-storybook` writes
 ├── .storybook/
 │   ├── main.ts
 │   └── preview.ts

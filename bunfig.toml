@@ -3,3 +3,8 @@
 jsx = "react"
 jsxFactory = "h"
 jsxFragment = "h"
+
+# `*.spec.ts` are Vitest browser-mode component tests (`bun run test:components`); `bun test` must not
+# collect them.
+[test]
+pathIgnorePatterns = ["**/*.spec.ts"]

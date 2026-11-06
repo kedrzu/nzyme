@@ -30,7 +30,7 @@ bindings.
 
 ```vue
 <script lang="ts" setup>
-import { Form } from '@nzyme/vue-forms/components/Form.jsx';
+import Form from '@nzyme/vue-forms/components/Form.vue';
 import { useForm } from '@nzyme/vue-forms/useForm.js';
 import { useFormFields } from '@nzyme/vue-forms/useFormFields.js';
 import { emailValidator } from '@nzyme/vue-forms/validators/emailValidator.js';
@@ -182,7 +182,7 @@ value or `watch` changes. A rule that must also run outside this form belongs in
 - **Form-level errors** (a failed API call) — a ref set in the submit handler and rendered with
   `role="alert"`; field errors display themselves through `:field`.
 - **Multi-step forms** — one `useForm` per step, switched with `v-if`, each validating and submitting
-  on its own. `Reveal` (`@nzyme/vue/components/Reveal.jsx`) animates the switch.
+  on its own. `Reveal` (`@nzyme/vue/components/Reveal.vue`) animates the switch.
 - **Nested objects and dynamic lists** — factory functions in `useFormFields` / `useFormFieldArray`;
   read `references/nested-forms.md`.
 

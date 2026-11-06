@@ -1,4 +1,5 @@
 export * from './animateOnce.js';
+export * from './canScrollHorizontally.js';
 export * from './clearFocus.js';
 export * from './createHistoryMock.js';
 export * from './downloadFile.js';

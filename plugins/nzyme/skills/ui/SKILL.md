@@ -180,6 +180,13 @@ It cannot see focus indicators, non-text contrast, keyboard paths, focus hidden 
 or announcements of changes; the author owns those, and a spec proves the keyboard and focus ones.
 `references/accessibility.md` maps each success criterion to the check that covers it.
 
+A component is accessible on its own, whatever its consumer passes. When a story or a page needs an
+`aria-label` (or any other ARIA attribute) to pass axe, the component is broken: fix it there, never
+in the story or the consumer, or the next consumer hits the same failure. A component that
+inherently needs an accessible name (an icon-only button, a close button, a search field without a
+visible label) takes a dedicated prop whose default comes from the component's `.loc.yaml`, so an
+instance whose consumer passes nothing is still named.
+
 Per-story `a11y: { test: 'todo' }` or `'off'` is the same as disabling a lint rule: never to make a
 failure go away; only with a comment naming why the rule is wrong for that story.
 
@@ -190,6 +197,7 @@ failure go away; only with a comment naming why the rule is wrong for that story
 |A raw `<button>` with its own `saving` ref and `:disabled="saving"`|focus is lost mid-action, a fast double click runs the action twice, every button re-implements it|
 |`disabled` while busy, or no `aria-busy`|keyboard users lose their place; screen readers hear nothing while the action runs|
 |A raw reka-ui part used in a page|every page styles and labels it differently; Title/Description and portal rules are forgotten|
+|An axe failure fixed by adding `aria-*` in the story or the consumer|the component stays broken; the next consumer ships the same violation|
 |A dialog without a `Title` (visually hidden if the design has none)|no accessible name; reka warns, axe fails the open-state story|
 |A component with no story for its error, busy, disabled or open state|that state is never rendered in a test, so axe never checks it|
 |A raw hex or px value in a component's style|the token set drifts; contrast documented on the token no longer applies|

@@ -84,4 +84,5 @@ Primitives and components: `nzyme/packages/vue-forms/README.md`, `nzyme/packages
   or cut it.
 - It goes through the apply protocol like any element: show the diff, write on approval, by heading
   section when the file exists, keeping sections the repo added.
-- Link it from `CLAUDE.md` only if the repo lists its skills there; the skill loads on its own.
+- Never add it to `CLAUDE.md`: the skill loads on its own from its description
+  (`references/claude-code.md`).

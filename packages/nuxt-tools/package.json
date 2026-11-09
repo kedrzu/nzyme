@@ -46,7 +46,7 @@
         "@nzyme/tsconfig": "workspace:*",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "nuxt": "^4.4.8",
-        "oxfmt": "0.76.0",
+        "oxfmt": "0.77.0",
         "vite": "^7.3.6"
     },
     "peerDependencies": {

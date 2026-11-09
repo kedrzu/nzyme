@@ -99,6 +99,7 @@ export interface OxlintDefinition {
  */
 export interface OxlintVisitor {
     ExpressionStatement?(node: OxlintExpressionStatement): void;
+    JSXOpeningElement?(node: OxlintJsxOpeningElement): void;
 }
 
 /**
@@ -116,6 +117,9 @@ export interface OxlintNodeTypes {
     Identifier: OxlintIdentifier;
     ImportDeclaration: OxlintImportDeclaration;
     ImportSpecifier: OxlintImportSpecifier;
+    JSXAttribute: OxlintJsxAttribute;
+    JSXIdentifier: OxlintJsxIdentifier;
+    JSXMemberExpression: OxlintJsxMemberExpression;
     UnaryExpression: OxlintUnaryExpression;
 }
 
@@ -155,4 +159,27 @@ export interface OxlintUnaryExpression {
     type: 'UnaryExpression';
     operator: string;
     argument: OxlintNode;
+}
+
+export interface OxlintJsxOpeningElement {
+    type: 'JSXOpeningElement';
+    /** `JSXIdentifier`, `JSXMemberExpression` or `JSXNamespacedName`. */
+    name: OxlintNode;
+    /** `JSXAttribute`s and `JSXSpreadAttribute`s, in source order. */
+    attributes: OxlintNode[];
+}
+
+export interface OxlintJsxAttribute {
+    type: 'JSXAttribute';
+    /** A `JSXIdentifier`, or a `JSXNamespacedName` for `xlink:href`. */
+    name: OxlintNode;
+}
+
+export interface OxlintJsxIdentifier {
+    type: 'JSXIdentifier';
+    name: string;
+}
+
+export interface OxlintJsxMemberExpression {
+    type: 'JSXMemberExpression';
 }

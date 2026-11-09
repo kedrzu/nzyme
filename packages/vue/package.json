@@ -11,7 +11,8 @@
     "files": [
         "src",
         "!src/**/*.test.ts",
-        "!src/**/*.test.tsx"
+        "!src/**/*.test.tsx",
+        "!src/**/*.spec.ts"
     ],
     "type": "module",
     "sideEffects": false,
@@ -27,7 +28,6 @@
             "types": "./src/shims.d.ts"
         },
         "./*.js": "./src/*.ts",
-        "./*.jsx": "./src/*.tsx",
         "./*.vue": "./src/*.vue"
     },
     "publishConfig": {
@@ -35,7 +35,8 @@
     },
     "scripts": {
         "build": "tsgo --build tsconfig.esm.json",
-        "format": "oxfmt ./src > /dev/null"
+        "format": "oxfmt ./src > /dev/null",
+        "test:components": "vitest run"
     },
     "dependencies": {
         "@nzyme/dom-utils": "workspace:*",
@@ -54,8 +55,14 @@
         "@types/lodash.debounce": "4.0.9",
         "@types/node": "26.6.6",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-        "oxfmt": "0.76.0",
+        "@vitejs/plugin-vue": "^6.0.10",
+        "@vitest/browser-playwright": "^4.1.12",
+        "oxfmt": "0.77.0",
+        "playwright": "^1.64.1",
+        "sass": "^1.107.1",
         "vite": "7.3.7",
+        "vitest": "^4.1.12",
+        "vitest-browser-vue": "^3.1.0",
         "vue": "^3.5.44"
     },
     "peerDependencies": {

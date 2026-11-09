@@ -283,6 +283,14 @@
             // type, with no failure to point at. Ordinary source keeps the rule.
             "files": ["**/*.d.ts"],
             "rules": { "import/no-empty-named-blocks": "off" }
+        },
+        {
+            // A story that passes `aria-*` to a component can make an axe failure go away without
+            // the component ever becoming accessible, and the next consumer ships the same
+            // violation. Stories are where that silencing happens, so the rule is scoped to them
+            // here, by file kind; the rule itself never looks at the filename.
+            "files": ["**/*.stories.tsx"],
+            "rules": { "nzyme/no-aria-on-component-in-story": "error" }
         }
     ]
 }

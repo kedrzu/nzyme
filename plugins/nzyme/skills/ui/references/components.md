@@ -73,11 +73,10 @@ menus, listbox), the parts wrap reka parts and the context carries only what rek
   `itemsAttrs` `aria-label`; turn on `keyboard`; render previous/next buttons through the `wrapper` slot
   (swipe and drag alone fail 2.5.7, and the buttons are the keyboard path). `autoPlay` pauses only on
   hover: an auto-playing carousel also needs a visible pause control (2.2.2).
-- **SSR caveat.** `Reveal`, `Collapse`, `Carousel` and the transitions import `*.module.scss` from
-  `.tsx` sources, which Nuxt's per-component SSR style inlining does not pick up. On a server-rendered
-  page their styles arrive only with the client bundle — carousel slides render stacked until
-  hydration (layout shift). An SSR app built on them needs the style settings in
-  `../architecture/references/nuxt-app.md` (SPA or SSR). An SPA is unaffected.
+- **SSR styles.** `Reveal`, `Collapse` and `Carousel` are SFCs, so Nuxt inlines their `<style>` on a
+  server-rendered page. The transitions are still `.tsx` with CSS modules. An SSR app adds
+  `@nuxtjs/critters` as described in `../architecture/references/nuxt-app.md` (SPA or SSR). An SPA is
+  unaffected.
 
 ## Modals
 

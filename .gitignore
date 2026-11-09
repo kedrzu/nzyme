@@ -38,3 +38,7 @@ tsconfig.cjs.json
 
 # Agent worktrees
 .claude/worktrees/
+
+# Vitest browser-mode failure screenshots
+__screenshots__/
+.vitest-attachments/

@@ -75,8 +75,8 @@ the `code-conventions` skill.
   3. Before reporting done, confirm `git status --porcelain` is empty and `HEAD` equals `@{u}`.
      This governs finishing a change; it never licenses making one.
 - **Stash safety:** stashes are shared across all worktrees, and other agents may be working in
-  parallel. Never use bare `git stash`/`pop`/`apply`. Name the stash uniquely and restore it by ref. The
-  `git:stash-safety` skill has the recipes.
+  parallel. Name every stash uniquely and restore it by its sha; the `git` plugin's hook blocks the
+  unsafe forms and says how.
 
 # Diagnosing failures — check, don't assume
 

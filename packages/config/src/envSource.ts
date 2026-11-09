@@ -16,7 +16,8 @@ export function envSource(env: EnvVariables = process.env): ConfigSource & { loa
             const entries: Record<string, string> = {};
 
             for (const [key, value] of Object.entries(env)) {
-                if (value !== undefined) {
+                // An empty variable counts as unset, so it never shadows a later source's real value.
+                if (value) {
                     entries[key] = value;
                 }
             }

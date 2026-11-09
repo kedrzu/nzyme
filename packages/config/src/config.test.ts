@@ -99,8 +99,8 @@ test('the first source wins per key and overridden keys are reported by name, ne
     expect(JSON.stringify(logs)).not.toContain('b2');
 });
 
-test('envSource takes only defined string entries', async () => {
-    expect(await envSource({ A: 'a', B: undefined }).load()).toEqual({ A: 'a' });
+test('envSource takes only non-empty entries, so an empty variable never shadows a later source', async () => {
+    expect(await envSource({ A: 'a', B: undefined, C: '' }).load()).toEqual({ A: 'a' });
 });
 
 test('fileSource reads a JSON document; an absent optional file contributes nothing, a required one throws', async () => {

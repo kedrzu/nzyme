@@ -35,11 +35,22 @@ test('resolves required and optional values, including falsy ones', () => {
     const Required = defineConfig<{ readonly enabled: boolean }>('required');
     const Optional = defineConfig('optional', { required: false });
     const False = defineConfig<boolean>('false');
-    container.set(RuntimeConfig, { required: { enabled: true }, false: false });
+    const Null = defineConfig<null>('null');
+    const Empty = defineConfig('empty');
+    container.set(RuntimeConfig, { required: { enabled: true }, false: false, null: null, empty: '' });
 
     expect(container.resolve(Required)).toEqual({ enabled: true });
     expect(container.resolve(Optional)).toBeUndefined();
     expect(container.resolve(False)).toBe(false);
+    expect(container.resolve(Null)).toBeNull();
+    expect(container.resolve(Empty)).toBe('');
+});
+
+test('fails naming the interface when no document was installed', () => {
+    const container = createContainer();
+    const Key = defineConfig('key');
+
+    expect(() => container.resolve(Key)).toThrow('Interface RuntimeConfig was not found');
 });
 
 test('a missing required key throws naming the key and the caller', () => {

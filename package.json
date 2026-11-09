@@ -35,22 +35,22 @@
         "tslib": "2.9.1"
     },
     "devDependencies": {
-        "@nx/js": "^24.0.3",
+        "@nx/js": "^24.0.5",
         "@nzyme/cli": "workspace:*",
         "@nzyme/eslint": "workspace:*",
         "@nzyme/tsconfig": "workspace:*",
         "@swc-node/register": "1.12.1",
-        "@swc/core": "1.16.21",
+        "@swc/core": "1.16.22",
         "@types/bun": "1.4.4",
         "@types/node": "^26.6.6",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "del-cli": "8.0.1",
         "eslint": "10.14.0",
         "eslint-plugin-package-json": "1.14.0",
-        "nx": "^24.0.3",
-        "oxfmt": "0.76.0",
-        "oxlint": "1.91.0",
-        "oxlint-tsgolint": "7.0.2005"
+        "nx": "^24.0.5",
+        "oxfmt": "0.77.0",
+        "oxlint": "1.92.0",
+        "oxlint-tsgolint": "7.0.2006"
     },
     "overrides": {
         "@types/bun": "1.4.4"

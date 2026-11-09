@@ -1,11 +1,11 @@
 export * from './App.js';
 export { CommonPlugin } from './CommonPlugin.js';
-export * from './components/Carousel.jsx';
-// TODO: decide if we want TSX or VUE version
-export * from './components/Collapse.jsx';
+export { default as Carousel } from './components/Carousel.vue';
+export * from './components/CarouselTypes.js';
+export * from './components/getCarouselPages.js';
+export { default as Collapse } from './components/Collapse.vue';
 export { LazyHydrate } from './components/LazyHydrate.js';
-//export { default as Reveal } from './components/Reveal.vue';
-export { Reveal } from './components/Reveal.js';
+export { default as Reveal } from './components/Reveal.vue';
 export * from './Format.js';
 export * from './modal/createModalMock.js';
 export * from './modal/ModalContext.js';

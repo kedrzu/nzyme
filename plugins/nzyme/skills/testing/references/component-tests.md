@@ -60,6 +60,43 @@ story's args instead of merging into them. Spread the story's own args to keep t
 await Default.run({ args: { ...Default.args, disabled: true } });
 ```
 
+## Without Storybook — library packages
+
+A package with no stories (such as `@nzyme/vue`) mounts the component directly with `render()` from
+`vitest-browser-vue`; everything else above holds. The package carries its own `vitest.config.ts`
+(`@vitejs/plugin-vue`, `@vitejs/plugin-vue-jsx` for `.tsx` sources, browser mode with the Playwright
+provider, `include: ['src/**/*.spec.ts']`) and a `test:components` script.
+
+- **Pass `props`, `slots` and `global` as in `@vue/test-utils`** — `render()` wraps its `mount()`.
+  `render` is async; `rerender(props)` updates props and `emitted(name)` returns the emitted payloads.
+- **Turn off the `<Transition>` stub** with `global: { stubs: { transition: false } }` whenever the
+  component's behaviour lives in transition hooks — `@vue/test-utils` stubs it by default, so no hook
+  runs and no `transitionend` arrives.
+- **Wait for a transition by its event**, `await expect.poll(() => screen.emitted('afterEnter')).toHaveLength(1)`,
+  never a fixed sleep. To assert a mid-transition state, capture it synchronously in a handler the
+  component calls during the transition.
+
+```ts
+import { expect, test } from 'vitest';
+import { page } from 'vitest/browser';
+import { render } from 'vitest-browser-vue';
+import { h } from 'vue';
+
+import Collapse from './Collapse.vue';
+
+test('does not render lazy content until first shown', async () => {
+    const screen = await render(Collapse, {
+        global: { stubs: { transition: false } },
+        props: { show: false },
+        slots: { default: () => h('p', 'Content') },
+    });
+    await expect.element(page.getByText('Content')).not.toBeInTheDocument();
+
+    await screen.rerender({ show: true });
+    await expect.element(page.getByText('Content')).toBeVisible();
+});
+```
+
 ## What to assert
 
 What the user sees: rendered text, attributes, computed style, focus, the emitted payload. Prove a

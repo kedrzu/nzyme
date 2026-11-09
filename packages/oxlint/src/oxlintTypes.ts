@@ -182,6 +182,4 @@ export interface OxlintJsxIdentifier {
 
 export interface OxlintJsxMemberExpression {
     type: 'JSXMemberExpression';
-    object: OxlintJsxIdentifier | OxlintJsxMemberExpression;
-    property: OxlintJsxIdentifier;
 }

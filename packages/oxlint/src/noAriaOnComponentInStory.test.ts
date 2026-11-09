@@ -35,9 +35,7 @@ describe('nzyme/no-aria-on-component-in-story', () => {
             lineOf(STORY, '<Foo.Bar'),
         ]);
         expect(diagnostics[0]?.message).toContain('`aria-label`');
-        expect(diagnostics[0]?.message).toContain('`<Button>`');
         expect(diagnostics[1]?.message).toContain('`aria-hidden`');
-        expect(diagnostics[1]?.message).toContain('`<Foo.Bar>`');
     });
 
     it('says to fix the component and to use a prop with a translated default', async () => {

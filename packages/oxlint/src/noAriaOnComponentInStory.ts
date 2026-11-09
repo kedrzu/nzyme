@@ -1,5 +1,5 @@
 import { isNode } from './isNode.js';
-import type { OxlintJsxMemberExpression, OxlintNode, OxlintRule } from './oxlintTypes.js';
+import type { OxlintNode, OxlintRule } from './oxlintTypes.js';
 
 const MESSAGE_ID = 'ariaOnComponent';
 
@@ -25,14 +25,13 @@ export const noAriaOnComponentInStory: OxlintRule = {
         },
         messages: {
             [MESSAGE_ID]:
-                '`{{attribute}}` is passed to `<{{tag}}>` in a story. Fix the component rather than the story: it must be accessible on its own, and a component that needs an accessible name takes a prop with a translated default.',
+                '`{{attribute}}` is passed to a component in a story. Fix the component rather than the story: it must be accessible on its own, and a component that needs an accessible name takes a prop with a translated default.',
         },
     },
     create(context) {
         return {
             JSXOpeningElement(node) {
-                const tag = componentName(node.name);
-                if (tag == null) {
+                if (!isComponent(node.name)) {
                     return;
                 }
 
@@ -45,7 +44,7 @@ export const noAriaOnComponentInStory: OxlintRule = {
                         context.report({
                             messageId: MESSAGE_ID,
                             node: attribute,
-                            data: { attribute: attribute.name.name, tag },
+                            data: { attribute: attribute.name.name },
                         });
                     }
                 }
@@ -54,21 +53,6 @@ export const noAriaOnComponentInStory: OxlintRule = {
     },
 };
 
-/** The tag as written, when it names a component; `undefined` for a native element. */
-function componentName(name: OxlintNode): string | undefined {
-    if (isNode(name, 'JSXMemberExpression')) {
-        return memberExpressionText(name);
-    }
-
-    if (isNode(name, 'JSXIdentifier') && /^\p{Lu}/u.test(name.name)) {
-        return name.name;
-    }
-
-    return undefined;
-}
-
-function memberExpressionText({ object, property }: OxlintJsxMemberExpression): string {
-    const objectText = object.type === 'JSXMemberExpression' ? memberExpressionText(object) : object.name;
-
-    return `${objectText}.${property.name}`;
+function isComponent(name: OxlintNode): boolean {
+    return isNode(name, 'JSXMemberExpression') || (isNode(name, 'JSXIdentifier') && /^\p{Lu}/u.test(name.name));
 }

@@ -77,3 +77,32 @@ its conventions require.
   (`packages/secrets/README.md`).
 - A new backend is a new `SecretStore`; Bitwarden is the first (`own-bitwarden-client-over-bws.md`),
   AWS is planned as a separate store.
+
+## Update 2026-11-09: a prefix instead of a mapping, stores as config sources
+
+Superseded in the Decision above: `SecretsMapping` and the per-name key mapping are gone, and a store is
+no longer read key by key.
+
+- **Why:** a name-to-key mapping must be kept in step with every `defineEnvVariable` declaration, and
+  it only let a project say which secrets exist, which a prefix says by itself. The repo that uses
+  these stores most (Healed) keeps its secrets as typed metadata on a config document
+  (`@nzyme/config`), where the name is already the key.
+- **A store is scoped by a prefix.** `SecretStore` has an arbitrary `prefix` (a path such as
+  `/secrets/dev/`, a name prefix such as `FOOBAR_`, or empty for the whole store), `readAll()` returns
+  every secret under it keyed without the prefix, and `write` takes keys without it. Stores read in one
+  batch, so Bitwarden keeps its request count (list plus one fetch) and a Parameter Store
+  store can use `GetParametersByPath`.
+- **Stores are config sources.** `secretsSource(store)` is a `ConfigSource`, so a repo with a config
+  document puts a store among its sources and lets the document's precedence order them. `loadSecrets
+  (container, stores)` stays for repos without one: it takes a list of stores, the earlier wins a
+  duplicate key, and the rest of its behaviour (an already-set variable wins and is reported, all or
+  nothing) is unchanged.
+- **Several stores, and the project owns the write policy.** The commands take a `SecretsProvider`:
+  `stores` and `target(name)`, which returns the store a key is written to or throws to refuse it.
+  This reverses the earlier "a mapping has one store" because the tier-per-store case now exists.
+  `list` shows every key with its store; `run` merges the stores (earlier wins) and strips every
+  store's credentials. `list` no longer reports missing secrets: nothing in nzyme knows which keys a
+  project expects, so a project that wants the check adds its own command.
+- **Cache:** `cached` stores the whole `readAll` result in the keychain per store id and prefix (an
+  index item plus one item per value, because of per-item size caps). A write invalidates it.
+- **Breaking:** `bitwarden({ project })` gains `prefix`; `SecretStore.read(keys)` becomes `readAll()`.

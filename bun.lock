@@ -609,6 +609,7 @@
       "version": "0.15.1",
       "dependencies": {
         "@nzyme/cli-core": "workspace:*",
+        "@nzyme/config": "workspace:*",
         "@nzyme/ioc": "workspace:*",
         "@nzyme/logging": "workspace:*",
         "enquirer": "^2.4.1",

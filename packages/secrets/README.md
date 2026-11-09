@@ -15,66 +15,71 @@ bun add @nzyme/secrets @nzyme/bitwarden
 Every `@nzyme/*` package in a repo, `@nzyme/cli` included, must be one version, installed in the repo
 (see [Commands from a plugin](#commands-from-a-plugin)).
 
-## The mapping
+## Stores and prefixes
 
-A project describes its secrets in a service resolving to a `SecretsMapping`: the one store its
-secrets live in, and each environment variable with the key of its secret in that store.
+A `SecretStore` is one place secrets live, scoped to a **prefix**: it reads every secret under the
+prefix and writes keys under it, and the keys it hands out carry no prefix. The prefix is arbitrary:
+a path such as `/secrets/dev/`, a name prefix such as `FOOBAR_`, or empty for the whole store. There
+is no mapping from variable names to keys: the key is the name.
 
 ```ts
-// packages/app/src/AppSecrets.ts
+// packages/app/src/AppStores.ts
 import { defineService } from '@nzyme/ioc/Service.js';
 import { bitwarden } from '@nzyme/bitwarden/bitwarden.js';
 import { cached } from '@nzyme/secrets/cached.js';
-import type { SecretsMapping } from '@nzyme/secrets/SecretsMapping.js';
+import type { SecretStore } from '@nzyme/secrets/SecretStore.js';
 
-export const AppSecrets = defineService<SecretsMapping>({
-    name: 'AppSecrets',
-    setup() {
-        const bw = cached(bitwarden({ project: '1f0c…' }), { ttl: 8 * 60 * 60 * 1000 });
-
-        return {
-            store: bw,
-            secrets: {
-                DATABASE_URL: 'DATABASE_URL',
-                STRIPE_KEY: 'stripe-test-key',
-            },
-        };
-    },
+export const AppStores = defineService<SecretStore[]>({
+    name: 'AppStores',
+    setup: () => [cached(bitwarden({ project: '1f0c…', prefix: 'DEV_' }), { ttl: 8 * 60 * 60 * 1000 })],
 });
 ```
 
-Several variables may share a key. A mapping has one store, so every secret a process loads comes
-from one place and `login` needs no store name. The core knows no environments: a project picks the
-store and keys however its own conventions require, for example by depending on an env variable in
-`deps`.
+The core knows no environments: a project picks the stores and prefixes however its own conventions
+require, for example by depending on an env variable in `deps`.
 
-## Loading at startup
+## In a config document
+
+A repo with a `defineConfig` document (`@nzyme/config`) uses a store as one of its sources:
+
+```ts
+import { secretsSource } from '@nzyme/secrets/secretsSource.js';
+
+sources: [envSource(), secretsSource(store)];
+```
+
+`secretsSource(store)` loads every secret under the store's prefix as config entries by key, and
+provenance names the source `secrets:<store id>`. Order the sources as the document's precedence
+wants: the first source with a key wins.
+
+## Loading into env variables
+
+A repo without a config document loads the stores into the environment variables its code already
+reads through `defineEnvVariable`:
 
 ```ts
 import { loadSecrets } from '@nzyme/secrets/loadSecrets.js';
 
-await loadSecrets(container, AppSecrets);
+await loadSecrets(container, container.resolve(AppStores));
 ```
 
-`loadSecrets` reads every mapped secret in one batch, and writes them into that container's
-`EnvVariables`, so `defineEnvVariable` resolves them. It takes the provider explicitly, as the
-`secrets` commands do, and resolves it from that container. Call it before resolving anything that
-reads those variables. Production, whose platform provides the
-variables, skips it.
+`loadSecrets` reads every store in parallel and writes the secrets into that container's
+`EnvVariables`, so `defineEnvVariable` resolves them by key. Call it before resolving anything that
+reads those variables. Production, whose platform provides the variables, skips it.
 
-- **Precedence:** a non-empty variable already set wins over its secret, and its name is reported in
-  the `Secrets loaded` log (`overridden`). Bun loads `.env` before any code runs, so a name listed
-  there usually means a leftover `.env`.
-- **All or nothing:** every read completes before anything is written. A secret that is missing or
-  empty, or a failed read, throws naming the variable, key and store, and leaves `EnvVariables`
-  untouched.
-- **No values in output:** errors and logs carry names and references, never values.
+- **Precedence:** for a key in several stores the earlier store wins. A non-empty variable already set
+  wins over its secret, and its name is reported in the `Secrets loaded` log (`overridden`). Bun loads
+  `.env` before any code runs, so a name listed there usually means a leftover `.env`.
+- **All or nothing:** every read completes before anything is written. A failed read throws and leaves
+  `EnvVariables` untouched.
+- **No values in output:** errors and logs carry names and store ids, never values.
 - **Reads only:** the startup step never writes to a store.
 
 ## Cache
 
-`cached(store, { ttl })` keeps the values of a store in the OS keychain (through `Bun.secrets`,
-service `nzyme-secrets`), so restarting a dev server makes no store call. `ttl` is in milliseconds and
+`cached(store, { ttl })` keeps the whole `readAll` result of a store in the OS keychain (through `Bun.secrets`,
+service `nzyme-secrets`), per store id and prefix, so restarting a dev server makes no store call. A write
+invalidates it. `ttl` is in milliseconds and
 required. A keychain failure only warns; the read falls through to the store. `secrets refresh`
 re-reads before the TTL runs out.
 
@@ -117,28 +122,50 @@ await execute({
 
 ## Commands
 
-Values are never taken from arguments and never printed.
+Values are never taken from arguments and never printed. The `provider` service resolves to a
+`SecretsProvider`: `stores` (every store, most preferred first) and `target(name)`, the project's write
+policy.
 
-- **`secrets login`** — stores credentials for the mapping's store. The token is read from a hidden
-  prompt, or from stdin.
-- **`secrets set <NAME>`** — writes one mapped secret. The value comes from a
-  hidden prompt, or from stdin: `nzyme secrets set DB_PASSWORD < password.txt`.
+```ts
+export const AppSecrets = defineService<SecretsProvider>({
+    name: 'AppSecrets',
+    setup() {
+        const dev = cached(bitwarden({ project: '1f0c…', prefix: 'DEV_' }), { ttl });
+        return {
+            stores: [dev],
+            target(name) {
+                if (!name.startsWith('SECRET_')) {
+                    throw new UsageError(`${name} is not a secret.`);
+                }
+                return dev;
+            },
+        };
+    },
+});
+```
+
+- **`secrets login`** — stores credentials for every store that has a `login`. The token is read from
+  a hidden prompt, or from stdin.
+- **`secrets set <NAME>`** — writes one secret to the store `target(NAME)` returns, under the key
+  `NAME`; `target` throws a `UsageError` to refuse the name, and then nothing is written. The value
+  comes from a hidden prompt, or from stdin: `nzyme secrets set DB_PASSWORD < password.txt`.
 - **`secrets set <NAME> --prompt[=<hint>]`** — how an agent asks the user for a secret: the user
   types it into a native masked dialog (osascript on macOS, Get-Credential on Windows, zenity or
   kdialog on Linux; a hidden terminal prompt when none opens), so the value never reaches the
   agent's transcript. Stdin is ignored. The hint says what the value is and where to find it, and
   needs the `=`: `--prompt="Staging DB password, in 1Password"` (`--prompt "…"` is a usage error).
-  On success it prints only the name, key, store and character count. It exits 1, writing nothing,
+  On success it prints only the name, store and character count. It exits 1, writing nothing,
   when nothing was entered (cancelled, blank or timed out after 5 minutes), when the value spans
   several lines, or when no dialog or terminal is available — then ask the user to run
   `nzyme secrets set <NAME>` in their own terminal and confirm with `nzyme secrets list`.
-- **`secrets list`** — each mapped name with its store id, key and status (`resolves`, `missing`,
-  `overridden by environment`); exits non-zero when one is missing.
-- **`secrets run -- <command>`** — runs a command with the mapped secrets as environment variables.
-  A variable already set wins; the store's credentials (`BWS_ACCESS_TOKEN`) are removed
-  from the child's environment; nothing starts when a secret is missing. The exit code is the
+- **`secrets list`** — every key of every store with its store id, and `overridden by environment`
+  when the variable is set. It does not know which keys a project expects, so it reports no missing
+  ones; a project can add its own check command.
+- **`secrets run -- <command>`** — runs a command with all stores merged (earlier wins) as environment
+  variables. A variable already set wins; every store's credentials (`BWS_ACCESS_TOKEN`) are removed
+  from the child's environment; nothing starts when a store cannot be read. The exit code is the
   command's own.
-- **`secrets refresh`** — re-reads the mapped secrets into the store's cache, when it has one.
+- **`secrets refresh`** — re-reads every store that caches.
 
 The startup step, `run` and `list` only read; only `set` writes. A store keeps one
 credential per machine, so a machine that only runs the app logs in with read-only credentials (for
@@ -148,5 +175,5 @@ Bitwarden, a read-only machine account) and its writes are refused.
 
 - [`@nzyme/bitwarden`](../bitwarden/README.md) — Bitwarden Secrets Manager.
 
-A store is an object implementing `SecretStore` (`id`, `read`, `write`, optional `login`, `refresh`,
-`credentialEnv`).
+A store is an object implementing `SecretStore` (`id`, `prefix`, `readAll`, `write`, optional `login`,
+`refresh`, `credentialEnv`).

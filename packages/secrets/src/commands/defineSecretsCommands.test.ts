@@ -6,15 +6,17 @@ import { PassThrough, Readable } from 'node:stream';
 import { afterEach, beforeEach, expect, spyOn, test } from 'bun:test';
 import { Cli } from 'clipanion';
 
+import { UsageError } from '@nzyme/cli-core';
 import type { CommandContext } from '@nzyme/cli-core/Command.js';
 import { createContainer } from '@nzyme/ioc/Container.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 
-import type { SecretsMapping } from '../SecretsMapping.js';
-import type { SecretStore, SecretStoreEntry } from '../SecretStore.js';
+import { createMemoryStore } from '../__fixtures__/createMemoryStore.js';
+import type { SecretStore } from '../SecretStore.js';
 import { SENTINEL as RUN_SENTINEL } from './__fixtures__/secretsCli.js';
 import { defineSecretsCommands } from './defineSecretsCommands.js';
+import type { SecretsProvider } from './SecretsCommandsOptions.js';
 
 const SENTINEL = 'sentinel-secret-value-cmd-81e0';
 const FIXTURE_CLI = new URL('./__fixtures__/secretsCli.ts', import.meta.url).pathname;
@@ -68,14 +70,16 @@ const PRINT_ENV = `process.stdout.write(JSON.stringify({
     SMTP_PASSWORD: process.env.SMTP_PASSWORD,
     BW_TOKEN: process.env.BW_TOKEN ?? null,
     BW_ORGANIZATION: process.env.BW_ORGANIZATION ?? null,
+    EXTRA_TOKEN: process.env.EXTRA_TOKEN ?? null,
     KEPT: process.env.KEPT,
     argv: process.argv,
 }))`;
 
-test('run passes every mapped secret via env, strips the store’s credentials, and keeps stdout the child’s', async () => {
+test('run merges all stores (earlier wins) into the env, strips every store’s credentials, and keeps stdout the child’s', async () => {
     const result = await runFixtureCli(['secrets', 'run', '--', process.execPath, '-e', PRINT_ENV, 'arg'], {
         BW_TOKEN: 'bw-credential',
         BW_ORGANIZATION: 'bw-organization',
+        EXTRA_TOKEN: 'extra-credential',
         KEPT: 'kept',
     });
 
@@ -88,6 +92,7 @@ test('run passes every mapped secret via env, strips the store’s credentials, 
         SMTP_PASSWORD: 'smtp-pass',
         BW_TOKEN: null,
         BW_ORGANIZATION: null,
+        EXTRA_TOKEN: null,
         KEPT: 'kept',
     });
     expect(JSON.stringify(child.argv)).not.toContain(RUN_SENTINEL);
@@ -116,64 +121,89 @@ test.each([
     expect(result.stdout).toBe('');
 });
 
-test('run starts nothing when a secret is missing and names it on stderr', async () => {
+test('run starts nothing when a store cannot be read and prints no value', async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'secrets-run-'));
     const marker = path.join(dir, 'started');
     const script = `require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'x')`;
 
     const result = await runFixtureCli(['secrets', 'run', '--', process.execPath, '-e', script], {
-        FIXTURE_MISSING: '1',
+        FIXTURE_UNREADABLE: '1',
     });
 
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toBe('');
-    expect(result.stderr).toContain('MISSING_ONE');
     expect(result.stderr).not.toContain(RUN_SENTINEL);
     expect(await Bun.file(marker).exists()).toBe(false);
 });
 
 // --- set ---
 
-test('set writes the stdin value, minus one trailing newline, to the mapped key, and never prints it', async () => {
+test('set writes the stdin value, minus one trailing newline, under the key of the target store, and never prints it', async () => {
     const bw = createMemoryStore({ id: 'bw' });
-    const mapping: SecretsMapping = {
-        store: bw.store,
-        secrets: { TELEGRAM_TOKEN: 'TELEGRAM_TOKEN_UMBRA', API_KEY: 'API_KEY' },
-    };
 
-    const first = await runCommand({ mapping, args: ['secrets', 'set', 'TELEGRAM_TOKEN'], stdin: `${SENTINEL}\n\n` });
-    const second = await runCommand({ mapping, args: ['secrets', 'set', 'API_KEY'], stdin: 'api-value' });
+    const first = await runCommand({
+        stores: [bw.store],
+        args: ['secrets', 'set', 'TELEGRAM_TOKEN'],
+        stdin: `${SENTINEL}\n\n`,
+    });
+    const second = await runCommand({ stores: [bw.store], args: ['secrets', 'set', 'API_KEY'], stdin: 'api-value' });
 
     expect(first.exitCode).toBe(0);
     expect(second.exitCode).toBe(0);
     expect(bw.writes).toEqual([
-        [{ key: 'TELEGRAM_TOKEN_UMBRA', value: `${SENTINEL}\n` }],
+        [{ key: 'TELEGRAM_TOKEN', value: `${SENTINEL}\n` }],
         [{ key: 'API_KEY', value: 'api-value' }],
     ]);
     expectNoLeak(first, SENTINEL);
     expectNoLeak(second, 'api-value');
 });
 
-test('set of an unmapped name fails naming it and writes nothing', async () => {
-    const bw = createMemoryStore({ id: 'bw' });
+test('set writes to the store target picks, and to no other', async () => {
+    const dev = createMemoryStore({ id: 'dev' });
+    const shared = createMemoryStore({ id: 'shared' });
 
     const result = await runCommand({
-        mapping: { store: bw.store, secrets: { API_KEY: 'API_KEY' } },
-        args: ['secrets', 'set', 'NOT_MAPPED'],
+        stores: [dev.store, shared.store],
+        target: name => (name.startsWith('SHARED_') ? shared.store : dev.store),
+        args: ['secrets', 'set', 'SHARED_KEY'],
+        stdin: SENTINEL,
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(shared.writes).toEqual([[{ key: 'SHARED_KEY', value: SENTINEL }]]);
+    expect(dev.writes).toEqual([]);
+    expect(result.stdout).toBe('SHARED_KEY written to store shared.\n');
+});
+
+test('set of a name target refuses fails with its message and writes to no store', async () => {
+    const dev = createMemoryStore({ id: 'dev' });
+    const shared = createMemoryStore({ id: 'shared' });
+
+    const result = await runCommand({
+        stores: [dev.store, shared.store],
+        target: name => {
+            throw new UsageError(`${name} is not a secret.`);
+        },
+        args: ['secrets', 'set', 'NOT_A_SECRET'],
         stdin: SENTINEL,
     });
 
     expect(result.exitCode).toBe(1);
-    expect(result.errors).toContain('NOT_MAPPED');
-    expect(bw.writes).toEqual([]);
+    expect(result.errors).toContain('NOT_A_SECRET is not a secret.');
+    expect(dev.writes).toEqual([]);
+    expect(shared.writes).toEqual([]);
+    expectNoLeak(result, SENTINEL);
 });
 
 test('set refuses an empty value and a value given as an argument', async () => {
     const bw = createMemoryStore({ id: 'bw' });
-    const mapping: SecretsMapping = { store: bw.store, secrets: { API_KEY: 'API_KEY' } };
 
-    const empty = await runCommand({ mapping, args: ['secrets', 'set', 'API_KEY'], stdin: '\n' });
-    const argument = await runCommand({ mapping, args: ['secrets', 'set', 'API_KEY', SENTINEL], stdin: 'from-stdin' });
+    const empty = await runCommand({ stores: [bw.store], args: ['secrets', 'set', 'API_KEY'], stdin: '\n' });
+    const argument = await runCommand({
+        stores: [bw.store],
+        args: ['secrets', 'set', 'API_KEY', SENTINEL],
+        stdin: 'from-stdin',
+    });
 
     expect(empty.exitCode).toBe(1);
     expect(argument.exitCode).toBe(1);
@@ -182,25 +212,19 @@ test('set refuses an empty value and a value given as an argument', async () => 
 
 // --- set --prompt (stand-ins for the dialog tools on PATH) ---
 
-test('set --prompt writes the trimmed dialog value, ignores stdin, and prints only name, key, store and length', async () => {
+test('set --prompt writes the trimmed dialog value, ignores stdin, and prints only name, store and length', async () => {
     const bw = createMemoryStore({ id: 'bw' });
-    const mapping: SecretsMapping = {
-        store: bw.store,
-        secrets: { TELEGRAM_TOKEN: 'TELEGRAM_TOKEN_UMBRA' },
-    };
     await standInDialog(`  ${SENTINEL}  \n`);
 
     const result = await runCommand({
-        mapping,
+        stores: [bw.store],
         args: ['secrets', 'set', 'TELEGRAM_TOKEN', '--prompt'],
         stdin: 'piped-value\n',
     });
 
     expect(result.exitCode).toBe(0);
-    expect(bw.writes).toEqual([[{ key: 'TELEGRAM_TOKEN_UMBRA', value: SENTINEL }]]);
-    expect(result.stdout).toBe(
-        `TELEGRAM_TOKEN written to key TELEGRAM_TOKEN_UMBRA in store bw (${SENTINEL.length} characters).\n`,
-    );
+    expect(bw.writes).toEqual([[{ key: 'TELEGRAM_TOKEN', value: SENTINEL }]]);
+    expect(result.stdout).toBe(`TELEGRAM_TOKEN written to store bw (${SENTINEL.length} characters).\n`);
     expectNoLeak(result, SENTINEL);
     expectNoLeak(result, 'piped-value');
 });
@@ -210,7 +234,7 @@ test('set --no-prompt reads the value from stdin and opens no dialog', async () 
     await standInDialog('dialog-value');
 
     const result = await runCommand({
-        mapping: { store: bw.store, secrets: { API_KEY: 'API_KEY' } },
+        stores: [bw.store],
         args: ['secrets', 'set', 'API_KEY', '--no-prompt'],
         stdin: SENTINEL,
     });
@@ -226,7 +250,7 @@ test('set --prompt=<hint> shows the hint in the dialog', async () => {
     await standInDialog(SENTINEL);
 
     const result = await runCommand({
-        mapping: { store: bw.store, secrets: { API_KEY: 'API_KEY' } },
+        stores: [bw.store],
         args: ['secrets', 'set', 'API_KEY', `--prompt=${hint}`],
     });
 
@@ -239,7 +263,7 @@ test('set --prompt refuses a multi-line value without printing it and writes not
     await standInDialog(`${SENTINEL}\nsecond-line-value\n`);
 
     const result = await runCommand({
-        mapping: { store: bw.store, secrets: { API_KEY: 'API_KEY' } },
+        stores: [bw.store],
         args: ['secrets', 'set', 'API_KEY', '--prompt'],
     });
 
@@ -258,7 +282,7 @@ test.each([
     await standInDialog(answer);
 
     const result = await runCommand({
-        mapping: { store: bw.store, secrets: { API_KEY: 'API_KEY' } },
+        stores: [bw.store],
         args: ['secrets', 'set', 'API_KEY', '--prompt'],
         stdin: SENTINEL,
     });
@@ -275,7 +299,7 @@ test('set --prompt with no dialog tool and no terminal fails naming the command 
     await useDialogDir();
 
     const result = await runCommand({
-        mapping: { store: bw.store, secrets: { API_KEY: 'API_KEY' } },
+        stores: [bw.store],
         args: ['secrets', 'set', 'API_KEY', '--prompt'],
         stdin: SENTINEL,
     });
@@ -286,116 +310,93 @@ test('set --prompt with no dialog tool and no terminal fails naming the command 
     expectNoLeak(result, SENTINEL);
 });
 
-test('set --prompt of an unmapped name fails naming it before opening a dialog', async () => {
+test('set --prompt of a refused name fails before opening a dialog', async () => {
     const bw = createMemoryStore({ id: 'bw' });
     await standInDialog(SENTINEL);
 
     const result = await runCommand({
-        mapping: { store: bw.store, secrets: { API_KEY: 'API_KEY' } },
-        args: ['secrets', 'set', 'NOT_MAPPED', '--prompt'],
+        stores: [bw.store],
+        target: name => {
+            throw new UsageError(`${name} is not a secret.`);
+        },
+        args: ['secrets', 'set', 'NOT_A_SECRET', '--prompt'],
     });
 
     expect(result.exitCode).toBe(1);
-    expect(result.errors).toContain('NOT_MAPPED');
+    expect(result.errors).toContain('NOT_A_SECRET');
     expect(await Bun.file(path.join(dialogDir, 'dialog.argv')).exists()).toBe(false);
     expect(bw.writes).toEqual([]);
 });
 
 // --- list ---
 
-test('list shows each name’s store, key and status, never a value, and fails when any is missing', async () => {
-    const bw = createMemoryStore({ id: 'bw', data: { API_KEY: SENTINEL, DB: 'db-value' } });
-    const mapping: SecretsMapping = {
-        store: bw.store,
-        secrets: { API_KEY: 'API_KEY', DB_PASSWORD: 'DB', GONE: 'GONE' },
-    };
-
-    const result = await runCommand({ mapping, args: ['secrets', 'list'], env: { DB_PASSWORD: 'env-value' } });
-
-    expect(result.exitCode).toBe(1);
-    expect(result.stdout).toBe(
-        [
-            'API_KEY  bw:API_KEY  resolves',
-            'DB_PASSWORD  bw:DB  overridden by environment',
-            'GONE  bw:GONE  missing',
-            '',
-        ].join('\n'),
-    );
-    expectNoLeak(result, SENTINEL);
-    expectNoLeak(result, 'env-value');
-});
-
-test('list exits 0 when every secret resolves', async () => {
-    const bw = createMemoryStore({ id: 'bw', data: { API_KEY: SENTINEL } });
+test('list shows every key of every store with its store id, never a value', async () => {
+    const one = createMemoryStore({ id: 'one', data: { API_KEY: SENTINEL, DB: 'db-value' } });
+    const two = createMemoryStore({ id: 'two', data: { SMTP: 'smtp-value' } });
 
     const result = await runCommand({
-        mapping: { store: bw.store, secrets: { API_KEY: 'API_KEY' } },
+        stores: [one.store, two.store],
         args: ['secrets', 'list'],
+        env: { DB: 'env-value' },
     });
 
     expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe(['API_KEY  one', 'DB  one  overridden by environment', 'SMTP  two', ''].join('\n'));
     expectNoLeak(result, SENTINEL);
+    expectNoLeak(result, 'db-value');
+    expectNoLeak(result, 'smtp-value');
+    expectNoLeak(result, 'env-value');
 });
 
 // --- login ---
 
-test('login prompts once through stdin and calls the store’s login with the answer', async () => {
+test('login prompts once per store through stdin and passes the answer to the store’s login', async () => {
     const bw = createMemoryStore({ id: 'bw', login: true });
-    const mapping: SecretsMapping = { store: bw.store, secrets: {} };
+    const plain = createMemoryStore({ id: 'plain' });
 
-    const result = await runCommand({ mapping, args: ['secrets', 'login'], stdin: `${SENTINEL}\n` });
+    const result = await runCommand({
+        stores: [plain.store, bw.store],
+        args: ['secrets', 'login'],
+        stdin: `${SENTINEL}\n`,
+    });
 
     expect(result.exitCode).toBe(0);
     expect(bw.logins).toEqual([SENTINEL]);
+    expect(result.stdout).toBe('Logged in to store bw.\n');
     expectNoLeak(result, SENTINEL);
 });
 
 test('login with an empty answer fails saying nothing was entered and never reaches the store', async () => {
     const bw = createMemoryStore({ id: 'bw', login: true });
-    const mapping: SecretsMapping = { store: bw.store, secrets: {} };
 
-    const result = await runCommand({ mapping, args: ['secrets', 'login'], stdin: ' \n' });
+    const result = await runCommand({ stores: [bw.store], args: ['secrets', 'login'], stdin: ' \n' });
 
     expect(result.exitCode).toBe(1);
     expect(result.errors).toContain('Nothing was entered');
     expect(bw.logins).toEqual([]);
 });
 
-test('login fails naming a store without login', async () => {
+test('login fails when no store has a login', async () => {
     const plain = createMemoryStore({ id: 'plain' });
 
-    const result = await runCommand({ mapping: { store: plain.store, secrets: {} }, args: ['secrets', 'login'] });
+    const result = await runCommand({ stores: [plain.store], args: ['secrets', 'login'] });
 
     expect(result.exitCode).toBe(1);
-    expect(result.errors).toContain('Store plain has no login');
+    expect(result.errors).toContain('None of the stores has a login');
 });
 
 // --- refresh ---
 
-test('refresh calls the store’s refresh with every mapped key once', async () => {
+test('refresh calls refresh on every store that has one and leaves the others alone', async () => {
     const bw = createMemoryStore({ id: 'bw', refresh: true });
-    const mapping: SecretsMapping = {
-        store: bw.store,
-        secrets: { API_KEY: 'API_KEY', TOKEN: 'TOKEN_KEY', LEGACY_TOKEN: 'TOKEN_KEY' },
-    };
-
-    const result = await runCommand({ mapping, args: ['secrets', 'refresh'] });
-
-    expect(result.exitCode).toBe(0);
-    expect(bw.refreshes).toEqual([['API_KEY', 'TOKEN_KEY']]);
-    expect(result.stdout).toBe('Refreshed store bw.\n');
-});
-
-test('refresh leaves a store without a cache alone', async () => {
     const plain = createMemoryStore({ id: 'plain' });
 
-    const result = await runCommand({
-        mapping: { store: plain.store, secrets: { API_KEY: 'API_KEY' } },
-        args: ['secrets', 'refresh'],
-    });
+    const result = await runCommand({ stores: [bw.store, plain.store], args: ['secrets', 'refresh'] });
 
     expect(result.exitCode).toBe(0);
-    expect(plain.reads).toEqual([]);
+    expect(bw.refreshes).toBe(1);
+    expect(plain.reads).toBe(0);
+    expect(result.stdout).toBe('Refreshed store bw.\nStore plain keeps no cache; nothing to refresh.\n');
 });
 
 interface CommandResult {
@@ -406,16 +407,28 @@ interface CommandResult {
 }
 
 interface RunCommandOptions {
-    mapping: SecretsMapping;
+    stores: SecretStore[];
+    /** The write policy; the first store by default. */
+    target?: SecretsProvider['target'];
     args: string[];
     stdin?: string;
     env?: EnvVariables;
 }
 
-/** Runs a `secrets` command through clipanion in-process, with a real container and the given mapping. */
+/** Runs a `secrets` command through clipanion in-process, with a real container and the given stores. */
 async function runCommand(options: RunCommandOptions) {
-    const { mapping, args } = options;
-    const provider = defineService<SecretsMapping>({ name: 'AppSecrets', setup: () => mapping });
+    const { stores, args } = options;
+    const target =
+        options.target ??
+        (() => {
+            const [first] = stores;
+            if (!first) {
+                throw new Error('The test gave no store');
+            }
+
+            return first;
+        });
+    const provider = defineService<SecretsProvider>({ name: 'AppSecrets', setup: () => ({ stores, target }) });
     const cli = new Cli<CommandContext>({ binaryName: 'nzyme' });
     for (const command of defineSecretsCommands({ provider })) {
         cli.register(command);
@@ -513,56 +526,4 @@ function collect() {
     stream.on('data', (chunk: Buffer) => chunks.push(chunk.toString('utf8')));
 
     return { stream, text: () => chunks.join('') };
-}
-
-interface MemoryStoreOptions {
-    id: string;
-    data?: Record<string, string>;
-    credentialEnv?: string[];
-    login?: boolean;
-    refresh?: boolean;
-}
-
-function createMemoryStore(options: MemoryStoreOptions) {
-    const data = new Map(Object.entries(options.data ?? {}));
-    const reads: string[][] = [];
-    const writes: SecretStoreEntry[][] = [];
-    const logins: string[] = [];
-    const refreshes: string[][] = [];
-
-    const store: SecretStore = {
-        id: options.id,
-        credentialEnv: options.credentialEnv,
-        read(keys) {
-            reads.push(keys);
-            const found = new Map<string, string>();
-            for (const key of keys) {
-                const value = data.get(key);
-                if (value !== undefined) {
-                    found.set(key, value);
-                }
-            }
-
-            return Promise.resolve(found);
-        },
-        write(entries) {
-            writes.push(entries);
-            return Promise.resolve();
-        },
-    };
-
-    if (options.login) {
-        store.login = async prompt => {
-            logins.push(await prompt('Access token'));
-        };
-    }
-
-    if (options.refresh) {
-        store.refresh = keys => {
-            refreshes.push(keys);
-            return Promise.resolve();
-        };
-    }
-
-    return { store, reads, writes, logins, refreshes };
 }

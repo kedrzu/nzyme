@@ -131,6 +131,23 @@
         "oxfmt": "0.77.0",
       },
     },
+    "packages/config": {
+      "name": "@nzyme/config",
+      "version": "0.15.1",
+      "dependencies": {
+        "@nzyme/ioc": "workspace:*",
+        "@nzyme/logging": "workspace:*",
+        "@nzyme/types": "workspace:*",
+      },
+      "devDependencies": {
+        "@nzyme/ioc-testing": "workspace:*",
+        "@nzyme/tsconfig": "workspace:*",
+        "@types/bun": "^1.4.3",
+        "@types/node": "26.6.6",
+        "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+        "oxfmt": "0.77.0",
+      },
+    },
     "packages/crypto": {
       "name": "@nzyme/crypto",
       "version": "0.15.1",
@@ -1465,6 +1482,8 @@
     "@nzyme/cli": ["@nzyme/cli@workspace:packages/cli"],
 
     "@nzyme/cli-core": ["@nzyme/cli-core@workspace:packages/cli-core"],
+
+    "@nzyme/config": ["@nzyme/config@workspace:packages/config"],
 
     "@nzyme/crypto": ["@nzyme/crypto@workspace:packages/crypto"],
 

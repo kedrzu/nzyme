@@ -6,7 +6,7 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
 
 - **Core:** `utils`, `types`, `ioc`, `ioc-testing`, `logging`, `validation`, `crypto`, `money`,
   `i18n`, `i18n-core`, `i18n-compiler`, `rpc`, `openapi`, `fetch-utils`, `xml-utils`, `markdown`,
-  `typography`, `secrets` (secret stores loaded into env variables, and the `secrets` commands)
+  `typography`, `config` (the typed config document and its sources), `secrets` (secret stores loaded into env variables, and the `secrets` commands)
 - **Vue:** `vue`, `vue-utils`, `vue-ioc`, `vue-forms`, `vue-i18n`, `vue-transitions`, `dom-utils`
 - **Tooling:**
   - `cli-core` (the clipanion-based `Command` framework behind every CLI), `cli` (the `nzyme` binary: `monorepo`, `localise`, `index`, `quiet-run`,

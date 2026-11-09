@@ -1,10 +1,9 @@
-import { existsSync } from 'node:fs';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { basename, dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { basename } from 'node:path';
 
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
+
+import type { OxlintJsonDiagnostic } from './oxlintTestHarness.js';
+import { PLUGIN_PATH, lineOf, useOxlintHarness } from './oxlintTestHarness.js';
 
 /**
  * End-to-end coverage: the rule is exercised by spawning the real `oxlint` binary over generated
@@ -17,17 +16,6 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test
  * would have to be excluded from `bun lint` and from the tsconfig solution.
  */
 const RULE_CODE = 'nzyme(no-unused-no-side-effects-result)';
-
-/** The built plugin, because that is what ships and what a `jsPlugins` entry points at. */
-const PLUGIN_PATH = join(import.meta.dir, '..', 'dist', 'index.js');
-
-/**
- * Resolved through the package rather than a fixed `node_modules/.bin` path: when nzyme is checked
- * out as a submodule its dependencies hoist to the parent workspace and `nzyme/node_modules` does
- * not exist at all. Resolution therefore lands on whichever `oxlint` the surrounding workspace
- * lints with, which is the version the plugin has to work against.
- */
-const OXLINT_BIN = join(dirname(fileURLToPath(import.meta.resolve('oxlint/package.json'))), 'bin', 'oxlint');
 
 /** Local declarations every same-file case calls into: annotated, unannotated, and annotated async. */
 const DECLARATIONS = `/**
@@ -74,46 +62,9 @@ interface RuleFinding {
     line: number;
 }
 
-interface OxlintJsonReport {
-    diagnostics: OxlintJsonDiagnostic[];
-}
-
-interface OxlintJsonDiagnostic {
-    code: string;
-    message: string;
-    filename: string;
-    labels: OxlintJsonLabel[];
-}
-
-interface OxlintJsonLabel {
-    span: OxlintJsonSpan;
-}
-
-interface OxlintJsonSpan {
-    line: number;
-}
-
-let root: string;
-
-beforeAll(() => {
-    if (!existsSync(PLUGIN_PATH)) {
-        throw new Error(
-            `No built plugin at ${PLUGIN_PATH}. Run \`tsgo --build\` first — oxlint loads the plugin's built output, so this test cannot fall back to the source.`,
-        );
-    }
-});
-
-beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), 'nzyme-oxlint-rule-'));
-    const config = {
-        jsPlugins: [PLUGIN_PATH],
-        rules: { 'nzyme/no-unused-no-side-effects-result': 'error' },
-    };
-    await writeFile(join(root, '.oxlintrc.json'), JSON.stringify(config), 'utf8');
-});
-
-afterEach(async () => {
-    await rm(root, { recursive: true, force: true });
+const { lint } = useOxlintHarness({
+    config: { jsPlugins: [PLUGIN_PATH], rules: { 'nzyme/no-unused-no-side-effects-result': 'error' } },
+    ruleCode: RULE_CODE,
 });
 
 describe('nzyme/no-unused-no-side-effects-result', () => {
@@ -256,26 +207,6 @@ export function caller(value: number): number {
     });
 });
 
-/** Writes the fixture files and returns only the diagnostics this rule raised. */
-async function lint(files: Record<string, string>): Promise<OxlintJsonDiagnostic[]> {
-    for (const [name, content] of Object.entries(files)) {
-        await writeFile(join(root, name), content, 'utf8');
-    }
-
-    // oxlint exits 1 whenever it reported anything at all, so the exit code carries no signal here.
-    // Its type-stripping `ExperimentalWarning` goes to stderr, which is why only stdout is read.
-    const run = Bun.spawnSync([OXLINT_BIN, '-c', join(root, '.oxlintrc.json'), '--format=json', root], { cwd: root });
-    const stdout = run.stdout.toString();
-    if (stdout.length === 0) {
-        throw new Error(`oxlint produced no JSON report. stderr:\n${run.stderr.toString()}`);
-    }
-
-    const report = JSON.parse(stdout) as OxlintJsonReport;
-
-    // Only this rule's findings: oxlint's own default categories stay on in so minimal a config.
-    return report.diagnostics.filter(diagnostic => diagnostic.code === RULE_CODE);
-}
-
 function locations(diagnostics: OxlintJsonDiagnostic[]): RuleFinding[] {
     return diagnostics.map(diagnostic => ({
         file: basename(diagnostic.filename),
@@ -290,14 +221,4 @@ export async function caller(value: number): Promise<number> {
 ${body}
 }
 `;
-}
-
-/** Line of `snippet` in the fixture, so an expectation survives edits above it. */
-function lineOf(source: string, snippet: string): number {
-    const index = source.indexOf(snippet);
-    if (index < 0) {
-        throw new Error(`Fixture does not contain ${JSON.stringify(snippet)}`);
-    }
-
-    return source.slice(0, index).split('\n').length;
 }

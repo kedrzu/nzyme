@@ -49,6 +49,9 @@ Run from the repo root:
 - `bun run typecheck` — `tsgo --build`.
 - `bun run test` — all tests (`bun:test`); `bun test packages/<pkg>/src` for one package. Always run
   from the repo root, and use `bun run test`, not bare `bun test`, for the whole suite.
+- `bun run test:components` — Vue component tests (`*.spec.ts`) in Vitest browser mode, headless
+  Chromium; `bun test` never collects them. First run: `bun x playwright install chromium` in the
+  package.
 - `bun run lint` / `bun run lint:check` — oxlint (type-aware) plus ESLint for Vue,
   `package.json` and Markdown (`lint` formats Markdown).
 - `bun run format` / `bun run format:check` — oxfmt (Markdown is ESLint's, above). Never hand-apply

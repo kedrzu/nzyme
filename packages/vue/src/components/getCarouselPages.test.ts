@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 
-import { getCarouselPages } from './Carousel.jsx';
-import type { CarouselItemBox, CarouselPage } from './Carousel.jsx';
+import { getCarouselPages } from './getCarouselPages.js';
+import type { CarouselItemBox, CarouselPage } from './CarouselTypes.js';
 
 // Five items 100px wide, 10px apart, after 10px of padding; the carousel is 250px wide: two to a page.
 const items: CarouselItemBox[] = [0, 1, 2, 3, 4].map(index => ({ left: 10 + index * 110, width: 100 }));

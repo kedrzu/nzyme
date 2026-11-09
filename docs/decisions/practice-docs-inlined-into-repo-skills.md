@@ -54,12 +54,8 @@ Practice as docs, inlined by repo skills.
   through `.claude/skills/nzyme`, and still works from a user-level install in an empty directory.
 - **nzyme itself is a consumer:** its own `.claude/skills/<area>/SKILL.md` inline
   `docs/practice/<area>.md` the same way.
-- **Sessions start at the repo root,** which makes the relative path resolve; every launcher in use
-  (Paseo, BMO, an editor) already does it. A rule in `CLAUDE.md` could not enforce it, because the
-  agent reads it only after the session has started. A `SessionStart` hook in the `guardrails`
-  plugin (`kedrzu/skills`) warns instead, in every repository: when the working directory is not the
-  git top level, it tells the user and the agent to restart from the root. It has to be installed at
-  user scope, because a plugin linked into the project does not load from a subdirectory either.
+- **Sessions start at the repo root,** which makes the relative path resolve. Every launcher in use
+  (Paseo, BMO, an editor) does it, so nothing enforces it.
 - **`/nzyme:architecture` creates and compares the repo skills.** Per area in play: a skill exists,
   inlines its document, carries only repo facts above it, and no second repo skill covers the same
   area.
@@ -97,5 +93,5 @@ A product repo (healed first):
 - One description per area in a repo's context, written by the repo for its own vocabulary.
 - A practice change reaches a repo when it bumps nzyme, with no copy or generation step.
 - Every repo writes its skills; `/nzyme:architecture` keeps them from drifting only when it runs.
-- A session started outside the repo root loses every repo skill that inlines a document; the hook
-  makes that visible at once rather than through an agent that silently lacks its rules.
+- A session started below the repo root loses every repo skill that inlines a document, and the
+  plugins linked into the project, without a warning.

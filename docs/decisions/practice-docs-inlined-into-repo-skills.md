@@ -56,9 +56,10 @@ Practice as docs, inlined by repo skills.
   `docs/practice/<area>.md` the same way.
 - **Sessions start at the repo root,** which makes the relative path resolve; every launcher in use
   (Paseo, BMO, an editor) already does it. A rule in `CLAUDE.md` could not enforce it, because the
-  agent reads it only after the session has started. The `nzyme` plugin carries a `SessionStart` hook
-  instead: when the working directory is not the git top level, it tells the user that the repo's
-  skills will not load and to restart from the root.
+  agent reads it only after the session has started. A `SessionStart` hook in the `guardrails`
+  plugin (`kedrzu/skills`) warns instead, in every repository: when the working directory is not the
+  git top level, it tells the user and the agent to restart from the root. It has to be installed at
+  user scope, because a plugin linked into the project does not load from a subdirectory either.
 - **`/nzyme:architecture` creates and compares the repo skills.** Per area in play: a skill exists,
   inlines its document, carries only repo facts above it, and no second repo skill covers the same
   area.
@@ -78,9 +79,7 @@ nzyme:
    template in `assets/`; `references/claude-code.md` drops the practice-plugin table and gains the
    compare rules; the element tables name practice documents instead of skills; the `CLAUDE.md`
    template names the repo's skills.
-5. The `SessionStart` hook in `plugins/nzyme/hooks/`, with a test for a session at the root (silent)
-   and in a subdirectory (warns).
-6. `CLAUDE.md`, `docs/submodule-setup.md#agents` and the plugin and marketplace descriptions follow.
+5. `CLAUDE.md`, `docs/submodule-setup.md#agents` and the plugin and marketplace descriptions follow.
 
 A product repo (healed first):
 

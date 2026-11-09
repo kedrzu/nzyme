@@ -47,9 +47,10 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
   and landing.
 - Both are the contracts of the `dev` plugin (`/dev:fix`, `/dev:task`, `/dev:feature`, `/dev:build`,
   `/dev:deliver`), installed from the `kedrzu-skills` marketplace in `.claude/settings.json`.
-- **Every implementation task reads the `code-conventions` skill**, plus the skill for its area. Each
-  is the repo's own (`.claude/skills/<name>/SKILL.md`) and inlines nzyme's practice document
-  (`nzyme/docs/practice/<area>.md`); a rule that is wrong everywhere is fixed in nzyme.
+- **Every implementation task loads the `code-conventions` skill with the Skill tool**, plus the skill
+  for its area. Each is the repo's own (`.claude/skills/<name>/SKILL.md`) and inlines nzyme's practice
+  document (`nzyme/docs/practice/<area>.md`) only when loaded, so load it, don't Read the file; a rule
+  that is wrong everywhere is fixed in nzyme.
 - **ADRs** go to `docs/decisions/<title-slug>.md`, never numbered.
 
 # TypeScript rules

@@ -1,6 +1,7 @@
 ---
 name: logging
-description: Structured logging in this repo with @nzyme/logging: injecting Logger, choosing the level, constant message plus scalar fields, logging caught errors, capturing logs in tests. Use when adding debug output, calling logger.info/warn/error/debug or useLogger, or logging a caught error.
+description: >-
+    Use before adding or changing a logger call, or handling a caught error that should be logged — injecting Logger, the level, a constant message with scalar fields, capturing logs in tests.
 ---
 
 Sources: `packages/logging`, `packages/logging-ui`.

@@ -1,6 +1,7 @@
 ---
 name: testing
-description: Writing, running and judging tests in this repo: whether a test is worth writing, bun:test unit and integration tests with createTestContainer, assertions, @nzyme/vitest matchers, component tests in Vitest browser mode, Playwright e2e. Use when writing, reviewing or debugging any test, or deciding whether a change needs one.
+description: >-
+    Use before writing, changing or running any test (*.test.ts, component or e2e spec) — whether it is worth writing, createTestContainer, assertions, Vitest browser mode, Playwright.
 ---
 
 Unit tests: `bun run test` (all, `bun test ./packages/*/src ./scripts`) or `bun test <path>`. Component tests: `bun run test:components` (Nx, `vitest run` per package). Matchers live in `packages/vitest`, container helpers in `packages/ioc-testing`.

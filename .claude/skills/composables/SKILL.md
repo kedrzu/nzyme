@@ -1,6 +1,7 @@
 ---
 name: composables
-description: Vue composables in this repo with @nzyme/vue-utils and @nzyme/vue-ioc: naming, reactive() return shape, makeRef options, useDataSource, useService, event emitters, reactivity pitfalls. Use when writing or reviewing a `use[Feature]` function or component-scoped reactive logic.
+description: >-
+    Use before writing, extracting or reviewing a use* composable or a shared reactive store — return shape, options with makeRef, useDataSource, event emitters, reactivity pitfalls.
 ---
 
 Sources: `packages/vue-utils`, `packages/vue-ioc`, `packages/vue`.

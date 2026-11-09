@@ -1,6 +1,7 @@
 ---
 name: code-conventions
-description: TypeScript and Vue conventions in this repo: naming files and exports, function order, style, casts, imports, JSDoc and public API, Vue SFC script order, BEM classes, design principles. Use whenever you write, refactor or review TypeScript or Vue here, name a file, or point at code from a comment or doc.
+description: >-
+    Use before writing, refactoring or reviewing any TypeScript or Vue in this repo, on every implementation task — naming, function order, casts, imports, JSDoc and public API, SFC script order, BEM.
 ---
 
 !`cat docs/practice/code-conventions.md 2>/dev/null || cat nzyme/docs/practice/code-conventions.md`

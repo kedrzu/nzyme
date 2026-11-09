@@ -1,6 +1,7 @@
 ---
 name: forms
-description: Vue forms in this repo with @nzyme/vue-forms and @nzyme/validation: useForm, useFormFields, validators, input components on the headless primitives, nested forms, shared rules. Use when creating or changing a form, adding validation or building an input component.
+description: >-
+    Use before creating or changing a form, a form field, a validator or an input component — useForm, useFormFields, validation rules, the headless input primitives.
 ---
 
 Sources: `packages/vue-forms` (component tests: `bun run test:components`), `packages/validation`.

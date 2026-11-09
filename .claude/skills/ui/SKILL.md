@@ -1,6 +1,7 @@
 ---
 name: ui
-description: Building Vue UI in this repo on the headless primitives of @nzyme/vue-forms and reka-ui, animated with @nzyme/vue-transitions and @nzyme/vue, styled with design tokens and CSS modules, with a story and an axe-checked test per component. Use when creating or changing a Vue component.
+description: >-
+    Use before creating or changing any Vue component (.vue) in packages/vue, vue-forms or vue-transitions — headless primitives, reka-ui, transitions, tokens and CSS modules, stories and axe tests.
 ---
 
 Sources: `packages/vue-forms`, `packages/vue-transitions`, `packages/vue`. Component tests: `bun run test:components`.

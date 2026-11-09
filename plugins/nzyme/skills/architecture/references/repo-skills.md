@@ -30,9 +30,10 @@ repo's own and not compared.
 `.claude/skills/<name>/SKILL.md`, from `assets/repo-skill.md.tmpl`:
 
 - **Frontmatter** — `name` and `description` in the repo's vocabulary (`database`, not `drizzle`, if
-  that is what the repo says). The description leads with the key use case and stays near 400
-  characters: what the area is here, then when to use it. Model-invocable: no
-  `disable-model-invocation`.
+  that is what the repo says). The description names the moment to load it, with the files and actions
+  that mark it: "Use before creating or changing any Vue component (.vue) in packages/ui or an app —
+  props, variants, styling, accessibility." Around 200 characters, no list of other skills it is not
+  for. Model-invocable: no `disable-model-invocation`.
 - **Repo facts** — only what holds here:
   - **Paths** — the package, its folders, where stories, tests, schema, migrations or generated files
     go.
@@ -43,7 +44,9 @@ repo's own and not compared.
   - **Commands** — how to run the area's checks, codegen or migrations.
 - **The inline line, last** — `` !`cat nzyme/docs/practice/<area>.md` ``, one per document. Claude
   Code replaces it with the document when the skill loads; the path is relative to the repo root,
-  where every session starts. The document's references (`nzyme/docs/practice/<area>/…`) and package
+  where every session starts. The expansion runs as a shell command, so a session that denies
+  `Bash(cat:*)` gets a permission error in place of the skill (`assets/claude-settings.json.tmpl`
+  allows it). The document's references (`nzyme/docs/practice/<area>/…`) and package
   READMEs (`nzyme/packages/<pkg>/README.md`) are linked by path, never inlined.
 
 For `secrets` the facts are the whole point: the exact prefix (`bun nzyme secrets` or the product

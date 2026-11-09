@@ -9,7 +9,7 @@ import type { ConfigSource } from './ConfigSource.js';
  *
  * Only string-valued keys can travel this way; structured keys belong in a file or a secret store.
  */
-export function envSource(env: EnvVariables = process.env): ConfigSource {
+export function envSource(env: EnvVariables = process.env): ConfigSource & { load(): Record<string, string> } {
     return {
         name: 'env',
         load() {

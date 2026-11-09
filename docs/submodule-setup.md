@@ -222,15 +222,17 @@ A product's setup script (Paseo runs it for every new worktree through `paseo.js
 - **nzyme's rules:** `nzyme/CLAUDE.md` and the `nzyme` plugin describe how to use and change nzyme.
   Point the product's `CLAUDE.md` at them for work inside `nzyme/`. Changes there follow nzyme's
   conventions: Conventional Commits, and a PR to `kedrzu/nzyme`.
-- **The plugin:** symlink it from the submodule, so the skills always match the nzyme commit the
-  product pins:
+- **The plugin:** it ships `/nzyme:architecture` only. Symlink it from the submodule, so the skill
+  always matches the nzyme commit the product pins:
 
   ```sh
   ln -s ../../nzyme/plugins/nzyme .claude/skills/nzyme
   ```
 
-  Link `nzyme-ui`, `nzyme-drizzle` or `nzyme-api-clients` the same way when the product has that area
-  ([practice-skills-as-opt-in-plugins.md](decisions/practice-skills-as-opt-in-plugins.md)).
+  The practice is in `nzyme/docs/practice/<area>.md`. The product writes one skill per area it has,
+  with its own facts, ending in `` !`cat nzyme/docs/practice/<area>.md` ``
+  ([practice-docs-inlined-into-repo-skills.md](decisions/practice-docs-inlined-into-repo-skills.md)).
+  Sessions must start at the product root for that path to resolve.
 
   Remove any `nzyme` entry from `extraKnownMarketplaces` and `nzyme@nzyme` from `enabledPlugins` in the
   product's `.claude/settings.json`: a project-level marketplace install of the same plugin wins over

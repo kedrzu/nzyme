@@ -51,8 +51,11 @@ The reasoning is in [docs/decisions/release-line-on-nx-release.md](docs/decision
 
 ## Agent plugin for consumers
 
-This repository is also a Claude Code marketplace. Its `nzyme` plugin teaches coding agents how to use
-the packages (IoC, logging, translations, forms, composables, testing) and the conventions they follow:
+This repository is also a Claude Code marketplace. Its `nzyme` plugin ships `/nzyme:architecture`, which
+sets up a product repo or brings it up to date with the reference architecture. How to use the packages
+(IoC, logging, translations, forms, composables, testing) and the conventions they follow is written as
+documents in [docs/practice](docs/practice); a product repo's own skills load them (see
+[docs/submodule-setup.md](docs/submodule-setup.md#agents)).
 
 ```sh
 claude plugin marketplace add kedrzu/nzyme

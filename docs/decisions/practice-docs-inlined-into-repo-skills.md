@@ -53,7 +53,10 @@ Practice as docs, inlined by repo skills.
 - **The `nzyme` plugin keeps only skills that act on the repo** (`architecture`). It is still linked
   through `.claude/skills/nzyme`, and still works from a user-level install in an empty directory.
 - **nzyme itself is a consumer:** its own `.claude/skills/<area>/SKILL.md` inline
-  `docs/practice/<area>.md` the same way.
+  `docs/practice/<area>.md` the same way, falling back to `nzyme/docs/practice/<area>.md`. A product's
+  session loads them as nested `nzyme:<area>` skills once the agent touches a file under `nzyme/`, and
+  its working directory is then the product's root (checked 2026-11-09: both paths expand without a
+  permission prompt).
 - **Sessions start at the repo root,** which makes the relative path resolve. Every launcher in use
   (Paseo, BMO, an editor) does it, so nothing enforces it.
 - **`/nzyme:architecture` creates and compares the repo skills.** Per area in play: a skill exists,

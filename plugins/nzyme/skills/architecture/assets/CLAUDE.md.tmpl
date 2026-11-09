@@ -47,16 +47,15 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
   and landing.
 - Both are the contracts of the `dev` plugin (`/dev:fix`, `/dev:task`, `/dev:feature`, `/dev:build`,
   `/dev:deliver`), installed from the `kedrzu-skills` marketplace in `.claude/settings.json`.
-- **Every implementation task reads `nzyme:code-conventions`**, plus the `nzyme:*` skill for the area
-  it touches (`ioc`, `logging`, `translations`, `forms`, `composables`, `testing`). They load from
-  the submodule through `.claude/skills/nzyme`. {{practice skills — e.g. A task on a component also
-  reads `nzyme-ui:ui`, one on SQL `nzyme-drizzle:drizzle`.}}
+- **Every implementation task reads the `code-conventions` skill**, plus the skill for its area. Each
+  is the repo's own (`.claude/skills/<name>/SKILL.md`) and inlines nzyme's practice document
+  (`nzyme/docs/practice/<area>.md`); a rule that is wrong everywhere is fixed in nzyme.
 - **ADRs** go to `docs/decisions/<title-slug>.md`, never numbered.
 
 # TypeScript rules
 
 These always apply. Everything else — organization, naming, casting, JSDoc, design principles — is in
-`nzyme:code-conventions`.
+the `code-conventions` skill.
 
 - Import `.ts` files with a `.js` extension (ESM).
 - Never use `any`; use proper types or `unknown`. Reaching for `any` or an ugly cast means something

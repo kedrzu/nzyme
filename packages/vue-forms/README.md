@@ -5,8 +5,7 @@ each input primitive returns a render function for the bare native element plus 
 the app wraps it once into its own styled component.
 
 How to write forms with it — the canonical form, which submit trigger to use, validation practice,
-nested forms and shared rules — is in the `nzyme:forms` skill (`plugins/nzyme/skills/forms/` in the
-nzyme repo). This README is the catalogue.
+nested forms and shared rules — is in the [forms practice](https://github.com/kedrzu/nzyme/blob/main/docs/practice/forms.md). This README is the catalogue.
 
 ```bash
 bun add @nzyme/vue-forms

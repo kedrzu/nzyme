@@ -1,3 +1,4 @@
+import { noAriaOnComponentInStory } from './noAriaOnComponentInStory.js';
 import { noUnusedNoSideEffectsResult } from './noUnusedNoSideEffectsResult.js';
 import type { OxlintPlugin } from './oxlintTypes.js';
 
@@ -8,6 +9,7 @@ import type { OxlintPlugin } from './oxlintTypes.js';
 const plugin: OxlintPlugin = {
     meta: { name: 'nzyme' },
     rules: {
+        'no-aria-on-component-in-story': noAriaOnComponentInStory,
         'no-unused-no-side-effects-result': noUnusedNoSideEffectsResult,
     },
 };

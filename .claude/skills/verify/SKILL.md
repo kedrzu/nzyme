@@ -44,6 +44,8 @@ downstream consumers.
    `bun nzyme quiet-run bun nx affected -t build --base=origin/main --exclude=@nzyme/logging-ui`
 2. Tests of the touched packages, always from the repo root:
    `bun nzyme quiet-run bun test packages/<pkg>/src` (a file path narrows further).
+   Touched a package with component tests (`*.spec.ts`, e.g. `@nzyme/vue`)? Also
+   `bun nzyme quiet-run bun run --cwd packages/<pkg> test:components`.
 3. Lint the changed files, new untracked ones included (`git diff` alone lists only tracked paths):
    `{ git diff --name-only --diff-filter=d $(git merge-base origin/main HEAD) -- '*.ts' '*.tsx' '*.vue'; git ls-files --others --exclude-standard -- '*.ts' '*.tsx' '*.vue'; } | xargs bun nzyme quiet-run bun x oxlint --type-aware --quiet`
    (on a hotfix branch use its base instead of `origin/main`)
@@ -65,6 +67,8 @@ and re-run from step 1 if a fix touched dependencies or generated inputs:
 4. `bun nzyme quiet-run bun run format:check` — fix with `bun run format`.
 5. `bun nzyme quiet-run bun run test` — `bun run test`, not `bun test` (the bare form ignores the
    script).
+6. `bun nzyme quiet-run bun run test:components` — Vue component tests in headless Chromium (CI
+   installs it with `bun x playwright install --with-deps chromium` in `packages/vue`).
 
 Before calling it done, run `git status --porcelain`: generated files must not appear (they are
 gitignored), and formatting fixes must be committed.

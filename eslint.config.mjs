@@ -34,4 +34,12 @@ export default [
         },
     },
     ...vue(),
+    {
+        files: ['**/*.vue'],
+        rules: {
+            // `v-show-hydrated` is `vShow` from `@nzyme/vue-utils/directives/vShow.js` (see `Collapse.vue`),
+            // which toggles display under a `<Transition>` the same way the built-in `v-show` does.
+            'vue/require-toggle-inside-transition': ['error', { additionalDirectives: ['show-hydrated'] }],
+        },
+    },
 ];

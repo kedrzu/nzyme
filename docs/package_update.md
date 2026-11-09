@@ -1,6 +1,6 @@
 # Package Update Notes
 
-Last updated: 2026-11-03
+Last updated: 2026-11-09
 
 Read by every dependency update that touches this repository — a run started here, or one started in
 a project that consumes nzyme as a submodule. Entries never name a consumer: one that holds nzyme
@@ -118,6 +118,14 @@ separate change. It affects only the scoped `verify` step, so an update run need
 `nx release` runs only on the `release` branch, so nothing on a PR exercises it. After an Nx bump run
 `nx release version --dry-run` and `nx release changelog <next> --dry-run` by hand.
 
+**Those dry-runs cannot be done from a consumer's checkout.** A consumer never installs this root's
+`devDependencies`, so `@nx/js` is absent there and `nx release version --dry-run` dies with
+`Unable to resolve the default "versionActions" implementation … it is likely that you simply need to
+install the "@nx/js" plugin` (seen 2026-11-09). `nx migrate` warns about the same absence and skips
+that package group — harmless for a patch with no migrations, but it means the migration list was
+never consulted. A consumer-driven Nx bump therefore leaves both dry-runs as an explicit hand-off,
+and a standalone checkout of this repository is where they get run.
+
 ### Moving a locked version inside its range
 
 `bun install` does not re-resolve a range the lockfile already satisfies, and a bare `bun update`
@@ -148,14 +156,14 @@ Version-specific failures from past attempts. Never retry a listed version; dele
 newer version fixes it. One `###` per package and attempted version. A `blocked-by-consumer` entry is
 never retried from inside this repository — only a run in a consumer can show it fixed.
 
-### nuxt 4.5+ / vite 8 (attempted by a consumer 2026-10-26, reverted; re-checked 2026-11-02)
+### nuxt 4.5+ / vite 8 (attempted by a consumer 2026-10-26, reverted; re-checked 2026-11-09)
 
 - **Problem**: a consumer is held on nuxt 4.4.8 and vite 7. nuxt 4.6 requires vite 8 (`@nuxt/vite-builder@4.6.2` depends on `vite: ^8.3.4`), and vite 8's bundler drops environment-gated branches from **dynamically imported** chunks even when the gate is true. A consumer that gates lazily-loaded, non-production-only code on build-time environment constants loses that code from its non-production builds.
 - **Error**: in the consumer's tree-shaking test, the lazy chunk builds down to its unconditional marker; both guarded markers are eliminated, while the entry chunk is correct. It happens with `minify: false` too, so it is the bundler, not terser. Typecheck and app builds stay green.
 - **Status**: blocked-by-consumer
-- **Notes**: do not raise the `nuxt` or `vite` ranges or pins (`packages/logging-ui`, `packages/nuxt-tools`, the Vue packages) past 4.4.x / 7.x, or the consumer gets a second Nuxt or Vite. nzyme's own share of the migration is known: nuxt 4.6 types the nitro hooks again, so the `@ts-expect-error nitro hooks are not typed` directive in `packages/nuxt-tools/src/outputFilesModule.ts` becomes an error (TS2578) and must go; `crossws` moves to the 0.4.x line with it (General Rules). The old blocker (`@nuxt/image` pinning a beta `ipx`) is gone.
+- **Notes**: re-checked at vite 8.3.6 on 2026-11-09 and the consumer's tree-shaking test fails identically, so nothing has moved. Do not raise the `nuxt` or `vite` ranges or pins (`packages/logging-ui`, `packages/nuxt-tools`, the Vue packages) past 4.4.x / 7.x, or the consumer gets a second Nuxt or Vite. nzyme's own share of the migration is known: nuxt 4.6 types the nitro hooks again, so the `@ts-expect-error nitro hooks are not typed` directive in `packages/nuxt-tools/src/outputFilesModule.ts` becomes an error (TS2578) and must go; `crossws` moves to the 0.4.x line with it (General Rules). The old blocker (`@nuxt/image` pinning a beta `ipx`) is gone.
 
-### rollup 4.62.3 through 4.67.4 (re-checked 2026-11-03)
+### rollup 4.62.3 through 4.68.1 (re-checked 2026-11-09)
 
 - **Problem**: `packages/pulumi/src/compileFunction.worker.ts` stops compiling — the
   `bundleStats()` plugin no longer satisfies `InputPluginOption`.
@@ -166,8 +174,9 @@ never retried from inside this repository — only a run in a consumer can show 
   nothing from 4.63.4 up to 4.67.4 was attempted, because the vendored type is unchanged:
   `rollup-plugin-bundle-stats` hard-pins `rollup-plugin-stats@2.1.3`, whose `dist/types.d.mts` still
   declares `file: string`, in 4.23.1 (published 2026-11-02) as in 4.22.3. Moving to the newest
-  `rollup-plugin-stats` would not help: 3.0.2 declares `file: string` too. Re-test rollup only when a
-  release relaxes `SourceMap.file`. Verify with
+  `rollup-plugin-stats` would not help: 3.0.2 declares `file: string` too. Nothing from 4.67.5 to
+  4.68.1 was attempted either, for the same reason — re-checked 2026-11-09, the vendored type is
+  unchanged. Re-test rollup only when a release relaxes `SourceMap.file`. Verify with
   `grep -n 'file' node_modules/.bun/rollup-plugin-stats@*/node_modules/rollup-plugin-stats/dist/types.d.*`.
 
 ### rollup-plugin-bundle-stats 4.23.1 (not attempted, 2026-11-02)
@@ -184,7 +193,7 @@ never retried from inside this repository — only a run in a consumer can show 
 - **Problem**: `@babel/preset-env` has no 8.1.0 (`latest` is 8.0.7), so moving `@babel/core` alone
   installs a second Babel 8 tree: `@babel/types` 8.0.6 beside 8.1.0, nested `@babel/*` lockfile keys
   149 → 200. Tests stay green with that tree.
-- **Status**: skip — retry once `@babel/preset-env` publishes 8.1.x.
+- **Status**: skip — retry once `@babel/preset-env` publishes 8.1.x. Re-checked 2026-11-09: `npm view @babel/preset-env version` still reads 8.0.7.
 - **Notes**: do not collapse the tree by deleting lockfile entries (General Rules → moving a locked
   version).
 
@@ -198,7 +207,7 @@ never retried from inside this repository — only a run in a consumer can show 
 - **Notes**: retry `vue-tsc` when `unplugin-dts` moves its `@volar/*`, and `unist-util-visit` when a
   later install no longer nests. Check with the lockfile key count before and after.
 
-### typescript 7.x — the target is 7.1, not 7.0 (upstream checked 2026-10-26)
+### typescript 7.x — the target is 7.1, not 7.0 (upstream checked 2026-11-09)
 
 **7.0 was never going to unblock this, by design.** It ships no programmatic API. From
 [Announcing TypeScript 7.0](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/#running-side-by-side-with-typescript-6.0):
@@ -233,7 +242,8 @@ classic API. typescript-eslint states it honestly: `typescript-estree@8.72.0` pe
 
 **Re-check — three conditions, all required:**
 
-1. `npm view typescript dist-tags` → `latest` on a 7.1.x.
+1. `npm view typescript dist-tags` → `latest` on a 7.1.x. Checked 2026-11-09: still `7.0.2`, with
+   7.1 only on `beta` (`7.1.0-beta`) and `next`.
 2. typescript-eslint PR #12803 merged **and** released.
 3. Volar PR #6170 out of draft **and** released in a `vue-tsc` that drops the classic-API requirement.
 
@@ -267,3 +277,30 @@ superseded on schedule by this path.
   so the declaration merge in `packages/vitest/src/index.ts` must repeat that parameter list and
   return `R` instead of `void` (General Rules → vitest). vitest 5 peers `vite: ^6.4 || ^7 || ^8`, so
   vite 7 does not block it.
+
+### vite-plugin-checker 1.0.0 (not attempted 2026-11-09)
+
+- **Problem**: `packages/rollup-utils` declares `vite-plugin-checker: ^0.14.5`. Raising a published
+  range to a new major is a breaking change of this repository, and nothing here needs 1.0.
+- **Status**: skip — needs its own change, with the `feat!` / `BREAKING CHANGE:` treatment a range
+  major requires.
+- **Notes**: `vite-plugin-checker` is one of the tools that keeps classic `typescript@6` resolvable
+  here (General Rules → `typescript / @typescript/native-preview`), so a 1.0 bump is also the moment
+  to re-read what TypeScript API it consumes: if 1.0 drops the classic API requirement, that entry's
+  list of blockers gets shorter. Check with `npm view vite-plugin-checker@1.0.0 peerDependencies` and
+  its changelog before raising the range.
+
+### @lucide/vue, @linear/sdk, graphql and vue — exact pins a consumer shares
+
+- **Problem**: four packages are pinned **exactly** rather than as ranges, in the private packages
+  `logging-ui` and `linear`. A consumer that pins the same package exactly installs a second copy the
+  moment the two pins disagree, and types cross both boundaries (`@lucide/vue` and `vue` into the
+  consumer's components, `@linear/sdk` and `graphql` through `@nzyme/linear`'s exported surface).
+- **Status**: not a failure — a standing coupling.
+- **Notes**: on 2026-11-09 all four had drifted and had to move with a consumer:
+  `@lucide/vue` 1.67.0 -> 1.70.0 and `vue` 3.5.44 -> 3.5.45 in `logging-ui`, `@linear/sdk` 101.0.0 ->
+  101.1.0 and `graphql` 17.0.2 -> 17.1.0 in `linear`. An exact pin is legitimate in a private package
+  (the publishing lint does not require ranges there), but it means these four move on the consumer's
+  schedule, not this repository's. Check them with
+  `grep -n '"@lucide/vue"\|"vue"\|"@linear/sdk"\|"graphql"' packages/*/package.json` at the start of
+  any run here, and expect a consumer-driven run to move them from the outside.

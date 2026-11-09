@@ -75,7 +75,7 @@ menus, listbox), the parts wrap reka parts and the context carries only what rek
   hover: an auto-playing carousel also needs a visible pause control (2.2.2).
 - **SSR styles.** `Reveal`, `Collapse` and `Carousel` are SFCs, so Nuxt inlines their `<style>` on a
   server-rendered page. The transitions are still `.tsx` with CSS modules. An SSR app adds
-  `@nuxtjs/critters` as described in the `architecture` skill (its `references/nuxt-app.md`, SPA or SSR).
+  `@nuxtjs/critters` as described in nzyme's `plugins/nzyme/skills/architecture/references/nuxt-app.md` ([on GitHub](https://github.com/kedrzu/nzyme/blob/main/plugins/nzyme/skills/architecture/references/nuxt-app.md)) (SPA or SSR).
   An SPA is unaffected.
 
 ## Modals

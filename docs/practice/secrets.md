@@ -7,9 +7,9 @@ other variable ([ioc](ioc.md)). Values are cached in the OS keychain. There is n
 every credential — the app's, a script's, a token a tool needs — is a mapped secret, so it has one
 home and one way in.
 
-The repo's own `.claude/skills/secrets/SKILL.md` says what is true only there: how the CLI is
-invoked (`bun nzyme secrets …` or the product's CLI), where the provider lives, which store and
-environments exist, whose machines can write. Read it; this document uses `secrets …` for the command.
+What is true only in one repo — how the CLI is invoked (`bun nzyme secrets …` or the product's CLI),
+where the provider lives, which store and environments exist, whose machines can write — sits above
+this document. This document uses `secrets …` for the command.
 API and options: `@nzyme/secrets` README (`nzyme/packages/secrets/README.md` in a product repo).
 
 ## A value never enters the transcript

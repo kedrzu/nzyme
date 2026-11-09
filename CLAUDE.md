@@ -78,8 +78,7 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
 - Both are the contracts of the `dev` plugin (`/dev:fix`, `/dev:task`, `/dev:feature`, `/dev:build`,
   `/dev:deliver`), which is installed from the `kedrzu-skills` marketplace in `.claude/settings.json`.
 - **Every implementation task loads the repo's `code-conventions` skill with the Skill tool**, plus the
-  skill for the area it touches (`ioc`, `logging`, `translations`, `forms`, `composables`, `secrets`, `testing`, `ui`,
-  `api-clients`). Each is `.claude/skills/<area>/SKILL.md` and inlines the practice document
+  skill for its area. Each is `.claude/skills/<area>/SKILL.md` and inlines the practice document
   `docs/practice/<area>.md`, which consumer repos use too, so fix the text there when it is wrong. Load
   them, don't Read their `SKILL.md`: the document is inlined only when the skill is loaded.
 - **The `nzyme` plugin** (`plugins/nzyme`) ships only `/nzyme:architecture`, which sets up or updates a

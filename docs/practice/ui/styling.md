@@ -2,7 +2,7 @@
 
 Read when writing a component's styles or adding a design token. Class naming (BEM with a single `_`,
 camelCase) is in [code-conventions](../code-conventions.md); how the token partials are injected into every SCSS block
-is part of the UI package setup in the `architecture` skill.
+is part of the UI package setup in nzyme's `plugins/nzyme/skills/architecture/references/ui-package.md` ([on GitHub](https://github.com/kedrzu/nzyme/blob/main/plugins/nzyme/skills/architecture/references/ui-package.md)).
 
 ## Design tokens
 

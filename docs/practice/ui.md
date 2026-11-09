@@ -24,8 +24,8 @@ does not repeat them:
 - **User-facing text** → [translations](translations.md) (`.loc.yaml` beside the component).
 - **A `use[Feature]` composable or a store shared across components** → [composables](composables.md) /
   [ioc](ioc.md).
-- **Setting up the UI package, Storybook, Vitest browser mode and token injection** → the
-  `architecture` skill. This document assumes they exist.
+- **Setting up the UI package, Storybook, Vitest browser mode and token injection** →
+  nzyme's `plugins/nzyme/skills/architecture/references/ui-package.md` ([on GitHub](https://github.com/kedrzu/nzyme/blob/main/plugins/nzyme/skills/architecture/references/ui-package.md)). This document assumes they exist.
 
 ## Requirements
 

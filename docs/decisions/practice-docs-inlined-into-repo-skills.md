@@ -54,8 +54,11 @@ Practice as docs, inlined by repo skills.
   through `.claude/skills/nzyme`, and still works from a user-level install in an empty directory.
 - **nzyme itself is a consumer:** its own `.claude/skills/<area>/SKILL.md` inline
   `docs/practice/<area>.md` the same way.
-- **Sessions start at the repo root.** It is what makes the relative path resolve, and every launcher
-  in use (Paseo, BMO, an editor) already does it. A repo's `CLAUDE.md` says so.
+- **Sessions start at the repo root,** which makes the relative path resolve; every launcher in use
+  (Paseo, BMO, an editor) already does it. A rule in `CLAUDE.md` could not enforce it, because the
+  agent reads it only after the session has started. The `nzyme` plugin carries a `SessionStart` hook
+  instead: when the working directory is not the git top level, it tells the user that the repo's
+  skills will not load and to restart from the root.
 - **`/nzyme:architecture` creates and compares the repo skills.** Per area in play: a skill exists,
   inlines its document, carries only repo facts above it, and no second repo skill covers the same
   area.
@@ -74,8 +77,10 @@ nzyme:
 4. `/nzyme:architecture`: `references/repo-skills.md` becomes the procedure above with a skill
    template in `assets/`; `references/claude-code.md` drops the practice-plugin table and gains the
    compare rules; the element tables name practice documents instead of skills; the `CLAUDE.md`
-   template names the repo's skills and states the repo-root rule.
-5. `CLAUDE.md`, `docs/submodule-setup.md#agents` and the plugin and marketplace descriptions follow.
+   template names the repo's skills.
+5. The `SessionStart` hook in `plugins/nzyme/hooks/`, with a test for a session at the root (silent)
+   and in a subdirectory (warns).
+6. `CLAUDE.md`, `docs/submodule-setup.md#agents` and the plugin and marketplace descriptions follow.
 
 A product repo (healed first):
 
@@ -93,4 +98,5 @@ A product repo (healed first):
 - One description per area in a repo's context, written by the repo for its own vocabulary.
 - A practice change reaches a repo when it bumps nzyme, with no copy or generation step.
 - Every repo writes its skills; `/nzyme:architecture` keeps them from drifting only when it runs.
-- A session started outside the repo root loses every repo skill that inlines a document.
+- A session started outside the repo root loses every repo skill that inlines a document; the hook
+  makes that visible at once rather than through an agent that silently lacks its rules.

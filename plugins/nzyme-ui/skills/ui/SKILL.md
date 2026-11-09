@@ -207,7 +207,7 @@ failure go away; only with a comment naming why the rule is wrong for that story
 ## References
 
 - `references/components.md` — field wrappers, reka-ui wrapping conventions, compound components,
-  transitions and `Reveal`/`Collapse`/`Carousel` (with the SSR style caveat), modals, stories,
+  transitions and `Reveal`/`Collapse`/`Carousel` (with SSR styles), modals, stories,
   harnesses, text.
 - `references/styling.md` — token partials, CSS modules, BEM, CSS custom properties for variants,
   state selectors, focus and touch-target mixins, motion, breakpoints.

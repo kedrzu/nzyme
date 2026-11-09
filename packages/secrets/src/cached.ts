@@ -12,24 +12,26 @@ export interface CachedOptions {
     keychain?: Keychain;
 }
 
-interface CacheIndex {
+interface CacheItem {
     /** `Date.now()` when the store was read. */
     at: number;
-    /** The keys that read returned. */
-    keys: string[];
+    /** What that read returned. */
+    values: Record<string, string>;
 }
 
 /**
  * Wraps a store with a cache in the keychain, so a repeated `readAll` within `ttl` makes no store call.
- * The whole read is cached per store id and prefix: one index item with the timestamp and the keys,
- * plus one item per value, so no item outgrows a per-item size cap (Windows Credential Manager holds
- * 2560 bytes). A write invalidates the index, so the next read goes to the store. A keychain failure
- * only warns: the read falls through to the store. Values are kept only in the keychain, never in a file.
+ * The whole read is ONE keychain item per store id and prefix, holding JSON `{ at, values }`, so the
+ * cache can never hold a mix of two reads or a key the store no longer has. A write deletes the item,
+ * so the next read goes to the store. A keychain failure or a malformed item only warns: the read falls
+ * through to the store. Values are kept only in the keychain, never in a file.
+ *
+ * One item per store means a store larger than Windows Credential Manager's 2560-byte item cap will not
+ * cache there (the keychain refuses it, which only warns); nobody uses Windows today.
  */
 export function cached(store: SecretStore, options: CachedOptions): SecretStore {
     const keychain = options.keychain ?? osKeychain;
-    const scope = `${store.id}:${store.prefix}`;
-    const indexName = `cache-index:${scope}`;
+    const itemName = `cache:${store.id}:${store.prefix}`;
 
     return {
         id: store.id,
@@ -52,52 +54,32 @@ export function cached(store: SecretStore, options: CachedOptions): SecretStore 
 
     async function write(entries: SecretStoreEntry[]) {
         await store.write(entries);
-        await guarded('deleting from', () => keychain.delete(indexName));
+        await guarded('deleting from', () => keychain.delete(itemName));
     }
 
     async function readFromCache() {
-        const raw = await guarded('reading', () => keychain.get(indexName));
+        const raw = await guarded('reading', () => keychain.get(itemName));
         if (raw == null) {
             return undefined;
         }
 
-        const index = parseIndex(raw);
-        if (!index) {
-            console.warn(`Secrets cache of store ${store.id}: the keychain index is malformed, ignoring it`);
+        const item = parseItem(raw);
+        if (!item) {
+            console.warn(`Secrets cache of store ${store.id}: the keychain item is malformed, ignoring it`);
             return undefined;
         }
 
-        if (Date.now() - index.at >= options.ttl) {
+        if (Date.now() - item.at >= options.ttl) {
             return undefined;
         }
 
-        const values = await Promise.all(index.keys.map(key => guarded('reading', () => keychain.get(itemName(key)))));
-        const result = new Map<string, string>();
-        for (const [position, key] of index.keys.entries()) {
-            const value = values[position];
-            if (value == null) {
-                return undefined;
-            }
-
-            result.set(key, value);
-        }
-
-        return result;
+        return new Map(Object.entries(item.values));
     }
 
     async function readFromStore() {
         const secrets = await store.readAll();
-        const previous = await guarded('reading', () => keychain.get(indexName));
-        const stale = previous == null ? [] : (parseIndex(previous)?.keys ?? []);
-
-        await Promise.all([
-            ...[...secrets].map(([key, value]) => guarded('writing', () => keychain.set(itemName(key), value))),
-            ...stale
-                .filter(key => !secrets.has(key))
-                .map(key => guarded('deleting from', () => keychain.delete(itemName(key)))),
-        ]);
-        const index: CacheIndex = { at: Date.now(), keys: [...secrets.keys()] };
-        await guarded('writing', () => keychain.set(indexName, JSON.stringify(index)));
+        const item: CacheItem = { at: Date.now(), values: Object.fromEntries(secrets) };
+        await guarded('writing', () => keychain.set(itemName, JSON.stringify(item)));
 
         return secrets;
     }
@@ -111,13 +93,9 @@ export function cached(store: SecretStore, options: CachedOptions): SecretStore 
             return undefined;
         }
     }
-
-    function itemName(key: string) {
-        return `cache:${scope}:${key}`;
-    }
 }
 
-function parseIndex(raw: string): CacheIndex | undefined {
+function parseItem(raw: string): CacheItem | undefined {
     let parsed: unknown;
     try {
         parsed = JSON.parse(raw);
@@ -130,12 +108,22 @@ function parseIndex(raw: string): CacheIndex | undefined {
         parsed === null ||
         !('at' in parsed) ||
         typeof parsed.at !== 'number' ||
-        !('keys' in parsed) ||
-        !Array.isArray(parsed.keys) ||
-        !parsed.keys.every((key): key is string => typeof key === 'string')
+        !('values' in parsed) ||
+        typeof parsed.values !== 'object' ||
+        parsed.values === null ||
+        Array.isArray(parsed.values)
     ) {
         return undefined;
     }
 
-    return { at: parsed.at, keys: parsed.keys };
+    const values: Record<string, string> = {};
+    for (const [key, value] of Object.entries(parsed.values)) {
+        if (typeof value !== 'string') {
+            return undefined;
+        }
+
+        values[key] = value;
+    }
+
+    return { at: parsed.at, values };
 }

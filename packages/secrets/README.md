@@ -78,10 +78,10 @@ reads those variables. Production, whose platform provides the variables, skips 
 ## Cache
 
 `cached(store, { ttl })` keeps the whole `readAll` result of a store in the OS keychain (through `Bun.secrets`,
-service `nzyme-secrets`), per store id and prefix, so restarting a dev server makes no store call. A write
-invalidates it. `ttl` is in milliseconds and
-required. A keychain failure only warns; the read falls through to the store. `secrets refresh`
-re-reads before the TTL runs out.
+service `nzyme-secrets`) as one item per store id and prefix, so restarting a dev server makes no store call. A
+write deletes the item. `ttl` is in milliseconds and required. A keychain failure or a malformed item only warns;
+the read falls through to the store. `secrets refresh` re-reads before the TTL runs out. A store larger than
+Windows Credential Manager's 2560-byte item cap will not cache on Windows (it only warns).
 
 Values are kept only in the keychain, never in a file. Any `bun` process of the same user can read them without a prompt: on macOS (Bun 1.4.4, checked 2026-11-02) a separate `bun` script read the tokens that `nzyme secrets login` had stored. The keychain protects them from other users and from a stolen disk, not from code you run. Linux is not checked yet.
 

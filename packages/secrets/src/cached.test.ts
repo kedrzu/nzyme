@@ -33,7 +33,7 @@ test('within the TTL readAll comes from the keychain with no store call', async 
         ]),
     );
     expect(inner.reads).toBe(1);
-    expect([...keychain.values.keys()].toSorted()).toEqual(['cache-index:bw:', 'cache:bw::A', 'cache:bw::B']);
+    expect([...keychain.values.keys()]).toEqual(['cache:bw:']);
 });
 
 test('a read older than the TTL goes to the store again', async () => {
@@ -75,7 +75,7 @@ test('a failing inner write leaves the cache untouched', async () => {
     expect(inner.reads).toBe(1);
 });
 
-test('refresh re-reads within the TTL, replacing items and deleting a vanished one', async () => {
+test('refresh re-reads within the TTL and overwrites the item, dropping a vanished key', async () => {
     const inner = createMemoryStore('bw', { A: 'a', B: 'b' });
     const keychain = createMemoryKeychain();
     const store = cached(inner.store, { ttl: HOUR, keychain });
@@ -85,7 +85,7 @@ test('refresh re-reads within the TTL, replacing items and deleting a vanished o
     inner.values.delete('B');
     await store.refresh?.();
 
-    expect(keychain.values.has('cache:bw::B')).toBe(false);
+    expect(keychain.values.get('cache:bw:')).not.toContain('"B"');
     expect(await store.readAll()).toEqual(new Map([['A', 'a2']]));
     expect(inner.reads).toBe(2);
 });
@@ -131,26 +131,31 @@ test('a failing keychain only warns by store id and falls through to the store, 
     }
 });
 
-test('a value the keychain refuses to save makes the next read go to the store', async () => {
+test('after a write, a key removed from the store no longer resolves from the cache', async () => {
+    const inner = createMemoryStore('bw', { A: 'a', B: 'b' });
+    const store = cached(inner.store, { ttl: HOUR, keychain: createMemoryKeychain() });
+
+    await store.readAll();
+    inner.values.delete('B');
+    await store.write([{ key: 'A', value: 'a2' }]);
+
+    expect(await store.readAll()).toEqual(new Map([['A', 'a2']]));
+    expect(inner.reads).toBe(2);
+});
+
+test('an item the keychain refuses to save makes the next read go to the store', async () => {
     const warn = spyOn(console, 'warn').mockImplementation(() => {});
     try {
-        const inner = createMemoryStore('bw', { SMALL: 'small', BIG: SENTINEL });
-        const memory = createMemoryKeychain();
+        const inner = createMemoryStore('bw', { A: SENTINEL });
         const keychain: Keychain = {
-            ...memory,
-            set: (name, value) =>
-                name === 'cache:bw::BIG' ? Promise.reject(new Error('too large')) : memory.set(name, value),
+            ...createMemoryKeychain(),
+            set: () => Promise.reject(new Error('too large')),
         };
         const store = cached(inner.store, { ttl: HOUR, keychain });
 
         await store.readAll();
 
-        expect(await store.readAll()).toEqual(
-            new Map([
-                ['SMALL', 'small'],
-                ['BIG', SENTINEL],
-            ]),
-        );
+        expect(await store.readAll()).toEqual(new Map([['A', SENTINEL]]));
         expect(inner.reads).toBe(2);
         expect(warn.mock.calls.map(args => args.join(' ')).join('\n')).not.toContain(SENTINEL);
     } finally {
@@ -158,34 +163,42 @@ test('a value the keychain refuses to save makes the next read go to the store',
     }
 });
 
-test('a corrupt or foreign-shaped index is treated as a miss with a warning', async () => {
+test('a corrupt or foreign-shaped item is treated as a miss with a warning', async () => {
     const warn = spyOn(console, 'warn').mockImplementation(() => {});
     try {
-        for (const raw of ['not json', `"${SENTINEL}"`, `{"at":1}`, '[1]', `{"at":1,"keys":[1]}`]) {
+        for (const raw of [
+            'not json',
+            `"${SENTINEL}"`,
+            `{"at":1}`,
+            '[1]',
+            `{"at":1,"values":{"A":1}}`,
+            `{"at":1,"values":[]}`,
+        ]) {
             const inner = createMemoryStore('bw', { A: 'a' });
             const keychain = createMemoryKeychain();
-            keychain.values.set('cache-index:bw:', raw);
+            keychain.values.set('cache:bw:', raw);
 
             expect(await cached(inner.store, { ttl: HOUR, keychain }).readAll()).toEqual(new Map([['A', 'a']]));
             expect(inner.reads).toBe(1);
         }
 
-        expect(warn).toHaveBeenCalledTimes(5);
+        expect(warn).toHaveBeenCalledTimes(6);
         expect(warn.mock.calls.map(args => args.join(' ')).join('\n')).not.toContain(SENTINEL);
     } finally {
         warn.mockRestore();
     }
 });
 
-test('values are kept in the keychain, one item each, and nowhere else', async () => {
+test('values are kept in the keychain item and nowhere else', async () => {
     const inner = createMemoryStore('bw', { A: SENTINEL });
     const keychain = createMemoryKeychain();
     const store = cached(inner.store, { ttl: HOUR, keychain });
 
     await store.readAll();
 
-    expect(keychain.values.get('cache:bw::A')).toBe(SENTINEL);
-    expect(keychain.values.get('cache-index:bw:')).not.toContain(SENTINEL);
+    expect([...keychain.values.keys()]).toEqual(['cache:bw:']);
+    const item: unknown = JSON.parse(keychain.values.get('cache:bw:') ?? '');
+    expect(item).toHaveProperty('values', { A: SENTINEL });
 });
 
 test('delegates id, prefix, login and credentialEnv to the inner store', async () => {

@@ -6,4 +6,6 @@ description: >-
 
 Sources: `packages/openapi`, `packages/fetch-utils`; the Linear GraphQL client in `packages/linear` (spec refreshed by its `schema` script).
 
+Links in the document below are relative to its directory (`docs/practice/` here); package READMEs are `packages/<pkg>/README.md`.
+
 !`cat docs/practice/api-clients.md 2>/dev/null || cat nzyme/docs/practice/api-clients.md`

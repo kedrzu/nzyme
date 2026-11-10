@@ -42,17 +42,22 @@ repo's own and not compared.
   - **Requirements the repo enforces**, with what enforces them (for UI: a story and a story-based
     test per component, WCAG 2.2 AA through axe in those tests).
   - **Commands** — how to run the area's checks, codegen or migrations.
-- **The inline line, last** — `` !`cat nzyme/docs/practice/<area>.md` ``, one per document. Claude
+- **The link base and the inline line, last** — one sentence saying the document's links are
+  relative to `nzyme/docs/practice/` and package READMEs are `nzyme/packages/<pkg>/README.md` (inlining
+  drops the document's own directory, so its relative links such as `testing/e2e.md` would resolve
+  nowhere), then `` !`cat nzyme/docs/practice/<area>.md` ``, one per document; the sentence is
+  identical in every repo skill. Claude
   Code replaces it with the document when the skill loads; the path is relative to the repo root,
   where every session starts. The expansion runs as a shell command, so a session that denies
   `Bash(cat:*)` gets a permission error in place of the skill (`assets/claude-settings.json.tmpl`
-  allows it). The document's references (`nzyme/docs/practice/<area>/…`) and package
-  READMEs (`nzyme/packages/<pkg>/README.md`) are linked by path, never inlined.
+  allows it). The document's references and package READMEs are
+  linked by path, never inlined.
 
 For `secrets` the facts are the whole point: the exact prefix (`bun nzyme secrets` or the product
 CLI's), the provider file, each store and its environments, the variable that selects the environment
 and how to run a command against another one, whose machines can write, and any secrets command the
-repo adds.
+repo adds. Its description also keeps the trigger "before running anything that could print the
+environment or read the keychain", since the ban on `env` and `printenv` must reach the agent before the skill is loaded.
 
 It never restates the document. If a line would hold everywhere nzyme is used, it belongs in the
 practice document, not here.

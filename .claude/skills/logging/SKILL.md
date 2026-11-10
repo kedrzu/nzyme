@@ -6,4 +6,6 @@ description: >-
 
 Sources: `packages/logging`, `packages/logging-ui`.
 
+Links in the document below are relative to its directory (`docs/practice/` here); package READMEs are `packages/<pkg>/README.md`.
+
 !`cat docs/practice/logging.md 2>/dev/null || cat nzyme/docs/practice/logging.md`

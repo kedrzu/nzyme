@@ -6,4 +6,6 @@ description: >-
 
 Compile `.loc.yaml` with `bun run localise`. Never edit the generated `.loc.ts`.
 
+Links in the document below are relative to its directory (`docs/practice/` here); package READMEs are `packages/<pkg>/README.md`.
+
 !`cat docs/practice/translations.md 2>/dev/null || cat nzyme/docs/practice/translations.md`

@@ -6,4 +6,6 @@ description: >-
 
 Sources: `packages/vue-forms`, `packages/vue-transitions`, `packages/vue`. Component tests: `bun run test:components`.
 
+Links in the document below are relative to its directory (`docs/practice/` here); package READMEs are `packages/<pkg>/README.md`.
+
 !`cat docs/practice/ui.md 2>/dev/null || cat nzyme/docs/practice/ui.md`

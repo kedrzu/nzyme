@@ -6,4 +6,6 @@ description: >-
 
 Sources: `packages/vue-utils`, `packages/vue-ioc`, `packages/vue`.
 
+Links in the document below are relative to its directory (`docs/practice/` here); package READMEs are `packages/<pkg>/README.md`.
+
 !`cat docs/practice/composables.md 2>/dev/null || cat nzyme/docs/practice/composables.md`

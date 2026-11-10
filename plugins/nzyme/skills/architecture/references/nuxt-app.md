@@ -3,7 +3,7 @@
 A Nuxt 4 app package with nothing implicit: no auto-imports, no file-based routes, one path alias,
 one IoC container. The app talks to whatever API the repo has; this element does not prescribe a
 backend. Components come from the UI package (`references/ui-package.md`); how they are built is
-`../ui/SKILL.md`.
+`../../../../docs/practice/ui.md`.
 
 ## Reference state
 
@@ -26,8 +26,9 @@ packages/{{app}}/
   `prep` (`nuxt prepare`, which writes `.nuxt/tsconfig.json`) through the `nx.json` target defaults,
   and `build` depends on `typecheck`.
 - **`tsconfig.json`** extends `.nuxt/tsconfig.json`, so `nzyme monorepo` does not generate it (the app
-  has no `tsconfig.esm.json`). Un-ignore it: `!/packages/{{app}}/tsconfig.json` in `.gitignore`
-  (`references/monorepo.md`).
+  has no `tsconfig.esm.json`).
+- **`.gitignore`** in the app: `.nuxt/`, `.output/` and `!tsconfig.json`, which un-ignores the
+  hand-written tsconfig (`references/monorepo.md`).
 - **Lint:** the app imports `.vue` files, so it gets a `files` entry in the `.oxlintrc.json` override
   (`references/lint-format.md`).
 - **Setup:** `setup.build.sh` keeps its `{{if nuxt}}` block (`references/setup-scripts.md`).
@@ -201,7 +202,7 @@ export default defineNuxtPlugin({
 
 - The `ioc-plugin` registers the interface implementations (`LanguageContext`, an auth store) and
   sets values from `useRuntimeConfig().public`. Services themselves resolve lazily on first
-  `useService`; how to define them is `nzyme:ioc`.
+  `useService`; how to define them is `../../../../docs/practice/ioc.md`.
 - **`dependsOn: ['ioc-plugin']`** on every plugin that resolves a service, so the order is stated,
   not inherited from file names. Outside a component, resolve through
   `nuxtApp.vueApp.runWithContext(() => useService(X))`.

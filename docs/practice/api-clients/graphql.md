@@ -117,7 +117,7 @@ export function createCatalogRequester(options: CreateCatalogRequesterOptions) {
 and a 2xx response whose `errors` array is non-empty (validation, a resolver failure). Callers and
 alerting treat them differently. A GraphQL error's `message` often echoes the rejected input, so
 `CatalogGraphQLError` builds its own message from the failing field `path`s and the count, and keeps
-the raw entries on an `errors` property — never in the message (`nzyme:logging`).
+the raw entries on an `errors` property — never in the message ([logging](../logging.md)).
 
 Unit-test the requester with a fake `fetch` passed through the options: headers and body sent, data
 returned, each error class thrown. That test plus the generated types cover the integration's own

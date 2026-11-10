@@ -1,15 +1,3 @@
----
-name: composables
-description: >-
-    Vue composables with @nzyme/vue-utils and @nzyme/vue-ioc — naming, the reactive() return shape and
-    the typed `reactive` re-export, MaybeRefOrGetter options with makeRef, data loading with
-    useDataSource, injecting with useService/useLogger, events with createEventEmitter, onEventEmitter
-    and onWindowEvent, per-item effects with mapScopedArray, plus Vue reactivity and stateful-flow
-    pitfalls. Use when writing or reviewing a `use[Feature]` composition function or component-scoped
-    reactive logic in a project that imports @nzyme/vue-utils or @nzyme/vue-ioc. Not for: state shared
-    across components (a defineService store — ioc skill) or form state and validation (forms skill).
----
-
 # Composables
 
 A composable (`use[Feature]`) encapsulates **component-scoped** stateful logic: each call creates an
@@ -17,9 +5,9 @@ independent instance whose watchers and listeners die with the calling component
 
 ## When NOT to use
 
-- **State shared across components or cached beyond one component** → a `defineService` store (ioc
-  skill, `references/reactive-services.md`).
-- **Form state and validation** → forms skill.
+- **State shared across components or cached beyond one component** → a `defineService` store ([ioc](ioc.md),
+  [`ioc/reactive-services.md`](ioc/reactive-services.md)).
+- **Form state and validation** → [forms](forms.md).
 - **Logic used by exactly one component** → keep it in that component's setup; extraction without reuse
   only adds indirection.
 
@@ -221,11 +209,11 @@ component.
 
 |Situation|Rule|Detail|
 |-|-|-|
-|Watching a value that can reset to `null`|Handle the `null` branch — reset local state to its default|`references/reactivity-pitfalls.md`|
+|Watching a value that can reset to `null`|Handle the `null` branch — reset local state to its default|[`composables/reactivity-pitfalls.md`](composables/reactivity-pitfalls.md)|
 |Fetching keyed by an id that changes|`useDataSource` with `clear()` on the id switch, not `computedAsync`|same|
 |A composable with effects inside `array.map()`|`mapScopedArray(() => arr, item => ...)`|same|
 |`isBrowser()` guard in browser-only code|Delete it|same|
-|Draining a queue of pending operations|Remove each item only after it succeeds|`references/stateful-flow-patterns.md`|
+|Draining a queue of pending operations|Remove each item only after it succeeds|[`composables/stateful-flow-patterns.md`](composables/stateful-flow-patterns.md)|
 |Updating state the app treats as truth before the API call|Apply it only after success|same|
 |An optional injected context is absent|The fallback path must fire the same side effects|same|
 |A store persists per-user data|Wipe it on every identity change, logout included|same|

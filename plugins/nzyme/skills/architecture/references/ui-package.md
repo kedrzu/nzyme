@@ -2,8 +2,8 @@
 
 The package the product's components live in, with Storybook and the Vitest browser project that
 runs every story as a test. This reference owns the setup only. How a component is built, which
-stories and specs it needs, and what WCAG 2.2 AA asks of it are `../ui/SKILL.md`; how a spec is
-written is `nzyme:testing`.
+stories and specs it needs, and what WCAG 2.2 AA asks of it are `../../../../docs/practice/ui.md`; how a
+spec is written is `../../../../docs/practice/testing.md`.
 
 ## Reference state
 
@@ -13,6 +13,7 @@ packages/ui/
 ├── tsconfig.esm.json   # hand-written; nzyme monorepo generates tsconfig.json from it
 ├── viteShared.ts       # cssOptions, shared by Nuxt, Storybook and Vitest
 ├── vitest.config.ts
+├── .gitignore          # storybook-static/, *storybook.log — what `build-storybook` writes
 ├── .storybook/
 │   ├── main.ts
 │   └── preview.ts
@@ -64,7 +65,7 @@ packages/ui/
 - `tsgo` cannot read `.vue` files, so `vue-tsc --noEmit` is the package's `typecheck` and the root
   `typecheck` reaches it through `nx run-many -t typecheck`.
 - `.loc.yaml` files beside components compile to `.loc.ts` through the root `localise` script (run by
-  `setup.build.sh` and watched by `watch:localise`); authoring them is `nzyme:translations`.
+  `setup.build.sh` and watched by `watch:localise`); authoring them is `../../../../docs/practice/translations.md`.
 
 `src/shims.d.ts`, so a story can put the test id on any element in TSX:
 
@@ -121,7 +122,7 @@ export const cssOptions: CSSOptions = {
 
 The path filter matters: injected into nzyme's or a library's SCSS, the tokens would collide with
 their own variables. What goes in `tokens.scss` and `main.scss` (role names, no emitted CSS, contrast
-noted on the token) is `../ui/references/styling.md`; a new package starts with a comment saying the
+noted on the token) is `../../../../docs/practice/ui/styling.md`; a new package starts with a comment saying the
 partial emits nothing and a handful of tokens.
 
 ## Storybook
@@ -210,7 +211,7 @@ const preview: Preview = {
 export default preview;
 ```
 
-- **`a11y.test: 'error'` with the WCAG 2.2 AA tags** is the enforcement `../ui/SKILL.md` relies on.
+- **`a11y.test: 'error'` with the WCAG 2.2 AA tags** is the enforcement `../../../../docs/practice/ui.md` relies on.
   Without `wcag22aa` axe never runs target-size (2.5.8): proven on the skeleton, a story with two
   10 px buttons passes without the tag and fails with it.
 - The preview registers what the app's `ioc-plugin` registers (`references/nuxt-app.md`); a language
@@ -294,4 +295,4 @@ not run Nuxt. Propose the UI package once a second app or a landing site needs t
 - Token injection that is not shared (an `additionalData` copied into the Nuxt config and Storybook
   separately), or one without the path filter: a difference.
 - Jest, `@vue/test-utils` mounts in jsdom, or Storybook's test runner instead of the Vitest project:
-  propose this setup; the component specs move to `composeStories` (`nzyme:testing`).
+  propose this setup; the component specs move to `composeStories` (`../../../../docs/practice/testing.md`).

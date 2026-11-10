@@ -1,17 +1,3 @@
----
-name: testing
-description: >-
-    Deciding whether a test is worth writing and writing it well in projects built on @nzyme — the
-    test-worthiness gate, the anti-signal catalog of tests that look like coverage but prove nothing,
-    bun:test conventions, wiring units with createTestContainer from @nzyme/ioc-testing and container.set
-    overrides, the mocking policy, captured logs, assertion typing, the @nzyme/vitest matchers, Vue
-    component tests in Vitest browser mode over Storybook composeStories, Playwright e2e specs
-    (component harnesses, selectors, parallel-safe data), and the boundary between e2e and component
-    tests. Use when writing, reviewing or debugging a unit, integration, component or e2e test, or when
-    deciding whether a change needs a test and which kind. Not for: writing the Storybook stories
-    themselves, or running a project's full verification protocol (its verify skill).
----
-
 # Testing
 
 ## Is this test worth writing?
@@ -27,7 +13,7 @@ If the honest answer is "none" or "only a refactor I'd notice anyway", don't wri
 it in review.
 
 **Anti-signal catalog** — each looks like coverage but proves little (worked examples in
-`references/test-structure.md`):
+[`testing/test-structure.md`](testing/test-structure.md)):
 
 - **Assertion too weak to catch the named bug** — `toBeGreaterThan(0)`, `toBeTruthy()`, `toBeDefined()`
   standing in for the expected value. A test titled "excludes archived items" that asserts only
@@ -87,9 +73,9 @@ the cheapest harness that catches the regression.
 
 **Component vs e2e** — one Vue component's behavior (validation, conditional rendering, focus, emits,
 loading states) → a component test in Vitest browser mode, mounted from its stories
-(`references/component-tests.md`). A journey a user performs across the UI and the backend (CRUD
-lifecycles, multi-page flows, auth and role boundaries) → a Playwright e2e spec (`references/e2e.md`).
-The checklist, and why a rule is not re-checked in both layers: `references/e2e-vs-component.md`.
+([`testing/component-tests.md`](testing/component-tests.md)). A journey a user performs across the UI and the backend (CRUD
+lifecycles, multi-page flows, auth and role boundaries) → a Playwright e2e spec ([`testing/e2e.md`](testing/e2e.md)).
+The checklist, and why a rule is not re-checked in both layers: [`testing/e2e-vs-component.md`](testing/e2e-vs-component.md).
 
 ## bun:test conventions
 
@@ -128,7 +114,7 @@ test('creates the product and returns its id', async () => {
 
 - **Overrides go in before the first `resolve`** — singletons resolve their deps once. `set` reaches
   singleton services, commands, factories and interfaces; not the transient `Logger` or plain injectables
-  (env variables, `Fetch`) — see the ioc skill.
+  (env variables, `Fetch`) — see [ioc](ioc.md).
 - **Don't mock internal services and commands** — resolve the real ones; mock only the true outside
   world (third-party APIs, clocks). A mocked integration test passes while the real wiring is broken.
 - **Fidelity follows the subject under test.** Run for real whatever the test asserts on. A heavy side
@@ -162,13 +148,13 @@ by a `date-fns` duration.
 
 ## References
 
-- `references/test-structure.md` — what a test should assert: weak assertions, both branches of a
+- [`testing/test-structure.md`](testing/test-structure.md) — what a test should assert: weak assertions, both branches of a
   guard, identity not position, exact values, payload not call, `rejects` for errors.
-- `references/assertions.md` — assertion typing: typed `const` expectations, which matcher, typed mock
+- [`testing/assertions.md`](testing/assertions.md) — assertion typing: typed `const` expectations, which matcher, typed mock
   returns, no `as never`, `!` in tests, typed `objectContaining`.
-- `references/component-tests.md` — Vitest browser mode with `composeStories`: running stories,
+- [`testing/component-tests.md`](testing/component-tests.md) — Vitest browser mode with `composeStories`: running stories,
   `userEvent`, `expect.element`, `page.viewport`, overriding args.
-- `references/e2e.md` — Playwright: component harnesses, selectors that survive the build, parallel-safe
+- [`testing/e2e.md`](testing/e2e.md) — Playwright: component harnesses, selectors that survive the build, parallel-safe
   data, helpers, journeys, reading failures.
-- `references/e2e-vs-component.md` — what belongs in an e2e journey vs a component test, and not
+- [`testing/e2e-vs-component.md`](testing/e2e-vs-component.md) — what belongs in an e2e journey vs a component test, and not
   duplicating a check across layers.

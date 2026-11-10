@@ -84,12 +84,11 @@ jobs:
             exit 0
           fi
           bun nx release changelog "$next"
-          # The agent plugin ships from this repo and is versioned with the packages.
-          plugin=plugins/nzyme/.claude-plugin/plugin.json
-          if [ -f "$plugin" ]; then
+          # The agent plugins ship from this repo and are versioned with the packages.
+          for plugin in plugins/*/.claude-plugin/plugin.json; do
             jq --indent 4 --arg v "$next" '.version = $v' "$plugin" > "$RUNNER_TEMP/plugin.json"
             mv "$RUNNER_TEMP/plugin.json" "$plugin"
-          fi
+          done
           # `nx release version` already refreshed bun.lock; this only normalises formatting.
           bun x oxfmt . > /dev/null
           awk -v v="$next" '$0 ~ "^## " v " " {found=1; next} found && /^## / {exit} found {print}' CHANGELOG.md > "$RUNNER_TEMP/notes.md"

@@ -77,19 +77,18 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
   hotfix bases and landing.
 - Both are the contracts of the `dev` plugin (`/dev:fix`, `/dev:task`, `/dev:feature`, `/dev:build`,
   `/dev:deliver`), which is installed from the `kedrzu-skills` marketplace in `.claude/settings.json`.
-- **Every implementation task reads `nzyme:code-conventions`**, plus the `nzyme:*` skill for the package
-  it touches (`ioc`, `logging`, `translations`, `forms`, `composables`, `secrets`, `testing`). These skills ship from
-  this repo in `plugins/nzyme/` and are what consumer repos install too, so fix them here when they are
-  wrong.
-- **User-invoked skills** in the same plugin serve product repos: `/nzyme:architecture` sets up or
-  updates a repo and routes to the practice skills `ui`, `drizzle` and `api-clients`. Here they matter
-  when you change them, or the packages and docs they link.
+- **Every implementation task reads `docs/practice/code-conventions.md`**, plus the practice document
+  for its area, `docs/practice/<area>.md`: `ioc`, `logging`, `testing`, `ui`, `composables`, `forms`,
+  `translations`, `drizzle`, `api-clients`, `secrets`. Consumer repos inline the same documents into
+  their own skills, so fix the text there when it is wrong.
+- **The `nzyme` plugin** (`plugins/nzyme`) ships only `/nzyme:architecture`, which sets up or updates a
+  product repo and compares its skills against the practice documents.
 - **ADRs** go to `docs/decisions/<title-slug>.md`, never numbered.
 
 # TypeScript rules
 
 These always apply. Everything else — organization, naming, casting, JSDoc, design principles — is in
-`nzyme:code-conventions`.
+`docs/practice/code-conventions.md`.
 
 - Import `.ts` files with a `.js` extension (ESM).
 - Never use `any`; use proper types or `unknown`. Reaching for `any` or an ugly cast means something
@@ -135,8 +134,8 @@ that no `workspace:` specifier survives packing (versions already on npm are ski
   3. Before reporting done, confirm `git status --porcelain` is empty and `HEAD` equals `@{u}`.
      This governs finishing a change; it never licenses making one.
 - **Stash safety:** stashes are shared across all worktrees, and other agents may be working in
-  parallel. Never use bare `git stash`/`pop`/`apply`. Name the stash uniquely and restore it by ref. The
-  `git:stash-safety` skill has the recipes.
+  parallel. Name every stash uniquely and restore it by its sha; the `git` plugin's hook blocks the
+  unsafe forms and says how.
 
 # Diagnosing failures — check, don't assume
 

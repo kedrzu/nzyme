@@ -1,18 +1,3 @@
----
-name: api-clients
-description: >-
-    Third-party API integrations on @nzyme — one package per vendor; REST from a committed OpenAPI
-    spec through openapi-typescript and @nzyme/openapi, as a client service plus one command per
-    operation; GraphQL from a committed SDL and `.gql` operations through graphql-codegen's generic
-    SDK with a thin requester and no runtime GraphQL library; @nzyme/fetch-utils endpoints when the
-    vendor publishes no spec. Covers where specs and generated files live, the `schema` and `codegen`
-    scripts as Nx targets, auth and base URLs from env variables, error handling over typed status
-    unions, and mocking at the client boundary. Use when adding or changing an integration with an
-    external HTTP or GraphQL API. Not for: the @nzyme/openapi call API (its README), DI mechanics (ioc
-    skill), test wiring (testing skill).
-disable-model-invocation: true
----
-
 # API clients
 
 An integration with an external API is a package that turns the vendor's contract into typed
@@ -24,9 +9,9 @@ surprise in production.
 
 - **How to call `createOpenApiFetch` / `openApiFetch`** — request options, content types, the
   response union, file uploads: the `@nzyme/openapi` README (`node_modules/@nzyme/openapi/README.md`).
-  This skill is the practice around it.
-- **`defineService`, `defineCommand`, `Shape`, `defineEnvVariable`, `container.set`** → `nzyme:ioc`.
-- **Test structure and the mocking policy** → `nzyme:testing`. Logging a failed call → `nzyme:logging`.
+  This document is the practice around it.
+- **`defineService`, `defineCommand`, `Shape`, `defineEnvVariable`, `container.set`** → [ioc](ioc.md).
+- **Test structure and the mocking policy** → [testing](testing.md). Logging a failed call → [logging](logging.md).
 - **Your own backend's endpoints** — those are `@nzyme/rpc`, not a third-party client.
 
 ## Pick the shape by what the vendor publishes
@@ -34,7 +19,7 @@ surprise in production.
 |Vendor publishes|Shape|Runtime dependency|
 |-|-|-|
 |OpenAPI spec (JSON/YAML)|`openapi-typescript` → `schema.gen.d.ts` → `createOpenApiFetch<paths>` in a client service, one command per operation|`@nzyme/openapi`|
-|GraphQL schema (SDL or introspection)|`.gql` operations → graphql-codegen `typescript-generic-sdk` → `getSdk(requester)` in a client service — `references/graphql.md`|none (a ~40-line requester)|
+|GraphQL schema (SDL or introspection)|`.gql` operations → graphql-codegen `typescript-generic-sdk` → `getSdk(requester)` in a client service — [`api-clients/graphql.md`](api-clients/graphql.md)|none (a ~40-line requester)|
 |Neither (REST without a spec, XML, form-encoded)|hand-modelled `defineEndpoint`s run by a `defineFetchClient` in a client service|`@nzyme/fetch-utils`|
 |A key-less public API useful to several repos|plain `defineEndpoint`s contributed to `@nzyme/apis`, no IoC|`@nzyme/fetch-utils`|
 
@@ -125,13 +110,13 @@ mock surface for consumers' tests becomes one small function per operation.
 - **Unexpected status** → throw `ApplicationError` (or a `<Vendor>Error` subclass when callers need
   to distinguish it) carrying `operation` and `status` as data. The message is built from the
   operation and status, never from the response body: vendor bodies echo submitted values, and an
-  error message becomes an issue title and grouping key (`nzyme:logging`).
+  error message becomes an issue title and grouping key ([logging](logging.md)).
 - **A wrong spec** (a misspelled enum, a missing nullable) — patch it at the call site with the
   narrowest cast and a comment naming the spec bug; report it upstream. Never edit `schema.gen.d.ts`.
 
 ## Testing at the boundary
 
-The client service is the outside world. Per `nzyme:testing`, mock only there:
+The client service is the outside world. Per [testing](testing.md), mock only there:
 
 - **A command's own logic** (mapping, status handling) — `container.set(CrmClient, fake)` where the
   fake returns the typed `{ status, contentType, data, response }` for the case under test.
@@ -139,7 +124,7 @@ The client service is the outside world. Per `nzyme:testing`, mock only there:
   vendor's types never leak into its tests.
 - **A hand-written transport** (the GraphQL requester, a signing wrapper) — a unit test passing a fake
   `fetch` as a plain parameter. Do not override the `Fetch` injectable through `container.set`: `set`
-  does not reach plain injectables (`nzyme:ioc`).
+  does not reach plain injectables ([ioc](ioc.md)).
 - **Never call the real vendor from the test suite** — it makes the suite depend on credentials,
   network and the vendor's rate limits.
 
@@ -158,5 +143,5 @@ The client service is the outside world. Per `nzyme:testing`, mock only there:
 
 ## References
 
-- `references/graphql.md` — read when integrating a GraphQL API: package layout, `codegen.yml`, the
+- [`api-clients/graphql.md`](api-clients/graphql.md) — read when integrating a GraphQL API: package layout, `codegen.yml`, the
   schema fetch script, the requester, the client service and its two error classes.

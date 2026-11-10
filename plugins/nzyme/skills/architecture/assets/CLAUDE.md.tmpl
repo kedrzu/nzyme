@@ -47,17 +47,16 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
   and landing.
 - Both are the contracts of the `dev` plugin (`/dev:fix`, `/dev:task`, `/dev:feature`, `/dev:build`,
   `/dev:deliver`), installed from the `kedrzu-skills` marketplace in `.claude/settings.json`.
-- **Every implementation task reads `nzyme:code-conventions`**, plus the `nzyme:*` skill for the area
-  it touches (`ioc`, `logging`, `translations`, `forms`, `composables`, `testing`). They load from
-  the submodule through `.claude/skills/nzyme`.
-- **This repo's own skills** hold what is true only here: {{repo skills — e.g. `ui`, `app`, `database`;
-  each `.claude/skills/<area>/SKILL.md` with one line on when it applies}}.
+- **Every implementation task loads the `code-conventions` skill with the Skill tool**, plus the skill
+  for its area. Each is the repo's own (`.claude/skills/<name>/SKILL.md`) and inlines nzyme's practice
+  document (`nzyme/docs/practice/<area>.md`) only when loaded, so load it, don't Read the file; a rule
+  that is wrong everywhere is fixed in nzyme.
 - **ADRs** go to `docs/decisions/<title-slug>.md`, never numbered.
 
 # TypeScript rules
 
 These always apply. Everything else — organization, naming, casting, JSDoc, design principles — is in
-`nzyme:code-conventions`.
+the `code-conventions` skill.
 
 - Import `.ts` files with a `.js` extension (ESM).
 - Never use `any`; use proper types or `unknown`. Reaching for `any` or an ugly cast means something
@@ -76,8 +75,8 @@ These always apply. Everything else — organization, naming, casting, JSDoc, de
   3. Before reporting done, confirm `git status --porcelain` is empty and `HEAD` equals `@{u}`.
      This governs finishing a change; it never licenses making one.
 - **Stash safety:** stashes are shared across all worktrees, and other agents may be working in
-  parallel. Never use bare `git stash`/`pop`/`apply`. Name the stash uniquely and restore it by ref. The
-  `git:stash-safety` skill has the recipes.
+  parallel. Name every stash uniquely and restore it by its sha; the `git` plugin's hook blocks the
+  unsafe forms and says how.
 
 # Diagnosing failures — check, don't assume
 

@@ -42,7 +42,9 @@ build half of that same command. Paseo runs it for every worktree it cuts.
     (nzyme's CI checks nzyme).
   - `codegen`, `watch`, `dev` fan out through Nx to the targets in `project.json` and the packages.
   - `lint*`, `format*`, `lint:nzyme`: why each flag is there is in `references/lint-format.md`.
-  - `clean`, `clean:npm`, `reinstall`: the way back from a broken install.
+  - `clean`, `clean:npm`, `reinstall`: the way back from a broken install. `clean` deletes the build
+    output this repo produces: the asset's paths, plus e.g. `**/.output` and `**/.nuxt` for a Nuxt
+    app, `**/storybook-static`, `**/test-results` and `**/playwright-report` when the repo has them.
   - Elements add their own: `test:stories` (UI package), `e2e` (e2e), `storybook`.
 
 Older alternatives found in product repos and not used: a monolithic `setup.sh` that CI cannot share,

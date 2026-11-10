@@ -1,8 +1,8 @@
 # Styling — tokens, CSS modules, variants, states
 
 Read when writing a component's styles or adding a design token. Class naming (BEM with a single `_`,
-camelCase) is in `nzyme:code-conventions`; how the token partials are injected into every SCSS block
-is part of the UI package setup in the `architecture` skill.
+camelCase) is in [code-conventions](../code-conventions.md); how the token partials are injected into every SCSS block
+is part of the UI package setup in nzyme's `plugins/nzyme/skills/architecture/references/ui-package.md` ([on GitHub](https://github.com/kedrzu/nzyme/blob/main/plugins/nzyme/skills/architecture/references/ui-package.md)).
 
 ## Design tokens
 
@@ -29,7 +29,7 @@ is part of the UI package setup in the `architecture` skill.
 - `<style lang="scss" module>` in every SFC; `$style.x` in the template. When the script needs a class
   name (a computed class list), `useCssModule()`; never import the SFC's style through a query string.
 - A `.tsx` component or a style shared by several SFCs uses `Foo.module.scss`.
-- Class names are hashed at build. Tests and harnesses never select by class (`nzyme:testing`).
+- Class names are hashed at build. Tests and harnesses never select by class ([testing](../testing.md)).
 - A `class` prop for an inner element is declared with `classProp` from
   `@nzyme/vue-utils/classProp.js` (`contentClass: classProp`).
 - Keep selectors flat: one class per element, a modifier class or a state attribute on top. Deep

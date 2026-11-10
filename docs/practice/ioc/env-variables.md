@@ -1,7 +1,7 @@
 # Environment variables
 
 Read when a variable needs `parse`, is optional, or you need the exact type each option produces. The
-core rule (inject via `deps`, never `process.env`; a bare call is required) is in the ioc `SKILL.md`.
+core rule (inject via `deps`, never `process.env`; a bare call is required) is in [ioc](../ioc.md).
 
 ## How resolution works
 
@@ -82,7 +82,7 @@ container.
 Secrets from a remote store reach env variables through `EnvVariables`, so declare and inject them
 like any other variable. An app calls `await loadSecrets(container, stores)` with its
 secret stores (a service resolving to `SecretStore[]`) at startup, before resolving anything that reads them; a variable
-already set wins. Adding a secret and keeping its value out of the transcript: `nzyme:secrets`.
+already set wins. Adding a secret and keeping its value out of the transcript: [secrets](../secrets.md).
 Setup, precedence and the `secrets` commands: `@nzyme/secrets` README
 (`packages/secrets/README.md` in nzyme).
 

@@ -6,7 +6,7 @@ Why rules are a node visitor shared by the backend and `useRules`, and the trade
 
 |Situation|Use|
 |-|-|
-|Validation that exists only in this form's UI|Field validators in `useFormFields` (the forms `SKILL.md`)|
+|Validation that exists only in this form's UI|Field validators in `useFormFields` ([forms](../forms.md))|
 |The same business rule must also run elsewhere — on the backend, in a build step, in several forms|A rule from `@nzyme/validation`, run with `validateRules` outside Vue and `useRules` in a form|
 
 Write the rule once with `defineRule` (`@nzyme/validation/rules/defineRule.js`) in the package that owns
@@ -54,7 +54,7 @@ export const orderRule = defineRule<Order, OrderRulesContext>((order, v) => {
   through `ctx`, never a closure over outside state. Build the context once per edit from the whole
   document.
 - Messages are already-translated strings the rule produces from `ctx.lang` through a `.loc.yaml`
-  (translations skill). There is no error-code catalog: the rule that detects the problem is the only
+  ([translations](../translations.md)). There is no error-code catalog: the rule that detects the problem is the only
   place that can phrase, interpolate and pluralize it correctly.
 
 ## Running a rule

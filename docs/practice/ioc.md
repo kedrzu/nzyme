@@ -1,16 +1,3 @@
----
-name: ioc
-description: >-
-    Dependency injection with @nzyme/ioc — defineCommand (one operation), defineService (several
-    methods or held state), defineFactory (per-call instances), defineInterface, the explicit `Shape`
-    interface, deps, defineEnvVariable, container.set overrides and mocking with @nzyme/ioc-testing,
-    plus shared reactive stores built on createEventEmitter/createSingleRunner from @nzyme/utils. Use
-    when writing or reviewing code that imports @nzyme/ioc, @nzyme/ioc-testing or @nzyme/vue-ioc:
-    creating a service or command, wiring dependencies, injecting env variables, naming `*Command.ts` /
-    `*Service.ts` / `*Endpoint.ts` files, overriding a dependency in a test, or building a store shared
-    across Vue components. Not for: reactive logic owned by one component (composables skill).
----
-
 # IoC (dependency injection)
 
 `@nzyme/ioc` wires units through a container instead of direct imports. A unit declares what it needs
@@ -24,7 +11,7 @@ state or connection held in the closure is shared by every caller.
   `@__NO_SIDE_EFFECTS__`, imported directly. Wrapping a formatter, validator or parser in
   `defineCommand` adds container indirection and buys nothing — there is nothing to inject or swap in
   tests.
-- **Reactive state owned by one component** → composables skill (`use[Feature]`, torn down with the
+- **Reactive state owned by one component** → [composables](composables.md) (`use[Feature]`, torn down with the
   component). A `defineService` store is for state *shared across components* for the container's
   lifetime.
 - **A fixed internal constant** (timeout, cache size) → a plain `const`, not an injectable.
@@ -218,13 +205,13 @@ export const CATALOG_API_KEY = defineEnvVariable('CATALOG_API_KEY');
 export const CATALOG_API_URL = defineEnvVariable('CATALOG_API_URL', { default: 'https://api.example.com' });
 ```
 
-Read `references/env-variables.md` for `parse`, `required: false`, the type each option really
+Read [`ioc/env-variables.md`](ioc/env-variables.md) for `parse`, `required: false`, the type each option really
 produces (`required: false` does **not** add `| undefined`) and per-package `env.ts` files.
 
 ### Reactive frontend stores
 
 A store shared across components is a `defineService` whose `setup` holds refs and exposes them through
-`reactive()`. Read `references/reactive-services.md` when building one, a service with events
+`reactive()`. Read [`ioc/reactive-services.md`](ioc/reactive-services.md) when building one, a service with events
 (`createEventEmitter`) or a deduplicated background task (`createSingleRunner`).
 
 ### Overriding and mocking
@@ -251,7 +238,7 @@ does) or plain injectables from `defineInjectable` — `Fetch`, `constValue`, en
 `resolve` ignores the container; override their source (`EnvVariables`) or put an interface in front.
 
 Without a container, `Unit.create(deps)` (or `Unit.create()` when there are no deps) runs `setup`
-directly. Test structure and assertions: testing skill.
+directly. Test structure and assertions: [testing](testing.md).
 
 ## Anti-patterns
 
@@ -273,7 +260,7 @@ directly. Test structure and assertions: testing skill.
 
 ## References
 
-- `references/env-variables.md` — `parse`, optionality and the types each option yields, `env.ts`
+- [`ioc/env-variables.md`](ioc/env-variables.md) — `parse`, optionality and the types each option yields, `env.ts`
   layout, bad patterns.
-- `references/reactive-services.md` — shared reactive stores, event-emitting services,
+- [`ioc/reactive-services.md`](ioc/reactive-services.md) — shared reactive stores, event-emitting services,
   `createSingleRunner` background tasks.

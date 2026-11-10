@@ -1,11 +1,11 @@
 # Components — wrappers, animation, stories, harnesses
 
-Read when building a component past the button in `SKILL.md`. The props and options of every nzyme
+Read when building a component past the button in [ui](../ui.md). The props and options of every nzyme
 primitive named here are in its package README; this file is how to use them in a UI layer.
 
 ## Field wrapper
 
-Every input wrapper (`nzyme:forms` shows the pattern) renders inside one shared field wrapper that
+Every input wrapper ([forms](../forms.md) shows the pattern) renders inside one shared field wrapper that
 owns what a field looks like and what it announces. The primitive owns value, `:field` binding,
 errors and focus; the wrapper owns the label, hint, error list and their wiring:
 
@@ -68,15 +68,15 @@ menus, listbox), the parts wrap reka parts and the context carries only what rek
 |A row of cards paged horizontally|`Carousel`|see below|
 
 - Keep UI motion short (100–250 ms) and honour `prefers-reduced-motion` in the transition's styles
-  (`references/styling.md`).
+  ([`styling.md`](styling.md)).
 - **`Carousel` accessibility is the author's.** Use `items-tag="ul"` with `li` items and an
   `itemsAttrs` `aria-label`; turn on `keyboard`; render previous/next buttons through the `wrapper` slot
   (swipe and drag alone fail 2.5.7, and the buttons are the keyboard path). `autoPlay` pauses only on
   hover: an auto-playing carousel also needs a visible pause control (2.2.2).
 - **SSR styles.** `Reveal`, `Collapse` and `Carousel` are SFCs, so Nuxt inlines their `<style>` on a
   server-rendered page. The transitions are still `.tsx` with CSS modules. An SSR app adds
-  `@nuxtjs/critters` as described in `../architecture/references/nuxt-app.md` (SPA or SSR). An SPA is
-  unaffected.
+  `@nuxtjs/critters` as described in nzyme's `plugins/nzyme/skills/architecture/references/nuxt-app.md` ([on GitHub](https://github.com/kedrzu/nzyme/blob/main/plugins/nzyme/skills/architecture/references/nuxt-app.md)) (SPA or SSR).
+  An SPA is unaffected.
 
 ## Modals
 
@@ -118,11 +118,11 @@ export const Disabled: Story = { render: () => <TextInput label="Email" modelVal
 - **Overlays render into `<body>`**; the a11y check covers the whole body, so a portalled dialog is
   checked as long as a story opens it.
 - **Services a component injects are replaced in the story's decorator** through the container
-  (`nzyme:ioc`), never by a prop added for the story's sake.
+  ([ioc](../ioc.md)), never by a prop added for the story's sake.
 - Story-only styles go in `Foo.stories.module.scss`, never into the component.
 
 Specs over these stories — `composeStories`, `userEvent`, `expect.element` — follow
-`nzyme:testing` (`references/component-tests.md`). The busy button is the canonical spec: an
+[testing/component-tests.md](../testing/component-tests.md). The busy button is the canonical spec: an
 async-click story, one click, `aria-busy="true"` while the promise is pending, a second click not
 running the action again.
 
@@ -130,7 +130,7 @@ running the action again.
 
 A component that e2e specs drive ships `Foo.harness.ts` beside it, exported from the UI package so the
 e2e package imports it; harness rules (positional constructor, `root` on the test id, ARIA selectors,
-no CSS classes) are in `nzyme:testing` (`references/e2e.md`). For the test id to land, a component
+no CSS classes) are in [testing/e2e.md](../testing/e2e.md). For the test id to land, a component
 keeps fallthrough attributes on its root element (the default) — `useButton` and the input primitives
 already forward them to the native element.
 
@@ -138,5 +138,5 @@ already forward them to the native element.
 
 Every string the component renders, visible or not — labels, the loading text of a busy button, an
 icon-only button's name, a dialog's hidden title — comes from `Foo.loc.yaml` beside it
-(`nzyme:translations`). A component placed inside a translated sentence uses `Format` from
+([translations](../translations.md)). A component placed inside a translated sentence uses `Format` from
 `@nzyme/vue`, never string concatenation.

@@ -1,7 +1,7 @@
 # Reactive services (frontend stores)
 
 Read when building state shared across components, a service that emits events, or a deduplicated
-background task. State used by a single component is a composable instead (composables skill).
+background task. State used by a single component is a composable instead ([composables](../composables.md)).
 
 A `defineService` can hold Vue reactivity: the state survives and is shared because `setup` runs once
 per container. A root container from `createContainer()` in `@nzyme/vue-ioc/createContainer.js` runs
@@ -94,7 +94,7 @@ setup({ api, logger }) {
 
 Components subscribe with `onEventEmitter(chat.events.messageReceived, onMessage)` from
 `@nzyme/vue-utils/onEventEmitter.js`, which unsubscribes when the component's scope is disposed (see
-the composables skill). Code outside components must call `off` itself.
+[composables](../composables.md)). Code outside components must call `off` itself.
 
 ## Deduplicated background tasks — `createSingleRunner`
 

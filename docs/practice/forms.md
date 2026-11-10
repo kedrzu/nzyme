@@ -1,15 +1,3 @@
----
-name: forms
-description: >-
-    Vue forms with @nzyme/vue-forms and @nzyme/validation — useForm, useFormFields, useFormFieldArray,
-    the Form component's submit and pending mechanics, built-in and custom validators, conditional and
-    async validation, input components built on the headless useTextInput/useButton family, nested and
-    dynamic forms, and shared validation rules run with useRules/validateRules. Use when writing or
-    reviewing code that imports @nzyme/vue-forms or @nzyme/validation: creating a form, adding
-    validation, building an input component, or sharing a business rule between a form and the
-    backend. Not for general reactive logic or data loading (composables skill).
----
-
 # Forms
 
 `@nzyme/vue-forms` holds form state and validation; `@nzyme/validation` holds framework-free validators
@@ -17,10 +5,10 @@ and rules that the form validators wrap. Both are headless — the app owns the 
 
 The catalogue of what `@nzyme/vue-forms` exports — every input primitive with its props and returned
 state, `useButton`'s busy mechanics, each validator's options — is its README
-(`node_modules/@nzyme/vue-forms/README.md`). This skill is the practice.
+(`node_modules/@nzyme/vue-forms/README.md`). This document is the practice.
 
 `useForm` reads the current language through `useLanguage()`, so forms need the app's IoC container
-(`IocPlugin` from `@nzyme/vue-ioc`) with a `LanguageContext` registered (translations skill).
+(`IocPlugin` from `@nzyme/vue-ioc`) with a `LanguageContext` registered ([translations](translations.md)).
 
 ## Canonical form
 
@@ -39,7 +27,7 @@ import { requiredValidator } from '@nzyme/vue-forms/validators/requiredValidator
 import Button from '../ui/Button.vue';
 import TextInput from '../ui/TextInput.vue';
 
-// t and l come from useTranslate() and ./SubscribeForm.loc.js — translations skill
+// t and l come from useTranslate() and ./SubscribeForm.loc.js — see translations.md
 
 const form = useForm({
     email: '',
@@ -173,7 +161,7 @@ const skuValidator = defineValidator<string>({
 
 An async validator — `defineValidator({ async: true, debounce, watch, validate })` — re-runs when the
 value or `watch` changes. A rule that must also run outside this form belongs in a shared rule instead
-— see `references/rules.md`.
+— see [`forms/rules.md`](forms/rules.md).
 
 ## Other patterns
 
@@ -184,7 +172,7 @@ value or `watch` changes. A rule that must also run outside this form belongs in
 - **Multi-step forms** — one `useForm` per step, switched with `v-if`, each validating and submitting
   on its own. `Reveal` (`@nzyme/vue/components/Reveal.vue`) animates the switch.
 - **Nested objects and dynamic lists** — factory functions in `useFormFields` / `useFormFieldArray`;
-  read `references/nested-forms.md`.
+  read [`forms/nested-forms.md`](forms/nested-forms.md).
 
 ## Anti-patterns
 
@@ -199,7 +187,7 @@ value or `watch` changes. A rule that must also run outside this form belongs in
 
 ## References
 
-- `references/nested-forms.md` — nested objects, arrays of items, add/remove rows, deep nesting,
+- [`forms/nested-forms.md`](forms/nested-forms.md) — nested objects, arrays of items, add/remove rows, deep nesting,
   validation propagation.
-- `references/rules.md` — a rule shared with the backend or other forms: `defineRule`,
+- [`forms/rules.md`](forms/rules.md) — a rule shared with the backend or other forms: `defineRule`,
   `validateRules`, `useRules`, `stopAt`, message routing.

@@ -139,7 +139,7 @@ What the contract demands of every callback:
   command; the database work must absorb the retry (check-then-insert, below) and the side effect
   must tolerate a second call for the same committed state.
 - **Non-critical effects catch and log their own failure** so they neither fail the command nor
-  starve the callbacks after them (how to log a caught error: `nzyme:logging`).
+  starve the callbacks after them (how to log a caught error: [logging](../logging.md)).
 - **Never put a must-happen state change in `afterCommit`.** If losing the effect breaks the system
   (money bookkeeping, an entitlement), it is a row written inside the transaction — and a job or
   outbox processes it from there.

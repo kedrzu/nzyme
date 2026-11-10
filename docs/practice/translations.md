@@ -1,14 +1,3 @@
----
-name: translations
-description: >-
-    User-facing text with @nzyme/i18n, @nzyme/i18n-core, @nzyme/i18n-compiler and @nzyme/vue-i18n —
-    authoring `.loc.yaml` files (parameters, pluralization, typography shortcuts, language tags),
-    compiling them with `nzyme localise`, and consuming them through Translator, useTranslate,
-    translateToString and the Translate component. Use whenever you add or change user-facing text in a
-    project that has `.loc.yaml` files or imports @nzyme/i18n or @nzyme/vue-i18n — UI strings are never
-    hardcoded — and when translating in services, Vue components or plain helpers.
----
-
 # Translations
 
 User-facing text lives in `[name].loc.yaml` files, compiled by the `nzyme localise` CLI command

@@ -1,15 +1,3 @@
----
-name: code-conventions
-description: >-
-    TypeScript and Vue conventions for code built on the @nzyme packages — file organization and
-    naming, function ordering, style, casting, imports, JSDoc (what counts as public API, the
-    `@__NO_SIDE_EFFECTS__` annotation), Vue SFC script order and BEM class naming, and the design
-    principles. Use whenever you write, refactor or review TypeScript or Vue code in a repository that
-    depends on @nzyme/*: naming a file or export, ordering functions, spotting a code-smell cast,
-    writing JSDoc, or pointing at code from a comment or doc. Not for: dependency-injection wiring and
-    the `*Command.ts`/`*Service.ts` role suffixes (ioc skill).
----
-
 # Code conventions
 
 ## Code organization
@@ -23,7 +11,7 @@ description: >-
   - an exported function and its params/options interface;
   - a service or command and the types used only by it — its private shapes sit beside it, not in
     five files of five lines each; its params, result and `Shape` sit at the top of the same file
-    even though callers and mocks import them (see the ioc skill);
+    even though callers and mocks import them (see [ioc](ioc.md));
   - several small related types that are read and changed as a set, in one `*Types.ts`;
   - a Vue component, its props, and types that belong only to that component;
   - enums and their translations;
@@ -47,7 +35,7 @@ description: >-
 `ProductCreateEndpoint.handler.ts`, `ProductService.mock.ts`, `ProductService.test.ts`,
 `ProductCard.stories.tsx`. A file whose name is a different unit is a different unit. File-name
 suffixes for IoC and RPC units (`*Command.ts`, `*Service.ts`, `*Endpoint.ts`,
-`*Endpoint.handler.ts`, …) are owned by the ioc skill.
+`*Endpoint.handler.ts`, …) are owned by [ioc](ioc.md).
 
 ## Style
 

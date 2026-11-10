@@ -1,13 +1,3 @@
----
-name: logging
-description: >-
-    Structured logging with @nzyme/logging — injecting `Logger`, choosing the level, a constant message
-    plus scalar fields, logging caught errors under `error`, ApplicationError data, and capturing logs
-    in tests instead of mocking the logger. Use when writing or reviewing code that imports
-    @nzyme/logging or calls `logger.info/warn/error/debug`, `useLogger` from @nzyme/vue-ioc, or when
-    adding debug output or logging a caught error in a project built on @nzyme/ioc.
----
-
 # Logging
 
 `Logger` from `@nzyme/logging/Logger.js` is an IoC service; every entry goes to the `LoggerTransport`

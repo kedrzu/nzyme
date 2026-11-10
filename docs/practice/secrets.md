@@ -1,28 +1,16 @@
----
-name: secrets
-description: >-
-    Secrets in a repo built on @nzyme/secrets — every credential the repo's code, scripts or tools
-    need is a secret in a remote store, loaded into env variables. Covers adding a secret and
-    asking the user for its value through a masked dialog (`secrets set --prompt`), running a command
-    with the secrets (`secrets run`), diagnosing a missing secret or rejected token (`secrets list`),
-    and what never to do with a value. Use whenever a task needs an API key, token, password or other
-    credential, when a secret is missing, when the user is about to paste one into the chat, and
-    before running anything that could print the environment or read the keychain.
----
-
 # Secrets
 
 The repo keeps its secrets in a remote store (Bitwarden Secrets Manager today) behind a login.
 A store is scoped by a prefix and its secrets are keyed by the variable name. A repo with a config
 document lists `secretsSource(store)` among its sources; otherwise the app calls
 `loadSecrets(container, stores)` at startup, so the code reads secrets through `defineEnvVariable` like any
-other variable (`nzyme:ioc`). Values are cached in the OS keychain. There is no secrets file:
+other variable ([ioc](ioc.md)). Values are cached in the OS keychain. There is no secrets file:
 every credential — the app's, a script's, a token a tool needs — is a secret in a store, so it has one
 home and one way in.
 
-The repo's own `.claude/skills/secrets/SKILL.md` says what is true only there: how the CLI is
-invoked (`bun nzyme secrets …` or the product's CLI), where the stores are defined, which prefixes
-and environments exist, which store a name goes to, whose machines can write. Read it; this skill uses `secrets …` for the command.
+What is true only in one repo — how the CLI is invoked (`bun nzyme secrets …` or the product's CLI),
+where the stores are defined, which prefixes and environments exist, which store a name goes to,
+whose machines can write — sits above this document. This document uses `secrets …` for the command.
 API and options: `@nzyme/secrets` README (`nzyme/packages/secrets/README.md` in a product repo).
 
 ## A value never enters the transcript
@@ -40,7 +28,7 @@ The commands never print values; the leaks come from around them:
   `Bun.secrets.get`, or a script that calls either.
 - **The store.** Never fetch a value from Bitwarden yourself (API, `bws`, web vault).
 - **Your own output.** A value never goes into a command argument, a file, a log field
-  (`nzyme:logging`), an error message, a test snapshot or a commit. Tests set `EnvVariables` in the
+  ([logging](logging.md)), an error message, a test snapshot or a commit. Tests set `EnvVariables` in the
   container with fake values.
 
 To check a value is right without seeing it, run what uses it: the app, an API call through

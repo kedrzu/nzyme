@@ -2,8 +2,8 @@
 
 A Playwright package that drives the built app in Chromium. This reference owns the package, its
 config and where harnesses live; how a spec and a harness are written — harness shape, selectors,
-parallel-safe data, journeys — is `nzyme:testing` (its `references/e2e.md`), and which behaviour
-belongs in e2e rather than a component spec is its `references/e2e-vs-component.md`.
+parallel-safe data, journeys — is `../../../../docs/practice/testing/e2e.md`, and which behaviour belongs in e2e rather than a
+component spec is `../../../../docs/practice/testing/e2e-vs-component.md`.
 
 ## Reference state
 
@@ -19,7 +19,7 @@ packages/e2e/
 ```
 
 Component harnesses live beside their component in the UI package (`Button.harness.ts` next to
-`Button.vue`, `../ui/SKILL.md`) and are imported from there:
+`Button.vue`, `../../../../docs/practice/ui.md`) and are imported from there:
 `import { ButtonHarness } from '{{scope}}/ui/Button.harness.js'`. A harness that models a whole screen
 belongs to no component and lives in `src/harnesses/`. The UI package then lists `@playwright/test`
 (already in `assets/ui-package.json.tmpl`) for the `Locator` type.
@@ -143,8 +143,9 @@ Bun.serve({
 - Root script `"e2e": "bun --cwd packages/e2e test"`.
 - `setup.build.sh` keeps its `{{if browser-tests}}` block (`references/setup-scripts.md`); the
   browser comes from the repo's `playwright` package.
-- The root `tests` script skips `*.spec.ts`, so bun never picks up a Playwright spec;
-  `test-results/` and `playwright-report/` are in `assets/gitignore.tmpl`.
+- The root `tests` script skips `*.spec.ts`, so bun never picks up a Playwright spec.
+- `packages/e2e/.gitignore` ignores `test-results/` and `playwright-report/`, which Playwright writes
+  beside its config.
 - e2e is not part of the default verification: it needs the built app and the backend running. The
   repo's `verify` skill says when it runs.
 

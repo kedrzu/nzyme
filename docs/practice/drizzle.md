@@ -1,17 +1,3 @@
----
-name: drizzle
-description: >-
-    SQL with Drizzle ORM on Postgres, independent of the hosting platform — select-and-join queries
-    only (never the relational query API `db.query.*`), single-row reads, ownership in the same WHERE,
-    transactions with `afterCommit` and external calls kept outside them, batched writes, diff-based
-    child updates, guarded state transitions, optimistic locking, null-safe comparison with
-    `eqOrNull`, foreign keys, typed operators over raw SQL, and schema-first migrations. Use when
-    writing or reviewing Drizzle queries, schema or transactions, or when setting up the database
-    helpers a repo must provide. Not for: injecting the client (ioc skill) or integration-test wiring
-    (testing skill).
-disable-model-invocation: true
----
-
 # Drizzle
 
 The Drizzle schema in TypeScript is the source of truth for the database; queries are written as
@@ -21,12 +7,12 @@ Postgres host (Supabase, Neon, RDS, a local container). Examples name the schema
 
 ## When NOT to use
 
-- **Wiring the client** → `nzyme:ioc`. The Drizzle instance is a `defineService` (`DatabaseClient`)
+- **Wiring the client** → [ioc](ioc.md). The Drizzle instance is a `defineService` (`DatabaseClient`)
   that units take through `deps`; never import a module-level instance.
-- **Integration tests against a real database** → `nzyme:testing` (`createTestContainer`, unique
+- **Integration tests against a real database** → [testing](testing.md) (`createTestContainer`, unique
   data per test).
 - **Reads the browser makes directly** (e.g. supabase-js under row-level security) — that client is
-  not Drizzle; this skill covers server-side access only.
+  not Drizzle; this document covers server-side access only.
 
 ## The query API: selects and joins only
 
@@ -88,7 +74,7 @@ use the repo's `eqOrNull` (emits `IS NULL` for a nullish value, `=` otherwise). 
 `inArray()` are type-checked and follow column renames; a `sql` template with hand-typed column
 names is not. Raw `sql` is for what Drizzle does not model (`DISTINCT ON`, window functions,
 LATERAL, row-wise comparison), and even then interpolates schema references, never string names —
-`references/query-patterns.md`.
+[`drizzle/query-patterns.md`](drizzle/query-patterns.md).
 
 **Bounded, narrow reads.** Every list query has a `.limit()`; an unbounded select grows with
 production data. Select named columns, not `.select()` on a wide table. Independent queries run
@@ -96,7 +82,7 @@ together with `Promise.all`.
 
 ## Transactions
 
-A repo provides transaction helpers (contract in `references/transactions.md`):
+A repo provides transaction helpers (contract in [`drizzle/transactions.md`](drizzle/transactions.md)):
 
 |Situation|Helper|
 |-|-|
@@ -129,7 +115,7 @@ and never mutates state outside its callback.
 |Move an entity through a one-way lifecycle|put the current-state precondition in the `where`, `.returning()`, zero rows → error|without the guard a retried or concurrent call re-transitions an already-moved row|
 |Read-modify-write of a versioned entity|serializable transaction, or a `version` column checked in the `where`|two writers cannot both apply on the same read|
 
-Code for each: `references/query-patterns.md`.
+Code for each: [`drizzle/query-patterns.md`](drizzle/query-patterns.md).
 
 ## Schema
 
@@ -166,8 +152,8 @@ described in the references:
 - `DatabaseClient` service wrapping `drizzle(postgresClient)` — no `schema` option, optional query
   logging behind a local-only flag;
 - transaction helpers with `afterCommit` and the 40001 retry, plus `runInTransaction` —
-  `references/transactions.md`;
-- `eqOrNull` and a values-subquery builder for multi-row updates — `references/query-patterns.md`.
+  [`drizzle/transactions.md`](drizzle/transactions.md);
+- `eqOrNull` and a values-subquery builder for multi-row updates — [`drizzle/query-patterns.md`](drizzle/query-patterns.md).
 
 ## Anti-patterns
 
@@ -188,9 +174,9 @@ described in the references:
 
 ## References
 
-- `references/transactions.md` — read when choosing an isolation level, registering `afterCommit`,
+- [`drizzle/transactions.md`](drizzle/transactions.md) — read when choosing an isolation level, registering `afterCommit`,
   sequencing a write around an external API call, making a command composable in a caller's
   transaction, or implementing the transaction helpers.
-- `references/query-patterns.md` — read when batching writes, updating many rows to different
+- [`drizzle/query-patterns.md`](drizzle/query-patterns.md) — read when batching writes, updating many rows to different
   values, diffing child records, guarding a state transition, adding optimistic locking, writing
   joins, aliases or unavoidable raw SQL, or implementing `eqOrNull` and the values-subquery builder.

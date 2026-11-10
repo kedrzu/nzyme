@@ -246,23 +246,29 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
         logger.info(
             `🔀 Merging submodule ${chalk.magenta(target.name)} PR ${chalk.gray(`#${target.openPr.number}`)}...`,
         );
-        await ensureNotDraft({
-            githubClient,
-            config: target.config,
-            prNumber: target.openPr.number,
-            isDraft: target.openPr.draft,
-            label: `Submodule ${target.name}`,
-            autoYes: true,
-            logger,
-        });
 
         // GitHub refuses the plain merge endpoint for a pull request kept in a stack. Merging the
         // pinned node through merge-async lands it and every open node below it — exactly what the
         // pin contains; nodes above it are not pinned and stay open.
-        const submoduleStack = await findStackForPr(githubClient, target.config, target.openPr.number);
-        const landingNodes = submoduleStack
-            ? getOpenNodesUpTo(submoduleStack, target.openPr.number)
-            : [{ number: target.openPr.number, headRef: target.openPr.head.ref }];
+        const { stack: submoduleStack, nodes: landingNodes } = await resolveSubmoduleLanding(
+            githubClient,
+            target.config,
+            target.openPr,
+        );
+
+        // Every node that lands leaves draft, not only the pinned one: GitHub refuses the whole stack
+        // merge while any node in it is still a draft, and lands none of it.
+        for (const node of landingNodes) {
+            await ensureNotDraft({
+                githubClient,
+                config: target.config,
+                prNumber: node.number,
+                isDraft: node.draft,
+                label: `Submodule ${target.name} ${chalk.cyan(node.headRef)}`,
+                autoYes: true,
+                logger,
+            });
+        }
 
         await waitForRequiredChecks({
             client: githubClient,
@@ -561,6 +567,41 @@ async function waitForStackMerge(params: WaitForStackMergeParams): Promise<void>
 }
 
 /**
+ * What merging a submodule's pinned pull request lands, and the GitHub stack it is kept in, if any.
+ */
+interface SubmoduleLanding {
+    stack: PullRequestStack | null;
+
+    /**
+     * Every open pull request merging the pinned one lands, bottom to top — just the pinned one when
+     * it is not stacked.
+     */
+    nodes: SubmoduleLandingNode[];
+}
+
+/**
+ * A pull request a submodule merge lands.
+ */
+type SubmoduleLandingNode = Pick<StackPullRequest, 'draft' | 'headRef' | 'number'>;
+
+/**
+ * What merging a submodule's pinned pull request lands: the pinned node and, in a stack, every open
+ * node below it. Read fresh from GitHub on each call — draft state is what it is now.
+ */
+async function resolveSubmoduleLanding(
+    githubClient: GithubClient,
+    config: GithubConfig,
+    openPr: GitHubPR,
+): Promise<SubmoduleLanding> {
+    const stack = await findStackForPr(githubClient, config, openPr.number);
+    const nodes = stack
+        ? getOpenNodesUpTo(stack, openPr.number)
+        : [{ number: openPr.number, headRef: openPr.head.ref, draft: openPr.draft ?? false }];
+
+    return { stack, nodes };
+}
+
+/**
  * The still-open nodes of `stack` from its bottom up to and including `prNumber` — what merging that
  * pull request through merge-async lands.
  * @__NO_SIDE_EFFECTS__
@@ -828,18 +869,33 @@ async function confirmMerge(params: ConfirmMergeParams): Promise<void> {
 
     let totalUnresolved = 0;
     let drafts = 0;
+    let submodulePrCount = 0;
 
     for (const target of submoduleTargets) {
         if (target.openPr) {
+            const { nodes } = await resolveSubmoduleLanding(githubClient, target.config, target.openPr);
+            submodulePrCount += nodes.length;
+
             const unresolved = await countUnresolvedReviewThreads(githubClient, target.config, target.openPr.number);
             totalUnresolved += unresolved;
-            drafts += target.openPr.draft ? 1 : 0;
             logger.info(
                 `   ${chalk.magenta(target.name)} ${chalk.gray(`#${target.openPr.number}`)} ${target.openPr.title} ` +
                     formatState(target.openPr.draft) +
                     formatUnresolved(unresolved),
             );
             logger.info(`      ${chalk.blueBright(chalk.underline(target.openPr.html_url))}`);
+
+            // A stacked submodule PR lands every open node below it too, each made ready first —
+            // so the plan names them, drafts marked, for one answer to cover all of them.
+            for (const node of nodes) {
+                drafts += node.draft ? 1 : 0;
+                if (node.number !== target.openPr.number) {
+                    logger.info(
+                        `      ↳ lands with ${chalk.cyan(node.headRef)} ${chalk.gray(`#${node.number}`)} ` +
+                            formatState(node.draft),
+                    );
+                }
+            }
         } else {
             logger.info(
                 `   ${chalk.magenta(target.name)} ${chalk.gray('(PR already merged — will refresh reference)')}`,
@@ -863,7 +919,7 @@ async function confirmMerge(params: ConfirmMergeParams): Promise<void> {
         return;
     }
 
-    const prCount = mainPrs.length + submoduleTargets.filter(target => target.openPr).length;
+    const prCount = mainPrs.length + submodulePrCount;
     const notes: string[] = [];
     if (totalUnresolved > 0) {
         notes.push(`${totalUnresolved} unresolved comment${totalUnresolved === 1 ? '' : 's'}`);

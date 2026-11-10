@@ -5,8 +5,19 @@ import parseGitignore from 'parse-gitignore';
 
 import { getProjectRoot } from './getProjectRoot.js';
 
+interface CompiledPattern {
+    regex: RegExp;
+    /** `!pattern` - re-includes what an earlier pattern ignored. */
+    negated: boolean;
+    /** `pattern/` - matches directories only. */
+    directoryOnly: boolean;
+}
+
 // Cache of gitignore patterns per directory
-const directoryCache = new Map<string, RegExp[]>();
+const directoryCache = new Map<string, CompiledPattern[]>();
+
+// Cache of whether a directory is ignored (itself or through an ancestor)
+const directoryIgnoredCache = new Map<string, boolean>();
 
 // Cache of git roots per directory
 const gitRootCache = new Map<string, string>();
@@ -50,56 +61,90 @@ export function isFileIgnored(file: string): boolean | undefined {
     // Find git root for this file (handles submodules)
     const gitRoot = findGitRoot(fileDir);
 
-    // Walk up from file's directory to git root, checking .gitignore files
-    let currentDir = fileDir;
+    // Git cannot re-include a file whose parent directory is excluded
+    if (isDirectoryIgnored(fileDir, gitRoot)) {
+        return true;
+    }
+
+    const isDirectory = isDirectoryOnDisk(file);
+
+    if (matchesGitignore(file, isDirectory === true, gitRoot)) {
+        return true;
+    }
+
+    // Not ignored - a directory returns undefined so chokidar can traverse into it
+    // (also when it can't be stat'ed, e.g. doesn't exist yet)
+    return isDirectory === false ? false : undefined;
+}
+
+/**
+ * Whether the directory is ignored, directly or through any of its ancestors up to the git root.
+ */
+function isDirectoryIgnored(dir: string, gitRoot: string): boolean {
+    if (dir === gitRoot || !isInside(gitRoot, dir)) {
+        return false;
+    }
+
+    const cached = directoryIgnoredCache.get(dir);
+    if (cached !== undefined) {
+        return cached;
+    }
+
+    const ignored = isDirectoryIgnored(path.dirname(dir), gitRoot) || matchesGitignore(dir, true, gitRoot);
+    directoryIgnoredCache.set(dir, ignored);
+    return ignored;
+}
+
+/**
+ * Evaluates the `.gitignore` files from the nearest one upwards. On a level the last matching
+ * pattern decides (a negation re-includes); with no match the next level up decides.
+ * Does not look at ancestors of `target` - see `isDirectoryIgnored`.
+ */
+function matchesGitignore(target: string, isDirectory: boolean, gitRoot: string): boolean {
+    let currentDir = path.dirname(target);
 
     while (true) {
         const patterns = getCachedPatternsForDirectory(currentDir);
 
         if (patterns.length > 0) {
-            // Get relative path from this directory (where .gitignore lives)
-            const relativeFromDir = path.relative(currentDir, file).replaceAll('\\', '/');
+            const relativeFromDir = path.relative(currentDir, target).replaceAll('\\', '/');
 
-            // Check if file matches any pattern
-            for (const regex of patterns) {
-                if (regex.test(relativeFromDir)) {
-                    return true;
+            for (let i = patterns.length - 1; i >= 0; i--) {
+                const pattern = patterns[i];
+                if (pattern && (isDirectory || !pattern.directoryOnly) && pattern.regex.test(relativeFromDir)) {
+                    return !pattern.negated;
                 }
             }
         }
 
-        // Stop if we've reached the git root
-        if (currentDir === gitRoot) {
-            break;
-        }
-
-        if (currentDir === projectRoot) {
-            break;
+        if (currentDir === gitRoot || currentDir === projectRoot) {
+            return false;
         }
 
         const parentDir = path.dirname(currentDir);
         // Stop if we can't go higher or reached filesystem root
         if (parentDir === currentDir) {
-            break;
+            return false;
         }
 
         currentDir = parentDir;
     }
+}
 
-    // Not explicitly ignored - check if it's a directory or file
+function isInside(root: string, target: string): boolean {
+    const relative = path.relative(root, target);
+    return relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
+}
+
+/**
+ * `undefined` when the path can't be stat'ed.
+ */
+function isDirectoryOnDisk(target: string): boolean | undefined {
     try {
-        const stats = fs.statSync(file);
-        if (stats.isDirectory()) {
-            // Return undefined for directories so chokidar can traverse into them
-            return undefined;
-        }
+        return fs.statSync(target).isDirectory();
     } catch {
-        // If we can't stat it, assume it might be a directory (e.g., doesn't exist yet)
         return undefined;
     }
-
-    // It's a file and not ignored
-    return false;
 }
 
 /**
@@ -107,6 +152,7 @@ export function isFileIgnored(file: string): boolean | undefined {
  */
 export function clearIgnoreCache(): void {
     directoryCache.clear();
+    directoryIgnoredCache.clear();
     gitRootCache.clear();
 }
 
@@ -145,7 +191,7 @@ function findGitRoot(startDir: string): string {
 /**
  * Gets cached patterns for a directory, loading from .gitignore if not cached.
  */
-function getCachedPatternsForDirectory(dir: string): RegExp[] {
+function getCachedPatternsForDirectory(dir: string): CompiledPattern[] {
     const cached = directoryCache.get(dir);
     if (cached) {
         return cached;
@@ -165,7 +211,6 @@ function getCachedPatternsForDirectory(dir: string): RegExp[] {
         }
     }
 
-    // Compile patterns to regexes (filter out invalid ones)
     const compiledPatterns = compilePatterns(patterns);
 
     directoryCache.set(dir, compiledPatterns);
@@ -173,41 +218,93 @@ function getCachedPatternsForDirectory(dir: string): RegExp[] {
 }
 
 /**
- * Compiles gitignore patterns to regular expressions.
+ * Compiles gitignore patterns to regular expressions matched against the path relative to the
+ * `.gitignore` directory. A pattern matches the path itself only - paths below an ignored
+ * directory are handled by the ancestor check.
  */
-function compilePatterns(patterns: string[]): RegExp[] {
-    const compiled: RegExp[] = [];
+function compilePatterns(patterns: string[]): CompiledPattern[] {
+    const compiled: CompiledPattern[] = [];
 
-    for (const pattern of patterns) {
-        // Convert gitignore pattern to regex
-        let regexPattern = pattern
-            .replace(/\./g, '\\.')
-            .replace(/\*\*/g, '@@DOUBLE_STAR@@')
-            .replace(/\*/g, '[^/]*')
-            .replace(/@@DOUBLE_STAR@@/g, '.*')
-            .replace(/\?/g, '[^/]');
+    for (const raw of patterns) {
+        let pattern = raw;
 
-        // Handle leading slash (absolute path from root)
-        if (regexPattern.startsWith('/')) {
-            regexPattern = '^' + regexPattern.slice(1);
-        } else {
-            // Pattern can match anywhere in the path
-            regexPattern = '(^|/)' + regexPattern;
+        const negated = pattern.startsWith('!');
+        if (negated) {
+            pattern = pattern.slice(1);
+        } else if (pattern.startsWith('\\!') || pattern.startsWith('\\#')) {
+            pattern = pattern.slice(1);
         }
 
-        // Handle trailing slash (directory only)
-        if (regexPattern.endsWith('/')) {
-            regexPattern = regexPattern.slice(0, -1) + '($|/)';
-        } else {
-            regexPattern = regexPattern + '($|/)';
+        const directoryOnly = pattern.endsWith('/');
+        if (directoryOnly) {
+            pattern = pattern.slice(0, -1);
         }
+
+        // A slash anywhere but the end anchors the pattern to the .gitignore directory
+        const anchored = pattern.includes('/');
+        if (pattern.startsWith('/')) {
+            pattern = pattern.slice(1);
+        }
+
+        if (pattern === '') {
+            continue;
+        }
+
+        const segments = pattern.split('/');
+        let body = '';
+        segments.forEach((segment, index) => {
+            const last = index === segments.length - 1;
+            if (segment === '**') {
+                body += last ? '.+' : '(?:.*/)?';
+            } else {
+                body += translateSegment(segment) + (last ? '' : '/');
+            }
+        });
 
         try {
-            compiled.push(new RegExp(regexPattern));
+            compiled.push({
+                regex: new RegExp((anchored ? '^' : '(?:^|/)') + body + '$'),
+                negated,
+                directoryOnly,
+            });
         } catch {
             // Skip invalid patterns
         }
     }
 
     return compiled;
+}
+
+/**
+ * Translates one path segment of a gitignore pattern (`*`, `?`, `[...]`, `\x`) to regex source.
+ */
+function translateSegment(segment: string): string {
+    let out = '';
+    for (let i = 0; i < segment.length; i++) {
+        const char = segment.charAt(i);
+        if (char === '*') {
+            out += '[^/]*';
+        } else if (char === '?') {
+            out += '[^/]';
+        } else if (char === '[') {
+            const end = segment.indexOf(']', i + 2);
+            if (end === -1) {
+                out += '\\[';
+            } else {
+                const content = segment.slice(i + 1, end);
+                out += `[${content.startsWith('!') ? '^' + content.slice(1) : content}]`;
+                i = end;
+            }
+        } else if (char === '\\' && i + 1 < segment.length) {
+            i++;
+            out += escapeRegex(segment.charAt(i));
+        } else {
+            out += escapeRegex(char);
+        }
+    }
+    return out;
+}
+
+function escapeRegex(char: string): string {
+    return char.replace(/[$()*+.?[\\\]^{|}]/g, '\\$&');
 }

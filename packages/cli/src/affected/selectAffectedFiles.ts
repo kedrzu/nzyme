@@ -1,11 +1,11 @@
 import path from 'node:path';
 
 import type { ImportGraph } from '@nzyme/project-utils/importGraph/buildImportGraph.js';
+import { findOwningPackageDir } from '@nzyme/project-utils/findOwningPackageDir.js';
 import { getImportSourceKind } from '@nzyme/project-utils/importGraph/extractImportSpecifiers.js';
 
 import type { AffectedConfig } from './AffectedConfig.js';
 import type { ChangedFile } from './collectChangedFiles.js';
-import { findOwningPackageDir } from './findOwningPackageDir.js';
 
 /** Options of {@link selectAffectedFiles}. */
 export interface SelectAffectedFilesOptions {

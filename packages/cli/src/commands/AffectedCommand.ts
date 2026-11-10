@@ -3,12 +3,13 @@ import path from 'node:path';
 import { Option, UsageError } from '@nzyme/cli-core';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { spawnForExitCode } from '@nzyme/cli-core/utils/spawnForExitCode.js';
-import { buildImportGraph } from '@nzyme/project-utils/importGraph/buildImportGraph.js';
+import { findOwningPackageDir } from '@nzyme/project-utils/findOwningPackageDir.js';
 import { getPackages } from '@nzyme/project-utils/getPackages.js';
+import { buildImportGraph } from '@nzyme/project-utils/importGraph/buildImportGraph.js';
+import { relativePosixPath } from '@nzyme/project-utils/relativePosixPath.js';
 
 import { readAffectedConfig } from '../affected/AffectedConfig.js';
 import { collectChangedFiles } from '../affected/collectChangedFiles.js';
-import { findOwningPackageDir } from '../affected/findOwningPackageDir.js';
 import { resolveAffectedBase } from '../affected/resolveAffectedBase.js';
 import type { AffectedBase } from '../affected/resolveAffectedBase.js';
 import type { AffectedSelection } from '../affected/selectAffectedFiles.js';
@@ -110,7 +111,7 @@ export class AffectedCommand extends Command {
         });
 
         const packageDirs = packages
-            .map(pkg => path.relative(root, pkg.path).split(path.sep).join('/'))
+            .map(pkg => relativePosixPath(root, pkg.path))
             .filter(dir => dir !== '' && !dir.startsWith('..'));
         const selection = selectAffectedFiles({ graph, changedFiles, config, patterns: args.patterns, packageDirs });
 

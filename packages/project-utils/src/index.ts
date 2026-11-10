@@ -1,5 +1,6 @@
 export * from './createCli.js';
 export * from './createScript.js';
+export * from './findOwningPackageDir.js';
 export * from './getCallerFilePath.js';
 export * from './getCliFlagString.js';
 export * from './getEnvFilePath.js';
@@ -15,6 +16,7 @@ export * from './killPortListeners.js';
 export * from './loadEnvVariables.js';
 export * from './lsofListenArgs.js';
 export * from './readEnvVariables.js';
+export * from './relativePosixPath.js';
 export * from './resolveLocalPath.js';
 export * from './resolveModulePath.js';
 export * from './resolveProjectPath.js';

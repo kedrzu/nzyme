@@ -252,14 +252,14 @@ function compilePatterns(patterns: string[]): CompiledPattern[] {
 
         const segments = pattern.split('/');
         let body = '';
-        segments.forEach((segment, index) => {
+        for (const [index, segment] of segments.entries()) {
             const last = index === segments.length - 1;
             if (segment === '**') {
                 body += last ? '.+' : '(?:.*/)?';
             } else {
                 body += translateSegment(segment) + (last ? '' : '/');
             }
-        });
+        }
 
         try {
             compiled.push({

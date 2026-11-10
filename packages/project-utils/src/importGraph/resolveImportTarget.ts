@@ -3,8 +3,10 @@ import path from 'node:path';
 
 import { assertNever } from '@nzyme/utils/assertNever.js';
 
+import { findOwningPackageDir } from '../findOwningPackageDir.js';
 import type { Package } from '../getPackages.js';
 import { isFileIgnored } from '../isFileIgnored.js';
+import { relativePosixPath } from '../relativePosixPath.js';
 import { getImportSourceKind } from './extractImportSpecifiers.js';
 import type { ImportSpecifier } from './extractImportSpecifiers.js';
 
@@ -72,15 +74,19 @@ export function resolveRelativeSpecifier(
  */
 export function createImportResolver(options: CreateImportResolverOptions): ImportResolver {
     const { root, paths } = options;
-    const packages = options.packages
-        .map(pkg => ({
-            name: pkg.packageJson.name,
-            root: path.relative(root, pkg.path).split(path.sep).join('/'),
-            exports: pkg.packageJson.exports,
-        }))
-        // Longest root first so a file belongs to its most specific package.
-        .toSorted((a, b) => b.root.length - a.root.length);
+    const packages = options.packages.map(pkg => ({
+        name: pkg.packageJson.name,
+        root: relativePosixPath(root, pkg.path),
+        exports: pkg.packageJson.exports,
+    }));
     const packagesByName = new Map(packages.flatMap(pkg => (pkg.name ? [[pkg.name, pkg] as const] : [])));
+    const packagesByRoot = new Map<string, (typeof packages)[number]>();
+    for (const pkg of packages) {
+        if (!packagesByRoot.has(pkg.root)) {
+            packagesByRoot.set(pkg.root, pkg);
+        }
+    }
+    const packageRoots = [...packagesByRoot.keys()];
     const aliases = options.aliases ?? [];
     let sortedPaths: string[] | undefined;
     const onDisk = new Map<string, boolean>();
@@ -215,7 +221,7 @@ export function createImportResolver(options: CreateImportResolverOptions): Impo
     }
 
     function ownerOf(file: string) {
-        return packages.find(pkg => pkg.root === '' || file.startsWith(`${pkg.root}/`));
+        return packagesByRoot.get(findOwningPackageDir(file, packageRoots));
     }
 }
 

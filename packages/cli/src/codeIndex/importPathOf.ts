@@ -1,4 +1,4 @@
-import { relative, sep } from 'node:path';
+import { relativePosixPath } from '@nzyme/project-utils/relativePosixPath.js';
 
 /** Inputs for {@link importPathOf}. */
 export interface ImportPathOfOptions {
@@ -21,7 +21,7 @@ export interface ImportPathOfOptions {
 export function importPathOf(options: ImportPathOfOptions): string {
     const { packageName, packageDir, filePath } = options;
 
-    const rel = relative(packageDir, filePath).split(sep).join('/');
+    const rel = relativePosixPath(packageDir, filePath);
     const withoutSrc = rel.startsWith('src/') ? rel.slice('src/'.length) : rel;
     const withJsExt = withoutSrc.replace(/\.tsx?$/, '.js');
 

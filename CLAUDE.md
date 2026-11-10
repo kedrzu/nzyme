@@ -77,10 +77,10 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
   hotfix bases and landing.
 - Both are the contracts of the `dev` plugin (`/dev:fix`, `/dev:task`, `/dev:feature`, `/dev:build`,
   `/dev:deliver`), which is installed from the `kedrzu-skills` marketplace in `.claude/settings.json`.
-- **Every implementation task loads the repo's `code-conventions` skill with the Skill tool**, plus the
-  skill for its area. Each is `.claude/skills/<area>/SKILL.md` and inlines the practice document
-  `docs/practice/<area>.md`, which consumer repos use too, so fix the text there when it is wrong. Load
-  them, don't Read their `SKILL.md`: the document is inlined only when the skill is loaded.
+- **Every implementation task reads `docs/practice/code-conventions.md`**, plus the practice document
+  for its area, `docs/practice/<area>.md`: `ioc`, `logging`, `testing`, `ui`, `composables`, `forms`,
+  `translations`, `drizzle`, `api-clients`, `secrets`. Consumer repos inline the same documents into
+  their own skills, so fix the text there when it is wrong.
 - **The `nzyme` plugin** (`plugins/nzyme`) ships only `/nzyme:architecture`, which sets up or updates a
   product repo and compares its skills against the practice documents.
 - **ADRs** go to `docs/decisions/<title-slug>.md`, never numbered.
@@ -88,7 +88,7 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
 # TypeScript rules
 
 These always apply. Everything else — organization, naming, casting, JSDoc, design principles — is in
-the `code-conventions` skill.
+`docs/practice/code-conventions.md`.
 
 - Import `.ts` files with a `.js` extension (ESM).
 - Never use `any`; use proper types or `unknown`. Reaching for `any` or an ugly cast means something

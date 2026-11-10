@@ -235,6 +235,10 @@ interface FakeRepoPr {
     head: string;
     base: string;
     state: 'closed' | 'open';
+    /**
+     * Still a draft. Cleared by the `markPullRequestReadyForReview` mutation, as on GitHub.
+     */
+    draft?: boolean;
 }
 
 /**
@@ -259,7 +263,8 @@ interface CreateFakeGithubParams {
 /**
  * A `GithubClient` stub serving both repositories of a superproject: every pull request in `prs`,
  * green checks on every head, the given `stacks` and no review threads. A stacked pull request refuses
- * the plain merge endpoint, as GitHub does, and merge-async lands it with every open node below it.
+ * the plain merge endpoint, as GitHub does, and merge-async lands it with every open node below it —
+ * or, as GitHub does, refuses the whole stack while any of those nodes is still a draft.
  * Records each merge as `<repo>#<number>`, in order.
  */
 function createFakeGithub(params: CreateFakeGithubParams): { client: GithubClient; merged: string[] } {
@@ -295,11 +300,23 @@ function createFakeGithub(params: CreateFakeGithubParams): { client: GithubClien
 
         if (route === 'PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge-async') {
             const stack = findStack(requestParams.repo, requestParams.pull_number!)!;
-            for (const number of stack.prs.slice(0, stack.prs.indexOf(requestParams.pull_number!) + 1)) {
-                const pr = find(stack.repo, number);
-                if (pr.state === 'open') {
-                    await land(pr);
-                }
+            const landing = stack.prs
+                .slice(0, stack.prs.indexOf(requestParams.pull_number!) + 1)
+                .map(number => find(stack.repo, number))
+                .filter(pr => pr.state === 'open');
+
+            if (landing.some(pr => pr.draft)) {
+                return {
+                    status: 202,
+                    data: {
+                        status: 'failed',
+                        details: { message: 'Pull request must be open and not in draft mode in order to be merged.' },
+                    },
+                };
+            }
+
+            for (const pr of landing) {
+                await land(pr);
             }
 
             return { status: 202, data: { status: 'merged' } };
@@ -317,7 +334,8 @@ function createFakeGithub(params: CreateFakeGithubParams): { client: GithubClien
             state: pr.state,
             merged_at: pr.state === 'closed' ? '2026-01-01T00:00:00Z' : null,
             updated_at: '2026-01-01T00:00:00Z',
-            draft: false,
+            draft: pr.draft ?? false,
+            node_id: `${pr.repo}#${pr.number}`,
             html_url: `https://github.com/acme/${pr.repo}/pull/${pr.number}`,
             mergeable_state: 'clean',
             head: { ref: pr.head, sha },
@@ -336,7 +354,19 @@ function createFakeGithub(params: CreateFakeGithubParams): { client: GithubClien
 
     const client = {
         request,
-        graphql: () => Promise.reject(new Error('no review threads here')),
+        graphql: (query: string, variables: { pullRequestId?: string }) => {
+            if (!query.includes('markPullRequestReadyForReview')) {
+                return Promise.reject(new Error('no review threads here'));
+            }
+
+            const pr = prs.find(candidate => `${candidate.repo}#${candidate.number}` === variables.pullRequestId)!;
+            pr.draft = false;
+            return Promise.resolve({
+                markPullRequestReadyForReview: {
+                    pullRequest: { id: variables.pullRequestId, number: pr.number, isDraft: false },
+                },
+            });
+        },
         rest: {
             pulls: {
                 list: async (listParams: { repo: string; state: string; base?: string }) => ({
@@ -551,6 +581,76 @@ test('a task whose submodule work is a stack merges that stack before the produc
     expect(merged).toEqual(['sub#4', 'sub#5', 'main#10']);
     expect((await simpleGit({ baseDir: submodulePath }).revparse(['HEAD'])).trim()).toBe(squashed);
     expect((await simpleGit({ baseDir: remotes.main }).raw(['rev-parse', 'abc-1-work:nzyme'])).trim()).toBe(squashed);
+});
+
+// The submodule stack is pinned at its top node, which is ready, while the nodes below it are still
+// drafts. GitHub refuses a stack merge that would land a draft, so every node the merge lands has to
+// leave draft first — not only the pinned one — and the plan has to say which of them are drafts.
+test('a submodule stack whose lower nodes are drafts is taken out of draft before it lands', async () => {
+    const { mainPath, subSeed, remotes } = await setupMergeScenario(root, {
+        subBranch: 'feat/top',
+        productBase: 'main',
+    });
+    const seed = simpleGit({ baseDir: subSeed, config: ['user.email=t@t', 'user.name=t', 'commit.gpgsign=false'] });
+    await seed.push(['origin', 'main:refs/heads/feat/bottom']);
+    await seed.push(['origin', 'main:refs/heads/feat/middle']);
+    const { client, merged } = createFakeGithub({
+        remotes,
+        prs: [
+            { repo: 'main', number: 10, title: '[ABC-1] Work', head: 'abc-1-work', base: 'main', state: 'open' },
+            {
+                repo: 'sub',
+                number: 3,
+                title: 'fix: bottom',
+                head: 'feat/bottom',
+                base: 'main',
+                state: 'open',
+                draft: true,
+            },
+            {
+                repo: 'sub',
+                number: 4,
+                title: 'fix: middle',
+                head: 'feat/middle',
+                base: 'feat/bottom',
+                state: 'open',
+                draft: true,
+            },
+            { repo: 'sub', number: 5, title: 'feat: top', head: 'feat/top', base: 'feat/middle', state: 'open' },
+        ],
+        stacks: [{ repo: 'sub', number: 1, prs: [3, 4, 5] }],
+        onMerge: async pr => {
+            if (pr.repo !== 'sub' || pr.number !== 5) {
+                return;
+            }
+
+            await seed.raw(['merge', '--squash', `origin/${pr.head}`]);
+            await seed.commit(pr.title);
+            await seed.push(['origin', 'main']);
+        },
+    });
+    const { logger, logs } = createTestLogger('mergeTaskPrs');
+    process.chdir(mainPath);
+
+    await mergeTaskPrs({
+        githubClient: client,
+        githubConfig: GITHUB_CONFIG,
+        issueId: 'ABC-1',
+        baseBranch: 'main',
+        logger,
+        autoYes: true,
+        checkPollIntervalMs: 0,
+    });
+
+    expect(merged).toEqual(['sub#3', 'sub#4', 'sub#5', 'main#10']);
+
+    const plan = logs.map(log => log.message);
+    expect(plan.some(line => line.includes('#3') && line.includes('feat/bottom') && line.includes('(draft)'))).toBe(
+        true,
+    );
+    expect(plan.some(line => line.includes('#4') && line.includes('feat/middle') && line.includes('(draft)'))).toBe(
+        true,
+    );
 });
 
 // A hotfix into the product's `release` whose pin sits on nzyme's own `release` line, which has an

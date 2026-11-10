@@ -99,7 +99,6 @@ All generated files are gitignored, in both trees. In the product's `.gitignore`
 
 ```gitignore
 tsconfig.json
-tsconfig.cjs.json
 *.loc.ts
 /INDEX.md
 /UTILS.md

@@ -75,7 +75,7 @@ and where each placeholder value comes from.
 |Setup scripts|setup, onboarding, Paseo, scripts|`setup.sh`, `setup.build.sh`, `package.json` scripts, `paseo.json`|`references/setup-scripts.md`|
 |Lint and format|lint, format, oxlint, oxfmt, ESLint|`.oxlintrc.json`, `.oxfmtrc.json`, `eslint.config.mjs`|`references/lint-format.md`|
 |VS Code|editor, VS Code, format on save|`.vscode/`|`references/vscode.md`|
-|Claude Code|Claude, agents, skills, permissions, `CLAUDE.md`|`.claude/settings.json`, `.claude/git.json`, `.claude/skills/nzyme`, `CLAUDE.md`, `docs/decisions/`|`references/claude-code.md`|
+|Claude Code|Claude, agents, skills, permissions, `CLAUDE.md`|`.claude/settings.json`, `.claude/.gitignore`, `.claude/git.json`, `.claude/skills/nzyme`, `CLAUDE.md`, `docs/decisions/`|`references/claude-code.md`|
 |GitHub|PR, CI, GitHub Actions, submodule bump|`.github/`|`references/github.md`|
 |Architecture document|architecture, document the repo|`ARCHITECTURE.md`, `docs/architecture/`|`references/architecture-doc.md`|
 

@@ -143,8 +143,9 @@ Bun.serve({
 - Root script `"e2e": "bun --cwd packages/e2e test"`.
 - `setup.build.sh` keeps its `{{if browser-tests}}` block (`references/setup-scripts.md`); the
   browser comes from the repo's `playwright` package.
-- The root `tests` script skips `*.spec.ts`, so bun never picks up a Playwright spec;
-  `test-results/` and `playwright-report/` are in `assets/gitignore.tmpl`.
+- The root `tests` script skips `*.spec.ts`, so bun never picks up a Playwright spec.
+- `packages/e2e/.gitignore` ignores `test-results/` and `playwright-report/`, which Playwright writes
+  beside its config.
 - e2e is not part of the default verification: it needs the built app and the backend running. The
   repo's `verify` skill says when it runs.
 

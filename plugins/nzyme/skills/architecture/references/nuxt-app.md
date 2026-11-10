@@ -26,8 +26,9 @@ packages/{{app}}/
   `prep` (`nuxt prepare`, which writes `.nuxt/tsconfig.json`) through the `nx.json` target defaults,
   and `build` depends on `typecheck`.
 - **`tsconfig.json`** extends `.nuxt/tsconfig.json`, so `nzyme monorepo` does not generate it (the app
-  has no `tsconfig.esm.json`). Un-ignore it: `!/packages/{{app}}/tsconfig.json` in `.gitignore`
-  (`references/monorepo.md`).
+  has no `tsconfig.esm.json`).
+- **`.gitignore`** in the app: `.nuxt/`, `.output/` and `!tsconfig.json`, which un-ignores the
+  hand-written tsconfig (`references/monorepo.md`).
 - **Lint:** the app imports `.vue` files, so it gets a `files` entry in the `.oxlintrc.json` override
   (`references/lint-format.md`).
 - **Setup:** `setup.build.sh` keeps its `{{if nuxt}}` block (`references/setup-scripts.md`).

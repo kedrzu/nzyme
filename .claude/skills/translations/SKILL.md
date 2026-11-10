@@ -4,7 +4,7 @@ description: >-
     Use before adding or changing any user-facing text or a .loc.yaml file — authoring messages, compiling with `nzyme localise`, useTranslate and Translate.
 ---
 
-Compile `.loc.yaml` with `bun run localise`. Never edit the generated `.loc.ts`.
+Compile `.loc.yaml` with `bun run localise`.
 
 Links in the document below are relative to its directory (`docs/practice/` here); package READMEs are `packages/<pkg>/README.md`.
 

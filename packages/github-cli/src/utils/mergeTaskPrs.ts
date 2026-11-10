@@ -250,11 +250,11 @@ export async function mergeTaskPrs(params: MergeTaskPrsParams): Promise<void> {
         // GitHub refuses the plain merge endpoint for a pull request kept in a stack. Merging the
         // pinned node through merge-async lands it and every open node below it — exactly what the
         // pin contains; nodes above it are not pinned and stay open.
-        const { stack: submoduleStack, nodes: landingNodes } = await resolveSubmoduleLanding(
+        const { stack: submoduleStack, nodes: landingNodes } = await resolveSubmoduleLanding({
             githubClient,
-            target.config,
-            target.openPr,
-        );
+            config: target.config,
+            openPr: target.openPr,
+        });
 
         // Every node that lands leaves draft, not only the pinned one: GitHub refuses the whole stack
         // merge while any node in it is still a draft, and lands none of it.
@@ -585,14 +585,24 @@ interface SubmoduleLanding {
 type SubmoduleLandingNode = Pick<StackPullRequest, 'draft' | 'headRef' | 'number'>;
 
 /**
+ * Parameters for {@link resolveSubmoduleLanding}.
+ */
+interface ResolveSubmoduleLandingParams {
+    githubClient: GithubClient;
+    config: GithubConfig;
+
+    /**
+     * The submodule's pinned pull request.
+     */
+    openPr: GitHubPR;
+}
+
+/**
  * What merging a submodule's pinned pull request lands: the pinned node and, in a stack, every open
  * node below it. Read fresh from GitHub on each call — draft state is what it is now.
  */
-async function resolveSubmoduleLanding(
-    githubClient: GithubClient,
-    config: GithubConfig,
-    openPr: GitHubPR,
-): Promise<SubmoduleLanding> {
+async function resolveSubmoduleLanding(params: ResolveSubmoduleLandingParams): Promise<SubmoduleLanding> {
+    const { githubClient, config, openPr } = params;
     const stack = await findStackForPr(githubClient, config, openPr.number);
     const nodes = stack
         ? getOpenNodesUpTo(stack, openPr.number)
@@ -873,7 +883,11 @@ async function confirmMerge(params: ConfirmMergeParams): Promise<void> {
 
     for (const target of submoduleTargets) {
         if (target.openPr) {
-            const { nodes } = await resolveSubmoduleLanding(githubClient, target.config, target.openPr);
+            const { nodes } = await resolveSubmoduleLanding({
+                githubClient,
+                config: target.config,
+                openPr: target.openPr,
+            });
             submodulePrCount += nodes.length;
 
             const unresolved = await countUnresolvedReviewThreads(githubClient, target.config, target.openPr.number);

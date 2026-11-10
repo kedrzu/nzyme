@@ -57,17 +57,6 @@ describe('walkProjectFiles', () => {
         ]);
     });
 
-    it('prunes what the predicate ignores, files and directories alike', async () => {
-        const seen: string[] = [];
-        const files = await walkProjectFiles(root, relativePath => {
-            seen.push(relativePath);
-            return relativePath === 'packages' || relativePath.endsWith('.yaml');
-        });
-
-        expect(files).toEqual(['.gitignore', '.storybook/main.ts', 'keep.log', 'src/a.ts', 'src/b/c.ts']);
-        expect(seen.some(p => p.startsWith('packages/'))).toBe(false);
-    });
-
     it('honours the ancestors’ .gitignore when walking a subdirectory', async () => {
         expect(await walkProjectFiles(path.join(root, 'packages/x'))).toEqual([
             '.gitignore',

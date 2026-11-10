@@ -15,8 +15,6 @@ export interface BuildImportGraphOptions {
     /** Workspace packages (from `getPackages`) — bare specifiers resolve through their `exports`. */
     packages: Package[];
     aliases?: ImportAlias[];
-    /** Prunes more than `.gitignore` does — see {@link walkProjectFiles}. */
-    ignore?: (relativePath: string) => boolean;
     /**
      * Root-relative paths that imports may resolve to although they are not on disk — a deleted
      * file. They are targets only, never parsed.
@@ -56,7 +54,7 @@ export interface ImportGraph {
  */
 export async function buildImportGraph(options: BuildImportGraphOptions): Promise<ImportGraph> {
     const { root } = options;
-    const walked = await walkProjectFiles(root, options.ignore);
+    const walked = await walkProjectFiles(root);
     const paths = new Set(walked);
     for (const extra of options.extraPaths ?? []) {
         paths.add(extra);

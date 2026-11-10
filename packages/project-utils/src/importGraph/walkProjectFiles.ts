@@ -6,12 +6,11 @@ import { isFileIgnored } from '../isFileIgnored.js';
 /**
  * Lists every file under `root` that git does not ignore (`.gitignore` files, nested ones and
  * negations included, as {@link isFileIgnored} evaluates them), as sorted root-relative
- * `/`-separated paths. An ignored directory is pruned, not walked. `ignore` prunes more: it gets the
- * root-relative path of each file and directory and returns `true` to skip it.
+ * `/`-separated paths. An ignored directory is pruned, not walked.
  *
  * Symbolic links are not followed, nor listed. A missing or unreadable `root` yields `[]`.
  */
-export async function walkProjectFiles(root: string, ignore?: (relativePath: string) => boolean): Promise<string[]> {
+export async function walkProjectFiles(root: string): Promise<string[]> {
     const files: string[] = [];
     await walkDirectory('');
     return files.toSorted();
@@ -32,7 +31,7 @@ export async function walkProjectFiles(root: string, ignore?: (relativePath: str
                 }
 
                 const relativePath = relativeDir ? `${relativeDir}/${entry.name}` : entry.name;
-                if (ignore?.(relativePath) || isFileIgnored(path.join(root, relativePath)) === true) {
+                if (isFileIgnored(path.join(root, relativePath)) === true) {
                     return;
                 }
 

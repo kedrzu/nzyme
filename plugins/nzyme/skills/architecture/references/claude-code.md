@@ -110,6 +110,8 @@ ask a fresh `claude -p` which skills have no description; if any of the repo's o
 
 **Never in a project** — personal tools belong in the user's own `~/.claude/settings.json`: `gmail-mcp`,
 `gdrive-mcp`, `whatsapp`, `telegram`, `shopping-research`, `wait-what` (`kedrzu-skills`).
+`secrets` (`kedrzu-skills`) is not one of them but stays out too: the repo's `secrets` skill and
+`secrets set --prompt` put every credential in the repo's store.
 
 **New plugins.** The marketplaces grow. On every run, list `kedrzu-skills` — the local copy at
 `~/.claude/plugins/marketplaces/kedrzu-skills/.claude-plugin/marketplace.json`, or
@@ -126,37 +128,31 @@ marketplace is a difference (remove it from `enabledPlugins`).
 
 ## Compare
 
+Compare against the reference state above; whatever the repo has that it does not describe, and
+whatever it describes that the repo lacks, is a difference.
+
 - `settings.json`: key-wise. Repo-only allows and settings stay, and so do plugins the repo chose
-  (recorded in `ARCHITECTURE.md`, or from the "when the repo uses it" list). Missing disable flags,
-  deny entries, an "always" plugin or `Bash(bun nzyme:*)` are differences; so is a personal plugin
-  ("never in a project"). `Bash(*)` in `allow` is a difference: it grants everything the deny list and the
-  guardrails exist to stop.
-- An `nzyme@nzyme` entry in `enabledPlugins`, or an `nzyme` marketplace in `extraKnownMarketplaces`:
-  always a difference. Remove both and add the symlink: a marketplace install of the same plugin
-  wins over the symlinked copy, so the skills would silently follow nzyme `main` instead of the pin.
-  Plugins the repo loads through committed symlinks into another submodule stay as they are.
-- `secrets@kedrzu-skills` in `enabledPlugins`: a difference. Remove it; the repo's `secrets` skill
-  and `secrets set --prompt` replace it, so every credential goes to the repo's store.
-- Repo skills (`references/repo-skills.md`), each a difference:
-  - an area in play without a repo skill;
-  - a repo skill for an area whose body does not end by inlining `nzyme/docs/practice/<area>.md`;
-  - two repo skills on one area: merge them;
-  - a reference to an `nzyme:<area>` skill or an `nzyme-ui`, `nzyme-drizzle`, `nzyme-api-clients`
-    plugin or skill, which no longer exist: point it at the repo skill, and remove a symlink or
-    `enabledPlugins` entry for one of those plugins;
-  - `skillListingBudgetFraction` set while a fresh `claude -p` shows every description at the default:
-    remove it.
+  (recorded in `ARCHITECTURE.md`, or from the "when the repo uses it" list). Every disable flag, deny
+  entry, "always" plugin and `Bash(bun nzyme:*)` is present; no personal plugin ("never in a
+  project") is. `allow` holds no `Bash(*)`: it would grant everything the deny list and the guardrails
+  exist to stop.
+- nzyme's skills load only through the `.claude/skills/nzyme` symlink, never as a marketplace plugin:
+  a marketplace install of the same plugin wins over the symlinked copy, so the skills would follow
+  nzyme `main` instead of the pin. Plugins the repo loads through committed symlinks into another
+  submodule stay as they are.
+- Repo skills (`references/repo-skills.md`): one per area in play, each ending by inlining
+  `nzyme/docs/practice/<area>.md`, and every skill reference in the repo names one that exists.
+  `skillListingBudgetFraction` is set only when a fresh `claude -p` does not show every description
+  at the default.
 - `.claude/git.json`: not compared here. A repo without it may simply push to `main`; `git:setup`
   decides.
 - `CLAUDE.md`: by heading section. The repo's own sections (language rules, a standing authorization
   for commits and PRs in worktrees, gotchas) stay. A shared section that differs from nzyme's text at
-  the pinned commit is shown with nzyme's version. A list of the repo's skills is a difference:
-  propose removing it.
-- `AGENTS.md` instead of `CLAUDE.md`: Claude Code does not read `AGENTS.md`, so the reference is
-  `CLAUDE.md`. Propose `git mv AGENTS.md CLAUDE.md`; if other agents still need `AGENTS.md`, keep it as
-  a one-line pointer to `CLAUDE.md`. Fix references to a `nzyme/AGENTS.md`, which does not exist.
-- A tracked `.claude/settings.local.json` or `CLAUDE.local.md`: propose `git rm --cached` and the
-  ignore entries.
+  the pinned commit is shown with nzyme's version. It lists no skills: the session's skill list
+  already does.
+- The agent file is `CLAUDE.md` — Claude Code does not read `AGENTS.md`; an `AGENTS.md` other agents
+  still need is a one-line pointer to it.
+- `.claude/settings.local.json` and `CLAUDE.local.md` are ignored, never tracked.
 
 ## Proposing a `CLAUDE.md` change
 

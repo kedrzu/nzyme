@@ -22,6 +22,8 @@ export interface SpawnForExitCodeOptions {
     stdio: StdioOptions;
     /** The child's environment; this process's own when omitted. */
     env?: NodeJS.ProcessEnv;
+    /** The child's working directory; this process's own when omitted. */
+    cwd?: string;
 }
 
 /** How a child spawned by {@link spawnForExitCode} ended. */
@@ -43,10 +45,10 @@ export interface SpawnForExitCodeResult {
  * @util
  */
 export function spawnForExitCode(options: SpawnForExitCodeOptions): Promise<SpawnForExitCodeResult> {
-    const { executable, args, stdio, env } = options;
+    const { executable, args, stdio, env, cwd } = options;
 
     return new Promise<SpawnForExitCodeResult>(resolve => {
-        const child = spawn(executable, args, { stdio, env });
+        const child = spawn(executable, args, { stdio, env, cwd });
         process.on('SIGINT', noop);
         for (const signal of FORWARDED_SIGNALS) {
             process.on(signal, forward);

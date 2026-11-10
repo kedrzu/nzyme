@@ -1,8 +1,11 @@
+import { statSync } from 'node:fs';
 import path from 'node:path';
 
 import { assertNever } from '@nzyme/utils/assertNever.js';
 
 import type { Package } from '../getPackages.js';
+import { isFileIgnored } from '../isFileIgnored.js';
+import { getImportSourceKind } from './extractImportSpecifiers.js';
 import type { ImportSpecifier } from './extractImportSpecifiers.js';
 
 /**
@@ -21,11 +24,15 @@ export interface CreateImportResolverOptions {
     root: string;
     packages: Package[];
     aliases?: ImportAlias[];
-    /** Every path an import may resolve to, root-relative and `/`-separated. */
+    /**
+     * The paths an import resolves to first, root-relative and `/`-separated. A `module` or `sass`
+     * target outside it is still found on disk when it is a gitignored source file outside any
+     * gitignored directory — see {@link createImportResolver}.
+     */
     paths: ReadonlySet<string>;
 }
 
-/** Resolves specifiers found in a root-relative file to root-relative paths of {@link CreateImportResolverOptions.paths}. */
+/** Resolves specifiers found in a root-relative file to root-relative paths. */
 export interface ImportResolver {
     /**
      * Targets of the specifier — one path, every path under a directory (`url` kind), or none
@@ -46,15 +53,22 @@ export function resolveRelativeSpecifier(
     specifier: string,
     pathSet: ReadonlySet<string>,
 ): string | null {
-    return findCandidate(typeScriptCandidates(joinPath(path.posix.dirname(fromFile), specifier)), pathSet);
+    const candidates = typeScriptCandidates(joinPath(path.posix.dirname(fromFile), specifier));
+    return candidates.find(candidate => pathSet.has(candidate)) ?? null;
 }
 
 /**
  * Creates the resolver of an import graph: relative specifiers, workspace packages through their
  * `exports` (the `source` condition, else a plain target, `import` or `default`; `*` patterns),
  * aliases, Sass partials and `new URL` file/directory targets. A specifier that resolves to nothing
- * on disk or in the path set yields no target rather than an error.
- * @__NO_SIDE_EFFECTS__
+ * yields no target rather than an error.
+ *
+ * Every candidate is looked up in `paths` first. Only when none is there does a `module`/`sass`
+ * specifier fall back to disk, and only to a generated source file: a source extension
+ * (`.ts .tsx .mts .js .mjs .vue .scss`), inside the root, outside `node_modules`, and not in a
+ * gitignored directory — so a gitignored `x.loc.ts` next to its sources is found, while build
+ * output (`dist/`, `.nuxt/`) never is, not even through a package's `import`/`default` export.
+ * `url` targets come from `paths` only.
  */
 export function createImportResolver(options: CreateImportResolverOptions): ImportResolver {
     const { root, paths } = options;
@@ -69,6 +83,7 @@ export function createImportResolver(options: CreateImportResolverOptions): Impo
     const packagesByName = new Map(packages.flatMap(pkg => (pkg.name ? [[pkg.name, pkg] as const] : [])));
     const aliases = options.aliases ?? [];
     let sortedPaths: string[] | undefined;
+    const onDisk = new Map<string, boolean>();
 
     return { resolve };
 
@@ -92,7 +107,7 @@ export function createImportResolver(options: CreateImportResolverOptions): Impo
         // A bundler query (`x.svg?component`, `sw.js?worker&url`) does not change the file.
         const specifier = rawSpecifier.replace(/\?.*$/, '');
         if (specifier.startsWith('.')) {
-            return resolveModulePath(joinPath(path.posix.dirname(fromFile), specifier), paths);
+            return findCandidate(moduleCandidates(joinPath(path.posix.dirname(fromFile), specifier)));
         }
         if (specifier.startsWith('/')) {
             return null;
@@ -101,7 +116,7 @@ export function createImportResolver(options: CreateImportResolverOptions): Impo
         const owner = ownerOf(fromFile);
         for (const alias of aliases) {
             if (owner?.name && alias.packages.includes(owner.name) && specifier.startsWith(alias.prefix)) {
-                return resolveModulePath(joinPath(owner.root, specifier.slice(alias.prefix.length)), paths);
+                return findCandidate(moduleCandidates(joinPath(owner.root, specifier.slice(alias.prefix.length))));
             }
         }
 
@@ -140,7 +155,7 @@ export function createImportResolver(options: CreateImportResolverOptions): Impo
                   `${base}/_index.scss`,
                   `${base}/index.scss`,
               ];
-        return findCandidate(candidates, paths);
+        return findCandidate(candidates);
     }
 
     function resolveUrl(fromFile: string, specifier: string): string[] {
@@ -171,8 +186,32 @@ export function createImportResolver(options: CreateImportResolverOptions): Impo
             return null;
         }
 
-        const resolved = joinPath(pkg.root, target);
-        return paths.has(resolved) ? resolved : null;
+        return findCandidate([joinPath(pkg.root, target)]);
+    }
+
+    function findCandidate(candidates: string[]): string | null {
+        return (
+            candidates.find(candidate => paths.has(candidate)) ??
+            candidates.find(candidate => isGeneratedSourceOnDisk(candidate)) ??
+            null
+        );
+    }
+
+    function isGeneratedSourceOnDisk(candidate: string): boolean {
+        const cached = onDisk.get(candidate);
+        if (cached !== undefined) {
+            return cached;
+        }
+
+        const dir = path.posix.dirname(candidate);
+        const found =
+            getImportSourceKind(candidate) !== null &&
+            !candidate.startsWith('../') &&
+            !candidate.split('/').includes('node_modules') &&
+            isFileOnDisk(path.join(root, candidate)) &&
+            (dir === '.' || isFileIgnored(path.join(root, dir)) !== true);
+        onDisk.set(candidate, found);
+        return found;
     }
 
     function ownerOf(file: string) {
@@ -181,20 +220,17 @@ export function createImportResolver(options: CreateImportResolverOptions): Impo
 }
 
 /** {@link typeScriptCandidates} first, then the path as written and the non-TS forms. */
-function resolveModulePath(joined: string, pathSet: ReadonlySet<string>): string | null {
+function moduleCandidates(joined: string): string[] {
     const base = joined.replace(/\.(js|ts|tsx)$/, '');
-    return findCandidate(
-        [
-            ...typeScriptCandidates(joined),
-            joined,
-            joined.replace(/\.jsx$/, '.tsx'),
-            joined.replace(/\.mjs$/, '.mts'),
-            `${base}.js`,
-            `${base}.d.ts`,
-            `${base}/index.js`,
-        ],
-        pathSet,
-    );
+    return [
+        ...typeScriptCandidates(joined),
+        joined,
+        joined.replace(/\.jsx$/, '.tsx'),
+        joined.replace(/\.mjs$/, '.mts'),
+        `${base}.js`,
+        `${base}.d.ts`,
+        `${base}/index.js`,
+    ];
 }
 
 function typeScriptCandidates(joined: string): string[] {
@@ -202,8 +238,12 @@ function typeScriptCandidates(joined: string): string[] {
     return [`${base}.ts`, `${base}.tsx`, `${base}/index.ts`, `${base}/index.tsx`];
 }
 
-function findCandidate(candidates: string[], pathSet: ReadonlySet<string>): string | null {
-    return candidates.find(candidate => pathSet.has(candidate)) ?? null;
+function isFileOnDisk(file: string): boolean {
+    try {
+        return statSync(file).isFile();
+    } catch {
+        return false;
+    }
 }
 
 /**

@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { Package } from '../getPackages.js';
-import { extractEsmSpecifiers, extractImplicitSpecifiers } from './extractImportSpecifiers.js';
+import { extractEsmSpecifiers, extractImplicitSpecifiers, getImportSourceKind } from './extractImportSpecifiers.js';
 import type { ImportSourceKind, ImportSpecifier } from './extractImportSpecifiers.js';
 import { createImportResolver } from './resolveImportTarget.js';
 import type { ImportAlias } from './resolveImportTarget.js';
@@ -18,8 +18,8 @@ export interface BuildImportGraphOptions {
     /** Prunes more than `.gitignore` does — see {@link walkProjectFiles}. */
     ignore?: (relativePath: string) => boolean;
     /**
-     * Root-relative paths that imports may resolve to although the walk does not list them — a
-     * deleted file, or a gitignored generated one (`*.loc.ts`). They are targets only, never parsed.
+     * Root-relative paths that imports may resolve to although they are not on disk — a deleted
+     * file. They are targets only, never parsed.
      */
     extraPaths?: Iterable<string>;
 }
@@ -34,7 +34,10 @@ export interface ImportEdge {
 
 /** The project's file-level import graph. Cycles are kept as they are: a traversal needs a visited set. */
 export interface ImportGraph {
-    /** Every walked file, sorted — source or not. */
+    /**
+     * Every walked file, source or not, plus every gitignored source file reached through imports
+     * (`*.loc.ts`), sorted.
+     */
     files: string[];
     /** Direct importers of a root-relative path; `[]` for a path nothing imports. */
     importersOf(path: string): ImportEdge[];
@@ -45,44 +48,64 @@ export interface ImportGraph {
  * the sources (`.ts .tsx .mts .js .mjs .vue .scss`, `.d.ts` included — their imports are real
  * edges too) and resolves each specifier against the walked paths (any extension, so JSON, SVG
  * and directory URLs resolve) plus `extraPaths`.
+ *
+ * Gitignored source files are reached rather than walked: an import that resolves to one on disk
+ * (a generated `x.loc.ts`; never build output or `node_modules` — see `createImportResolver`) makes
+ * it a node, and its own imports are followed in turn. A gitignored file nothing imports is not a
+ * node.
  */
 export async function buildImportGraph(options: BuildImportGraphOptions): Promise<ImportGraph> {
     const { root } = options;
-    const files = await walkProjectFiles(root, options.ignore);
-    const paths = new Set(files);
+    const walked = await walkProjectFiles(root, options.ignore);
+    const paths = new Set(walked);
     for (const extra of options.extraPaths ?? []) {
         paths.add(extra);
     }
 
     const resolver = createImportResolver({ root, packages: options.packages, aliases: options.aliases, paths });
     const importers = new Map<string, ImportEdge[]>();
+    const nodes = new Set(walked);
 
-    const parsed = await Promise.all(
-        files.map(async file => {
-            const sourceKind = getSourceKind(file);
-            if (!sourceKind) {
-                return [];
-            }
-            const content = await readFile(path.join(root, file), 'utf8');
-            return resolveEdges(file, extractSpecifiers(content, sourceKind));
-        }),
-    );
-
-    for (const edges of parsed) {
-        for (const edge of edges) {
-            const list = importers.get(edge.to);
-            if (list) {
-                list.push(edge);
-            } else {
-                importers.set(edge.to, [edge]);
+    let batch = walked;
+    while (batch.length > 0) {
+        const parsed = await Promise.all(batch.map(file => parseFile(file)));
+        const reached = new Set<string>();
+        for (const edges of parsed) {
+            for (const edge of edges) {
+                addImporter(edge);
+                if (!nodes.has(edge.to) && !paths.has(edge.to)) {
+                    reached.add(edge.to);
+                }
             }
         }
+        for (const file of reached) {
+            nodes.add(file);
+        }
+        batch = [...reached].toSorted();
     }
 
     return {
-        files,
+        files: [...nodes].toSorted(),
         importersOf: target => importers.get(target) ?? [],
     };
+
+    async function parseFile(file: string): Promise<ImportEdge[]> {
+        const sourceKind = getImportSourceKind(file);
+        if (!sourceKind) {
+            return [];
+        }
+        const content = await readFile(path.join(root, file), 'utf8');
+        return resolveEdges(file, extractSpecifiers(content, sourceKind));
+    }
+
+    function addImporter(edge: ImportEdge): void {
+        const list = importers.get(edge.to);
+        if (list) {
+            list.push(edge);
+        } else {
+            importers.set(edge.to, [edge]);
+        }
+    }
 
     function resolveEdges(file: string, specifiers: ImportSpecifier[]): ImportEdge[] {
         // One edge per target; it is type-only only when every import of the target is.
@@ -99,21 +122,4 @@ export async function buildImportGraph(options: BuildImportGraphOptions): Promis
 function extractSpecifiers(content: string, sourceKind: ImportSourceKind): ImportSpecifier[] {
     const implicit = extractImplicitSpecifiers(content, sourceKind);
     return sourceKind === 'script' ? [...extractEsmSpecifiers(content), ...implicit] : implicit;
-}
-
-function getSourceKind(file: string): ImportSourceKind | null {
-    switch (path.posix.extname(file)) {
-        case '.ts':
-        case '.tsx':
-        case '.mts':
-        case '.js':
-        case '.mjs':
-            return 'script';
-        case '.vue':
-            return 'vue';
-        case '.scss':
-            return 'scss';
-        default:
-            return null;
-    }
 }

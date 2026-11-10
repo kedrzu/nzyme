@@ -26,10 +26,25 @@ const files: Record<string, string> = {
     'packages/common/src/cycle/a.test.ts': `import { a } from './a.js';`,
     'packages/common/src/mixed.ts': `import type { Thing } from './types.js';\nimport { format } from './format.js';\nimport type { format as f } from './format.js';`,
     'packages/common/src/docs.ts': `/** @example import { format } from './format.js'; */\nexport const docs = 1;`,
-    'packages/common/src/Messages.loc.ts': `import { format } from './format.js';`,
+    'packages/common/src/Messages.loc.ts': `import { defineMessages } from '@acme/i18n/defineMessages.js';`,
     'packages/common/src/Messages.loc.yaml': `hello: Hello`,
     'packages/common/src/useMessages.ts': `import { Messages } from './Messages.loc.js';`,
+    'packages/common/src/useMessages.test.ts': `import { useMessages } from './useMessages.js';`,
+    'packages/common/src/Orphan.loc.ts': `import { defineMessages } from '@acme/i18n/defineMessages.js';`,
+    'packages/common/src/usesDeleted.ts': `import { gone } from './Deleted.js';`,
+    'packages/common/src/usesBuild.ts': [
+        `import '../dist/index.js';`,
+        `import '../node_modules/dep/index.js';`,
+        `import '@acme/built';`,
+        `import '@acme/built/conditional.js';`,
+    ].join('\n'),
     'packages/common/dist/index.js': `import './format.js';`,
+    'packages/common/node_modules/dep/index.ts': `export const dep = 1;`,
+    'packages/i18n/package.json': '{}',
+    'packages/i18n/src/defineMessages.ts': `export function defineMessages() {}`,
+    'packages/built/package.json': '{}',
+    'packages/built/dist/index.js': `export const built = 1;`,
+    'packages/built/dist/conditional.js': `export const conditional = 1;`,
     'packages/app/package.json': '{}',
     'packages/app/utils/format.ts': `import { format } from '@acme/common/format.js';`,
     'packages/app/components/Page.vue': [
@@ -59,6 +74,17 @@ const packages: Package[] = [
             exports: { '.': { source: './src/index.ts' }, './*.js': { source: './src/*.ts' } },
         },
     },
+    {
+        path: 'packages/i18n',
+        packageJson: { name: '@acme/i18n', exports: { './*.js': { source: './src/*.ts' } } },
+    },
+    {
+        path: 'packages/built',
+        packageJson: {
+            name: '@acme/built',
+            exports: { '.': './dist/index.js', './conditional.js': { import: './dist/conditional.js' } },
+        },
+    },
     { path: 'packages/app', packageJson: { name: '@acme/app' } },
     { path: 'packages/other', packageJson: { name: '@acme/other' } },
 ];
@@ -75,7 +101,7 @@ beforeAll(async () => {
         root,
         packages: packages.map(pkg => ({ ...pkg, path: path.join(root, pkg.path) })),
         aliases: [{ prefix: '@/', packages: ['@acme/app'] }],
-        extraPaths: ['packages/common/src/Messages.loc.ts'],
+        extraPaths: ['packages/common/src/Deleted.ts'],
     });
 });
 
@@ -104,10 +130,31 @@ function transitiveImporters(start: string): string[] {
 }
 
 describe('buildImportGraph', () => {
-    it('lists the walked files without gitignored ones', () => {
+    it('lists the walked files and the gitignored sources reached through imports only', () => {
         expect(graph.files).toContain('packages/app/fixtures/b.txt');
+        expect(graph.files).toContain('packages/common/src/Messages.loc.ts');
+        expect(graph.files).not.toContain('packages/common/src/Orphan.loc.ts');
         expect(graph.files).not.toContain('packages/common/dist/index.js');
-        expect(graph.files).not.toContain('packages/common/src/Messages.loc.ts');
+        expect(graph.files).not.toContain('packages/common/src/Deleted.ts');
+    });
+
+    it('follows imports through a reached gitignored source file', () => {
+        expect(importers('packages/common/src/Messages.loc.ts')).toEqual(['packages/common/src/useMessages.ts']);
+        expect(importers('packages/i18n/src/defineMessages.ts')).toEqual(['packages/common/src/Messages.loc.ts']);
+        expect(transitiveImporters('packages/i18n/src/defineMessages.ts')).toEqual([
+            'packages/common/src/Messages.loc.ts',
+            'packages/common/src/useMessages.test.ts',
+            'packages/common/src/useMessages.ts',
+            'packages/i18n/src/defineMessages.ts',
+        ]);
+    });
+
+    it('never reaches build output or node_modules, relatively or through package exports', () => {
+        expect(graph.importersOf('packages/common/dist/index.js')).toEqual([]);
+        expect(graph.importersOf('packages/common/node_modules/dep/index.ts')).toEqual([]);
+        expect(graph.importersOf('packages/built/dist/index.js')).toEqual([]);
+        expect(graph.importersOf('packages/built/dist/conditional.js')).toEqual([]);
+        expect(graph.files.filter(file => file.includes('/dist/') || file.includes('node_modules'))).toEqual([]);
     });
 
     it('links relative, package, alias, vue, scss and url imports', () => {
@@ -128,12 +175,11 @@ describe('buildImportGraph', () => {
     it('gives no edge to a same-named file elsewhere, nor from comments or gitignored files', () => {
         expect(importers('packages/other/utils/format.ts')).toEqual([]);
         expect(importers('packages/common/src/format.ts')).not.toContain('packages/common/src/docs.ts');
-        expect(importers('packages/common/src/format.ts')).not.toContain('packages/common/src/Messages.loc.ts');
         expect(importers('packages/common/src/format.ts')).not.toContain('packages/common/dist/index.js');
     });
 
-    it('resolves imports of extra paths that the walk does not list', () => {
-        expect(importers('packages/common/src/Messages.loc.ts')).toEqual(['packages/common/src/useMessages.ts']);
+    it('resolves imports of extra paths that are not on disk', () => {
+        expect(importers('packages/common/src/Deleted.ts')).toEqual(['packages/common/src/usesDeleted.ts']);
     });
 
     it('marks an edge type-only only when every import of the target is', () => {

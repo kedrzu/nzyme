@@ -22,6 +22,29 @@ export interface ImportSpecifier {
 export type ImportSourceKind = 'script' | 'vue' | 'scss';
 
 /**
+ * The kind of source file a path is by its extension — `.ts .tsx .mts .js .mjs` (`.d.ts`
+ * included), `.vue`, `.scss` — or `null` for a file that is not parsed for imports.
+ * @__NO_SIDE_EFFECTS__
+ */
+export function getImportSourceKind(file: string): ImportSourceKind | null {
+    const extension = /\.[^./]+$/.exec(file)?.[0];
+    switch (extension) {
+        case '.ts':
+        case '.tsx':
+        case '.mts':
+        case '.js':
+        case '.mjs':
+            return 'script';
+        case '.vue':
+            return 'vue';
+        case '.scss':
+            return 'scss';
+        default:
+            return null;
+    }
+}
+
+/**
  * Extracts every ESM module specifier: static `import … from`, `export … from`, side-effect
  * `import 'x'` and dynamic `import('literal')`. Comments are stripped first, so an `import` in JSDoc
  * is not an import.

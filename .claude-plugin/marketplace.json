@@ -13,6 +13,24 @@
             "source": "./plugins/nzyme",
             "description": "How to use the @nzyme framework packages — dependency injection, logging, translations, Vue forms and composables — plus the TypeScript conventions and testing practice they are written for, and the reference architecture of a product repo (/nzyme:architecture) with its UI, Drizzle and API-client practice",
             "category": "development"
+        },
+        {
+            "name": "nzyme-ui",
+            "source": "./plugins/nzyme-ui",
+            "description": "Building Vue UI components the nzyme way, on @nzyme/vue-forms primitives and reka-ui, with SCSS tokens, stories and WCAG 2.2 AA story tests. For repos with a UI package.",
+            "category": "development"
+        },
+        {
+            "name": "nzyme-drizzle",
+            "source": "./plugins/nzyme-drizzle",
+            "description": "SQL with Drizzle the nzyme way: schema, queries, transactions and migrations. For repos with a SQL database.",
+            "category": "development"
+        },
+        {
+            "name": "nzyme-api-clients",
+            "source": "./plugins/nzyme-api-clients",
+            "description": "Third-party API clients the nzyme way: one package per vendor, committed specs, offline codegen. For repos that integrate external APIs.",
+            "category": "development"
         }
     ]
 }

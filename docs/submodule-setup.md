@@ -229,6 +229,9 @@ A product's setup script (Paseo runs it for every new worktree through `paseo.js
   ln -s ../../nzyme/plugins/nzyme .claude/skills/nzyme
   ```
 
+  Link `nzyme-ui`, `nzyme-drizzle` or `nzyme-api-clients` the same way when the product has that area
+  ([practice-skills-as-opt-in-plugins.md](decisions/practice-skills-as-opt-in-plugins.md)).
+
   Remove any `nzyme` entry from `extraKnownMarketplaces` and `nzyme@nzyme` from `enabledPlugins` in the
   product's `.claude/settings.json`: a project-level marketplace install of the same plugin wins over
   the symlinked copy, so the skills would follow nzyme `main` instead of the pin.

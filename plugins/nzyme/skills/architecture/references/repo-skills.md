@@ -1,6 +1,6 @@
 # Repo-owned skills
 
-When work enters an area that has a practice skill (`ui`, `drizzle`, `api-clients`) or the Nuxt app,
+When work enters an area that has a practice plugin (`references/claude-code.md`) or the Nuxt app,
 offer to write — or bring up to date — a skill that lives in the repo. A repo with secrets always has
 one (`secrets`): an agent cannot add or use a secret without knowing how this repo invokes the
 commands and which environments exist. The nzyme skill holds the
@@ -24,7 +24,7 @@ in the repo then pick up the area's rules on their own, without anyone invoking 
 For `secrets` the paths and commands are the whole point: the exact prefix (`bun nzyme secrets` or
 the product CLI's), the provider file, each store and its environments, the variable that selects
 the environment and how to run a command against another one, whose machines can write, and
-any secrets command the repo adds. The practice it links is `nzyme/plugins/nzyme/skills/secrets/SKILL.md`.
+any secrets command the repo adds. The practice it names is `nzyme:secrets`.
 
 It never restates a rule the linked skill or README owns. If a line would hold everywhere nzyme is
 used, it belongs in the nzyme skill, not here.
@@ -33,12 +33,10 @@ used, it belongs in the nzyme skill, not here.
 
 Link through the submodule, so the text matches the nzyme commit the repo pins:
 
-- skills: `nzyme/plugins/nzyme/skills/<name>/SKILL.md`;
 - package READMEs: `nzyme/packages/<pkg>/README.md`.
 
-The practice skills are user-invoked, so the repo skill tells the agent to **read** the file, not to
-invoke it. The model-invocable `nzyme:*` skills (`forms`, `testing`, …) can also be named; they load
-on their own.
+The practice skills (`nzyme-ui:ui`, `nzyme-drizzle:drizzle`, `nzyme-api-clients:api-clients`) and the
+`nzyme:*` skills (`forms`, `testing`, …) are named, not linked by path; they load on their own.
 
 ## Frontmatter
 
@@ -56,7 +54,7 @@ description: >-
 
 # UI
 
-Read `nzyme/plugins/nzyme/skills/ui/SKILL.md` before building a component; it holds the practice.
+`nzyme-ui:ui` holds the practice; load it before building a component.
 Primitives and components: `nzyme/packages/vue-forms/README.md`, `nzyme/packages/vue/README.md`.
 
 ## Paths

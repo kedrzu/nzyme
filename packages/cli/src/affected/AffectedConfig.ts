@@ -1,7 +1,10 @@
 import type { ImportAlias } from '@nzyme/project-utils/importGraph/resolveImportTarget.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
+import { createConfigParsers } from '../utils/createConfigParsers.js';
 import { readNzymeConfig } from '../utils/readNzymeConfig.js';
+
+const { parseArray, parseStringArray, parseString, configError } = createConfigParsers('affected');
 
 /**
  * Configuration of `nzyme affected`, read from the `nzyme.affected` field of the repo's root
@@ -125,39 +128,4 @@ function parseRewrite(value: unknown, path: string): AffectedRewrite {
         from: parseString(value.from, `${path}.from`),
         to: parseString(value.to, `${path}.to`),
     };
-}
-
-/** Validates an array, each item with `parseItem`. */
-function parseArray<T>(value: unknown, path: string, parseItem: (item: unknown, path: string) => T): T[] {
-    if (!Array.isArray(value)) {
-        throw configError(path, 'an array');
-    }
-
-    const items: T[] = [];
-    for (const [index, item] of value.entries()) {
-        items.push(parseItem(item, `${path}[${index}]`));
-    }
-    return items;
-}
-
-/** Validates an array of non-empty strings. */
-function parseStringArray(value: unknown, path: string): string[] {
-    if (!Array.isArray(value)) {
-        throw configError(path, 'an array of strings');
-    }
-
-    return parseArray(value, path, parseString);
-}
-
-/** Validates a non-empty string. */
-function parseString(value: unknown, path: string): string {
-    if (typeof value !== 'string' || value === '') {
-        throw configError(path, 'a non-empty string');
-    }
-    return value;
-}
-
-/** The error for a config value of the wrong shape. */
-function configError(path: string, expected: string): Error {
-    return new Error(`Invalid affected config in package.json: \`${path}\` must be ${expected}.`);
 }

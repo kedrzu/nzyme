@@ -32,9 +32,9 @@ export async function collectChangedFiles(options: CollectChangedFilesOptions): 
     const git = new GitRepository(options.root);
     const submodules = await listSubmodulePaths(options.root);
     const files = new Map<string, boolean>();
-    const add = (filePath: string, deleted: boolean) => {
+    function add(filePath: string, deleted: boolean) {
         files.set(filePath, (files.get(filePath) ?? true) && deleted);
-    };
+    }
 
     // The gitlink of a submodule shows up as a changed path in its parent; its own files stand for it.
     for (const file of await diffRepository(git, options.mergeBase)) {
@@ -44,11 +44,11 @@ export async function collectChangedFiles(options: CollectChangedFilesOptions): 
     }
 
     for (const submodule of submodules) {
-        const baseSha = await readGitlink(git, options.mergeBase, submodule);
+        const baseSha = await git.findGitlink(options.mergeBase, submodule);
         const sub = new GitRepository(path.join(options.root, submodule));
 
-        if (!(await isCheckedOut(sub))) {
-            if (baseSha !== (await readGitlink(git, 'HEAD', submodule))) {
+        if (!(await sub.isCheckedOut())) {
+            if (baseSha !== (await git.findGitlink('HEAD', submodule))) {
                 throw new Error(
                     `Submodule "${submodule}" is not checked out but its commit changed since the base. ` +
                         'Run `git submodule update --init` first.',
@@ -105,23 +105,6 @@ async function listSubmodulePaths(root: string): Promise<string[]> {
     }
 
     return splitNul(result.stdout).map(entry => entry.slice(entry.indexOf('\n') + 1));
-}
-
-/** The submodule commit recorded for `submodulePath` in `revision`, or `null` when it is not a submodule there. */
-async function readGitlink(git: GitRepository, revision: string, submodulePath: string): Promise<string | null> {
-    const entry = await git.git(['ls-tree', revision, '--', submodulePath]);
-    const match = /^160000 commit ([0-9a-f]+)\t/.exec(entry);
-    return match?.[1] ?? null;
-}
-
-/** An uninitialised submodule is an empty directory, where git would act on the parent repository. */
-async function isCheckedOut(git: GitRepository): Promise<boolean> {
-    try {
-        await git.assertCheckedOut();
-        return true;
-    } catch {
-        return false;
-    }
 }
 
 function splitNul(output: string): string[] {

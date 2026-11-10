@@ -1,6 +1,6 @@
 {
     "name": "nzyme",
-    "description": "How to use the @nzyme framework packages — dependency injection (@nzyme/ioc), logging (@nzyme/logging), translations (@nzyme/i18n, @nzyme/vue-i18n), Vue forms (@nzyme/vue-forms, @nzyme/validation) and composables (@nzyme/vue-utils, @nzyme/vue-ioc), secrets (@nzyme/secrets) — plus the TypeScript conventions and testing practice they are written for, and user-invoked skills for the reference architecture of a product repo (/nzyme:architecture) and its UI components, Drizzle SQL and third-party API clients",
+    "description": "The user-invoked /nzyme:architecture skill: sets up a product repo built on the @nzyme framework packages, or brings it up to date with nzyme's reference architecture, and keeps the repo's own skills in line with the practice documents in docs/practice",
     "version": "0.15.1",
     "author": {
         "name": "Michał Kędrzyński"

@@ -10,7 +10,7 @@ the practice-skill part of
 
 The `nzyme` plugin shipped the practice skills (`code-conventions`, `ioc`, `logging`, `testing`,
 `forms`, `composables`, `translations`, `secrets`, and the user-invoked `ui`, `drizzle`,
-`api-clients`), and each product repo added its own skills on top. Measured in healed on 2026-11-06:
+`api-clients`), and each product repo added its own skills on top. Measured in the parent repository on 2026-11-06:
 
 - Several descriptions per area sat in every session: UI alone had five (`frontend`, `components`,
   `stories`, the repo's `ui`, `nzyme-ui:ui`). With 62 skills the listing passed its budget (1% of the
@@ -52,8 +52,8 @@ Practice as docs, inlined by repo skills.
   their stories) may share one skill that inlines both documents.
 - **The `nzyme` plugin keeps only skills that act on the repo** (`architecture`). It is still linked
   through `.claude/skills/nzyme`, and still works from a user-level install in an empty directory.
-- **nzyme itself is a consumer:** its own `.claude/skills/<area>/SKILL.md` inline
-  `docs/practice/<area>.md` the same way.
+- **nzyme itself has no practice skills.** Its `CLAUDE.md` points an agent at
+  `docs/practice/<area>.md` by area; consumer repos are the only ones that inline the documents.
 - **Sessions start at the repo root,** which makes the relative path resolve. Every launcher in use
   (Paseo, BMO, an editor) does it, so nothing enforces it.
 - **`/nzyme:architecture` creates and compares the repo skills.** Per area in play: a skill exists,
@@ -70,16 +70,16 @@ nzyme:
 2. Remove the moved skills from `plugins/nzyme`, and the `nzyme-ui`, `nzyme-drizzle` and
    `nzyme-api-clients` plugins with `scripts/practicePlugins.test.ts` (`release.yml` keeps versioning
    whatever plugins remain).
-3. Add nzyme's own repo skills for the areas it develops.
+3. Point `CLAUDE.md` at `docs/practice/<area>.md` for each area.
 4. `/nzyme:architecture`: `references/repo-skills.md` becomes the procedure above with a skill
    template in `assets/`; `references/claude-code.md` drops the practice-plugin table and gains the
    compare rules; the element tables name practice documents instead of skills; the `CLAUDE.md`
    template names the repo's skills.
-5. `CLAUDE.md`, `docs/submodule-setup.md#agents` and the plugin and marketplace descriptions follow.
+5. `docs/submodule-setup.md#agents` and the plugin and marketplace descriptions follow.
 
-A product repo (healed first):
+A product repo (the parent repository first):
 
-1. Map every area to one repo skill, merging what overlaps today (in healed: the thin `ui` into
+1. Map every area to one repo skill, merging what overlaps today (in the parent repository: the thin `ui` into
    `components`, `app` into `frontend`, `database` inlining `drizzle`, `testing` inlining `testing`),
    and add skills for areas with none (`code-conventions`, `ioc`, `logging`, `forms`, `composables`,
    `translations`). `secrets` waits for the repo to use `@nzyme/secrets`.

@@ -3,7 +3,7 @@
 A Nuxt 4 app package with nothing implicit: no auto-imports, no file-based routes, one path alias,
 one IoC container. The app talks to whatever API the repo has; this element does not prescribe a
 backend. Components come from the UI package (`references/ui-package.md`); how they are built is
-`../ui/SKILL.md`.
+`../../../../docs/practice/ui.md`.
 
 ## Reference state
 
@@ -202,7 +202,7 @@ export default defineNuxtPlugin({
 
 - The `ioc-plugin` registers the interface implementations (`LanguageContext`, an auth store) and
   sets values from `useRuntimeConfig().public`. Services themselves resolve lazily on first
-  `useService`; how to define them is `nzyme:ioc`.
+  `useService`; how to define them is `../../../../docs/practice/ioc.md`.
 - **`dependsOn: ['ioc-plugin']`** on every plugin that resolves a service, so the order is stated,
   not inherited from file names. Outside a component, resolve through
   `nuxtApp.vueApp.runWithContext(() => useService(X))`.

@@ -2,7 +2,7 @@
 
 Vue 3 components and composables for app UIs: animated `Reveal`, `Collapse` and `Carousel`, lazy
 hydration, an imperative modal service, scroll lock and sticky detection, plus small rendering helpers.
-Composable practice (naming, return shape, reactivity pitfalls) is in the `nzyme:composables` skill;
+Composable practice (naming, return shape, reactivity pitfalls) is in the [composables practice](https://github.com/kedrzu/nzyme/blob/main/docs/practice/composables.md);
 this README is the catalogue.
 
 ```bash

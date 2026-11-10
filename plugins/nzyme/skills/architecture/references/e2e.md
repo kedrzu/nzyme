@@ -2,8 +2,8 @@
 
 A Playwright package that drives the built app in Chromium. This reference owns the package, its
 config and where harnesses live; how a spec and a harness are written — harness shape, selectors,
-parallel-safe data, journeys — is `nzyme:testing` (its `references/e2e.md`), and which behaviour
-belongs in e2e rather than a component spec is its `references/e2e-vs-component.md`.
+parallel-safe data, journeys — is `../../../../docs/practice/testing/e2e.md`, and which behaviour belongs in e2e rather than a
+component spec is `../../../../docs/practice/testing/e2e-vs-component.md`.
 
 ## Reference state
 
@@ -19,7 +19,7 @@ packages/e2e/
 ```
 
 Component harnesses live beside their component in the UI package (`Button.harness.ts` next to
-`Button.vue`, `../ui/SKILL.md`) and are imported from there:
+`Button.vue`, `../../../../docs/practice/ui.md`) and are imported from there:
 `import { ButtonHarness } from '{{scope}}/ui/Button.harness.js'`. A harness that models a whole screen
 belongs to no component and lives in `src/harnesses/`. The UI package then lists `@playwright/test`
 (already in `assets/ui-package.json.tmpl`) for the `Locator` type.

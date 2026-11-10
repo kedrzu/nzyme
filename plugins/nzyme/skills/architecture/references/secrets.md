@@ -2,7 +2,7 @@
 
 Every credential the repo needs — the app's, a script's, a token a tool uses — lives in a remote
 store behind a login, mapped to the env variable that reads it, and reaches the code through
-`@nzyme/secrets`. No secrets file exists in the repo or beside it. Practice: `../secrets/SKILL.md`;
+`@nzyme/secrets`. No secrets file exists in the repo or beside it. Practice: `../../../../docs/practice/secrets.md`;
 API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-code-through-env-variables.md`.
 
 ## Reference state

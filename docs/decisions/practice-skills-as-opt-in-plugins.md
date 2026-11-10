@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [practice-docs-inlined-into-repo-skills.md](practice-docs-inlined-into-repo-skills.md).
 
 ## Context
 

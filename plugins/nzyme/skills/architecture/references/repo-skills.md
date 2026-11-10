@@ -1,85 +1,73 @@
-# Repo-owned skills
+# Repo skills
 
-When work enters an area that has a practice plugin (`references/claude-code.md`) or the Nuxt app,
-offer to write — or bring up to date — a skill that lives in the repo. A repo with secrets always has
-one (`secrets`): an agent cannot add or use a secret without knowing how this repo invokes the
-commands and which environments exist. The nzyme skill holds the
-practice; the repo skill holds what is true only here, and links the nzyme skill for the rest. Agents
-in the repo then pick up the area's rules on their own, without anyone invoking `architecture`.
+nzyme holds each practice as a document, `nzyme/docs/practice/<area>.md`; the repo owns the skill
+that brings it to an agent. One model-invocable skill per area the repo has, holding what is true
+only here and ending with a line that inlines the document, so an agent gets both in one load
+without anyone invoking `architecture`. Why: `nzyme/docs/decisions/practice-docs-inlined-into-repo-skills.md`.
 
-## Where and what
+## Which areas
 
-`.claude/skills/<area>/SKILL.md`, one per area, named after the area as the repo calls it (`ui`,
-`database`, `integrations`, `app`). It holds only:
+|Area|In play when the repo has|
+|-|-|
+|`code-conventions`, `ioc`, `logging`, `testing`|always|
+|`ui`|the UI package or Nuxt app element|
+|`composables`|`vue` in a package's `package.json`|
+|`forms`|`@nzyme/vue-forms` in a package's `package.json`|
+|`translations`|`*.loc.yaml` files or `@nzyme/i18n` in a package's `package.json`|
+|`drizzle`|the SQL with Drizzle element|
+|`api-clients`|the third-party APIs element|
+|`secrets`|the secrets element|
 
-- **Paths** — where this area's code lives: the package, its folders, where stories, tests, schema,
-  migrations or generated files go.
-- **Decisions** — the repo's choices for the area, each in a line, linking the section of
-  `ARCHITECTURE.md` (or `docs/architecture/<area>.md`) that records the reason.
-- **Requirements the repo enforces** — stated with what enforces them (for UI: a story and a
-  story-based test per component, WCAG 2.2 AA through axe in those tests).
-- **Commands** — how to run this area's checks, codegen or migrations.
-- **Links** — the nzyme practice skill and the package READMEs, with a line on when to read each.
+Each area in play has exactly one repo skill, and no other repo skill covers it. Before writing one,
+map the repo's existing skills to areas: a skill the repo already has for the area (`database` for
+`drizzle`, `components` for `ui`) becomes that area's skill and gains the inline line; two skills on
+one area merge into one. Two areas the repo treats as one (UI components and their stories) may share
+one skill that inlines both documents. A repo skill outside every area (`app`, `deploy`) is the
+repo's own and not compared.
 
-For `secrets` the paths and commands are the whole point: the exact prefix (`bun nzyme secrets` or
-the product CLI's), the provider file, each store and its environments, the variable that selects
-the environment and how to run a command against another one, whose machines can write, and
-any secrets command the repo adds. The practice it names is `nzyme:secrets`.
+## What a skill holds
 
-It never restates a rule the linked skill or README owns. If a line would hold everywhere nzyme is
-used, it belongs in the nzyme skill, not here.
+`.claude/skills/<name>/SKILL.md`, from `assets/repo-skill.md.tmpl`:
 
-## Links
+- **Frontmatter** — `name` and `description` in the repo's vocabulary (`database`, not `drizzle`, if
+  that is what the repo says). The description names the moment to load it, with the files and actions
+  that mark it: "Use before creating or changing any Vue component (.vue) in packages/ui or an app —
+  props, variants, styling, accessibility." Around 200 characters, no list of other skills it is not
+  for. Model-invocable: no `disable-model-invocation`.
+- **Repo facts** — only what holds here:
+  - **Paths** — the package, its folders, where stories, tests, schema, migrations or generated files
+    go.
+  - **Decisions** — the repo's choices for the area, one line each, linking the section of
+    `ARCHITECTURE.md` (or `docs/architecture/<area>.md`) that records the reason.
+  - **Requirements the repo enforces**, with what enforces them (for UI: a story and a story-based
+    test per component, WCAG 2.2 AA through axe in those tests).
+  - **Commands** — how to run the area's checks, codegen or migrations.
+- **The link base and the inline line, last** — one sentence saying the document's links are
+  relative to `nzyme/docs/practice/` and package READMEs are `nzyme/packages/<pkg>/README.md` (inlining
+  drops the document's own directory, so its relative links such as `testing/e2e.md` would resolve
+  nowhere), then `` !`cat nzyme/docs/practice/<area>.md` ``, one per document; the sentence is
+  identical in every repo skill. Claude
+  Code replaces it with the document when the skill loads; the path is relative to the repo root,
+  where every session starts. The expansion runs as a shell command, so a session that denies
+  `Bash(cat:*)` gets a permission error in place of the skill (`assets/claude-settings.json.tmpl`
+  allows it). The document's references and package READMEs are
+  linked by path, never inlined.
 
-Link through the submodule, so the text matches the nzyme commit the repo pins:
+For `secrets` the facts are the whole point: the exact prefix (`bun nzyme secrets` or the product
+CLI's), the provider file, each store and its environments, the variable that selects the environment
+and how to run a command against another one, whose machines can write, and any secrets command the
+repo adds. Its description also keeps the trigger "before running anything that could print the
+environment or read the keychain", since the ban on `env` and `printenv` must reach the agent before the skill is loaded.
 
-- package READMEs: `nzyme/packages/<pkg>/README.md`.
-
-The practice skills (`nzyme-ui:ui`, `nzyme-drizzle:drizzle`, `nzyme-api-clients:api-clients`) and the
-`nzyme:*` skills (`forms`, `testing`, …) are named, not linked by path; they load on their own.
-
-## Frontmatter
-
-Model-invocable: no `disable-model-invocation`. The description says what the area is in this repo
-and when to use it, so it triggers on the area's work:
-
-```md
----
-name: ui
-description: >-
-    Building and changing components in this repo's UI package (packages/ui) and the app's screens —
-    where components, stories and tests live, the story-and-test requirement, and the design tokens.
-    Use when creating, changing or reviewing a Vue component or a screen.
----
-
-# UI
-
-`nzyme-ui:ui` holds the practice; load it before building a component.
-Primitives and components: `nzyme/packages/vue-forms/README.md`, `nzyme/packages/vue/README.md`.
-
-## Paths
-
-- Components: `packages/ui/src/` — flat, folders only for families (`forms/`, `layout/`).
-- Screens: `packages/app/<feature>/`, routed in `packages/app/app/router.options.ts`, built only
-  from `packages/ui` components.
-- Design tokens: `packages/ui/src/styles/tokens.scss`.
-
-## Requirements
-
-- Every component has a `*.stories.tsx` story per state; each story runs as a test in
-  `bun run test:stories`, with axe failing on any WCAG 2.2 AA violation.
-
-## Decisions
-
-- Dialogs are built on reka-ui — `ARCHITECTURE.md#app-and-ui`.
-```
+It never restates the document. If a line would hold everywhere nzyme is used, it belongs in the
+practice document, not here.
 
 ## Writing and updating
 
 - Fill it from the repo, not from guesses: read the packages, existing components or queries, and
   `ARCHITECTURE.md` first. Ask only for what neither says.
-- Keep it short — a screen or two. Growth means practice is leaking in; move it to the nzyme skill
-  or cut it.
+- Keep the facts short — a screen at most. Growth means practice is leaking in; move it to the
+  document or cut it.
 - It goes through the apply protocol like any element: show the diff, write on approval, by heading
   section when the file exists, keeping sections the repo added.
 - Never add it to `CLAUDE.md`: the skill loads on its own from its description

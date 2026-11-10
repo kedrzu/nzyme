@@ -3,7 +3,7 @@
 ## Status
 
 Accepted. Its context-cost decision for the practice skills is superseded by
-[practice-skills-as-opt-in-plugins.md](practice-skills-as-opt-in-plugins.md).
+[practice-docs-inlined-into-repo-skills.md](practice-docs-inlined-into-repo-skills.md).
 
 ## Context
 

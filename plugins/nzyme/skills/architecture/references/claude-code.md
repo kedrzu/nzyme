@@ -55,12 +55,15 @@ clone or a new worktree behaves the same for every agent, with no per-machine se
     `nzyme/`, the code map and the generated files;
   - essential commands and quiet-run;
   - verification and the dev pipeline: pointers to `verify` and `git-workflow`, the `nzyme:*` skills
-    every task reads, the repo's own skills, ADRs in `docs/decisions/<title-slug>.md`;
+    every task reads, ADRs in `docs/decisions/<title-slug>.md`;
   - TypeScript rules, Git, Diagnosing failures, Writing style, Agent tool use.
 
   Those last five are shared with nzyme's `CLAUDE.md` (`../../../../CLAUDE.md`), word for word, except
   that Git leaves the commit style to `git-workflow`. The file stays a hub: detail lives in the skills
-  and `ARCHITECTURE.md`.
+  and `ARCHITECTURE.md`. It never lists the skills: the agent already sees every model-invocable
+  skill's name and description from its frontmatter, so a list duplicates that and drifts. A
+  skill is named in `CLAUDE.md` only where a rule routes to it ("every task reads
+  `nzyme:code-conventions`").
 - **Local files** — `CLAUDE.local.md` (personal instructions, e.g. a reply language) and
   `.claude/settings.local.json` (personal grants, MCP servers) are gitignored, the first in the root
   `.gitignore`, the second with `worktrees/` in `.claude/.gitignore` (`assets/claude-gitignore.tmpl`),
@@ -108,9 +111,7 @@ marketplace is a difference (remove it from `enabledPlugins`).
 
 ## Placeholders
 
-- `CLAUDE.md`: `{{summary — …}}` from `ARCHITECTURE.md`'s opening, or ask; `{{repo skills — …}}`
-  from `.claude/skills/*/` other than `nzyme`, `verify` and `git-workflow` (drop the bullet when there
-  are none).
+- `CLAUDE.md`: `{{summary — …}}` from `ARCHITECTURE.md`'s opening, or ask.
 - `settings.json`: the allow list follows the root `package.json`. An element that adds a script adds
   its allow (`Bash(bun run e2e:*)`, `Bash(bun run storybook:*)`, a database script).
 
@@ -131,7 +132,8 @@ marketplace is a difference (remove it from `enabledPlugins`).
   decides.
 - `CLAUDE.md`: by heading section. The repo's own sections (language rules, a standing authorization
   for commits and PRs in worktrees, gotchas) stay. A shared section that differs from nzyme's text at
-  the pinned commit is shown with nzyme's version.
+  the pinned commit is shown with nzyme's version. A list of the repo's skills is a difference:
+  propose removing it.
 - `AGENTS.md` instead of `CLAUDE.md`: Claude Code does not read `AGENTS.md`, so the reference is
   `CLAUDE.md`. Propose `git mv AGENTS.md CLAUDE.md`; if other agents still need `AGENTS.md`, keep it as
   a one-line pointer to `CLAUDE.md`. Fix references to a `nzyme/AGENTS.md`, which does not exist.

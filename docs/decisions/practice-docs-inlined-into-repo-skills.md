@@ -10,7 +10,7 @@ the practice-skill part of
 
 The `nzyme` plugin shipped the practice skills (`code-conventions`, `ioc`, `logging`, `testing`,
 `forms`, `composables`, `translations`, `secrets`, and the user-invoked `ui`, `drizzle`,
-`api-clients`), and each product repo added its own skills on top. Measured in healed on 2026-11-06:
+`api-clients`), and each product repo added its own skills on top. Measured in the parent repository on 2026-11-06:
 
 - Several descriptions per area sat in every session: UI alone had five (`frontend`, `components`,
   `stories`, the repo's `ui`, `nzyme-ui:ui`). With 62 skills the listing passed its budget (1% of the
@@ -77,9 +77,9 @@ nzyme:
    template names the repo's skills.
 5. `docs/submodule-setup.md#agents` and the plugin and marketplace descriptions follow.
 
-A product repo (healed first):
+A product repo (the parent repository first):
 
-1. Map every area to one repo skill, merging what overlaps today (in healed: the thin `ui` into
+1. Map every area to one repo skill, merging what overlaps today (in the parent repository: the thin `ui` into
    `components`, `app` into `frontend`, `database` inlining `drizzle`, `testing` inlining `testing`),
    and add skills for areas with none (`code-conventions`, `ioc`, `logging`, `forms`, `composables`,
    `translations`). `secrets` waits for the repo to use `@nzyme/secrets`.

@@ -41,7 +41,7 @@ All of it works before the first `.pen` file exists.
 - **`@pen.dev/cli`** as an exact-pinned dev dependency: design rounds and `pen render` run the repo's own `pen`, and
   a pin keeps every machine on the agent the practice was written against.
 
-- **Credentials: `pen login`, once per machine**, listed in the onboarding steps (`README.md` or wherever the repo
+- **Credentials: `bunx pen login`, once per machine**, listed in the onboarding steps (`README.md` or wherever the repo
   lists them). No pen.dev key and no API key: nothing in the secret store (`references/secrets.md`), the repo or the
   environment. CI runs only the check, which needs no login.
 
@@ -58,9 +58,9 @@ All of it works before the first `.pen` file exists.
   - where design logs live (`docs/design/<feature>.md`, for example);
   - any rule of the practice the repo overrides.
 
-  Then the link-base sentence and `` !`cat nzyme/docs/practice/design.md` ``, followed by one sentence: "If the
-  practice document isn't inlined above, read `nzyme/docs/practice/design.md` before changing the design." Pen's
-  agent may not run the `!` expansion.
+  Then one sentence, "If the practice document isn't inlined below, read `nzyme/docs/practice/design.md` before
+  changing the design." (Pen's agent may not run the `!` expansion), the link-base sentence, and
+  `` !`cat nzyme/docs/practice/design.md` ``.
 
 ## Placeholders
 
@@ -75,7 +75,7 @@ All of it works before the first `.pen` file exists.
 - `setup.sh` without the registration, or with it after the catch-up merge: a difference.
 - No `nzyme.plugins` entry for the pen plugin, or no `pen check` in `lint` and `lint:check`: a difference.
 - `@pen.dev/cli` missing, or as a range: a difference.
-- A pen.dev or Anthropic key in the secret store, `.env` or CI for design work: a difference. Remove it; `pen login`
+- A pen.dev or Anthropic key in the secret store, `.env` or CI for design work: a difference. Remove it; `bunx pen login`
   is the only credential.
 - No `design` skill, one that does not inline the practice document, or one that sends design work to a single
   design branch or to a prompt pasted by the owner: a difference.

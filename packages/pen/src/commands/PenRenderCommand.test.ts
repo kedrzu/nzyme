@@ -36,7 +36,7 @@ test('asks for `pen login` when pen answers that authentication is required', as
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toEndWith(
-        'pen render: run `pen login` once on this machine (the owner has to: it needs their pen.dev account)\n',
+        'pen render: run `bunx pen login` once on this machine (the owner has to: it needs their pen.dev account)\n',
     );
     expect(result.stdout).toBe('');
 });

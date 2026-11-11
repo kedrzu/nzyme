@@ -24,7 +24,7 @@ export class PenRenderCommand extends Command {
         description: 'Render nodes of a .pen design file, or of a revision of it, to PNG',
         details: `
             Exports the given node ids as \`<id>.png\` through \`pen interactive\` (the repo's
-            \`@pen.dev/cli\` dev dependency, logged in once per machine with \`pen login\`). The source
+            \`@pen.dev/cli\` dev dependency, logged in once per machine with \`bunx pen login\`). The source
             is a file or \`<rev>:<path>\` as \`git show\` takes it. The PNGs go to \`--out\`, or to a new
             temporary directory; their absolute paths are printed one per line.
         `,
@@ -72,7 +72,7 @@ export class PenRenderCommand extends Command {
 
             if (output.includes('Authentication required')) {
                 this.context.stderr.write(
-                    'pen render: run `pen login` once on this machine (the owner has to: it needs their pen.dev account)\n',
+                    'pen render: run `bunx pen login` once on this machine (the owner has to: it needs their pen.dev account)\n',
                 );
                 return 1;
             }

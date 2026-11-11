@@ -57,7 +57,7 @@ export { default } from '@nzyme/pen/plugin.js';
   A `rev:path` is read with `git show`; `pen` saves only to a temporary file, never to the input.
   The PNGs go to a new temporary directory unless `--out` names one; the scale defaults to 2. `pen`
   is the repo's own `node_modules/.bin/pen`: add `@pen.dev/cli` as a dev dependency, and run
-  `pen login` once per machine (no key is used). Without either, the command says which is missing
+  `bunx pen login` once per machine (no key is used). Without either, the command says which is missing
   and exits 1.
 
 ## The document model

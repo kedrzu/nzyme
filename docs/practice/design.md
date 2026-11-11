@@ -49,7 +49,7 @@ it, and designs noticeably worse, so rounds go through the CLI.
    result misses, write a follow-up brief rather than patching it yourself through the MCP.
 4. **Record the round** in the design log and run `bun nzyme pen check`.
 
-**Credentials: only `pen login`, once per machine.** Its session serves every later `pen` command, and the agent
+**Credentials: only `bunx pen login`, once per machine.** Its session serves every later `pen` command, and the agent
 inside runs on the user's own Claude login. There are no keys and no API keys: nothing in the secret store, the repo
 or the environment. When `pen` answers "Authentication required", the login is the owner's to do: say so and stop.
 

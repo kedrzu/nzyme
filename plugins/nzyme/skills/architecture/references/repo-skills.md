@@ -17,6 +17,7 @@ without anyone invoking `architecture`. Why: `nzyme/docs/decisions/practice-docs
 |`drizzle`|the SQL with Drizzle element|
 |`api-clients`|the third-party APIs element|
 |`secrets`|the secrets element|
+|`design`|the design in Pen element|
 
 Each area in play has exactly one repo skill, and no other repo skill covers it. Before writing one,
 map the repo's existing skills to areas: a skill the repo already has for the area (`database` for

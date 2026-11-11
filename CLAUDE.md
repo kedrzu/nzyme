@@ -11,6 +11,7 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
 - **Tooling:**
   - `cli-core` (the clipanion-based `Command` framework behind every CLI), `cli` (the `nzyme` binary: `monorepo`, `localise`, `index`, `quiet-run`,
     `submodule`, `depcheck`)
+  - `pen` (Pen design files in git: the document model and the `pen` commands)
   - `tsconfig`, `eslint` (also the oxlint preset), `oxlint` (custom rules), `project-utils`,
     `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`
 - **Integrations:** `aws`, `pulumi`, `slack`, `apis`, `bitwarden` (a Secrets Manager store for `secrets`)

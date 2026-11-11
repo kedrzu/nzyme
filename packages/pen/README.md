@@ -43,6 +43,22 @@ export { default } from '@nzyme/pen/plugin.js';
   unmerged with a valid file. A clean merge deletes the report. Register it with
   `git config merge.pen.driver "bun nzyme pen merge %O %A %B %P"` and `*.pen merge=pen -diff` in
   `.gitattributes`.
+- `nzyme pen diff [<rev>] [<rev>] [-- <path>]` prints, as Markdown, what changed in a `.pen` file
+  (`diffPen`). Revisions work as in `git diff`: none compares the working file with `HEAD`, one
+  compares it with that revision, two compare the revisions. The path may be left out when git
+  tracks exactly one `.pen` file. The output has a summary line, then per top-level frame one line
+  per added or removed subtree (its topmost node, with how many nodes it holds), and per changed
+  (with the changed properties, an instance's overrides as `descendants["a/b"].fill`) and moved
+  node, then the changed variables with both values, then the
+  changed components (a reusable node changed itself or in its subtree) with how many instances
+  use each.
+- `nzyme pen render <file | rev:path> <id…> [--out <dir>] [--scale <n>]` exports the nodes as
+  `<id>.png` through `pen interactive`, headless, and prints the absolute paths of the PNGs written.
+  A `rev:path` is read with `git show`; `pen` saves only to a temporary file, never to the input.
+  The PNGs go to a new temporary directory unless `--out` names one; the scale defaults to 2. `pen`
+  is the repo's own `node_modules/.bin/pen`: add `@pen.dev/cli` as a dev dependency, and run
+  `pen login` once per machine (no key is used). Without either, the command says which is missing
+  and exits 1.
 
 ## The document model
 

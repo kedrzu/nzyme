@@ -30,6 +30,7 @@
     },
     "dependencies": {
         "@nzyme/cli-core": "workspace:*",
+        "@nzyme/project-utils": "workspace:*",
         "@nzyme/utils": "workspace:*"
     },
     "devDependencies": {

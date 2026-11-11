@@ -4,10 +4,8 @@ import path from 'node:path';
 import { assertNever } from '@nzyme/utils/assertNever.js';
 import { capitalizeFirstLetter } from '@nzyme/utils/string/caseUtils.js';
 
+import { formatPenValue } from './formatPenValue.js';
 import type { PenConflict, PenConflictNode } from './mergePen.js';
-
-/** A value longer than this, as JSON, is cut in the report: the file holds it whole. */
-const MAX_VALUE_LENGTH = 400;
 
 /** Options of {@link writeConflictReport}. */
 export interface WriteConflictReportOptions {
@@ -87,9 +85,9 @@ function formatConflict(conflict: PenConflict): string[] {
             return [
                 ...where,
                 ...(conflict.key === null ? [] : [`- Key: \`${conflict.key}\``]),
-                `- Base: ${formatValue(conflict.base)}`,
-                `- Ours (kept): ${formatValue(conflict.ours)}`,
-                `- Theirs: ${formatValue(conflict.theirs)}`,
+                `- Base: ${formatPenValue(conflict.base)}`,
+                `- Ours (kept): ${formatPenValue(conflict.ours)}`,
+                `- Theirs: ${formatPenValue(conflict.theirs)}`,
             ];
         default:
             return assertNever(conflict);
@@ -103,17 +101,4 @@ function formatNode(node: PenConflictNode): string {
             ? ''
             : ` on ${node.frame.name === null ? '' : `"${node.frame.name}" `}(\`${node.frame.id}\`)`;
     return `\`${node.id}\`${name}${frame}`;
-}
-
-function formatValue(value: unknown): string {
-    if (value === undefined) {
-        return '(absent)';
-    }
-
-    const json = JSON.stringify(value);
-    const shown = json.length > MAX_VALUE_LENGTH ? `${json.slice(0, MAX_VALUE_LENGTH)}…` : json;
-    const fence = shown.includes('`') ? '``' : '`';
-    const suffix = shown === json ? '' : ` (${json.length} characters, cut)`;
-
-    return `${fence}${shown}${fence}${suffix}`;
 }

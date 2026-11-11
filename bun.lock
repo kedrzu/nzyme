@@ -462,6 +462,7 @@
       "version": "0.15.1",
       "dependencies": {
         "@nzyme/cli-core": "workspace:*",
+        "@nzyme/project-utils": "workspace:*",
         "@nzyme/utils": "workspace:*",
       },
       "devDependencies": {

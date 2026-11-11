@@ -45,10 +45,6 @@ All of it works before the first `.pen` file exists.
   lists them). No pen.dev key and no API key: nothing in the secret store (`references/secrets.md`), the repo or the
   environment. CI runs only the check, which needs no login.
 
-- **One line in `CLAUDE.md`/`AGENTS.md`:** "An implementation that has to differ from the design brings the `.pen`
-  file along on the same branch: small changes on its own, big ones asked first (the `design` skill)." An
-  implementing agent that never loads the `design` skill still needs the rule.
-
 - **The repo's skill** `.claude/skills/design/SKILL.md` (`references/repo-skills.md`), required: Pen's own agent
   and the `pen` CLI's load it, and briefs name it. Its repo facts:
 
@@ -79,4 +75,3 @@ All of it works before the first `.pen` file exists.
   is the only credential.
 - No `design` skill, one that does not inline the practice document, or one that sends design work to a single
   design branch or to a prompt pasted by the owner: a difference.
-- No "design follows the implementation" line in `CLAUDE.md`/`AGENTS.md`: a difference.

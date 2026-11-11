@@ -25,6 +25,12 @@ test('checks every tracked .pen file and fails naming the file and the node', as
     });
 });
 
+test('with no arguments, passes in a git repo that tracks no .pen file', async () => {
+    const result = await runPenCheck(await createRepo());
+
+    expect(result).toEqual({ exitCode: 0, stdout: 'pen check: 0 file(s) OK\n', stderr: '' });
+});
+
 async function createRepo() {
     const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'pen-check-'));
     await git(repo, 'init', '--quiet');

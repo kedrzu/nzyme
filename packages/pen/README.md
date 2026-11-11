@@ -36,6 +36,13 @@ export { default } from '@nzyme/pen/plugin.js';
   `variables`. Free text (`content`, `name`, `context`, `metadata`) is never read as a variable
   reference, so "$5 off" passes. An unknown format `version` is a warning. Each problem is printed
   with its file and node; the exit code is 1 on any error.
+- `nzyme pen merge <base> <ours> <theirs> [path]` is git's merge driver for `.pen` files. It merges
+  node by node (`mergePen`): changes made on one side only land on their own; where both sides
+  changed the same thing differently, ours is kept, a Markdown report goes to
+  `<git dir>/pen-conflicts/<path, / as __>.md` and the exit code is 1, so git leaves the path
+  unmerged with a valid file. A clean merge deletes the report. Register it with
+  `git config merge.pen.driver "bun nzyme pen merge %O %A %B %P"` and `*.pen merge=pen -diff` in
+  `.gitattributes`.
 
 ## The document model
 

@@ -37,7 +37,7 @@ reference adds the files around them.
 - **`.editorconfig`** matches `.oxfmtrc.json` (4 spaces; 2 for YAML, HTML and Vue), so an editor
   without the oxc extension writes what the formatter would.
 - **`.gitignore` lists what this repo actually produces**, nothing from a catalogue. The asset holds
-  what every nzyme repo produces: `.DS_Store`, dependencies, `dist`, tool caches, nzyme's generated
+  what every nzyme repo produces: contributors' OS and editor files, dependencies, `dist`, tool caches, nzyme's generated
   files, env files, `CLAUDE.local.md`, `.context/`. Everything else is added when the repo has its source:
   - **Owned by one directory → that directory's own `.gitignore`**, never a nested path in the root
     one: a Nuxt app ignores `.nuxt/` and `.output/` in `packages/<app>/.gitignore`, the UI package
@@ -47,12 +47,13 @@ reference adds the files around them.
   - **Produced anywhere in the tree → the root**, e.g. `.wrangler/`, `.dev.vars`, `.dev.vars.*` for
     Cloudflare Workers; `target/` for Rust; `.playwright-mcp/` when agents use the Playwright MCP;
     `!.env.example` when the repo commits one.
-  - **OS files** the team's machines write into the tree are the repo's: `.DS_Store` is in the asset,
-    since nzyme repos are worked on from Macs; add `Thumbs.db` when someone works on Windows. Never
-    rely on a developer's global gitignore for them.
-  - **Editor files** (`.idea/`, swap files) come from one developer's tools: they belong in that
-    developer's global gitignore (`core.excludesFile`). `.vscode/` holds the repo's shared settings
-    and is committed (`references/vscode.md`).
+  - **Files a contributor's machine writes into any checkout** are the repo's too, so a fresh clone
+    is clean on every machine without a global gitignore: OS metadata (`.DS_Store`, `Thumbs.db`) and
+    the common editors' files (`.idea/` for JetBrains, `*.swp`, `*.swo` for Vim), all in the asset.
+    `.vscode/` holds the repo's shared settings and is committed (`references/vscode.md`).
+  - **Never a catalogue:** a cache or output of a technology or tool the repo does not use
+    (`.turbo/` without Turbo, `.next/` without Next.js, `coverage/` with nothing measuring it) is not
+    added "just in case".
 
 ## Placeholders
 
@@ -74,8 +75,7 @@ reference adds the files around them.
 - A hand-rolled tsconfig generator or committed `tsconfig.json` files: a difference — `nzyme monorepo`
   replaces them.
 - `.gitignore`: a missing asset line, or a missing entry for an output the repo does produce, is a
-  difference. So is a line nothing in the repo produces (a leftover, a copied catalogue, editor
-  files), and a nested path that belongs in that directory's own `.gitignore`: propose removing or
+  difference. So is a line nothing in the repo produces (a leftover, a copied catalogue), and a nested path that belongs in that directory's own `.gitignore`: propose removing or
   moving it. Check with `git check-ignore --no-index -v <path>` before claiming a file is or is not
   covered.
 - `.gitattributes`: add the lines the asset has and the repo lacks; never remove the repo's.

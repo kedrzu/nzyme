@@ -457,6 +457,21 @@
         "oxfmt": "0.77.0",
       },
     },
+    "packages/pen": {
+      "name": "@nzyme/pen",
+      "version": "0.15.1",
+      "dependencies": {
+        "@nzyme/cli-core": "workspace:*",
+        "@nzyme/utils": "workspace:*",
+      },
+      "devDependencies": {
+        "@nzyme/tsconfig": "workspace:*",
+        "@types/bun": "^1.4.3",
+        "@types/node": "26.6.6",
+        "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+        "oxfmt": "0.77.0",
+      },
+    },
     "packages/project-utils": {
       "name": "@nzyme/project-utils",
       "version": "0.15.1",
@@ -1505,6 +1520,8 @@
     "@nzyme/openapi": ["@nzyme/openapi@workspace:packages/openapi"],
 
     "@nzyme/oxlint": ["@nzyme/oxlint@workspace:packages/oxlint"],
+
+    "@nzyme/pen": ["@nzyme/pen@workspace:packages/pen"],
 
     "@nzyme/project-utils": ["@nzyme/project-utils@workspace:packages/project-utils"],
 

@@ -49,6 +49,17 @@ require_bun_floor() {
 
 require_bun_floor
 
+# {{if pen}}
+# --- Pen merge driver ---
+#
+# `.gitattributes` routes `*.pen` to the `pen` merge driver, which merges the design file node by node.
+# Registered before the catch-up merge below, which may be the first merge to touch the file. Local
+# config is shared by every worktree of this clone, and setting it again is harmless. A driver that
+# cannot run yet (nothing installed) makes git report a conflict, which the catch-up aborts and reports.
+git config merge.pen.name "Pen design file"
+git config merge.pen.driver "bun nzyme pen merge %O %A %B %P"
+
+# {{end}}
 # --- Worktree: catch up with origin/main, copy local files ---
 #
 # Worktrees only: in the main checkout the branch you are on is a deliberate choice, and setup has no

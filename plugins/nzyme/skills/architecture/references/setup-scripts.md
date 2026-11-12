@@ -9,17 +9,20 @@ build half of that same command. Paseo runs it for every worktree it cuts.
 
   1. **bun floor:** fails when the local bun is older than `packageManager`; newer passes. The
      version has one home, `package.json`.
-  2. **Worktree catch-up** (worktrees only, never CI or the main checkout): finds the branch's base —
+  2. **Pen merge driver** (only with the design in Pen element, `references/design-in-pen.md`): two
+     idempotent `git config` lines registering `bun nzyme pen merge` as the `pen` driver, before the
+     catch-up merge, which may be the first to touch a `.pen` file.
+  3. **Worktree catch-up** (worktrees only, never CI or the main checkout): finds the branch's base —
      the open PR's, else the one Paseo recorded in `<git-dir>/paseo/worktree.json` — and only when it is
      `main` merges `origin/main` in. A stacked node never takes `main`: it would drag `main` into a PR
      that does not target it. The local `main` is fast-forwarded too, so the next worktree is not cut
      from a stale one. A conflicting merge is aborted and reported, never left half-done.
-  3. **Local files** (worktrees only): copies `CLAUDE.local.md` and `.claude/settings.local.json` from
+  4. **Local files** (worktrees only): copies `CLAUDE.local.md` and `.claude/settings.local.json` from
      the main checkout. Never overwrites. Secrets are not files: they come from the store and the
      keychain every worktree shares (`references/secrets.md`).
-  4. **Submodule checkout** (not in CI): `references/submodule.md`.
-  5. **`bash setup.build.sh`.**
-  6. **`bun run index`**, non-fatal: the code map is for agents, so CI skips it and a failure only
+  5. **Submodule checkout** (not in CI): `references/submodule.md`.
+  6. **`bash setup.build.sh`.**
+  7. **`bun run index`**, non-fatal: the code map is for agents, so CI skips it and a failure only
      warns.
 
   Every skipped step is warned about when it happens and again at the end.
@@ -59,6 +62,8 @@ Older alternatives found in product repos and not used: a monolithic `setup.sh` 
   lines either way. The Playwright install uses the repo's own `playwright` package (`bun x`), so the
   browser matches the version the tests run; CI adds `--with-deps` because a fresh runner lacks the
   browser's system libraries.
+- `setup.sh.tmpl` keeps `# {{if pen}}` … `# {{end}}` when the design in Pen element is in play, and
+  drops the marker lines either way.
 - `paseo.json.tmpl`: `{{branchNameInstructions}}`, `{{commitMessageInstructions}}`,
   `{{pullRequestInstructions}}` follow the repo's commit convention — its `git-workflow` skill or
   `CLAUDE.md` when it has one, else ask. With Conventional Commits, take the three strings from

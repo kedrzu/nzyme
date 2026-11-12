@@ -31,9 +31,8 @@ reference adds the files around them.
 - **`bunfig.toml`:** bun reads JSX options only from the `bunfig.toml` of the directory it runs in,
   and nzyme's Vue `.tsx` tests need them when run from the product root. A `[test]` section
   (`preload`, `root`) is the repo's own; keep it.
-- **`.gitattributes`:** LF everywhere and generated code marked `linguist-generated`. Add
-  `*.pen binary linguist-generated` when the repo holds Pencil design files: they are never diffed or
-  merged.
+- **`.gitattributes`:** LF everywhere and generated code marked `linguist-generated`. A repo that designs in
+  Pen adds `*.pen merge=pen -diff linguist-generated` (`references/design-in-pen.md`).
 - **`.editorconfig`** matches `.oxfmtrc.json` (4 spaces; 2 for YAML, HTML and Vue), so an editor
   without the oxc extension writes what the formatter would.
 - **`.gitignore` lists what this repo actually produces**, nothing from a catalogue. The asset holds

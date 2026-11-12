@@ -33,7 +33,10 @@ packages/ui/
   packages are one version; `playwright` and `@playwright/test` are one version, and it is the one
   `setup.build.sh` installs a browser for (`references/setup-scripts.md`).
 - **Root wiring:**
-  - root `package.json` scripts `"test:stories": "nx run-many -t test:stories"` and
+  - root `package.json` scripts
+    `"test:stories": "bun nzyme affected --per-package 'packages/ui/**/*.stories.tsx' 'packages/ui/src/**/*.spec.ts' -- bun run test:stories"`
+    — the stories and specs the change can break, handed to the package's own script
+    (`references/affected-tests.md`) — `"test:stories:full": "nx run-many -t test:stories"` and
     `"storybook": "bun --cwd packages/ui storybook"`; the cached `test:stories` target default is
     already in `nx.json` (`references/nx.md`);
   - `setup.build.sh` keeps its `{{if browser-tests}}` block;
@@ -265,15 +268,15 @@ export default defineConfig({
 });
 ```
 
-`bun run test:stories` then renders every story in Chromium, fails on a render error or an axe
+`bun run test:stories:full` then renders every story in Chromium, fails on a render error or an axe
 violation, and runs the `*.spec.ts` files beside them.
 
 ## A repo with one app and no UI package
 
 The same files go into the app package: `viteShared.ts` and `src/styles/` at the app root,
 `.storybook/` and `vitest.config.ts` beside `nuxt.config.ts`, the stories glob widened to
-`'../**/*.stories.@(ts|tsx)'`, and an `@` alias to the app root in `viteFinal`, since Storybook does
-not run Nuxt. Propose the UI package once a second app or a landing site needs the same components.
+`'../**/*.stories.@(ts|tsx)'`, an `@` alias to the app root in `viteFinal`, since Storybook does
+not run Nuxt, and the root `test:stories` patterns naming the app package instead of `packages/ui`. Propose the UI package once a second app or a landing site needs the same components.
 
 ## Placeholders
 
@@ -285,7 +288,8 @@ not run Nuxt. Propose the UI package once a second app or a landing site needs t
 
 ## Compare
 
-- `package.json`: key-wise; repo dependencies and scripts stay. A `test:stories` script missing, or a
+- `package.json`: key-wise; repo dependencies and scripts stay. A `test:stories` or `test:stories:full`
+  script missing, or a
   `vitest`/`@vitest/browser*` version split, is a difference.
 - `preview.ts`: `a11y.test` other than `'error'`, or `runOnly` without `wcag22aa`, is always a
   difference, shown even when the rest matches. Repo decorators, globals and viewports stay.

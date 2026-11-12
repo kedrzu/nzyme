@@ -47,9 +47,12 @@ reference adds the files around them.
   - **Produced anywhere in the tree → the root**, e.g. `.wrangler/`, `.dev.vars`, `.dev.vars.*` for
     Cloudflare Workers; `target/` for Rust; `.playwright-mcp/` when agents use the Playwright MCP;
     `!.env.example` when the repo commits one.
-  - **OS and editor files** (`.DS_Store`, `.idea/`, swap files) come from a developer's machine, not
-    the project: they belong in that developer's global gitignore (`core.excludesFile`). `.vscode/`
-    holds the repo's shared settings and is committed (`references/vscode.md`).
+  - **Editor files** (`.idea/`, swap files) come from a developer's machine, not the project: they
+    belong in that developer's global gitignore (`core.excludesFile`). `.DS_Store` is the exception
+    and sits in the root `.gitignore`: macOS writes one into every directory Finder opens, on every
+    Mac, so a `git add -A` or a tool committing untracked files sweeps them in, and `nzyme affected`
+    reads an untracked `.DS_Store` as a changed file. `.vscode/` holds the repo's shared settings and
+    is committed (`references/vscode.md`).
 
 ## Placeholders
 

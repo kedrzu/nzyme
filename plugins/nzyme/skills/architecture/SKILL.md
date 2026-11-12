@@ -3,7 +3,7 @@ name: architecture
 description: >-
     The reference architecture of a product repo built on @nzyme — sets up a new repo, brings an
     existing one up to date element by element (monorepo layout, Nx and parallel worktrees, the nzyme
-    submodule, setup scripts, lint and format, VS Code, Claude Code, GitHub, Nuxt app, UI package, e2e,
+    submodule, setup scripts, scoped tests, lint and format, VS Code, Claude Code, GitHub, Nuxt app, UI package, e2e,
     secrets, and technologies such as Drizzle), keeps the repo's `ARCHITECTURE.md`, and writes the
     repo's own skill per area, each inlining nzyme's practice document for that area.
     Takes a free-form request; there are no modes or subcommands to remember.
@@ -73,6 +73,7 @@ and where each placeholder value comes from.
 |Nx and parallel worktrees|build, cache, Nx, worktrees, slow machine|`nx.json`, `project.json`, Nx inputs guard test|`references/nx.md`|
 |nzyme submodule|submodule, nzyme version, bump nzyme|`.gitmodules`, `nzyme/`|`references/submodule.md`|
 |Setup scripts|setup, onboarding, Paseo, scripts|`setup.sh`, `setup.build.sh`, `package.json` scripts, `paseo.json`|`references/setup-scripts.md`|
+|Scoped tests|slow tests, run only what changed, affected tests, scoped verification|`nzyme.affected` in the root `package.json`, `tests:full` script|`references/affected-tests.md`|
 |Lint and format|lint, format, oxlint, oxfmt, ESLint|`.oxlintrc.json`, `.oxfmtrc.json`, `eslint.config.mjs`|`references/lint-format.md`|
 |VS Code|editor, VS Code, format on save|`.vscode/`|`references/vscode.md`|
 |Claude Code|Claude, agents, skills, permissions, `CLAUDE.md`|`.claude/settings.json`, `.claude/.gitignore`, `.claude/git.json`, `.claude/skills/nzyme`, `CLAUDE.md`, `docs/decisions/`|`references/claude-code.md`|

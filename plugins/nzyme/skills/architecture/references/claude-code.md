@@ -47,7 +47,9 @@ clone or a new worktree behaves the same for every agent, with no per-machine se
   commit the repo pins (`docs/submodule-setup.md#agents`); a marketplace copy would follow nzyme `main`, not the
   pin.
 - **`.claude/skills/verify/`, `.claude/skills/git-workflow/`** — the `dev` plugin's contracts,
-  written by following `dev:setup` and `git:setup` (`SKILL.md`, Finish). One skill per area, each
+  written by following `dev:setup` and `git:setup` (`SKILL.md`, Finish). `verify` runs the default
+  test scripts in its scoped checks and their `:full` variants in its full protocol
+  (`references/affected-tests.md`). One skill per area, each
   inlining its practice document: `references/repo-skills.md`.
 - **`CLAUDE.md`** — `assets/CLAUDE.md.tmpl`. nzyme's own section skeleton, adapted to a product:
 

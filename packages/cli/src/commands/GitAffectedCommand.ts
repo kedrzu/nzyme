@@ -58,7 +58,8 @@ export class GitAffectedCommand extends Command {
             \`baseBranches\` (default \`["main"]\`), \`aliases\` ({ prefix, packages }[]),
             \`rewrites\` ({ from, to }[] — a changed path ending in \`from\` also changes the path
             ending in \`to\`), \`fullRunTriggers\` and \`ignore\` (globs matched against the
-            root-relative path, never the basename).
+            root-relative path, never the basename). A changed file that a \`fullRunTriggers\` file
+            imports, transitively, also runs everything.
         `,
         examples: [
             ['List the tests affected by the change', "nzyme git affected '*.test.ts'"],
@@ -268,7 +269,12 @@ function describeRun(base: AffectedBase, changedCount: number, selection: Affect
         `${changedCount} changed files`,
     ];
     if (selection.fullRun) {
-        parts.push(`full run: ${selection.fullRun.file} matches trigger "${selection.fullRun.trigger}"`);
+        const { file, trigger, via } = selection.fullRun;
+        parts.push(
+            via
+                ? `full run: ${file} is imported by ${via}, which matches trigger "${trigger}"`
+                : `full run: ${file} matches trigger "${trigger}"`,
+        );
     }
     parts.push(`${selection.files.length} selected`);
     return parts.join(' · ');

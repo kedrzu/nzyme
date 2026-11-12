@@ -26,7 +26,7 @@ export interface SelectAffectedFilesOptions {
 export interface AffectedSelection {
     /** Root-relative paths matching the patterns, sorted and unique; only files that exist. */
     files: string[];
-    /** Set when a changed file matched a full-run trigger — the first such file in path order. */
+    /** Set when a changed file matches a full-run trigger (the first in path order) or a trigger file imports it. */
     fullRun?: AffectedFullRunReason;
 }
 
@@ -34,6 +34,8 @@ export interface AffectedSelection {
 export interface AffectedFullRunReason {
     file: string;
     trigger: string;
+    /** The file matching `trigger` that imports `file`, transitively; unset when `file` matches it itself. */
+    via?: string;
 }
 
 /**
@@ -47,6 +49,9 @@ export interface AffectedFullRunReason {
  * 3. a package's `package.json` → seeds every source file of that package (a dependency change acts on
  *    the whole package and its importers);
  * 4. otherwise a seed; a `rewrites` rule also seeds the rewritten path.
+ *
+ * A seed of step 4 that a trigger file imports, transitively (a module the test preload or a
+ * `.storybook/preview.ts` runs), is a trigger too: it changes what every test runs in.
  *
  * A seed that is not a source file and that nothing imports (a fixture read through `fs`, a codegen
  * input) seeds every file of its owning package — the deepest package directory containing it, or the
@@ -72,6 +77,8 @@ export function selectAffectedFiles(options: SelectAffectedFilesOptions): Affect
     }
 
     const seeds = new Set<string>();
+    // The changed files and their rewrite targets: a trigger importing one of them forces a full run.
+    const direct: string[] = [];
     const rewritten = new Set<string>();
     const packageDirSet = new Set(packageDirs);
 
@@ -81,6 +88,7 @@ export function selectAffectedFiles(options: SelectAffectedFilesOptions): Affect
         }
 
         seeds.add(file);
+        direct.push(file);
         if (path.posix.basename(file) === 'package.json' && packageDirSet.has(path.posix.dirname(file))) {
             const dir = path.posix.dirname(file);
             for (const packageFile of graph.files) {
@@ -95,8 +103,14 @@ export function selectAffectedFiles(options: SelectAffectedFilesOptions): Affect
 
         for (const target of rewriteChangedPath(file, config.rewrites)) {
             seeds.add(target);
+            direct.push(target);
             rewritten.add(file);
         }
+    }
+
+    const fullRun = findImportingTrigger(graph, direct, findTrigger);
+    if (fullRun) {
+        return { files: graph.files.filter(matchesPattern), fullRun };
     }
 
     const fallbackPackages = new Set<string>();
@@ -132,6 +146,36 @@ export function selectAffectedFiles(options: SelectAffectedFilesOptions): Affect
 
     const files = [...selected].filter(file => existing.has(file) && matchesPattern(file)).toSorted();
     return { files };
+}
+
+/**
+ * Walks the importers of `files` (breadth-first, one shared visited set) and returns the first file
+ * reached that matches a trigger, with the file it was reached from.
+ */
+function findImportingTrigger(
+    graph: ImportGraph,
+    files: string[],
+    findTrigger: (file: string) => string | undefined,
+): AffectedFullRunReason | undefined {
+    const origin = new Map(files.map(file => [file, file]));
+    const queue = [...files];
+
+    for (let file = queue.shift(); file !== undefined; file = queue.shift()) {
+        for (const edge of graph.importersOf(file)) {
+            if (origin.has(edge.from)) {
+                continue;
+            }
+            const source = origin.get(file) ?? file;
+            const trigger = findTrigger(edge.from);
+            if (trigger !== undefined) {
+                return { file: source, trigger, via: edge.from };
+            }
+            origin.set(edge.from, source);
+            queue.push(edge.from);
+        }
+    }
+
+    return undefined;
 }
 
 /**

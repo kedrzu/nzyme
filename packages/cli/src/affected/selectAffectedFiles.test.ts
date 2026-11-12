@@ -103,6 +103,31 @@ test('triggers match the root-relative path: `package.json` is the root manifest
     expect(packageChange.files).toEqual(['b/src/fixture.test.ts', 'b/src/y.test.ts']);
 });
 
+test('a file a trigger file imports, transitively, triggers a full run naming that trigger file', () => {
+    // `b/src/y.ts` stands for a test preload: everything it imports runs before every test.
+    const config = { fullRunTriggers: ['b/src/y.ts'] };
+
+    expect(select({ changed: ['a/src/hub.ts'], config })).toEqual({
+        files: [
+            'a/src/other.test.ts',
+            'a/src/x.test.ts',
+            'b/src/fixture.test.ts',
+            'b/src/y.test.ts',
+            'scripts/run.test.ts',
+        ],
+        fullRun: { file: 'a/src/hub.ts', trigger: 'b/src/y.ts', via: 'b/src/y.ts' },
+    });
+    // `a/src/x.ts` is outside the trigger's imports: an ordinary selection.
+    expect(select({ changed: ['a/src/x.ts'], config })).toEqual({ files: ['a/src/x.test.ts'] });
+});
+
+test("a package manifest's seeds do not reach a trigger: only the changed files and rewrite targets do", () => {
+    const config = { fullRunTriggers: ['b/src/y.ts'] };
+
+    // `a/package.json` seeds `a/src/hub.ts`, which the trigger imports — yet the change is the manifest.
+    expect(select({ changed: ['a/package.json'], config }).fullRun).toBeUndefined();
+});
+
 test('a package manifest change reaches importers in other packages', () => {
     expect(select({ changed: ['a/package.json'] }).files).toEqual([
         'a/src/other.test.ts',

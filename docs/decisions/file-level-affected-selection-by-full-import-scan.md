@@ -49,7 +49,9 @@ used by healed's architecture check, so one parser serves both.
   URL naming a directory is no edge — an edge to every file under it would make a file depend on a
   whole package; a changed file there falls to the package fallback below. No lint rule
   forbids other implicit forms; the residue is covered by conservative fallbacks: full-run triggers
-  (lockfile, tsconfig, test-runner config), a package's `package.json` standing for all its sources,
+  (lockfile, tsconfig, test-runner config) and every file a trigger file imports, transitively (a
+  test preload or a Storybook preview runs its imports for every test, though no test imports
+  them), a package's `package.json` standing for all its sources,
   and a changed non-source file nothing imports (a fixture read through `fs`) selecting every
   matching file of its package and their importers.
 - **Generated sources come in through `rewrites`, not from disk.** The walk skips gitignored files

@@ -15,7 +15,8 @@ const { parseArray, parseStringArray, parseString, configError } = createConfigP
  * path — unlike the command's selection patterns, a glob without `/` is NOT matched against the
  * basename. So `package.json` is the root manifest only (a package's own `package.json` is handled
  * separately: it stands for a change of every source file of that package), and a glob meant for
- * every directory says so: `**\/tsconfig*.json`.
+ * every directory says so: `**\/tsconfig*.json`. A source file a trigger file imports, transitively,
+ * triggers too — list the roots (the test preload, a `.storybook/preview.ts`), not what they import.
  *
  * @example
  * ```json

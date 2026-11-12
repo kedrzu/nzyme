@@ -42,11 +42,10 @@ reported by name as overridden.
 ```ts
 import { loadConfig } from '@nzyme/config/loadConfig.js';
 
-const provenance = await loadConfig(container, [
+await loadConfig(container, [
     fileSource({ path: '.config.json', optional: true }),
     envSource(),
 ]);
-provenance.get('DB_PASSWORD'); // name of the source the key came from
 ```
 
 `loadConfig` installs the merged document as `RuntimeConfig` and logs one `Config loaded` line with

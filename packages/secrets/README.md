@@ -49,7 +49,7 @@ sources: [envSource(), secretsSource(store)];
 ```
 
 `secretsSource(store)` loads every secret under the store's prefix as config entries by key, and
-provenance names the source `secrets:<store id>`. Order the sources as the document's precedence
+the `Config loaded` log names the source `secrets:<store id>`. Order the sources as the document's precedence
 wants: the first source with a key wins.
 
 ## Loading into env variables

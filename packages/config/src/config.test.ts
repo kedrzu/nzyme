@@ -77,19 +77,12 @@ test('meta is typed through to the definition', () => {
 
 test('the first source wins per key and overridden keys are reported by name, never value', async () => {
     const { container, logs } = createTestContainer();
-    const provenance = await loadConfig(container, [
+    await loadConfig(container, [
         memorySource('first', { A: SENTINEL, B: 'b1' }),
         memorySource('second', { B: 'b2', C: 'c2' }),
     ]);
 
     expect(container.resolve(RuntimeConfig)).toEqual({ A: SENTINEL, B: 'b1', C: 'c2' });
-    expect(provenance).toEqual(
-        new Map([
-            ['A', 'first'],
-            ['B', 'first'],
-            ['C', 'second'],
-        ]),
-    );
     expect(logs.find(log => log.message === 'Config loaded')?.data).toEqual({
         sources: ['first', 'second'],
         keys: 3,

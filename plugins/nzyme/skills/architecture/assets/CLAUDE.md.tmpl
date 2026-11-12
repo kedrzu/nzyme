@@ -59,9 +59,7 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
 These always apply. Everything else — organization, naming, casting, JSDoc, design principles — is in
 the `code-conventions` skill.
 
-- Import `.ts` files with a `.js` extension (ESM).
-- Never use `any`; use proper types or `unknown`. Reaching for `any` or an ugly cast means something
-  deeper is wrong: investigate, don't cast.
+- Reaching for an ugly cast means something deeper is wrong: investigate, don't cast.
 - Use `assert()` from `@nzyme/utils` instead of a non-null assertion (`!`) in production code (`!` is
   fine in tests).
 - Never disable a lint rule to make an error go away; ask if stuck. A rule that is genuinely wrong for a
@@ -75,9 +73,6 @@ the `code-conventions` skill.
   2. Commit and push through `git-workflow`. Never commit red.
   3. Before reporting done, confirm `git status --porcelain` is empty and `HEAD` equals `@{u}`.
      This governs finishing a change; it never licenses making one.
-- **Stash safety:** stashes are shared across all worktrees, and other agents may be working in
-  parallel. Name every stash uniquely and restore it by its sha; the `git` plugin's hook blocks the
-  unsafe forms and says how.
 
 # Diagnosing failures — check, don't assume
 
@@ -106,10 +101,7 @@ This applies to everything you write: plans, PR descriptions, reviews, docs, cha
 
 # Agent tool use
 
-- **Locate, then window:** grep or the index to find the range, then read it with offset/limit. Never
-  re-read a file you already have, or re-read to verify your own edit.
-- **Batch independent calls** in one message; serialize only on real dependencies.
-- **Use absolute paths;** don't rely on `cd` persisting between shell calls.
+- **Locate, then window:** grep or the index to find the range, then read it with offset/limit.
 - **Pick subagent tiers by the work:**
   - Haiku for mechanical search;
   - Sonnet for multi-hop or semantic exploration;

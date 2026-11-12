@@ -92,13 +92,15 @@ Two `nzyme` CLI commands generate the rest:
 - **`nzyme monorepo`**, run from the product root. It writes a `tsconfig.json` into every workspace
   package, nzyme's included, with project references to its workspace dependencies, plus a root
   `tsconfig.json` referencing them all. Re-run it after adding a package or changing internal
-  dependencies.
+  dependencies. It also writes a root `tsconfig.cjs.json` referencing the CommonJS builds of the nzyme
+  packages that have one.
 - **`nzyme localise`** compiles every `.loc.yaml` into `.loc.ts`.
 
 All generated files are gitignored, in both trees. In the product's `.gitignore`:
 
 ```gitignore
 tsconfig.json
+tsconfig.cjs.json
 *.loc.ts
 /INDEX.md
 /UTILS.md

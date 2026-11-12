@@ -142,7 +142,7 @@ Bun.serve({
 
 - Root script `"e2e": "bun --cwd packages/e2e test"`.
 - `setup.build.sh` keeps its `{{if browser-tests}}` block (`references/setup-scripts.md`); the
-  browser comes from the repo's `playwright` package.
+  browser comes from the root's `playwright` devDependency (`references/ui-package.md`).
 - The root `tests` script skips `*.spec.ts`, so bun never picks up a Playwright spec.
 - `packages/e2e/.gitignore` ignores `test-results/` and `playwright-report/`, which Playwright writes
   beside its config.

@@ -196,18 +196,12 @@ describe('createImportResolver', () => {
         ]);
     });
 
-    it('resolves a url to a file, or to every file under a directory', () => {
+    it('resolves a url to a file, and a directory url to nothing', () => {
         const from = 'packages/app/utils/format.ts';
 
         expect(resolveFrom(from, spec('../fixtures/one.json', 'url'))).toEqual(['packages/app/fixtures/one.json']);
-        expect(resolveFrom(from, spec('../fixtures/', 'url'))).toEqual([
-            'packages/app/fixtures/nested/two.txt',
-            'packages/app/fixtures/one.json',
-        ]);
-        expect(resolveFrom(from, spec('../fixtures', 'url'))).toEqual([
-            'packages/app/fixtures/nested/two.txt',
-            'packages/app/fixtures/one.json',
-        ]);
+        expect(resolveFrom(from, spec('../fixtures/', 'url'))).toEqual([]);
+        expect(resolveFrom(from, spec('../fixtures', 'url'))).toEqual([]);
         expect(resolveFrom(from, spec('https://example.com/x.json', 'url'))).toEqual([]);
         expect(resolveFrom(from, spec('../missing', 'url'))).toEqual([]);
     });

@@ -222,7 +222,7 @@ function select(params: SelectParams): AffectedSelection {
 function createGraph(files: string[], edges: [string, string][]): ImportGraph {
     const importers = new Map<string, ImportEdge[]>();
     for (const [from, to] of edges) {
-        importers.set(to, [...(importers.get(to) ?? []), { from, to, typeOnly: false }]);
+        importers.set(to, [...(importers.get(to) ?? []), { from, to }]);
     }
     return { files: files.toSorted(), importersOf: file => importers.get(file) ?? [] };
 }

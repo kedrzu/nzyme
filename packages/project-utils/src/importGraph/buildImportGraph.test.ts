@@ -30,7 +30,8 @@ const files: Record<string, string> = {
     'packages/common/src/Messages.loc.yaml': `hello: Hello`,
     'packages/common/src/useMessages.ts': `import { Messages } from './Messages.loc.js';`,
     'packages/common/src/useMessages.test.ts': `import { useMessages } from './useMessages.js';`,
-    'packages/common/src/Orphan.loc.ts': `import { defineMessages } from '@acme/i18n/defineMessages.js';`,
+    'packages/common/src/Other.loc.ts': `import { defineMessages } from '@acme/i18n/defineMessages.js';`,
+    'packages/common/src/useOther.ts': `import { Other } from './Other.loc.js';`,
     'packages/common/src/usesDeleted.ts': `import { gone } from './Deleted.js';`,
     'packages/common/src/usesBuild.ts': [
         `import '../dist/index.js';`,
@@ -101,7 +102,7 @@ beforeAll(async () => {
         root,
         packages: packages.map(pkg => ({ ...pkg, path: path.join(root, pkg.path) })),
         aliases: [{ prefix: '@/', packages: ['@acme/app'] }],
-        extraPaths: ['packages/common/src/Deleted.ts'],
+        extraPaths: ['packages/common/src/Deleted.ts', 'packages/common/src/Messages.loc.ts'],
     });
 });
 
@@ -114,7 +115,7 @@ function importers(target: string): string[] {
     return graph.importersOf(target).map(edge => edge.from);
 }
 
-/** Everything that transitively imports `start` — the traversal `nzyme affected` does. */
+/** Everything that transitively imports `start` — the traversal `nzyme git affected` does. */
 function transitiveImporters(start: string): string[] {
     const visited = new Set([start]);
     const queue = [start];
@@ -130,23 +131,22 @@ function transitiveImporters(start: string): string[] {
 }
 
 describe('buildImportGraph', () => {
-    it('lists the walked files and the gitignored sources reached through imports only', () => {
+    it('lists the walked files only — neither gitignored files nor extra paths', () => {
         expect(graph.files).toContain('packages/app/fixtures/b.txt');
-        expect(graph.files).toContain('packages/common/src/Messages.loc.ts');
-        expect(graph.files).not.toContain('packages/common/src/Orphan.loc.ts');
+        expect(graph.files).not.toContain('packages/common/src/Messages.loc.ts');
+        expect(graph.files).not.toContain('packages/common/src/Other.loc.ts');
         expect(graph.files).not.toContain('packages/common/dist/index.js');
         expect(graph.files).not.toContain('packages/common/src/Deleted.ts');
     });
 
-    it('follows imports through a reached gitignored source file', () => {
-        expect(importers('packages/common/src/Messages.loc.ts')).toEqual(['packages/common/src/useMessages.ts']);
-        expect(importers('packages/i18n/src/defineMessages.ts')).toEqual(['packages/common/src/Messages.loc.ts']);
-        expect(transitiveImporters('packages/i18n/src/defineMessages.ts')).toEqual([
+    it('resolves a gitignored file only when it is an extra path, and never parses it', () => {
+        expect(transitiveImporters('packages/common/src/Messages.loc.ts')).toEqual([
             'packages/common/src/Messages.loc.ts',
             'packages/common/src/useMessages.test.ts',
             'packages/common/src/useMessages.ts',
-            'packages/i18n/src/defineMessages.ts',
         ]);
+        expect(graph.importersOf('packages/common/src/Other.loc.ts')).toEqual([]);
+        expect(graph.importersOf('packages/i18n/src/defineMessages.ts')).toEqual([]);
     });
 
     it('never reaches build output or node_modules, relatively or through package exports', () => {
@@ -167,8 +167,8 @@ describe('buildImportGraph', () => {
         expect(importers('packages/app/components/Child.vue')).toEqual(['packages/app/components/Page.vue']);
         expect(importers('packages/app/components/Page.module.scss')).toEqual(['packages/app/components/Page.vue']);
         expect(importers('packages/app/styles/_colors.scss')).toEqual(['packages/app/components/Page.module.scss']);
-        expect(importers('packages/app/fixtures/a.json')).toEqual(['packages/app/test/fixtures.test.ts']);
-        expect(importers('packages/app/fixtures/b.txt')).toEqual(['packages/app/test/fixtures.test.ts']);
+        expect(importers('packages/app/fixtures/a.json')).toEqual([]);
+        expect(importers('packages/app/fixtures/b.txt')).toEqual([]);
         expect(importers('packages/app/data/one.json')).toEqual(['packages/app/test/fixtures.test.ts']);
     });
 
@@ -182,14 +182,13 @@ describe('buildImportGraph', () => {
         expect(importers('packages/common/src/Deleted.ts')).toEqual(['packages/common/src/usesDeleted.ts']);
     });
 
-    it('marks an edge type-only only when every import of the target is', () => {
-        const edges = graph.importersOf('packages/common/src/types.ts');
-        expect(edges).toEqual([
-            { from: 'packages/common/src/mixed.ts', to: 'packages/common/src/types.ts', typeOnly: true },
+    it('gives one edge per importing file, type-only imports included', () => {
+        expect(graph.importersOf('packages/common/src/types.ts')).toEqual([
+            { from: 'packages/common/src/mixed.ts', to: 'packages/common/src/types.ts' },
         ]);
-        expect(
-            graph.importersOf('packages/common/src/format.ts').find(e => e.from.endsWith('mixed.ts'))?.typeOnly,
-        ).toBe(false);
+        expect(importers('packages/common/src/format.ts').filter(from => from.endsWith('mixed.ts'))).toEqual([
+            'packages/common/src/mixed.ts',
+        ]);
     });
 
     it('represents a cycle, and a visited-set traversal over it terminates', () => {

@@ -5,8 +5,8 @@ import { assertNever } from '@nzyme/utils/assertNever.js';
  * - `module` — module resolution: relative (`.js` → `.ts`, `index`), workspace package `exports`,
  *   configured aliases;
  * - `sass` — Sass load rules: relative first (partials `_x.scss`, `_index.scss`), then packages;
- * - `url` — a path relative to the importing file (`new URL('x', import.meta.url)`), which may name
- *   a directory.
+ * - `url` — a file path relative to the importing file (`new URL('x', import.meta.url)`); a
+ *   directory resolves to nothing.
  */
 export type ImportSpecifierKind = 'module' | 'sass' | 'url';
 

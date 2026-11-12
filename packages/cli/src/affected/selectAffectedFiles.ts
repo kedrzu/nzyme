@@ -6,6 +6,7 @@ import { getImportSourceKind } from '@nzyme/project-utils/importGraph/extractImp
 
 import type { AffectedConfig } from './AffectedConfig.js';
 import type { ChangedFile } from './collectChangedFiles.js';
+import { rewriteChangedPath } from './rewriteChangedPath.js';
 
 /** Options of {@link selectAffectedFiles}. */
 export interface SelectAffectedFilesOptions {
@@ -92,11 +93,9 @@ export function selectAffectedFiles(options: SelectAffectedFilesOptions): Affect
             }
         }
 
-        for (const rewrite of config.rewrites) {
-            if (file.endsWith(rewrite.from)) {
-                seeds.add(file.slice(0, -rewrite.from.length) + rewrite.to);
-                rewritten.add(file);
-            }
+        for (const target of rewriteChangedPath(file, config.rewrites)) {
+            seeds.add(target);
+            rewritten.add(file);
         }
     }
 

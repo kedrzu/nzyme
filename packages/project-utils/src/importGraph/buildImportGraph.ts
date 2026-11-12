@@ -16,8 +16,9 @@ export interface BuildImportGraphOptions {
     packages: Package[];
     aliases?: ImportAlias[];
     /**
-     * Root-relative paths that imports may resolve to although they are not on disk — a deleted
-     * file. They are targets only, never parsed.
+     * Root-relative paths that imports may resolve to although walking does not list them — a
+     * deleted file, or a gitignored generated file (`x.loc.ts`) a change stands for. They are
+     * targets only, never parsed, and not in {@link ImportGraph.files}.
      */
     extraPaths?: Iterable<string>;
 }
@@ -26,64 +27,43 @@ export interface BuildImportGraphOptions {
 export interface ImportEdge {
     from: string;
     to: string;
-    /** Every import of `to` in `from` is `import type` / `export type`. */
-    typeOnly: boolean;
 }
 
 /** The project's file-level import graph. Cycles are kept as they are: a traversal needs a visited set. */
 export interface ImportGraph {
-    /**
-     * Every walked file, source or not, plus every gitignored source file reached through imports
-     * (`*.loc.ts`), sorted.
-     */
+    /** Every walked (non-ignored) file, source or not, sorted. */
     files: string[];
-    /** Direct importers of a root-relative path; `[]` for a path nothing imports. */
+    /** Direct importers of a root-relative path, one edge per importing file; `[]` for a path nothing imports. */
     importersOf(path: string): ImportEdge[];
 }
 
 /**
  * Builds the reverse import graph of a project in one scan: walks every non-ignored file, parses
  * the sources (`.ts .tsx .mts .js .mjs .vue .scss`, `.d.ts` included — their imports are real
- * edges too) and resolves each specifier against the walked paths (any extension, so JSON, SVG
- * and directory URLs resolve) plus `extraPaths`.
- *
- * Gitignored source files are reached rather than walked: an import that resolves to one on disk
- * (a generated `x.loc.ts`; never build output or `node_modules` — see `createImportResolver`) makes
- * it a node, and its own imports are followed in turn. A gitignored file nothing imports is not a
- * node.
+ * edges too) and resolves each specifier against the walked paths (any extension, so JSON and SVG
+ * files resolve) plus `extraPaths`. A gitignored file is a target only when it is
+ * in `extraPaths`; it is never parsed.
  */
 export async function buildImportGraph(options: BuildImportGraphOptions): Promise<ImportGraph> {
     const { root } = options;
-    const walked = await walkProjectFiles(root);
-    const paths = new Set(walked);
+    const files = await walkProjectFiles(root);
+    const paths = new Set(files);
     for (const extra of options.extraPaths ?? []) {
         paths.add(extra);
     }
 
     const resolver = createImportResolver({ root, packages: options.packages, aliases: options.aliases, paths });
     const importers = new Map<string, ImportEdge[]>();
-    const nodes = new Set(walked);
 
-    let batch = walked;
-    while (batch.length > 0) {
-        const parsed = await Promise.all(batch.map(file => parseFile(file)));
-        const reached = new Set<string>();
-        for (const edges of parsed) {
-            for (const edge of edges) {
-                addImporter(edge);
-                if (!nodes.has(edge.to) && !paths.has(edge.to)) {
-                    reached.add(edge.to);
-                }
-            }
+    const parsed = await Promise.all(files.map(file => parseFile(file)));
+    for (const edges of parsed) {
+        for (const edge of edges) {
+            addImporter(edge);
         }
-        for (const file of reached) {
-            nodes.add(file);
-        }
-        batch = [...reached].toSorted();
     }
 
     return {
-        files: [...nodes].toSorted(),
+        files,
         importersOf: target => importers.get(target) ?? [],
     };
 
@@ -106,14 +86,13 @@ export async function buildImportGraph(options: BuildImportGraphOptions): Promis
     }
 
     function resolveEdges(file: string, specifiers: ImportSpecifier[]): ImportEdge[] {
-        // One edge per target; it is type-only only when every import of the target is.
-        const typeOnlyByTarget = new Map<string, boolean>();
+        const targets = new Set<string>();
         for (const specifier of specifiers) {
             for (const target of resolver.resolve(file, specifier)) {
-                typeOnlyByTarget.set(target, (typeOnlyByTarget.get(target) ?? true) && specifier.typeOnly);
+                targets.add(target);
             }
         }
-        return [...typeOnlyByTarget].map(([to, typeOnly]) => ({ from: file, to, typeOnly }));
+        return [...targets].map(to => ({ from: file, to }));
     }
 }
 

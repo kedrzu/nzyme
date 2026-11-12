@@ -11,6 +11,7 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
 - **Tooling:**
   - `cli-core` (the clipanion-based `Command` framework behind every CLI), `cli` (the `nzyme` binary: `monorepo`, `localise`, `index`, `quiet-run`,
     `submodule`, `depcheck`)
+  - `pen` (Pen design files in git: the document model and the `pen` commands)
   - `tsconfig`, `eslint` (also the oxlint preset), `oxlint` (custom rules), `project-utils`,
     `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`
 - **Integrations:** `aws`, `pulumi`, `slack`, `apis`, `bitwarden` (a Secrets Manager store for `secrets`)
@@ -79,7 +80,7 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
   `/dev:deliver`), which is installed from the `kedrzu-skills` marketplace in `.claude/settings.json`.
 - **Every implementation task reads `docs/practice/code-conventions.md`**, plus the practice document
   for its area, `docs/practice/<area>.md`: `ioc`, `logging`, `testing`, `ui`, `composables`, `forms`,
-  `translations`, `drizzle`, `api-clients`, `secrets`. Consumer repos inline the same documents into
+  `translations`, `drizzle`, `api-clients`, `secrets`, `design`. Consumer repos inline the same documents into
   their own skills, so fix the text there when it is wrong.
 - **The `nzyme` plugin** (`plugins/nzyme`) ships only `/nzyme:architecture`, which sets up or updates a
   product repo and compares its skills against the practice documents.

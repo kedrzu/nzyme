@@ -34,11 +34,13 @@ table below. The result is one of these situations, or a combination of them:
 - **Nothing here yet** (an empty directory, or a repo with no product code) → a new repo. Do step 0,
   then every repo element, plus the app and technology elements the request names. Ask only what the
   request leaves open and the reference does not decide — the product name and npm scope, Nuxt SPA or
-  SSR, whether there is a UI package, e2e, CI, a database. Where the reference has one answer, take it
+  SSR, whether there is a UI package, e2e, CI, a database, whether the product is designed in Pen
+  (`references/design-in-pen.md`). Where the reference has one answer, take it
   without asking.
 - **An existing repo, a request about its setup** ("bring up to date", "check our Nx config", "fix
   lint setup") → compare the elements the request names; a general request means every repo element
-  plus each app and technology element whose repo signals are present. A repo already at the
+  plus each app and technology element whose repo signals are present. Design in Pen is asked when
+  `ARCHITECTURE.md` records no choice. A repo already at the
   reference gets "no differences" and no writes.
 - **A request about a piece of work** ("starting the settings screen", "adding Stripe", "we need a
   database") → the element whose signals match. Check that its setup is in place (UI work with no UI
@@ -95,6 +97,7 @@ platform or technology (Cloudflare, Supabase, …) is added here as one more row
 |SQL with Drizzle|database, Postgres, SQL, Drizzle, migrations|`drizzle-orm` or `drizzle-kit` in a `package.json`|`nzyme/docs/practice/drizzle.md`|`nzyme/docs/practice/drizzle.md`|
 |Secrets|secret, API key, token, credentials, password|`@nzyme/secrets`, `defineEnvVariable` holding credentials, a dotenv file with credentials|`references/secrets.md`|`nzyme/docs/practice/secrets.md`|
 |Third-party APIs|integration, vendor API, OpenAPI, GraphQL, webhook client|an OpenAPI spec or `.graphql` SDL in a package, `@nzyme/openapi`|`nzyme/docs/practice/api-clients.md`|`nzyme/docs/practice/api-clients.md`|
+|Design in Pen|design, Pen, mockups, screens to draw|`ARCHITECTURE.md` records that the repo designs in Pen; a tracked `*.pen` (suggests it)|`references/design-in-pen.md`|`nzyme/docs/practice/design.md`|
 
 A backend (server package, hosting, deployment) is not part of the default architecture and has no
 element; build it when the repo needs it, and record its shape in `ARCHITECTURE.md`.

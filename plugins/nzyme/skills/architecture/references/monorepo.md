@@ -31,14 +31,13 @@ reference adds the files around them.
 - **`bunfig.toml`:** bun reads JSX options only from the `bunfig.toml` of the directory it runs in,
   and nzyme's Vue `.tsx` tests need them when run from the product root. A `[test]` section
   (`preload`, `root`) is the repo's own; keep it.
-- **`.gitattributes`:** LF everywhere and generated code marked `linguist-generated`. Add
-  `*.pen binary linguist-generated` when the repo holds Pencil design files: they are never diffed or
-  merged.
+- **`.gitattributes`:** LF everywhere and generated code marked `linguist-generated`. A repo that designs in
+  Pen adds `*.pen merge=pen -diff linguist-generated` (`references/design-in-pen.md`).
 - **`.editorconfig`** matches `.oxfmtrc.json` (4 spaces; 2 for YAML, HTML and Vue), so an editor
   without the oxc extension writes what the formatter would.
 - **`.gitignore` lists what this repo actually produces**, nothing from a catalogue. The asset holds
-  what every nzyme repo produces: dependencies, `dist`, tool caches, nzyme's generated files, env
-  files, `CLAUDE.local.md`, `.context/`. Everything else is added when the repo has its source:
+  what every nzyme repo produces: contributors' OS and editor files, dependencies, `dist`, tool caches, nzyme's generated
+  files, env files, `CLAUDE.local.md`, `.context/`. Everything else is added when the repo has its source:
   - **Owned by one directory → that directory's own `.gitignore`**, never a nested path in the root
     one: a Nuxt app ignores `.nuxt/` and `.output/` in `packages/<app>/.gitignore`, the UI package
     ignores `storybook-static/` when it builds Storybook, `packages/e2e/.gitignore` ignores
@@ -47,9 +46,13 @@ reference adds the files around them.
   - **Produced anywhere in the tree → the root**, e.g. `.wrangler/`, `.dev.vars`, `.dev.vars.*` for
     Cloudflare Workers; `target/` for Rust; `.playwright-mcp/` when agents use the Playwright MCP;
     `!.env.example` when the repo commits one.
-  - **OS and editor files** (`.DS_Store`, `.idea/`, swap files) come from a developer's machine, not
-    the project: they belong in that developer's global gitignore (`core.excludesFile`). `.vscode/`
-    holds the repo's shared settings and is committed (`references/vscode.md`).
+  - **Files a contributor's machine writes into any checkout** are the repo's too, so a fresh clone
+    is clean on every machine without a global gitignore: OS metadata (`.DS_Store`, `Thumbs.db`) and
+    the common editors' files (`.idea/` for JetBrains, `*.swp`, `*.swo` for Vim), all in the asset.
+    `.vscode/` holds the repo's shared settings and is committed (`references/vscode.md`).
+  - **Never a catalogue:** a cache or output of a technology or tool the repo does not use
+    (`.turbo/` without Turbo, `.next/` without Next.js, `coverage/` with nothing measuring it) is not
+    added "just in case".
 
 ## Placeholders
 
@@ -71,8 +74,7 @@ reference adds the files around them.
 - A hand-rolled tsconfig generator or committed `tsconfig.json` files: a difference — `nzyme monorepo`
   replaces them.
 - `.gitignore`: a missing asset line, or a missing entry for an output the repo does produce, is a
-  difference. So is a line nothing in the repo produces (a leftover, a copied catalogue, OS or editor
-  files), and a nested path that belongs in that directory's own `.gitignore`: propose removing or
+  difference. So is a line nothing in the repo produces (a leftover, a copied catalogue), and a nested path that belongs in that directory's own `.gitignore`: propose removing or
   moving it. Check with `git check-ignore --no-index -v <path>` before claiming a file is or is not
   covered.
 - `.gitattributes`: add the lines the asset has and the repo lacks; never remove the repo's.

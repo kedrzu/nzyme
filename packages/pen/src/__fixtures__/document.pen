@@ -1,0 +1,187 @@
+{
+  "version": "2.22",
+  "children": [
+    {
+      "type": "frame",
+      "id": "screen",
+      "name": "Screen · Inbox",
+      "x": 0,
+      "y": 0,
+      "width": 400,
+      "height": 300,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "row",
+          "name": "Row",
+          "stroke": {
+            "align": "inside",
+            "thickness": 1,
+            "fill": "$border"
+          },
+          "children": [
+            {
+              "type": "text",
+              "id": "price",
+              "name": "$ label",
+              "content": "$5 off",
+              "fontFamily": "$font",
+              "fill": "$fg"
+            },
+            {
+              "type": "icon",
+              "id": "tagIcon",
+              "library": "lucide",
+              "icon": "tag",
+              "fill": "$fg"
+            }
+          ]
+        },
+        {
+          "type": "ref",
+          "id": "saveButton",
+          "ref": "button",
+          "name": "Save",
+          "descendants": {
+            "label": {
+              "content": "$ Save",
+              "fill": "$accent"
+            },
+            "icon": {
+              "type": "rectangle",
+              "id": "saveDot",
+              "width": 8,
+              "height": 8,
+              "fill": "$accent"
+            }
+          }
+        },
+        {
+          "type": "ref",
+          "id": "promoCard",
+          "ref": "card",
+          "descendants": {
+            "body": {
+              "type": "frame",
+              "id": "promoBody",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "promoText",
+                  "content": "Replaced",
+                  "fill": "$fg"
+                }
+              ]
+            },
+            "slot": {
+              "children": [
+                {
+                  "type": "ref",
+                  "id": "slotButton",
+                  "ref": "button",
+                  "descendants": {
+                    "label": {
+                      "content": "Slot"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "components",
+      "name": "Components",
+      "layout": "horizontal",
+      "children": [
+        {
+          "type": "frame",
+          "id": "button",
+          "name": "Button",
+          "reusable": true,
+          "fill": "$accent",
+          "cornerRadius": 6,
+          "children": [
+            {
+              "type": "text",
+              "id": "label",
+              "content": "OK",
+              "fill": "$fg"
+            },
+            {
+              "type": "icon",
+              "id": "icon",
+              "library": "lucide",
+              "icon": "check"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "card",
+          "name": "Card",
+          "reusable": true,
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "body"
+            },
+            {
+              "type": "frame",
+              "id": "slot",
+              "slot": [
+                "button"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "bg": {
+      "type": "color",
+      "value": "#0D1117"
+    },
+    "fg": {
+      "type": "color",
+      "value": "#E6EDF3"
+    },
+    "border": {
+      "type": "color",
+      "value": "#30363D"
+    },
+    "accent": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#0969DA",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "$link",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "link": {
+      "type": "color",
+      "value": "#4493F8"
+    },
+    "font": {
+      "type": "string",
+      "value": "Inter"
+    }
+  },
+  "fileToken": "fixture"
+}

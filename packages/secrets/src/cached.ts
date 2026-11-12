@@ -28,8 +28,16 @@ interface CacheItem {
  *
  * One item per store means a store larger than Windows Credential Manager's 2560-byte item cap will not
  * cache there (the keychain refuses it, which only warns); nobody uses Windows today.
+ *
+ * Outside Bun there is no OS keychain (`Bun.secrets`), so without an explicit `keychain` the store is
+ * returned as it is: a tool with a Node shebang that loads secrets, `nuxi` for one, reads the store on
+ * every run instead of warning that the keychain failed.
  */
 export function cached(store: SecretStore, options: CachedOptions): SecretStore {
+    if (!options.keychain && typeof Bun === 'undefined') {
+        return store;
+    }
+
     const keychain = options.keychain ?? osKeychain;
     const itemName = `cache:${store.id}`;
 

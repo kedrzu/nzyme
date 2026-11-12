@@ -174,7 +174,7 @@ Bitwarden, a read-only machine account) and its writes are refused.
 ## Stores
 
 - [`@nzyme/bitwarden`](../bitwarden/README.md) — Bitwarden Secrets Manager.
-- `parameterStore` from `@nzyme/aws/ssm.js` — AWS Systems Manager Parameter Store: a path prefix (`/secrets/dev/`, direct children only) or a name prefix (`FOOBAR_`); credentials from the AWS provider chain or a `profile`, no `login`.
+- `parameterStore` from `@nzyme/aws/ssm.js` — AWS Systems Manager Parameter Store: a path prefix (`/secrets/dev/`, direct children only) or a name prefix (`FOOBAR_`); credentials from the AWS provider chain or a `profile`, no `login`; an explicit `endpoint` keeps the store on real AWS when `AWS_ENDPOINT_URL` points the process at an emulator.
 
 A store is an object implementing `SecretStore` (`id`, `prefix`, `readAll`, `write`, optional `login`,
 `refresh`, `credentialEnv`).

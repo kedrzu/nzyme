@@ -143,10 +143,11 @@ test('write stores SecureString, Overwrite, standard tier, with the prefix prepe
     ]);
 });
 
-test('id differs by region, profile and prefix', () => {
+test('id differs by region, endpoint, profile and prefix', () => {
     const ids = [
         parameterStore({ prefix: '/s/' }).id,
         parameterStore({ prefix: '/s/', region: 'eu-west-1' }).id,
+        parameterStore({ prefix: '/s/', endpoint: 'http://localhost:4566' }).id,
         parameterStore({ prefix: '/s/', profile: 'a' }).id,
         parameterStore({ prefix: '/s/', profile: 'b' }).id,
         parameterStore({ prefix: '/t/' }).id,

@@ -24,7 +24,16 @@ export interface ParameterStoreOptions {
     region?: string;
     /** The shared-config profile the credentials come from; the SDK's default provider chain when omitted. */
     profile?: string;
-    /** An `SSMClient` to use instead of creating one (tests). `region` and `profile` are then not applied. */
+    /**
+     * The service endpoint (`https://ssm.us-east-1.amazonaws.com`). Omitted, the SDK resolves it, and
+     * honours `AWS_ENDPOINT_URL`: a process that points its AWS clients at a local emulator would read
+     * the store from the emulator too. Set it when the store must be the real one whatever that variable says.
+     */
+    endpoint?: string;
+    /**
+     * An `SSMClient` to use instead of creating one (tests). `region`, `profile` and `endpoint` are then
+     * not applied.
+     */
     client?: SSMClient;
 }
 
@@ -41,17 +50,18 @@ const GET_PARAMETERS_BATCH_SIZE = 10;
  * @__NO_SIDE_EFFECTS__
  */
 export function parameterStore(options: ParameterStoreOptions): SecretStore {
-    const { region, profile } = options;
+    const { region, profile, endpoint } = options;
     if (options.prefix === '') {
         throw new Error('Parameter Store prefix must not be empty');
     }
 
     const isPath = options.prefix.startsWith('/');
     const prefix = isPath && !options.prefix.endsWith('/') ? `${options.prefix}/` : options.prefix;
-    const client = options.client ?? new SSMClient({ region, profile });
+    const client = options.client ?? new SSMClient({ region, profile, endpoint });
 
     return {
-        id: `ssm:${region ?? 'default'}:${prefix}${profile == null ? '' : `:${profile}`}`,
+        // The endpoint is part of the identity: the same prefix behind another endpoint is another store.
+        id: `ssm:${region ?? 'default'}${endpoint == null ? '' : `@${endpoint}`}:${prefix}${profile == null ? '' : `:${profile}`}`,
         prefix,
         readAll,
         write,

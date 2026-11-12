@@ -48,10 +48,10 @@ export interface AffectedFullRunReason {
  *    the whole package and its importers);
  * 4. otherwise a seed; a `rewrites` rule also seeds the rewritten path.
  *
- * A seed that is not a source file and that nothing imports (a fixture read through `fs`) seeds
- * every file of its owning package — the deepest package directory containing it, or the files outside
- * every package. A changed file that matched a rewrite rule is exempt: the rule says where its
- * dependents are (`x.loc.yaml` → `x.loc.ts`). Deleted files seed like any other; they are never selected.
+ * A seed that is not a source file and that nothing imports (a fixture read through `fs`, a codegen
+ * input) seeds every file of its owning package — the deepest package directory containing it, or the
+ * files outside every package — and so their importers in other packages. A changed file that
+ * matched a rewrite rule is exempt: the rule says where its dependents are (`x.loc.yaml` → `x.loc.ts`). Deleted files seed like any other; they are never selected.
  * @__NO_SIDE_EFFECTS__
  */
 export function selectAffectedFiles(options: SelectAffectedFilesOptions): AffectedSelection {
@@ -108,6 +108,15 @@ export function selectAffectedFiles(options: SelectAffectedFilesOptions): Affect
         }
     }
 
+    // The fallback package's files are seeds too, so the walk reaches their importers in other packages.
+    if (fallbackPackages.size > 0) {
+        for (const file of graph.files) {
+            if (fallbackPackages.has(findOwningPackageDir(file, packageDirs))) {
+                seeds.add(file);
+            }
+        }
+    }
+
     // Breadth-first over the importers; `selected` doubles as the visited set, which closes cycles.
     const selected = new Set(seeds);
     const queue = [...seeds];
@@ -117,14 +126,6 @@ export function selectAffectedFiles(options: SelectAffectedFilesOptions): Affect
             if (!selected.has(edge.from)) {
                 selected.add(edge.from);
                 queue.push(edge.from);
-            }
-        }
-    }
-
-    if (fallbackPackages.size > 0) {
-        for (const file of graph.files) {
-            if (fallbackPackages.has(findOwningPackageDir(file, packageDirs))) {
-                selected.add(file);
             }
         }
     }

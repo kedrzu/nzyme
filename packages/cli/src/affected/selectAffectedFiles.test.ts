@@ -115,6 +115,14 @@ test('a non-source file nothing imports selects every matching file of its ownin
     expect(select({ changed: ['b/fixtures/data.json'] }).files).toEqual(['b/src/fixture.test.ts', 'b/src/y.test.ts']);
 });
 
+test('a non-source file nothing imports reaches the importers of its package in other packages', () => {
+    expect(select({ changed: ['a/codegen.yaml'] }).files).toEqual([
+        'a/src/other.test.ts',
+        'a/src/x.test.ts',
+        'b/src/y.test.ts',
+    ]);
+});
+
 test('a non-source file outside every package falls back to the files outside every package', () => {
     expect(select({ changed: ['scripts/data.txt'] }).files).toEqual(['scripts/run.test.ts']);
 });
@@ -145,8 +153,12 @@ test('a rewrite seeds the rewritten path, and spares its source the package fall
 
     // `x.loc.ts` is generated and gitignored: not a graph file, but still a seed.
     expect(select({ changed: ['a/src/x.loc.yaml'], graph, config }).files).toEqual(['a/src/x.test.ts']);
-    // Without the rule the yaml file has no importer, so its whole package runs.
-    expect(select({ changed: ['a/src/x.loc.yaml'], graph }).files).toEqual(['a/src/other.test.ts', 'a/src/x.test.ts']);
+    // Without the rule the yaml file has no importer, so its whole package and their importers run.
+    expect(select({ changed: ['a/src/x.loc.yaml'], graph }).files).toEqual([
+        'a/src/other.test.ts',
+        'a/src/x.test.ts',
+        'b/src/y.test.ts',
+    ]);
 });
 
 test('a handler rewrite reaches the importers of the definition', () => {

@@ -51,7 +51,7 @@ used by healed's architecture check, so one parser serves both.
   forbids other implicit forms; the residue is covered by conservative fallbacks: full-run triggers
   (lockfile, tsconfig, test-runner config), a package's `package.json` standing for all its sources,
   and a changed non-source file nothing imports (a fixture read through `fs`) selecting every
-  matching file of its package.
+  matching file of its package and their importers.
 - **Generated sources come in through `rewrites`, not from disk.** The walk skips gitignored files
   and the graph never reads one. A `rewrites` rule (`.loc.yaml` → `.loc.ts`) maps a changed source
   onto its generated file, and that target joins the resolvable paths for the one scan, so its

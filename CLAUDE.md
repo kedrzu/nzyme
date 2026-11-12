@@ -92,8 +92,8 @@ These always apply. Everything else — organization, naming, casting, JSDoc, de
 `docs/practice/code-conventions.md`.
 
 - Reaching for an ugly cast means something deeper is wrong: investigate, don't cast.
-- Use `assert()` from `@nzyme/utils` instead of a non-null assertion (`!`) in production code (`!` is
-  fine in tests).
+- Use `assert()` from `@nzyme/utils` instead of a non-null assertion (`!`) in production code: `!` gives
+  no runtime check (it is fine in tests).
 - Never disable a lint rule to make an error go away; ask if stuck. A rule that is genuinely wrong for a
   case is disabled in config, or with a comment saying why.
 
@@ -129,39 +129,60 @@ that no `workspace:` specifier survives packing (versions already on npm are ski
   becomes the squash commit. Never edit `version` fields or `CHANGELOG.md` by hand.
 - **Land every change you were asked to make:**
   1. Run the scoped checks.
-  2. Commit and push through `git-workflow`. Never commit red.
+  2. Commit and push through `git-workflow`. Never commit red, and never ask for permission to commit or
+     push: authorization to make the change is authorization to land it.
   3. Before reporting done, confirm `git status --porcelain` is empty and `HEAD` equals `@{u}`.
      This governs finishing a change; it never licenses making one.
 
 # Diagnosing failures — check, don't assume
 
-- **Read the real error first:** the failing assertion, the first error line of the log. Do this before
-  reasoning about causes.
-- **When everything fails, look for one shared cause** (a broken build, a missing generated file).
-  Diagnose it on one fast case, not by re-running the suite.
-- **Fix the whole class, not the instance:** once you know the mechanism, grep for every occurrence.
+Get direct evidence before naming a cause. A plausible story about why something broke is worse than none:
+it sends you fixing the wrong thing, and every wrong fix costs another verify cycle.
+
+- **Read the real error first:** the failing assertion, the browser console, the first error line of the
+  log, the resource that is supposedly missing. A timeout or a dot-reporter run describes a symptom; the
+  underlying error usually names the problem. Use the tool that shows the actual state instead of
+  inferring it.
+- **When everything fails, look for one shared cause:** 35 of 35 e2e specs failing is one broken app
+  boot, not 35 broken tests. Diagnose it on one fast case, not by re-running the suite.
+- **Fix the whole class, not the instance:** once you know the mechanism, grep for every occurrence and
+  handle them together. Finding the second one with another full run is the expensive path.
 - **An implausibly fast green is not green:** a 0 s run, or a usage banner with exit 0, did not run
-  anything.
-- **Say "I don't know yet".** State hypotheses as hypotheses, and drop them plainly when evidence kills
-  them.
+  anything. Check the log before believing a pass.
+- **Say "I don't know yet".** State hypotheses as hypotheses, and when evidence kills one, say so plainly
+  rather than sliding to the next guess.
 
 # Writing style
 
-This applies to everything you write: plans, PR descriptions, reviews, docs, chat replies.
+This applies to everything you write: plans, PR descriptions, issues, reviews, docs, chat replies.
+Templates say which sections to include; they never license length. Each rule has a check to run on your
+draft.
 
-- **Distill.** Every paragraph carries a fact, decision or instruction found nowhere else. No filler
-  ("It is important to note…"), and don't restate the request.
-- **Omit an inapplicable section rather than writing "N/A".** A table needs 3+ rows and 2+ varying
-  columns; anything smaller is bullets.
-- **Match the user's register.** Anything durable or read by agents (code, comments, docs, ADRs, skills,
-  PRs) is English. A reply only the user reads is in their language.
+- **Distill.** Check: every paragraph carries a fact, decision or instruction found nowhere else.
+- **No filler** ("It is important to note…", "In conclusion…"). Check: delete the phrase; if the rest
+  still reads, it was filler.
+- **Don't restate the request.** Check: if the opening can go without losing anything the reader doesn't
+  already know, cut it.
+- **Omit an inapplicable section rather than writing "N/A".** Check: no "N/A", "None" or "TBD" bodies.
+  The exception is a section whose emptiness is the information ("asked and closed"), and only where its
+  template says so.
+- **A table earns its syntax:** 3+ rows and 2+ varying columns. Check: a 2-row table is two bullets.
+- **Name only what the reader has seen.** A label from your own working context (`D41`, "variant B", a
+  term you coined) is noise to someone who was not inside it. Check: every ID or term is explained in the
+  same sentence, or is something the reader wrote.
+- **Match the user's register.** Check: if it reads like a press release and the user writes like an
+  engineer, rewrite it.
+- **Write in the reader's language.** Anything durable or read by agents (code, comments, docs, ADRs,
+  skills, PRs, issues) is English; a reply or plan only the user reads is in their language. Technical
+  terms stay English in both. Check: who opens this next?
 - **Hub files stay thin.** `CLAUDE.md` and a `SKILL.md` carry routing and rules; detail goes in the
-  reference they point at.
+  reference they point at. Check: a paragraph not needed on every invocation belongs one level down.
 
 # Agent tool use
 
 - **Locate, then window:** grep or the index to find the range, then read it with offset/limit.
-- **Pick subagent tiers by the work:**
+- **Pick subagent tiers by the work;** the default inherits your model, which is too expensive for
+  fan-out:
   - Haiku for mechanical search;
   - Sonnet for multi-hop or semantic exploration;
   - your own model for the reasoning.

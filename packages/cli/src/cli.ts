@@ -31,7 +31,8 @@ const builtinCommands = [
 // parse — so nothing else may be printed there (loading a `.env` logs a line to stdout).
 // `secrets`, a plugin's command, decides for itself which values it reads: nzyme adds no `.env`
 // loading on top of Bun's.
-if (!['quiet-run', 'submodule', 'git', 'secrets'].includes(process.argv[2] ?? '')) {
+// `pen`, a plugin's command, runs as git's merge driver: it needs no `.env` and prints nothing extra.
+if (!['quiet-run', 'submodule', 'git', 'secrets', 'pen'].includes(process.argv[2] ?? '')) {
     loadEnvVariables();
 }
 

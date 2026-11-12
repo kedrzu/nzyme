@@ -34,8 +34,7 @@ belongs to no component and lives in `src/harnesses/`. The UI package then lists
     "type": "module",
     "scripts": {
         "typecheck": "tsgo -p tsconfig.json",
-        "test": "playwright test",
-        "report": "playwright show-report"
+        "test": "playwright test"
     },
     "dependencies": {
         "{{scope}}/ui": "workspace:*",
@@ -80,7 +79,8 @@ export default defineConfig({
     forbidOnly: !!process.env.CI,
     // A flaky test is a red to fix, not to retry away.
     retries: 0,
-    reporter: [['list'], ['html', { open: 'never' }]],
+    // Agents run e2e and read its output: a dot per test, and the failures in full.
+    reporter: 'dot',
     use: {
         ...devices['Desktop Chrome'],
         baseURL: `http://localhost:${PORT}`,
@@ -133,6 +133,10 @@ Bun.serve({
   (viewport, `isMobile`, `hasTouch`), and set `locale`/`timezoneId` to the users'.
 - **`reducedMotion: 'reduce'`** in `use` when screen transitions leave the old screen in the DOM for a
   moment; one spec that tests the transitions opts back in.
+- **The `dot` reporter:** e2e is run by agents, and every line it prints stays in their context.
+  `dot` prints one character per test and each failure in full; the trace and screenshot of a
+  failure are on disk under `test-results/`. No `list` (a line per test) and no HTML report nobody
+  opens.
 - **Fixed port:** two worktrees running e2e at once collide on it. Derive it from the worktree (a hash
   of the path into a port range) once that happens.
 - **Whole-page accessibility:** component stories already run axe; a flow that assembles a screen can
@@ -144,8 +148,7 @@ Bun.serve({
 - `setup.build.sh` keeps its `{{if browser-tests}}` block (`references/setup-scripts.md`); the
   browser comes from the repo's `playwright` package.
 - The root `tests` script skips `*.spec.ts`, so bun never picks up a Playwright spec.
-- `packages/e2e/.gitignore` ignores `test-results/` and `playwright-report/`, which Playwright writes
-  beside its config.
+- `packages/e2e/.gitignore` ignores `test-results/`, which Playwright writes beside its config.
 - e2e is not part of the default verification: it needs the built app and the backend running. The
   repo's `verify` skill says when it runs.
 
@@ -158,8 +161,8 @@ Bun.serve({
 ## Compare
 
 - `playwright.config.ts`: by option. `reuseExistingServer: true`, a `webServer` that runs `nuxt dev`,
-  retries above 0, `fullyParallel` off, or a test-id attribute other than the component tests' — each
-  a difference. Repo projects, `globalSetup` and extra servers stay.
+  retries above 0, `fullyParallel` off, a reporter that prints a line per test or opens a report, or a
+  test-id attribute other than the component tests' — each a difference. Repo projects, `globalSetup` and extra servers stay.
 - Harnesses: component harnesses kept in the e2e package while their components are in the UI package
   are a difference (they drift from the markup they wrap); screen harnesses stay in e2e.
 - No e2e package and the request did not ask for one: nothing to propose. e2e is an element the repo

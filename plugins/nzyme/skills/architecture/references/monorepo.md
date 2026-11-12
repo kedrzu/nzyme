@@ -41,7 +41,7 @@ reference adds the files around them.
   - **Owned by one directory → that directory's own `.gitignore`**, never a nested path in the root
     one: a Nuxt app ignores `.nuxt/` and `.output/` in `packages/<app>/.gitignore`, the UI package
     ignores `storybook-static/` when it builds Storybook, `packages/e2e/.gitignore` ignores
-    `test-results/` and `playwright-report/`, `.claude/.gitignore` ignores `settings.local.json` and
+    `test-results/`, `.claude/.gitignore` ignores `settings.local.json` and
     `worktrees/` (`assets/claude-gitignore.tmpl`). The rule moves and disappears with the directory.
   - **Produced anywhere in the tree → the root**, e.g. `.wrangler/`, `.dev.vars`, `.dev.vars.*` for
     Cloudflare Workers; `target/` for Rust; `.playwright-mcp/` when agents use the Playwright MCP;

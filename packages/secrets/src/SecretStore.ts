@@ -17,13 +17,11 @@ export interface SecretStoreEntry {
  * its credentials.
  */
 export interface SecretStore {
-    /** Stable identity of the store (for Bitwarden: server, project and prefix); names it in output. */
-    id: string;
     /**
-     * The part of the store this one covers. Arbitrary: a path such as `/secrets/dev/` or a name prefix
-     * such as `FOOBAR_`. Empty means the whole store.
+     * Stable identity of the store; names it in output and keys its cache. It must include everything
+     * that tells two stores apart, the prefix among it (for Bitwarden: server, project and prefix).
      */
-    prefix: string;
+    id: string;
     /** Reads every secret under the prefix, keyed without it. */
     readAll(): Promise<Map<string, string>>;
     /** Creates or updates the given entries (keys without the prefix). */

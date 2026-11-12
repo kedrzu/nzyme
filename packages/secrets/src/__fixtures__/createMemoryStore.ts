@@ -5,7 +5,6 @@ export interface MemoryStoreOptions {
     id: string;
     /** The secrets the store holds, by key (without prefix). */
     data?: Record<string, string>;
-    prefix?: string;
     credentialEnv?: string[];
     login?: boolean;
     refresh?: boolean;
@@ -20,7 +19,6 @@ export function createMemoryStore(options: MemoryStoreOptions) {
 
     const store: SecretStore = {
         id: options.id,
-        prefix: options.prefix ?? '',
         credentialEnv: options.credentialEnv,
         readAll() {
             counter.reads++;

@@ -77,7 +77,6 @@ export function bitwarden(options: BitwardenOptions): SecretStore {
 
     return {
         id: `bitwarden:${host}:${project}${prefix === '' ? '' : `:${prefix}`}`,
-        prefix,
         credentialEnv: [ACCESS_TOKEN_ENV],
         readAll,
         write,

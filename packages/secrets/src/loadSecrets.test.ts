@@ -63,7 +63,6 @@ test('a failing store read writes nothing, even from a store that was read', asy
     const fine = createMemoryStore({ id: 'fine', data: { TELEGRAM_TOKEN: SENTINEL } });
     const broken: SecretStore = {
         id: 'broken',
-        prefix: '',
         readAll: () => Promise.reject(new Error('Store unreachable')),
         write: () => Promise.resolve(),
     };

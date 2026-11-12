@@ -77,7 +77,7 @@ test('path prefix: readAll returns only direct children, keyed without the prefi
     ]);
     const store = parameterStore({ prefix: '/secrets/dev', client });
 
-    expect(store.prefix).toBe('/secrets/dev/');
+    expect(store.id).toEndWith(':/secrets/dev/');
     expect(Object.fromEntries(await store.readAll())).toEqual({ DB_URL: 'db', API_KEY: 'api' });
     expect(calls[0]?.input).toMatchObject({ Path: '/secrets/dev', Recursive: false, WithDecryption: true });
 });

@@ -28,7 +28,6 @@ const extra = createMemoryStore({
 
 const unreadable: SecretStore = {
     id: 'unreadable',
-    prefix: '',
     readAll: () => Promise.reject(new Error('Store unreachable')),
     write: () => Promise.resolve(),
 };

@@ -62,7 +62,6 @@ export function parameterStore(options: ParameterStoreOptions): SecretStore {
     return {
         // The endpoint is part of the identity: the same prefix behind another endpoint is another store.
         id: `ssm:${region ?? 'default'}${endpoint == null ? '' : `@${endpoint}`}:${prefix}${profile == null ? '' : `:${profile}`}`,
-        prefix,
         readAll,
         write,
     };

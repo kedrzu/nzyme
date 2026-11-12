@@ -33,7 +33,7 @@ test('within the TTL readAll comes from the keychain with no store call', async 
         ]),
     );
     expect(inner.reads).toBe(1);
-    expect([...keychain.values.keys()]).toEqual(['cache:bw:']);
+    expect([...keychain.values.keys()]).toEqual(['cache:bw']);
 });
 
 test('a read older than the TTL goes to the store again', async () => {
@@ -85,16 +85,16 @@ test('refresh re-reads within the TTL and overwrites the item, dropping a vanish
     inner.values.delete('B');
     await store.refresh?.();
 
-    expect(keychain.values.get('cache:bw:')).not.toContain('"B"');
+    expect(keychain.values.get('cache:bw')).not.toContain('"B"');
     expect(await store.readAll()).toEqual(new Map([['A', 'a2']]));
     expect(inner.reads).toBe(2);
 });
 
-test('caches of two stores, or of one store with two prefixes, never mix', async () => {
+test('caches of two stores, or or of one store behind two prefixes, never mix', async () => {
     const keychain = createMemoryKeychain();
     const one = createMemoryStore('one', { A: 'from-one' });
     const two = createMemoryStore('two', { A: 'from-two' });
-    const dev = createMemoryStore('one', { A: 'from-dev' }, 'DEV_');
+    const dev = createMemoryStore('one:DEV_', { A: 'from-dev' });
 
     const storeOne = cached(one.store, { ttl: HOUR, keychain });
     const storeTwo = cached(two.store, { ttl: HOUR, keychain });
@@ -176,7 +176,7 @@ test('a corrupt or foreign-shaped item is treated as a miss with a warning', asy
         ]) {
             const inner = createMemoryStore('bw', { A: 'a' });
             const keychain = createMemoryKeychain();
-            keychain.values.set('cache:bw:', raw);
+            keychain.values.set('cache:bw', raw);
 
             expect(await cached(inner.store, { ttl: HOUR, keychain }).readAll()).toEqual(new Map([['A', 'a']]));
             expect(inner.reads).toBe(1);
@@ -196,15 +196,15 @@ test('values are kept in the keychain item and nowhere else', async () => {
 
     await store.readAll();
 
-    expect([...keychain.values.keys()]).toEqual(['cache:bw:']);
-    const item: unknown = JSON.parse(keychain.values.get('cache:bw:') ?? '');
+    expect([...keychain.values.keys()]).toEqual(['cache:bw']);
+    const item: unknown = JSON.parse(keychain.values.get('cache:bw') ?? '');
     expect(item).toHaveProperty('values', { A: SENTINEL });
 });
 
-test('delegates id, prefix, login and credentialEnv to the inner store', async () => {
+test('delegates id, login and credentialEnv to the inner store', async () => {
     const logins: string[] = [];
     const inner: SecretStore = {
-        ...createMemoryStore('bw', {}, 'DEV_').store,
+        ...createMemoryStore('bw', {}).store,
         credentialEnv: ['BWS_ACCESS_TOKEN'],
         login: async prompt => {
             logins.push(await prompt('Access token'));
@@ -215,17 +215,15 @@ test('delegates id, prefix, login and credentialEnv to the inner store', async (
     await store.login?.(() => Promise.resolve('token'));
 
     expect(store.id).toBe('bw');
-    expect(store.prefix).toBe('DEV_');
     expect(store.credentialEnv).toEqual(['BWS_ACCESS_TOKEN']);
     expect(logins).toEqual(['token']);
 });
 
-function createMemoryStore(id: string, initial: Record<string, string>, prefix = '') {
+function createMemoryStore(id: string, initial: Record<string, string>) {
     const values = new Map(Object.entries(initial));
     const counter = { reads: 0 };
     const store: SecretStore = {
         id,
-        prefix,
         readAll: () => {
             counter.reads++;
             return Promise.resolve(new Map(values));

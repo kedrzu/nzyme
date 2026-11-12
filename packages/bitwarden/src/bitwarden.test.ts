@@ -79,7 +79,7 @@ test('with a prefix readAll returns only the secrets under it, stripped, in one 
 
     const result = await store.readAll();
 
-    expect(store.prefix).toBe('DEV_');
+    expect(store.id).toEndWith(':DEV_');
     expect(result).toEqual(
         new Map([
             ['DB_URL', 'dev-db-secret'],

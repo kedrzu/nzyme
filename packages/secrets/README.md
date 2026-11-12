@@ -78,7 +78,7 @@ reads those variables. Production, whose platform provides the variables, skips 
 ## Cache
 
 `cached(store, { ttl })` keeps the whole `readAll` result of a store in the OS keychain (through `Bun.secrets`,
-service `nzyme-secrets`) as one item per store id and prefix, so restarting a dev server makes no store call. A
+service `nzyme-secrets`) as one item per store id, so restarting a dev server makes no store call. A
 write deletes the item. `ttl` is in milliseconds and required. A keychain failure or a malformed item only warns;
 the read falls through to the store. `secrets refresh` re-reads before the TTL runs out. A store larger than
 Windows Credential Manager's 2560-byte item cap will not cache on Windows (it only warns).
@@ -176,5 +176,5 @@ Bitwarden, a read-only machine account) and its writes are refused.
 - [`@nzyme/bitwarden`](../bitwarden/README.md) — Bitwarden Secrets Manager.
 - `parameterStore` from `@nzyme/aws/ssm.js` — AWS Systems Manager Parameter Store: a path prefix (`/secrets/dev/`, direct children only) or a name prefix (`FOOBAR_`); credentials from the AWS provider chain or a `profile`, no `login`; an explicit `endpoint` keeps the store on real AWS when `AWS_ENDPOINT_URL` points the process at an emulator.
 
-A store is an object implementing `SecretStore` (`id`, `prefix`, `readAll`, `write`, optional `login`,
+A store is an object implementing `SecretStore` (`id` (which includes the prefix), `readAll`, `write`, optional `login`,
 `refresh`, `credentialEnv`).

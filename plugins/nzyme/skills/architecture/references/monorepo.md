@@ -23,7 +23,8 @@ reference adds the files around them.
 - **Workspaces, `workspace:*` dependencies, the toolchain versions and the `bun-types` patch:**
   `docs/submodule-setup.md#workspace-and-dependencies`.
 - **`tsconfig.esm.json` is the only committed root tsconfig.** `nzyme monorepo` generates every
-  `tsconfig.json`, which stays gitignored: `docs/submodule-setup.md#typescript-and-generated-files`.
+  `tsconfig.json` and the root `tsconfig.cjs.json`, which stay gitignored:
+  `docs/submodule-setup.md#typescript-and-generated-files`.
   A directory whose tsconfig is hand-written (a Nuxt app extending `.nuxt/tsconfig.json`, `scripts/`
   for the Nx guard test) un-ignores it in its own `.gitignore`: `!tsconfig.json`.
 - **`nx.includedScripts: []`** in the root `package.json` — why: `docs/submodule-setup.md#nx`. Root

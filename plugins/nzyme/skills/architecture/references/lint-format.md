@@ -16,7 +16,8 @@ and never nzyme's.
   output, Markdown (formatted by ESLint), `.context` and `nzyme`.
 - **Build output in the ignores is the repo's own**, like `.gitignore` (`references/monorepo.md`):
   the assets list `dist`; add `.output` and `.nuxt` when the repo has a Nuxt app, `storybook-static`,
-  `test-results`, `playwright-report` when it produces them — to both `.oxfmtrc.json` and
+  `test-results`, `playwright-report` when it produces them, `target` when it builds Rust (a Tauri shell
+  writes the app's assets, compressed, into it and ESLint fails parsing them) — to both `.oxfmtrc.json` and
   `eslint.config.mjs`.
 - **`eslint.config.mjs`** — `assets/eslint.config.mjs.tmpl`: `markdown()`, `packageJson()` and
   `vue()` from `@nzyme/eslint` behind `globalIgnores`. ESLint does not read `.gitignore`, so build

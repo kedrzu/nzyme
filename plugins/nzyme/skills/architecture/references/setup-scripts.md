@@ -60,8 +60,9 @@ Older alternatives found in product repos and not used: a monolithic `setup.sh` 
   `# {{end}}` when a package has `nuxt.config.ts`; keep `# {{if browser-tests}}` … `# {{end}}` when
   the repo has a `playwright.config.ts` or a Vitest config with `browser.enabled`. Drop the marker
   lines either way. The Playwright install uses the repo's own `playwright` package (`bun x`), so the
-  browser matches the version the tests run; CI adds `--with-deps` because a fresh runner lacks the
-  browser's system libraries.
+  browser matches the version the tests run. It runs from the root, so the root `package.json` lists
+  `playwright` (`references/ui-package.md`); without it `bun x` fetches the latest from npm. CI adds
+  `--with-deps` because a fresh runner lacks the browser's system libraries.
 - `setup.sh.tmpl` keeps `# {{if pen}}` … `# {{end}}` when the design in Pen element is in play, and
   drops the marker lines either way.
 - `paseo.json.tmpl`: `{{branchNameInstructions}}`, `{{commitMessageInstructions}}`,

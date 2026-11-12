@@ -36,7 +36,10 @@ packages/ui/
   - root `package.json` scripts `"test:stories": "nx run-many -t test:stories"` and
     `"storybook": "bun --cwd packages/ui storybook"`; the cached `test:stories` target default is
     already in `nx.json` (`references/nx.md`);
-  - `setup.build.sh` keeps its `{{if browser-tests}}` block;
+  - `setup.build.sh` keeps its `{{if browser-tests}}` block, and the root `package.json` lists `playwright` in
+    `devDependencies` at the UI package's version: `setup.build.sh` runs `bun x playwright` from the root, and
+    without a root `playwright` bun downloads whatever version npm has, so the installed Chromium may not be the
+    one the tests drive;
   - the package gets a `files` entry in the `.oxlintrc.json` `.vue` override
     (`references/lint-format.md`);
   - the root `tests` script already skips `*.spec.ts`, so bun never runs a browser spec.
@@ -280,12 +283,13 @@ not run Nuxt. Propose the UI package once a second app or a landing site needs t
 - `{{scope}}` — the npm scope (`references/monorepo.md`).
 - `{{nzyme:<package>}}` — as in `references/nuxt-app.md`: the version `nzyme/packages/*/package.json`
   pins, the exact one where two differ.
-- Storybook, `@playwright/test`/`playwright`, `reka-ui`, `sass` and `@vue/tsconfig` are literal in
+- Storybook, `@playwright/test`/`playwright`, `reka-ui` and `@vue/tsconfig` are literal in
   the template: the versions the skeleton was tested with (2026-10-30). Bump each group together.
 
 ## Compare
 
-- `package.json`: key-wise; repo dependencies and scripts stay. A `test:stories` script missing, or a
+- `package.json`: key-wise; repo dependencies and scripts stay. No `playwright` in the root `package.json`, or one
+  at a different version than the UI package's, is a difference. A `test:stories` script missing, or a
   `vitest`/`@vitest/browser*` version split, is a difference.
 - `preview.ts`: `a11y.test` other than `'error'`, or `runOnly` without `wcag22aa`, is always a
   difference, shown even when the rest matches. Repo decorators, globals and viewports stay.

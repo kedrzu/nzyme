@@ -32,6 +32,10 @@ packages/{{app}}/
 - **Lint:** the app imports `.vue` files, so it gets a `files` entry in the `.oxlintrc.json` override
   (`references/lint-format.md`).
 - **Setup:** `setup.build.sh` keeps its `{{if nuxt}}` block (`references/setup-scripts.md`).
+- **One Vue:** the root `package.json` `overrides` pin `vue` and `vue-router` at the versions the app
+  lists. nzyme's packages ask for ranges, and after a bump the lockfile keeps resolving them to the
+  version they had, beside the app's new one; two copies of `vue` break every `provide`/`inject` and
+  fail the typecheck on mismatched `App` types.
 
 ## SPA or SSR — the one question
 
@@ -257,11 +261,13 @@ A build that reads any other gitignored file (a key, a per-worktree config) adds
 - `{{nzyme:<package>}}` — the version a package under `nzyme/packages/` pins for `<package>`, copied
   as written; where two pin it differently, the exact one. One version of `vue` across the workspace
   is not a preference: a second copy breaks every `provide`/`inject`, the IoC container included.
-- `reka-ui` and `sass` are literal in the template, the versions the skeleton was tested with
-  (2026-10-30); bump them deliberately.
+- `reka-ui` is literal in the template, the version the skeleton was tested with (2026-10-30); bump
+  it deliberately. `sass` is `{{nzyme:sass}}`: it is a peer of `vite`, so a version other than nzyme's
+  makes a second `vite` whose types (`CSSOptions` from `viteShared.ts`) the Nuxt config rejects.
 
 ## Compare
 
+- Root `overrides` without `vue` and `vue-router` at the app's versions: a difference.
 - `package.json`: key-wise. A missing `appEnvironment` override in an app with env files, or one with
   a `{projectRoot}` path, is always a difference — and so is a missing guard row. Repo scripts and
   dependencies stay.

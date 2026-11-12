@@ -5,7 +5,7 @@ import path from 'node:path';
 import { expect, test } from 'bun:test';
 
 import { checkPen } from '../checkPen.js';
-import type { PenDocument, PenNode } from '../PenDocument.js';
+import type { PenDocument, PenNode, PenOverride } from '../PenDocument.js';
 import { indexPen, parsePen, serializePen } from '../PenDocument.js';
 
 const NZYME_CLI = new URL('../../../cli/src/cli.ts', import.meta.url).pathname;
@@ -34,6 +34,33 @@ test('git merges changes each branch made to different properties cleanly, adjac
     expect(node(merged, 'price')).toMatchObject({ content: '$10 off', fontFamily: 'Mono' });
     expect(node(merged, 'button').cornerRadius).toBe(8);
     expect(await exists(path.join(repo, REPORT))).toBe(false);
+});
+
+test('git merges changes each branch made to different override keys, variables and child lists cleanly', async () => {
+    const repo = await createRepo({
+        ours: doc => {
+            doc.variables = { ...doc.variables, bg: { type: 'color', value: '#000000' } };
+            overrides(doc, 'saveButton').label = { content: '$ Save now', fill: '$accent' };
+            const screen = node(doc, 'screen');
+            screen.children = screen.children?.toReversed();
+        },
+        theirs: doc => {
+            doc.variables = { ...doc.variables, fg: { type: 'color', value: '#FFFFFF' } };
+            overrides(doc, 'promoCard').slot = { fill: '$bg' };
+            node(doc, 'row').children?.push({ type: 'text', id: 'newHint', content: 'New', fill: '$fg' });
+        },
+    });
+
+    const merge = await run(repo, 'git', 'merge', '--no-edit', 'theirs');
+
+    expect(merge.exitCode).toBe(0);
+    const merged = await readMerged(repo);
+    expect(merged.variables?.bg).toEqual({ type: 'color', value: '#000000' });
+    expect(merged.variables?.fg).toEqual({ type: 'color', value: '#FFFFFF' });
+    expect(overrides(merged, 'saveButton').label).toEqual({ content: '$ Save now', fill: '$accent' });
+    expect(overrides(merged, 'promoCard').slot).toEqual({ fill: '$bg' });
+    expect(node(merged, 'screen').children?.map(child => child.id)).toEqual(['promoCard', 'saveButton', 'row']);
+    expect(node(merged, 'row').children?.map(child => child.id)).toEqual(['price', 'tagIcon', 'newHint']);
 });
 
 test('a property both branches changed stops the merge with a valid file and a report in the git dir', async () => {
@@ -164,6 +191,12 @@ function node(doc: PenDocument, id: string): PenNode {
         throw new Error(`no node ${id}`);
     }
     return entry.node;
+}
+
+function overrides(doc: PenDocument, id: string): Record<string, PenOverride> {
+    const instance = node(doc, id);
+    instance.descendants ??= {};
+    return instance.descendants;
 }
 
 function remove(doc: PenDocument, id: string) {

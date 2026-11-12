@@ -2,8 +2,6 @@ import type { StdioOptions } from 'node:child_process';
 import { spawn } from 'node:child_process';
 import { constants } from 'node:os';
 
-import { noop } from '@nzyme/utils/functions/noop.js';
-
 /** Exit code a shell uses for a command it cannot find — reused when the command cannot be spawned. */
 const COMMAND_NOT_FOUND = 127;
 
@@ -32,6 +30,11 @@ export interface SpawnForExitCodeResult {
     exitCode: number;
     /** Why the child could not be spawned; reporting it is the caller's job. */
     error?: Error;
+    /**
+     * The signal this process received while the child ran — set when the run was interrupted (Ctrl+C,
+     * a stopping process manager), so a caller running several commands stops instead of starting the next.
+     */
+    signal?: NodeJS.Signals;
 }
 
 /**
@@ -41,6 +44,7 @@ export interface SpawnForExitCodeResult {
  *
  * While the child runs, this process outlives it: SIGTERM and SIGHUP are forwarded to the child and
  * SIGINT is ignored, so a stopped wrapper never orphans its command and the exit code stays the child's.
+ * The signal received is reported back, so a caller running commands in turn can stop after this one.
  *
  * @util
  */
@@ -49,7 +53,8 @@ export function spawnForExitCode(options: SpawnForExitCodeOptions): Promise<Spaw
 
     return new Promise<SpawnForExitCodeResult>(resolve => {
         const child = spawn(executable, args, { stdio, env, cwd });
-        process.on('SIGINT', noop);
+        let received: NodeJS.Signals | undefined;
+        process.on('SIGINT', record);
         for (const signal of FORWARDED_SIGNALS) {
             process.on(signal, forward);
         }
@@ -57,16 +62,21 @@ export function spawnForExitCode(options: SpawnForExitCodeOptions): Promise<Spaw
         child.on('error', error => settle({ exitCode: COMMAND_NOT_FOUND, error }));
         child.on('close', (code, signal) => settle({ exitCode: code ?? 128 + getSignalNumber(signal) }));
 
+        function record(signal: NodeJS.Signals) {
+            received ??= signal;
+        }
+
         function forward(signal: NodeJS.Signals) {
+            record(signal);
             child.kill(signal);
         }
 
         function settle(result: SpawnForExitCodeResult) {
-            process.off('SIGINT', noop);
+            process.off('SIGINT', record);
             for (const signal of FORWARDED_SIGNALS) {
                 process.off(signal, forward);
             }
-            resolve(result);
+            resolve(received ? { ...result, signal: received } : result);
         }
     });
 }

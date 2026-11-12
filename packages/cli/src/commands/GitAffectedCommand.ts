@@ -1,8 +1,10 @@
+import { constants } from 'node:os';
 import path from 'node:path';
 
 import { Option, UsageError } from '@nzyme/cli-core';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { spawnForExitCode } from '@nzyme/cli-core/utils/spawnForExitCode.js';
+import type { SpawnForExitCodeResult } from '@nzyme/cli-core/utils/spawnForExitCode.js';
 import { findOwningPackageDir } from '@nzyme/project-utils/findOwningPackageDir.js';
 import { getPackages } from '@nzyme/project-utils/getPackages.js';
 import { buildImportGraph } from '@nzyme/project-utils/importGraph/buildImportGraph.js';
@@ -44,7 +46,8 @@ export class GitAffectedCommand extends Command {
             \`-- <cmd…>\`: runs the command with the files appended as arguments, exiting with its
             exit code. \`--per-package\`
             runs it once per owning package, sequentially, in the package directory with paths
-            relative to it, and exits with the first non-zero code. No affected files: nothing
+            relative to it, and exits with the first non-zero code; an interrupt (Ctrl+C, SIGTERM,
+            SIGHUP) stops the run after the current package. No affected files: nothing
             runs, exit 0.
 
             Base: \`--base <ref>\` (or \`-b <ref>\`); in GitHub Actions the pull request base or
@@ -131,9 +134,14 @@ export class GitAffectedCommand extends Command {
             if (args.perPackage) {
                 this.context.stderr.write(`nzyme git affected: ${group.dir || '.'} (${group.files.length} files)\n`);
             }
-            const groupExitCode = await this.runCommand(args.command, path.join(root, group.dir), group.files);
+            const result = await this.runCommand(args.command, path.join(root, group.dir), group.files);
             if (exitCode === 0) {
-                exitCode = groupExitCode;
+                exitCode = result.exitCode;
+            }
+            if (result.signal) {
+                // An interrupted run stops here: the next package must not start after Ctrl+C or a SIGTERM.
+                this.context.stderr.write(`nzyme git affected: stopped by ${result.signal}\n`);
+                return exitCode || 128 + constants.signals[result.signal];
             }
         }
 
@@ -141,19 +149,23 @@ export class GitAffectedCommand extends Command {
     }
 
     /** Runs the command in `cwd` with `files` (relative to it) as trailing arguments. */
-    private async runCommand(command: AffectedRunCommand, cwd: string, files: string[]): Promise<number> {
-        const { exitCode, error } = await spawnForExitCode({
+    private async runCommand(
+        command: AffectedRunCommand,
+        cwd: string,
+        files: string[],
+    ): Promise<SpawnForExitCodeResult> {
+        const result = await spawnForExitCode({
             executable: command.executable,
             args: [...command.args, ...files],
             stdio: 'inherit',
             cwd,
         });
 
-        if (error) {
-            this.context.stderr.write(`nzyme git affected: ${command.executable}: ${error.message}\n`);
+        if (result.error) {
+            this.context.stderr.write(`nzyme git affected: ${command.executable}: ${result.error.message}\n`);
         }
 
-        return exitCode;
+        return result;
     }
 }
 

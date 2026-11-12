@@ -112,6 +112,20 @@ test('--per-package runs every package after a failure and exits with the first 
     );
 });
 
+test('--per-package stops after the current package when the run is interrupted', async () => {
+    const log = path.join(outDir, 'interrupted.txt');
+    const script = 'echo "$PWD" >> "$OUT/interrupted.txt"; exec sleep 5';
+
+    const result = await runAffected(['--per-package', '*.test.ts', '--', 'sh', '-c', script], child => {
+        // Sent to the wrapper alone, as a process manager would, once the first package is running.
+        void waitForFile(log).then(() => child.kill('SIGTERM'));
+    });
+
+    expect(result.exitCode).toBe(143);
+    expect(result.stderr).toContain('stopped by SIGTERM');
+    expect(await fs.readFile(log, 'utf8')).toBe(`${repo}/packages/alpha\n`);
+});
+
 test('a changed file selects the importers of its gitignored rewrite target', async () => {
     const yaml = path.join(repo, 'packages/beta/src/Messages.loc.yaml');
     await fs.writeFile(yaml, 'hello: Hi\n');
@@ -157,13 +171,14 @@ test('a missing base fails instead of selecting nothing', async () => {
     expect(result.stderr).toContain('origin/nope');
 });
 
-async function runAffected(args: string[]) {
+async function runAffected(args: string[], onSpawn?: (child: Bun.Subprocess) => void) {
     const child = Bun.spawn([process.execPath, '--conditions=source', CLI_PATH, 'git', 'affected', ...args], {
         cwd: repo,
         env: { ...HERMETIC_GIT_ENV, OUT: outDir, GITHUB_ACTIONS: '' },
         stdout: 'pipe',
         stderr: 'pipe',
     });
+    onSpawn?.(child);
 
     const [stdout, stderr, exitCode] = await Promise.all([
         new Response(child.stdout).text(),
@@ -171,6 +186,12 @@ async function runAffected(args: string[]) {
         child.exited,
     ]);
     return { stdout, stderr, exitCode };
+}
+
+async function waitForFile(file: string): Promise<void> {
+    while (!(await fs.exists(file))) {
+        await Bun.sleep(20);
+    }
 }
 
 function git(...args: string[]): string {

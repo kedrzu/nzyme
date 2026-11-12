@@ -12,7 +12,7 @@ change to one file of a foundational package ran practically the whole suite. St
 tests were not scoped at all, the base was hard-wired to `origin/main`, and the mechanism was
 consumer-specific bash although other nzyme consumers need the same thing.
 
-`nzyme affected <pattern…> [-- <cmd…>]` selects files instead: the files changed against a base,
+`nzyme git affected <pattern…> [-- <cmd…>]` selects files instead: the files changed against a base,
 plus everything importing them, transitively, filtered by the patterns (`*.test.ts`,
 `packages/ui/src/**/*.stories.tsx`). Three questions decide its shape: how the importers of a change
 are found, what to do about dependencies imports do not show, and which base a change is measured
@@ -45,19 +45,23 @@ correct where text matching is not. The graph is `buildImportGraph` in `@nzyme/p
 used by healed's architecture check, so one parser serves both.
 
 - **Implicit dependencies are parsed, not banned.** Vue `<script|template|style src>`, Sass
-  `@use`/`@import`/`@forward` and `new URL('literal', import.meta.url)` are edges. No lint rule
+  `@use`/`@import`/`@forward` and `new URL('literal', import.meta.url)` naming a file are edges. A
+  URL naming a directory is no edge — an edge to every file under it would make a file depend on a
+  whole package; a changed file there falls to the package fallback below. No lint rule
   forbids other implicit forms; the residue is covered by conservative fallbacks: full-run triggers
   (lockfile, tsconfig, test-runner config), a package's `package.json` standing for all its sources,
   and a changed non-source file nothing imports (a fixture read through `fs`) selecting every
   matching file of its package.
-- **Generated sources are reached, not configured.** A gitignored `x.loc.ts` becomes a node because
-  an import resolves to it; a `rewrites` rule (`.loc.yaml` → `.loc.ts`) maps its source onto it.
-  Rewrites are suffix → suffix — the smallest syntax covering the known cases (`.handler.ts` →
+- **Generated sources come in through `rewrites`, not from disk.** The walk skips gitignored files
+  and the graph never reads one. A `rewrites` rule (`.loc.yaml` → `.loc.ts`) maps a changed source
+  onto its generated file, and that target joins the resolvable paths for the one scan, so its
+  importers are found. Parsing generated files would add no edge worth having: a `.loc.ts` imports
+  only a type from `@nzyme/i18n`. Rewrites are suffix → suffix — the smallest syntax covering the known cases (`.handler.ts` →
   `.ts`, `.loc.yaml` → `.loc.ts`). A file that matched a rewrite skips the package fallback: the rule
   names its dependents.
 - **Type-only imports count.** Bun erases them, so they over-select; the selection stays
-  conservative for now, and dropping `typeOnly` edges (the flag is already on every edge) is a
-  separate optimisation. Changed `.d.ts` files, in contrast, select nothing and are not even seeds:
+  conservative for now; edges do not record whether an import is type-only, and dropping type-only
+  edges would be a separate optimisation. Changed `.d.ts` files, in contrast, select nothing and are not even seeds:
   a declaration file is never executed, its consumers are type-level only, and the typecheck covers
   it.
 - **Triggers and `ignore` match the root-relative path; only selection patterns match a basename.**
@@ -67,11 +71,13 @@ used by healed's architecture check, so one parser serves both.
 - **`ignore` is about changes, not graph nodes.** It is not passed to the graph walk: an ignored path
   (`docs/**`) can still be imported, and pruning it would cut the chain from a change to its tests.
   It only means "a change of this file selects nothing".
-- **Base.** Explicit `--base` / `NZYME_AFFECTED_BASE`, then the GitHub Actions pull request base or
-  push `before`, then — opt-in — `--base pr` through `gh` (about 0.7 s, needs the network), otherwise
-  the nearest merge-base among the configured trunks (`baseBranches`, as `origin/<name>`).
+- **Base.** Explicit `--base` (`-b`), then the GitHub Actions pull request base or
+  push `before`, otherwise the nearest merge-base among the configured trunks (`baseBranches`, as `origin/<name>`).
   *Measured 2026-11-10:* the auto detection costs 35 ms for three candidates. An unresolvable base
-  fails the command; it never yields an empty selection.
+  fails the command; it never yields an empty selection. The resolution lives in one place,
+  `resolveAffectedBase()` in `@nzyme/project-utils`, and `nzyme git base` prints its ref: a
+  script that scopes other checks to the change (formatting, a typecheck) takes the base from there
+  and hands it back as `--base`, so every check measures the same change.
 - **E2E is out of scope.** A spec reaches the code through a browser and HTTP, which the graph
   cannot see; e2e keeps running in full.
 

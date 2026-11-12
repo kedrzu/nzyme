@@ -6,7 +6,6 @@ import path from 'node:path';
 import { afterEach, expect, setDefaultTimeout, test } from 'bun:test';
 
 import { collectChangedFiles } from './collectChangedFiles.js';
-import { resolveAffectedBase } from './resolveAffectedBase.js';
 
 // Every test builds real git repositories.
 setDefaultTimeout(60_000);
@@ -52,11 +51,6 @@ async function createRepo(files?: Record<string, string>): Promise<string> {
     git(dir, 'add', '-A');
     git(dir, 'commit', '-q', '-m', 'initial');
     return dir;
-}
-
-/** Simulates a remote-tracking branch without a remote. */
-function setOrigin(repo: string, name: string, sha: string): void {
-    git(repo, 'update-ref', `refs/remotes/origin/${name}`, sha);
 }
 
 function commitFile(repo: string, file: string, message = file): string {
@@ -184,144 +178,4 @@ test('an uninitialised submodule is skipped, unless its commit changed since the
 test('an unknown merge-base throws instead of returning an empty list', async () => {
     const repo = await createRepo();
     await expect(collectChangedFiles({ root: repo, mergeBase: 'deadbeef' })).rejects.toThrow();
-});
-
-const NO_ENV = {};
-
-test('auto picks the candidate with the fewest commits since its merge-base', async () => {
-    const repo = await createRepo();
-    const root = git(repo, 'rev-parse', 'HEAD');
-    await write(repo, 'one.ts');
-    const release = commitFile(repo, 'one');
-    await write(repo, 'two.ts');
-    commitFile(repo, 'two');
-    setOrigin(repo, 'main', root);
-    setOrigin(repo, 'release', release);
-
-    expect(await resolveAffectedBase({ root: repo, baseBranches: ['main', 'release'], env: NO_ENV })).toEqual({
-        ref: 'origin/release',
-        mergeBase: release,
-        source: 'auto',
-    });
-});
-
-test('auto breaks ties by candidate order and skips candidates that do not exist', async () => {
-    const repo = await createRepo();
-    const root = git(repo, 'rev-parse', 'HEAD');
-    setOrigin(repo, 'develop', root);
-    setOrigin(repo, 'main', root);
-
-    const base = await resolveAffectedBase({ root: repo, baseBranches: ['missing', 'develop', 'main'], env: NO_ENV });
-    expect(base.ref).toBe('origin/develop');
-});
-
-test('auto throws naming the candidates when none exists', async () => {
-    const repo = await createRepo();
-    await expect(resolveAffectedBase({ root: repo, baseBranches: ['main', 'dev'], env: NO_ENV })).rejects.toThrow(
-        /origin\/main, origin\/dev/,
-    );
-});
-
-test('the explicit flag beats the env variable, which beats GitHub Actions and auto', async () => {
-    const repo = await createRepo();
-    const first = git(repo, 'rev-parse', 'HEAD');
-    await write(repo, 'one.ts');
-    const second = commitFile(repo, 'one');
-    await write(repo, 'two.ts');
-    commitFile(repo, 'two');
-    setOrigin(repo, 'main', second);
-    setOrigin(repo, 'other', first);
-    const env = { NZYME_AFFECTED_BASE: 'origin/other', GITHUB_ACTIONS: 'true', GITHUB_BASE_REF: 'main' };
-
-    expect(await resolveAffectedBase({ root: repo, base: first, baseBranches: ['main'], env })).toEqual({
-        ref: first,
-        mergeBase: first,
-        source: 'explicit',
-    });
-    expect(await resolveAffectedBase({ root: repo, baseBranches: ['main'], env })).toMatchObject({
-        ref: 'origin/other',
-        source: 'explicit',
-    });
-});
-
-test('an explicit ref that does not exist throws', async () => {
-    const repo = await createRepo();
-    await expect(
-        resolveAffectedBase({ root: repo, base: 'origin/nope', baseBranches: ['main'], env: NO_ENV }),
-    ).rejects.toThrow(/origin\/nope/);
-});
-
-test('GitHub pull_request uses origin/<GITHUB_BASE_REF>', async () => {
-    const repo = await createRepo();
-    const root = git(repo, 'rev-parse', 'HEAD');
-    await write(repo, 'one.ts');
-    commitFile(repo, 'one');
-    setOrigin(repo, 'main', root);
-    setOrigin(repo, 'release', root);
-
-    const base = await resolveAffectedBase({
-        root: repo,
-        baseBranches: ['main'],
-        env: { GITHUB_ACTIONS: 'true', GITHUB_EVENT_NAME: 'pull_request', GITHUB_BASE_REF: 'release' },
-    });
-    expect(base).toEqual({ ref: 'origin/release', mergeBase: root, source: 'github-pr' });
-});
-
-test('GitHub push uses the event before sha; an all-zero before falls through to auto', async () => {
-    const repo = await createRepo();
-    const root = git(repo, 'rev-parse', 'HEAD');
-    await write(repo, 'one.ts');
-    commitFile(repo, 'one');
-    setOrigin(repo, 'main', root);
-    const eventPath = path.join(repo, '..', `event-${path.basename(repo)}.json`);
-    const env = { GITHUB_ACTIONS: 'true', GITHUB_EVENT_NAME: 'push', GITHUB_EVENT_PATH: eventPath };
-
-    await fs.writeFile(eventPath, JSON.stringify({ before: root }));
-    expect(await resolveAffectedBase({ root: repo, baseBranches: ['main'], env })).toEqual({
-        ref: root,
-        mergeBase: root,
-        source: 'github-push',
-    });
-
-    await fs.writeFile(eventPath, JSON.stringify({ before: '0'.repeat(40) }));
-    expect(await resolveAffectedBase({ root: repo, baseBranches: ['main'], env })).toMatchObject({
-        ref: 'origin/main',
-        source: 'auto',
-    });
-    await fs.rm(eventPath);
-});
-
-test('--base pr asks gh for the base branch of the current pull request', async () => {
-    const repo = await createRepo();
-    const root = git(repo, 'rev-parse', 'HEAD');
-    setOrigin(repo, 'release', root);
-    const calls: string[][] = [];
-
-    const base = await resolveAffectedBase({
-        root: repo,
-        base: 'pr',
-        baseBranches: ['main'],
-        env: NO_ENV,
-        runGh: args => {
-            calls.push(args);
-            return Promise.resolve('release\n');
-        },
-    });
-    expect(base).toEqual({ ref: 'origin/release', mergeBase: root, source: 'pr' });
-    expect(calls[0]?.slice(0, 2)).toEqual(['pr', 'view']);
-});
-
-test('a failing gh throws instead of falling back to auto', async () => {
-    const repo = await createRepo();
-    setOrigin(repo, 'main', git(repo, 'rev-parse', 'HEAD'));
-
-    await expect(
-        resolveAffectedBase({
-            root: repo,
-            base: 'pr',
-            baseBranches: ['main'],
-            env: NO_ENV,
-            runGh: () => Promise.reject(new Error('gh: no pull requests found')),
-        }),
-    ).rejects.toThrow(/no pull requests/);
 });

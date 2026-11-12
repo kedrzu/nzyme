@@ -7,17 +7,15 @@ import { findOwningPackageDir } from '@nzyme/project-utils/findOwningPackageDir.
 import { getPackages } from '@nzyme/project-utils/getPackages.js';
 import { buildImportGraph } from '@nzyme/project-utils/importGraph/buildImportGraph.js';
 import { relativePosixPath } from '@nzyme/project-utils/relativePosixPath.js';
+import { resolveAffectedBase } from '@nzyme/project-utils/resolveAffectedBase.js';
+import type { AffectedBase } from '@nzyme/project-utils/resolveAffectedBase.js';
 
 import { readAffectedConfig } from '../affected/AffectedConfig.js';
 import { collectChangedFiles } from '../affected/collectChangedFiles.js';
-import { resolveAffectedBase } from '../affected/resolveAffectedBase.js';
-import type { AffectedBase } from '../affected/resolveAffectedBase.js';
+import { rewriteChangedPath } from '../affected/rewriteChangedPath.js';
 import type { AffectedSelection } from '../affected/selectAffectedFiles.js';
 import { selectAffectedFiles } from '../affected/selectAffectedFiles.js';
 import { GitRepository } from '../submodule/GitRepository.js';
-
-/** The environment variable a run command receives the affected files in, `\n`-separated. */
-const FILES_ENV = 'NZYME_AFFECTED_FILES';
 
 /**
  * Selects the files a change can affect — the changed files plus everything importing them,
@@ -27,14 +25,14 @@ const FILES_ENV = 'NZYME_AFFECTED_FILES';
  *
  * stdout is a contract (callers parse the file list), so every diagnostic goes to stderr.
  */
-export class AffectedCommand extends Command {
-    static override paths = [['affected']];
+export class GitAffectedCommand extends Command {
+    static override paths = [['git', 'affected']];
 
     static override usage = Command.Usage({
         category: 'Testing',
         description: 'Select the files a change can affect, and print them or run a command on them',
         details: `
-            Usage: \`nzyme affected [--base <ref>|pr] [--per-package] <pattern…> [-- <cmd…>]\`.
+            Usage: \`nzyme git affected [--base|-b <ref>] [--per-package] <pattern…> [-- <cmd…>]\`.
 
             Diffs the working tree (commits, staged, unstaged, untracked; submodules against the
             gitlink of the base) against the base, scans the import graph once and selects the
@@ -43,15 +41,15 @@ export class AffectedCommand extends Command {
             (\`packages/{ui,app}/**/*.stories.tsx\`).
 
             Without \`--\`: prints the selected root-relative paths, one per line, to stdout. With
-            \`-- <cmd…>\`: runs the command with the files appended as arguments and in
-            \`${FILES_ENV}\` (newline-separated), exiting with its exit code. \`--per-package\`
+            \`-- <cmd…>\`: runs the command with the files appended as arguments, exiting with its
+            exit code. \`--per-package\`
             runs it once per owning package, sequentially, in the package directory with paths
             relative to it, and exits with the first non-zero code. No affected files: nothing
             runs, exit 0.
 
-            Base: \`--base <ref>\` or \`NZYME_AFFECTED_BASE\`; in GitHub Actions the pull request
-            base or the push \`before\`; \`--base pr\` asks \`gh\` for the current pull request's
-            base; otherwise the nearest of \`baseBranches\` (as \`origin/<name>\`).
+            Base: \`--base <ref>\` (or \`-b <ref>\`); in GitHub Actions the pull request base or
+            the push \`before\`; otherwise the nearest of \`baseBranches\` (as
+            \`origin/<name>\`). \`nzyme git base\` prints the base this resolves to.
 
             Configured by the \`nzyme.affected\` field of the root package.json, all optional:
             \`baseBranches\` (default \`["main"]\`), \`aliases\` ({ prefix, packages }[]),
@@ -60,17 +58,17 @@ export class AffectedCommand extends Command {
             root-relative path, never the basename).
         `,
         examples: [
-            ['List the tests affected by the change', "nzyme affected '*.test.ts'"],
-            ['Run the affected tests', "nzyme affected '*.test.ts' -- bun test"],
+            ['List the tests affected by the change', "nzyme git affected '*.test.ts'"],
+            ['Run the affected tests', "nzyme git affected '*.test.ts' -- bun test"],
             [
                 'Run affected stories per package',
-                "nzyme affected --per-package 'packages/*/src/**/*.stories.tsx' -- bunx vitest run --project=storybook",
+                "nzyme git affected --per-package 'packages/*/src/**/*.stories.tsx' -- bunx vitest run --project=storybook",
             ],
         ],
     });
 
     /**
-     * Everything after `affected`, parsed by {@link parseAffectedArgs}: clipanion cannot tell the
+     * Everything after `git affected`, parsed by {@link parseAffectedArgs}: clipanion cannot tell the
      * patterns from the command after `--` (a rest list swallows both, and a proxy cannot sit beside one).
      */
     args = Option.Proxy({ name: 'args' });
@@ -82,7 +80,7 @@ export class AffectedCommand extends Command {
      */
     override async run() {
         if (isHelpRequest(this.args)) {
-            this.context.stdout.write(this.cli.usage(AffectedCommand, { detailed: true }));
+            this.context.stdout.write(this.cli.usage(GitAffectedCommand, { detailed: true }));
             return 0;
         }
 
@@ -93,13 +91,7 @@ export class AffectedCommand extends Command {
         const base = await resolveAffectedBase({
             root,
             base: args.base,
-            env: {
-                NZYME_AFFECTED_BASE: process.env.NZYME_AFFECTED_BASE,
-                GITHUB_ACTIONS: process.env.GITHUB_ACTIONS,
-                GITHUB_BASE_REF: process.env.GITHUB_BASE_REF,
-                GITHUB_EVENT_NAME: process.env.GITHUB_EVENT_NAME,
-                GITHUB_EVENT_PATH: process.env.GITHUB_EVENT_PATH,
-            },
+            env: process.env,
             baseBranches: config.baseBranches,
         });
         const changedFiles = await collectChangedFiles({ root, mergeBase: base.mergeBase });
@@ -107,7 +99,11 @@ export class AffectedCommand extends Command {
             root,
             packages,
             aliases: config.aliases,
-            extraPaths: changedFiles.filter(file => file.deleted).map(file => file.path),
+            // Deleted files and rewrite targets (a gitignored `x.loc.ts`) are not walked, yet their importers count.
+            extraPaths: changedFiles.flatMap(file => [
+                ...(file.deleted ? [file.path] : []),
+                ...rewriteChangedPath(file.path, config.rewrites),
+            ]),
         });
 
         const packageDirs = packages
@@ -133,7 +129,7 @@ export class AffectedCommand extends Command {
         let exitCode = 0;
         for (const group of groups) {
             if (args.perPackage) {
-                this.context.stderr.write(`nzyme affected: ${group.dir || '.'} (${group.files.length} files)\n`);
+                this.context.stderr.write(`nzyme git affected: ${group.dir || '.'} (${group.files.length} files)\n`);
             }
             const groupExitCode = await this.runCommand(args.command, path.join(root, group.dir), group.files);
             if (exitCode === 0) {
@@ -144,25 +140,24 @@ export class AffectedCommand extends Command {
         return exitCode;
     }
 
-    /** Runs the command in `cwd` with `files` (relative to it) as trailing arguments and in {@link FILES_ENV}. */
+    /** Runs the command in `cwd` with `files` (relative to it) as trailing arguments. */
     private async runCommand(command: AffectedRunCommand, cwd: string, files: string[]): Promise<number> {
         const { exitCode, error } = await spawnForExitCode({
             executable: command.executable,
             args: [...command.args, ...files],
             stdio: 'inherit',
-            env: { ...process.env, [FILES_ENV]: files.join('\n') },
             cwd,
         });
 
         if (error) {
-            this.context.stderr.write(`nzyme affected: ${command.executable}: ${error.message}\n`);
+            this.context.stderr.write(`nzyme git affected: ${command.executable}: ${error.message}\n`);
         }
 
         return exitCode;
     }
 }
 
-/** The parsed arguments of `nzyme affected`. */
+/** The parsed arguments of `nzyme git affected`. */
 interface AffectedArgs {
     base?: string;
     perPackage: boolean;
@@ -171,7 +166,7 @@ interface AffectedArgs {
     command?: AffectedRunCommand;
 }
 
-/** The command `nzyme affected` runs on the selected files. */
+/** The command `nzyme git affected` runs on the selected files. */
 interface AffectedRunCommand {
     executable: string;
     args: string[];
@@ -191,7 +186,7 @@ function isHelpRequest(argv: string[]): boolean {
 }
 
 /**
- * Parses `[--base <ref>|--base=<ref>] [--per-package] <pattern…> [-- <cmd…>]`. Options may stand
+ * Parses `[--base <ref>|--base=<ref>|-b <ref>] [--per-package] <pattern…> [-- <cmd…>]`. Options may stand
  * anywhere before `--`; everything after it is the command, untouched.
  */
 function parseAffectedArgs(argv: string[]): AffectedArgs {
@@ -203,10 +198,10 @@ function parseAffectedArgs(argv: string[]): AffectedArgs {
         const token = own[i] ?? '';
         if (token === '--per-package') {
             result.perPackage = true;
-        } else if (token === '--base') {
+        } else if (token === '--base' || token === '-b') {
             const value = own[++i];
             if (value === undefined || value === '') {
-                throw new UsageError('--base needs a value: a ref, or `pr`.');
+                throw new UsageError(`${token} needs a ref.`);
             }
             result.base = value;
         } else if (token.startsWith('--base=') && token.length > '--base='.length) {
@@ -219,7 +214,7 @@ function parseAffectedArgs(argv: string[]): AffectedArgs {
     }
 
     if (result.patterns.length === 0) {
-        throw new UsageError('Pass at least one pattern, e.g. `nzyme affected "*.test.ts"`.');
+        throw new UsageError('Pass at least one pattern, e.g. `nzyme git affected "*.test.ts"`.');
     }
 
     if (separator !== -1) {
@@ -257,7 +252,7 @@ function groupByPackage(files: string[], packageDirs: string[]): AffectedFileGro
 /** The one diagnostic line of a run: base, changed file count, full-run reason and selection size. */
 function describeRun(base: AffectedBase, changedCount: number, selection: AffectedSelection): string {
     const parts = [
-        `nzyme affected: base ${base.ref} (${base.source}, merge-base ${base.mergeBase.slice(0, 10)})`,
+        `nzyme git affected: base ${base.ref} (${base.source}, merge-base ${base.mergeBase.slice(0, 10)})`,
         `${changedCount} changed files`,
     ];
     if (selection.fullRun) {

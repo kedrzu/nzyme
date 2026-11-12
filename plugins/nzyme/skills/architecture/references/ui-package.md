@@ -34,7 +34,7 @@ packages/ui/
   `setup.build.sh` installs a browser for (`references/setup-scripts.md`).
 - **Root wiring:**
   - root `package.json` scripts
-    `"test:stories": "bun nzyme affected --per-package 'packages/ui/**/*.stories.tsx' 'packages/ui/src/**/*.spec.ts' -- bun run test:stories"`
+    `"test:stories": "bun nzyme git affected --per-package 'packages/ui/**/*.stories.tsx' 'packages/ui/src/**/*.spec.ts' -- bun run test:stories"`
     — the stories and specs the change can break, handed to the package's own script
     (`references/affected-tests.md`) — `"test:stories:full": "nx run-many -t test:stories"` and
     `"storybook": "bun --cwd packages/ui storybook"`; the cached `test:stories` target default is

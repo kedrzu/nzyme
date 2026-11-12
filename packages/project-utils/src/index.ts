@@ -17,6 +17,7 @@ export * from './loadEnvVariables.js';
 export * from './lsofListenArgs.js';
 export * from './readEnvVariables.js';
 export * from './relativePosixPath.js';
+export * from './resolveAffectedBase.js';
 export * from './resolveLocalPath.js';
 export * from './resolveModulePath.js';
 export * from './resolveProjectPath.js';

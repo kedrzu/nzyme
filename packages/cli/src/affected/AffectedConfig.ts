@@ -7,8 +7,9 @@ import { readNzymeConfig } from '../utils/readNzymeConfig.js';
 const { parseArray, parseStringArray, parseString, configError } = createConfigParsers('affected');
 
 /**
- * Configuration of `nzyme affected`, read from the `nzyme.affected` field of the repo's root
- * `package.json`. Everything is optional; {@link readAffectedConfig} fills in the defaults.
+ * Configuration of `nzyme git affected` (`baseBranches` also of `nzyme git base`), read from the
+ * `nzyme.affected` field of the repo's root `package.json`. Everything is optional;
+ * {@link readAffectedConfig} fills in the defaults.
  *
  * `fullRunTriggers` and `ignore` are globs (`Bun.Glob`) always matched against the root-relative
  * path — unlike the command's selection patterns, a glob without `/` is NOT matched against the

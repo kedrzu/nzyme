@@ -4,8 +4,9 @@ import { execute } from '@nzyme/cli-core/execute.js';
 import { initialize } from '@nzyme/cli-core/initialize.js';
 import { loadEnvVariables } from '@nzyme/project-utils/loadEnvVariables.js';
 
-import { AffectedCommand } from './commands/AffectedCommand.js';
 import { DepcheckCommand } from './commands/DepcheckCommand.js';
+import { GitAffectedCommand } from './commands/GitAffectedCommand.js';
+import { GitBaseCommand } from './commands/GitBaseCommand.js';
 import { IndexCommand } from './commands/IndexCommand.js';
 import { LocaliseCommand } from './commands/LocaliseCommand.js';
 import { MonorepoCommand } from './commands/MonorepoCommand.js';
@@ -19,17 +20,18 @@ const builtinCommands = [
     LocaliseCommand,
     IndexCommand,
     QuietRunCommand,
-    AffectedCommand,
+    GitAffectedCommand,
+    GitBaseCommand,
     SubmoduleBumpCommand,
 ];
 
 // `quiet-run` wraps an arbitrary command: it hands that command the environment untouched (the
 // command loads its own `.env` if it wants one) and prints nothing beyond its own summary.
-// `submodule` and `affected` need no `.env`, and their stdout is a contract callers parse — so
-// nothing else may be printed there (loading a `.env` logs a line to stdout).
+// `submodule` and `git` (`git affected`, `git base`) need no `.env`, and their stdout is a contract callers
+// parse — so nothing else may be printed there (loading a `.env` logs a line to stdout).
 // `secrets`, a plugin's command, decides for itself which values it reads: nzyme adds no `.env`
 // loading on top of Bun's.
-if (!['quiet-run', 'submodule', 'affected', 'secrets'].includes(process.argv[2] ?? '')) {
+if (!['quiet-run', 'submodule', 'git', 'secrets'].includes(process.argv[2] ?? '')) {
     loadEnvVariables();
 }
 

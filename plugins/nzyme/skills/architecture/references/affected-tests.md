@@ -1,12 +1,12 @@
 # Scoped tests
 
 The default test scripts run only the tests the current change can break; a `:full` variant runs
-everything. Selection is `nzyme affected` (`@nzyme/cli`): one scan builds the repo's import graph,
+everything. Selection is `nzyme git affected` (`@nzyme/cli`): one scan builds the repo's import graph,
 then every test file whose imports reach a file changed since the base is selected. On a ~6k-file
 repo the scan takes about a second, and a change to a leaf module selects one test file where a
 package-level selection selected hundreds. How the graph is built and why it is one scan rather than
 a grep per file: `nzyme/docs/decisions/file-level-affected-selection-by-full-import-scan.md`. Flags:
-`bun nzyme affected --help`.
+`bun nzyme git affected --help`.
 
 ## Scripts
 
@@ -15,7 +15,7 @@ a grep per file: `nzyme/docs/decisions/file-level-affected-selection-by-full-imp
 |`tests`|`tests:full`|Setup scripts (`assets/package.json.tmpl`)|
 |`test:stories`|`test:stories:full`|UI package (`references/ui-package.md`)|
 
-- `tests` passes `TZ=UTC` and the test patterns to `nzyme affected`, which appends the selected files
+- `tests` passes `TZ=UTC` and the test patterns to `nzyme git affected`, which appends the selected files
   to `bun test`. The patterns name `*.test.ts` only, so a browser `*.spec.ts` never reaches bun.
 - `test:stories` runs with `--per-package`: each package's own `test:stories` script gets the
   selected files, relative to the package, as Vitest filters.
@@ -34,7 +34,8 @@ gate checks everything.
 - **`baseBranches`** — `main`, plus the production branch when the repo has one (`release`,
   `references/github.md`). The base is the candidate with the nearest merge-base, so a hotfix branch
   off `release` diffs against `release`. On GitHub Actions the event's base replaces it, and
-  `NZYME_AFFECTED_BASE` replaces both.
+  `--base <ref>` (`-b`) replaces both. `nzyme git base` prints the resolved base, for a script
+  that scopes other checks (format, typecheck) to the same change and hands it back as `--base`.
 - **`aliases`** — `{ "prefix": "@/", "packages": [...] }` listing every Nuxt app: their `@/` alias
   comes from the generated `.nuxt/tsconfig.json`, which the graph does not read.
 - **`rewrites`** — `{ "from": ".handler.ts", "to": ".ts" }` and `{ "from": ".loc.yaml", "to":
@@ -66,7 +67,7 @@ the `:full` variants, so the full protocol is what proves it.
 
 ## Compare
 
-- No `nzyme.affected` block, or `tests` without `nzyme affected`: a difference, unless
+- No `nzyme.affected` block, or `tests` without `nzyme git affected`: a difference, unless
   `ARCHITECTURE.md` records why the repo runs everything.
 - A `tests:full` or `test:stories:full` missing next to its default: a difference.
 - `fullRunTriggers` or `ignore` with entries of the repo's own (another config file, a generated

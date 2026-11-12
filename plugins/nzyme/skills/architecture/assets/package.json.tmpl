@@ -24,7 +24,7 @@
         "format:check": "oxfmt --check --disable-nested-config . && bun run format:md:check",
         "format:md": "eslint --fix \"**/*.md\"",
         "format:md:check": "eslint \"**/*.md\"",
-        "tests": "TZ=UTC bun nzyme affected 'packages/**/*.test.ts' 'scripts/**/*.test.ts' -- bun test --timeout 10000",
+        "tests": "TZ=UTC bun nzyme git affected 'packages/**/*.test.ts' 'scripts/**/*.test.ts' -- bun test --timeout 10000",
         "tests:full": "TZ=UTC bun test --timeout 10000 --pass-with-no-tests --path-ignore-patterns='**/*.spec.ts' --path-ignore-patterns='**/dist/**' ./packages ./scripts",
         "index": "nzyme index",
         "clean": "del \"**/dist\" \"**/.nx\" \"**/.nzyme\" \"**/*.tsbuildinfo\" \"!**/node_modules/**\"",

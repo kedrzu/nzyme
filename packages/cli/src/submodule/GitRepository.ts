@@ -36,13 +36,19 @@ export class GitRepository {
      * submodule at `HEAD`, so a typo in `--path` cannot silently act on nothing.
      */
     async readGitlink(submodulePath: string): Promise<string> {
-        const entry = await this.git(['ls-tree', 'HEAD', '--', submodulePath]);
-        const match = /^(\d+) \w+ ([0-9a-f]+)\t/.exec(entry);
-        if (!match?.[2] || match[1] !== GITLINK_MODE) {
+        const gitlink = await this.findGitlink('HEAD', submodulePath);
+        if (gitlink === null) {
             throw new Error(`"${submodulePath}" is not a submodule at HEAD of ${this.dir} (no gitlink in its tree).`);
         }
 
-        return match[2];
+        return gitlink;
+    }
+
+    /** The submodule commit `revision` records for `submodulePath`, or `null` when it is not a submodule there. */
+    async findGitlink(revision: string, submodulePath: string): Promise<string | null> {
+        const entry = await this.git(['ls-tree', revision, '--', submodulePath]);
+        const match = /^(\d+) \w+ ([0-9a-f]+)\t/.exec(entry);
+        return match?.[2] && match[1] === GITLINK_MODE ? match[2] : null;
     }
 
     /**
@@ -51,10 +57,15 @@ export class GitRepository {
      * repository instead.
      */
     async assertCheckedOut(): Promise<void> {
-        const prefix = await this.tryGit(['rev-parse', '--show-prefix']);
-        if (!prefix.ok || prefix.stdout !== '') {
+        if (!(await this.isCheckedOut())) {
             throw new Error(`${this.dir} is not a checked-out submodule. Run \`git submodule update --init\` first.`);
         }
+    }
+
+    /** Whether this directory is the top of a checked-out repository (see `assertCheckedOut`). */
+    async isCheckedOut(): Promise<boolean> {
+        const prefix = await this.tryGit(['rev-parse', '--show-prefix']);
+        return prefix.ok && prefix.stdout === '';
     }
 
     /**

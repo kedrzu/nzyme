@@ -23,8 +23,9 @@ Run from the repo root:
   local files. `bash setup.build.sh` is the build half, shared with CI.
 - `bun run build` — `tsgo --build`; `bun run watch` rebuilds on change, `bun run dev` runs the apps.
 - `bun run typecheck` — build, then each package's own typecheck.
-- `bun run tests` — all tests (`bun:test`); `bun test packages/<pkg>/src` for one package. Not bare
-  `bun test` for the whole suite: it skips the script's flags.
+- `bun run tests` — the tests the current change can break (`nzyme git affected`); `bun run tests:full`
+  runs all of them, `bun test packages/<pkg>/src` one package. Not bare `bun test` for the whole
+  suite: it skips the script's flags.
 - `bun run lint` / `bun run lint:check` — oxlint (type-aware) plus ESLint for Vue, `package.json` and
   Markdown, this repo's code only. `bun run lint:nzyme` checks the submodule with nzyme's own config.
 - `bun run format` / `bun run format:check` — oxfmt plus Markdown through ESLint (`format:md`). Never

@@ -1,6 +1,9 @@
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
+import { createConfigParsers } from '../utils/createConfigParsers.js';
 import { readNzymeConfig } from '../utils/readNzymeConfig.js';
+
+const { parseArray, parseStringArray, parseString, configError } = createConfigParsers('code index');
 
 /**
  * Configuration of `nzyme index`, read from the `nzyme.index` field of the repo's root
@@ -97,14 +100,7 @@ export function parseIndexConfig(value: unknown): NzymeIndexConfig {
     }
 
     if (value.defineKinds !== undefined) {
-        if (!Array.isArray(value.defineKinds)) {
-            throw configError('nzyme.index.defineKinds', 'an array');
-        }
-
-        config.defineKinds = [];
-        for (const [index, entry] of value.defineKinds.entries()) {
-            config.defineKinds.push(parseDefineKind(entry, `nzyme.index.defineKinds[${index}]`));
-        }
+        config.defineKinds = parseArray(value.defineKinds, 'nzyme.index.defineKinds', parseDefineKind);
     }
 
     if (value.entities !== undefined) {
@@ -154,30 +150,4 @@ function parseEntities(value: unknown, path: string): NzymeIndexEntitiesConfig {
     }
 
     return entities;
-}
-
-/** Validates an array of non-empty strings. */
-function parseStringArray(value: unknown, path: string): string[] {
-    if (!Array.isArray(value)) {
-        throw configError(path, 'an array of strings');
-    }
-
-    const strings: string[] = [];
-    for (const [index, item] of value.entries()) {
-        strings.push(parseString(item, `${path}[${index}]`));
-    }
-    return strings;
-}
-
-/** Validates a non-empty string. */
-function parseString(value: unknown, path: string): string {
-    if (typeof value !== 'string' || value === '') {
-        throw configError(path, 'a non-empty string');
-    }
-    return value;
-}
-
-/** The error for a config value of the wrong shape. */
-function configError(path: string, expected: string): Error {
-    return new Error(`Invalid code index config in package.json: \`${path}\` must be ${expected}.`);
 }

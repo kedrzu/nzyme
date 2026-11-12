@@ -11,8 +11,8 @@ this element's: it belongs to the repo's `git-workflow` skill, written by follow
   instructions and the skill agree on the commit style (`references/setup-scripts.md`).
 - **`.github/workflows/build.yml`** — `assets/workflows/build.yml.tmpl`, the merge gate on every PR:
   checkout with `submodules: recursive` (the gitlink, never `--remote`), bun from `packageManager`,
-  `bash setup.build.sh`, then `typecheck`, `lint:check`, `format:check` and `tests` — what the
-  `verify` skill's full protocol runs. No secrets; the job name `Build` is the required check.
+  `bash setup.build.sh`, then `typecheck`, `lint:check`, `format:check` and `tests:full` — what the
+  `verify` skill's full protocol runs; the merge gate checks every test, not the affected ones. No secrets; the job name `Build` is the required check.
 - **Repository settings** — a ruleset on `main` requiring `Build` (and `Verify Submodules` when that
   workflow is in), squash merges only, auto-merge allowed.
 

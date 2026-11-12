@@ -39,8 +39,10 @@ build half of that same command. Paseo runs it for every worktree it cuts.
   long-running services Paseo should offer to start.
 - **Root `package.json` scripts** — the `scripts` of `assets/package.json.tmpl`:
   - `tests`, not `test`: `bun test` is bun's built-in runner and shadows a script named `test`, so
-    `bun test` would skip the script's flags and paths. `tests` runs `./packages` and `./scripts`
-    (the Nx guard), in UTC, skipping `*.spec.ts` (browser specs) and `dist`.
+    `bun test` would skip the script's flags and paths. `tests` runs, in UTC, the `*.test.ts` under
+    `./packages` and `./scripts` (the Nx guard) that the current change can break; `tests:full` runs
+    all of them, skipping `*.spec.ts` (browser specs) and `dist`. The selection and the
+    `nzyme.affected` block: `references/affected-tests.md`.
   - `typecheck` builds, type-checks `scripts/`, then runs each package's `typecheck` except nzyme's
     (nzyme's CI checks nzyme).
   - `codegen`, `watch`, `dev` fan out through Nx to the targets in `project.json` and the packages.
@@ -48,7 +50,8 @@ build half of that same command. Paseo runs it for every worktree it cuts.
   - `clean`, `clean:npm`, `reinstall`: the way back from a broken install. `clean` deletes the build
     output this repo produces: the asset's paths, plus e.g. `**/.output` and `**/.nuxt` for a Nuxt
     app, `**/storybook-static`, `**/test-results` and `**/playwright-report` when the repo has them.
-  - Elements add their own: `test:stories` (UI package), `e2e` (e2e), `storybook`.
+  - Elements add their own: `test:stories` and `test:stories:full` (UI package), `e2e` (e2e),
+    `storybook`.
 
 Older alternatives found in product repos and not used: a monolithic `setup.sh` that CI cannot share,
 `sh` scripts called from CI workflows directly, a Conductor config instead of `paseo.json`, and

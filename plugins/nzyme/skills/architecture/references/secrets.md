@@ -27,7 +27,7 @@ API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-c
   `package.json`, run as `bun nzyme secrets …`. Every `@nzyme/*` package, `@nzyme/cli` included, is
   one version installed in the repo.
 - **CI** — a job that needs secrets gets `BWS_ACCESS_TOKEN` (a read-only machine account's token) from a GitHub
-  Actions secret and runs through `secrets run --`. The `Build` job needs none
+  Actions secret and runs through `secrets run <KEY>... --`, naming the keys it needs. The `Build` job needs none
   (`references/github.md`).
 - **The repo's skill** `.claude/skills/secrets/SKILL.md` — required, not offered: without it an
   agent does not know how to invoke the commands here or which environment a name belongs to. What it

@@ -161,10 +161,11 @@ export const AppSecrets = defineService<SecretsProvider>({
 - **`secrets list`** — every key of every store with its store id, and `overridden by environment`
   when the variable is set. It does not know which keys a project expects, so it reports no missing
   ones; a project can add its own check command.
-- **`secrets run -- <command>`** — runs a command with all stores merged (earlier wins) as environment
-  variables. A variable already set wins; every store's credentials (`BWS_ACCESS_TOKEN`) are removed
-  from the child's environment; nothing starts when a store cannot be read. The exit code is the
-  command's own.
+- **`secrets run <KEY>... -- <command>`** — runs a command with the named secrets as environment
+  variables, and no other secret, so a wrapper hands a tool exactly what it needs. For a key in
+  several stores the earlier store wins; a variable already set wins; every store's credentials
+  (`BWS_ACCESS_TOKEN`) are removed from the child's environment; nothing starts when a store cannot
+  be read or a named key is in no store. The exit code is the command's own.
 - **`secrets refresh`** — re-reads every store that caches.
 
 The startup step, `run` and `list` only read; only `set` writes. A store keeps one

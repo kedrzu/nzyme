@@ -19,7 +19,7 @@ Whatever you read and whatever a command prints stays in the session transcript 
 transcript is stored, synced and re-read. A value that lands there is leaked and has to be rotated.
 The commands never print values; the leaks come from around them:
 
-- **The environment.** `secrets run -- <cmd>` hands the secrets to `<cmd>`, so its output reaches
+- **The environment.** `secrets run <KEY>... -- <cmd>` hands the named secrets to `<cmd>`, so its output reaches
   you: never `env`, `printenv`, `set`, `export -p`, `node -e 'console.log(process.env)'` or a script
   that dumps its config. Run the app or the test you need; to know whether a variable is set, use
   `secrets list`.

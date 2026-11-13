@@ -75,13 +75,18 @@ const PRINT_ENV = `process.stdout.write(JSON.stringify({
     argv: process.argv,
 }))`;
 
-test('run merges all stores (earlier wins) into the env, strips every store’s credentials, and keeps stdout the child’s', async () => {
-    const result = await runFixtureCli(['secrets', 'run', '--', process.execPath, '-e', PRINT_ENV, 'arg'], {
-        BW_TOKEN: 'bw-credential',
-        BW_ORGANIZATION: 'bw-organization',
-        EXTRA_TOKEN: 'extra-credential',
-        KEPT: 'kept',
-    });
+const ALL_KEYS = ['API_KEY', 'DB_PASSWORD', 'SMTP_PASSWORD'];
+
+test('run puts the named secrets (earlier store wins) into the env, strips every store’s credentials, and keeps stdout the child’s', async () => {
+    const result = await runFixtureCli(
+        ['secrets', 'run', ...ALL_KEYS, '--', process.execPath, '-e', PRINT_ENV, 'arg'],
+        {
+            BW_TOKEN: 'bw-credential',
+            BW_ORGANIZATION: 'bw-organization',
+            EXTRA_TOKEN: 'extra-credential',
+            KEPT: 'kept',
+        },
+    );
 
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe('');
@@ -100,7 +105,7 @@ test('run merges all stores (earlier wins) into the env, strips every store’s 
 });
 
 test('run lets a variable set in the environment win and reports it on stderr only', async () => {
-    const result = await runFixtureCli(['secrets', 'run', '--', process.execPath, '-e', PRINT_ENV], {
+    const result = await runFixtureCli(['secrets', 'run', ...ALL_KEYS, '--', process.execPath, '-e', PRINT_ENV], {
         DB_PASSWORD: 'from-env',
     });
 
@@ -115,7 +120,7 @@ test.each([
     ['an exit code', 'process.exit(7)', 7],
     ['a signal as 128 + its number', 'process.kill(process.pid, "SIGTERM")', 128 + os.constants.signals.SIGTERM],
 ])('run passes %s through', async (_, script, expected) => {
-    const result = await runFixtureCli(['secrets', 'run', '--', process.execPath, '-e', script]);
+    const result = await runFixtureCli(['secrets', 'run', 'API_KEY', '--', process.execPath, '-e', script]);
 
     expect(result.exitCode).toBe(expected);
     expect(result.stdout).toBe('');
@@ -126,7 +131,7 @@ test('run starts nothing when a store cannot be read and prints no value', async
     const marker = path.join(dir, 'started');
     const script = `require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'x')`;
 
-    const result = await runFixtureCli(['secrets', 'run', '--', process.execPath, '-e', script], {
+    const result = await runFixtureCli(['secrets', 'run', 'API_KEY', '--', process.execPath, '-e', script], {
         FIXTURE_UNREADABLE: '1',
     });
 
@@ -134,6 +139,49 @@ test('run starts nothing when a store cannot be read and prints no value', async
     expect(result.stdout).toBe('');
     expect(result.stderr).not.toContain(RUN_SENTINEL);
     expect(await Bun.file(marker).exists()).toBe(false);
+});
+
+test('run gives the command only the secrets it names', async () => {
+    const result = await runFixtureCli(['secrets', 'run', 'DB_PASSWORD', '--', process.execPath, '-e', PRINT_ENV]);
+
+    expect(result.exitCode).toBe(0);
+    const child = JSON.parse(result.stdout) as Record<string, unknown>;
+    expect(child.DB_PASSWORD).toBe('db-pass');
+    expect(child.API_KEY).toBeUndefined();
+    expect(child.SMTP_PASSWORD).toBeUndefined();
+});
+
+test('run starts nothing when a named secret is in no store, and names it', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'secrets-run-'));
+    const marker = path.join(dir, 'started');
+    const script = `require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'x')`;
+
+    const result = await runFixtureCli([
+        'secrets',
+        'run',
+        'API_KEY',
+        'NOT_STORED',
+        '--',
+        process.execPath,
+        '-e',
+        script,
+    ]);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('NOT_STORED');
+    expect(result.stderr).not.toContain(RUN_SENTINEL);
+    expect(await Bun.file(marker).exists()).toBe(false);
+});
+
+test.each([
+    ['no secret is named', ['--', process.execPath, '-e', '']],
+    ['there is no separator', ['API_KEY', process.execPath, '-e', '']],
+    ['there is no command', ['API_KEY', '--']],
+])('run is a usage error when %s', async (_, args) => {
+    const result = await runFixtureCli(['secrets', 'run', ...args]);
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stdout + result.stderr).toContain('secrets run <KEY>... -- <command>');
 });
 
 // --- set ---

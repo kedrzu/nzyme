@@ -1,7 +1,7 @@
 # Secrets
 
 Every credential the repo needs — the app's, a script's, a token a tool uses — lives in a remote
-store behind a login, mapped to the env variable that reads it, and reaches the code through
+store behind a login, under a prefix, and reaches the code (the env variable or config entry named by its key) through
 `@nzyme/secrets`. No secrets file exists in the repo or beside it. Practice: `../../../../docs/practice/secrets.md`;
 API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-code-through-env-variables.md`.
 
@@ -13,19 +13,21 @@ API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-c
   read-only on a machine that only reads). Another store (AWS Secrets Manager, SSM Parameter Store, …) has no implementation yet:
   choosing it means writing it in nzyme first, as a `SecretStore`, before this element can
   be applied. Say so instead of wiring a store that does not exist.
-- **A provider** — a `defineService<SecretsMapping>(…)` beside the code that reads
-  the variables (the app package, or a shared package when several apps share secrets): one store,
-  wrapped in `cached(store, { ttl })`, and each variable mapped to its key in it. Environments are the repo's: the provider picks the project or keys from
-  an env variable in its `deps` (the app's `ENV`, for example).
-- **Startup** — each process that reads secrets in development calls
-  `await loadSecrets(container, AppSecrets)` with its provider before resolving anything that reads them. Production gets the variables
-  from its platform and skips it.
-- **Commands** — `defineSecretsCommands({ provider })` registered in the product's CLI, or, with no
+- **Stores** — one or more `SecretStore`s beside the code that reads the variables (the app package,
+  or a shared package when several apps share secrets), each wrapped in `cached(store, { ttl })` and
+  scoped by a prefix (a path such as `/secrets/dev/`, a name prefix such as `DEV_`, or empty for the
+  whole store). The key is the variable name; there is no mapping. Environments are the repo's: the
+  prefix or project comes from an env variable in the service's `deps` (the app's `ENV`, for example).
+- **Startup** — a repo with a config document (`@nzyme/config`) lists `secretsSource(store)` among the
+  document's sources. A repo without one has each process that reads secrets in development call
+  `await loadSecrets(container, stores)` before resolving anything that reads them. Production gets
+  the variables from its platform and skips it.
+- **Commands** — `defineSecretsCommands({ provider })` (a service resolving to `{ stores, target }`; `target(name)` returns the store a key is written to or throws to refuse it) registered in the product's CLI, or, with no
   product CLI, a plugin module (`tools/secrets.ts`) listed under `nzyme.plugins` in the root
   `package.json`, run as `bun nzyme secrets …`. Every `@nzyme/*` package, `@nzyme/cli` included, is
   one version installed in the repo.
 - **CI** — a job that needs secrets gets `BWS_ACCESS_TOKEN` (a read-only machine account's token) from a GitHub
-  Actions secret and runs through `secrets run --`. The `Build` job needs none
+  Actions secret and runs through `secrets run <KEY>... --`, naming the keys it needs. The `Build` job needs none
   (`references/github.md`).
 - **The repo's skill** `.claude/skills/secrets/SKILL.md` — required, not offered: without it an
   agent does not know how to invoke the commands here or which environment a name belongs to. What it
@@ -35,14 +37,14 @@ API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-c
 
 - The store and its project ids: from the user, once; ids go into the provider as code (a project id
   is not a secret).
-- The secret names: from the `defineEnvVariable` declarations that hold credentials.
+- The prefix of each store: the repo's own convention for where a tier or environment's secrets live.
 - The command prefix: the product CLI's binary name, or `bun nzyme`.
 
 ## Compare
 
-- Credentials read through `defineEnvVariable` with no `@nzyme/secrets` mapping: a difference.
+- Credentials read through `defineEnvVariable` with no `@nzyme/secrets` store: a difference.
 - A dotenv file holding credentials (`.env`, `.env.*`, `.dev.vars`): a difference. Migrate it
-  once, with no tool for it: map each name, then pipe its value from the file into
+  once, with no tool for it: pipe its value from the file into
   `secrets set <NAME>` (`sed -n 's/^NAME=//p' .env | secrets set NAME`, unquoting a quoted value in
   the pipe) so it never reaches the transcript. Move the file aside — Bun loads the cwd `.env` into
   every process, so `secrets list` would report its names `overridden by environment` — and delete it

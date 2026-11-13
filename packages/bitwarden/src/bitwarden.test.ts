@@ -31,14 +31,14 @@ afterEach(() => {
     }
 });
 
-test('read logs in with the stored token and costs three requests however many keys', async () => {
+test('readAll logs in with the stored token and costs three requests however many secrets', async () => {
     const fake = await startFakeBitwarden();
     await fake.addSecret({ key: 'DB_URL', value: 'postgres://db-secret' });
     await fake.addSecret({ key: 'API_KEY', value: 'api-secret' });
     await fake.addSecret({ key: 'OTHER', value: 'other-secret', project: OTHER_PROJECT });
     const store = bitwarden({ project: PROJECT, server: fake.url, keychain: fake.keychain, env: {} });
 
-    const result = await store.read(['DB_URL', 'API_KEY', 'MISSING', 'OTHER']);
+    const result = await store.readAll();
 
     expect(result).toEqual(
         new Map([
@@ -55,17 +55,60 @@ test('read logs in with the stored token and costs three requests however many k
     fake.expectNoLeak(['postgres://db-secret', 'api-secret']);
 });
 
-test('read sends two requests and reads absent keys as absent when none exists', async () => {
+test('readAll sends two requests and returns nothing when the project has no secret', async () => {
     const fake = await startFakeBitwarden();
-    await fake.addSecret({ key: 'DB_URL', value: 'postgres://db-secret' });
+    await fake.addSecret({ key: 'DB_URL', value: 'postgres://db-secret', project: OTHER_PROJECT });
     const store = bitwarden({ project: PROJECT, server: fake.url, keychain: fake.keychain, env: {} });
 
-    const result = await store.read(['MISSING']);
+    const result = await store.readAll();
 
     expect(result).toEqual(new Map());
     expect(fake.requests.map(request => request.route)).toEqual([
         'POST /identity/connect/token',
         `GET /api/projects/${PROJECT}/secrets`,
+    ]);
+});
+
+test('with a prefix readAll returns only the secrets under it, stripped, in one fetch', async () => {
+    const fake = await startFakeBitwarden();
+    await fake.addSecret({ key: 'DEV_DB_URL', value: 'dev-db-secret' });
+    await fake.addSecret({ key: 'DEV_API_KEY', value: 'dev-api-secret' });
+    await fake.addSecret({ key: 'PROD_DB_URL', value: 'prod-db-secret' });
+    await fake.addSecret({ key: 'DEV_', value: 'bare-prefix-secret' });
+    const store = bitwarden({ project: PROJECT, prefix: 'DEV_', server: fake.url, keychain: fake.keychain, env: {} });
+
+    const result = await store.readAll();
+
+    expect(store.id).toEndWith(':DEV_');
+    expect(result).toEqual(
+        new Map([
+            ['DB_URL', 'dev-db-secret'],
+            ['API_KEY', 'dev-api-secret'],
+        ]),
+    );
+    expect(fake.requests.map(request => request.route)).toEqual([
+        'POST /identity/connect/token',
+        `GET /api/projects/${PROJECT}/secrets`,
+        'POST /api/secrets/get-by-ids',
+    ]);
+    fake.expectNoLeak(['dev-db-secret', 'dev-api-secret', 'prod-db-secret']);
+});
+
+test('with a prefix write adds it to the key, updating the prefixed secret and leaving the unprefixed one', async () => {
+    const fake = await startFakeBitwarden();
+    await fake.addSecret({ key: 'DB_URL', value: 'unprefixed-secret' });
+    await fake.addSecret({ key: 'DEV_DB_URL', value: 'old-secret' });
+    const store = bitwarden({ project: PROJECT, prefix: 'DEV_', server: fake.url, keychain: fake.keychain, env: {} });
+
+    await store.write([
+        { key: 'DB_URL', value: 'new-secret' },
+        { key: 'API_KEY', value: 'created-secret' },
+    ]);
+
+    expect(await fake.readSecrets()).toEqual([
+        { key: 'DB_URL', value: 'unprefixed-secret', note: '', projects: [PROJECT] },
+        { key: 'DEV_DB_URL', value: 'new-secret', note: '', projects: [PROJECT] },
+        { key: 'DEV_API_KEY', value: 'created-secret', note: '', projects: [PROJECT] },
     ]);
 });
 
@@ -127,7 +170,7 @@ test('BWS_ACCESS_TOKEN wins over the keychain for read and write and is a creden
         env: { BWS_ACCESS_TOKEN: fake.tokens.env },
     });
 
-    await store.read(['DB_URL']);
+    await store.readAll();
     await store.write([{ key: 'DB_URL', value: 'changed-secret' }]);
 
     expect(store.credentialEnv).toEqual(['BWS_ACCESS_TOKEN']);
@@ -142,7 +185,7 @@ test('a keychain token is only sent to the server it was stored for', async () =
     const otherStore = bitwarden({ project: PROJECT, server: other.url, keychain, env: {} });
 
     await storedStore.login!(() => Promise.resolve(stored.tokens.machine));
-    const error = await catchError(otherStore.read(['DB_URL']));
+    const error = await catchError(otherStore.readAll());
 
     expect(error.message).toContain('`secrets login`');
     expect(other.requests).toEqual([]);
@@ -160,7 +203,7 @@ test('a suffixed store keeps its own token, bound to its server, and never falls
 
     await plain.login!(() => Promise.resolve(fake.tokens.machine));
     const sentByLogin = fake.requests.length;
-    const missing = await catchError(alpha.read(['DB_URL']));
+    const missing = await catchError(alpha.readAll());
     expect(missing.message).toContain('`secrets login`');
     expect(missing.message).toContain('#alpha');
     expect(fake.requests).toHaveLength(sentByLogin);
@@ -171,9 +214,9 @@ test('a suffixed store keeps its own token, bound to its server, and never falls
     });
     await beta.login!(() => Promise.resolve(fake.tokens.machine));
 
-    await alpha.read(['DB_URL']);
+    await alpha.readAll();
     expect(fake.requests.at(-1)?.client).toBe('env');
-    await beta.read(['DB_URL']);
+    await beta.readAll();
     expect(fake.requests.at(-1)?.client).toBe('machine');
 
     expect(prompts[0]).toContain('#alpha');
@@ -201,8 +244,8 @@ test('a suffix cannot make a token reach another server, even one that looks lik
     });
     const sameSuffix = bitwarden({ project: PROJECT, server: other.url, keychain, env: {}, keychainSuffix: 'shared' });
 
-    expect((await catchError(portLike.read(['DB_URL']))).message).toContain('No Bitwarden token');
-    expect((await catchError(sameSuffix.read(['DB_URL']))).message).toContain('No Bitwarden token');
+    expect((await catchError(portLike.readAll())).message).toContain('No Bitwarden token');
+    expect((await catchError(sameSuffix.readAll())).message).toContain('No Bitwarden token');
     expect(other.requests).toEqual([]);
 });
 
@@ -213,7 +256,7 @@ test('BWS_ACCESS_TOKEN wins over a suffixed stored token, and a blank suffix is 
     await bitwarden({ ...options, env: {} }).login!(() => Promise.resolve(fake.tokens.machine));
 
     const sentByLogin = fake.requests.length;
-    await bitwarden({ ...options, env: { BWS_ACCESS_TOKEN: fake.tokens.env } }).read(['DB_URL']);
+    await bitwarden({ ...options, env: { BWS_ACCESS_TOKEN: fake.tokens.env } }).readAll();
 
     expect(new Set(fake.requests.slice(sentByLogin).map(request => request.client))).toEqual(new Set(['env']));
     expect(() => bitwarden({ ...options, env: {}, keychainSuffix: '' })).toThrow('keychainSuffix must not be blank');
@@ -267,7 +310,7 @@ test('a rejected token fails with its own message', async () => {
         env: { BWS_ACCESS_TOKEN: fake.tokens.unknown },
     });
 
-    const error = await catchError(store.read(['DB_URL']));
+    const error = await catchError(store.readAll());
 
     expect(error.message).toBe(
         `Bitwarden at ${new URL(fake.url).host} rejected the access token: run \`secrets login\` with a valid one`,
@@ -281,7 +324,7 @@ test('an unreachable server fails with its own message', async () => {
     await fake.stop();
     const store = bitwarden({ project: PROJECT, server: url, keychain: fake.keychain, env: {} });
 
-    const error = await catchError(store.read(['DB_URL']));
+    const error = await catchError(store.readAll());
 
     expect(error.message).toBe(`Cannot reach Bitwarden at ${new URL(url).host}: check the server and the network`);
     expectNoLeak(error, fake.tokens.machine);
@@ -293,7 +336,7 @@ test('a duplicate key in the project fails naming the key, never a value', async
     await fake.addSecret({ key: 'DB_URL', value: 'second-secret' });
     const store = bitwarden({ project: PROJECT, server: fake.url, keychain: fake.keychain, env: {} });
 
-    const readError = await catchError(store.read(['DB_URL']));
+    const readError = await catchError(store.readAll());
     const writeError = await catchError(store.write([{ key: 'DB_URL', value: 'third-secret' }]));
 
     expect(readError.message).toBe(
@@ -311,7 +354,7 @@ test('a secret deleted between list and fetch fails with its own message', async
     fake.deleteBeforeFetch('API_KEY');
     const store = bitwarden({ project: PROJECT, server: fake.url, keychain: fake.keychain, env: {} });
 
-    const error = await catchError(store.read(['DB_URL', 'API_KEY']));
+    const error = await catchError(store.readAll());
 
     expect(error.message).toBe('A Bitwarden secret was deleted while it was being read: try again');
 });

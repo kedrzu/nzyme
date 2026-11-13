@@ -7,24 +7,29 @@ export type SecretPrompt = (label: string) => Promise<string>;
  * One entry passed to {@link SecretStore.write}.
  */
 export interface SecretStoreEntry {
+    /** The key without the store's prefix; the store adds it. */
     key: string;
     value: string;
 }
 
 /**
- * A remote (or local) place secrets are read from and written to. A store owns its credentials.
+ * A remote (or local) place secrets are read from and written to, scoped to a prefix. A store owns
+ * its credentials.
  */
 export interface SecretStore {
-    /** Stable identity of the store (for Bitwarden: server and project); used as the cache key. */
+    /**
+     * Stable identity of the store; names it in output and keys its cache. It must include everything
+     * that tells two stores apart, the prefix among it (for Bitwarden: server, project and prefix).
+     */
     id: string;
-    /** Reads keys in one batch. A key the store does not have is absent from the result. */
-    read(keys: string[]): Promise<Map<string, string>>;
-    /** Creates or updates the given entries. */
+    /** Reads every secret under the prefix, keyed without it. */
+    readAll(): Promise<Map<string, string>>;
+    /** Creates or updates the given entries (keys without the prefix). */
     write(entries: SecretStoreEntry[]): Promise<void>;
     /** Obtains the store's credentials, asking the user through `prompt` when needed. */
     login?(prompt: SecretPrompt): Promise<void>;
-    /** Re-fetches the given keys; implemented only by stores that cache. */
-    refresh?(keys: string[]): Promise<void>;
+    /** Re-reads the store's secrets; implemented only by stores that cache. */
+    refresh?(): Promise<void>;
     /** Environment variable names holding this store's credentials, stripped from a child process. */
     credentialEnv?: string[];
 }

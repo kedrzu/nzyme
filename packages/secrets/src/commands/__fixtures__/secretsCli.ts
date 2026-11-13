@@ -5,62 +5,40 @@
 import { execute } from '@nzyme/cli-core/execute.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 
-import type { SecretsMapping } from '../../SecretsMapping.js';
+import { createMemoryStore } from '../../__fixtures__/createMemoryStore.js';
 import type { SecretStore } from '../../SecretStore.js';
 import { defineSecretsCommands } from '../defineSecretsCommands.js';
+import type { SecretsProvider } from '../SecretsCommandsOptions.js';
 
 /** The value of `API_KEY`, which must never reach anything but the child's environment. */
 export const SENTINEL = 'sentinel-secret-value-run-4b2d';
 
-const bw = createStore({
+const bw = createMemoryStore({
     id: 'bw',
-    data: { API_KEY: SENTINEL, DB_PASSWORD: 'db-pass', SMTP: 'smtp-pass' },
+    data: { API_KEY: SENTINEL, DB_PASSWORD: 'db-pass' },
     credentialEnv: ['BW_TOKEN', 'BW_ORGANIZATION'],
 });
 
-const secrets: Record<string, string> = {
-    API_KEY: 'API_KEY',
-    DB_PASSWORD: 'DB_PASSWORD',
-    SMTP_PASSWORD: 'SMTP',
+// `DB_PASSWORD` is also here, but the earlier store wins it.
+const extra = createMemoryStore({
+    id: 'extra',
+    data: { DB_PASSWORD: 'shadowed', SMTP_PASSWORD: 'smtp-pass' },
+    credentialEnv: ['EXTRA_TOKEN'],
+});
+
+const unreadable: SecretStore = {
+    id: 'unreadable',
+    readAll: () => Promise.reject(new Error('Store unreachable')),
+    write: () => Promise.resolve(),
 };
 
-if (process.env.FIXTURE_MISSING) {
-    secrets.MISSING_ONE = 'NO_SUCH_KEY';
-}
+const stores = process.env.FIXTURE_UNREADABLE ? [bw.store, extra.store, unreadable] : [bw.store, extra.store];
 
-const AppSecrets = defineService<SecretsMapping>({
+const AppSecrets = defineService<SecretsProvider>({
     name: 'AppSecrets',
-    setup: () => ({ store: bw, secrets }),
+    setup: () => ({ stores, target: () => bw.store }),
 });
 
 if (import.meta.main) {
     await execute({ name: 'fixture', commands: defineSecretsCommands({ provider: AppSecrets }) });
-}
-
-/** Options of {@link createStore}. */
-interface CreateStoreOptions {
-    id: string;
-    /** The values the store holds, by key. */
-    data: Record<string, string>;
-    credentialEnv: string[];
-}
-
-function createStore(options: CreateStoreOptions): SecretStore {
-    const { id, data, credentialEnv } = options;
-    return {
-        id,
-        credentialEnv,
-        read(keys) {
-            const found = new Map<string, string>();
-            for (const key of keys) {
-                const value = data[key];
-                if (value !== undefined) {
-                    found.set(key, value);
-                }
-            }
-
-            return Promise.resolve(found);
-        },
-        write: () => Promise.resolve(),
-    };
 }

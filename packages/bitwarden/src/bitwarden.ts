@@ -14,6 +14,11 @@ export interface BitwardenOptions {
     /** The Secrets Manager project id. The store reads and writes only this project's secrets. */
     project: string;
     /**
+     * Narrows the store to the project's secrets whose key starts with it: `readAll` returns them with
+     * the prefix stripped, and `write` adds it. Empty (the default) covers the whole project.
+     */
+    prefix?: string;
+    /**
      * The Bitwarden server: a cloud vault URL (`https://vault.bitwarden.com`, `https://vault.bitwarden.eu`)
      * or the base URL of a self-hosted server, which serves `/identity` and `/api`. It must use
      * `https:`, except on localhost.
@@ -44,8 +49,8 @@ const MAX_ENCRYPTED_KEY_LENGTH = 1000;
 const MAX_ENCRYPTED_VALUE_LENGTH = 35000;
 
 /**
- * A Bitwarden Secrets Manager project as a secret store. A read costs at most three requests (login,
- * project listing, one fetch of the wanted secrets), however many keys are read.
+ * A Bitwarden Secrets Manager project as a secret store. A `readAll` costs at most three requests
+ * (login, project listing, one fetch of the secrets under the prefix), however many there are.
  *
  * Credentials: `BWS_ACCESS_TOKEN` when set; otherwise the token `secrets login` stored for this
  * server and `keychainSuffix`, so one per machine unless a suffix separates them. A machine that only
@@ -53,7 +58,7 @@ const MAX_ENCRYPTED_VALUE_LENGTH = 35000;
  * @__NO_SIDE_EFFECTS__
  */
 export function bitwarden(options: BitwardenOptions): SecretStore {
-    const { project, keychainSuffix, keychain = osKeychain, env = process.env } = options;
+    const { project, prefix = '', keychainSuffix, keychain = osKeychain, env = process.env } = options;
     const server = (options.server ?? DEFAULT_SERVER).replace(/\/+$/, '');
     const serverUrl = new URL(server);
     if (serverUrl.protocol !== 'https:' && !LOOPBACK_HOSTNAMES.has(serverUrl.hostname)) {
@@ -71,21 +76,21 @@ export function bitwarden(options: BitwardenOptions): SecretStore {
     const keychainName = `bitwarden:${label}`;
 
     return {
-        id: `bitwarden:${host}:${project}`,
+        id: `bitwarden:${host}:${project}${prefix === '' ? '' : `:${prefix}`}`,
         credentialEnv: [ACCESS_TOKEN_ENV],
-        read,
+        readAll,
         write,
         login,
     };
 
-    async function read(keys: string[]) {
+    async function readAll() {
         const client = await connect();
         const idsByKey = await listProject(client);
         const wanted = new Map<string, string>();
-        for (const key of keys) {
+        for (const key of idsByKey.keys()) {
             const id = findSecretId(idsByKey, key);
             if (id != null) {
-                wanted.set(id, key);
+                wanted.set(id, key.slice(prefix.length));
             }
         }
 
@@ -101,7 +106,7 @@ export function bitwarden(options: BitwardenOptions): SecretStore {
             }
 
             if (secret.value == null) {
-                throw new Error(`Bitwarden secret ${key} has no value: store one with \`secrets set\``);
+                throw new Error(`Bitwarden secret ${prefix}${key} has no value: store one with \`secrets set\``);
             }
 
             result.set(key, await decryptEncString(secret.value, client.organizationKey));
@@ -115,7 +120,8 @@ export function bitwarden(options: BitwardenOptions): SecretStore {
         const idsByKey = await listProject(client);
         const updates: SecretStoreUpdate[] = [];
         const creates: SecretStoreEntry[] = [];
-        for (const entry of entries) {
+        for (const { key, value } of entries) {
+            const entry = { key: prefix + key, value };
             const id = findSecretId(idsByKey, entry.key);
             if (id == null) {
                 creates.push(entry);
@@ -181,7 +187,7 @@ export function bitwarden(options: BitwardenOptions): SecretStore {
         return await loginBitwarden(urls, stored);
     }
 
-    /** Decrypts the project's keys into key → ids; more than one id means a duplicate key. */
+    /** Decrypts the project's keys under the prefix into full key → ids; more than one id means a duplicate key. */
     async function listProject(client: BitwardenClient) {
         const idsByKey = new Map<string, string[]>();
         for (const secret of await client.listProjectSecrets(project)) {
@@ -190,6 +196,10 @@ export function bitwarden(options: BitwardenOptions): SecretStore {
             }
 
             const key = await decryptEncString(secret.key, client.organizationKey);
+            if (!key.startsWith(prefix) || key === prefix) {
+                continue;
+            }
+
             const ids = idsByKey.get(key);
             if (ids == null) {
                 idsByKey.set(key, [secret.id]);

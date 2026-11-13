@@ -2,11 +2,11 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 
-import { resolveSecrets } from '../utils/resolveSecrets.js';
+import { readStores } from '../utils/readStores.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
 
 /**
- * Defines `secrets list`: each mapped name, where it comes from and whether it resolves — never a value.
+ * Defines `secrets list`: every key of every store with its store id — never a value.
  * @__NO_SIDE_EFFECTS__
  */
 export function defineSecretsListCommand(options: SecretsCommandsOptions): CommandClass {
@@ -14,33 +14,23 @@ export function defineSecretsListCommand(options: SecretsCommandsOptions): Comma
         static override paths = [['secrets', 'list']];
         static override usage = Command.Usage({
             category: 'Secrets',
-            description: 'List the mapped secrets and whether each resolves',
+            description: 'List the keys of every store',
             details: `
-                Prints each mapped name with its store and key and a status: \`resolves\`,
-                \`missing\`, or \`overridden by environment\`. Values are never printed. Exits
-                non-zero when any secret is missing.
+                Prints each key of each store with the store id, and \`overridden by environment\`
+                when the variable of that name is set. Values are never printed.
             `,
         });
 
         override async run() {
-            const mapping = this.container.resolve(options.provider);
+            const { stores } = this.container.resolve(options.provider);
             const env = this.container.resolve(EnvVariables);
-            const { missing, overridden } = await resolveSecrets(mapping, env);
-            const missingNames = new Set(missing.map(secret => secret.name));
-            const overriddenNames = new Set(overridden);
 
-            for (const [name, key] of Object.entries(mapping.secrets)) {
-                let status = 'resolves';
-                if (overriddenNames.has(name)) {
-                    status = 'overridden by environment';
-                } else if (missingNames.has(name)) {
-                    status = 'missing';
+            for (const { storeId, secrets } of await readStores(stores)) {
+                for (const key of [...secrets.keys()].toSorted()) {
+                    const status = env[key] ? '  overridden by environment' : '';
+                    this.context.stdout.write(`${key}  ${storeId}${status}\n`);
                 }
-
-                this.context.stdout.write(`${name}  ${mapping.store.id}:${key}  ${status}\n`);
             }
-
-            return missing.length > 0 ? 1 : 0;
         }
     };
 }

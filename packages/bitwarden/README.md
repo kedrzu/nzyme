@@ -6,10 +6,13 @@ and WebCrypto; no `bws` binary, no native module. Why: `docs/decisions/own-bitwa
 ```ts
 import { bitwarden } from '@nzyme/bitwarden/bitwarden.js';
 
-const bw = bitwarden({ project: '1f0c…' });
+const bw = bitwarden({ project: '1f0c…', prefix: 'DEV_' });
 ```
 
 - `project` — the Secrets Manager project id; the store reads and writes only its secrets.
+- `prefix` — optional. The store covers the project's secrets whose key starts with it: `readAll`
+  returns them with the prefix stripped, and `write` adds it. Empty (the default) covers the whole
+  project.
 - `server` — Bitwarden Cloud US by default. `https://vault.bitwarden.eu` for Cloud EU, or the base URL
   of a self-hosted server (which serves `/identity` and `/api`). It must use `https:`, except on
   localhost, so the token never travels unencrypted.
@@ -17,14 +20,14 @@ const bw = bitwarden({ project: '1f0c…' });
   one token per project or per Bitwarden organization. See [Several tokens on one
   machine](#several-tokens-on-one-machine).
 
-A read costs at most three requests (login, project listing, one fetch), however many keys.
+A `readAll` costs at most three requests (login, project listing, one fetch), however many keys.
 
 ## Setup
 
 1. **A dedicated organization.** Create a Bitwarden organization used only for Secrets Manager, not
    the one holding the team's passwords. A token's reach is then limited to that organization's
    secrets by construction, not only by its permissions.
-2. **Projects.** One project per repo or per environment, as the repo's mapping expects. Copy the
+2. **Projects.** One project per repo or per environment, as the repo's conventions expect (or one project with a `prefix` per environment). Copy the
    project id into `bitwarden({ project })`.
 3. **A machine account per machine,** with read-write access to the project. A machine meant only to
    read (a server, a CI runner) gets a read-only machine account; its writes fail with 403.
@@ -58,7 +61,7 @@ another server is a separate token.
 - A project that adds a suffix runs `secrets login` again. The unsuffixed token stays for the projects
   still using it, and a suffixed store never falls back to it.
 - `BWS_ACCESS_TOKEN`, when set, still takes the place of any stored token.
-- Values cached by `cached()` are kept per server and project, so stores with different suffixes
+- Values cached by `cached()` are kept per server, project and prefix, so stores with different suffixes
   reading one project share them.
 
 ## Why a token cannot reach passwords

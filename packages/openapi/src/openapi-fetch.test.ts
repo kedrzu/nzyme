@@ -82,6 +82,29 @@ describe('openApiFetch', () => {
         expect(result.contentType).toBe('application/json');
     });
 
+    it('accepts query parameters on an operation whose query parameters are all optional', async () => {
+        mockFetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            headers: new Headers({ 'content-type': 'application/json' }),
+            json: () => Promise.resolve({ id: 7, name: 'Renamed', photoUrls: [] }),
+        });
+
+        const client = createOpenApiFetch<paths>({ baseUrl: 'https://api.example.com', fetch: mockFetch });
+
+        await client({
+            path: '/pet/{petId}',
+            method: 'POST',
+            pathParams: { petId: 7 },
+            query: { name: 'Renamed' },
+        });
+
+        expect(mockFetch).toHaveBeenCalledWith(
+            'https://api.example.com/pet/7?name=Renamed',
+            expect.objectContaining({ method: 'POST' }),
+        );
+    });
+
     it('should make a POST request with JSON body', async () => {
         const mockResponse = {
             ok: true,

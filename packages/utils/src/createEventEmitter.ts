@@ -61,6 +61,10 @@ type EventFunction<P extends unknown[], R = unknown> = (...args: P) => R;
 
 /**
  * Creates a new event emitter instance with emit functionality.
+ *
+ * `emit` and `emitAsync` call the listeners registered when the emit started, each exactly once, in
+ * subscription order. A listener subscribed or unsubscribed during an emit takes effect from the next
+ * emit: a listener removed by an earlier one in the same emit is still called this time.
  * @util
  * @template TEvent - The type of event data that will be emitted (defaults to void)
  * @returns An object containing the event emitter and emit functions
@@ -86,13 +90,14 @@ export function createEventEmitter<E = []>() {
     };
 
     const emit = ((...args: EventParams<E>) => {
-        for (const callback of listeners) {
+        // Iterate a snapshot: a listener calling `off` would otherwise shift the array and skip the next one.
+        for (const callback of listeners.slice()) {
             void callback(...args);
         }
     }) satisfies EventEmit<E>;
 
     const emitAsync = async (...args: EventParams<E>) => {
-        for (const callback of listeners) {
+        for (const callback of listeners.slice()) {
             await callback(...args);
         }
     };

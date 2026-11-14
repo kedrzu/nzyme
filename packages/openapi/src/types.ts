@@ -67,9 +67,9 @@ export type ResponsesOf<Operation> = Operation extends { responses: infer R } ? 
 export type PathParams<Parameters> = Parameters extends { path: infer P } ? P : never;
 
 /**
- * Extract query parameters
+ * Extract query parameters. `query` is optional when every query parameter is, so the match accepts an optional key.
  */
-export type QueryParams<Parameters> = Parameters extends { query: infer Q } ? Q : never;
+export type QueryParams<Parameters> = Parameters extends { query?: infer Q } ? Q : never;
 
 /**
  * Extract header parameters

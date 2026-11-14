@@ -2,7 +2,8 @@ import { LOGGER_LEVELS } from './LoggerLevel.js';
 import type { LoggerLevel } from './LoggerLevel.js';
 
 /**
- * Parses a `LOG_LEVEL` value: `undefined` and `''` mean unset, anything else must be a level name.
+ * Parses a `LOG_LEVEL` value: `undefined` and `''` mean unset, anything else must be a level name, in
+ * any case (`DEBUG` is `debug`).
  * The one parser behind both the DI variable and the pre-container read.
  *
  * @throws when the value is not one of {@link LOGGER_LEVELS}.
@@ -13,8 +14,9 @@ export function parseLoggerLevel(value: string | undefined): LoggerLevel | undef
         return undefined;
     }
 
+    const normalized = value.toLowerCase();
     for (const level of LOGGER_LEVELS) {
-        if (level === value) {
+        if (level === normalized) {
             return level;
         }
     }

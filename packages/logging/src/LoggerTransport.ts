@@ -3,7 +3,7 @@ import { defineService } from '@nzyme/ioc/Service.js';
 
 import type { LoggerObject } from './Logger.js';
 import type { LoggerLevel } from './LoggerLevel.js';
-import { getProcessLoggerLevels } from './shouldLog.js';
+import { shouldLog } from './shouldLog.js';
 
 /** A function that handles log output for a given logger, level, message, and optional data. */
 export interface LoggerTransport {
@@ -20,7 +20,7 @@ export const consoleLog: LoggerTransport = (
     message: string,
     obj?: LoggerObject | null,
 ) => {
-    if (!getProcessLoggerLevels({ fallback: 'trace' })[level]) {
+    if (!shouldLog(level, { fallback: 'trace' })) {
         return;
     }
 

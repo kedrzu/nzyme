@@ -37,7 +37,7 @@ export async function loadConfig(container: Container, sources: readonly ConfigS
     container.set(RuntimeConfig, document);
 
     const logger = Logger.create({ name: 'loadConfig', transport: container.resolve(LoggerTransport) });
-    logger.info('Config loaded', {
+    logger.debug('Config loaded', {
         sources: sources.map(source => source.name),
         keys: seen.size,
         overridden: [...overridden],

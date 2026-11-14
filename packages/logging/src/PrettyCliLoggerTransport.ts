@@ -6,6 +6,7 @@ import { identity } from '@nzyme/utils/functions/identity.js';
 import { parseStackTrace } from '@nzyme/utils/parseStackTrace.js';
 import { toJsonString } from '@nzyme/utils/toJsonString.js';
 
+import { LOGGING } from './env.js';
 import { ApplicationError } from './ApplicationError.js';
 import type { LoggerLevel } from './LoggerLevel.js';
 import { LoggerTransport } from './LoggerTransport.js';
@@ -15,13 +16,19 @@ import { getPrettyPrefix } from './utils/getPrettyPrefix.js';
  * A console logger service for CLI with enhanced formatting.
  *
  * Every level goes to stderr: a command's stdout is its output, which callers pipe and parse, so a
- * log line there corrupts it.
+ * log line there corrupts it. `debug` and `trace` lines print only with `LOGGING=true`, so a command's
+ * routine startup stays silent; `info`, `warn` and `error` always print.
  */
 export const PrettyCliLoggerTransport = defineService({
     name: 'PrettyCliLoggerTransport',
     implements: LoggerTransport,
-    setup: (): LoggerTransport => {
+    deps: { verbose: LOGGING },
+    setup: ({ verbose }): LoggerTransport => {
         return (logger, level, message, obj) => {
+            if (!verbose && (level === 'debug' || level === 'trace')) {
+                return;
+            }
+
             const prefix = getPrettyPrefix(logger);
             const color = getColor(level);
             const lines = message.split('\n');

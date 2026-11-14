@@ -54,7 +54,7 @@ export interface WebsocketLoggerTransportOptions {
  * const transport = createWebsocketLoggerTransport({
  *   url: 'ws://localhost:3012/ingest',
  *   app: 'api',
- *   fallback: PrettyCliLoggerTransport.create(),
+ *   fallback: container.resolve(PrettyCliLoggerTransport),
  *   bufferSize: 100,
  * });
  *

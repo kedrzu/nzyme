@@ -13,6 +13,9 @@ import { getPrettyPrefix } from './utils/getPrettyPrefix.js';
 
 /**
  * A console logger service for CLI with enhanced formatting.
+ *
+ * Every level goes to stderr: a command's stdout is its output, which callers pipe and parse, so a
+ * log line there corrupts it.
  */
 export const PrettyCliLoggerTransport = defineService({
     name: 'PrettyCliLoggerTransport',
@@ -37,14 +40,14 @@ export const PrettyCliLoggerTransport = defineService({
             }
 
             // Log the main message
-            console[level](message);
+            console.error(message);
 
             if (obj?.error instanceof Error) {
                 const { error, ...rest } = obj;
                 obj = rest;
 
                 const formattedError = formatError(error, prefix);
-                console[level](formattedError);
+                console.error(formattedError);
 
                 // Extract and merge ApplicationError data
                 if (error instanceof ApplicationError) {
@@ -56,7 +59,7 @@ export const PrettyCliLoggerTransport = defineService({
             // Format and log other properties
             if (obj && Object.keys(obj).length > 0) {
                 const formattedProps = formatObjectProperties(obj, prefix);
-                console[level](formattedProps);
+                console.error(formattedProps);
             }
         };
     },

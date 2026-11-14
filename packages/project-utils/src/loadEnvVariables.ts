@@ -75,6 +75,7 @@ function loadEnvFile(file: string, output: Record<string, string>) {
 
     const result = configDotenv({ path: file, override: true, processEnv: output, quiet: true });
     if (result.parsed) {
-        console.debug(`🛠️ Loaded environment variables from ${chalk.green(file)}`);
+        // stderr, not stdout: a CLI's stdout is its output, and callers parse it.
+        console.error(`🛠️ Loaded environment variables from ${chalk.green(file)}`);
     }
 }

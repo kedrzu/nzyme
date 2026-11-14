@@ -87,7 +87,7 @@ The checklist, and why a rule is not re-checked in both layers: [`testing/e2e-vs
 - Helpers go at the **bottom** of the same test file as plain hoisted functions — not in a separate
   `.ts`, which would compile as production code. A one-line helper used once is just indirection; inline
   it.
-- Run a narrow target while iterating: `bun test <file>`. `LOGGING=true` prints captured logs.
+- Run a narrow target while iterating: `bun test <file>`. `LOG_LEVEL=debug` (or any level) prints the captured logs from that level up.
 
 ## Wiring units — `createTestContainer`
 

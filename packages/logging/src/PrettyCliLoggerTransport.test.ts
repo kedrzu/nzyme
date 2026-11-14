@@ -22,30 +22,47 @@ function createTransport(env: Record<string, string>): LoggerTransport {
     return container.resolve(PrettyCliLoggerTransport);
 }
 
-test('hides debug and trace by default', () => {
+test('unset LOG_LEVEL shows info and above only', () => {
     const transport = createTransport({});
 
-    transport('test', 'debug', 'debug line');
     transport('test', 'trace', 'trace line');
-
+    transport('test', 'debug', 'debug line');
     expect(stderr).not.toHaveBeenCalled();
-});
-
-test('shows debug and trace with LOGGING=true', () => {
-    const transport = createTransport({ LOGGING: 'true' });
-
-    transport('test', 'debug', 'debug line');
-    transport('test', 'trace', 'trace line');
-
-    expect(stderr).toHaveBeenCalledTimes(2);
-});
-
-test('always shows info, warn and error', () => {
-    const transport = createTransport({});
 
     transport('test', 'info', 'info line');
     transport('test', 'warn', 'warn line');
     transport('test', 'error', 'error line');
-
     expect(stderr).toHaveBeenCalledTimes(3);
+});
+
+test('empty LOG_LEVEL means unset', () => {
+    const transport = createTransport({ LOG_LEVEL: '' });
+
+    transport('test', 'debug', 'debug line');
+
+    expect(stderr).not.toHaveBeenCalled();
+});
+
+test('LOG_LEVEL=trace shows every level', () => {
+    const transport = createTransport({ LOG_LEVEL: 'trace' });
+
+    transport('test', 'trace', 'trace line');
+    transport('test', 'debug', 'debug line');
+
+    expect(stderr).toHaveBeenCalledTimes(2);
+});
+
+test('LOG_LEVEL=warn hides info and shows warn and error', () => {
+    const transport = createTransport({ LOG_LEVEL: 'warn' });
+
+    transport('test', 'info', 'info line');
+    expect(stderr).not.toHaveBeenCalled();
+
+    transport('test', 'warn', 'warn line');
+    transport('test', 'error', 'error line');
+    expect(stderr).toHaveBeenCalledTimes(2);
+});
+
+test('an invalid LOG_LEVEL throws listing the levels', () => {
+    expect(() => createTransport({ LOG_LEVEL: 'verbose' })).toThrow('trace, debug, info, warn, error');
 });

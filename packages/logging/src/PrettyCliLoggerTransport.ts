@@ -6,6 +6,8 @@ import { identity } from '@nzyme/utils/functions/identity.js';
 import { parseStackTrace } from '@nzyme/utils/parseStackTrace.js';
 import { toJsonString } from '@nzyme/utils/toJsonString.js';
 
+import { LOG_LEVEL } from './env.js';
+import { getEnabledLoggerLevels } from './getEnabledLoggerLevels.js';
 import { ApplicationError } from './ApplicationError.js';
 import type { LoggerLevel } from './LoggerLevel.js';
 import { LoggerTransport } from './LoggerTransport.js';
@@ -13,12 +15,23 @@ import { getPrettyPrefix } from './utils/getPrettyPrefix.js';
 
 /**
  * A console logger service for CLI with enhanced formatting.
+ *
+ * Every level goes to stderr: a command's stdout is its output, which callers pipe and parse, so a
+ * log line there corrupts it. `LOG_LEVEL` sets the minimum level; unset, it is `info`, so a command's
+ * routine startup (`debug`, `trace`) stays silent.
  */
 export const PrettyCliLoggerTransport = defineService({
     name: 'PrettyCliLoggerTransport',
     implements: LoggerTransport,
-    setup: (): LoggerTransport => {
+    deps: { logLevel: LOG_LEVEL },
+    setup: ({ logLevel }): LoggerTransport => {
+        const enabled = getEnabledLoggerLevels(logLevel ?? 'info');
+
         return (logger, level, message, obj) => {
+            if (!enabled[level]) {
+                return;
+            }
+
             const prefix = getPrettyPrefix(logger);
             const color = getColor(level);
             const lines = message.split('\n');
@@ -37,14 +50,14 @@ export const PrettyCliLoggerTransport = defineService({
             }
 
             // Log the main message
-            console[level](message);
+            console.error(message);
 
             if (obj?.error instanceof Error) {
                 const { error, ...rest } = obj;
                 obj = rest;
 
                 const formattedError = formatError(error, prefix);
-                console[level](formattedError);
+                console.error(formattedError);
 
                 // Extract and merge ApplicationError data
                 if (error instanceof ApplicationError) {
@@ -56,7 +69,7 @@ export const PrettyCliLoggerTransport = defineService({
             // Format and log other properties
             if (obj && Object.keys(obj).length > 0) {
                 const formattedProps = formatObjectProperties(obj, prefix);
-                console[level](formattedProps);
+                console.error(formattedProps);
             }
         };
     },

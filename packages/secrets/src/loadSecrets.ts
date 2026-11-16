@@ -36,5 +36,5 @@ export async function loadSecrets(container: Container, stores: SecretStore[]): 
     }
 
     const logger = Logger.create({ name: 'Secrets', transport: container.resolve(LoggerTransport) });
-    logger.info('Secrets loaded', { loaded, overridden });
+    logger.debug('Secrets loaded', { loaded, overridden });
 }

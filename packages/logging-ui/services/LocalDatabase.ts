@@ -1,3 +1,4 @@
+import { getEnabledLoggerLevels } from '@nzyme/logging/getEnabledLoggerLevels.js';
 import type { LoggerLevel } from '@nzyme/logging/LoggerLevel.js';
 import type { Resolved } from '@nzyme/ioc/Injectable.js';
 import { defineService } from '@nzyme/ioc/Service.js';
@@ -27,18 +28,6 @@ export interface LoggerConfig {
     /** Minimum level to display. Logs at this level or more severe are shown. 'none' hides all. */
     minLevel: LoggerLevel | 'none';
 }
-
-/** Severity ranking: lower number = more severe. */
-const LEVEL_SEVERITY: Record<LoggerLevel, number> = {
-    error: 0,
-    warn: 1,
-    info: 2,
-    debug: 3,
-    trace: 4,
-};
-
-/** Levels ordered by severity (most severe first). */
-const LEVELS_BY_SEVERITY: LoggerLevel[] = ['error', 'warn', 'info', 'debug', 'trace'];
 
 /**
  * Database schema for logging-ui using Dexie.
@@ -181,10 +170,7 @@ export function isLevelDisabled(config: LoggerConfig | undefined, level: LoggerL
     if (!config || !config.minLevel) {
         return false;
     }
-    if (config.minLevel === 'none') {
-        return true;
-    }
-    return LEVEL_SEVERITY[level] > LEVEL_SEVERITY[config.minLevel];
+    return !getEnabledLoggerLevels(config.minLevel)[level];
 }
 
 /**

@@ -68,7 +68,7 @@ await loadSecrets(container, container.resolve(AppStores));
 reads those variables. Production, whose platform provides the variables, skips it.
 
 - **Precedence:** for a key in several stores the earlier store wins. A non-empty variable already set
-  wins over its secret, and its name is reported in the `Secrets loaded` log (`overridden`). Bun loads
+  wins over its secret, and its name is reported in the `Secrets loaded` debug log (`overridden`). Bun loads
   `.env` before any code runs, so a name listed there usually means a leftover `.env`.
 - **All or nothing:** every read completes before anything is written. A failed read throws and leaves
   `EnvVariables` untouched.

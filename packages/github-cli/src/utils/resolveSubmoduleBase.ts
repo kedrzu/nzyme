@@ -15,8 +15,8 @@ export interface TrunkSubmoduleBase {
  * Every submodule stays on the commit its gitlink pins: nothing is parked, fast-forwarded or merged
  * against any base inside it, no submodule pull request is opened, readied or listed in the product
  * pull request's body, and no gitlink is re-pointed. A submodule is still fetched, only to check
- * that the commit its gitlink pins is on its remote before the main repository is pushed. `trunk` is kept only to tell a submodule resting on the trunk apart from
- * one carrying work of its own.
+ * that the commit its gitlink pins is on its remote before the main repository is pushed. `trunk`
+ * is kept only to tell a submodule resting on the trunk apart from one carrying work of its own.
  */
 export interface PinnedSubmoduleBase {
     kind: 'pin';

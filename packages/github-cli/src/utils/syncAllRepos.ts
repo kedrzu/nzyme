@@ -12,6 +12,7 @@ import { assertNoConflicts } from './assertNoConflicts.js';
 import { findUpperNodeHeads } from './assertPushLeavesUpperNodesOpen.js';
 import type { BranchGuard } from './createBranchGuard.js';
 import { createBranchGuard } from './createBranchGuard.js';
+import { assertSubmodulePinPublished } from './assertSubmodulePinPublished.js';
 import { assertSubmoduleReady } from './assertSubmoduleReady.js';
 import { autoCommitChanges } from './autoCommitChanges.js';
 import type { GithubClient } from './createGithubClient.js';
@@ -179,7 +180,7 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     // Every main-repository step below acts on whatever HEAD is at that instant, and the worktree is
     // shared with any other command running in it — so each write first checks HEAD is still the
     // branch this sync is for.
-    const mainGuard = createBranchGuard({
+    const branchGuard = createBranchGuard({
         git: mainGit,
         branch: mainBranch,
         findUpperNodes: () => findUpperNodeHeads(githubClient, githubConfig, mainBranch),
@@ -187,6 +188,24 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
 
     // === Phase 1: Detect submodules ===
     const submoduleInfos = await getSubmoduleInfo();
+
+    // A pinned submodule is left out of every phase below, so none of them can park, fast-forward
+    // or merge a base inside it, or commit a gitlink it moved. What its gitlink records is still
+    // checked before each main-repository push — against the HEAD actually pushed, after Phase 4 has
+    // taken in the remote branch and Phase 8 the base: leaving a pin alone is no reason to publish
+    // one that names a commit the submodule's remote does not have. That holds with a human present
+    // too — unlike a mid-flight submodule on the trunk path, a dangling gitlink is never worth pushing.
+    const mainGuard: BranchGuard = followsTrunk
+        ? branchGuard
+        : {
+              beforeWrite: branchGuard.beforeWrite,
+              beforePush: async () => {
+                  await branchGuard.beforePush();
+                  for (const submodule of submoduleInfos) {
+                      await assertSubmodulePinPublished({ mainGit, submodule });
+                  }
+              },
+          };
 
     // === Phase 2: Commit pending changes ===
     logger.info('');
@@ -226,8 +245,6 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     // are now stale, and readiness is judged from exactly those fields.
     const resolvedSubmodules = anySubmoduleCommitted ? await getSubmoduleInfo() : submoduleInfos;
 
-    // A pinned submodule is left out of every phase below, so none of them can fetch, park,
-    // fast-forward or merge a base inside it, or commit a gitlink it moved.
     if (submoduleBase.kind === 'pin' && resolvedSubmodules.length > 0) {
         logger.info(`   ${describeSubmodulePin(submoduleBase)}`);
     }

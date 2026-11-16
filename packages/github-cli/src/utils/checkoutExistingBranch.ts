@@ -18,6 +18,7 @@ import { handlePullWithRebase } from './handlePullWithRebase.js';
 import { applyNamedStash, pushNamedStash } from './namedStash.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 import { describeSubmodulePin } from './resolveSubmoduleBase.js';
+import { readGitlink } from './readGitlink.js';
 import { resolveSubmoduleBranch } from './resolveSubmoduleBranch.js';
 
 /**
@@ -369,9 +370,8 @@ async function checkoutSubmoduleBranch(params: CheckoutSubmoduleBranchParams): P
     // The main repo's checkout of `branchName` has already run by the time this executes, so the
     // gitlink it now records for the submodule - the commit HEAD points at right now - is the only
     // fact this repository actually carries about which submodule state belongs to the branch just
-    // checked out. `rev-parse HEAD:<path>` reads that gitlink straight from the commit's tree, the
-    // terser equivalent of `verify-submodule-refs.ts`'s `getSubmoduleCommit` (`ls-tree HEAD <path>`).
-    const gitlinkSha = (await simpleGit().raw(['rev-parse', `HEAD:${submodule.path}`])).trim();
+    // checked out.
+    const gitlinkSha = await readGitlink(simpleGit(), submodule.path);
 
     if (submoduleBase.kind === 'pin') {
         await checkoutSubmoduleOntoPin({ submoduleGit, submodule, gitlinkSha, logger });

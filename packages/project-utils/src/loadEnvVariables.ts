@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import chalk from 'chalk';
 import { config as configDotenv } from 'dotenv';
 
+import { shouldLog } from '@nzyme/logging/shouldLog.js';
 import { asArray } from '@nzyme/utils/array/asArray.js';
 
 import { getProjectRoot } from './getProjectRoot.js';
@@ -74,9 +75,9 @@ function loadEnvFile(file: string, output: Record<string, string>) {
     }
 
     const result = configDotenv({ path: file, override: true, processEnv: output, quiet: true });
-    if (result.parsed && process.env.LOGGING === 'true') {
-        // Verbose only, like the CLI logger's debug lines: it runs before any container exists, so the
-        // switch is read directly. stderr, not stdout: a CLI's stdout is its output, and callers parse it.
+    if (result.parsed && shouldLog('debug', { fallback: 'info' })) {
+        // A debug line, like the CLI logger's: it runs before any container exists, so the level is read
+        // through `shouldLog`. stderr, not stdout: a CLI's stdout is its output, and callers parse it.
         console.error(`🛠️ Loaded environment variables from ${chalk.green(file)}`);
     }
 }

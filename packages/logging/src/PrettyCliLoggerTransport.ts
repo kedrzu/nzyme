@@ -6,7 +6,8 @@ import { identity } from '@nzyme/utils/functions/identity.js';
 import { parseStackTrace } from '@nzyme/utils/parseStackTrace.js';
 import { toJsonString } from '@nzyme/utils/toJsonString.js';
 
-import { LOGGING } from './env.js';
+import { LOG_LEVEL } from './env.js';
+import { getEnabledLoggerLevels } from './getEnabledLoggerLevels.js';
 import { ApplicationError } from './ApplicationError.js';
 import type { LoggerLevel } from './LoggerLevel.js';
 import { LoggerTransport } from './LoggerTransport.js';
@@ -16,16 +17,18 @@ import { getPrettyPrefix } from './utils/getPrettyPrefix.js';
  * A console logger service for CLI with enhanced formatting.
  *
  * Every level goes to stderr: a command's stdout is its output, which callers pipe and parse, so a
- * log line there corrupts it. `debug` and `trace` lines print only with `LOGGING=true`, so a command's
- * routine startup stays silent; `info`, `warn` and `error` always print.
+ * log line there corrupts it. `LOG_LEVEL` sets the minimum level; unset, it is `info`, so a command's
+ * routine startup (`debug`, `trace`) stays silent.
  */
 export const PrettyCliLoggerTransport = defineService({
     name: 'PrettyCliLoggerTransport',
     implements: LoggerTransport,
-    deps: { verbose: LOGGING },
-    setup: ({ verbose }): LoggerTransport => {
+    deps: { logLevel: LOG_LEVEL },
+    setup: ({ logLevel }): LoggerTransport => {
+        const enabled = getEnabledLoggerLevels(logLevel ?? 'info');
+
         return (logger, level, message, obj) => {
-            if (!verbose && (level === 'debug' || level === 'trace')) {
+            if (!enabled[level]) {
                 return;
             }
 

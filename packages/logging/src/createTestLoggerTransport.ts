@@ -2,6 +2,7 @@ import type { LoggerObject } from './Logger.js';
 import type { LoggerLevel } from './LoggerLevel.js';
 import { consoleLog } from './LoggerTransport.js';
 import type { LoggerTransport } from './LoggerTransport.js';
+import { getProcessLoggerLevels } from './shouldLog.js';
 
 /** A log entry captured during test execution. */
 export interface CapturedLog {
@@ -25,18 +26,18 @@ export interface TestLoggerTransportResult {
 
 /**
  * Create a {@link LoggerTransport} suitable for tests — captures every log entry into an array
- * and, when `process.env.LOGGING === 'true'`, also forwards it to the console for debugging.
+ * and also forwards the levels `LOG_LEVEL` enables to the console for debugging (nothing when unset).
  *
  * @__NO_SIDE_EFFECTS__
  */
 export function createTestLoggerTransport(): TestLoggerTransportResult {
-    const enabled = process.env.LOGGING === 'true';
+    const enabled = getProcessLoggerLevels({ fallback: 'none' });
     const logs: CapturedLog[] = [];
 
     const transport: LoggerTransport = (logger, level, message, obj) => {
         logs.push({ logger, level, message, data: obj });
 
-        if (enabled) {
+        if (enabled[level]) {
             consoleLog(logger, level, message, obj);
         }
     };

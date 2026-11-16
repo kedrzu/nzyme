@@ -74,8 +74,9 @@ function loadEnvFile(file: string, output: Record<string, string>) {
     }
 
     const result = configDotenv({ path: file, override: true, processEnv: output, quiet: true });
-    if (result.parsed) {
-        // stderr, not stdout: a CLI's stdout is its output, and callers parse it.
+    if (result.parsed && process.env.LOGGING === 'true') {
+        // Verbose only, like the CLI logger's debug lines: it runs before any container exists, so the
+        // switch is read directly. stderr, not stdout: a CLI's stdout is its output, and callers parse it.
         console.error(`🛠️ Loaded environment variables from ${chalk.green(file)}`);
     }
 }

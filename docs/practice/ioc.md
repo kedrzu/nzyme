@@ -197,7 +197,7 @@ container, not its parents. Framework interfaces an app typically provides: `Lan
 
 ### Environment variables
 
-`defineEnvVariable` from `@nzyme/ioc/defineEnvVariable.js`; never `process.env`. **A bare call is
+`defineEnvVariable` from `@nzyme/ioc/defineEnvVariable.js`; never `process.env`. The one exception is `LOG_LEVEL` in code that runs before any container exists, read through `shouldLog()` from `@nzyme/logging/shouldLog.js`. **A bare call is
 required** — `defineEnvVariable('X')` resolves to `string` and throws at resolution if unset.
 
 ```ts

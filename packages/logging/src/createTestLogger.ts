@@ -12,7 +12,7 @@ export interface TestLoggerResult {
 
 /**
  * Create a {@link Logger} backed by a test transport. Log entries are captured into the returned
- * `logs` array and also forwarded to the console when `process.env.LOGGING === 'true'`.
+ * `logs` array and also forwarded to the console for the levels `LOG_LEVEL` enables.
  *
  * @param name - Name assigned to the logger and emitted with every entry.
  *

@@ -1,3 +1,4 @@
+import { LOGGER_LEVELS } from '@nzyme/logging/LoggerLevel.js';
 import type { LoggerLevel } from '@nzyme/logging/LoggerLevel.js';
 import { consoleLog } from '@nzyme/logging/LoggerTransport.js';
 import type { Resolved } from '@nzyme/ioc/Injectable.js';
@@ -11,7 +12,8 @@ import { getLoggerPath, isLevelDisabled, LocalDatabase } from './LocalDatabase.j
 
 const MAX_LOGS = 10000;
 
-export const LOG_LEVELS: LoggerLevel[] = ['error', 'warn', 'info', 'debug', 'trace'];
+/** Levels for display, most severe first. */
+export const LOG_LEVELS: LoggerLevel[] = [...LOGGER_LEVELS].reverse();
 
 /**
  * Color palette for apps and loggers (matches getPrettyPrefix colors).

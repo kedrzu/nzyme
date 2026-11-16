@@ -6,6 +6,14 @@ browser transports and a websocket transport). A deployed transport typically se
 and your object into one structured line, and forwards `error` entries to error tracking — so the
 fields you pass are what you can later filter and aggregate on.
 
+## `LOG_LEVEL`
+
+`LOG_LEVEL=<trace|debug|info|warn|error>` logs that level and above; an invalid value throws. Unset, each
+transport keeps its default: the CLI transport prints `info`+, the test transport forwards nothing,
+`consoleLog` prints everything. Code that runs before any container exists (like the `.env` loader) gates
+a log with `shouldLog(level, { fallback })` from `@nzyme/logging/shouldLog.js`. A transport resolves
+`getEnabledLoggerLevels(threshold)` once and checks `enabled[level]` per entry.
+
 ## Log level — first match wins
 
 |The entry is…|Level|
@@ -94,7 +102,7 @@ not from user content.
 `createTestContainer()` from `@nzyme/ioc-testing/createTestContainer.js` installs a capturing transport
 and returns every entry as `logs` (`{ logger, level, message, data }`); outside a container,
 `createTestLogger(name)` from `@nzyme/logging/createTestLogger.js` returns a real `Logger` plus `logs`.
-Both stay silent unless the test runs with `LOGGING=true`. Mocking `Logger` adds nothing and cannot even
+Both stay silent unless the test runs with `LOG_LEVEL=<level>`, which prints the captured entries from that level up. Mocking `Logger` adds nothing and cannot even
 work through `container.set` — the logger is transient, so override `LoggerTransport` if you need a
 different sink.
 

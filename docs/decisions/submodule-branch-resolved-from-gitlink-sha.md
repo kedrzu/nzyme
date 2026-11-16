@@ -107,8 +107,10 @@ product pull request finally lands: its `base.ref`, or for a stack the base of t
   fast-forwarded and merged against it, their pull requests target it, and a merge re-points the
   gitlinks.
 - **It lands anywhere else** (a hotfix into a production branch, say): every command — switch, push,
-  ready, refresh, merge — leaves each submodule on its gitlink. Nothing is fetched, parked or merged
-  inside it, no submodule pull request is opened or readied, and no gitlink is re-pointed.
+  ready, refresh, merge — leaves each submodule on its gitlink. Nothing is parked or merged inside
+  it, no submodule pull request is opened or readied, and no gitlink is re-pointed. It is fetched
+  only so that each main-repository push can refuse a gitlink naming a commit on no branch of the
+  submodule's remote.
 
 The product owns its pins ([product-owned-submodule-pins](product-owned-submodule-pins.md)), and only
 its trunk has them moved; a production branch receives a pin only by promotion, one the trunk has

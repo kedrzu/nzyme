@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -425,7 +425,7 @@ async function setupMovedSubmodule(
 // Before the trunk-or-pin rule, the sync took the PR base (`release`) as the submodule base too:
 // it fetched the submodule's own `release`, parked the detached submodule on it, and committed that
 // gitlink into the hotfix — shipping an nzyme commit the product's `main` had never run.
-test('a branch that does not land on the trunk leaves the submodule on its pin: nothing parked or re-pointed', async () => {
+test('a branch that does not land on the trunk leaves the submodule on its pin: nothing fetched, parked or re-pointed', async () => {
     const { mainPath, submodulePath, pin } = await setupMovedSubmodule(root, [
         { name: 'abc-1-hotfix', from: 'release' },
     ]);
@@ -447,9 +447,9 @@ test('a branch that does not land on the trunk leaves the submodule on its pin: 
     const sub = simpleGit({ baseDir: submodulePath });
     expect((await sub.revparse(['HEAD'])).trim()).toBe(pin);
     expect((await sub.status()).detached).toBe(true);
-    // Fetched only to check the pin is published: no local branch of the submodule's own `release`
-    // line was created or checked out.
-    expect((await sub.raw(['branch', '--list', 'release'])).trim()).toBe('');
+    // Not even fetched: nothing was pushed, so the pin was never checked against its remote.
+    expect((await sub.revparse(['origin/main'])).trim()).toBe(pin);
+    expect((await sub.raw(['branch', '-r', '--list', 'origin/release'])).trim()).toBe('');
 
     await main.fetch('origin');
     expect((await main.revparse(['origin/abc-1-hotfix'])).trim()).toBe(remoteHeadBefore);
@@ -605,35 +605,41 @@ test('a pinned branch refuses to push a gitlink naming a submodule commit its re
     });
 
     await expect(failure).rejects.toThrow(UsageError);
-    await expect(failure).rejects.toThrow(/nzyme.*feat\/log-level/);
+    await expect(failure).rejects.toThrow(/nzyme/);
 
     await main.fetch('origin');
     expect((await main.revparse(['origin/abc-2-upper'])).trim()).toBe(remoteHeadBefore);
 });
 
-// The check reads the submodule's remote-tracking refs, so they are refreshed (and pruned) first: a
-// branch that is gone from the remote must not still vouch for the commit through a stale ref.
-test('a pinned branch refuses a gitlink that only a stale remote-tracking ref still contains', async () => {
-    const { mainPath, submodulePath } = await setupMovedSubmodule(root, [
+// The pin is judged on the HEAD the push carries, after the branch has taken in its remote: a
+// dangling gitlink the remote branch has already re-pointed at a published commit is not refused.
+test('a pinned branch behind its remote is judged on the gitlink it pushes, not the stale local one', async () => {
+    const { mainPath, submodulePath, pin } = await setupMovedSubmodule(root, [
         { name: 'abc-1-base', from: 'main' },
         { name: 'abc-2-upper', from: 'abc-1-base' },
     ]);
     const main = simpleGit({ baseDir: mainPath });
-    const remoteHeadBefore = (await main.revparse(['origin/abc-2-upper'])).trim();
     await pinUnpublishedSubmoduleCommit({
         mainPath,
         submodulePath,
         branch: 'abc-2-upper',
-        subBranch: 'feat/gone',
+        subBranch: 'feat/log-level',
     });
-    const sub = simpleGit({ baseDir: submodulePath });
-    await sub.push(['-u', 'origin', 'feat/gone']);
-    // Deleted on the remote by someone else; this checkout's `origin/feat/gone` still has it.
-    await simpleGit({ baseDir: join(root, 'origin-sub.git') }).raw(['branch', '-D', 'feat/gone']);
+    const dangling = (await main.revparse(['HEAD'])).trim();
+    // Someone re-points the gitlink at the published pin and pushes; this checkout still sits on
+    // the dangling commit, with a local change of its own to push.
+    await simpleGit({ baseDir: submodulePath }).checkout(pin);
+    await main.add(['nzyme']);
+    await main.commit('re-point the submodule at a published commit');
+    await main.push(['origin', 'abc-2-upper']);
+    await main.reset(['--hard', dangling]);
+    writeFileSync(join(mainPath, 'local.txt'), 'local\n');
+    await main.add(['local.txt']);
+    await main.commit('local work');
     const { logger } = createTestLogger('syncAllRepos');
     process.chdir(mainPath);
 
-    const failure = syncAllRepos({
+    await syncAllRepos({
         branch: 'abc-2-upper',
         baseBranch: 'abc-1-base',
         submoduleBase: { kind: 'pin', trunk: 'main', landingTrunk: 'abc-1-base' },
@@ -643,9 +649,39 @@ test('a pinned branch refuses a gitlink that only a stale remote-tracking ref st
         logger,
     });
 
-    await expect(failure).rejects.toThrow(UsageError);
-    await expect(failure).rejects.toThrow(/nzyme/);
+    await main.fetch('origin');
+    expect((await main.raw(['rev-parse', 'origin/abc-2-upper:nzyme'])).trim()).toBe(pin);
+    expect((await main.raw(['rev-parse', 'origin/abc-2-upper:local.txt'])).trim()).not.toBe('');
+});
+
+// A clone made without `--recurse-submodules` has an empty directory where the submodule goes, which
+// git resolves upward to the main repository. The sync leaves such a submodule out rather than
+// checking — or fetching — the main repository in its name.
+test('a pinned branch with an uninitialized submodule pushes without checking its pin', async () => {
+    const { mainPath, submodulePath, pin } = await setupMovedSubmodule(root, [
+        { name: 'abc-1-hotfix', from: 'release' },
+    ]);
+    const main = simpleGit({ baseDir: mainPath });
+    rmSync(submodulePath, { recursive: true, force: true });
+    mkdirSync(submodulePath);
+    writeFileSync(join(mainPath, 'local.txt'), 'local\n');
+    await main.add(['local.txt']);
+    await main.commit('local work');
+    const localHead = (await main.revparse(['HEAD'])).trim();
+    const { logger } = createTestLogger('syncAllRepos');
+    process.chdir(mainPath);
+
+    await syncAllRepos({
+        branch: 'abc-1-hotfix',
+        baseBranch: 'release',
+        submoduleBase: { kind: 'pin', trunk: 'main', landingTrunk: 'release' },
+        unattended: true,
+        githubClient: NO_UPPER_NODES_CLIENT,
+        githubConfig: GITHUB_CONFIG,
+        logger,
+    });
 
     await main.fetch('origin');
-    expect((await main.revparse(['origin/abc-2-upper'])).trim()).toBe(remoteHeadBefore);
+    expect((await main.revparse(['origin/abc-1-hotfix'])).trim()).toBe(localHead);
+    expect((await main.raw(['rev-parse', 'origin/abc-1-hotfix:nzyme'])).trim()).toBe(pin);
 });

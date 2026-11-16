@@ -49,7 +49,8 @@ export interface SubmoduleInfo {
 }
 
 /**
- * Get information about all submodules in the repository.
+ * Get information about all initialized submodules in the repository. A submodule with no checkout
+ * of its own is left out.
  */
 export async function getSubmoduleInfo(): Promise<SubmoduleInfo[]> {
     const git = simpleGit();
@@ -78,6 +79,14 @@ export async function getSubmoduleInfo(): Promise<SubmoduleInfo[]> {
             const submoduleGit = simpleGit({ baseDir: path });
 
             try {
+                // An uninitialized submodule is an empty directory, so git resolves it upward to the
+                // main repository — every command below would then read and write the main repository
+                // in its name. Its own checkout is the top level of the repository it resolves to.
+                const prefix = await submoduleGit.revparse(['--show-prefix']);
+                if (prefix.trim() !== '') {
+                    continue;
+                }
+
                 // Get submodule status
                 const status = await submoduleGit.status();
                 const hasChanges = status.files.length > 0;

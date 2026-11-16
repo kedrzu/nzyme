@@ -5,6 +5,7 @@ import { UsageError } from '@nzyme/cli-core';
 
 import type { SubmoduleInfo } from './getSubmoduleInfo.js';
 import { isOnAnyRemoteBranch } from './parkSubmoduleOnBase.js';
+import { readGitlink } from './readGitlink.js';
 import { parseContainingBranches } from './resolveSubmoduleBranch.js';
 
 /**
@@ -39,7 +40,7 @@ export async function assertSubmodulePinPublished(params: AssertSubmodulePinPubl
     const { mainGit, submodule } = params;
     const subGit = simpleGit({ baseDir: submodule.path });
 
-    const pin = (await mainGit.raw(['rev-parse', `HEAD:${submodule.path}`])).trim();
+    const pin = await readGitlink(mainGit, submodule.path);
     await subGit.fetch(['origin', '--prune']);
 
     if (await isOnAnyRemoteBranch(subGit, pin)) {

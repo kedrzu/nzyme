@@ -62,7 +62,9 @@ for `nzyme git affected --record` to store as the variants of `@nzyme/affected`.
   process that reported `ready` has flushed past a test's end, it appends the test's line to
   `resultsFile` (`TracedTestResult` of `@nzyme/affected`): failed, passed with an incomplete trace and
   the reason (`no-heartbeat`, `stale-build`, `unprobed`, …), or passed with what it executed, its
-  assets and the run's startup code. With `ownsServers: false` it writes nothing. `traceDir` must be
+  assets and the run's startup code. A build is stale when a built file the test ran was not built from
+  its source's current content: the source map's `sourcesContent` differs, or, without it, the
+  `tsgo` build info's hash of the source does; an asset is compared by modification time. With `ownsServers: false` it writes nothing. `traceDir` must be
   fresh per run. It runs on Node or Bun.
 - Recording is `nzyme git affected`'s, on Bun: select with
   `--suite <name> --units <list.json> --test-list-out <file> --snapshot <file>` before the run, and

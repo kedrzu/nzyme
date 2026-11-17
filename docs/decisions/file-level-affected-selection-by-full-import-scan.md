@@ -81,7 +81,7 @@ used by healed's architecture check, so one parser serves both.
   script that scopes other checks to the change (formatting, a typecheck) takes the base from there
   and hands it back as `--base`, so every check measures the same change.
 - **E2E is out of scope.** A spec reaches the code through a browser and HTTP, which the graph
-  cannot see; e2e keeps running in full.
+  cannot see. E2E is selected from recorded execution instead (`variant-based-test-selection.md`).
 
 ## Consequences
 
@@ -102,7 +102,8 @@ Added 2026-11-17. `nzyme git affected --suite <name>` selects the tests of a sui
 `nzyme.affected.suites` from recorded **variants** (`openTestSelector` in `@nzyme/affected`) instead of
 the base diff alone. A variant is a test's dependencies with their hashes, recorded from a passing
 run; a test is skipped while one of its variants matches the current code. The base diff above stays
-as the fallback: a test of a static suite with no variant is selected by it, as before.
+as the fallback: a test of a static suite with no variant is selected by it, as before. Why variants
+and what they hash: `variant-based-test-selection.md`.
 
 - **The unit of a static suite is the file.** bun test and vitest report per testcase, but the
   command runs files, so `--junit <file>` records per file: a file whose testcases all passed gets a

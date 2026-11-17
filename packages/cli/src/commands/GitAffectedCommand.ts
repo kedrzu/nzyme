@@ -1,23 +1,16 @@
 import { constants } from 'node:os';
 import path from 'node:path';
 
+import { readAffectedConfig } from '@nzyme/affected/base/AffectedConfig.js';
+import { selectAffectedSinceBase } from '@nzyme/affected/base/selectAffectedSinceBase.js';
+import type { AffectedSelection } from '@nzyme/affected/base/selectAffectedFiles.js';
 import { Option, UsageError } from '@nzyme/cli-core';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { spawnForExitCode } from '@nzyme/cli-core/utils/spawnForExitCode.js';
 import type { SpawnForExitCodeResult } from '@nzyme/cli-core/utils/spawnForExitCode.js';
 import { findOwningPackageDir } from '@nzyme/project-utils/findOwningPackageDir.js';
-import { getPackages } from '@nzyme/project-utils/getPackages.js';
-import { buildImportGraph } from '@nzyme/project-utils/importGraph/buildImportGraph.js';
-import { relativePosixPath } from '@nzyme/project-utils/relativePosixPath.js';
-import { resolveAffectedBase } from '@nzyme/project-utils/resolveAffectedBase.js';
+import { GitRepository } from '@nzyme/project-utils/git/GitRepository.js';
 import type { AffectedBase } from '@nzyme/project-utils/resolveAffectedBase.js';
-
-import { readAffectedConfig } from '../affected/AffectedConfig.js';
-import { collectChangedFiles } from '../affected/collectChangedFiles.js';
-import { rewriteChangedPath } from '../affected/rewriteChangedPath.js';
-import type { AffectedSelection } from '../affected/selectAffectedFiles.js';
-import { selectAffectedFiles } from '../affected/selectAffectedFiles.js';
-import { GitRepository } from '../submodule/GitRepository.js';
 
 /**
  * Selects the files a change can affect — the changed files plus everything importing them,
@@ -90,30 +83,14 @@ export class GitAffectedCommand extends Command {
 
         const args = parseAffectedArgs(this.args);
         const root = await new GitRepository(this.cwd).git(['rev-parse', '--show-toplevel']);
-        const [config, packages] = await Promise.all([readAffectedConfig(root), getPackages(root)]);
-
-        const base = await resolveAffectedBase({
+        const config = await readAffectedConfig(root);
+        const { base, changedFiles, selection, packageDirs } = await selectAffectedSinceBase({
             root,
+            config,
+            patterns: args.patterns,
             base: args.base,
             env: process.env,
-            baseBranches: config.baseBranches,
         });
-        const changedFiles = await collectChangedFiles({ root, mergeBase: base.mergeBase });
-        const graph = await buildImportGraph({
-            root,
-            packages,
-            aliases: config.aliases,
-            // Deleted files and rewrite targets (a gitignored `x.loc.ts`) are not walked, yet their importers count.
-            extraPaths: changedFiles.flatMap(file => [
-                ...(file.deleted ? [file.path] : []),
-                ...rewriteChangedPath(file.path, config.rewrites),
-            ]),
-        });
-
-        const packageDirs = packages
-            .map(pkg => relativePosixPath(root, pkg.path))
-            .filter(dir => dir !== '' && !dir.startsWith('..'));
-        const selection = selectAffectedFiles({ graph, changedFiles, config, patterns: args.patterns, packageDirs });
 
         this.context.stderr.write(`${describeRun(base, changedFiles.length, selection)}\n`);
 

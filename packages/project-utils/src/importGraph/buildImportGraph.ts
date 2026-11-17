@@ -35,6 +35,8 @@ export interface ImportGraph {
     files: string[];
     /** Direct importers of a root-relative path, one edge per importing file; `[]` for a path nothing imports. */
     importersOf(path: string): ImportEdge[];
+    /** Direct imports of a root-relative path, one edge per target, in source order; `[]` for a file not parsed. */
+    importsOf(path: string): ImportEdge[];
 }
 
 /**
@@ -54,9 +56,11 @@ export async function buildImportGraph(options: BuildImportGraphOptions): Promis
 
     const resolver = createImportResolver({ root, packages: options.packages, aliases: options.aliases, paths });
     const importers = new Map<string, ImportEdge[]>();
+    const imports = new Map<string, ImportEdge[]>();
 
-    const parsed = await Promise.all(files.map(file => parseFile(file)));
-    for (const edges of parsed) {
+    const parsed = await Promise.all(files.map(async file => ({ file, edges: await parseFile(file) })));
+    for (const { file, edges } of parsed) {
+        imports.set(file, edges);
         for (const edge of edges) {
             addImporter(edge);
         }
@@ -65,6 +69,7 @@ export async function buildImportGraph(options: BuildImportGraphOptions): Promis
     return {
         files,
         importersOf: target => importers.get(target) ?? [],
+        importsOf: source => imports.get(source) ?? [],
     };
 
     async function parseFile(file: string): Promise<ImportEdge[]> {

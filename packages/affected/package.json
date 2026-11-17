@@ -30,6 +30,8 @@
     },
     "dependencies": {
         "@nzyme/crypto": "workspace:*",
+        "@nzyme/project-utils": "workspace:*",
+        "@nzyme/utils": "workspace:*",
         "@vue/compiler-sfc": "^3.5.44",
         "oxc-parser": "^0.152.0"
     },

@@ -55,9 +55,12 @@ const files: Record<string, string> = {
         `</script>`,
         `<template><Child /></template>`,
         `<style lang="scss" module src="./Page.module.scss" />`,
+        `<style scoped>.logo { background: url('@/assets/logo.svg#mark'); }</style>`,
     ].join('\n'),
     'packages/app/components/Child.vue': `<template><p>child</p></template>`,
-    'packages/app/components/Page.module.scss': `@use '../styles/colors';`,
+    'packages/app/components/Page.module.scss': `@use '../styles/colors';\n.hero { background: url(../assets/hero.png); }`,
+    'packages/app/assets/logo.svg': '<svg />',
+    'packages/app/assets/hero.png': 'png',
     'packages/app/styles/_colors.scss': `$primary: red;`,
     'packages/app/test/fixtures.test.ts': `const dir = new URL('../fixtures/', import.meta.url);\nconst one = new URL('../data/one.json', import.meta.url);`,
     'packages/app/fixtures/a.json': '{}',
@@ -170,6 +173,21 @@ describe('buildImportGraph', () => {
         expect(importers('packages/app/fixtures/a.json')).toEqual([]);
         expect(importers('packages/app/fixtures/b.txt')).toEqual([]);
         expect(importers('packages/app/data/one.json')).toEqual(['packages/app/test/fixtures.test.ts']);
+    });
+
+    it('links a file a style references through url(), in a .scss file and in a .vue <style>', () => {
+        expect(importers('packages/app/assets/hero.png')).toEqual(['packages/app/components/Page.module.scss']);
+        expect(importers('packages/app/assets/logo.svg')).toEqual(['packages/app/components/Page.vue']);
+    });
+
+    it('lists the direct imports of a file, the reverse of importersOf', () => {
+        expect(graph.importsOf('packages/app/components/Page.vue').map(edge => edge.to)).toEqual([
+            'packages/app/utils/format.ts',
+            'packages/app/components/Child.vue',
+            'packages/app/components/Page.module.scss',
+            'packages/app/assets/logo.svg',
+        ]);
+        expect(graph.importsOf('packages/app/assets/hero.png')).toEqual([]);
     });
 
     it('gives no edge to a same-named file elsewhere, nor from comments or gitignored files', () => {

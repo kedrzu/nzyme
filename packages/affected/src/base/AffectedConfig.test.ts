@@ -10,6 +10,7 @@ test('a missing config is the defaults', () => {
         rewrites: [],
         fullRunTriggers: [],
         ignore: [],
+        suites: {},
     };
     expect(parseAffectedConfig(undefined)).toEqual(expected);
 });
@@ -21,6 +22,7 @@ test('parses a full config, keeping the defaults for absent fields', () => {
         rewrites: [{ from: '.loc.yaml', to: '.loc.ts' }],
         fullRunTriggers: ['bun.lock'],
         ignore: ['**/*.md'],
+        suites: { e2e: { patterns: ['**/*.spec.ts'], traced: true, fullRunTriggers: ['playwright.config.ts'] } },
     };
     expect(parseAffectedConfig(full)).toEqual(full);
 
@@ -30,8 +32,11 @@ test('parses a full config, keeping the defaults for absent fields', () => {
         rewrites: [],
         fullRunTriggers: [],
         ignore: ['docs/**'],
+        suites: { unit: { patterns: ['*.test.ts'], traced: false, fullRunTriggers: [] } },
     };
-    expect(parseAffectedConfig({ ignore: ['docs/**'] })).toEqual(expected);
+    expect(parseAffectedConfig({ ignore: ['docs/**'], suites: { unit: { patterns: ['*.test.ts'] } } })).toEqual(
+        expected,
+    );
 });
 
 test('a malformed config throws, naming the offending path', () => {
@@ -46,6 +51,12 @@ test('a malformed config throws, naming the offending path', () => {
         [{ rewrites: [{ from: '.a' }] }, '`nzyme.affected.rewrites[0].to` must be a non-empty string'],
         [{ rewrites: {} }, '`nzyme.affected.rewrites` must be an array'],
         [{ ignore: ['ok', ''] }, '`nzyme.affected.ignore[1]` must be a non-empty string'],
+        [{ suites: { e2e: { patterns: [] } } }, '`nzyme.affected.suites.e2e.patterns` must be a non-empty array'],
+        [
+            { suites: { e2e: { patterns: ['*'], traced: 'yes' } } },
+            '`nzyme.affected.suites.e2e.traced` must be a boolean',
+        ],
+        [{ suites: { '../e2e': { patterns: ['*'] } } }, '`nzyme.affected.suites.../e2e` must be named'],
     ];
 
     for (const [value, message] of cases) {

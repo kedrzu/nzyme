@@ -3,9 +3,9 @@ import { pathToFileURL } from 'node:url';
 
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
+import { readNzymeConfig } from '@nzyme/project-utils/readNzymeConfig.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
-import { readNzymeConfig } from '../utils/readNzymeConfig.js';
 import { readProperty } from '../utils/readProperty.js';
 
 /**

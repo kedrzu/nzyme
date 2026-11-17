@@ -1,8 +1,7 @@
+import { createConfigParsers } from '@nzyme/project-utils/createConfigParsers.js';
 import type { ImportAlias } from '@nzyme/project-utils/importGraph/resolveImportTarget.js';
+import { readNzymeConfig } from '@nzyme/project-utils/readNzymeConfig.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
-
-import { createConfigParsers } from '../utils/createConfigParsers.js';
-import { readNzymeConfig } from '../utils/readNzymeConfig.js';
 
 const { parseArray, parseStringArray, parseString, configError } = createConfigParsers('affected');
 
@@ -27,7 +26,10 @@ const { parseArray, parseStringArray, parseString, configError } = createConfigP
  *             "aliases": [{ "prefix": "@/", "packages": ["@acme/app"] }],
  *             "rewrites": [{ "from": ".loc.yaml", "to": ".loc.ts" }],
  *             "fullRunTriggers": ["package.json", "bun.lock", "**\/tsconfig*.json"],
- *             "ignore": ["**\/*.md", "docs/**"]
+ *             "ignore": ["**\/*.md", "docs/**"],
+ *             "suites": {
+ *                 "e2e": { "patterns": ["**\/*.spec.ts"], "traced": true, "fullRunTriggers": ["playwright.config.ts"] }
+ *             }
  *         }
  *     }
  * }
@@ -44,6 +46,24 @@ export interface AffectedConfig {
     fullRunTriggers: string[];
     /** Root-relative globs: a changed file matching one selects nothing (unless it is also a trigger). */
     ignore: string[];
+    /** Test suites selected from recorded variants, by name (`openTestSelector`). */
+    suites: Record<string, AffectedSuiteConfig>;
+}
+
+/** One suite of `nzyme.affected.suites`. */
+export interface AffectedSuiteConfig {
+    /** Selection globs of the suite's test files, with the rule of `nzyme git affected` patterns. */
+    patterns: string[];
+    /**
+     * Whether a run records what each test executed. A test of a traced suite with no recorded
+     * variant always runs; one of a static suite falls back to the base diff. Default `false`.
+     */
+    traced: boolean;
+    /**
+     * Root-relative globs whose change invalidates every variant of the suite, on top of the
+     * top-level `fullRunTriggers`.
+     */
+    fullRunTriggers: string[];
 }
 
 /**
@@ -78,6 +98,7 @@ export function parseAffectedConfig(value: unknown): AffectedConfig {
         rewrites: [],
         fullRunTriggers: [],
         ignore: [],
+        suites: {},
     };
     if (value === undefined) {
         return config;
@@ -104,8 +125,51 @@ export function parseAffectedConfig(value: unknown): AffectedConfig {
     if (value.ignore !== undefined) {
         config.ignore = parseStringArray(value.ignore, 'nzyme.affected.ignore');
     }
+    if (value.suites !== undefined) {
+        config.suites = parseSuites(value.suites, 'nzyme.affected.suites');
+    }
 
     return config;
+}
+
+/** Validates `suites`; a name is a store directory, so it is limited to `[A-Za-z0-9_.-]`. */
+function parseSuites(value: unknown, path: string): Record<string, AffectedSuiteConfig> {
+    if (!isPlainObject(value)) {
+        throw configError(path, 'an object');
+    }
+
+    const suites: Record<string, AffectedSuiteConfig> = {};
+    for (const [name, suite] of Object.entries(value)) {
+        if (!/^[\w.-]+$/.test(name) || name === '.' || name === '..') {
+            throw configError(`${path}.${name}`, 'named with letters, digits, `_`, `.` or `-` only');
+        }
+        suites[name] = parseSuite(suite, `${path}.${name}`);
+    }
+    return suites;
+}
+
+/** Validates one `suites` entry. */
+function parseSuite(value: unknown, path: string): AffectedSuiteConfig {
+    if (!isPlainObject(value)) {
+        throw configError(path, 'an object');
+    }
+
+    const patterns = parseStringArray(value.patterns, `${path}.patterns`);
+    if (patterns.length === 0) {
+        throw configError(`${path}.patterns`, 'a non-empty array of strings');
+    }
+    if (value.traced !== undefined && typeof value.traced !== 'boolean') {
+        throw configError(`${path}.traced`, 'a boolean');
+    }
+
+    return {
+        patterns,
+        traced: value.traced ?? false,
+        fullRunTriggers:
+            value.fullRunTriggers === undefined
+                ? []
+                : parseStringArray(value.fullRunTriggers, `${path}.fullRunTriggers`),
+    };
 }
 
 /** Validates one `aliases` entry. */

@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { GitRepository } from '../submodule/GitRepository.js';
+import { GitRepository } from '@nzyme/project-utils/git/GitRepository.js';
 
 /** A file that differs from the base. Deleted files (and the old path of a rename) are included. */
 export interface ChangedFile {

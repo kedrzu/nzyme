@@ -258,8 +258,14 @@ function select(params: SelectParams): AffectedSelection {
 
 function createGraph(files: string[], edges: [string, string][]): ImportGraph {
     const importers = new Map<string, ImportEdge[]>();
+    const imports = new Map<string, ImportEdge[]>();
     for (const [from, to] of edges) {
         importers.set(to, [...(importers.get(to) ?? []), { from, to }]);
+        imports.set(from, [...(imports.get(from) ?? []), { from, to }]);
     }
-    return { files: files.toSorted(), importersOf: file => importers.get(file) ?? [] };
+    return {
+        files: files.toSorted(),
+        importersOf: file => importers.get(file) ?? [],
+        importsOf: file => imports.get(file) ?? [],
+    };
 }

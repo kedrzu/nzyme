@@ -48,15 +48,43 @@ export async function readPlaywrightTestList(file: string, root: string): Promis
     }
 
     function addTest(location: string, title: string[]): void {
-        const relative = relativePosixPath(realRoot, path.resolve(rootDir, location));
-        if (relative.startsWith('../') || path.isAbsolute(relative)) {
+        const unit = getPlaywrightTestUnit({ realRoot, realRootDir: rootDir, location, title });
+        if (unit === undefined) {
             return;
         }
-        const key = JSON.stringify([relative, title]);
+        const key = JSON.stringify([unit.file, title]);
         if (!tests.has(key)) {
-            tests.set(key, { unit: { file: relative, title }, location });
+            tests.set(key, { unit, location });
         }
     }
+}
+
+/** Parameters of {@link getPlaywrightTestUnit}. */
+export interface GetPlaywrightTestUnitParams {
+    /** The project root, resolved through symlinks. */
+    realRoot: string;
+    /** Playwright's `rootDir`, resolved through symlinks. */
+    realRootDir: string;
+    /** The test's file relative to `rootDir`, POSIX, as Playwright's JSON report writes it. */
+    location: string;
+    /** The titles of the describe blocks the test is in, outermost first, then its own title. */
+    title: string[];
+}
+
+/**
+ * The test unit of a Playwright test: its file relative to the project root, and its title path.
+ * Every reader of Playwright tests (a `--list` report, a reporter) builds units through it, so a
+ * selection and the variants recorded for it name a test the same way. `undefined` for a test outside
+ * the root.
+ * @__NO_SIDE_EFFECTS__
+ */
+export function getPlaywrightTestUnit(params: GetPlaywrightTestUnitParams): TestUnit | undefined {
+    const { realRoot, realRootDir, location, title } = params;
+    const relative = relativePosixPath(realRoot, path.resolve(realRootDir, location));
+    if (relative.startsWith('../') || path.isAbsolute(relative)) {
+        return undefined;
+    }
+    return { file: relative, title };
 }
 
 /**

@@ -43,3 +43,29 @@ probe.
 
 One NDJSON file per process and thread, `<pid>-<threadId>.ndjson`; the line types are `TraceLine` in
 `TraceLine.ts`.
+
+## Playwright
+
+`@nzyme/trace/playwright/*` writes, per test, what the traced servers and the test's browsers ran,
+for `nzyme git affected --record` to store as the variants of `@nzyme/affected`.
+
+- `traceTest` (`playwright/traceTest.js`) — re-export it as the suite's `test` and set
+  `use: { nzymeTrace: { apps } }` (`TracedApp`: the app's origin, its source `public/` and the built
+  output it serves, with source maps). Each context of a test, including one the test creates with
+  `browser.newContext()`, sends the test's label in the `x-nzyme-trace` header and the `nzyme-trace`
+  cookie for `localhost`; Chromium's JavaScript coverage of its pages, mapped through the bundles'
+  source maps, and the `public/` files they fetched are attached to the result. A Node-side client
+  sends `getTestTraceLabel(test.info())`. Chromium is launched without the features that swap the
+  renderer on navigation, which would drop the coverage of the page before.
+- `TraceReporter` (`playwright/TraceReporter.js`, default export) —
+  `['@nzyme/trace/playwright/TraceReporter.js', { resultsFile, traceDir, ownsServers }]`. Once every
+  process that reported `ready` has flushed past a test's end, it appends the test's line to
+  `resultsFile` (`TracedTestResult` of `@nzyme/affected`): failed, passed with an incomplete trace and
+  the reason (`no-heartbeat`, `stale-build`, `unprobed`, …), or passed with what it executed, its
+  assets and the run's startup code. With `ownsServers: false` it writes nothing. `traceDir` must be
+  fresh per run. It runs on Node or Bun.
+- Recording is `nzyme git affected`'s, on Bun: select with
+  `--suite <name> --units <list.json> --test-list-out <file> --snapshot <file>` before the run, and
+  after it record with `--suite <name> --record <resultsFile> --snapshot <file> [--full]`.
+- Servers read the label with `readTraceLabel(request.headers)` (`runtime/readTraceLabel.js`) and
+  pass it to `traceScope`.

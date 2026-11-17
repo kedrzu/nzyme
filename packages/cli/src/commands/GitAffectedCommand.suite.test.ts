@@ -5,7 +5,9 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, setDefaultTimeout, test } from 'bun:test';
 
+import type { TracedTestResult } from '@nzyme/affected/playwright/TracedTestResult.js';
 import { openTestSelector } from '@nzyme/affected/selector/openTestSelector.js';
+import type { TestUnit } from '@nzyme/affected/store/VariantStore.js';
 
 const CLI_PATH = new URL('../cli.ts', import.meta.url).pathname;
 
@@ -36,6 +38,8 @@ const RUNNER = [
 ].join('\n');
 
 const VALUE_TEST = 'packages/alpha/src/value.test.ts';
+const TOP: TestUnit = { file: 'e2e/x.spec.ts', title: ['top'] };
+const IN_GROUP: TestUnit = { file: 'e2e/x.spec.ts', title: ['grp', 'in'] };
 const USES_TEST = 'packages/beta/src/uses.test.ts';
 
 /**
@@ -198,11 +202,61 @@ test('--units writes the selected single tests as a Playwright test list', async
     expect(await fs.readFile(out, 'utf8')).toBe('x.spec.ts › grp › in\n');
 });
 
+test('--record makes variants of the complete passed tests, counts incomplete ones and refuses files edited since the selection', async () => {
+    const select = await selectE2e();
+    expect(select.stderr).toContain('2 run (no variant)');
+    await writeResults([
+        traced(TOP, ['packages/beta/src/other.ts']),
+        { unit: IN_GROUP, status: 'passed', complete: false, reason: 'no-heartbeat' },
+    ]);
+
+    const record = await recordE2e();
+
+    expect(record.exitCode).toBe(0);
+    expect(record.stderr).toContain('nzyme git affected: recorded 1 · 1 not recorded (no-heartbeat: 1)');
+    expect((await selectE2e()).stderr).toContain('1 run (no variant) · 1 skipped (variant match)');
+
+    // Edited after the selection the snapshot holds: the run may have executed other code.
+    await write('packages/beta/src/other.ts', 'export const other = 3;\n');
+    await writeResults([traced(IN_GROUP, ['packages/beta/src/other.ts'])]);
+
+    const edited = await recordE2e();
+
+    expect(edited.stderr).toContain('recorded 0 · 1 not recorded (edited: 1)');
+});
+
+test('--record --full invalidates a failed test and reports the selection skipped it', async () => {
+    await selectE2e();
+    await writeResults([traced(TOP, ['packages/beta/src/other.ts'])]);
+    await recordE2e();
+    expect((await selectE2e()).stderr).toContain('1 skipped (variant match)');
+    await writeResults([{ unit: TOP, status: 'failed' }]);
+
+    const full = await recordE2e(['--full']);
+
+    expect(full.exitCode).toBe(0);
+    expect(full.stderr).toContain('1 failed (1 variants invalidated)');
+    expect(full.stderr).toContain('tracing gap: e2e/x.spec.ts › top failed, yet the selection skipped it (variant)');
+    expect((await selectE2e()).stderr).toContain('2 run (no variant) · 0 skipped');
+});
+
+test('--record without a readable snapshot records nothing and exits 0', async () => {
+    await writeResults([traced(TOP, [])]);
+
+    const record = await recordE2e();
+
+    expect(record.exitCode).toBe(0);
+    expect(record.stderr).toContain('no variants recorded, cannot read the snapshot');
+});
+
 test.each([
     [['--junit', 'j.xml', '*.test.ts'], '--junit needs --suite <name>.'],
     [['--suite', 'unit', '--junit', 'j.xml'], '--junit needs the command'],
     [['--suite', 'e2e', '--units', 'u.json'], '--units needs --test-list-out <file>.'],
     [['--suite', 'e2e', '--units', 'u.json', '--test-list-out', 'o.txt', '--', 'true'], '--units takes no patterns'],
+    [['--suite', 'e2e', '--record', 'r.ndjson'], '--record needs --snapshot <file>'],
+    [['--suite', 'e2e', '--record', 'r.ndjson', '--snapshot', 's.json', '*.spec.ts'], '--record takes no patterns'],
+    [['--suite', 'unit', '--snapshot', 's.json'], '--snapshot needs --units <file> or --record <file>.'],
     [['--suite', 'nope'], 'Unknown test suite "nope"'],
 ])('%p is refused', async (args, message) => {
     const result = await runAffected(args);
@@ -253,4 +307,54 @@ function git(...args: string[]): string {
 async function write(file: string, content: string): Promise<void> {
     await fs.mkdir(path.dirname(path.join(repo, file)), { recursive: true });
     await fs.writeFile(path.join(repo, file), content);
+}
+
+/** `--units` over `x.spec.ts` (tests {@link TOP} and {@link IN_GROUP}), writing the snapshot. */
+async function selectE2e() {
+    const units = path.join(outDir, 'units.json');
+    await fs.writeFile(
+        units,
+        JSON.stringify({
+            config: { rootDir: path.join(repo, 'e2e') },
+            suites: [
+                {
+                    title: 'x.spec.ts',
+                    file: 'x.spec.ts',
+                    specs: [{ title: 'top', file: 'x.spec.ts' }],
+                    suites: [{ title: 'grp', file: 'x.spec.ts', specs: [{ title: 'in', file: 'x.spec.ts' }] }],
+                },
+            ],
+        }),
+    );
+    const out = path.join(outDir, 'selected.txt');
+    return await runAffected([
+        '--suite',
+        'e2e',
+        '--units',
+        units,
+        '--test-list-out',
+        out,
+        '--snapshot',
+        snapshotFile(),
+    ]);
+}
+
+async function recordE2e(extra: string[] = []) {
+    return await runAffected(['--suite', 'e2e', '--record', resultsFile(), '--snapshot', snapshotFile(), ...extra]);
+}
+
+async function writeResults(results: TracedTestResult[]): Promise<void> {
+    await fs.writeFile(resultsFile(), results.map(result => `${JSON.stringify(result)}\n`).join(''));
+}
+
+function traced(unit: TestUnit, executed: string[]): TracedTestResult {
+    return { unit, status: 'passed', complete: true, entry: [unit.file], executed, startup: [], assets: [] };
+}
+
+function snapshotFile() {
+    return path.join(outDir, 'snapshot.json');
+}
+
+function resultsFile() {
+    return path.join(outDir, 'results.ndjson');
 }

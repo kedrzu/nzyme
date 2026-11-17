@@ -11,6 +11,7 @@ import { instrumentScript } from './instrumentScript.js';
 import { TRACE_BUCKET_MS, TraceRecorder } from './TraceRecorder.js';
 import { TraceWriter } from './TraceWriter.js';
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
+import { relativePosixPath } from '@nzyme/project-utils/relativePosixPath.js';
 
 /** Parameters of {@link installProbe}. */
 export interface InstallProbeParams {
@@ -94,12 +95,16 @@ export function installProbe(params: InstallProbeParams) {
 
     function instrumentFile(file: string, code: string) {
         try {
-            const sourceAt = createSourceLocator({ file, code, root });
+            const locator = createSourceLocator({ file, code, root });
+            const stale = locator.findStale(locator.sources);
+            if (stale.length > 0) {
+                writer.write({ type: 'stale', at: Date.now(), file: relativePosixPath(root, file), sources: stale });
+            }
             const instrumented = instrumentScript({
                 code,
                 filename: file,
                 fileIdAt: offset => {
-                    const source = sourceAt(offset);
+                    const source = locator.sourceAt(offset);
                     return source === undefined ? undefined : fileIdOf(source);
                 },
             });

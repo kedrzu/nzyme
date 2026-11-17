@@ -5,6 +5,7 @@ import {
     PutParameterCommand,
     SSMClient,
 } from '@aws-sdk/client-ssm';
+import { fromIni } from '@aws-sdk/credential-provider-ini';
 
 import type { SecretStore, SecretStoreEntry } from '@nzyme/secrets/SecretStore.js';
 import { splitIntoChunks } from '@nzyme/utils/array/splitIntoChunks.js';
@@ -44,7 +45,8 @@ const GET_PARAMETERS_BATCH_SIZE = 10;
  * An AWS Systems Manager Parameter Store prefix as a secret store. Values are read decrypted and
  * written as `SecureString`, standard tier.
  *
- * Credentials come from the AWS SDK provider chain, or from `profile`. There is no `login`, and no
+ * Credentials come from the AWS SDK provider chain, or from `profile` alone — never both, so keys a
+ * caller exported for other clients do not mix with a store that names its profile. There is no `login`, and no
  * `credentialEnv`: stripping `AWS_*` variables from a child process would break the tools in it that
  * need them.
  * @__NO_SIDE_EFFECTS__
@@ -57,7 +59,10 @@ export function parameterStore(options: ParameterStoreOptions): SecretStore {
 
     const isPath = options.prefix.startsWith('/');
     const prefix = isPath && !options.prefix.endsWith('/') ? `${options.prefix}/` : options.prefix;
-    const client = options.client ?? new SSMClient({ region, profile, endpoint });
+    // A named profile is the only source: the default chain would also look at `AWS_ACCESS_KEY_ID` in the
+    // environment — set there by a caller for other clients — and warn that both are present.
+    const credentials = profile == null ? undefined : fromIni({ profile });
+    const client = options.client ?? new SSMClient({ region, credentials, endpoint });
 
     return {
         // The endpoint is part of the identity: the same prefix behind another endpoint is another store.

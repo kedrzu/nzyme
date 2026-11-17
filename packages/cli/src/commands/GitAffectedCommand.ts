@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import { constants } from 'node:os';
 import path from 'node:path';
 
@@ -46,7 +46,7 @@ export class GitAffectedCommand extends Command {
         description: 'Select the files a change can affect, and print them or run a command on them',
         details: `
             Usage: \`nzyme git affected [--base|-b <ref>] [--per-package] <pattern…> [-- <cmd…>]\`,
-            \`nzyme git affected --suite <name> [--junit <file>] [--full] [<pattern…>] [-- <cmd…>]\`,
+            \`nzyme git affected --suite <name> [--per-package] [--junit <file>] [--full] [<pattern…>] [-- <cmd…>]\`,
             \`nzyme git affected --suite <name> --units <file> --test-list-out <file> [--snapshot <file>]\`
             or \`nzyme git affected --suite <name> --record <file> --snapshot <file> [--full]\`.
 
@@ -82,12 +82,15 @@ export class GitAffectedCommand extends Command {
             command and the empty-selection rule are the same. A summary with the reasons goes to
             stderr. \`--full\` runs every test of the suite, still selecting, for the audit below.
 
-            \`--junit <file>\` (with \`--suite\` and a command, not \`--per-package\`): after the
-            command, reads the JUnit report it wrote (bun test, vitest) and records a variant of
-            each test file whose testcases all passed; a file with a failure has its matching
-            variants invalidated, and one the selection skipped yet failed (under \`--full\`) is
-            reported as a hole in what the selection sees. An unreadable report records nothing;
-            the exit code stays the command's.
+            \`--junit <file>\` (with \`--suite\` and a command): after the command, reads the
+            JUnit report it wrote (bun test, vitest) and records a variant of each test file whose
+            testcases all passed; a file with a failure has its matching variants invalidated, and
+            one the selection skipped yet failed (under \`--full\`) is reported as a hole in what
+            the selection sees. The file is deleted before each run, so a run that writes no report
+            records nothing rather than a stale one; with \`--per-package\` it is read after each
+            package's run, before the next overwrites it — pass the command an absolute path, as
+            it runs in the package directory. An unreadable report records nothing; the exit code
+            stays the command's.
 
             \`--units <file> --test-list-out <file>\` (with \`--suite\`; no patterns, no command):
             selects single tests from the output of \`playwright test --list --reporter=json\` and
@@ -112,6 +115,10 @@ export class GitAffectedCommand extends Command {
             [
                 'Run the unit tests no variant skips, recording the passing ones',
                 'nzyme git affected --suite unit --junit /tmp/junit.xml -- bun test --reporter=junit --reporter-outfile=/tmp/junit.xml',
+            ],
+            [
+                'Run the affected stories per package, recording the passing ones',
+                'nzyme git affected --suite stories --per-package --junit /tmp/junit.xml -- bunx vitest run --reporter=junit --outputFile.junit=/tmp/junit.xml',
             ],
             [
                 'Select single e2e tests for Playwright',
@@ -215,9 +222,30 @@ export class GitAffectedCommand extends Command {
         }
 
         const packageDirs = args.perPackage ? await getPackageDirs(root) : [];
-        const exitCode = await this.runOnFiles({ root, command: args.command, files: selected, packageDirs, args });
-        if (args.junit !== undefined) {
-            await this.recordFromJunit({ root, selector, selection, junitFile: args.junit, ranFiles: selected });
+        if (args.junit === undefined) {
+            return await this.runOnFiles({ root, command: args.command, files: selected, packageDirs, args });
+        }
+
+        const junitFile = path.resolve(this.cwd, args.junit);
+        const recordings: JunitRecording[] = [];
+        const exitCode = await this.runOnFiles({
+            root,
+            command: args.command,
+            files: selected,
+            packageDirs,
+            args,
+            junit: {
+                file: junitFile,
+                onReport: async ranFiles => {
+                    const recording = await this.recordFromJunit({ root, selector, junitFile, ranFiles });
+                    if (recording) {
+                        recordings.push(recording);
+                    }
+                },
+            },
+        });
+        if (recordings.length > 0) {
+            this.reportRecording(mergeRecordings(recordings), selector, selection);
         }
         return exitCode;
     }
@@ -292,29 +320,30 @@ export class GitAffectedCommand extends Command {
     }
 
     /**
-     * Records the outcome of each ran file from the JUnit report, then reports the failed files the
-     * selection had skipped (only an explicit `--full` run executes those): a dependency neither a
-     * variant nor the import graph saw. Their matching variants are already invalidated, as are those
-     * of every failed file. A report that cannot be read records nothing.
+     * Records the outcome of each file of one run from its JUnit report. A report that cannot be read
+     * records nothing and returns `undefined`.
      */
-    private async recordFromJunit(options: RecordFromJunitOptions): Promise<void> {
-        const { stderr } = this.context;
-        let recording: JunitRecording;
+    private async recordFromJunit(options: RecordFromJunitOptions): Promise<JunitRecording | undefined> {
         try {
-            recording = await recordJunitResults({
-                selector: options.selector,
-                root: options.root,
-                junitFile: path.resolve(this.cwd, options.junitFile),
-                ranFiles: options.ranFiles,
-            });
+            return await recordJunitResults(options);
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            stderr.write(`nzyme git affected: no variants recorded, cannot read the JUnit report: ${message}\n`);
-            return;
+            this.context.stderr.write(
+                `nzyme git affected: no variants recorded, cannot read the JUnit report: ${message}\n`,
+            );
+            return undefined;
         }
+    }
 
+    /**
+     * Prints what was recorded, then the failed files the selection had skipped (only an explicit
+     * `--full` run executes those): a dependency neither a variant nor the import graph saw. Their
+     * matching variants are already invalidated, as are those of every failed file.
+     */
+    private reportRecording(recording: JunitRecording, selector: TestSelector, selection: TestSelection): void {
+        const { stderr } = this.context;
         stderr.write(`${describeRecording(recording)}\n`);
-        for (const { unit, reason } of options.selector.audit(recording.failed, options.selection)) {
+        for (const { unit, reason } of selector.audit(recording.failed, selection)) {
             stderr.write(
                 `nzyme git affected: ${unit.file} failed, yet the selection skipped it (${reason.kind}) — ` +
                     'a dependency it does not see; its variants were invalidated\n',
@@ -324,17 +353,23 @@ export class GitAffectedCommand extends Command {
 
     /**
      * Runs the command on `files`, once or per owning package; an interrupt stops the run after the
-     * current package.
+     * current package. With `junit`, the report is deleted before each run and handed over after it.
      */
     private async runOnFiles(options: RunOnFilesOptions): Promise<number> {
-        const { root, command, files, args } = options;
+        const { root, command, files, args, junit } = options;
         const groups = args.perPackage ? groupByPackage(files, options.packageDirs) : [{ dir: '', files }];
         let exitCode = 0;
         for (const group of groups) {
             if (args.perPackage) {
                 this.context.stderr.write(`nzyme git affected: ${group.dir || '.'} (${group.files.length} files)\n`);
             }
+            if (junit) {
+                await rm(junit.file, { force: true });
+            }
             const result = await this.runCommand(command, path.join(root, group.dir), group.files);
+            if (junit) {
+                await junit.onReport(group.files.map(file => (group.dir === '' ? file : `${group.dir}/${file}`)));
+            }
             if (exitCode === 0) {
                 exitCode = result.exitCode;
             }
@@ -413,6 +448,16 @@ interface RunOnFilesOptions {
     /** Root-relative package directories, for `--per-package`. */
     packageDirs: string[];
     args: AffectedArgs;
+    /** `--junit`: the report each run writes, and what reads it after the run. */
+    junit?: RunJunit;
+}
+
+/** The JUnit report of `GitAffectedCommand.runOnFiles`. */
+interface RunJunit {
+    /** Absolute path of the report; deleted before each run. */
+    file: string;
+    /** Called after each run (each package, with `--per-package`) with the root-relative files it ran. */
+    onReport(ranFiles: string[]): Promise<void>;
 }
 
 /** Options of `GitAffectedCommand.writeSelectedTestList`. */
@@ -451,8 +496,7 @@ interface SelectionSnapshot {
 interface RecordFromJunitOptions {
     root: string;
     selector: TestSelector;
-    /** The selection made before the run, for the audit. */
-    selection: TestSelection;
+    /** Absolute path of the report. */
     junitFile: string;
     /** Root-relative test files the command ran. */
     ranFiles: string[];
@@ -567,10 +611,6 @@ function validateSuiteFileArgs(args: AffectedArgs): void {
     if (args.junit !== undefined && !args.command) {
         throw new UsageError('--junit needs the command that writes the report after `--`.');
     }
-    if (args.junit !== undefined && args.perPackage) {
-        // Every package's run would overwrite the one report.
-        throw new UsageError('--junit cannot be combined with --per-package.');
-    }
 }
 
 /** `--suite` over single tests: `--units` in, `--test-list-out` out, nothing else. */
@@ -650,6 +690,19 @@ function describeTracedRecording(recording: TracedRecording): string {
         parts.push(`${total} not recorded (${reasons.join(', ')})`);
     }
     return parts.join(' · ');
+}
+
+/** The recordings of several runs (one per package) as one. */
+function mergeRecordings(recordings: readonly JunitRecording[]): JunitRecording {
+    const merged: JunitRecording = { recorded: [], refused: [], failed: [], invalidated: 0, unreported: [] };
+    for (const recording of recordings) {
+        merged.recorded.push(...recording.recorded);
+        merged.refused.push(...recording.refused);
+        merged.failed.push(...recording.failed);
+        merged.invalidated += recording.invalidated;
+        merged.unreported.push(...recording.unreported);
+    }
+    return merged;
 }
 
 /** Groups root-relative files by owning package, with paths relative to it; groups in directory order. */

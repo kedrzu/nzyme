@@ -154,6 +154,33 @@ test('--full runs every file, invalidates a failed one and reports that the sele
     expect(await readRan()).toEqual([USES_TEST]);
 });
 
+test('--per-package reads the report after each package, so every package records its files', async () => {
+    // The runner sees paths relative to the package, as vitest reports them.
+    const first = await runSuite({ FAIL: 'src/value.test.ts' }, ['--per-package']);
+
+    expect(first.exitCode).toBe(1);
+    expect(first.stderr).toContain('recorded 1 · 1 failed (0 variants invalidated)');
+    expect(await readRan()).toEqual(['src/value.test.ts', 'src/uses.test.ts']);
+
+    const second = await runSuite({}, ['--per-package']);
+
+    expect(second.stderr).toContain(
+        '1 run (affected since base) · 2 skipped (1 variant match; 1 unaffected since base)',
+    );
+    expect(await readRan()).toEqual(['src/value.test.ts']);
+});
+
+test('a run that writes no report does not record the previous one', async () => {
+    const junit = path.join(outDir, 'junit.xml');
+    await runSuite({});
+    await write('packages/alpha/src/value.ts', 'export const value = 3;\n');
+
+    const result = await runAffected(['--suite', 'unit', '--junit', junit, '--', 'sh', '-c', 'exit 0']);
+
+    expect(result.stderr).toContain('no variants recorded, cannot read the JUnit report');
+    expect((await runSuite({})).stderr).toContain('2 run (changed: packages/alpha/src/value.ts)');
+});
+
 test('an unreadable JUnit report records nothing, warns, and keeps the exit code', async () => {
     const junit = path.join(outDir, 'missing.xml');
 

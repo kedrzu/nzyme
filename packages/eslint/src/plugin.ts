@@ -9,7 +9,7 @@ import { publishAccessPublic } from './rules/publishAccessPublic.js';
  * The `nzyme` ESLint plugin with every custom rule. Presets share this one object: flat config
  * refuses two different plugin objects registered under the same name.
  */
-export const nzymePlugin: ESLint.Plugin = {
+export const nzymePlugin: Readonly<ESLint.Plugin> = {
     meta: { name: '@nzyme/eslint' },
     rules: {
         'exports-source-first': exportsSourceFirst,

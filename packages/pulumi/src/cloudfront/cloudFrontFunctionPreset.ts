@@ -12,7 +12,7 @@ import { cloudFrontMethodsPlugin } from './cloudFrontMethodsPlugin.js';
  * for an edge function. The runtime's own limit — no `async` closures passed as arguments — is not
  * expressible here; no CloudFront Function uses `async` today.
  */
-const PRESET_ENV_EXCLUDE = [
+const PRESET_ENV_EXCLUDE: readonly string[] = [
     'transform-arrow-functions',
     'transform-async-to-generator',
     'transform-block-scoping',

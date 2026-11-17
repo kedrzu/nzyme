@@ -55,7 +55,10 @@ export const EXTRA_SECTIONS = {
 const DEFAULT_DEFINE_KIND_ORDER = 55;
 
 /** Kinds a configured `defineX` kind may not reuse — they already mean something else. */
-const RESERVED_KINDS = new Set([...BUILTIN_DEFINE_KINDS.map(kind => kind.kind), ...Object.keys(EXTRA_SECTIONS)]);
+const RESERVED_KINDS: ReadonlySet<string> = new Set([
+    ...BUILTIN_DEFINE_KINDS.map(kind => kind.kind),
+    ...Object.keys(EXTRA_SECTIONS),
+]);
 
 /**
  * Resolves a repo's {@link NzymeIndexConfig} into the settings the indexer runs on: defaults

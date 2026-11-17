@@ -17,7 +17,7 @@ const DECISION = 'docs/decisions/workspace-code-generators-run-from-source.md in
  * runtime condition comes before it. Reordering an existing `source` is autofixed; a missing one is
  * only reported, because its `src` path cannot be guessed safely.
  */
-export const exportsSourceFirst: Rule.RuleModule = {
+export const exportsSourceFirst: Readonly<Rule.RuleModule> = {
     meta: {
         type: 'problem',
         fixable: 'code',

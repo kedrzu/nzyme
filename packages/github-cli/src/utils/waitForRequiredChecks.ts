@@ -80,7 +80,13 @@ const DEFAULT_TIMEOUT_MS = 1_200_000;
 /**
  * Check-run conclusions that count as a hard failure.
  */
-const FAILING_CONCLUSIONS = new Set(['failure', 'timed_out', 'cancelled', 'action_required', 'stale']);
+const FAILING_CONCLUSIONS: ReadonlySet<string> = new Set([
+    'failure',
+    'timed_out',
+    'cancelled',
+    'action_required',
+    'stale',
+]);
 
 /**
  * The aggregate state of every check run and commit status on a head SHA.

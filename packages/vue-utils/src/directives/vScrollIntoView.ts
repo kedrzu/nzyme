@@ -44,7 +44,9 @@ export type ScrollIntoViewDirectiveOptions = {
  * </script>
  * ```
  */
-export const vScrollIntoView: ObjectDirective<ElementOrVue, ScrollIntoViewDirectiveOptions | null | undefined> = {
+export const vScrollIntoView: Readonly<
+    ObjectDirective<ElementOrVue, ScrollIntoViewDirectiveOptions | null | undefined>
+> = {
     mounted(instance, binding) {
         const el = unwrapElement(instance);
 

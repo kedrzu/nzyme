@@ -1,7 +1,7 @@
 /**
  * Read permissions that can be performed on a DynamoDB table.
  */
-export const DYNAMODB_READ_PERMISSIONS = [
+export const DYNAMODB_READ_PERMISSIONS: readonly string[] = [
     'dynamodb:GetItem',
     'dynamodb:BatchGetItem',
     'dynamodb:Scan',
@@ -12,7 +12,7 @@ export const DYNAMODB_READ_PERMISSIONS = [
 /**
  * Write permissions that can be performed on a DynamoDB table.
  */
-export const DYNAMODB_WRITE_PERMISSIONS = [
+export const DYNAMODB_WRITE_PERMISSIONS: readonly string[] = [
     'dynamodb:PutItem',
     'dynamodb:UpdateItem',
     'dynamodb:DeleteItem',

@@ -114,6 +114,14 @@ merely throws on invalid input may.
 call to an annotated function whose result nothing consumes — either dead code or proof the annotation
 is wrong. It has no autofix on purpose: use the result, delete the call, or drop the annotation.
 
+`nzyme/no-module-state` rejects module-level state nobody declared: test selection by recorded
+execution assumes a cache one test fills is never what serves the next. At module top level it allows
+functions, primitives, immutable values (`as const`, `Object.freeze`, a `Readonly*`/`readonly T[]`
+type) and calls to annotated functions — so the annotation also vouches that the function is
+idempotent and tested — plus the external packages listed in the rule's `externalPackages` option.
+Put a memo or cache in `createMemo`/`createCache` from `@nzyme/utils`; state a module genuinely holds
+(a lock count on the one document body) gets a disable comment saying why.
+
 ### Point at code by symbol, never by line number
 
 Write `resolveDeps()` in `packages/ioc/src/utils/resolveDeps.ts`, never `resolveDeps.ts:12`. Nobody

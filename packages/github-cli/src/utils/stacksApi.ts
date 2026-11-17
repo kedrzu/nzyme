@@ -90,7 +90,7 @@ interface MergeAsyncResponse {
  * 409 when a merge request for the pull request already exists (its `uuid` is returned), 400 when
  * the pull request cannot be merged at all (closed or draft, as `failed`).
  */
-const MERGE_ASYNC_RESULT_ERROR_STATUSES = new Set([400, 409]);
+const MERGE_ASYNC_RESULT_ERROR_STATUSES: ReadonlySet<number> = new Set([400, 409]);
 
 /**
  * Perform a request against a route `@octokit/rest` has no types for, and hand the caller the shape
@@ -104,7 +104,7 @@ async function requestUntyped<T>(
     client: GithubClient,
     route: string,
     params: Record<string, unknown>,
-    resultErrorStatuses?: Set<number>,
+    resultErrorStatuses?: ReadonlySet<number>,
 ): Promise<{ data: T; status: number }> {
     try {
         const response = await client.request(route, params);
@@ -140,7 +140,10 @@ function toMergeAsyncResult(data: MergeAsyncResponse, prNumber: number, knownUui
 /**
  * The response a failed Octokit request carried, when its HTTP status is one of `statuses`.
  */
-function readErrorResponse(error: unknown, statuses: Set<number>): { data: unknown; status: number } | undefined {
+function readErrorResponse(
+    error: unknown,
+    statuses: ReadonlySet<number>,
+): { data: unknown; status: number } | undefined {
     if (
         typeof error === 'object' &&
         error !== null &&

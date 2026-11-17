@@ -23,7 +23,10 @@ export type VueContainerOptions = {
     parent?: VueContainer;
 };
 
-/** Creates a Vue-aware IoC container that resolves services within a Vue effect scope. */
+/**
+ * Creates a Vue-aware IoC container that resolves services within a Vue effect scope.
+ * @__NO_SIDE_EFFECTS__
+ */
 export function createContainer(options?: VueContainerOptions): VueContainer {
     const parent = options?.parent;
     const effectScope = parent ? (getCurrentScope() ?? parent.effectScope) : createEffectScope(true);

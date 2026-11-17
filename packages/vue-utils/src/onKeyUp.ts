@@ -8,7 +8,7 @@ interface KeyConfig {
 type Key = 'ArrowLeft' | 'ArrowRight' | 'Enter' | 'Escape';
 type KeyCallback = (e: KeyboardEvent) => void;
 
-const keyConfigs: Record<Key, KeyConfig> = {
+const keyConfigs: Readonly<Record<Key, KeyConfig>> = {
     Escape: {
         code: 27,
         alternative: 'Esc',

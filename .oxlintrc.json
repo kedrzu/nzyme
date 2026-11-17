@@ -59,6 +59,25 @@
                 "typescript/no-unsafe-member-access": "off",
                 "typescript/no-unsafe-return": "off"
             }
+        },
+        {
+            // Process entry points: each runs as its own process (or worker thread), so its top level
+            // is that process's `main` rather than state a module shares between tests.
+            "files": [
+                "scripts/**",
+                "packages/*/scripts/**",
+                "packages/cli/bin/**",
+                "packages/cli/src/cli.ts",
+                "packages/pulumi/src/compileFunction.worker.ts"
+            ],
+            "rules": { "nzyme/no-module-state": "off" }
+        },
+        {
+            // clipanion reads a command's metadata from static fields its `Command` base declares
+            // mutable (`static paths?: string[][]`, `static usage?: Usage`), so a subclass can make
+            // them neither `readonly` nor of a readonly type. Nothing writes them after declaration.
+            "files": ["packages/cli/src/commands/**", "packages/pen/src/commands/**"],
+            "rules": { "nzyme/no-module-state": "off" }
         }
     ]
 }

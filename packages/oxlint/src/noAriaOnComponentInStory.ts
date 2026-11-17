@@ -17,7 +17,7 @@ const MESSAGE_ID = 'ariaOnComponent';
  * `overrides` entry. Deliberately out of scope: spread attributes
  * (`{...{ 'aria-label': 'x' }}`) and `h(Button, { 'aria-label': … })`.
  */
-export const noAriaOnComponentInStory: OxlintRule = {
+export const noAriaOnComponentInStory: Readonly<OxlintRule> = {
     meta: {
         type: 'problem',
         docs: {

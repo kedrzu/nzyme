@@ -53,7 +53,7 @@ export interface RemoteStackInfo {
  * resolved but are dead. Kept generic on purpose — this package is a framework submodule and must
  * not know about any app's profile naming or environment conventions.
  */
-const CREDENTIAL_ERROR_NAMES = [
+const CREDENTIAL_ERROR_NAMES: readonly string[] = [
     'CredentialsProviderError',
     'TokenProviderError',
     'ExpiredToken',

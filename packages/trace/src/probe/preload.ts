@@ -8,6 +8,7 @@
 
 const traceDir = process.env.NZYME_TRACE_DIR;
 // A second load of the preload (twice in BUN_OPTIONS) must not instrument and record everything twice.
+// oxlint-disable-next-line nzyme/no-module-state -- a preload exists to install the probe into the process as it loads.
 if (traceDir && globalThis.__nzymeTrace === undefined) {
     // Imported lazily, so a process that loads the preload without tracing never loads the parser.
     const { installProbe } = await import('./installProbe.js');

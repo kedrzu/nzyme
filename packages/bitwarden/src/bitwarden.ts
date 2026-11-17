@@ -40,9 +40,9 @@ export interface BitwardenOptions {
 
 const ACCESS_TOKEN_ENV = 'BWS_ACCESS_TOKEN';
 const DEFAULT_SERVER = 'https://vault.bitwarden.com';
-const CLOUD_VAULT_HOSTS = new Set(['vault.bitwarden.com', 'vault.bitwarden.eu']);
+const CLOUD_VAULT_HOSTS: ReadonlySet<string> = new Set(['vault.bitwarden.com', 'vault.bitwarden.eu']);
 /** Hosts a plain `http:` server may have: the token sent to them never crosses the network. */
-const LOOPBACK_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]']);
+const LOOPBACK_HOSTNAMES: ReadonlySet<string> = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 /** The server's limits on EncString lengths (`EncryptedStringLength` on its request models). */
 const MAX_ENCRYPTED_KEY_LENGTH = 1000;

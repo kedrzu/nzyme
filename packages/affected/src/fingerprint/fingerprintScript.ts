@@ -13,7 +13,7 @@ export type ScriptLoader = 'ts' | 'tsx' | 'js';
  * the JS loader keeps every import. JSX is pinned to the classic factory: the automatic runtime
  * prints a generated helper name.
  */
-const transpilers: Record<ScriptLoader, Bun.Transpiler> = {
+const transpilers: Readonly<Record<ScriptLoader, Bun.Transpiler>> = {
     ts: new Bun.Transpiler({ loader: 'ts', trimUnusedImports: true }),
     tsx: new Bun.Transpiler({
         loader: 'tsx',

@@ -4,6 +4,7 @@ export const NO_SIDE_EFFECTS_ANNOTATION = '@__NO_SIDE_EFFECTS__';
 const IDENTIFIER = /^[$A-Z_a-z][\w$]*$/;
 const NAMED_REEXPORT = /^export\s+(type\s+)?\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]/gm;
 const STAR_REEXPORT = /^export\s+\*\s+from\s*['"]([^'"]+)['"]/gm;
+const LOCAL_EXPORT_CLAUSE = /^export\s+\{([^}]*)\}\s*;?\s*$/gm;
 const ALIAS_SEPARATOR = /\s+as\s+/;
 
 /** One `export … from` edge to follow: where to look next, and under which name. */
@@ -45,26 +46,50 @@ export function scanExportAnnotation(source: string, exportName: string): Export
         return { kind: 'absent' };
     }
 
-    const declaration = findTopLevelDeclaration(source, exportName);
-    if (declaration != null) {
-        return hasAnnotationBefore(source, declaration) ? { kind: 'annotated' } : { kind: 'absent' };
+    const declarations = findTopLevelDeclarations(source, exportName);
+    if (declarations.length > 0) {
+        return isAnyAnnotated(source, declarations);
+    }
+
+    // `export { dirname as getDirname }` — declared here under another name.
+    const localName = findLocalAlias(source, exportName);
+    if (localName != null) {
+        return isAnyAnnotated(source, findTopLevelDeclarations(source, localName));
     }
 
     const hops = collectReexportHops(source, exportName);
     return hops.length > 0 ? { kind: 'reexport', hops } : { kind: 'absent' };
 }
 
+function isAnyAnnotated(source: string, declarations: number[]): ExportAnnotationScan {
+    return declarations.some(index => hasAnnotationBefore(source, index)) ? { kind: 'annotated' } : { kind: 'absent' };
+}
+
+/** The local name a `export { local as exportName }` clause without `from` exports. */
+function findLocalAlias(source: string, exportName: string): string | undefined {
+    for (const match of source.matchAll(LOCAL_EXPORT_CLAUSE)) {
+        const original = match[1] == null ? undefined : findClauseOrigin(match[1], exportName);
+        if (original != null && original !== exportName) {
+            return original;
+        }
+    }
+
+    return undefined;
+}
+
 /**
- * Offset of the top-level `function`/`const`/`let`/`var` declaration of `exportName`, with or
+ * Offsets of the top-level `function`/`const`/`let`/`var` declarations of `exportName`, with or
  * without the `export` keyword — a name can also be declared first and exported by a later clause.
+ * An overloaded function has one per signature, and the annotation may sit on any of them: the
+ * convention puts it on the implementation, which comes last.
  */
-function findTopLevelDeclaration(source: string, exportName: string): number | undefined {
+function findTopLevelDeclarations(source: string, exportName: string): number[] {
     const declaration = new RegExp(
         String.raw`^(?:export\s+)?(?:declare\s+)?(?:async\s+)?(?:function\s*\*?|const|let|var)\s+${exportName}\b`,
-        'm',
+        'gm',
     );
 
-    return declaration.exec(source)?.index;
+    return Array.from(source.matchAll(declaration), match => match.index);
 }
 
 /** Whether any of the comment blocks running up to `index` carries the annotation. */

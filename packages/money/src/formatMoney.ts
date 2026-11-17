@@ -18,7 +18,7 @@ export type FormatMoneyOptions = {
     withDecimals?: boolean;
 };
 
-const OPTIONS_DEFAULT: FormatMoneyOptions = {};
+const OPTIONS_DEFAULT: Readonly<FormatMoneyOptions> = {};
 
 /**
  * Money formatter
@@ -32,19 +32,13 @@ export interface MoneyFormatter {
  * @util
  */
 export function formatMoney(money: Money, options?: FormatMoneyOptions): string {
-    return getFormatter(money[1])(money[0], options);
+    return formatters[money[1]](money[0], options);
 }
 
-function getFormatter(currency: Currency) {
-    let formatter = formatters.get(currency);
-    if (!formatter) {
-        formatter = createFormatter(currency);
-        formatters.set(currency, formatter);
-    }
-
-    return formatter;
-}
-
+/**
+ * Builds the formatter of one currency; its `Intl` formats are created once, here.
+ * @__NO_SIDE_EFFECTS__
+ */
 function createFormatter(currency: Currency): MoneyFormatter {
     const { locale, fractionDigits, symbol, code } = CURRENCIES[currency];
 
@@ -86,4 +80,8 @@ function createFormatter(currency: Currency): MoneyFormatter {
     };
 }
 
-const formatters = new Map<Currency, MoneyFormatter>();
+const formatters: Readonly<Record<Currency, MoneyFormatter>> = {
+    PLN: createFormatter('PLN'),
+    EUR: createFormatter('EUR'),
+    USD: createFormatter('USD'),
+};

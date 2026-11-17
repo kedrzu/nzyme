@@ -14,7 +14,7 @@ import { formatMarkdown } from './formatMarkdown.js';
  * Gitignored files are skipped: ESLint does not read `.gitignore`, and generated Markdown (code
  * indexes, local notes) is not ours to format.
  */
-export const markdownFormat: MarkdownRuleDefinition = {
+export const markdownFormat: Readonly<MarkdownRuleDefinition> = {
     meta: {
         type: 'layout',
         fixable: 'code',

@@ -9,7 +9,7 @@ import { propertyName, publishedPackageRoot } from './jsonPackage.js';
  *
  * Private packages are skipped.
  */
-export const publishAccessPublic: Rule.RuleModule = {
+export const publishAccessPublic: Readonly<Rule.RuleModule> = {
     meta: {
         type: 'problem',
         schema: [],

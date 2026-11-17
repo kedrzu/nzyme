@@ -45,7 +45,11 @@ interface BrowserTracer {
  * Chromium features that swap the renderer process on a navigation (`page.goto`) and so drop the
  * coverage of the page before it: with them, a test navigating twice loses its first page's code.
  */
-const PROCESS_SWAP_FEATURES = ['BackForwardCache', 'ProactivelySwapBrowsingInstance', 'RenderDocument'];
+const PROCESS_SWAP_FEATURES: readonly string[] = [
+    'BackForwardCache',
+    'ProactivelySwapBrowsingInstance',
+    'RenderDocument',
+];
 
 /**
  * A Playwright `test` that traces each test for test selection: every browser context of the test —

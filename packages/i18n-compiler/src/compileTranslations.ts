@@ -15,7 +15,7 @@ const LANG_TAG_REGEX = /^([a-zA-Z_][a-zA-Z0-9_-]*)\[([^\]]+)\]$/;
 const INDENT = '  ';
 
 // JavaScript reserved words that cannot be used as variable names
-const RESERVED_WORDS = new Set([
+const RESERVED_WORDS: ReadonlySet<string> = new Set([
     // Keywords
     'break',
     'case',

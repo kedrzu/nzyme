@@ -1,0 +1,83 @@
+{
+    "openapi": "3.0.0",
+    "info": { "title": "Tagged", "version": "1" },
+    "paths": {
+        "/workspaces/{workspaceId}/controls/{controlId}/notes": {
+            "get": {
+                "operationId": "ControlNotes_list",
+                "summary": "List Control Notes",
+                "tags": ["Control Notes"],
+                "parameters": [
+                    { "name": "workspaceId", "in": "path", "required": true, "schema": { "type": "number" } },
+                    { "name": "controlId", "in": "path", "required": true, "schema": { "type": "number" } }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "content": {
+                            "application/json": {
+                                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ControlNote" } }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "operationId": "ControlNotes_create",
+                "summary": "Create Control Note",
+                "description": "Create a Note for a given Control.\n\nRequires **Controls: Create Control Note** permission.",
+                "tags": ["Control Notes"],
+                "parameters": [
+                    { "name": "workspaceId", "in": "path", "required": true, "schema": { "type": "number" } },
+                    { "name": "controlId", "in": "path", "required": true, "schema": { "type": "number" } }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": { "schema": { "$ref": "#/components/schemas/ControlNoteCreateRequest" } }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "created",
+                        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ControlNote" } } }
+                    }
+                }
+            }
+        },
+        "/workspaces/{workspaceId}/controls": {
+            "get": {
+                "operationId": "Controls_list",
+                "summary": "List Controls",
+                "tags": ["Controls"],
+                "parameters": [
+                    { "name": "workspaceId", "in": "path", "required": true, "schema": { "type": "number" } },
+                    { "name": "size", "in": "query", "schema": { "type": "integer", "format": "int32" } }
+                ],
+                "responses": { "200": { "description": "ok" } }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ControlNoteCreateRequest": {
+                "type": "object",
+                "required": ["comment"],
+                "properties": {
+                    "comment": { "type": "string" },
+                    "visibility": { "type": "string", "enum": ["PUBLIC", "PRIVATE"], "nullable": true }
+                }
+            },
+            "ControlNote": {
+                "type": "object",
+                "required": ["id", "comment", "createdAt"],
+                "properties": {
+                    "id": { "type": "number" },
+                    "comment": { "type": "string" },
+                    "createdAt": { "type": "string", "format": "date-time" },
+                    "owner": { "$ref": "#/components/schemas/User", "nullable": true }
+                }
+            },
+            "User": { "type": "object", "properties": { "id": { "type": "number" } } }
+        }
+    }
+}

@@ -165,6 +165,24 @@
         "oxfmt": "0.77.0",
       },
     },
+    "packages/discord-cli": {
+      "name": "@nzyme/discord-cli",
+      "version": "0.15.1",
+      "dependencies": {
+        "@nzyme/cli-core": "workspace:*",
+        "@nzyme/openapi-cli": "workspace:*",
+        "@nzyme/utils": "workspace:*",
+      },
+      "devDependencies": {
+        "@nzyme/ioc": "workspace:*",
+        "@nzyme/tsconfig": "workspace:*",
+        "@types/bun": "^1.4.3",
+        "@types/node": "26.6.6",
+        "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+        "clipanion": "^4.0.0-rc.4",
+        "oxfmt": "0.77.0",
+      },
+    },
     "packages/dom-utils": {
       "name": "@nzyme/dom-utils",
       "version": "0.15.1",
@@ -465,6 +483,23 @@
         "@types/bun": "^1.4.4",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "openapi-typescript": "7.13.0",
+        "oxfmt": "0.77.0",
+      },
+    },
+    "packages/openapi-cli": {
+      "name": "@nzyme/openapi-cli",
+      "version": "0.15.1",
+      "dependencies": {
+        "@nzyme/cli-core": "workspace:*",
+        "@nzyme/utils": "workspace:*",
+      },
+      "devDependencies": {
+        "@nzyme/ioc": "workspace:*",
+        "@nzyme/tsconfig": "workspace:*",
+        "@types/bun": "^1.4.3",
+        "@types/node": "26.6.6",
+        "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+        "clipanion": "^4.0.0-rc.4",
         "oxfmt": "0.77.0",
       },
     },
@@ -1512,6 +1547,8 @@
 
     "@nzyme/crypto": ["@nzyme/crypto@workspace:packages/crypto"],
 
+    "@nzyme/discord-cli": ["@nzyme/discord-cli@workspace:packages/discord-cli"],
+
     "@nzyme/dom-utils": ["@nzyme/dom-utils@workspace:packages/dom-utils"],
 
     "@nzyme/eslint": ["@nzyme/eslint@workspace:packages/eslint"],
@@ -1547,6 +1584,8 @@
     "@nzyme/nuxt-tools": ["@nzyme/nuxt-tools@workspace:packages/nuxt-tools"],
 
     "@nzyme/openapi": ["@nzyme/openapi@workspace:packages/openapi"],
+
+    "@nzyme/openapi-cli": ["@nzyme/openapi-cli@workspace:packages/openapi-cli"],
 
     "@nzyme/oxlint": ["@nzyme/oxlint@workspace:packages/oxlint"],
 

@@ -12,9 +12,11 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
   - `cli-core` (the clipanion-based `Command` framework behind every CLI), `cli` (the `nzyme` binary: `monorepo`, `localise`, `index`, `quiet-run`,
     `submodule`, `depcheck`, `git affected`, `git base`)
   - `pen` (Pen design files in git: the document model and the `pen` commands)
+  - `openapi-cli` (agent-facing `schema`/`get`/`write` commands over any OpenAPI REST service)
   - `tsconfig`, `eslint` (also the oxlint preset), `oxlint` (custom rules), `project-utils`,
     `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`
-- **Integrations:** `aws`, `pulumi`, `slack`, `apis`, `bitwarden` (a Secrets Manager store for `secrets`)
+- **Integrations:** `aws`, `pulumi`, `slack`, `apis`, `bitwarden` (a Secrets Manager store for `secrets`),
+  `discord-cli` (the Discord REST API through `openapi-cli`, as a bot)
 - **Private, never published:** `github-cli`, `linear`, `sentry-cli`, `logging-ui`
 
 `bun run index` (also run by setup) generates a gitignored code map:

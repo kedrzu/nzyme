@@ -247,6 +247,7 @@ async function writeProject() {
             '        document.title = greetLabel(text);',
             '    });',
             "    document.querySelector('a')?.addEventListener('click', never);",
+            "    void navigator.serviceWorker.register('/sw.js');",
             '}',
             'init();',
             '',
@@ -255,6 +256,8 @@ async function writeProject() {
         'app/src/unused.ts': "export function never(): void {\n    throw new Error('never');\n}\n",
         'app/pages/index.html':
             '<!doctype html><button>go</button><a>never</a><img src="/img/logo.svg"><script type="module" src="/main.js"></script>\n',
+        // A service worker the page registers: page coverage never covers it.
+        'app/dist/sw.js': "self.addEventListener('fetch', () => undefined);\n",
         'app/public/img/logo.svg': '<svg xmlns="http://www.w3.org/2000/svg"/>\n',
         'server/greet.js': "export function greet() {\n    return 'hello';\n}\n",
         'server/other.js': "export function other() {\n    return 'other';\n}\n",

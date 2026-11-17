@@ -6,6 +6,7 @@ import { threadId } from 'node:worker_threads';
 import { plugin } from 'bun';
 
 import type { TraceRuntime } from '../runtime/TraceRuntime.js';
+import { createBuildChecker } from './createBuildChecker.js';
 import { createSourceLocator } from './createSourceLocator.js';
 import { instrumentScript } from './instrumentScript.js';
 import { TRACE_BUCKET_MS, TraceRecorder } from './TraceRecorder.js';
@@ -26,9 +27,10 @@ export interface InstallProbeParams {
  * functions run under the current label, writes them to `<traceDir>/<pid>-<threadId>.ndjson`, and
  * installs the label runtime on `globalThis`. Call it once, from the preload.
  */
-export function installProbe(params: InstallProbeParams) {
+export async function installProbe(params: InstallProbeParams): Promise<void> {
     // Real path: module paths Bun hands to the loader are resolved through symlinks.
     const root = realpathSync(getProjectRoot(process.cwd()));
+    const buildChecker = await createBuildChecker(root);
     const ownDir = path.resolve(import.meta.dir, '../..');
     const als = new AsyncLocalStorage<string | null>();
     const recorder = new TraceRecorder();
@@ -95,7 +97,7 @@ export function installProbe(params: InstallProbeParams) {
 
     function instrumentFile(file: string, code: string) {
         try {
-            const locator = createSourceLocator({ file, code, root });
+            const locator = createSourceLocator({ file, code, root, buildChecker });
             const stale = locator.findStale(locator.sources);
             if (stale.length > 0) {
                 writer.write({ type: 'stale', at: Date.now(), file: relativePosixPath(root, file), sources: stale });

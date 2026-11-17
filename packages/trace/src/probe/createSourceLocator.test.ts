@@ -4,13 +4,17 @@ import path from 'node:path';
 
 import { afterAll, beforeAll, expect, test } from 'bun:test';
 
+import { createBuildChecker } from './createBuildChecker.js';
+import type { BuildChecker } from './createBuildChecker.js';
 import { createSourceLocator } from './createSourceLocator.js';
 
 let root: string;
+let buildChecker: BuildChecker;
 
 beforeAll(async () => {
     // Real path: the bundler writes sources relative to the resolved `/private/var` on macOS.
     root = await realpath(await mkdtemp(path.join(tmpdir(), 'trace-locator-')));
+    buildChecker = await createBuildChecker(root);
 });
 
 afterAll(async () => {
@@ -35,7 +39,7 @@ test('a bundle maps each function to its own source, and drops node_modules sour
 
     const file = path.join(root, 'dist/main.js');
     const code = await readFile(file, 'utf8');
-    const { sourceAt, sources } = createSourceLocator({ file, code, root });
+    const { sourceAt, sources } = createSourceLocator({ file, code, root, buildChecker });
 
     expect(sourceAt(code.indexOf('function fromMain'))).toBe('src/main.ts');
     expect(sourceAt(code.indexOf('function fromLib'))).toBe('src/lib.ts');
@@ -46,49 +50,78 @@ test('a bundle maps each function to its own source, and drops node_modules sour
 test('a file without a source map is its own source, unless it lives in node_modules', () => {
     const code = 'export const f = () => 1;\n';
 
-    expect(createSourceLocator({ file: path.join(root, 'scripts/plain.js'), code, root }).sourceAt(0)).toBe(
-        'scripts/plain.js',
-    );
     expect(
-        createSourceLocator({ file: path.join(root, 'node_modules/x/plain.js'), code, root }).sourceAt(0),
+        createSourceLocator({ file: path.join(root, 'scripts/plain.js'), code, root, buildChecker }).sourceAt(0),
+    ).toBe('scripts/plain.js');
+    expect(
+        createSourceLocator({ file: path.join(root, 'node_modules/x/plain.js'), code, root, buildChecker }).sourceAt(0),
     ).toBeUndefined();
 });
 
-test('a bundle of built JavaScript maps through it to the source, and a build older than its input is stale', async () => {
-    await writeFiles({
-        'pkg/src/lib.ts': "export function fromLib(): string { return 'lib'; }\n",
-        'app/main.js':
-            "import { fromLib } from '../pkg/dist/lib.js';\nexport function fromMain() { return fromLib(); }\n",
-    });
-    // A package built on its own (tsc-like: one source per file), then bundled into the app.
-    await buildFile('pkg/src/lib.ts', 'pkg/dist');
+test('a bundle of a tsc-built package maps through it to the source, stale only when some build does not hold the current content', async () => {
+    const lib = "export function fromLib(): string { return 'lib'; }\n";
+    const main = "import { fromLib } from '../pkg/dist/lib.js';\nexport function fromMain() { return fromLib(); }\n";
+    await writeFiles({ 'pkg/tsconfig.json': TSCONFIG, 'pkg/src/lib.ts': lib, 'app/main.js': main });
+    // A workspace package built by tsgo (one source per file, a build info), then bundled into an app.
+    await compileWithTsgo('pkg');
     await buildFile('app/main.js', 'bundle');
 
     const file = path.join(root, 'bundle/main.js');
     const code = await readFile(file, 'utf8');
-    const { sourceAt, sources, findStale } = createSourceLocator({ file, code, root });
+    // A fresh checker per look: one caches what it read, as a process does.
+    const locate = async () => createSourceLocator({ file, code, root, buildChecker: await createBuildChecker(root) });
+    const { sourceAt, sources } = await locate();
 
     expect(sourceAt(code.indexOf('function fromLib'))).toBe('pkg/src/lib.ts');
     expect(sources.toSorted()).toEqual(['app/main.js', 'pkg/src/lib.ts']);
+    expect((await locate()).findStale(sources)).toEqual([]);
 
-    await setModified({ 'pkg/src/lib.ts': 10, 'pkg/dist/lib.js': 20, 'bundle/main.js': 30, 'app/main.js': 5 });
-    expect(findStale(sources)).toEqual([]);
-    // The package was rebuilt after the bundle: the bundle runs its old build.
-    await setModified({ 'pkg/dist/lib.js': 40 });
-    expect(findStale(sources)).toEqual(['pkg/src/lib.ts']);
-    // The source changed after the package build the bundle took.
-    await setModified({ 'pkg/dist/lib.js': 20, 'pkg/src/lib.ts': 25 });
-    expect(findStale(sources)).toEqual(['pkg/src/lib.ts']);
+    // A checkout touches files without changing them.
+    await setModified({ 'pkg/src/lib.ts': 4_000_000_000, 'app/main.js': 4_000_000_000 });
+    expect((await locate()).findStale(sources)).toEqual([]);
+
+    await writeFiles({ 'pkg/src/lib.ts': lib.replace("'lib'", "'changed'") });
+    expect((await locate()).findStale(sources)).toEqual(['pkg/src/lib.ts']);
+
+    await writeFiles({ 'pkg/src/lib.ts': lib, 'app/main.js': `// edited\n${main}` });
+    expect((await locate()).findStale(sources)).toEqual(['app/main.js']);
 });
 
-test('a virtual module of a bundler is not a source', () => {
-    const map = { version: 3, sources: ['virtual:nuxt:paths.mjs', '\0commonjsHelpers.js', 'real.ts'], mappings: '' };
+test('a virtual module of a bundler is not a source, and a query names the file before it', () => {
+    const map = {
+        version: 3,
+        sources: ['virtual:nuxt:paths.mjs', '\0commonjsHelpers.js', 'real.ts', 'icon.svg?component', 'icon.svg#x'],
+        mappings: '',
+    };
     const code = `export {};\n//# sourceMappingURL=data:application/json,${encodeURIComponent(JSON.stringify(map))}\n`;
 
-    const { sources } = createSourceLocator({ file: path.join(root, 'out/virtual.js'), code, root });
+    const { sources } = createSourceLocator({ file: path.join(root, 'out/virtual.js'), code, root, buildChecker });
 
-    expect(sources).toEqual(['out/real.ts']);
+    expect(sources).toEqual(['out/real.ts', 'out/icon.svg']);
 });
+
+/** A package's `tsconfig.json`, as a workspace package builds: source maps and a build info in `dist`. */
+const TSCONFIG = JSON.stringify({
+    compilerOptions: {
+        target: 'es2022',
+        module: 'esnext',
+        moduleResolution: 'bundler',
+        rootDir: 'src',
+        outDir: 'dist',
+        sourceMap: true,
+        incremental: true,
+        tsBuildInfoFile: 'dist/.tsbuildinfo',
+        types: [],
+        skipLibCheck: true,
+    },
+    include: ['src'],
+});
+
+async function compileWithTsgo(dir: string) {
+    const tsgo = path.join(import.meta.dir, '../../node_modules/.bin/tsgo');
+    const compile = Bun.spawn([tsgo, '-p', path.join(root, dir, 'tsconfig.json')], { stdout: 'pipe', stderr: 'pipe' });
+    expect(await compile.exited).toBe(0);
+}
 
 async function buildFile(entry: string, outdir: string) {
     const build = await Bun.build({

@@ -12,5 +12,5 @@ const traceDir = process.env.NZYME_TRACE_DIR;
 if (traceDir && globalThis.__nzymeTrace === undefined) {
     // Imported lazily, so a process that loads the preload without tracing never loads the parser.
     const { installProbe } = await import('./installProbe.js');
-    installProbe({ traceDir, preloadPath: import.meta.path });
+    await installProbe({ traceDir, preloadPath: import.meta.path });
 }

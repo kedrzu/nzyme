@@ -1,8 +1,10 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { TraceMap, originalPositionFor } from '@jridgewell/trace-mapping';
+
+import type { BuildChecker } from './createBuildChecker.js';
+import { toSourcePath } from './toSourcePath.js';
 
 /** Parameters of {@link createSourceLocator}. */
 export interface CreateSourceLocatorParams {
@@ -11,6 +13,8 @@ export interface CreateSourceLocatorParams {
     code: string;
     /** Absolute project root. */
     root: string;
+    /** Decides whether a built file on the way to a source reflects it; shared by every file of a process. */
+    buildChecker: BuildChecker;
 }
 
 /** The original sources of one JavaScript file, from {@link createSourceLocator}. */
@@ -24,11 +28,8 @@ export interface SourceLocator {
     /** Every traced source the file was compiled from (root-relative), whether it ran or not. */
     sources: string[];
     /**
-     * Those of `sources` the build does not reflect: the source, or a built file on the way to it,
-     * was modified after the file compiled from it. Modification times are a sound signal because
-     * every build in scope rewrites its output on any input change (`tsgo --build` even on a
-     * type-only one). A missing file on the way is skipped: it is a virtual module, or a deleted file
-     * the variant check reports by itself.
+     * Those of `sources` the build does not reflect: this file, or a built file on the way to the
+     * source, was not built from the current content of its input (see `BuildChecker.isCurrent`).
      */
     findStale: (sources: Iterable<string>) => string[];
 }
@@ -44,9 +45,10 @@ export interface SourceLocator {
  * @__NO_SIDE_EFFECTS__
  */
 export function createSourceLocator(params: CreateSourceLocatorParams): SourceLocator {
-    const { file, code, root } = params;
+    const { file, code, root, buildChecker } = params;
     /** The built files between this file and each source compiled through them, outermost first. */
     const buildChains = new Map<string, string[]>();
+    const builtMaps = new Map<string, TraceMap | undefined>();
     const followed = new Map<string, string>();
     const loaded = loadSourceMap(file, code);
     if (loaded === undefined) {
@@ -84,15 +86,14 @@ export function createSourceLocator(params: CreateSourceLocatorParams): SourceLo
     function findStale(candidates: Iterable<string>) {
         const stale: string[] = [];
         for (const source of candidates) {
-            const files = [file, ...(buildChains.get(source) ?? []), path.join(root, source)];
-            const mtimes = files.map(each => statSync(each, { throwIfNoEntry: false })?.mtimeMs);
-            for (let i = 1; i < mtimes.length; i++) {
-                const built = mtimes[i - 1];
-                const input = mtimes[i];
-                if (built != null && input != null && input > built) {
+            let builtFile = file;
+            for (const input of [...(buildChains.get(source) ?? []), path.join(root, source)]) {
+                const builtMap = builtFile === file ? map : builtMaps.get(builtFile);
+                if (!buildChecker.isCurrent({ builtFile, map: builtMap, input })) {
                     stale.push(source);
                     break;
                 }
+                builtFile = input;
             }
         }
         return stale;
@@ -113,6 +114,7 @@ export function createSourceLocator(params: CreateSourceLocatorParams): SourceLo
                 break;
             }
             const builtMap = loadSourceMap(builtFile, readFileSync(builtFile, 'utf8'));
+            builtMaps.set(builtFile, builtMap);
             const only = builtMap?.resolvedSources.length === 1 ? builtMap.resolvedSources[0] : undefined;
             const next = only == null ? undefined : toTracedPath(only, root);
             if (next === undefined || next === current) {
@@ -154,7 +156,7 @@ function loadSourceMap(file: string, code: string) {
 }
 
 function toTracedPath(source: string, root: string) {
-    const absolute = path.resolve(source.startsWith('file:') ? fileURLToPath(source) : source);
+    const absolute = toSourcePath(source);
     const relative = path.relative(root, absolute);
     const segments = relative.split(path.sep);
     if (

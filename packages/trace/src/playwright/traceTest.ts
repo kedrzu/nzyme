@@ -3,6 +3,9 @@ import type { Browser, BrowserContext, LaunchOptions, Page } from '@playwright/t
 
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
 
+import { createBuildChecker } from '../probe/createBuildChecker.js';
+import type { BuildChecker } from '../probe/createBuildChecker.js';
+
 import { TRACE_LABEL_COOKIE, TRACE_LABEL_HEADER } from '../runtime/readTraceLabel.js';
 import { mapBrowserAssets } from './browserAssets.js';
 import { mapBrowserCoverage } from './browserCoverage.js';
@@ -32,6 +35,12 @@ interface TraceTestFixtures {
     _nzymeBrowserTracer: BrowserTracer | undefined;
 }
 
+/** The worker fixtures of {@link traceTest}: its option, and caches shared by the worker's tests. */
+interface TraceWorkerFixtures extends TraceTestOptions {
+    /** `undefined` with tracing off. */
+    _nzymeBuildChecker: BuildChecker | undefined;
+}
+
 /** Collects what the browsers of one test attempt run and fetch. */
 interface BrowserTracer {
     label: string;
@@ -59,8 +68,15 @@ const PROCESS_SWAP_FEATURES: readonly string[] = [
  * attached to the test result for `TraceReporter`. Re-export it as the suite's `test`, and set
  * `nzymeTrace` in `use`; without it nothing changes.
  */
-export const traceTest = test.extend<TraceTestFixtures, TraceTestOptions>({
+export const traceTest = test.extend<TraceTestFixtures, TraceWorkerFixtures>({
     nzymeTrace: [undefined, { scope: 'worker', option: true }],
+
+    _nzymeBuildChecker: [
+        async ({ nzymeTrace }, use, workerInfo) => {
+            await use(nzymeTrace ? await createBuildChecker(getProjectRoot(workerInfo.config.rootDir)) : undefined);
+        },
+        { scope: 'worker' },
+    ],
 
     launchOptions: [
         async ({ launchOptions, nzymeTrace }, use) => {
@@ -76,8 +92,8 @@ export const traceTest = test.extend<TraceTestFixtures, TraceTestOptions>({
     },
 
     _nzymeBrowserTracer: [
-        async ({ browser, nzymeTrace }, use, testInfo) => {
-            if (!nzymeTrace) {
+        async ({ browser, nzymeTrace, _nzymeBuildChecker }, use, testInfo) => {
+            if (!nzymeTrace || !_nzymeBuildChecker) {
                 await use(undefined);
                 return;
             }
@@ -86,6 +102,7 @@ export const traceTest = test.extend<TraceTestFixtures, TraceTestOptions>({
                 label: getTestTraceLabel(testInfo),
                 apps: nzymeTrace.apps,
                 root: getProjectRoot(testInfo.config.rootDir),
+                buildChecker: _nzymeBuildChecker,
             });
             const restore = labelNewContexts(browser, tracer);
             let trace: BrowserTrace;
@@ -114,10 +131,11 @@ interface CreateBrowserTracerParams {
     label: string;
     apps: TracedApp[];
     root: string;
+    buildChecker: BuildChecker;
 }
 
 function createBrowserTracer(params: CreateBrowserTracerParams): BrowserTracer {
-    const { label, apps, root } = params;
+    const { label, apps, root, buildChecker } = params;
     const contexts = new Set<BrowserContext>();
     const coverageStarts = new Map<Page, Promise<void>>();
     const collected = new Set<Page>();
@@ -125,6 +143,8 @@ function createBrowserTracer(params: CreateBrowserTracerParams): BrowserTracer {
     /** How many times each script was fetched, and how many coverage entries it has: one per document. */
     const fetchedScripts = new Map<string, number>();
     const coveredScripts = new Map<string, number>();
+    /** Service and web worker scripts: page coverage never covers them, and their code is not traced. */
+    const workerScripts = new Set<string>();
     const executed = new Set<string>();
     const stale = new Set<string>();
     let incomplete: string | undefined;
@@ -141,11 +161,13 @@ function createBrowserTracer(params: CreateBrowserTracerParams): BrowserTracer {
         context.on('requestfinished', request => {
             const url = request.url();
             fetched.add(url);
-            if (request.resourceType() === 'script') {
+            // A request a service worker made is not a page's script.
+            if (request.resourceType() === 'script' && !request.serviceWorker()) {
                 fetchedScripts.set(url, (fetchedScripts.get(url) ?? 0) + 1);
             }
         });
         context.on('page', page => void startCoverage(page));
+        context.on('serviceworker', worker => workerScripts.add(worker.url()));
 
         const newPage = context.newPage.bind(context);
         context.newPage = async () => {
@@ -167,7 +189,15 @@ function createBrowserTracer(params: CreateBrowserTracerParams): BrowserTracer {
             await Promise.all(context.pages().map(collect));
         }
 
+        for (const context of contexts) {
+            for (const worker of context.serviceWorkers()) {
+                workerScripts.add(worker.url());
+            }
+        }
         for (const [url, fetches] of fetchedScripts) {
+            if (workerScripts.has(url)) {
+                continue;
+            }
             // A document whose coverage was lost (its renderer was swapped, or it closed on its own)
             // fetched a script of an app: a gap, not "nothing ran".
             const covered = coveredScripts.get(url) ?? 0;
@@ -194,6 +224,7 @@ function createBrowserTracer(params: CreateBrowserTracerParams): BrowserTracer {
                 incomplete ??= `JavaScript coverage did not start: ${String(error)}`;
             });
             coverageStarts.set(page, started);
+            page.on('worker', worker => workerScripts.add(worker.url()));
 
             const closePage = page.close.bind(page);
             page.close = async options => {
@@ -220,7 +251,7 @@ function createBrowserTracer(params: CreateBrowserTracerParams): BrowserTracer {
             for (const script of coverage) {
                 coveredScripts.set(script.url, (coveredScripts.get(script.url) ?? 0) + 1);
             }
-            const execution = mapBrowserCoverage({ coverage, apps, root });
+            const execution = mapBrowserCoverage({ coverage, apps, root, buildChecker });
             for (const file of execution.executed) {
                 executed.add(file);
             }

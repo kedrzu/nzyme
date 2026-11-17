@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 
+import type { BuildChecker } from '../probe/createBuildChecker.js';
 import { createSourceLocator } from '../probe/createSourceLocator.js';
 import { resolveAppFile } from './resolveAppFile.js';
 import type { TracedApp } from './TracedApp.js';
@@ -23,13 +24,14 @@ export interface MapBrowserCoverageParams {
     apps: readonly TracedApp[];
     /** Absolute project root. */
     root: string;
+    buildChecker: BuildChecker;
 }
 
 /** The source files a browser ran, as root-relative paths. */
 export interface BrowserExecution {
     /** Sources with at least one function that ran. */
     executed: string[];
-    /** Executed sources modified after the bundle that ran them was built. */
+    /** Executed sources the bundle that ran them was not built from as they are now. */
     stale: string[];
 }
 
@@ -40,7 +42,7 @@ export interface BrowserExecution {
  * reached through imports).
  */
 export function mapBrowserCoverage(params: MapBrowserCoverageParams): BrowserExecution {
-    const { coverage, apps, root } = params;
+    const { coverage, apps, root, buildChecker } = params;
     const executed = new Set<string>();
     const stale = new Set<string>();
 
@@ -51,7 +53,7 @@ export function mapBrowserCoverage(params: MapBrowserCoverageParams): BrowserExe
         }
 
         const code = script.source ?? readFileSync(file, 'utf8');
-        const locator = createSourceLocator({ file, code, root });
+        const locator = createSourceLocator({ file, code, root, buildChecker });
         const scriptExecuted = new Set<string>();
         for (const fn of script.functions) {
             const range = fn.ranges[0];

@@ -314,9 +314,15 @@ test('schema of an untagged 3.1 spec groups by path segment, merges path-item pa
     expect(either.stdout).not.toContain('auth:');
     expect(list.stdout).not.toContain('auth:');
     expect(message.stdout).toBe(
-        ['Message: object', '  id: Snowflake', '  content: string', '  author?: User?', '  embeds?: map[]?', ''].join(
-            '\n',
-        ),
+        [
+            'Message: object',
+            '  id: Snowflake',
+            '  content: string',
+            '  author?: User?',
+            '  embeds?: map[]?',
+            '  mentions?: (User | Snowflake)[]',
+            '',
+        ].join('\n'),
     );
     expect(user.stdout).toContain('  global_name?: string?\n');
 });

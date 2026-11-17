@@ -158,7 +158,9 @@ export function describeSchema(schema: unknown): string {
 
 function describeType(schema: Record<string, unknown>, type: unknown): string {
     if (type === 'array') {
-        return `${describeSchema(schema.items)}[]`;
+        const items = describeSchema(schema.items);
+        // `(A | B)[]`, so the array is not read as `A | (B[])`.
+        return items.includes(' ') ? `(${items})[]` : `${items}[]`;
     }
     if (type === 'object' || isPlainObject(schema.properties)) {
         return isPlainObject(schema.properties) ? 'object' : 'map';

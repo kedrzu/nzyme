@@ -77,7 +77,8 @@
                     "id": { "$ref": "#/components/schemas/Snowflake" },
                     "content": { "type": "string" },
                     "author": { "oneOf": [{ "type": "null" }, { "$ref": "#/components/schemas/User" }] },
-                    "embeds": { "type": ["array", "null"], "items": { "type": "object" } }
+                    "embeds": { "type": ["array", "null"], "items": { "type": "object" } },
+                    "mentions": { "type": "array", "items": { "oneOf": [{ "$ref": "#/components/schemas/User" }, { "$ref": "#/components/schemas/Snowflake" }] } }
                 }
             },
             "User": {

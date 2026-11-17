@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, readdir, readFile, rename, rm, stat, unlink, utimes, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, rm, rmdir, stat, unlink, utimes, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { GitRepository } from '@nzyme/project-utils/git/GitRepository.js';
@@ -15,6 +15,12 @@ const STORE_VERSION = 1;
 
 /** Variants kept per test; recording one more evicts the least recently matched. */
 const MAX_VARIANTS_PER_TEST = 20;
+
+/** A test none of whose variants was recorded or matched for this long is gone (deleted or renamed): its directory is removed. */
+const STALE_TEST_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** A temporary file younger than this may still be in a writer's hands, so cleanup leaves it. */
+const TMP_GRACE_MS = 60 * 1000;
 
 /** A test: its file, root-relative, and the path of titles within it (empty for a file-level unit). */
 export interface TestUnit {
@@ -79,6 +85,10 @@ export interface StoredVariant {
  * Writes are atomic (a temporary file renamed into place), so a reader in another worktree sees a
  * whole variant or none. A file that does not parse or has another format version is skipped: the
  * test then has no variant and runs.
+ *
+ * Opening a store cleans it up: directories of other format versions go, and so do the tests
+ * nothing recorded or matched in {@link STALE_TEST_MS}. Cleanup leaves a recent temporary file
+ * alone, so it never removes a variant another worktree is writing.
  */
 export class VariantStore {
     constructor(readonly dir: string) {}
@@ -90,7 +100,21 @@ export class VariantStore {
             '--path-format=absolute',
             '--git-common-dir',
         ]);
-        return new VariantStore(path.join(commonDir, 'nzyme-affected', `v${STORE_VERSION}`, suite));
+        return await VariantStore.openAt(path.join(commonDir, 'nzyme-affected'), suite);
+    }
+
+    /** The store of `suite` under `storeRoot` (the directory holding the `v<N>` directories), cleaned up. */
+    static async openAt(storeRoot: string, suite: string): Promise<VariantStore> {
+        const current = `v${STORE_VERSION}`;
+        for (const entry of await listEntries(storeRoot)) {
+            if (entry.isDirectory() && /^v\d+$/.test(entry.name) && entry.name !== current) {
+                await removeTree(path.join(storeRoot, entry.name));
+            }
+        }
+
+        const store = new VariantStore(path.join(storeRoot, current, suite));
+        await store.removeStaleTests();
+        return store;
     }
 
     /** The valid variants of a test, newest first. */
@@ -119,8 +143,18 @@ export class VariantStore {
         const file = path.join(dir, `${id}.json`);
         const tmp = `${file}.${process.pid}.${randomUUID()}.tmp`;
 
+        const content = JSON.stringify({ version: STORE_VERSION, ...variant });
         await mkdir(dir, { recursive: true });
-        await writeFile(tmp, JSON.stringify({ version: STORE_VERSION, ...variant }));
+        try {
+            await writeFile(tmp, content);
+        } catch (error) {
+            if (!isErrorCode(error, 'ENOENT')) {
+                throw error;
+            }
+            // Cleanup in another worktree removed the directory just created; the temporary file now keeps it.
+            await mkdir(dir, { recursive: true });
+            await writeFile(tmp, content);
+        }
         try {
             await rename(tmp, file);
         } catch (error) {
@@ -141,6 +175,25 @@ export class VariantStore {
     /** Deletes a variant; one already gone is fine. */
     async remove(unit: TestUnit, id: string): Promise<void> {
         await ignoreMissing(unlink(this.variantPath(unit, id)));
+    }
+
+    /** Removes the directories of tests whose newest variant was last recorded or matched over {@link STALE_TEST_MS} ago. */
+    private async removeStaleTests(): Promise<void> {
+        for (const entry of await listEntries(this.dir)) {
+            if (!entry.isDirectory()) {
+                continue;
+            }
+            const dir = path.join(this.dir, entry.name);
+            let newestMs = 0;
+            for (const name of await listDir(dir)) {
+                if (name.endsWith('.json')) {
+                    newestMs = Math.max(newestMs, (await ignoreMissing(stat(path.join(dir, name))))?.mtimeMs ?? 0);
+                }
+            }
+            if (Date.now() - newestMs > STALE_TEST_MS) {
+                await removeTree(dir);
+            }
+        }
     }
 
     /** A file's mtime is the last time its variant was recorded or matched. */
@@ -182,6 +235,40 @@ async function listDir(dir: string): Promise<string[]> {
     return (await ignoreMissing(readdir(dir))) ?? [];
 }
 
+async function listEntries(dir: string) {
+    return (await ignoreMissing(readdir(dir, { withFileTypes: true }))) ?? [];
+}
+
+/**
+ * Removes a directory tree, except temporary files younger than {@link TMP_GRACE_MS} (a writer may
+ * be about to rename one into place) and the directories that hold them.
+ */
+async function removeTree(dir: string): Promise<void> {
+    for (const entry of await listEntries(dir)) {
+        const entryPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            await removeTree(entryPath);
+            continue;
+        }
+        if (entry.name.endsWith('.tmp')) {
+            const stats = await ignoreMissing(stat(entryPath));
+            if (!stats || Date.now() - stats.mtimeMs < TMP_GRACE_MS) {
+                continue;
+            }
+        }
+        await ignoreMissing(unlink(entryPath));
+    }
+
+    try {
+        await rmdir(dir);
+    } catch (error) {
+        // Still holds a recent temporary file, or another process removed it first.
+        if (!isErrorCode(error, 'ENOTEMPTY') && !isErrorCode(error, 'EEXIST') && !isErrorCode(error, 'ENOENT')) {
+            throw error;
+        }
+    }
+}
+
 async function readOptional(file: string): Promise<string | undefined> {
     return await ignoreMissing(readFile(file, 'utf8'));
 }
@@ -191,11 +278,15 @@ async function ignoreMissing<T>(promise: Promise<T>): Promise<T | undefined> {
     try {
         return await promise;
     } catch (error) {
-        if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+        if (isErrorCode(error, 'ENOENT')) {
             return undefined;
         }
         throw error;
     }
+}
+
+function isErrorCode(error: unknown, code: string): boolean {
+    return error instanceof Error && 'code' in error && error.code === code;
 }
 
 /** A stored variant, or `undefined` for anything that is not one of the current version. */

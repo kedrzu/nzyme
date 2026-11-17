@@ -88,6 +88,38 @@ test('read returns the written variants, newest first, and remove deletes one', 
     expect(await store.read(UNIT)).toEqual([older]);
 });
 
+test('opening a store removes other format versions and tests nothing matched in 30 days, but keeps fresh ones', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nzyme-variant-store-'));
+    tmpDirs.push(root);
+    const longAgo = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
+
+    const oldVersion = path.join(root, 'v0', 'e2e', 'unit');
+    await fs.mkdir(oldVersion, { recursive: true });
+    await fs.writeFile(path.join(oldVersion, 'a.json'), '{}');
+
+    const store = await VariantStore.openAt(root, 'e2e');
+    const fresh = await store.write(createVariant('a', '2026-01-01T00:00:00.000Z'));
+    const gone: TestUnit = { file: 'e2e/deleted.spec.ts' };
+    const stale = await store.write({ ...createVariant('b', '2026-01-01T00:00:00.000Z'), unit: gone });
+    const staleFile = (await listJsonFiles(store.dir)).find(file => file.endsWith(`${stale.id}.json`)) ?? '';
+    await fs.utimes(staleFile, longAgo, longAgo);
+
+    // A stale test another worktree is recording into right now: its temporary file is kept.
+    const writing: TestUnit = { file: 'e2e/writing.spec.ts' };
+    const written = await store.write({ ...createVariant('c', '2026-01-01T00:00:00.000Z'), unit: writing });
+    const writtenFile = (await listJsonFiles(store.dir)).find(file => file.endsWith(`${written.id}.json`)) ?? '';
+    await fs.utimes(writtenFile, longAgo, longAgo);
+    await fs.writeFile(`${writtenFile}.1.tmp`, '{');
+
+    await VariantStore.openAt(root, 'e2e');
+
+    expect(await fs.readdir(root)).toEqual(['v1']);
+    expect(await store.read(UNIT)).toEqual([fresh]);
+    expect(await store.read(gone)).toEqual([]);
+    expect(await fs.readdir(path.dirname(staleFile)).catch(() => 'removed')).toBe('removed');
+    expect(await fs.readdir(path.dirname(writtenFile))).toEqual([`${path.basename(writtenFile)}.1.tmp`]);
+});
+
 function createVariant(top: string, recordedAt: string): Variant {
     return { unit: UNIT, files: { 'src/a.ts': { top } }, suite: { hash: 's', config: 'c', inputs: {} }, recordedAt };
 }

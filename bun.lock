@@ -732,6 +732,29 @@
         "oxfmt": "0.77.0",
       },
     },
+    "packages/trace": {
+      "name": "@nzyme/trace",
+      "version": "0.15.1",
+      "dependencies": {
+        "@jridgewell/trace-mapping": "^0.3.31",
+        "@nzyme/project-utils": "workspace:*",
+        "oxc-parser": "^0.152.0",
+      },
+      "devDependencies": {
+        "@nzyme/tsconfig": "workspace:*",
+        "@types/bun": "^1.4.4",
+        "@types/node": "26.6.6",
+        "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+        "effect": "^4.1.2",
+        "oxfmt": "0.77.0",
+      },
+      "peerDependencies": {
+        "effect": "^4.1.2",
+      },
+      "optionalPeers": [
+        "effect",
+      ],
+    },
     "packages/tsconfig": {
       "name": "@nzyme/tsconfig",
       "version": "0.15.1",
@@ -1625,6 +1648,8 @@
     "@nzyme/sentry-cli": ["@nzyme/sentry-cli@workspace:packages/sentry-cli"],
 
     "@nzyme/slack": ["@nzyme/slack@workspace:packages/slack"],
+
+    "@nzyme/trace": ["@nzyme/trace@workspace:packages/trace"],
 
     "@nzyme/tsconfig": ["@nzyme/tsconfig@workspace:packages/tsconfig"],
 
@@ -2751,6 +2776,8 @@
     "editorconfig": ["editorconfig@3.0.2", "", { "dependencies": { "@one-ini/wasm": "0.2.1", "commander": "^14.0.3", "minimatch": "~10.2.4", "semver": "^7.7.4" }, "bin": { "editorconfig": "bin/editorconfig" } }, "sha512-T0ix8GhtxyKVfUFEcvdNDt3YGqlwkFHbD4/5bgFUDgFmxhI/cSRAeJ87/Sz//Cq8Eam6JX/e23RkoFO71P7aAA=="],
 
     "ee-first": ["ee-first@1.1.1", "", {}, "sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow=="],
+
+    "effect": ["effect@4.1.4", "", {}, "sha512-Tgrv/9FN+TZYyOn8XSli+fVqAfwDrDAkiX5Uu9vztINb675VTQdhD0gWI5Kzvhlh9QqzjZvw72iugqw5pwoghQ=="],
 
     "ejs": ["ejs@5.0.1", "", { "bin": { "ejs": "bin/cli.js" } }, "sha512-COqBPFMxuPTPspXl2DkVYaDS3HtrD1GpzOGkNTJ1IYkifq/r9h8SVEFrjA3D9/VJGOEoMQcrlhpntcSUrM8k6A=="],
 

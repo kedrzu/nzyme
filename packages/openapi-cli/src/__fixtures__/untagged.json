@@ -1,0 +1,90 @@
+{
+    "openapi": "3.1.0",
+    "info": { "title": "Untagged", "version": "1" },
+    "security": [{ "BotToken": [] }],
+    "paths": {
+        "/channels/{channel_id}/messages": {
+            "parameters": [
+                { "name": "channel_id", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/Snowflake" } }
+            ],
+            "get": {
+                "operationId": "list_messages",
+                "parameters": [{ "name": "limit", "in": "query", "schema": { "type": ["integer", "null"] } }],
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "content": {
+                            "application/json": {
+                                "schema": { "type": ["array", "null"], "items": { "$ref": "#/components/schemas/Message" } }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "operationId": "create_message",
+                "description": "Posts a message to a channel.\nThe bot needs SEND_MESSAGES.\n\nLong detail that is not shown.",
+                "parameters": [
+                    { "name": "channel_id", "in": "path", "required": true, "schema": { "type": "string", "format": "snowflake" } }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": { "schema": { "$ref": "#/components/schemas/MessageCreateRequest" } }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Message" } } }
+                    }
+                }
+            }
+        },
+        "/users/@me": {
+            "get": {
+                "operationId": "get_my_user",
+                "security": [{ "BotToken": [] }, { "OAuth2": ["identify"] }],
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+                    }
+                }
+            }
+        },
+        "/users/@me/connections": {
+            "get": {
+                "operationId": "list_my_connections",
+                "security": [{ "OAuth2": ["connections"] }],
+                "responses": { "200": { "description": "ok" } }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Snowflake": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$", "format": "snowflake" },
+            "MessageCreateRequest": {
+                "type": "object",
+                "properties": {
+                    "content": { "type": ["string", "null"], "maxLength": 4000 },
+                    "nonce": { "oneOf": [{ "type": "integer", "format": "int64" }, { "type": "string" }, { "type": "null" }] }
+                }
+            },
+            "Message": {
+                "type": "object",
+                "required": ["id", "content"],
+                "properties": {
+                    "id": { "$ref": "#/components/schemas/Snowflake" },
+                    "content": { "type": "string" },
+                    "author": { "oneOf": [{ "type": "null" }, { "$ref": "#/components/schemas/User" }] },
+                    "embeds": { "type": ["array", "null"], "items": { "type": "object" } }
+                }
+            },
+            "User": {
+                "type": "object",
+                "required": ["id"],
+                "properties": { "id": { "$ref": "#/components/schemas/Snowflake" }, "global_name": { "anyOf": [{ "type": "string" }, { "type": "null" }] } }
+            }
+        }
+    }
+}

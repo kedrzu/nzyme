@@ -220,7 +220,7 @@ export const PLAIN = plain({ a: 1 });
         expect(findings).toEqual([lineOf(source, 'export const PLAIN')]);
     });
 
-    it('allows calls into a listed external package, chains included, and narrows a `pkg#name` entry', async () => {
+    it('allows calls into a listed external package, member and curried chains included, and narrows a `pkg#name` entry', async () => {
         const source = `import { z } from 'zod';
 import { defineComponent, ref } from 'vue';
 import { debounce } from 'lodash';
@@ -230,11 +230,14 @@ export const SUBPATH = z.string();
 export const COMPONENT = defineComponent({});
 export const STATE = ref(0);
 export const DEBOUNCED = debounce(() => {}, 100);
+export const CURRIED = z.custom<string>()('curried');
+export const CURRIED_STATE = debounce(() => {}, 100)();
 `;
 
         expect(await lintCase(source)).toEqual([
             lineOf(source, 'export const STATE'),
             lineOf(source, 'export const DEBOUNCED'),
+            lineOf(source, 'export const CURRIED_STATE'),
         ]);
     });
 

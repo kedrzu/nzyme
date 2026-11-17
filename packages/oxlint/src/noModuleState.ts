@@ -478,6 +478,13 @@ export const noModuleState: Readonly<OxlintRule> = {
                 return root != null && isExternal(importOf(root));
             }
 
+            // A curried call — `Context.Service<T>()('Name')` — is allowed when its chain starts in an
+            // external package, like a member chain.
+            if (isNode(callee, 'CallExpression')) {
+                const root = chainRoot(callee);
+                return root != null && isExternal(importOf(root));
+            }
+
             if (callee.type === 'ParenthesizedExpression' || callee.type === 'TSNonNullExpression') {
                 const inner: OxlintAnyNode = callee;
                 return inner.expression != null && isAllowedCallee(inner.expression);

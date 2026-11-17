@@ -100,7 +100,7 @@ export type TranslationResult = {
 
 /**
  * Compiles YAML translation files into TypeScript code
- * @_NO_SIDE_EFFECTS_
+ * @__NO_SIDE_EFFECTS__
  */
 export function compileTranslations(yaml: string): TranslationResult {
     const document = parseDocument(yaml);

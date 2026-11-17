@@ -56,8 +56,10 @@ Two hashes per file, in `@nzyme/affected`.
 - **Fingerprint.** Types and comments are stripped before hashing, so a type-only change selects
   nothing; a file that fails to parse counts as changed in full. In `.vue`, the template, `<script setup>`
   and styles are body, a plain `<script>` is top. Non-code dependencies (images, fonts) are hashed whole.
-- **Variant** = the test's entry files (hashed whole), the executed files (`body` + `top`), their import
-  closure (`top`), its assets, and a suite fingerprint: the suite's `fullRunTriggers` and everything they
+- **Variant** = the test's entry files (hashed whole), the executed files (`body` + `top`), their static
+  import closure (`top`; a literal `import('…')` is not followed — a lazily loaded module the test
+  reached is an executed file itself, and following a router's lazy routes would tie every test to
+  every page), its assets, and a suite fingerprint: the suite's `fullRunTriggers` and everything they
   import, the files that ran at startup, modules imported for side effects only, and files with a
   computed `import(…)`. A suite fingerprint that no longer matches reruns the whole suite.
 - **Selection.** A test is skipped when any variant matches. A static suite's test with no variant falls

@@ -25,6 +25,9 @@ const files: Record<string, string> = {
     'packages/common/src/cycle/c.ts': `import { a } from './a.js';\nexport const c = 1;`,
     'packages/common/src/cycle/a.test.ts': `import { a } from './a.js';`,
     'packages/common/src/mixed.ts': `import type { Thing } from './types.js';\nimport { format } from './format.js';\nimport type { format as f } from './format.js';`,
+    'packages/common/src/lazy/router.ts': `import { shared } from './shared.js';\nexport const routes = [() => import('./page.js'), () => import('./shared.js')];`,
+    'packages/common/src/lazy/page.ts': `export const page = 1;`,
+    'packages/common/src/lazy/shared.ts': `export const shared = 1;`,
     'packages/common/src/docs.ts': `/** @example import { format } from './format.js'; */\nexport const docs = 1;`,
     'packages/common/src/Messages.loc.ts': `import { defineMessages } from '@acme/i18n/defineMessages.js';`,
     'packages/common/src/Messages.loc.yaml': `hello: Hello`,
@@ -202,10 +205,17 @@ describe('buildImportGraph', () => {
 
     it('gives one edge per importing file, type-only imports included', () => {
         expect(graph.importersOf('packages/common/src/types.ts')).toEqual([
-            { from: 'packages/common/src/mixed.ts', to: 'packages/common/src/types.ts' },
+            { from: 'packages/common/src/mixed.ts', to: 'packages/common/src/types.ts', dynamic: false },
         ]);
         expect(importers('packages/common/src/format.ts').filter(from => from.endsWith('mixed.ts'))).toEqual([
             'packages/common/src/mixed.ts',
+        ]);
+    });
+
+    it('marks an edge dynamic only when every import of the target is a dynamic `import()`', () => {
+        expect(graph.importsOf('packages/common/src/lazy/router.ts')).toEqual([
+            { from: 'packages/common/src/lazy/router.ts', to: 'packages/common/src/lazy/shared.ts', dynamic: false },
+            { from: 'packages/common/src/lazy/router.ts', to: 'packages/common/src/lazy/page.ts', dynamic: true },
         ]);
     });
 

@@ -71,7 +71,12 @@ export async function buildSuiteFingerprint(options: BuildSuiteFingerprintOption
         }
         const effects = scanModuleEffects(file, content);
         for (const specifier of effects.sideEffectImports) {
-            for (const target of options.resolver.resolve(file, { specifier, typeOnly: false, kind: 'module' })) {
+            for (const target of options.resolver.resolve(file, {
+                specifier,
+                typeOnly: false,
+                dynamic: false,
+                kind: 'module',
+            })) {
                 add(target, 'side-effect');
             }
         }

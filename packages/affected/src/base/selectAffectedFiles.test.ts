@@ -260,8 +260,8 @@ function createGraph(files: string[], edges: [string, string][]): ImportGraph {
     const importers = new Map<string, ImportEdge[]>();
     const imports = new Map<string, ImportEdge[]>();
     for (const [from, to] of edges) {
-        importers.set(to, [...(importers.get(to) ?? []), { from, to }]);
-        imports.set(from, [...(imports.get(from) ?? []), { from, to }]);
+        importers.set(to, [...(importers.get(to) ?? []), { from, to, dynamic: false }]);
+        imports.set(from, [...(imports.get(from) ?? []), { from, to, dynamic: false }]);
     }
     return {
         files: files.toSorted(),

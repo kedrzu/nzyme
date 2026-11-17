@@ -30,6 +30,11 @@ describe('extractEsmSpecifiers', () => {
             '@acme/ns',
         ]);
         expect(extractEsmSpecifiers(content).every(s => s.kind === 'module' && !s.typeOnly)).toBe(true);
+        expect(
+            extractEsmSpecifiers(content)
+                .filter(s => s.dynamic)
+                .map(s => s.specifier),
+        ).toEqual(['./lazy.js']);
     });
 
     it('marks `import type` and `export type` as type-only', () => {

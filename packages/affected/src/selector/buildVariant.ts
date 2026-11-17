@@ -38,8 +38,10 @@ export type BuildVariantResult = { variant: Variant } | { missing: string };
  * - entry files and everything they import, transitively — in full: the test side is not traced,
  *   so any runtime change to it counts;
  * - executed files — in full;
- * - everything executed files import, transitively — `top` only: their load-time code ran, their
- *   function bodies did not (or they would be executed files themselves);
+ * - everything executed files import statically, transitively — `top` only: their load-time code
+ *   ran, their function bodies did not (or they would be executed files themselves). A dynamic
+ *   `import('…')` is not followed: a lazily loaded module the test reached ran, so it is an executed
+ *   file itself;
  * - assets — by bytes (they have no structure to split).
  *
  * A file whose structure cannot be split is hashed by its bytes at any level. The suite fingerprint
@@ -57,7 +59,7 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
     for (const file of full) {
         levels.set(file, 'full');
     }
-    for (const file of collectImportClosure(graph, options.executed)) {
+    for (const file of collectImportClosure(graph, options.executed, { staticOnly: true })) {
         if (!levels.has(file)) {
             levels.set(file, 'top');
         }

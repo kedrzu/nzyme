@@ -105,6 +105,20 @@ test('an HTTP error exits 1 with the message first, the body as indented detail,
     expect(result.stdout + result.stderr).not.toContain(FAKE_CREDENTIAL);
 });
 
+test('a rate limit is a failure like any other: exit 1, nothing on stdout, retry_after on stderr, no retry', async () => {
+    const requests = stubFetch(() =>
+        Response.json({ message: 'You are being rate limited.', retry_after: 1.5 }, { status: 429 }),
+    );
+
+    const result = await run(['discord', 'get', '/channels/9']);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toStartWith('Discord GET /channels/9 failed: 429\n');
+    expect(result.stderr).toContain('"retry_after": 1.5');
+    expect(requests).toHaveLength(1);
+});
+
 test('a credential echoed in a success body never reaches stdout', async () => {
     const escaped = FAKE_CREDENTIAL.replaceAll('/', '\\/');
     stubFetch(() => new Response(`{"token":"${escaped}"}`));

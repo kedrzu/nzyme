@@ -1,16 +1,31 @@
+import { writeFile } from 'node:fs/promises';
 import { constants } from 'node:os';
 import path from 'node:path';
 
 import { readAffectedConfig } from '@nzyme/affected/base/AffectedConfig.js';
+import { createPatternMatcher } from '@nzyme/affected/base/createPatternMatcher.js';
 import { selectAffectedSinceBase } from '@nzyme/affected/base/selectAffectedSinceBase.js';
 import type { AffectedSelection } from '@nzyme/affected/base/selectAffectedFiles.js';
+import { formatPlaywrightTestList, readPlaywrightTestList } from '@nzyme/affected/playwright/playwrightTestList.js';
+import { openTestSelector } from '@nzyme/affected/selector/openTestSelector.js';
+import type { TestSelector } from '@nzyme/affected/selector/openTestSelector.js';
+import type { TestSelection } from '@nzyme/affected/selector/TestSelection.js';
+import { getTestUnitKey } from '@nzyme/affected/store/VariantStore.js';
 import { Option, UsageError } from '@nzyme/cli-core';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { spawnForExitCode } from '@nzyme/cli-core/utils/spawnForExitCode.js';
 import type { SpawnForExitCodeResult } from '@nzyme/cli-core/utils/spawnForExitCode.js';
 import { findOwningPackageDir } from '@nzyme/project-utils/findOwningPackageDir.js';
+import { getPackages } from '@nzyme/project-utils/getPackages.js';
 import { GitRepository } from '@nzyme/project-utils/git/GitRepository.js';
+import { walkProjectFiles } from '@nzyme/project-utils/importGraph/walkProjectFiles.js';
+import { relativePosixPath } from '@nzyme/project-utils/relativePosixPath.js';
 import type { AffectedBase } from '@nzyme/project-utils/resolveAffectedBase.js';
+import { assert } from '@nzyme/utils/assert.js';
+
+import { describeTestSelection } from '../affected/describeTestSelection.js';
+import { recordJunitResults } from '../affected/recordJunitResults.js';
+import type { JunitRecording } from '../affected/recordJunitResults.js';
 
 /**
  * Selects the files a change can affect — the changed files plus everything importing them,
@@ -27,7 +42,9 @@ export class GitAffectedCommand extends Command {
         category: 'Testing',
         description: 'Select the files a change can affect, and print them or run a command on them',
         details: `
-            Usage: \`nzyme git affected [--base|-b <ref>] [--per-package] <pattern…> [-- <cmd…>]\`.
+            Usage: \`nzyme git affected [--base|-b <ref>] [--per-package] <pattern…> [-- <cmd…>]\`,
+            \`nzyme git affected --suite <name> [--junit <file>] [--full] [<pattern…>] [-- <cmd…>]\`
+            or \`nzyme git affected --suite <name> --units <file> --test-list-out <file>\`.
 
             Diffs the working tree (commits, staged, unstaged, untracked; submodules against the
             gitlink of the base) against the base, scans the import graph once and selects the
@@ -53,6 +70,24 @@ export class GitAffectedCommand extends Command {
             ending in \`to\`), \`fullRunTriggers\` and \`ignore\` (globs matched against the
             root-relative path, never the basename). A changed file that a \`fullRunTriggers\` file
             imports, transitively, also runs everything.
+
+            \`--suite <name>\` selects the tests of a suite of \`nzyme.affected.suites\` from their
+            recorded variants instead: a test is skipped while one of its variants matches the
+            current code; one without a variant runs (a traced suite) or is selected by the base
+            diff as above (a static suite). The patterns default to the suite's; the output, the
+            command and the empty-selection rule are the same. A summary with the reasons goes to
+            stderr. \`--full\` runs every test of the suite, still selecting, for the audit below.
+
+            \`--junit <file>\` (with \`--suite\` and a command, not \`--per-package\`): after the
+            command, reads the JUnit report it wrote (bun test, vitest) and records a variant of
+            each test file whose testcases all passed; a file with a failure has its matching
+            variants invalidated, and one the selection skipped yet failed (under \`--full\`) is
+            reported as a hole in what the selection sees. An unreadable report records nothing;
+            the exit code stays the command's.
+
+            \`--units <file> --test-list-out <file>\` (with \`--suite\`; no patterns, no command):
+            selects single tests from the output of \`playwright test --list --reporter=json\` and
+            writes them as a Playwright \`--test-list\` file. Exits 0; the summary goes to stderr.
         `,
         examples: [
             ['List the tests affected by the change', "nzyme git affected '*.test.ts'"],
@@ -60,6 +95,14 @@ export class GitAffectedCommand extends Command {
             [
                 'Run affected stories per package',
                 "nzyme git affected --per-package 'packages/*/src/**/*.stories.tsx' -- bunx vitest run --project=storybook",
+            ],
+            [
+                'Run the unit tests no variant skips, recording the passing ones',
+                'nzyme git affected --suite unit --junit /tmp/junit.xml -- bun test --reporter=junit --reporter-outfile=/tmp/junit.xml',
+            ],
+            [
+                'Select single e2e tests for Playwright',
+                'nzyme git affected --suite e2e --units units.json --test-list-out selected.txt',
             ],
         ],
     });
@@ -83,6 +126,10 @@ export class GitAffectedCommand extends Command {
 
         const args = parseAffectedArgs(this.args);
         const root = await new GitRepository(this.cwd).git(['rev-parse', '--show-toplevel']);
+        if (args.suite !== undefined) {
+            return await this.runSuite(root, args, args.suite);
+        }
+
         const config = await readAffectedConfig(root);
         const { base, changedFiles, selection, packageDirs } = await selectAffectedSinceBase({
             root,
@@ -104,15 +151,114 @@ export class GitAffectedCommand extends Command {
             return 0;
         }
 
-        const groups = args.perPackage
-            ? groupByPackage(selection.files, packageDirs)
-            : [{ dir: '', files: selection.files }];
+        return await this.runOnFiles({ root, command: args.command, files: selection.files, packageDirs, args });
+    }
+
+    /** `--suite`: selects the suite's tests from their recorded variants. */
+    private async runSuite(root: string, args: AffectedArgs, suite: string): Promise<number> {
+        const selector = await openTestSelector({ root, suite, base: args.base });
+        if (args.units !== undefined) {
+            assert(args.testListOut !== undefined, '--units comes with --test-list-out.');
+            return await this.writeSelectedTestList({
+                root,
+                selector,
+                suite,
+                units: args.units,
+                out: args.testListOut,
+            });
+        }
+
+        const config = await readAffectedConfig(root);
+        const suiteConfig = config.suites[suite];
+        assert(suiteConfig, `openTestSelector accepted suite "${suite}".`);
+        const matchesPattern = createPatternMatcher(args.patterns.length > 0 ? args.patterns : suiteConfig.patterns);
+        const files = (await walkProjectFiles(root)).filter(file => matchesPattern(file));
+        const selection = await selector.select(files.map(file => ({ file })));
+        this.context.stderr.write(`nzyme git affected --suite ${suite}: ${describeTestSelection(selection)}\n`);
+
+        const selected = args.full ? files : selection.run.map(test => test.unit.file);
+        if (args.full) {
+            this.context.stderr.write(`nzyme git affected: --full runs all ${files.length} files\n`);
+        }
+        if (selected.length === 0) {
+            this.context.stderr.write('no affected files\n');
+            return 0;
+        }
+
+        if (!args.command) {
+            this.context.stdout.write(`${selected.join('\n')}\n`);
+            return 0;
+        }
+
+        const packageDirs = args.perPackage ? await getPackageDirs(root) : [];
+        const exitCode = await this.runOnFiles({ root, command: args.command, files: selected, packageDirs, args });
+        if (args.junit !== undefined) {
+            await this.recordFromJunit({ root, selector, selection, junitFile: args.junit, ranFiles: selected });
+        }
+        return exitCode;
+    }
+
+    /**
+     * `--units`: selects single tests listed by `playwright test --list --reporter=json` and writes
+     * them as a `--test-list` file. Exits 0 whatever is selected; the caller reads the file.
+     */
+    private async writeSelectedTestList(options: WriteSelectedTestListOptions): Promise<number> {
+        const tests = await readPlaywrightTestList(path.resolve(this.cwd, options.units), options.root);
+        const selection = await options.selector.select(tests.map(test => test.unit));
+        const run = new Set(selection.run.map(test => getTestUnitKey(test.unit)));
+
+        await writeFile(
+            path.resolve(this.cwd, options.out),
+            formatPlaywrightTestList(tests.filter(test => run.has(getTestUnitKey(test.unit)))),
+        );
+        this.context.stderr.write(`nzyme git affected --suite ${options.suite}: ${describeTestSelection(selection)}\n`);
+        return 0;
+    }
+
+    /**
+     * Records the outcome of each ran file from the JUnit report, then reports the failed files the
+     * selection had skipped (only an explicit `--full` run executes those): a dependency neither a
+     * variant nor the import graph saw. Their matching variants are already invalidated, as are those
+     * of every failed file. A report that cannot be read records nothing.
+     */
+    private async recordFromJunit(options: RecordFromJunitOptions): Promise<void> {
+        const { stderr } = this.context;
+        let recording: JunitRecording;
+        try {
+            recording = await recordJunitResults({
+                selector: options.selector,
+                root: options.root,
+                junitFile: path.resolve(this.cwd, options.junitFile),
+                ranFiles: options.ranFiles,
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            stderr.write(`nzyme git affected: no variants recorded, cannot read the JUnit report: ${message}\n`);
+            return;
+        }
+
+        stderr.write(`${describeRecording(recording)}\n`);
+        for (const { unit, reason } of options.selector.audit(recording.failed, options.selection)) {
+            stderr.write(
+                `nzyme git affected: ${unit.file} failed, yet the selection skipped it (${reason.kind}) — ` +
+                    'a dependency it does not see; its variants were invalidated\n',
+            );
+        }
+    }
+
+    /**
+     * Runs the command on `files`, once or per owning package; an interrupt stops the run after the
+     * current package.
+     */
+    private async runOnFiles(options: RunOnFilesOptions): Promise<number> {
+        const { root, command, files, args } = options;
+        const groups = args.perPackage ? groupByPackage(files, options.packageDirs) : [{ dir: '', files }];
         let exitCode = 0;
         for (const group of groups) {
             if (args.perPackage) {
                 this.context.stderr.write(`nzyme git affected: ${group.dir || '.'} (${group.files.length} files)\n`);
             }
-            const result = await this.runCommand(args.command, path.join(root, group.dir), group.files);
+            const result = await this.runCommand(command, path.join(root, group.dir), group.files);
             if (exitCode === 0) {
                 exitCode = result.exitCode;
             }
@@ -154,6 +300,16 @@ interface AffectedArgs {
     patterns: string[];
     /** The command after `--`, when given. */
     command?: AffectedRunCommand;
+    /** `--suite <name>`: select from the recorded variants of a suite of `nzyme.affected.suites`. */
+    suite?: string;
+    /** `--junit <file>`: the JUnit report the command writes, to record from. */
+    junit?: string;
+    /** `--units <file>`: the `playwright test --list --reporter=json` output to select single tests from. */
+    units?: string;
+    /** `--test-list-out <file>`: where to write the selected tests as a Playwright `--test-list`. */
+    testListOut?: string;
+    /** `--full`: run every test of the suite; the selection is still made, for the audit. */
+    full: boolean;
 }
 
 /** The command `nzyme git affected` runs on the selected files. */
@@ -168,6 +324,49 @@ interface AffectedFileGroup {
     files: string[];
 }
 
+/** Options of `GitAffectedCommand.runOnFiles`. */
+interface RunOnFilesOptions {
+    root: string;
+    command: AffectedRunCommand;
+    /** Root-relative files to pass to the command. */
+    files: string[];
+    /** Root-relative package directories, for `--per-package`. */
+    packageDirs: string[];
+    args: AffectedArgs;
+}
+
+/** Options of `GitAffectedCommand.writeSelectedTestList`. */
+interface WriteSelectedTestListOptions {
+    root: string;
+    selector: TestSelector;
+    suite: string;
+    /** The `--units` file. */
+    units: string;
+    /** The `--test-list-out` file. */
+    out: string;
+}
+
+/** Options of `GitAffectedCommand.recordFromJunit`. */
+interface RecordFromJunitOptions {
+    root: string;
+    selector: TestSelector;
+    /** The selection made before the run, for the audit. */
+    selection: TestSelection;
+    junitFile: string;
+    /** Root-relative test files the command ran. */
+    ranFiles: string[];
+}
+
+/** Options taking a value: `--name <value>` or `--name=<value>`. */
+const VALUE_OPTIONS = {
+    '--base': 'base',
+    '-b': 'base',
+    '--suite': 'suite',
+    '--junit': 'junit',
+    '--units': 'units',
+    '--test-list-out': 'testListOut',
+} as const satisfies Record<string, keyof AffectedArgs>;
+
 /** `--help` / `-h` before `--` — the proxy keeps clipanion from seeing it. */
 function isHelpRequest(argv: string[]): boolean {
     const separator = argv.indexOf('--');
@@ -176,35 +375,35 @@ function isHelpRequest(argv: string[]): boolean {
 }
 
 /**
- * Parses `[--base <ref>|--base=<ref>|-b <ref>] [--per-package] <pattern…> [-- <cmd…>]`. Options may stand
- * anywhere before `--`; everything after it is the command, untouched.
+ * Parses `[--base <ref>|-b <ref>] [--per-package] [--suite <name> [--junit <file>] [--full] | --suite
+ * <name> --units <file> --test-list-out <file>] <pattern…> [-- <cmd…>]`. A value option also takes
+ * `--name=<value>`. Options may stand anywhere before `--`; everything after it is the command, untouched.
  */
 function parseAffectedArgs(argv: string[]): AffectedArgs {
     const separator = argv.indexOf('--');
     const own = separator === -1 ? argv : argv.slice(0, separator);
-    const result: AffectedArgs = { perPackage: false, patterns: [] };
+    const result: AffectedArgs = { perPackage: false, patterns: [], full: false };
 
     for (let i = 0; i < own.length; i++) {
         const token = own[i] ?? '';
+        const [name, inline] = token.startsWith('--') ? splitInlineValue(token) : [token, undefined];
         if (token === '--per-package') {
             result.perPackage = true;
-        } else if (token === '--base' || token === '-b') {
-            const value = own[++i];
+        } else if (token === '--full') {
+            result.full = true;
+        } else if (isValueOption(name)) {
+            const value = inline ?? own[++i];
             if (value === undefined || value === '') {
-                throw new UsageError(`${token} needs a ref.`);
+                throw new UsageError(
+                    name === '--base' || name === '-b' ? `${name} needs a ref.` : `${name} needs a value.`,
+                );
             }
-            result.base = value;
-        } else if (token.startsWith('--base=') && token.length > '--base='.length) {
-            result.base = token.slice('--base='.length);
+            result[VALUE_OPTIONS[name]] = value;
         } else if (token.startsWith('-')) {
             throw new UsageError(`Unknown option ${token}. Put the command to run after \`--\`.`);
         } else {
             result.patterns.push(token);
         }
-    }
-
-    if (result.patterns.length === 0) {
-        throw new UsageError('Pass at least one pattern, e.g. `nzyme git affected "*.test.ts"`.');
     }
 
     if (separator !== -1) {
@@ -215,11 +414,98 @@ function parseAffectedArgs(argv: string[]): AffectedArgs {
         result.command = { executable, args };
     }
 
-    if (result.perPackage && !result.command) {
-        throw new UsageError('--per-package needs a command to run after `--`.');
+    if (result.suite === undefined) {
+        validatePlainArgs(result);
+    } else if (result.units === undefined) {
+        validateSuiteFileArgs(result);
+    } else {
+        validateSuiteTestArgs(result);
     }
 
     return result;
+}
+
+/** Without `--suite`: patterns are required, and the suite options are refused. */
+function validatePlainArgs(args: AffectedArgs): void {
+    for (const [option, set] of [
+        ['--junit', args.junit !== undefined],
+        ['--units', args.units !== undefined],
+        ['--test-list-out', args.testListOut !== undefined],
+        ['--full', args.full],
+    ] as const) {
+        if (set) {
+            throw new UsageError(`${option} needs --suite <name>.`);
+        }
+    }
+    if (args.patterns.length === 0) {
+        throw new UsageError('Pass at least one pattern, e.g. `nzyme git affected "*.test.ts"`.');
+    }
+    if (args.perPackage && !args.command) {
+        throw new UsageError('--per-package needs a command to run after `--`.');
+    }
+}
+
+/** `--suite` over test files: the patterns default to the suite's. */
+function validateSuiteFileArgs(args: AffectedArgs): void {
+    if (args.testListOut !== undefined) {
+        throw new UsageError('--test-list-out needs --units <file>.');
+    }
+    if (args.perPackage && !args.command) {
+        throw new UsageError('--per-package needs a command to run after `--`.');
+    }
+    if (args.junit !== undefined && !args.command) {
+        throw new UsageError('--junit needs the command that writes the report after `--`.');
+    }
+    if (args.junit !== undefined && args.perPackage) {
+        // Every package's run would overwrite the one report.
+        throw new UsageError('--junit cannot be combined with --per-package.');
+    }
+}
+
+/** `--suite` over single tests: `--units` in, `--test-list-out` out, nothing else. */
+function validateSuiteTestArgs(args: AffectedArgs): void {
+    if (args.testListOut === undefined) {
+        throw new UsageError('--units needs --test-list-out <file>.');
+    }
+    if (args.command || args.patterns.length > 0 || args.perPackage || args.junit !== undefined || args.full) {
+        throw new UsageError(
+            '--units takes no patterns, command, --per-package, --junit or --full: it only writes the selected tests.',
+        );
+    }
+}
+
+/** `--name=value` → `['--name', 'value']`; a token without `=` → `[token, undefined]`. */
+function splitInlineValue(token: string): [string, string | undefined] {
+    const index = token.indexOf('=');
+    return index === -1 ? [token, undefined] : [token.slice(0, index), token.slice(index + 1)];
+}
+
+function isValueOption(name: string): name is keyof typeof VALUE_OPTIONS {
+    return Object.hasOwn(VALUE_OPTIONS, name);
+}
+
+/** Root-relative directories of the workspace packages, for `--per-package`. */
+async function getPackageDirs(root: string): Promise<string[]> {
+    const packages = await getPackages(root);
+    return packages.map(pkg => relativePosixPath(root, pkg.path)).filter(dir => dir !== '' && !dir.startsWith('..'));
+}
+
+/** `nzyme git affected: recorded 5 · 1 failed (2 variants invalidated) · 1 not recorded (a.test.ts: edited b.ts)`. */
+function describeRecording(recording: JunitRecording): string {
+    const parts = [`nzyme git affected: recorded ${recording.recorded.length}`];
+    if (recording.failed.length > 0) {
+        parts.push(`${recording.failed.length} failed (${recording.invalidated} variants invalidated)`);
+    }
+    if (recording.refused.length > 0) {
+        const refusals = recording.refused.map(({ file, reason }) =>
+            reason.kind === 'not-passed' ? file : `${file}: ${reason.kind} ${reason.file}`,
+        );
+        parts.push(`${recording.refused.length} not recorded (${refusals.join(', ')})`);
+    }
+    if (recording.unreported.length > 0) {
+        parts.push(`${recording.unreported.length} without a passing testcase in the report`);
+    }
+    return parts.join(' · ');
 }
 
 /** Groups root-relative files by owning package, with paths relative to it; groups in directory order. */

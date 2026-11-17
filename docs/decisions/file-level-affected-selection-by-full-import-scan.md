@@ -95,3 +95,29 @@ used by healed's architecture check, so one parser serves both.
 - A consumer configures its trunks, aliases, rewrites, triggers and ignored paths under
   `nzyme.affected` in its root `package.json`; without it the defaults (`baseBranches: ["main"]`,
   nothing else) apply.
+
+## Addendum: suites selected from recorded variants
+
+Added 2026-11-17. `nzyme git affected --suite <name>` selects the tests of a suite of
+`nzyme.affected.suites` from recorded **variants** (`openTestSelector` in `@nzyme/affected`) instead of
+the base diff alone. A variant is a test's dependencies with their hashes, recorded from a passing
+run; a test is skipped while one of its variants matches the current code. The base diff above stays
+as the fallback: a test of a static suite with no variant is selected by it, as before.
+
+- **The unit of a static suite is the file.** bun test and vitest report per testcase, but the
+  command runs files, so `--junit <file>` records per file: a file whose testcases all passed gets a
+  variant whose entry is the file (its imports are followed, as above); a file with any failure, or a
+  testsuite counting a failure, has its matching variants invalidated. A file the report does not
+  show passing — failed to load, all skipped, absent — records nothing. An unreadable report records
+  nothing and leaves the exit code to the command.
+- **The unit of a traced suite (e2e) is the single test.** `--units` reads the tests from
+  `playwright test --list --reporter=json` and `--test-list-out` writes the selection in Playwright's
+  `--test-list` format. Playwright trims each `›`-separated token and matches the title path as a
+  prefix, so a title it could not read back cuts the line there: it selects more tests, never fewer.
+  Recording an e2e test is the reporter's job, not this command's.
+- **The self-check is local to `--full`.** Only a run that executes tests the selection skipped can
+  find one that fails while a variant claims nothing changed; `--full` runs every file, selects anyway
+  and reports such a file as a hole in what the selection sees, after invalidating its variants.
+- **stdout stays the contract.** Without `--suite` nothing changed; with it the output, the command
+  and the empty-selection rule are the same, and the summary with reasons
+  (`2 run (changed: a.ts) · 40 skipped (variant match)`) goes to stderr.

@@ -6,6 +6,7 @@ import { getImportSourceKind } from '@nzyme/project-utils/importGraph/extractImp
 
 import type { AffectedConfig } from './AffectedConfig.js';
 import type { ChangedFile } from './collectChangedFiles.js';
+import { createPatternMatcher } from './createPatternMatcher.js';
 import { rewriteChangedPath } from './rewriteChangedPath.js';
 
 /** Options of {@link selectAffectedFiles}. */
@@ -176,15 +177,6 @@ function findImportingTrigger(
     }
 
     return undefined;
-}
-
-/**
- * The selection-pattern rule: a glob without `/` matches the basename, one with `/` the
- * root-relative path.
- */
-function createPatternMatcher(patterns: string[]): (file: string) => boolean {
-    const globs = patterns.map(pattern => ({ glob: new Bun.Glob(pattern), basename: !pattern.includes('/') }));
-    return file => globs.some(({ glob, basename }) => glob.match(basename ? path.posix.basename(file) : file));
 }
 
 /** Returns the first glob matching the root-relative path, or `undefined`. */

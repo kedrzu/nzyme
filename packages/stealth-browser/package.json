@@ -34,6 +34,7 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
+        "@nzyme/ioc": "workspace:*",
         "@nzyme/logging": "workspace:*",
         "@nzyme/utils": "workspace:*"
     },

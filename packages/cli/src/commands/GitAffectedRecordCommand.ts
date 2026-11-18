@@ -6,6 +6,7 @@ import { openTestSelector } from '@nzyme/affected/selector/openTestSelector.js';
 import { Option } from '@nzyme/cli-core';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { GitRepository } from '@nzyme/project-utils/git/GitRepository.js';
+import { sumOver } from '@nzyme/utils/array/sumOver.js';
 
 import { recordTracedResults } from '../affected/recordTracedResults.js';
 import type { TracedRecording } from '../affected/recordTracedResults.js';
@@ -104,7 +105,7 @@ function describeTracedRecording(recording: TracedRecording): string {
         parts.push(`${recording.failed.length} failed (${recording.invalidated} variants invalidated)`);
     }
     if (recording.refused.size > 0) {
-        const total = [...recording.refused.values()].reduce((sum, count) => sum + count, 0);
+        const total = sumOver(recording.refused.values(), count => count);
         const reasons = [...recording.refused].map(([reason, count]) => `${reason}: ${count}`);
         parts.push(`${total} not recorded (${reasons.join(', ')})`);
     }

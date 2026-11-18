@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, setDefaultTimeout, test } from 'bun:test';
 
-import type { TracedTestResult } from '@nzyme/affected/playwright/TracedTestResult.js';
+import type { TracedTestResult, TracedTestTraced } from '@nzyme/affected/playwright/TracedTestResult.js';
 import { openTestSelector } from '@nzyme/affected/selector/openTestSelector.js';
 import type { TestUnit } from '@nzyme/affected/store/VariantStore.js';
 
@@ -252,6 +252,45 @@ test('--record makes variants of the complete passed tests, counts incomplete on
     expect(edited.stderr).toContain('recorded 0 · 1 not recorded (edited: 1)');
 });
 
+test('--record makes a file a server ran once part of every variant that imports it', async () => {
+    // A lazy singleton: the first test to use it runs `setup()`, later ones reuse what it built.
+    await write('packages/beta/src/client.ts', 'export function setup() {\n    return 1;\n}\n');
+    await write(
+        'packages/beta/src/command.ts',
+        "import { setup } from './client.js';\nexport const command = setup;\n",
+    );
+    const client = 'packages/beta/src/client.ts';
+    const command = 'packages/beta/src/command.ts';
+    await selectE2e();
+    await writeResults([traced(TOP, [client, command]), traced(IN_GROUP, [command])]);
+    await recordE2e();
+    expect((await selectE2e()).stderr).toContain('0 run · 2 skipped (variant match)');
+
+    await write(client, 'export function setup() {\n    return 2;\n}\n');
+
+    expect((await selectE2e()).stderr).toContain('2 run (changed: packages/beta/src/client.ts) · 0 skipped');
+});
+
+test('--record keeps a file only a browser ran out of the variants that merely import it', async () => {
+    await write('packages/beta/src/client.ts', 'export function setup() {\n    return 1;\n}\n');
+    await write(
+        'packages/beta/src/command.ts',
+        "import { setup } from './client.js';\nexport const command = setup;\n",
+    );
+    const client = 'packages/beta/src/client.ts';
+    const command = 'packages/beta/src/command.ts';
+    await selectE2e();
+    // Each test gets a fresh browser context: what one test's browser ran keeps no state for another.
+    await writeResults([{ ...traced(TOP, [command]), browserExecuted: [client] }, traced(IN_GROUP, [command])]);
+    await recordE2e();
+
+    await write(client, 'export function setup() {\n    return 2;\n}\n');
+
+    expect((await selectE2e()).stderr).toContain(
+        '1 run (changed: packages/beta/src/client.ts) · 1 skipped (variant match)',
+    );
+});
+
 test('--record --full invalidates a failed test and reports the selection skipped it', async () => {
     await selectE2e();
     await writeResults([traced(TOP, ['packages/beta/src/other.ts'])]);
@@ -374,7 +413,7 @@ async function writeResults(results: TracedTestResult[]): Promise<void> {
     await fs.writeFile(resultsFile(), results.map(result => `${JSON.stringify(result)}\n`).join(''));
 }
 
-function traced(unit: TestUnit, executed: string[]): TracedTestResult {
+function traced(unit: TestUnit, executed: string[]): TracedTestTraced {
     return { unit, status: 'passed', complete: true, entry: [unit.file], executed, startup: [], assets: [] };
 }
 

@@ -157,7 +157,8 @@ export default class TraceReporter implements Reporter {
             status: 'passed',
             complete: true,
             entry: [unit.file],
-            executed: [...new Set([...execution.executed, ...browser.executed])],
+            executed: [...execution.executed],
+            browserExecuted: browser.executed,
             startup: [...startup],
             assets: browser.assets,
         };

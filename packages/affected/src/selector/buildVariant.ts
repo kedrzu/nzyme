@@ -18,6 +18,8 @@ export interface BuildVariantOptions {
     entry: string[];
     /** Root-relative files whose functions ran for this test. */
     executed: string[];
+    /** Root-relative files whose functions ran in a server process anywhere in the run (`TestRun.runExecuted`). */
+    runExecuted: string[];
     /** Root-relative non-code files the test loaded (an image the browser fetched). */
     assets: string[];
     /** Root-relative files whose functions ran at startup, before any test. */
@@ -41,7 +43,8 @@ export type BuildVariantResult = { variant: Variant } | { missing: string };
  * - everything executed files import statically, transitively — `top` only: their load-time code
  *   ran, their function bodies did not (or they would be executed files themselves). A dynamic
  *   `import('…')` is not followed: a lazily loaded module the test reached ran, so it is an executed
- *   file itself;
+ *   file itself. Except a file a server process ran anywhere in the run: in full, since code that
+ *   ran once and kept state (a lazy singleton's setup) served this test too;
  * - assets — by bytes (they have no structure to split).
  *
  * A file whose structure cannot be split is hashed by its bytes at any level. The suite fingerprint
@@ -59,9 +62,10 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
     for (const file of full) {
         levels.set(file, 'full');
     }
+    const ranInRun = new Set(options.runExecuted);
     for (const file of collectImportClosure(graph, options.executed, { staticOnly: true })) {
         if (!levels.has(file)) {
-            levels.set(file, 'top');
+            levels.set(file, ranInRun.has(file) ? 'full' : 'top');
         }
     }
 

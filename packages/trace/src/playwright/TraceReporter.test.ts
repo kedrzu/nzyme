@@ -99,12 +99,18 @@ test('a traced run writes what each passed test ran and fetched, and --record ma
     expect(greets['app/src/unused.ts']).not.toHaveProperty('body');
     expect(greets['server/greet.js']).toHaveProperty('body');
     expect(greets).toHaveProperty(['app/public/img/logo.svg']);
-    // Imported by the server's entry, which ran, but called only by the other test.
-    expect(greets['server/other.js']).not.toHaveProperty('body');
+    // Imported by the server's entry and called only by the other test, yet in full: a server
+    // process serves every test, so state one test's call leaves behind can serve the next.
+    expect(greets['server/other.js']).toHaveProperty('body');
 
-    const ownContext = await readVariantFiles(OWN_CONTEXT);
-    expect(ownContext['server/other.js']).toHaveProperty('body');
-    expect(ownContext['server/greet.js']).not.toHaveProperty('body');
+    // Each test's line still says which server code ran for it, and keeps the browser's apart.
+    const [greetsLine, ownContextLine] = results.map(result => ('executed' in result ? result : undefined));
+    expect(greetsLine?.executed).toContain('server/greet.js');
+    expect(greetsLine?.executed).not.toContain('server/other.js');
+    expect(greetsLine?.executed).not.toContain('app/src/main.ts');
+    expect(greetsLine?.browserExecuted).toContain('app/src/main.ts');
+    expect(ownContextLine?.executed).toContain('server/other.js');
+    expect(ownContextLine?.executed).not.toContain('server/greet.js');
 
     // Both tests' labels reached the server: the `context` fixture's and the one the test created.
     expect(await readServerLabels('server/greet.js')).toHaveLength(1);

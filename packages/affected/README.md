@@ -26,6 +26,9 @@ suite only when the base diff selects it, in a `traced` suite always.
 - `fingerprint/fingerprintFile.ts` — a file's `body` hash (outermost function bodies) and `top` hash
   (the rest), types and comments stripped; `.vue` split by block.
 - `selector/openTestSelector.ts` — `select`, `record`, `invalidate` and `audit` for one suite.
+- `selector/buildVariant.ts` — what a variant holds: entry files and their imports in full, executed
+  files in full, their static imports `top` only — in full when a server ran them anywhere in the run
+  (`TestRun.runExecuted`) — and assets by bytes.
 - `store/VariantStore.ts` — the variants, in `<git-common-dir>/nzyme-affected/`, shared by every
   worktree of a clone; at most 20 per test.
 - `junit/readJunitResults.ts` — per-file results of a bun test or Vitest JUnit report.

@@ -31,7 +31,14 @@ export interface TracedTestTraced {
     complete: true;
     /** The test's file; its imports are followed. */
     entry: string[];
+    /** Files whose functions ran for this test in a server process (the probe's trace). */
     executed: string[];
+    /**
+     * Files whose functions ran for this test in its browser. Kept apart from `executed` because
+     * only server-side execution can leave state behind for later tests (see `TestRun.runExecuted`).
+     * A line without it was written before the split: its `executed` holds both, read as server-side.
+     */
+    browserExecuted?: string[];
     /** Files the run executed at startup, before any test; every test depends on them. */
     startup: string[];
     assets: string[];

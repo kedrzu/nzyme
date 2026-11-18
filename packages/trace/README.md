@@ -61,8 +61,10 @@ for `nzyme git affected --record` to store as the variants of `@nzyme/affected`.
   `['@nzyme/trace/playwright/TraceReporter.js', { resultsFile, traceDir, ownsServers }]`. Once every
   process that reported `ready` has flushed past a test's end, it appends the test's line to
   `resultsFile` (`TracedTestResult` of `@nzyme/affected`): failed, passed with an incomplete trace and
-  the reason (`no-heartbeat`, `stale-build`, `unprobed`, …), or passed with what it executed, its
-  assets and the run's startup code. A build is stale when a built file the test ran was not built from
+  the reason (`no-heartbeat`, `stale-build`, `unprobed`, …), or passed with what it executed — the
+  servers' files (`executed`) apart from the browser's (`browserExecuted`), because `--record` hashes
+  a file any server ran in the run in full in every variant that imports it — its assets and the
+  run's startup code. A build is stale when a built file the test ran was not built from
   its source's current content: the source map's `sourcesContent` differs, or, without it, the
   `tsgo` build info's hash of the source does; an asset is compared by modification time. With `ownsServers: false` it writes nothing. `traceDir` must be
   fresh per run. It runs on Node or Bun.

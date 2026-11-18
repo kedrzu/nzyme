@@ -57,11 +57,21 @@ Two hashes per file, in `@nzyme/affected`.
   nothing; a file that fails to parse counts as changed in full. In `.vue`, the template, `<script setup>`
   and styles are body, a plain `<script>` is top. Non-code dependencies (images, fonts) are hashed whole.
 - **Variant** = the test's entry files (hashed whole), the executed files (`body` + `top`), their static
-  import closure (`top`; a literal `import('…')` is not followed — a lazily loaded module the test
-  reached is an executed file itself, and following a router's lazy routes would tie every test to
-  every page), its assets, and a suite fingerprint: the suite's `fullRunTriggers` and everything they
+  import closure (`top`, except a file a server process ran in the same run, below; a literal
+  `import('…')` is not followed — a lazily loaded module the test reached is an executed file itself,
+  and following a router's lazy routes would tie every test to every page), its assets, and a suite fingerprint: the suite's `fullRunTriggers` and everything they
   import, the files that ran at startup, modules imported for side effects only, and files with a
   computed `import(…)`. A suite fingerprint that no longer matches reruns the whole suite.
+- **Code that runs once in a server.** A long-lived server serves every test, so code that runs once
+  and keeps state — a lazy singleton's setup, a memo, a cache — runs only in the first test that needs
+  it, and later tests that use what it built never execute it. A mutation campaign found a body change
+  to such code selecting 1 of the 34 tests it broke (an AWS client's setup), and 1 of 10 (another). So
+  a closure file that any server process executed anywhere in the run, in any test, gets `body` too.
+  Browser execution does not count: every test gets a fresh browser context, so browser state never
+  crosses tests; the reporter keeps the two apart for this. Measured on 92 recorded e2e variants, both
+  mutations then select every test they break (34 and 11 tests), and a single-file historical edit
+  selects 27.3 tests on average instead of 22.8. Startup files need nothing extra: the suite
+  fingerprint holds them in full.
 - **Selection.** A test is skipped when any variant matches. A static suite's test with no variant falls
   back to the base diff; a traced suite's test with no variant runs. Only a pass records; a failure
   invalidates the variants matching the current code, so the test runs until it passes. A record is

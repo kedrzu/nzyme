@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/bitwarden",
-    "version": "0.15.1",
+    "version": "0.16.0",
     "description": "Bitwarden Secrets Manager as a secret store for @nzyme/secrets",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/config",
-    "version": "0.15.1",
+    "version": "0.16.0",
     "description": "A typed config document assembled from ordered sources and resolved through the container",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

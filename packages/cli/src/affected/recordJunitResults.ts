@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { readJunitResults } from '@nzyme/affected/junit/readJunitResults.js';
+import { mergeJunitStatus, readJunitResults } from '@nzyme/affected/junit/readJunitResults.js';
 import type { JunitFileResult } from '@nzyme/affected/junit/readJunitResults.js';
 import type { RecordRefusal, TestSelector } from '@nzyme/affected/selector/openTestSelector.js';
 import { relativePosixPath } from '@nzyme/project-utils/relativePosixPath.js';
@@ -81,10 +81,7 @@ function matchRanFiles(
         if (file === undefined) {
             continue;
         }
-        const current = statuses.get(file);
-        if (current === undefined || current === 'passed' || result.status === 'failed') {
-            statuses.set(file, result.status);
-        }
+        statuses.set(file, mergeJunitStatus(statuses.get(file), result.status));
     }
     return statuses;
 

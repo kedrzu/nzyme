@@ -56,11 +56,20 @@ export function parseJunitResults(xml: string): JunitFileResult[] {
     }
 
     function setStatus(file: string, status: JunitFileResult['status']): void {
-        const current = results.get(file);
-        if (current === undefined || current === 'passed' || status === 'failed') {
-            results.set(file, status);
-        }
+        results.set(file, mergeJunitStatus(results.get(file), status));
     }
+}
+
+/**
+ * Combines two outcomes reported for one test file: a failure wins over anything else, and a skip over
+ * a pass.
+ * @__NO_SIDE_EFFECTS__
+ */
+export function mergeJunitStatus(
+    current: JunitFileResult['status'] | undefined,
+    next: JunitFileResult['status'],
+): JunitFileResult['status'] {
+    return current === undefined || current === 'passed' || next === 'failed' ? next : current;
 }
 
 /** A parsed XML element: attributes (`@_name`) and child elements by tag name. */

@@ -2,6 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { isErrorCode } from '@nzyme/utils/isErrorCode.js';
+import { parseNdjson } from '@nzyme/utils/parseNdjson.js';
 
 import type { TraceLine } from '../TraceLine.js';
 import type { TraceProcess } from './TraceProcess.js';
@@ -40,19 +41,8 @@ function parseTraceFile(name: string, text: string): TraceProcess | undefined {
     const fileNames = new Map<number, string>();
     let process: TraceProcess | undefined;
 
-    for (const line of text.split('\n')) {
-        if (line === '') {
-            continue;
-        }
-        let parsed: TraceLine;
-        try {
-            // The probe of this package writes the file: its lines are trusted to match the type.
-            parsed = JSON.parse(line) as TraceLine;
-        } catch {
-            // Only the last line can be cut short, by a process killed mid-write.
-            break;
-        }
-
+    // The probe of this package writes the file: its lines are trusted to match the type.
+    for (const parsed of parseNdjson(text) as TraceLine[]) {
         if (parsed.type === 'start') {
             process = { name, bucketMs: parsed.bucketMs, hits: [], stale: new Set() };
             continue;

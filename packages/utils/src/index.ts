@@ -74,6 +74,7 @@ export * from './Nullable.js';
 export * from './omitProps.js';
 export * from './parseBigint.js';
 export * from './parseDuration.js';
+export * from './parseNdjson.js';
 export * from './parseStackTrace.js';
 export * from './phoneLink.js';
 export * from './promiseAll.js';

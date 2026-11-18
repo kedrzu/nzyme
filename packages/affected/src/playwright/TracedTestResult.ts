@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 
 import { isErrorCode } from '@nzyme/utils/isErrorCode.js';
+import { parseNdjson } from '@nzyme/utils/parseNdjson.js';
 
 import type { TestUnit } from '../store/VariantStore.js';
 
@@ -71,18 +72,6 @@ export async function readTracedTestResults(file: string): Promise<TracedTestRes
         throw error;
     }
 
-    const results: TracedTestResult[] = [];
-    for (const line of text.split('\n')) {
-        if (line === '') {
-            continue;
-        }
-        try {
-            // Written by the trace reporter: its lines are trusted to match the type.
-            results.push(JSON.parse(line) as TracedTestResult);
-        } catch {
-            // Only the last line can be cut short, by a run killed mid-write.
-            break;
-        }
-    }
-    return results;
+    // Written by the trace reporter: its lines are trusted to match the type.
+    return parseNdjson(text) as TracedTestResult[];
 }

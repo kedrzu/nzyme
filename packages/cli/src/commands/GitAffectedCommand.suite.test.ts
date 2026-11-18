@@ -103,7 +103,7 @@ test('records the files that passed, skips them next time, and runs a failed one
     expect(first.stderr).toContain(
         'nzyme git affected --suite unit: 2 run (affected since base) · 1 skipped (unaffected since base)',
     );
-    expect(first.stderr).toContain('recorded 1 · 1 failed (0 variants invalidated)');
+    expect(first.stderr).toContain('recorded 1 · 1 failed');
     expect(await readRan()).toEqual([VALUE_TEST, USES_TEST]);
 
     const second = await runSuite({});
@@ -143,7 +143,7 @@ test('--per-package reads the report after each package, so every package record
     const first = await runSuite({ FAIL: 'src/value.test.ts' }, ['--per-package']);
 
     expect(first.exitCode).toBe(1);
-    expect(first.stderr).toContain('recorded 1 · 1 failed (0 variants invalidated)');
+    expect(first.stderr).toContain('recorded 1 · 1 failed');
     expect(await readRan()).toEqual(['src/value.test.ts', 'src/uses.test.ts']);
 
     const second = await runSuite({}, ['--per-package']);
@@ -175,7 +175,7 @@ test('an unreadable JUnit report records nothing, warns, and keeps the exit code
     expect((await runAffected(['--suite', 'unit'])).stdout).toBe(`${VALUE_TEST}\n${USES_TEST}\n`);
 });
 
-test('--units writes the selected single tests as a Playwright test list', async () => {
+test('test-list writes the selected single tests as a Playwright test list', async () => {
     const units = path.join(outDir, 'units.json');
     const out = path.join(outDir, 'selected.txt');
     await fs.writeFile(
@@ -193,11 +193,11 @@ test('--units writes the selected single tests as a Playwright test list', async
         }),
     );
 
-    const first = await runAffected(['--suite', 'e2e', '--units', units, '--test-list-out', out]);
+    const first = await runGit(['affected-test-list', '--suite', 'e2e', '--units', units, '--out', out]);
 
     expect(first.exitCode).toBe(0);
     expect(first.stdout).toBe('');
-    expect(first.stderr).toContain('nzyme git affected --suite e2e: 2 run (no variant) · 0 skipped');
+    expect(first.stderr).toContain('nzyme git affected-test-list --suite e2e: 2 run (no variant) · 0 skipped');
     expect(await fs.readFile(out, 'utf8')).toBe('x.spec.ts › top\nx.spec.ts › grp › in\n');
 
     const selector = await openTestSelector({ root: repo, suite: 'e2e' });
@@ -207,18 +207,18 @@ test('--units writes the selected single tests as a Playwright test list', async
     );
     expect(recorded).toEqual({ recorded: true });
 
-    const second = await runAffected(['--suite', 'e2e', '--units', units, '--test-list-out', out]);
+    const second = await runGit(['affected-test-list', '--suite', 'e2e', '--units', units, '--out', out]);
 
     expect(second.stderr).toContain('1 run (no variant) · 1 skipped (variant match)');
     expect(await fs.readFile(out, 'utf8')).toBe('x.spec.ts › grp › in\n');
 });
 
-test('--record makes variants of the complete passed tests, counts incomplete ones and refuses files edited since the selection', async () => {
+test('record makes variants of the complete passed tests, counts incomplete ones and refuses files edited since the selection', async () => {
     const select = await selectE2e();
     expect(select.stderr).toContain('2 run (no variant)');
     await writeResults([
         traced(TOP, ['packages/beta/src/other.ts']),
-        { unit: IN_GROUP, status: 'passed', complete: false, reason: 'no-heartbeat' },
+        { unit: IN_GROUP, status: 'passed', complete: false, reason: 'no-heartbeat', executed: [] },
     ]);
 
     const record = await recordE2e();
@@ -236,7 +236,7 @@ test('--record makes variants of the complete passed tests, counts incomplete on
     expect(edited.stderr).toContain('recorded 0 · 1 not recorded (edited: 1)');
 });
 
-test('--record makes a file a server ran once part of every variant that imports it', async () => {
+test('record makes a file a server ran once part of every variant that imports it', async () => {
     // A lazy singleton: the first test to use it runs `setup()`, later ones reuse what it built.
     await write('packages/beta/src/client.ts', 'export function setup() {\n    return 1;\n}\n');
     await write(
@@ -255,7 +255,7 @@ test('--record makes a file a server ran once part of every variant that imports
     expect((await selectE2e()).stderr).toContain('2 run (changed: packages/beta/src/client.ts) · 0 skipped');
 });
 
-test('--record makes a file a server ran in a failed or incomplete test part of every variant that imports it', async () => {
+test('record makes a file a server ran in a failed or incomplete test part of every variant that imports it', async () => {
     // The first test to use the lazy singleton failed, or its trace was incomplete: its `setup()` still
     // serves every test after it.
     await write('packages/beta/src/client.ts', 'export function setup() {\n    return 1;\n}\n');
@@ -277,7 +277,7 @@ test('--record makes a file a server ran in a failed or incomplete test part of 
     );
 });
 
-test('--record keeps a file only a browser ran out of the variants that merely import it', async () => {
+test('record keeps a file only a browser ran out of the variants that merely import it', async () => {
     await write('packages/beta/src/client.ts', 'export function setup() {\n    return 1;\n}\n');
     await write(
         'packages/beta/src/command.ts',
@@ -297,12 +297,12 @@ test('--record keeps a file only a browser ran out of the variants that merely i
     );
 });
 
-test('--record --full invalidates a failed test and reports the selection skipped it', async () => {
+test('record --full invalidates a failed test and reports the selection skipped it', async () => {
     await selectE2e();
     await writeResults([traced(TOP, ['packages/beta/src/other.ts'])]);
     await recordE2e();
     expect((await selectE2e()).stderr).toContain('1 skipped (variant match)');
-    await writeResults([{ unit: TOP, status: 'failed' }]);
+    await writeResults([{ unit: TOP, status: 'failed', executed: [] }]);
 
     const full = await recordE2e(['--full']);
 
@@ -312,7 +312,7 @@ test('--record --full invalidates a failed test and reports the selection skippe
     expect((await selectE2e()).stderr).toContain('2 run (no variant) · 0 skipped');
 });
 
-test('--record without a readable snapshot records nothing and exits 0', async () => {
+test('record without a readable snapshot records nothing and exits 0', async () => {
     await writeResults([traced(TOP, [])]);
 
     const record = await recordE2e();
@@ -322,17 +322,24 @@ test('--record without a readable snapshot records nothing and exits 0', async (
 });
 
 test.each([
-    [['--junit', 'j.xml', '*.test.ts'], '--junit needs --suite <name>.'],
-    [['--suite', 'unit', '--junit', 'j.xml'], '--junit needs the command'],
-    [['--suite', 'e2e', '--units', 'u.json'], '--units needs --test-list-out <file>.'],
-    [['--suite', 'e2e', '--units', 'u.json', '--test-list-out', 'o.txt', '--', 'true'], '--units takes no patterns'],
-    [['--suite', 'e2e', '--record', 'r.ndjson'], '--record needs --snapshot <file>'],
-    [['--suite', 'e2e', '--record', 'r.ndjson', '--snapshot', 's.json', '*.spec.ts'], '--record takes no patterns'],
-    [['--suite', 'unit', '--snapshot', 's.json'], '--snapshot needs --units <file> or --record <file>.'],
-    [['--suite', 'unit', '--full', '--', 'true'], '--full needs --record <file>'],
-    [['--suite', 'nope'], 'Unknown test suite "nope"'],
+    [['affected', '--junit', 'j.xml', '*.test.ts'], '--junit needs --suite <name>.'],
+    [['affected', '--suite', 'unit', '--junit', 'j.xml'], '--junit needs the command'],
+    [['affected', '--suite', 'unit', '--per-package'], '--per-package needs a command'],
+    [['affected', '--suite', 'unit', '--units', 'u.json'], 'Unknown option --units'],
+    // A typed command refuses a missing required option, and anything it does not declare.
+    [['affected-test-list', '--suite', 'e2e', '--units', 'u.json'], 'Command not found'],
+    [['affected-record', '--suite', 'e2e', '--results', 'r.ndjson'], 'Command not found'],
+    [
+        ['affected-record', '--suite', 'e2e', '--results', 'r', '--snapshot', 's', '*.spec.ts'],
+        'Extraneous positional argument',
+    ],
+    [
+        ['affected-record', '--suite', 'e2e', '--results', 'r', '--snapshot', 's', '--junit', 'j.xml'],
+        'Unsupported option name',
+    ],
+    [['affected', '--suite', 'nope'], 'Unknown test suite "nope"'],
 ])('%p is refused', async (args, message) => {
-    const result = await runAffected(args);
+    const result = await runGit(args);
 
     expect(result.exitCode).not.toBe(0);
     expect(result.stderr + result.stdout).toContain(message);
@@ -354,7 +361,12 @@ async function readRan(): Promise<string[]> {
 }
 
 async function runAffected(args: string[], env: Record<string, string> = {}) {
-    const child = Bun.spawn([process.execPath, '--conditions=source', CLI_PATH, 'git', 'affected', ...args], {
+    return await runGit(['affected', ...args], env);
+}
+
+/** `nzyme git <args…>` in the fixture repo. */
+async function runGit(args: string[], env: Record<string, string> = {}) {
+    const child = Bun.spawn([process.execPath, '--conditions=source', CLI_PATH, 'git', ...args], {
         cwd: repo,
         env: { ...HERMETIC_GIT_ENV, OUT: outDir, GITHUB_ACTIONS: '', ...env },
         stdout: 'pipe',
@@ -382,7 +394,7 @@ async function write(file: string, content: string): Promise<void> {
     await fs.writeFile(path.join(repo, file), content);
 }
 
-/** `--units` over `x.spec.ts` (tests {@link TOP} and {@link IN_GROUP}), writing the snapshot. */
+/** `test-list` over `x.spec.ts` (tests {@link TOP} and {@link IN_GROUP}), writing the snapshot. */
 async function selectE2e() {
     const units = path.join(outDir, 'units.json');
     await fs.writeFile(
@@ -400,12 +412,13 @@ async function selectE2e() {
         }),
     );
     const out = path.join(outDir, 'selected.txt');
-    return await runAffected([
+    return await runGit([
+        'affected-test-list',
         '--suite',
         'e2e',
         '--units',
         units,
-        '--test-list-out',
+        '--out',
         out,
         '--snapshot',
         snapshotFile(),
@@ -413,7 +426,16 @@ async function selectE2e() {
 }
 
 async function recordE2e(extra: string[] = []) {
-    return await runAffected(['--suite', 'e2e', '--record', resultsFile(), '--snapshot', snapshotFile(), ...extra]);
+    return await runGit([
+        'affected-record',
+        '--suite',
+        'e2e',
+        '--results',
+        resultsFile(),
+        '--snapshot',
+        snapshotFile(),
+        ...extra,
+    ]);
 }
 
 async function writeResults(results: TracedTestResult[]): Promise<void> {

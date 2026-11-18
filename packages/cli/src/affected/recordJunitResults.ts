@@ -3,7 +3,6 @@ import path from 'node:path';
 import { readJunitResults } from '@nzyme/affected/junit/readJunitResults.js';
 import type { JunitFileResult } from '@nzyme/affected/junit/readJunitResults.js';
 import type { RecordRefusal, TestSelector } from '@nzyme/affected/selector/openTestSelector.js';
-import type { TestUnit } from '@nzyme/affected/store/VariantStore.js';
 import { relativePosixPath } from '@nzyme/project-utils/relativePosixPath.js';
 
 /** Options of {@link recordJunitResults}. */
@@ -21,10 +20,8 @@ export interface RecordJunitResultsOptions {
 export interface JunitRecording {
     recorded: string[];
     refused: { file: string; reason: RecordRefusal }[];
-    /** Failed files, whose variants matching the current code were removed. */
-    failed: TestUnit[];
-    /** Variants removed for the failed files. */
-    invalidated: number;
+    /** Failed files: recorded nothing, so they run again. */
+    failed: string[];
     /**
      * Ran, but in the report with a testcase skipped (a name-filtered run covers only part of a file),
      * or not at all (a file that failed to load).
@@ -34,9 +31,10 @@ export interface JunitRecording {
 
 /**
  * Records, per test file, the outcome of a run from its JUnit report: a file all of whose testcases
- * passed gets a variant (its entry is the file itself; imports are followed), a file with any failure
- * has its matching variants invalidated, so it runs again. A file the report does not show passing in
- * full (a testcase skipped, or not reported at all) is neither recorded nor invalidated. Throws when the report cannot be read.
+ * passed gets a variant (its entry is the file itself; imports are followed); a file with any failure,
+ * or one the report does not show passing in full (a testcase skipped, or not reported at all), gets
+ * none. Nothing is invalidated: the command ran only files no variant matched, so a failed one has no
+ * matching variant to remove and runs again as it is. Throws when the report cannot be read.
  *
  * Report paths are absolute or relative to the runner's root, which need not be the git root
  * (vitest's `root`): one is matched to a ran file exactly, else by path suffix when that is unique.
@@ -45,13 +43,12 @@ export async function recordJunitResults(options: RecordJunitResultsOptions): Pr
     const { selector, root } = options;
     const results = await readJunitResults(options.junitFile);
     const statuses = matchRanFiles(results, options.ranFiles, root);
-    const recording: JunitRecording = { recorded: [], refused: [], failed: [], invalidated: 0, unreported: [] };
+    const recording: JunitRecording = { recorded: [], refused: [], failed: [], unreported: [] };
 
     for (const file of options.ranFiles) {
         const status = statuses.get(file);
         if (status === 'failed') {
-            recording.failed.push({ file });
-            recording.invalidated += await selector.invalidate({ file });
+            recording.failed.push(file);
         } else if (status === 'passed') {
             const result = await selector.record({ file }, { status: 'passed', entry: [file] });
             if (result.recorded) {

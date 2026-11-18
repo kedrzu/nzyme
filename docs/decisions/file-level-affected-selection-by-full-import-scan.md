@@ -108,19 +108,24 @@ and what they hash: `variant-based-test-selection.md`.
 
 - **The unit of a static suite is the file.** bun test and vitest report per testcase, but the
   command runs files, so `--junit <file>` records per file: a file whose testcases all passed gets a
-  variant whose entry is the file (its imports are followed, as above); a file with any failure, or a
-  testsuite counting a failure, has its matching variants invalidated. A file the report does not
-  show passing — failed to load, any testcase skipped (a name-filtered or partial run), absent — records
-  nothing and invalidates nothing. An unreadable report records
-  nothing and leaves the exit code to the command.
-- **The unit of a traced suite (e2e) is the single test.** `--units` reads the tests from
-  `playwright test --list --reporter=json` and `--test-list-out` writes the selection in Playwright's
-  `--test-list` format. Playwright trims each `›`-separated token and matches the title path as a
-  prefix, so a title it could not read back cuts the line there: it selects more tests, never fewer.
-  Recording an e2e test is the reporter's job, not this command's.
+  variant whose entry is the file (its imports are followed, as above). A file with any failure, or a
+  testsuite counting a failure, records nothing, and so does a file the report does not show passing —
+  failed to load, any testcase skipped (a name-filtered or partial run), absent. Nothing is
+  invalidated: the command runs only files no variant matches, so a failed file has no matching
+  variant to remove and simply runs again. An unreadable report records nothing and leaves the exit
+  code to the command.
+- **The unit of a traced suite (e2e) is the single test**, selected and recorded by two commands of
+  their own, each with only its own options. `nzyme git affected-test-list --units <file> --out <file>`
+  reads the tests from `playwright test --list --reporter=json` and writes the selection in
+  Playwright's `--test-list` format. Playwright trims each `›`-separated token and matches the title
+  path as a prefix, so a title it could not read back cuts the line there: it selects more tests,
+  never fewer. `nzyme git affected-record --results <file> --snapshot <file>` records what the trace
+  reporter wrote; a failed test there invalidates its matching variants, because a traced run may
+  execute a test a variant matches (a full or explicitly named run).
 - **A static suite has no self-check.** Only a run that executes tests the selection skipped can
   find one that fails while a variant claims nothing changed, and a static suite's full run goes around
-  the selection (the consumer runs every file directly). The traced suite keeps one: `--record --full`.
+  the selection (the consumer runs every file directly). The traced suite keeps one:
+  `nzyme git affected-record --full`.
 - **stdout stays the contract.** Without `--suite` nothing changed; with it the output, the command
   and the empty-selection rule are the same, and the summary with reasons
   (`2 run (changed: a.ts) · 40 skipped (variant match)`) goes to stderr.

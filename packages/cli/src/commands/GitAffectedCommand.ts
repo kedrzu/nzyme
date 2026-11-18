@@ -1,4 +1,4 @@
-import { readFile, rm, writeFile } from 'node:fs/promises';
+import { rm } from 'node:fs/promises';
 import { constants } from 'node:os';
 import path from 'node:path';
 
@@ -6,12 +6,8 @@ import { readAffectedConfig } from '@nzyme/affected/base/AffectedConfig.js';
 import { createPatternMatcher } from '@nzyme/affected/base/createPatternMatcher.js';
 import { selectAffectedSinceBase } from '@nzyme/affected/base/selectAffectedSinceBase.js';
 import type { AffectedSelection } from '@nzyme/affected/base/selectAffectedFiles.js';
-import { formatPlaywrightTestList, readPlaywrightTestList } from '@nzyme/affected/playwright/playwrightTestList.js';
-import { readTracedTestResults } from '@nzyme/affected/playwright/TracedTestResult.js';
 import { openTestSelector } from '@nzyme/affected/selector/openTestSelector.js';
-import type { TestSelector, TestSelectorSnapshot } from '@nzyme/affected/selector/openTestSelector.js';
-import type { TestSelection } from '@nzyme/affected/selector/TestSelection.js';
-import { getTestUnitKey } from '@nzyme/affected/store/VariantStore.js';
+import type { TestSelector } from '@nzyme/affected/selector/openTestSelector.js';
 import { Option, UsageError } from '@nzyme/cli-core';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { spawnForExitCode } from '@nzyme/cli-core/utils/spawnForExitCode.js';
@@ -27,8 +23,6 @@ import { assert } from '@nzyme/utils/assert.js';
 import { describeTestSelection } from '../affected/describeTestSelection.js';
 import { recordJunitResults } from '../affected/recordJunitResults.js';
 import type { JunitRecording } from '../affected/recordJunitResults.js';
-import { recordTracedResults } from '../affected/recordTracedResults.js';
-import type { TracedRecording } from '../affected/recordTracedResults.js';
 
 /**
  * Selects the files a change can affect — the changed files plus everything importing them,
@@ -46,9 +40,9 @@ export class GitAffectedCommand extends Command {
         description: 'Select the files a change can affect, and print them or run a command on them',
         details: `
             Usage: \`nzyme git affected [--base|-b <ref>] [--per-package] <pattern…> [-- <cmd…>]\`,
-            \`nzyme git affected --suite <name> [--per-package] [--junit <file>] [<pattern…>] [-- <cmd…>]\`,
-            \`nzyme git affected --suite <name> --units <file> --test-list-out <file> [--snapshot <file>]\`
-            or \`nzyme git affected --suite <name> --record <file> --snapshot <file> [--full]\`.
+            or \`nzyme git affected --suite <name> [--per-package] [--junit <file>] [<pattern…>] [-- <cmd…>]\`.
+            The single tests of a traced suite are selected by \`nzyme git affected-test-list\` and
+            recorded by \`nzyme git affected-record\`.
 
             Diffs the working tree (commits, staged, unstaged, untracked; submodules against the
             gitlink of the base) against the base, scans the import graph once and selects the
@@ -84,24 +78,11 @@ export class GitAffectedCommand extends Command {
 
             \`--junit <file>\` (with \`--suite\` and a command): after the command, reads the
             JUnit report it wrote (bun test, vitest) and records a variant of each test file whose
-            testcases all passed; a file with a failure has its matching variants invalidated. The file is deleted before each run, so a run that writes no report
-            records nothing rather than a stale one; with \`--per-package\` it is read after each
-            package's run, before the next overwrites it — pass the command an absolute path, as
-            it runs in the package directory. An unreadable report records nothing; the exit code
-            stays the command's.
-
-            \`--units <file> --test-list-out <file>\` (with \`--suite\`; no patterns, no command):
-            selects single tests from the output of \`playwright test --list --reporter=json\` and
-            writes them as a Playwright \`--test-list\` file. Exits 0; the summary goes to stderr.
-            \`--snapshot <file>\` also writes the selection and the state of the code it saw, for
-            \`--record\`.
-
-            \`--record <file> --snapshot <file>\` (with \`--suite\`; no patterns, no command):
-            after a traced run, records the results file its reporter wrote (\`@nzyme/trace\`): a
-            passed test with a complete trace gets a variant, unless a file it depends on was edited
-            since the selection the snapshot holds; a failed test has its matching variants
-            invalidated; an incomplete trace records nothing and is counted by reason. \`--full\`
-            also reports each failed test the selection had skipped. Always exits 0.
+            testcases all passed; a failed file records nothing, so it runs again. The file is
+            deleted before each run, so a run that writes no report records nothing rather than a
+            stale one; with \`--per-package\` it is read after each package's run, before the next
+            overwrites it — pass the command an absolute path, as it runs in the package directory.
+            An unreadable report records nothing; the exit code stays the command's.
         `,
         examples: [
             ['List the tests affected by the change', "nzyme git affected '*.test.ts'"],
@@ -117,14 +98,6 @@ export class GitAffectedCommand extends Command {
             [
                 'Run the affected stories per package, recording the passing ones',
                 'nzyme git affected --suite stories --per-package --junit /tmp/junit.xml -- bunx vitest run --reporter=junit --outputFile.junit=/tmp/junit.xml',
-            ],
-            [
-                'Select single e2e tests for Playwright',
-                'nzyme git affected --suite e2e --units units.json --test-list-out selected.txt --snapshot snapshot.json',
-            ],
-            [
-                'Record the results of the traced e2e run',
-                'nzyme git affected --suite e2e --record results.ndjson --snapshot snapshot.json',
             ],
         ],
     });
@@ -178,25 +151,7 @@ export class GitAffectedCommand extends Command {
 
     /** `--suite`: selects the suite's tests from their recorded variants. */
     private async runSuite(root: string, args: AffectedArgs, suite: string): Promise<number> {
-        if (args.record !== undefined) {
-            assert(args.snapshot !== undefined, '--record comes with --snapshot.');
-            await this.recordTracedRun({ root, suite, results: args.record, snapshot: args.snapshot, full: args.full });
-            return 0;
-        }
-
         const selector = await openTestSelector({ root, suite, base: args.base });
-        if (args.units !== undefined) {
-            assert(args.testListOut !== undefined, '--units comes with --test-list-out.');
-            return await this.writeSelectedTestList({
-                root,
-                selector,
-                suite,
-                units: args.units,
-                out: args.testListOut,
-                snapshot: args.snapshot,
-            });
-        }
-
         const config = await readAffectedConfig(root);
         const suiteConfig = config.suites[suite];
         assert(suiteConfig, `openTestSelector accepted suite "${suite}".`);
@@ -249,75 +204,6 @@ export class GitAffectedCommand extends Command {
             this.context.stderr.write(`${describeRecording(mergeRecordings(recordings))}\n`);
         }
         return exitCode;
-    }
-
-    /**
-     * `--units`: selects single tests listed by `playwright test --list --reporter=json` and writes
-     * them as a `--test-list` file. Exits 0 whatever is selected; the caller reads the file.
-     */
-    private async writeSelectedTestList(options: WriteSelectedTestListOptions): Promise<number> {
-        const tests = await readPlaywrightTestList(path.resolve(this.cwd, options.units), options.root);
-        const selection = await options.selector.select(tests.map(test => test.unit));
-        const run = new Set(selection.run.map(test => getTestUnitKey(test.unit)));
-
-        await writeFile(
-            path.resolve(this.cwd, options.out),
-            formatPlaywrightTestList(tests.filter(test => run.has(getTestUnitKey(test.unit)))),
-        );
-        if (options.snapshot !== undefined) {
-            const snapshot: SelectionSnapshot = {
-                suite: options.suite,
-                selector: options.selector.snapshot(),
-                selection,
-            };
-            await writeFile(path.resolve(this.cwd, options.snapshot), JSON.stringify(snapshot));
-        }
-        this.context.stderr.write(`nzyme git affected --suite ${options.suite}: ${describeTestSelection(selection)}\n`);
-        return 0;
-    }
-
-    /**
-     * `--record`: records the results file of a traced run against the selection snapshot taken
-     * before it, then (`--full`) reports the failed tests the selection had skipped. A problem only
-     * costs the recording: it is reported, never failing the run.
-     */
-    private async recordTracedRun(options: RecordTracedRunOptions): Promise<void> {
-        const { stderr } = this.context;
-        let snapshot: SelectionSnapshot;
-        try {
-            // Written by `--units … --snapshot` of this command.
-            snapshot = JSON.parse(
-                await readFile(path.resolve(this.cwd, options.snapshot), 'utf8'),
-            ) as SelectionSnapshot;
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            stderr.write(`nzyme git affected: no variants recorded, cannot read the snapshot: ${message}\n`);
-            return;
-        }
-        if (snapshot.suite !== options.suite) {
-            stderr.write(
-                `nzyme git affected: no variants recorded, the snapshot is of suite "${snapshot.suite}", not "${options.suite}"\n`,
-            );
-            return;
-        }
-
-        const selector = await openTestSelector({
-            root: options.root,
-            suite: options.suite,
-            snapshot: snapshot.selector,
-        });
-        const results = await readTracedTestResults(path.resolve(this.cwd, options.results));
-        const recording = await recordTracedResults(selector, results);
-        stderr.write(`${describeTracedRecording(recording)}\n`);
-        if (!options.full) {
-            return;
-        }
-        for (const { unit, reason } of selector.audit(recording.failed, snapshot.selection)) {
-            stderr.write(
-                `nzyme git affected: tracing gap: ${[unit.file, ...(unit.title ?? [])].join(' › ')} failed, ` +
-                    `yet the selection skipped it (${reason.kind}) — its variants were invalidated\n`,
-            );
-        }
     }
 
     /**
@@ -400,16 +286,6 @@ interface AffectedArgs {
     suite?: string;
     /** `--junit <file>`: the JUnit report the command writes, to record from. */
     junit?: string;
-    /** `--units <file>`: the `playwright test --list --reporter=json` output to select single tests from. */
-    units?: string;
-    /** `--test-list-out <file>`: where to write the selected tests as a Playwright `--test-list`. */
-    testListOut?: string;
-    /** `--snapshot <file>`: the selection and the code state it saw, written by `--units`, read by `--record`. */
-    snapshot?: string;
-    /** `--record <file>`: the results file of a traced run, to record. */
-    record?: string;
-    /** `--full` (with `--record`): report the failed tests the selection would have skipped. */
-    full: boolean;
 }
 
 /** The command `nzyme git affected` runs on the selected files. */
@@ -445,38 +321,6 @@ interface RunJunit {
     onReport(ranFiles: string[]): Promise<void>;
 }
 
-/** Options of `GitAffectedCommand.writeSelectedTestList`. */
-interface WriteSelectedTestListOptions {
-    root: string;
-    selector: TestSelector;
-    suite: string;
-    /** The `--units` file. */
-    units: string;
-    /** The `--test-list-out` file. */
-    out: string;
-    /** The `--snapshot` file, when given. */
-    snapshot?: string;
-}
-
-/** Options of `GitAffectedCommand.recordTracedRun`. */
-interface RecordTracedRunOptions {
-    root: string;
-    suite: string;
-    /** The `--record` file. */
-    results: string;
-    /** The `--snapshot` file. */
-    snapshot: string;
-    full: boolean;
-}
-
-/** The `--snapshot` file: what the selection before a traced run saw, for recording after it. */
-interface SelectionSnapshot {
-    suite: string;
-    selector: TestSelectorSnapshot;
-    /** The selection made, for the audit of a full run. */
-    selection: TestSelection;
-}
-
 /** Options of `GitAffectedCommand.recordFromJunit`. */
 interface RecordFromJunitOptions {
     root: string;
@@ -493,10 +337,6 @@ const VALUE_OPTIONS = {
     '-b': 'base',
     '--suite': 'suite',
     '--junit': 'junit',
-    '--units': 'units',
-    '--test-list-out': 'testListOut',
-    '--snapshot': 'snapshot',
-    '--record': 'record',
 } as const satisfies Record<string, keyof AffectedArgs>;
 
 /** `--help` / `-h` before `--` — the proxy keeps clipanion from seeing it. */
@@ -507,23 +347,20 @@ function isHelpRequest(argv: string[]): boolean {
 }
 
 /**
- * Parses `[--base <ref>|-b <ref>] [--per-package] [--suite <name> [--junit <file>] | --suite
- * <name> --units <file> --test-list-out <file> [--snapshot <file>] | --suite <name> --record <file>
- * --snapshot <file> [--full]] <pattern…> [-- <cmd…>]`. A value option also takes
- * `--name=<value>`. Options may stand anywhere before `--`; everything after it is the command, untouched.
+ * Parses `[--base <ref>|-b <ref>] [--per-package] [--suite <name> [--junit <file>]] <pattern…>
+ * [-- <cmd…>]`. A value option also takes `--name=<value>`. Options may stand anywhere before `--`;
+ * everything after it is the command, untouched.
  */
 function parseAffectedArgs(argv: string[]): AffectedArgs {
     const separator = argv.indexOf('--');
     const own = separator === -1 ? argv : argv.slice(0, separator);
-    const result: AffectedArgs = { perPackage: false, patterns: [], full: false };
+    const result: AffectedArgs = { perPackage: false, patterns: [] };
 
     for (let i = 0; i < own.length; i++) {
         const token = own[i] ?? '';
         const [name, inline] = token.startsWith('--') ? splitInlineValue(token) : [token, undefined];
         if (token === '--per-package') {
             result.perPackage = true;
-        } else if (token === '--full') {
-            result.full = true;
         } else if (isValueOption(name)) {
             const value = inline ?? own[++i];
             if (value === undefined || value === '') {
@@ -547,88 +384,26 @@ function parseAffectedArgs(argv: string[]): AffectedArgs {
         result.command = { executable, args };
     }
 
-    if (result.suite === undefined) {
-        validatePlainArgs(result);
-    } else if (result.record !== undefined) {
-        validateRecordArgs(result);
-    } else if (result.units === undefined) {
-        validateSuiteFileArgs(result);
-    } else {
-        validateSuiteTestArgs(result);
-    }
-
+    validateAffectedArgs(result);
     return result;
 }
 
-/** Without `--suite`: patterns are required, and the suite options are refused. */
-function validatePlainArgs(args: AffectedArgs): void {
-    for (const [option, set] of [
-        ['--junit', args.junit !== undefined],
-        ['--units', args.units !== undefined],
-        ['--test-list-out', args.testListOut !== undefined],
-        ['--snapshot', args.snapshot !== undefined],
-        ['--record', args.record !== undefined],
-        ['--full', args.full],
-    ] as const) {
-        if (set) {
-            throw new UsageError(`${option} needs --suite <name>.`);
-        }
+/**
+ * Patterns are required without `--suite` (a suite defaults to its own); `--junit` needs `--suite`,
+ * and it and `--per-package` need a command.
+ */
+function validateAffectedArgs(args: AffectedArgs): void {
+    if (args.junit !== undefined && args.suite === undefined) {
+        throw new UsageError('--junit needs --suite <name>.');
     }
-    if (args.patterns.length === 0) {
+    if (args.suite === undefined && args.patterns.length === 0) {
         throw new UsageError('Pass at least one pattern, e.g. `nzyme git affected "*.test.ts"`.');
-    }
-    if (args.perPackage && !args.command) {
-        throw new UsageError('--per-package needs a command to run after `--`.');
-    }
-}
-
-/** `--suite` over test files: the patterns default to the suite's, when it has them. */
-function validateSuiteFileArgs(args: AffectedArgs): void {
-    if (args.testListOut !== undefined) {
-        throw new UsageError('--test-list-out needs --units <file>.');
-    }
-    if (args.snapshot !== undefined) {
-        throw new UsageError('--snapshot needs --units <file> or --record <file>.');
     }
     if (args.perPackage && !args.command) {
         throw new UsageError('--per-package needs a command to run after `--`.');
     }
     if (args.junit !== undefined && !args.command) {
         throw new UsageError('--junit needs the command that writes the report after `--`.');
-    }
-    if (args.full) {
-        throw new UsageError('--full needs --record <file>: only a traced run is audited.');
-    }
-}
-
-/** `--suite` over single tests: `--units` in, `--test-list-out` out, nothing else. */
-function validateSuiteTestArgs(args: AffectedArgs): void {
-    if (args.testListOut === undefined) {
-        throw new UsageError('--units needs --test-list-out <file>.');
-    }
-    if (args.command || args.patterns.length > 0 || args.perPackage || args.junit !== undefined || args.full) {
-        throw new UsageError(
-            '--units takes no patterns, command, --per-package, --junit or --full: it only writes the selected tests.',
-        );
-    }
-}
-
-/** `--record` of a traced run: `--snapshot` in, `--full` optionally, nothing else. */
-function validateRecordArgs(args: AffectedArgs): void {
-    if (args.snapshot === undefined) {
-        throw new UsageError('--record needs --snapshot <file>, written by the --units selection before the run.');
-    }
-    if (
-        args.command ||
-        args.patterns.length > 0 ||
-        args.perPackage ||
-        args.junit !== undefined ||
-        args.units !== undefined ||
-        args.testListOut !== undefined
-    ) {
-        throw new UsageError(
-            '--record takes no patterns, command, --per-package, --junit, --units or --test-list-out: it only records.',
-        );
     }
 }
 
@@ -642,11 +417,11 @@ function isValueOption(name: string): name is keyof typeof VALUE_OPTIONS {
     return Object.hasOwn(VALUE_OPTIONS, name);
 }
 
-/** `nzyme git affected: recorded 5 · 1 failed (2 variants invalidated) · 1 not recorded (a.test.ts: edited b.ts)`. */
+/** `nzyme git affected: recorded 5 · 1 failed · 1 not recorded (a.test.ts: edited b.ts)`. */
 function describeRecording(recording: JunitRecording): string {
     const parts = [`nzyme git affected: recorded ${recording.recorded.length}`];
     if (recording.failed.length > 0) {
-        parts.push(`${recording.failed.length} failed (${recording.invalidated} variants invalidated)`);
+        parts.push(`${recording.failed.length} failed`);
     }
     if (recording.refused.length > 0) {
         const refusals = recording.refused.map(({ file, reason }) =>
@@ -662,28 +437,13 @@ function describeRecording(recording: JunitRecording): string {
     return parts.join(' · ');
 }
 
-/** `nzyme git affected: recorded 5 · 1 failed (2 variants invalidated) · 2 not recorded (no-heartbeat: 1, edited: 1)`. */
-function describeTracedRecording(recording: TracedRecording): string {
-    const parts = [`nzyme git affected: recorded ${recording.recorded}`];
-    if (recording.failed.length > 0) {
-        parts.push(`${recording.failed.length} failed (${recording.invalidated} variants invalidated)`);
-    }
-    if (recording.refused.size > 0) {
-        const total = [...recording.refused.values()].reduce((sum, count) => sum + count, 0);
-        const reasons = [...recording.refused].map(([reason, count]) => `${reason}: ${count}`);
-        parts.push(`${total} not recorded (${reasons.join(', ')})`);
-    }
-    return parts.join(' · ');
-}
-
 /** The recordings of several runs (one per package) as one. */
 function mergeRecordings(recordings: readonly JunitRecording[]): JunitRecording {
-    const merged: JunitRecording = { recorded: [], refused: [], failed: [], invalidated: 0, unreported: [] };
+    const merged: JunitRecording = { recorded: [], refused: [], failed: [], unreported: [] };
     for (const recording of recordings) {
         merged.recorded.push(...recording.recorded);
         merged.refused.push(...recording.refused);
         merged.failed.push(...recording.failed);
-        merged.invalidated += recording.invalidated;
         merged.unreported.push(...recording.unreported);
     }
     return merged;

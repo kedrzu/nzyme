@@ -57,7 +57,8 @@ used by healed's architecture check, so one parser serves both.
 - **Generated sources come in through `rewrites`, not from disk.** The walk skips gitignored files
   and the graph never reads one. A `rewrites` rule (`.loc.yaml` → `.loc.ts`) maps a changed source
   onto its generated file, and that target joins the resolvable paths for the one scan, so its
-  importers are found. Parsing generated files would add no edge worth having: a `.loc.ts` imports
+  importers are found. The variant graph applies the same rules in reverse: a target imports its
+  source. Parsing generated files would add no edge worth having: a `.loc.ts` imports
   only a type from `@nzyme/i18n`. Rewrites are suffix → suffix — the smallest syntax covering the known cases (`.handler.ts` →
   `.ts`, `.loc.yaml` → `.loc.ts`). A file that matched a rewrite skips the package fallback: the rule
   names its dependents.
@@ -109,7 +110,8 @@ and what they hash: `variant-based-test-selection.md`.
   command runs files, so `--junit <file>` records per file: a file whose testcases all passed gets a
   variant whose entry is the file (its imports are followed, as above); a file with any failure, or a
   testsuite counting a failure, has its matching variants invalidated. A file the report does not
-  show passing — failed to load, all skipped, absent — records nothing. An unreadable report records
+  show passing — failed to load, any testcase skipped (a name-filtered or partial run), absent — records
+  nothing and invalidates nothing. An unreadable report records
   nothing and leaves the exit code to the command.
 - **The unit of a traced suite (e2e) is the single test.** `--units` reads the tests from
   `playwright test --list --reporter=json` and `--test-list-out` writes the selection in Playwright's

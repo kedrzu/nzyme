@@ -1,6 +1,6 @@
 /**
- * Hashes of a source file's runtime code, split by when that code runs. Types and comments are not
- * part of either hash, and neither is formatting.
+ * Hashes of a source file's runtime code, split by when that code runs. Formatting is part of neither
+ * hash; in scripts, neither are types and comments (Vue SFC blocks and stylesheets keep their comments).
  */
 export interface FileFingerprint {
     /** Hash of the outermost function bodies: code that runs only when something calls it. */

@@ -1,22 +1,26 @@
 import { parse } from '@vue/compiler-sfc';
-import type { SFCBlock } from '@vue/compiler-sfc';
-import { parseSync } from 'oxc-parser';
+import type { SFCBlock, SFCStyleBlock } from '@vue/compiler-sfc';
 
 import type { FileFingerprintResult } from './FileFingerprint.js';
 import { fingerprintScript } from './fingerprintScript.js';
 import type { ScriptLoader } from './fingerprintScript.js';
-import { normalizeStyle } from './fingerprintStyle.js';
 import { normalizeWhitespace } from './normalizeWhitespace.js';
 import { getMd5Hash } from '@nzyme/crypto';
+import { extractEsmSpecifiers } from '@nzyme/project-utils/importGraph/extractImportSpecifiers.js';
 
 /**
- * Fingerprints a Vue SFC. `<template>`, `<script setup>`, `<style>` and custom blocks run when the
- * component is used, so all of them go to `body`. A plain `<script>` runs when the module loads and
- * is fingerprinted like a script module: its function bodies join `body`, its rest is `top`.
+ * Fingerprints a Vue SFC by what runs when the component is used (`body`) and what runs when its
+ * module loads (`top`):
+ * - `<template>`, `<script setup>`, scoped or CSS-module `<style>` and custom blocks are `body`;
+ * - the import declarations of `<script setup>` are hoisted to the module, so its static, non-type
+ *   import specifiers are also `top`;
+ * - a global `<style>` (neither `scoped` nor `module`) is injected when the module loads, so it is `top`;
+ * - a plain `<script>` is fingerprinted like a script module: its function bodies join `body`, its
+ *   rest joins `top`.
  *
- * `<script setup>` keeps its types: `defineProps<T>()` and `defineEmits<T>()` compile them into
- * runtime declarations. Its comments and formatting are ignored, and so are those of `<style>`
- * (see {@link normalizeStyle}); the other blocks ignore formatting only. Block attributes (`lang`, `scoped`, `src`, …) are part of the hash.
+ * Blocks other than the plain `<script>` are hashed by their text with whitespace normalised, so a
+ * comment-only change in them changes the hash. Block attributes (`lang`, `scoped`, `src`, …) are
+ * part of the hash.
  * @__NO_SIDE_EFFECTS__
  */
 export function fingerprintVue(path: string, content: string): FileFingerprintResult {
@@ -26,24 +30,23 @@ export function fingerprintVue(path: string, content: string): FileFingerprintRe
     }
 
     const bodyParts: string[] = [];
-    for (const block of [descriptor.template, ...descriptor.customBlocks]) {
+    const topParts: string[] = [];
+    for (const block of [descriptor.template, descriptor.scriptSetup, ...descriptor.customBlocks]) {
         if (block) {
-            bodyParts.push(serializeBlock(block, normalizeWhitespace(block.content)));
+            bodyParts.push(serializeBlock(block));
         }
     }
     for (const block of descriptor.styles) {
-        bodyParts.push(serializeBlock(block, normalizeStyle(block.content, block.lang)));
+        (isGlobalStyle(block) ? topParts : bodyParts).push(serializeBlock(block));
     }
 
     if (descriptor.scriptSetup) {
-        const setupCode = stripScriptComments(descriptor.scriptSetup);
-        if (setupCode == null) {
-            return 'whole';
-        }
-        bodyParts.push(serializeBlock(descriptor.scriptSetup, setupCode));
+        const imports = extractEsmSpecifiers(descriptor.scriptSetup.content)
+            .filter(specifier => !specifier.typeOnly && !specifier.dynamic)
+            .map(specifier => specifier.specifier);
+        topParts.push(JSON.stringify(imports));
     }
 
-    let top = '';
     if (descriptor.script) {
         const loader = getScriptLoader(descriptor.script.lang);
         if (!loader) {
@@ -55,13 +58,13 @@ export function fingerprintVue(path: string, content: string): FileFingerprintRe
             return 'whole';
         }
 
-        bodyParts.push(serializeBlock(descriptor.script, script.body));
-        top = script.top;
+        bodyParts.push(JSON.stringify([descriptor.script.type, descriptor.script.attrs, script.body]));
+        topParts.push(script.top);
     }
 
     return {
         body: getMd5Hash(bodyParts.join('\0')),
-        top: getMd5Hash(top),
+        top: getMd5Hash(topParts.join('\0')),
     };
 }
 
@@ -79,25 +82,10 @@ function getScriptLoader(lang: string | undefined): ScriptLoader | null {
     }
 }
 
-/** The block's code with comments removed and whitespace normalised, or `null` if it does not parse. */
-function stripScriptComments(block: SFCBlock) {
-    const lang = block.lang === 'ts' || block.lang === 'tsx' ? block.lang : 'jsx';
-    const { comments, errors } = parseSync(`setup.${lang}`, block.content, { sourceType: 'module', lang });
-    if (errors.length > 0) {
-        return null;
-    }
-
-    let code = '';
-    let position = 0;
-    for (const comment of comments) {
-        code += block.content.slice(position, comment.start) + ' ';
-        position = comment.end;
-    }
-    code += block.content.slice(position);
-
-    return normalizeWhitespace(code);
+function isGlobalStyle(block: SFCStyleBlock) {
+    return !block.scoped && !block.module;
 }
 
-function serializeBlock(block: SFCBlock, content: string) {
-    return JSON.stringify([block.type, block.attrs, content]);
+function serializeBlock(block: SFCBlock) {
+    return JSON.stringify([block.type, block.attrs, normalizeWhitespace(block.content)]);
 }

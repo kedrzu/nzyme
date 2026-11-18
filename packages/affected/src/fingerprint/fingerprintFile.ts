@@ -2,17 +2,18 @@ import { extname } from 'node:path';
 
 import type { FileFingerprintResult } from './FileFingerprint.js';
 import { fingerprintScript } from './fingerprintScript.js';
-import { fingerprintStyle } from './fingerprintStyle.js';
 import { fingerprintVue } from './fingerprintVue.js';
+import { normalizeWhitespace } from './normalizeWhitespace.js';
+import { getMd5Hash } from '@nzyme/crypto';
 
 /**
  * Fingerprints a file by the part of its code a change touches: function bodies or the code that
- * runs at module load (see {@link FileFingerprint}). Changes to types, comments or formatting alone
- * change neither hash.
+ * runs at module load (see {@link FileFingerprint}).
  *
- * Scripts (`.ts`, `.tsx`, `.mts`, `.js`, `.mjs`) and Vue SFCs are split; stylesheets (`.css`,
- * `.scss`, `.sass`, `.less`) get one hash for both parts (see {@link fingerprintStyle}); anything
- * else, and any file that does not parse, is `'whole'`.
+ * Scripts (`.ts`, `.tsx`, `.mts`, `.js`, `.mjs`) and Vue SFCs are split. A stylesheet (`.css`,
+ * `.scss`, `.sass`, `.less`) has no load-time/call-time split, so `body` and `top` are one hash of its
+ * text with whitespace normalised: whatever level a variant stores it at, any change but formatting
+ * changes the hash it compares. Anything else, and any file that does not parse, is `'whole'`.
  * @__NO_SIDE_EFFECTS__
  */
 export function fingerprintFile(path: string, content: string): FileFingerprintResult {
@@ -30,8 +31,10 @@ export function fingerprintFile(path: string, content: string): FileFingerprintR
         case '.css':
         case '.scss':
         case '.sass':
-        case '.less':
-            return fingerprintStyle(content, extname(path).slice(1));
+        case '.less': {
+            const hash = getMd5Hash(normalizeWhitespace(content));
+            return { body: hash, top: hash };
+        }
         default:
             return 'whole';
     }

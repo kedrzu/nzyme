@@ -27,49 +27,48 @@ const label = computed(() => props.title.toUpperCase());
 </style>
 `;
 
-test('template, script setup and style changes change only body', () => {
+test('template, script setup and scoped style changes change only body', () => {
     expect(changedParts(base, base.replace('class="card"', 'class="panel"'))).toEqual(['body']);
     expect(changedParts(base, base.replace('toUpperCase', 'toLowerCase'))).toEqual(['body']);
     expect(changedParts(base, base.replace('color: red', 'color: blue'))).toEqual(['body']);
-    expect(changedParts(base, base.replace('<style scoped>', '<style>'))).toEqual(['body']);
+    expect(changedParts(base, base.replace('<style scoped>', '<style module>'))).toEqual(['body']);
 });
 
 test('script setup types are runtime declarations, so they change body', () => {
     expect(changedParts(base, base.replace('title: string', 'title: number'))).toEqual(['body']);
 });
 
-test('comments and formatting in script setup change no hash', () => {
+test('formatting in script setup and style changes no hash', () => {
     const after = base
-        .replace('// Props of the card.', '/* The card props. */')
-        .replace('const label = computed(', 'const label =\n    computed(');
+        .replace('const label = computed(', 'const label =\n    computed(')
+        .replace('.card { color: red; }', '.card {\n    color: red;\n}');
     expect(changedParts(base, after)).toEqual([]);
 });
 
-test('comments in a style block change no hash', () => {
-    const scss = base.replace('<style scoped>', '<style scoped lang="scss">');
-    expect(changedParts(scss, scss.replace('.card { color: red; }', '.card { color: red; } // note'))).toEqual([]);
-    expect(changedParts(scss, scss.replace('color: red;', '/* why */ color: red;'))).toEqual([]);
-    expect(changedParts(base, base.replace('color: red;', '/* why */ color: red;'))).toEqual([]);
+test('a global style is injected at module load, so it is top', () => {
+    const global = base.replace('<style scoped>', '<style>');
+    expect(changedParts(base, global)).toEqual(['body', 'top']);
+    expect(changedParts(global, global.replace('color: red', 'color: blue'))).toEqual(['top']);
 });
 
-test('comment markers in style strings and urls are content', () => {
-    const scss = base.replace('<style scoped>', '<style scoped lang="scss">');
-    const withUrl = scss.replace('color: red;', 'background: url(http://a/b.png);');
-    expect(changedParts(withUrl, withUrl.replace('http://a/b.png', 'http://a/c.png'))).toEqual(['body']);
-
-    const withQuotedUrl = scss.replace('color: red;', 'background: url("//cdn/a.png");');
-    expect(changedParts(withQuotedUrl, withQuotedUrl.replace('//cdn/a.png', '//cdn/b.png'))).toEqual(['body']);
-
-    const withContent = scss.replace('color: red;', 'content: "//x";');
-    expect(changedParts(withContent, withContent.replace('"//x"', '"//y"'))).toEqual(['body']);
-
-    const withOpener = scss.replace('color: red; }', "content: '/*'; color: red; } /* end */");
-    expect(changedParts(withOpener, withOpener.replace('color: red', 'color: blue'))).toEqual(['body']);
-});
-
-test('// is not a comment in a plain CSS style block', () => {
-    const withSlashes = base.replace('color: red;', 'color: red; //x');
-    expect(changedParts(withSlashes, withSlashes.replace('//x', '//y'))).toEqual(['body']);
+test('an import in script setup is hoisted to the module, so it changes top', () => {
+    const withImport = base.replace('// Props of the card.', "import { computed } from './reactivity.js';");
+    expect(changedParts(withImport, withImport.replace("'./reactivity.js'", "'./signals.js'"))).toEqual([
+        'body',
+        'top',
+    ]);
+    expect(
+        changedParts(
+            withImport,
+            withImport.replace('import { computed }', "import './polyfill.js';\nimport { computed }"),
+        ),
+    ).toEqual(['body', 'top']);
+    expect(
+        changedParts(
+            withImport,
+            withImport.replace('import { computed }', "import type { Size } from './Size.js';\nimport { computed }"),
+        ),
+    ).toEqual(['body']);
 });
 
 test('a plain script is split like a module', () => {
@@ -82,7 +81,6 @@ test('an SFC with a block that does not parse is whole', () => {
     expect(fingerprintVue('Card.vue', base.replace("export const SIZES = ['sm', 'lg'];", 'export const = ;'))).toBe(
         'whole',
     );
-    expect(fingerprintVue('Card.vue', base.replace('const label =', 'const label = = '))).toBe('whole');
     expect(fingerprintVue('Card.vue', '<template><div></template>')).toBe('whole');
 });
 

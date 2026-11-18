@@ -9,6 +9,7 @@ import type { BrandOverride } from './createBrandOverride.js';
 import type { StealthDecision } from './checkStealthRequest.js';
 import { createIsolatedWorlds } from './createIsolatedWorlds.js';
 import type { SessionOriginator, SessionRegistry } from './createSessionRegistry.js';
+import type { SitePaceRun } from './createSitePace.js';
 import { readTargetInfo } from './readTargetInfo.js';
 
 /** A connected client: its socket's handlers call into it. */
@@ -36,6 +37,8 @@ export interface ConnectClientParams<D> {
     /** Subscribes to every browser event, after the registry saw it; returns the unsubscribe. */
     onEvent: (listener: (event: CdpEvent) => void) => () => void;
     policy?: CdpPolicy<D>;
+    /** The site pace of the browser run: holds or refuses what acts on a site. None: nothing waits. */
+    pace?: Pick<SitePaceRun, 'gate'>;
     logger: Logger;
 }
 
@@ -61,15 +64,15 @@ const TARGET_EVENTS = new Set([
  * Connects one client to the shared browser and judges each of its messages, in this order: the message shape; the
  * proxy's own rules (a session must be the client's, a target its group's, sessions flat); the caller's `policy`; the
  * same rules again on what the policy passed, so a rewrite cannot reach further than the client could; then the
- * stealth rules (`checkStealthRequest`), which no policy can lift. Each message takes its session's place in line when
- * it arrives, and an async policy runs inside that place, so a later command of the session never overtakes it on the
- * wire; a command of a closed socket is never sent. Only what belongs to the client is passed back: events of a
- * session go to the client that opened it, target events only for the targets it sees and only once it discovers
- * targets; replies carry the client's own ids. A page a grouped client creates joins its group, and is announced to
- * it, since the browser's own `Target.targetCreated` comes before the claim and is filtered out.
+ * stealth rules (`checkStealthRequest`), which no policy can lift; then the site `pace`, when there is one. Each
+ * message takes its session's place in line when it arrives, and an async policy or a held command waits inside that
+ * place, so a later command of the session never overtakes it on the wire; a command of a closed socket is never
+ * sent. Only what belongs to the client is passed back: events of a session go to the client that opened it, target
+ * events only for the targets it sees and only once it discovers targets; replies carry the client's own ids. A page a
+ * grouped client creates joins its group, and is announced to it, since the browser's own `Target.targetCreated` comes before the claim and is filtered out.
  */
 export function connectClient<D>(params: ConnectClientParams<D>): CdpClient {
-    const { clientId, group, data, socket, send, registry, brand, policy, logger } = params;
+    const { clientId, group, data, socket, send, registry, brand, policy, pace, logger } = params;
     const originator: SessionOriginator = { type: 'client', clientId };
     const worlds = createIsolatedWorlds(send);
     const policyClient: CdpPolicyClient<D> = {
@@ -139,14 +142,16 @@ export function connectClient<D>(params: ConnectClientParams<D>): CdpClient {
             if (closed) {
                 return;
             }
-            const decision = await decide(message);
+            const decided = await decide(message);
             // The socket closed while the policy judged: its sessions are detached, and nothing is sent for it any more.
             if (closed) {
                 return;
             }
-            // A site pace, once there is one, gates here: forwarded commands, and an isolated `Runtime.evaluate`, which
-            // is how a client goes back and forward (`history.back()`). The proxy's own navigation of a page created
-            // with a URL (`createTarget`) is not gated again: the client's `Target.createTarget` is the load.
+            const decision = await keepPace(decided);
+            // The socket closed while the command was held, and no site's slot is used.
+            if (closed) {
+                return;
+            }
             // Runs up to the browser call before the next command of the session is let go.
             const executed = execute(id, decision);
             markSent();
@@ -191,6 +196,20 @@ export function connectClient<D>(params: ConnectClientParams<D>): CdpClient {
             return { type: 'reject', message: rechecked.reject };
         }
         return checkStealthRequest(rechecked, worlds);
+    }
+
+    /**
+     * Holds a decision that acts on a site until the pace lets it go, or turns it into the pace's refusal. The proxy's
+     * own navigation of a page created with a URL (`createTarget`) is not paced again: the client's
+     * `Target.createTarget` with its URL is the paced load.
+     */
+    async function keepPace(decision: StealthDecision): Promise<StealthDecision> {
+        const command = findPacedCommand(decision);
+        if (pace == null || command == null) {
+            return decision;
+        }
+        const verdict = await pace.gate(command);
+        return verdict.type === 'refuse' ? { type: 'reject', message: verdict.message } : decision;
     }
 
     /**
@@ -508,5 +527,20 @@ export function connectClient<D>(params: ConnectClientParams<D>): CdpClient {
         if (!closed) {
             socket.send(JSON.stringify(message));
         }
+    }
+}
+
+/**
+ * What the pace judges of a decision: a forwarded command, or an evaluation run in an isolated world, which is how
+ * agent-browser goes back and forward (`history.back()`). Anything else never loads a page.
+ */
+function findPacedCommand(decision: StealthDecision): CdpRequest | undefined {
+    switch (decision.type) {
+        case 'forward':
+            return decision;
+        case 'isolate':
+            return decision.call.method === 'Runtime.evaluate' ? decision.call : undefined;
+        default:
+            return undefined;
     }
 }

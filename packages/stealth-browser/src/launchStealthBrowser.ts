@@ -16,6 +16,8 @@ import { connectClient } from './connectClient.js';
 import type { CdpClient } from './connectClient.js';
 import { createBrandOverride } from './createBrandOverride.js';
 import { createSessionRegistry } from './createSessionRegistry.js';
+import { ATTACH_SITE_PACE } from './createSitePace.js';
+import type { SitePace } from './createSitePace.js';
 import { splitPipeFrames } from './splitPipeFrames.js';
 
 /** How the browser is launched, and what its clients may do. */
@@ -31,6 +33,12 @@ export interface LaunchStealthBrowserOptions<D = unknown> {
      * policy can lift; `D` is the data the caller passes to `connect` for each client.
      */
     policy?: CdpPolicy<D>;
+    /**
+     * The human pace kept on every site, checked after the stealth rules: a command that loads a page waits for its
+     * site's slot or is refused. Hand the same pace to the next launch to keep what it learned of blocks. None: nothing
+     * waits.
+     */
+    pace?: SitePace;
     /** How long configuring the started browser, reading its identity included, may take; 15 s by default. */
     startTimeoutMs?: number;
     logger?: Logger;
@@ -141,6 +149,7 @@ export async function launchStealthBrowser<D = unknown>(
     const { stderr, pipe, input } = readPipes(child);
 
     const brand = createBrandOverride({ send: call, registry, logger });
+    const pace = options.pace?.[ATTACH_SITE_PACE](registry);
     const exited = new Promise<StealthBrowserExit>(resolve => {
         child.once('exit', (code, signal) => resolve(onExit(code, signal)));
     });
@@ -231,6 +240,7 @@ export async function launchStealthBrowser<D = unknown>(
                 brand,
                 onEvent,
                 policy: options.policy,
+                pace,
                 logger,
             }),
         };
@@ -326,6 +336,7 @@ export async function launchStealthBrowser<D = unknown>(
     function dispatchEvent(event: CdpEvent) {
         registry.observe(event);
         brand.observe(event);
+        pace?.observe(event);
         for (const listener of listeners) {
             try {
                 listener(event);
@@ -342,6 +353,7 @@ export async function launchStealthBrowser<D = unknown>(
         }
         pending.clear();
         registry.clear();
+        pace?.detach();
         for (const connected of clients) {
             closeClient(connected);
         }

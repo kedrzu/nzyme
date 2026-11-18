@@ -10,6 +10,8 @@ import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 import { waitUntil } from '@nzyme/utils/waitUntil.js';
 
 import type { CdpSocket } from './CdpTypes.js';
+import { createSitePace } from './createSitePace.js';
+import type { SitePace } from './createSitePace.js';
 import { launchStealthBrowser } from './launchStealthBrowser.js';
 import type { StealthBrowser } from './launchStealthBrowser.js';
 
@@ -46,6 +48,12 @@ const BRANDED_URL = 'https://brand.test/';
 const BRANDED_SERVICE_WORKER_PAGE_URL = 'https://brand.test/?service-worker';
 const BRANDED_FRAME_URL = 'https://brand.test/frame';
 const BRANDED_SERVICE_WORKER_URL = 'https://brand.test/service-worker.js';
+/** A site the pace keeps; its `www.` page answers 403, a block. */
+const SHOP_URL = 'https://shop.test/';
+const SHOP_BLOCKED_URL = 'https://www.shop.test/blocked';
+/** The pace's refusal of the shop for 5 minutes after its block. */
+const SHOP_PAUSED =
+    'shop.test is paced after it blocked or challenged the browser: the next action on it is possible in 5 min.';
 /**
  * The page's own detector, after rebrowser's bot-detector: an Error logged with `console.debug` is serialised only
  * while Runtime is enabled, which formats its stack through `Error.prepareStackTrace`. (Its `name` is read either way,
@@ -504,12 +512,58 @@ test('a browser exit closes every client socket', async () => {
     expect(await b.closed).toEqual([1011, 'The browser exited']);
 }, 30_000);
 
-async function startBrowser() {
+test('a held command keeps its session order, and after a block the site is refused with the reason', async () => {
+    const browser = await startBrowser(createSitePace());
+    const client = connectClient(browser);
+    const sessionId = await attachClient(client, await createTarget(client));
+    await servePages(
+        client,
+        sessionId,
+        { [SHOP_URL]: DETECTOR_HTML, [SHOP_BLOCKED_URL]: DETECTOR_HTML },
+        { [SHOP_BLOCKED_URL]: 403 },
+    );
+    await client.call('Network.enable', {}, sessionId);
+    await navigate(client, sessionId, SHOP_URL);
+
+    const startedAt = Date.now();
+    const replies: string[] = [];
+    const loads = client.messages.filter(m => m['method'] === 'Page.loadEventFired').length;
+    const held = client
+        .call('Page.navigate', { url: SHOP_BLOCKED_URL }, sessionId)
+        .then(() => replies.push('navigate'));
+    const after = evaluateIn(client, sessionId, '1').then(() => replies.push('evaluate'));
+    await Promise.all([held, after]);
+    expect(replies).toEqual(['navigate', 'evaluate']);
+    expect(Date.now() - startedAt).toBeGreaterThan(4000);
+    await waitUntil(() => client.messages.filter(m => m['method'] === 'Page.loadEventFired').length > loads, {
+        timeoutMs: TIMEOUT_MS,
+    });
+
+    await expect(client.call('Page.navigate', { url: SHOP_URL }, sessionId)).rejects.toThrow(SHOP_PAUSED);
+}, 30_000);
+
+test("a site's block outlives the browser: the next one launched with the same pace refuses it too", async () => {
+    const pace = createSitePace();
+    const first = await startBrowser(pace);
+    const client = connectClient(first, 'group-a');
+    const sessionId = await attachClient(client, await createTarget(client));
+    await servePages(client, sessionId, { [SHOP_BLOCKED_URL]: DETECTOR_HTML }, { [SHOP_BLOCKED_URL]: 403 });
+    await client.call('Network.enable', {}, sessionId);
+    await navigate(client, sessionId, SHOP_BLOCKED_URL);
+    await expect(client.call('Page.navigate', { url: SHOP_URL }, sessionId)).rejects.toThrow(SHOP_PAUSED);
+    await first.close();
+
+    const next = connectClient(await startBrowser(pace), 'group-a');
+    await expect(next.call('Target.createTarget', { url: SHOP_URL })).rejects.toThrow(SHOP_PAUSED);
+}, 30_000);
+
+async function startBrowser(pace?: SitePace) {
     const work = await createWork();
     const browser = await launchStealthBrowser({
         executablePath: EXECUTABLE,
         userDataDir: path.join(work, 'profile'),
         args: HEADLESS_ARGS,
+        pace,
         logger: createTestLogger('test').logger,
     });
     cleanups.push(() => browser.close());
@@ -592,10 +646,15 @@ async function evaluateIn(client: TestClient, sessionId: string, expression: str
 }
 
 /**
- * Intercepts the page's requests on `sessionId` with `Fetch` and answers each from `pages` by URL, a 404 the rest;
- * enables Page for its load events.
+ * Intercepts the page's requests on `sessionId` with `Fetch` and answers each from `pages` by URL, with its status in
+ * `statuses` (200 by default), a 404 the rest; enables Page for its load events.
  */
-async function servePages(client: TestClient, sessionId: string, pages: Record<string, string>) {
+async function servePages(
+    client: TestClient,
+    sessionId: string,
+    pages: Record<string, string>,
+    statuses: Record<string, number> = {},
+) {
     client.onMessage(message => {
         if (message['method'] !== 'Fetch.requestPaused' || !isPlainObject(message['params'])) {
             return;
@@ -608,7 +667,7 @@ async function servePages(client: TestClient, sessionId: string, pages: Record<s
             'Fetch.fulfillRequest',
             {
                 requestId,
-                responseCode: html == null ? 404 : 200,
+                responseCode: html == null ? 404 : (statuses[String(url)] ?? 200),
                 responseHeaders: [
                     {
                         name: 'Content-Type',

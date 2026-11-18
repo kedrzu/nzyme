@@ -6,6 +6,9 @@ import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 import type { CdpPolicy, CdpRequest } from './CdpTypes.js';
 import { connectClient } from './connectClient.js';
 import { createSessionRegistry } from './createSessionRegistry.js';
+import type { SessionRegistry } from './createSessionRegistry.js';
+import { ATTACH_SITE_PACE, createSitePace } from './createSitePace.js';
+import type { SitePaceClock, SitePaceRun } from './createSitePace.js';
 
 /** A command the fake browser got. */
 interface SentCommand {
@@ -172,9 +175,58 @@ test('a page created with a URL is created blank and navigated by the proxy befo
     expect(registry.getSessionOriginator('s-new')).toEqual({ type: 'proxy' });
 });
 
+test('without a pace, loads of one site go to the browser one right after another', async () => {
+    const { browser, client } = prepare({});
+
+    await client.call('Page.navigate', { url: 'https://example.com/' }, 's-a');
+    await client.call('Page.navigate', { url: 'https://example.com/next' }, 's-a');
+    await client.call('Target.createTarget', { url: 'https://example.com/other' });
+
+    expect(browser.sent.filter(sent => sent.method === 'Page.navigate')).toHaveLength(3);
+});
+
+test("a page created with a URL takes its site's slot once, the proxy's navigation of it is not held, and what the pace refuses never reaches the browser", async () => {
+    const clock = createManualClock();
+    const registry = createSessionRegistry();
+    const { browser, client } = prepare({ registry, pace: createSitePace({ clock })[ATTACH_SITE_PACE](registry) });
+
+    await client.call('Target.createTarget', { url: 'https://example.com/' });
+    expect(browser.sent.map(sent => sent.method)).toEqual([
+        'Target.createTarget',
+        'Target.attachToTarget',
+        'Page.navigate',
+        'Target.detachFromTarget',
+    ]);
+
+    const held = client.call('Page.navigate', { url: 'https://example.com/next' }, 's-a');
+    await Bun.sleep(10);
+    expect(browser.sent).toHaveLength(4);
+    clock.advance(5000);
+    await held;
+    expect(browser.sent.at(-1)).toEqual({
+        method: 'Page.navigate',
+        params: { url: 'https://example.com/next' },
+        sessionId: 's-a',
+    });
+
+    // Each in its own session's line, so all three are held at once.
+    registry.claimSession({ type: 'client', clientId: 'c-a' }, 's-a2', 't-a');
+    registry.claimSession({ type: 'client', clientId: 'c-a' }, 's-a3', 't-a');
+    void client.call('Page.navigate', { url: 'https://example.com/' }, 's-a2');
+    void client.call('Page.navigate', { url: 'https://example.com/' }, 's-a3');
+    void client.call('Target.createTarget', { url: 'https://example.com/' });
+    const refused = await client.call('Page.navigate', { url: 'https://example.com/' }, 's-a');
+    expect(refused['error']).toMatchObject({
+        message: 'example.com is paced at one page load every 5 s: the next action on it is possible in 20 s.',
+    });
+});
+
 /** What `prepare` builds a client with. */
 interface PrepareOptions {
     policy?: CdpPolicy<string>;
+    pace?: Pick<SitePaceRun, 'gate'>;
+    /** The registry to fill; a new one by default. */
+    registry?: SessionRegistry;
 }
 
 /**
@@ -183,7 +235,7 @@ interface PrepareOptions {
  * `attachToTarget` with `s-new`, anything else with `{}`.
  */
 function prepare(options: PrepareOptions) {
-    const registry = createSessionRegistry();
+    const registry = options.registry ?? createSessionRegistry();
     registry.claimTarget('group-a', 't-a');
     registry.claimSession({ type: 'client', clientId: 'c-a' }, 's-a', 't-a');
     registry.claimTarget('group-b', 't-b');
@@ -231,6 +283,7 @@ function prepare(options: PrepareOptions) {
         brand: { whenBranded: () => Promise.resolve() },
         onEvent: () => () => {},
         policy: options.policy,
+        pace: options.pace,
         logger: createTestLogger('test').logger,
     });
 
@@ -252,4 +305,24 @@ function prepare(options: PrepareOptions) {
             },
         },
     };
+}
+
+/** A clock whose time moves only by `advance()`, which runs every timer due by then. */
+function createManualClock() {
+    let now = 0;
+    const timers: { at: number; callback: () => void }[] = [];
+    const clock: SitePaceClock & { advance(ms: number): void } = {
+        now: () => now,
+        setTimeout(callback, ms) {
+            timers.push({ at: now + ms, callback });
+        },
+        advance(ms) {
+            now += ms;
+            for (const timer of timers.filter(pending => pending.at <= now)) {
+                timers.splice(timers.indexOf(timer), 1);
+                timer.callback();
+            }
+        },
+    };
+    return clock;
 }

@@ -32,6 +32,13 @@ export interface ParameterStoreOptions {
      */
     endpoint?: string;
     /**
+     * The KMS key `write` encrypts the `SecureString` parameters with: a key id, a key ARN or an alias
+     * name (`alias/parameter-store`). Omitted, no key is sent and Parameter Store uses the default
+     * `aws/ssm` key — and an overwrite without it puts a parameter back on that default key, so every
+     * writer of a store must pass the same key. Reads need no key: decryption finds it from the parameter.
+     */
+    keyId?: string;
+    /**
      * An `SSMClient` to use instead of creating one (tests). `region`, `profile` and `endpoint` are then
      * not applied.
      */
@@ -52,7 +59,7 @@ const GET_PARAMETERS_BATCH_SIZE = 10;
  * @__NO_SIDE_EFFECTS__
  */
 export function parameterStore(options: ParameterStoreOptions): SecretStore {
-    const { region, profile, endpoint } = options;
+    const { region, profile, endpoint, keyId } = options;
     if (options.prefix === '') {
         throw new Error('Parameter Store prefix must not be empty');
     }
@@ -145,6 +152,7 @@ export function parameterStore(options: ParameterStoreOptions): SecretStore {
                     Name: prefix + key,
                     Value: value,
                     Type: 'SecureString',
+                    KeyId: keyId,
                     Overwrite: true,
                     Tier: 'Standard',
                 }),

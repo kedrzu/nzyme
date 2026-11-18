@@ -143,6 +143,20 @@ test('write stores SecureString, Overwrite, standard tier, with the prefix prepe
     ]);
 });
 
+test('write sends the keyId on every PutParameter when the store has one, and none otherwise', async () => {
+    const entries = [
+        { key: 'A', value: 'one' },
+        { key: 'B', value: 'two' },
+    ];
+    const keyed = fakeSsm([]);
+    await parameterStore({ prefix: '/s/', keyId: 'alias/parameter-store', client: keyed.client }).write(entries);
+    const plain = fakeSsm([]);
+    await parameterStore({ prefix: '/s/', client: plain.client }).write(entries);
+
+    expect(keyed.calls.map(c => c.input['KeyId'])).toEqual(['alias/parameter-store', 'alias/parameter-store']);
+    expect(plain.calls.every(c => !('KeyId' in c.input) || c.input['KeyId'] === undefined)).toBe(true);
+});
+
 test('id differs by region, endpoint, profile and prefix', () => {
     const ids = [
         parameterStore({ prefix: '/s/' }).id,

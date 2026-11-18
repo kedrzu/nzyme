@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/stealth-browser",
-    "version": "0.15.1",
+    "version": "0.16.0",
     "description": "A stealth Chrome over CDP for AI agents: launch, proxy, CLI",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

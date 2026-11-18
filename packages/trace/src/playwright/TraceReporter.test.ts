@@ -4,7 +4,6 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { afterAll, beforeAll, expect, setDefaultTimeout, test } from 'bun:test';
-import type { Subprocess } from 'bun';
 
 import type { TracedTestResult } from '@nzyme/affected/playwright/TracedTestResult.js';
 import { VariantStore } from '@nzyme/affected/store/VariantStore.js';
@@ -13,7 +12,8 @@ import type { TestUnit } from '@nzyme/affected/store/VariantStore.js';
 import type { TraceLine } from '../TraceLine.js';
 
 // A real Playwright run on Node (Chromium, the `traceTest` fixture, `TraceReporter`) of a tiny
-// project — a browser bundle with a source map, served by a Bun server started with the probe — between
+// project — a browser bundle with a source map, served by a Bun server Playwright starts with the
+// probe and stops before the reporter reads its trace — between
 // the selection and the recording of `nzyme git affected`.
 setDefaultTimeout(120_000);
 
@@ -23,15 +23,14 @@ const GREETS: TestUnit = { file: 'e2e/app.spec.ts', title: ['greets'] };
 const OWN_CONTEXT: TestUnit = { file: 'e2e/app.spec.ts', title: ['labels a context the test creates'] };
 
 let root: string;
+/** The trace directory of the latest run: a fresh one per run, as the reporter requires. */
 let traceDir: string;
 /** Run files outside the project, so writing them is no edit of it. */
 let outDir: string;
-let server: Subprocess<'ignore', 'pipe', 'inherit'>;
-let origin: string;
+let port: number;
 
 beforeAll(async () => {
     root = await realpath(await mkdtemp(path.join(tmpdir(), 'trace-playwright-')));
-    traceDir = await mkdtemp(path.join(tmpdir(), 'trace-playwright-dir-'));
     outDir = await mkdtemp(path.join(tmpdir(), 'trace-playwright-out-'));
     await writeProject();
 
@@ -57,24 +56,14 @@ beforeAll(async () => {
         execFileSync('git', args, { cwd: root, stdio: 'ignore' });
     }
 
-    server = Bun.spawn([process.execPath, path.join(root, 'server/server.js')], {
-        cwd: root,
-        env: {
-            ...process.env,
-            BUN_OPTIONS: `--preload=${path.join(srcDir, 'probe/preload.ts')}`,
-            NZYME_TRACE_DIR: traceDir,
-        },
-        stdout: 'pipe',
-        stderr: 'inherit',
-    });
-    origin = await readOrigin(server);
+    // A free port for the web server each run starts.
+    const probe = Bun.serve({ port: 0, fetch: () => new Response() });
+    port = probe.port ?? 0;
+    await probe.stop();
 });
 
 afterAll(async () => {
-    server.kill();
-    await server.exited;
     await rm(root, { recursive: true, force: true });
-    await rm(traceDir, { recursive: true, force: true });
     await rm(outDir, { recursive: true, force: true });
 });
 
@@ -104,7 +93,9 @@ test('a traced run writes what each passed test ran and fetched, and --record ma
     expect(greets['server/other.js']).toHaveProperty('body');
 
     // Each test's line still says which server code ran for it, and keeps the browser's apart.
-    const [greetsLine, ownContextLine] = results.map(result => ('executed' in result ? result : undefined));
+    const [greetsLine, ownContextLine] = results.map(result =>
+        result.status === 'passed' && result.complete ? result : undefined,
+    );
     expect(greetsLine?.executed).toContain('server/greet.js');
     expect(greetsLine?.executed).not.toContain('server/other.js');
     expect(greetsLine?.executed).not.toContain('app/src/main.ts');
@@ -118,14 +109,14 @@ test('a traced run writes what each passed test ran and fetched, and --record ma
     expect(await readServerLabels('server/greet.js')).not.toEqual(await readServerLabels('server/other.js'));
 });
 
-test('a failed test is written as failed: --record invalidates its variant and --full reports a tracing gap', async () => {
+test('a failed test is written as failed with its server code: --record invalidates its variant and --full reports a tracing gap', async () => {
     const run = await runE2e({ FAIL: '1' });
 
     expect(run.playwright.exitCode).toBe(1);
-    expect((await readResults()).find(result => result.unit.title?.[0] === 'greets')).toEqual({
-        unit: GREETS,
-        status: 'failed',
-    });
+    const failed = (await readResults()).find(result => result.unit.title?.[0] === 'greets');
+    expect(failed).toMatchObject({ unit: GREETS, status: 'failed' });
+    // A lazy singleton a failed test initialized still serves the tests after it.
+    expect(failed?.executed).toContain('server/greet.js');
     expect(run.record.stderr).toContain('1 failed (1 variants invalidated)');
     expect(run.record.stderr).toContain('tracing gap: e2e/app.spec.ts › greets failed, yet the selection skipped it');
 
@@ -134,15 +125,44 @@ test('a failed test is written as failed: --record invalidates its variant and -
     expect(await store.read(OWN_CONTEXT)).not.toEqual([]);
 });
 
+test('on servers the run did not start, only failures are written, so they still invalidate and are audited', async () => {
+    await runE2e({});
+    const run = await runE2e({ FAIL: '1', OWNS_SERVERS: 'false' });
+
+    const expected: TracedTestResult[] = [{ unit: GREETS, status: 'failed' }];
+    expect(await readResults()).toEqual(expected);
+    expect(run.record.stderr).toContain('1 failed (1 variants invalidated)');
+    expect(run.record.stderr).toContain('tracing gap: e2e/app.spec.ts › greets failed, yet the selection skipped it');
+});
+
+test('a bundle built before a source changed makes every test of the run stale, though no function of it ran', async () => {
+    const unused = path.join(root, 'app/src/unused.ts');
+    const original = await readFile(unused, 'utf8');
+    await writeFile(unused, original.replace("'never'", "'changed'"));
+    try {
+        await runE2e({});
+    } finally {
+        await writeFile(unused, original);
+    }
+
+    const results = await readResults();
+    expect(results.map(result => [result.unit, 'reason' in result && result.reason])).toEqual([
+        [GREETS, 'stale-build'],
+        [OWN_CONTEXT, 'stale-build'],
+    ]);
+});
+
 /**
  * The three steps of a traced e2e run: select (listing the tests, snapshotting what the selection
  * saw), run everything with Playwright on Node, as a consumer does, and record a full run.
  */
 async function runE2e(env: Record<string, string>) {
     const playwrightCli = await realpath(path.join(root, 'node_modules/@playwright/test/cli.js'));
+    traceDir = await mkdtemp(path.join(outDir, 'trace-'));
     const e2eEnv = {
         ...process.env,
-        APP_ORIGIN: origin,
+        APP_PORT: String(port),
+        BUN_PATH: process.execPath,
         TRACE_DIR: traceDir,
         SRC_DIR: srcDir,
         RESULTS_FILE: resultsFile(),
@@ -221,19 +241,6 @@ async function readServerLabels(file: string): Promise<(string | null)[]> {
     return [...labels];
 }
 
-async function readOrigin(child: Subprocess<'ignore', 'pipe', 'inherit'>): Promise<string> {
-    let output = '';
-    const decoder = new TextDecoder();
-    for await (const chunk of child.stdout) {
-        output += decoder.decode(chunk);
-        const port = /PORT=(\d+)/.exec(output)?.[1];
-        if (port) {
-            return `http://localhost:${port}`;
-        }
-    }
-    throw new Error(`The traced server exited before listening: ${output}`);
-}
-
 async function writeProject() {
     const runtime = (name: string) => JSON.stringify(path.join(srcDir, 'runtime', `${name}.ts`));
     const files: Record<string, string> = {
@@ -275,8 +282,8 @@ async function writeProject() {
             "import { greet } from './greet.js';",
             "import { other } from './other.js';",
             "const app = path.join(import.meta.dir, '../app');",
-            'const server = Bun.serve({',
-            '    port: 0,',
+            'Bun.serve({',
+            '    port: Number(process.env.APP_PORT),',
             '    async fetch(request) {',
             '        const { pathname } = new URL(request.url);',
             "        if (pathname === '/api/greet') {",
@@ -295,7 +302,6 @@ async function writeProject() {
             '    },',
             '});',
             'markReady();',
-            'console.log(`PORT=${server.port}`);',
             '',
         ].join('\n'),
         'e2e/playwright.config.ts': [
@@ -307,11 +313,27 @@ async function writeProject() {
             "        ['list'],",
             '        [',
             '            `${process.env.SRC_DIR}/playwright/TraceReporter.ts`,',
-            '            { resultsFile: process.env.RESULTS_FILE, traceDir: process.env.TRACE_DIR, ownsServers: true },',
+            '            {',
+            '                resultsFile: process.env.RESULTS_FILE,',
+            '                traceDir: process.env.TRACE_DIR,',
+            "                ownsServers: process.env.OWNS_SERVERS !== 'false',",
+            '            },',
             '        ],',
             '    ],',
             '    use: {',
-            "        nzymeTrace: { apps: [{ origin: process.env.APP_ORIGIN, publicDir: 'app/public', outputDir: 'app/dist' }] },",
+            '        nzymeTrace: {',
+            "            apps: [{ origin: `http://localhost:${process.env.APP_PORT}`, publicDir: 'app/public', outputDir: 'app/dist' }],",
+            '        },',
+            '    },',
+            '    webServer: {',
+            '        command: `${process.env.BUN_PATH} ../server/server.js`,',
+            '        port: Number(process.env.APP_PORT),',
+            '        reuseExistingServer: false,',
+            "        gracefulShutdown: { signal: 'SIGINT', timeout: 1000 },",
+            '        env: {',
+            `            BUN_OPTIONS: \`--preload=\${process.env.SRC_DIR}/probe/preload.ts\`,`,
+            '            NZYME_TRACE_DIR: process.env.TRACE_DIR,',
+            '        },',
             '    },',
             '};',
             '',
@@ -321,7 +343,7 @@ async function writeProject() {
             '',
             `import { traceTest as test } from ${JSON.stringify(path.join(srcDir, 'playwright/traceTest.ts'))};`,
             '',
-            'const origin = process.env.APP_ORIGIN;',
+            'const origin = `http://localhost:${process.env.APP_PORT}`;',
             '',
             "test('greets', async ({ page }) => {",
             '    await page.goto(`${origin}/`);',

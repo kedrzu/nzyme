@@ -7,7 +7,7 @@ export interface BrowserTrace {
     executed: string[];
     /** Root-relative static assets of the apps' `public/` directories the pages fetched. */
     assets: string[];
-    /** Executed sources the served bundles were built before. */
+    /** Sources of the loaded bundles that the bundles were built before (see `BrowserExecution.stale`). */
     stale: string[];
     /** Set when the pages ran code whose coverage was lost; then the trace is not complete. */
     incomplete?: string;

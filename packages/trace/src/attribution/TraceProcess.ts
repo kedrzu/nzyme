@@ -1,10 +1,10 @@
-/** What one trace file (one traced process or thread) recorded so far, read by `createTraceDirReader`. */
+/** What one trace file (one traced process or thread) recorded, read by `readTraceDir`. */
 export interface TraceProcess {
     /** The trace file's name, `<pid>-<threadId>.ndjson`. */
     name: string;
     /** Bucket width of its hits, in milliseconds. */
     bucketMs: number;
-    /** When it called `markReady()`; `undefined` while it has not. */
+    /** When it called `markReady()`; `undefined` when it never did. */
     readyAt?: number;
     /** The `at` of its last flush: every hit up to it is in the file. */
     flushedAt?: number;

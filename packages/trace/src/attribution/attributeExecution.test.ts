@@ -28,16 +28,6 @@ test('the label of a test that already ended, or of no test of the run, counts a
     expect(executedBy(tests.get('b'))).toEqual(['foreign.ts', 'late-a.ts']);
 });
 
-test('a labelled hit of a test still running is its own, not of the ended test it overlaps', () => {
-    const running: TracedTestWindow = { label: 'b', start: 10_500 };
-    const server = traceProcess({ hits: [hit(108, 'b', 'b-only.ts')] });
-
-    const { tests } = attributeExecution([server], [A, running]);
-
-    expect(executedBy(tests.get('a'))).toEqual([]);
-    expect(tests.has('b')).toBe(false);
-});
-
 test('code before the first test or before its process was ready is startup; later code outside every test is dropped', () => {
     const server = traceProcess({
         hits: [
@@ -54,17 +44,18 @@ test('code before the first test or before its process was ready is startup; lat
     expect(executedBy(tests.get('b'))).toEqual([]);
 });
 
-test('a test is complete once every ready process flushed past its end plus a bucket, or ended', () => {
-    const flushedPast = traceProcess({ flushedAt: 11_100 });
+test('a test is complete once every ready process flushed at or past its end, or ended', () => {
+    const flushedPast = traceProcess({ flushedAt: 11_000 });
     const ended = traceProcess({ name: 'ended', flushedAt: 10_200, endedAt: 10_200 });
     const neverReady = traceProcess({ name: 'wrapper', readyAt: undefined, flushedAt: 1_000 });
 
     const complete = attributeExecution([flushedPast, ended, neverReady], [A]).tests.get('a');
     expect(complete?.complete).toBe(true);
 
-    const behind = traceProcess({ name: 'behind', flushedAt: 11_099 });
-    const incomplete = attributeExecution([flushedPast, behind], [A]).tests.get('a');
-    expect(incomplete).toMatchObject({ complete: false, reason: { kind: 'no-heartbeat', process: 'behind' } });
+    // Killed during the test: its hits after the last flush are lost.
+    const killed = traceProcess({ name: 'killed', flushedAt: 10_999 });
+    const incomplete = attributeExecution([flushedPast, killed], [A]).tests.get('a');
+    expect(incomplete).toMatchObject({ complete: false, reason: { kind: 'no-heartbeat', process: 'killed' } });
 });
 
 test('nothing is complete when no process reported ready: the server was not started with the probe', () => {
@@ -75,23 +66,20 @@ test('nothing is complete when no process reported ready: the server was not sta
     expect(execution).toMatchObject({ complete: false, reason: { kind: 'unprobed' } });
 });
 
-test('a test that ran a file from a stale build, or whose startup did, is not complete', () => {
-    const tests = [A, B];
-    const stale = new Set(['changed.ts']);
+test('a stale file loaded by any process makes every test of the run incomplete, even one that never ran it', () => {
+    // `changed.ts` ran only its module top level: no test, nor startup, has it in its executed files.
+    const server = traceProcess({ hits: [hit(105, 'a', 'a-only.ts')], stale: new Set(['changed.ts']) });
+    const wrapper = traceProcess({ name: 'wrapper', readyAt: undefined });
 
-    const ranStale = traceProcess({ hits: [hit(105, 'a', 'changed.ts'), hit(115, 'b', 'other.ts')], stale });
-    const attribution = attributeExecution([ranStale], tests);
-    expect(attribution.tests.get('a')).toMatchObject({
+    const { tests } = attributeExecution([server, wrapper], [A, B]);
+
+    const expected: TestExecution = {
+        executed: new Set(['a-only.ts']),
         complete: false,
         reason: { kind: 'stale-build', file: 'changed.ts' },
-    });
-    expect(attribution.tests.get('b')?.complete).toBe(true);
-
-    const bootedStale = traceProcess({ hits: [hit(50, null, 'changed.ts')], stale });
-    expect(attributeExecution([bootedStale], tests).tests.get('b')).toMatchObject({
-        complete: false,
-        reason: { kind: 'stale-build' },
-    });
+    };
+    expect(tests.get('a')).toEqual(expected);
+    expect(tests.get('b')).toMatchObject({ complete: false, reason: { kind: 'stale-build', file: 'changed.ts' } });
 });
 
 function traceProcess(overrides: Partial<TraceProcess>): TraceProcess {

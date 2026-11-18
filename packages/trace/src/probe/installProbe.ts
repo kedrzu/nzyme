@@ -14,6 +14,9 @@ import { TraceWriter } from './TraceWriter.js';
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
 import { relativePosixPath } from '@nzyme/project-utils/relativePosixPath.js';
 
+/** Signals that stop a server; Playwright stops its web servers with one of them. */
+const STOP_SIGNALS = ['SIGINT', 'SIGTERM'] as const;
+
 /** Parameters of {@link installProbe}. */
 export interface InstallProbeParams {
     traceDir: string;
@@ -67,6 +70,12 @@ export async function installProbe(params: InstallProbeParams): Promise<void> {
         writer.write({ type: 'end', at: Date.now() });
         writer.close();
     });
+    // Signals reach the main thread only.
+    if (threadId === 0) {
+        for (const signal of STOP_SIGNALS) {
+            process.on(signal, flushOnSignal);
+        }
+    }
 
     plugin({
         name: '@nzyme/trace',
@@ -84,6 +93,19 @@ export async function installProbe(params: InstallProbeParams): Promise<void> {
             });
         },
     });
+
+    /**
+     * A process a signal kills writes no `end`: a flush now proves it ran until the signal, so a test
+     * that ended just before is not lost to the last bucket. Then the signal does what it would have
+     * done without this listener: when no other listener handles it, it is raised again.
+     */
+    function flushOnSignal(signal: NodeJS.Signals) {
+        flush();
+        process.off(signal, flushOnSignal);
+        if (process.listenerCount(signal) === 0) {
+            process.kill(process.pid, signal);
+        }
+    }
 
     function hit(fileId: number) {
         recorder.record(fileId, als.getStore() ?? null, Date.now());

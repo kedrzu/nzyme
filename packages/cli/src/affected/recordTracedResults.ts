@@ -18,7 +18,9 @@ export interface TracedRecording {
  * Records the results a traced run wrote (`@nzyme/trace`'s Playwright reporter), in order: a passed
  * attempt with a complete trace becomes a variant, a failed one invalidates the test's matching
  * variants, and a passed one with an incomplete trace records nothing. Every variant gets the files
- * any test of the run executed in a server process (`TestRun.runExecuted`).
+ * any attempt of the run, failed and incomplete ones included, executed in a server process
+ * (`TestRun.runExecuted`): a lazy singleton the first test initialized serves every later one,
+ * whatever that first test's outcome.
  */
 export async function recordTracedResults(
     selector: TestSelector,
@@ -65,16 +67,14 @@ export async function recordTracedResults(
 }
 
 /**
- * Every file a server process of the run executed in a test. Startup files are left out: the suite
- * fingerprint already hashes them in full.
+ * Every file a server process of the run executed in a test attempt, whatever its outcome. Startup
+ * files are left out: the suite fingerprint already hashes them in full.
  */
 function collectServerExecuted(results: readonly TracedTestResult[]): string[] {
     const executed = new Set<string>();
     for (const result of results) {
-        if (result.status === 'passed' && result.complete) {
-            for (const file of result.executed) {
-                executed.add(file);
-            }
+        for (const file of result.executed ?? []) {
+            executed.add(file);
         }
     }
     return [...executed];

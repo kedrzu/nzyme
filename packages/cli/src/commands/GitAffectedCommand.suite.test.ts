@@ -271,6 +271,28 @@ test('--record makes a file a server ran once part of every variant that imports
     expect((await selectE2e()).stderr).toContain('2 run (changed: packages/beta/src/client.ts) · 0 skipped');
 });
 
+test('--record makes a file a server ran in a failed or incomplete test part of every variant that imports it', async () => {
+    // The first test to use the lazy singleton failed, or its trace was incomplete: its `setup()` still
+    // serves every test after it.
+    await write('packages/beta/src/client.ts', 'export function setup() {\n    return 1;\n}\n');
+    await write(
+        'packages/beta/src/command.ts',
+        "import { setup } from './client.js';\nexport const command = setup;\n",
+    );
+    const client = 'packages/beta/src/client.ts';
+    const command = 'packages/beta/src/command.ts';
+    await selectE2e();
+    await writeResults([{ unit: TOP, status: 'failed', executed: [client, command] }, traced(IN_GROUP, [command])]);
+    await recordE2e();
+    expect((await selectE2e()).stderr).toContain('1 run (no variant) · 1 skipped (variant match)');
+
+    await write(client, 'export function setup() {\n    return 2;\n}\n');
+
+    expect((await selectE2e()).stderr).toContain(
+        '2 run (1 changed: packages/beta/src/client.ts; 1 no variant) · 0 skipped',
+    );
+});
+
 test('--record keeps a file only a browser ran out of the variants that merely import it', async () => {
     await write('packages/beta/src/client.ts', 'export function setup() {\n    return 1;\n}\n');
     await write(

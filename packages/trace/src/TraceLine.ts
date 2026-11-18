@@ -49,7 +49,7 @@ export interface TraceReadyLine {
 
 /**
  * Written when the process loads a built file older than some of its sources: what runs from those
- * sources is not what is on disk, so a test that ran them records nothing.
+ * sources is not what is on disk, so the run records nothing.
  */
 export interface TraceStaleLine {
     type: 'stale';

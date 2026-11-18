@@ -31,7 +31,10 @@ export interface MapBrowserCoverageParams {
 export interface BrowserExecution {
     /** Sources with at least one function that ran. */
     executed: string[];
-    /** Executed sources the bundle that ran them was not built from as they are now. */
+    /**
+     * Sources of every loaded script, executed or not, that the script was not built from as they are
+     * now: code that ran only at a module's top level is in no `executed`, yet its file is hashed.
+     */
     stale: string[];
 }
 
@@ -54,7 +57,6 @@ export function mapBrowserCoverage(params: MapBrowserCoverageParams): BrowserExe
 
         const code = script.source ?? readFileSync(file, 'utf8');
         const locator = createSourceLocator({ file, code, root, buildChecker });
-        const scriptExecuted = new Set<string>();
         for (const fn of script.functions) {
             const range = fn.ranges[0];
             if (
@@ -66,12 +68,11 @@ export function mapBrowserCoverage(params: MapBrowserCoverageParams): BrowserExe
             }
             const source = locator.sourceAt(range.startOffset);
             if (source !== undefined) {
-                scriptExecuted.add(source);
                 executed.add(source);
             }
         }
 
-        for (const source of locator.findStale(scriptExecuted)) {
+        for (const source of locator.findStale(locator.sources)) {
             stale.add(source);
         }
     }

@@ -1,7 +1,7 @@
-import { statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 import { createFileCache } from './createFileCache.js';
+import { isFile } from './isFile.js';
 
 /** The `exports` condition a workspace package points at its TypeScript source with. */
 const SOURCE_CONDITION = 'source';
@@ -101,8 +101,4 @@ function readSourceCondition(entry: unknown): string | undefined {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isFile(path: string): boolean {
-    return statSync(path, { throwIfNoEntry: false })?.isFile() ?? false;
 }

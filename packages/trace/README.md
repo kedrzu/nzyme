@@ -47,7 +47,7 @@ One NDJSON file per process and thread, `<pid>-<threadId>.ndjson`; the line type
 ## Playwright
 
 `@nzyme/trace/playwright/*` writes, per test, what the traced servers and the test's browsers ran,
-for `nzyme git affected --record` to store as the variants of `@nzyme/affected`.
+for `nzyme git affected-record` to store as the variants of `@nzyme/affected`.
 
 - `traceTest` (`playwright/traceTest.js`) — re-export it as the suite's `test` and set
   `use: { nzymeTrace: { apps } }` (`TracedApp`: the app's origin, its source `public/` and the built
@@ -58,26 +58,27 @@ for `nzyme git affected --record` to store as the variants of `@nzyme/affected`.
   sends `getTestTraceLabel(test.info())`. Chromium is launched without the features that swap the
   renderer on navigation, which would drop the coverage of the page before.
 - `TraceReporter` (`playwright/TraceReporter.js`, default export) —
-  `['@nzyme/trace/playwright/TraceReporter.js', { resultsFile, traceDir, ownsServers }]`. When the
+  `['@nzyme/trace/playwright/TraceReporter.js', { resultsFile, traceDir }]`. When the
   run ends — Playwright stops its web servers before — it reads `traceDir` once, attributes every
   attempt in one pass (`attributeExecution`) and writes one line per attempt to `resultsFile`
   (`TracedTestResult` of `@nzyme/affected`): failed, passed with an incomplete trace and the reason
   (`no-heartbeat`, `stale-build`, `unprobed`, …), or passed with what it executed — the servers'
   files (`executed`) apart from the browser's (`browserExecuted`), its assets and the run's startup
   code. Every line carries the servers' files, failed and incomplete attempts included, because
-  `--record` hashes a file any server ran in the run in full in every variant that imports it. A
-  process that neither ended nor flushed up to a test's end (it was killed, or hung) makes that test
+  `nzyme git affected-record` hashes a file any server ran in the run in full in every variant that
+  imports it. A process that neither ended nor flushed up to a test's end (it was killed, or hung) makes that test
   incomplete (`no-heartbeat`); the probe flushes on `SIGINT`/`SIGTERM`, so a server stopped by a
   signal still proves it ran past the last test. A stale build makes the whole run incomplete: a
   built file any server process loaded, or a bundle any page loaded, that was not built from its
   sources' current content — the source map's `sourcesContent` differs, or, without it, the `tsgo`
   build info's hash of the source does; an asset is compared by modification time. A test's variant
   hashes files whose functions it never ran (their top level), so staleness is not judged per test.
-  With `ownsServers: false` there is no trace of this run: only failed attempts are written, so they
-  still invalidate variants and `--full` audits them. `traceDir` must be fresh per run. It runs on
-  Node or Bun.
-- Recording is `nzyme git affected`'s, on Bun: select with
-  `--suite <name> --units <list.json> --test-list-out <file> --snapshot <file>` before the run, and
-  after it record with `--suite <name> --record <resultsFile> --snapshot <file> [--full]`.
+  `traceDir` must be fresh per run. A server the run did not start (a dev server, a reused one)
+  writes nothing there, so every passed attempt is `unprobed` and not recorded, while a failed one
+  is still written: it invalidates variants and `--full` audits it. It runs on Node or Bun.
+- Selection and recording are `nzyme git affected`'s, on Bun: select with
+  `nzyme git affected-test-list --suite <name> --units <list.json> --out <file> --snapshot <file>`
+  before the run, and after it record with
+  `nzyme git affected-record --suite <name> --results <resultsFile> --snapshot <file> [--full]`.
 - Servers read the label with `readTraceLabel(request.headers)` (`runtime/readTraceLabel.js`) and
   pass it to `traceScope`.

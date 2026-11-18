@@ -67,7 +67,7 @@ afterAll(async () => {
     await rm(outDir, { recursive: true, force: true });
 });
 
-test('a traced run writes what each passed test ran and fetched, and --record makes variants of them', async () => {
+test('a traced run writes what each passed test ran and fetched, and affected-record makes variants of them', async () => {
     const run = await runE2e({});
 
     expect(run.playwright.exitCode).toBe(0);
@@ -109,7 +109,7 @@ test('a traced run writes what each passed test ran and fetched, and --record ma
     expect(await readServerLabels('server/greet.js')).not.toEqual(await readServerLabels('server/other.js'));
 });
 
-test('a failed test is written as failed with its server code: --record invalidates its variant and --full reports a tracing gap', async () => {
+test('a failed test is written as failed with its server code: affected-record invalidates its variant and --full reports a tracing gap', async () => {
     const run = await runE2e({ FAIL: '1' });
 
     expect(run.playwright.exitCode).toBe(1);
@@ -125,13 +125,24 @@ test('a failed test is written as failed with its server code: --record invalida
     expect(await store.read(OWN_CONTEXT)).not.toEqual([]);
 });
 
-test('on servers the run did not start, only failures are written, so they still invalidate and are audited', async () => {
+test('on servers that write no trace of this run, passes are unprobed and failures still invalidate and are audited', async () => {
     await runE2e({});
-    const run = await runE2e({ FAIL: '1', OWNS_SERVERS: 'false' });
+    // As a stack the run did not start: its server traces somewhere else than the run's directory.
+    const run = await runE2e({ FAIL: '1', SERVER_TRACE_DIR: await mkdtemp(path.join(outDir, 'elsewhere-')) });
 
-    const expected: TracedTestResult[] = [{ unit: GREETS, status: 'failed' }];
-    expect(await readResults()).toEqual(expected);
-    expect(run.record.stderr).toContain('1 failed (1 variants invalidated)');
+    const results = await readResults();
+    expect(results.find(result => result.unit.title?.[0] === 'greets')).toEqual({
+        unit: GREETS,
+        status: 'failed',
+        executed: [],
+    });
+    expect(results.find(result => result.unit.title?.[0] === OWN_CONTEXT.title?.[0])).toMatchObject({
+        unit: OWN_CONTEXT,
+        status: 'passed',
+        complete: false,
+        reason: 'unprobed',
+    });
+    expect(run.record.stderr).toContain('1 failed (1 variants invalidated) · 1 not recorded (unprobed: 1)');
     expect(run.record.stderr).toContain('tracing gap: e2e/app.spec.ts › greets failed, yet the selection skipped it');
 });
 
@@ -176,15 +187,29 @@ async function runE2e(env: Record<string, string>) {
     const list = await spawnStep(['node', playwrightCli, 'test', '--list', '--reporter=json'], e2eDir, e2eEnv);
     await writeFile(units, list.stdout);
     const snapshot = path.join(outDir, 'snapshot.json');
-    const affected = [process.execPath, '--conditions=source', CLI_PATH, 'git', 'affected', '--suite', 'e2e'];
+    const nzyme = [process.execPath, '--conditions=source', CLI_PATH, 'git'];
     const select = await spawnStep(
-        [...affected, '--units', units, '--test-list-out', path.join(outDir, 'selected.txt'), '--snapshot', snapshot],
+        [
+            ...nzyme,
+            'affected-test-list',
+            '--suite',
+            'e2e',
+            '--units',
+            units,
+            '--out',
+            path.join(outDir, 'selected.txt'),
+            '--snapshot',
+            snapshot,
+        ],
         root,
     );
     expect(select.exitCode).toBe(0);
 
     const playwright = await spawnStep(['node', playwrightCli, 'test'], e2eDir, e2eEnv);
-    const record = await spawnStep([...affected, '--record', resultsFile(), '--snapshot', snapshot, '--full'], root);
+    const record = await spawnStep(
+        [...nzyme, 'affected-record', '--suite', 'e2e', '--results', resultsFile(), '--snapshot', snapshot, '--full'],
+        root,
+    );
     return { playwright, record };
 }
 
@@ -316,7 +341,6 @@ async function writeProject() {
             '            {',
             '                resultsFile: process.env.RESULTS_FILE,',
             '                traceDir: process.env.TRACE_DIR,',
-            "                ownsServers: process.env.OWNS_SERVERS !== 'false',",
             '            },',
             '        ],',
             '    ],',
@@ -332,7 +356,7 @@ async function writeProject() {
             "        gracefulShutdown: { signal: 'SIGINT', timeout: 1000 },",
             '        env: {',
             `            BUN_OPTIONS: \`--preload=\${process.env.SRC_DIR}/probe/preload.ts\`,`,
-            '            NZYME_TRACE_DIR: process.env.TRACE_DIR,',
+            '            NZYME_TRACE_DIR: process.env.SERVER_TRACE_DIR ?? process.env.TRACE_DIR,',
             '        },',
             '    },',
             '};',

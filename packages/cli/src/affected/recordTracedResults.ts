@@ -73,7 +73,7 @@ export async function recordTracedResults(
 function collectServerExecuted(results: readonly TracedTestResult[]): string[] {
     const executed = new Set<string>();
     for (const result of results) {
-        for (const file of result.executed ?? []) {
+        for (const file of result.executed) {
             executed.add(file);
         }
     }

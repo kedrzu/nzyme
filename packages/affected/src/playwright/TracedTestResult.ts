@@ -6,20 +6,17 @@ import type { TestUnit } from '../store/VariantStore.js';
 
 /**
  * One line of a traced run's results file (NDJSON, one line per finished test attempt, written when
- * the run ends), written by `@nzyme/trace`'s Playwright reporter and recorded by `nzyme git affected
- * --record`. Paths are root-relative.
+ * the run ends), written by `@nzyme/trace`'s Playwright reporter and recorded by `nzyme git
+ * affected-record`. Paths are root-relative.
  */
 export type TracedTestResult = TracedTestFailed | TracedTestIncomplete | TracedTestTraced;
 
-/**
- * An attempt that did not end as expected: its matching variants are invalidated. Written on a
- * run that reused already-running servers too, without `executed`.
- */
+/** An attempt that did not end as expected: its matching variants are invalidated. */
 export interface TracedTestFailed {
     unit: TestUnit;
     status: 'failed';
     /** Files whose functions ran for this attempt in a server process; see `TracedTestTraced.executed`. */
-    executed?: string[];
+    executed: string[];
 }
 
 /** A passed attempt whose trace is not complete: nothing is recorded for it. */
@@ -31,9 +28,9 @@ export interface TracedTestIncomplete {
     reason: string;
     /**
      * Files whose functions the server processes were seen to run for this attempt; see
-     * `TracedTestTraced.executed`. Absent when the server trace was not read.
+     * `TracedTestTraced.executed`.
      */
-    executed?: string[];
+    executed: string[];
 }
 
 /** A passed attempt with its full trace: recorded as a variant. */

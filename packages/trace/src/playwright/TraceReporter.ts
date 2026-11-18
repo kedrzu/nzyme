@@ -20,23 +20,20 @@ import { getTestTraceLabel } from './getTestTraceLabel.js';
 export interface TraceReporterOptions {
     /**
      * Where to write the results (absolute): one `TracedTestResult` line per finished test attempt,
-     * for `nzyme git affected --record`. The reporter empties it when the run begins.
+     * for `nzyme git affected-record`. The reporter empties it when the run begins.
      */
     resultsFile: string;
     /**
      * The `NZYME_TRACE_DIR` the traced servers of this run write to (absolute). Use a fresh one per
-     * run: files of an earlier run would be read as this one's.
+     * run: files of an earlier run would be read as this one's. A server this run did not start (a dev
+     * server, a reused one) writes nothing here, so every attempt reads as `unprobed`: passes are not
+     * recorded, failures still are.
      */
     traceDir: string;
-    /**
-     * Whether this run started the servers it tests. A server already running (a dev server, a reused
-     * one) was not started with the probe and its trace is not this run's: only failures are written.
-     */
-    ownsServers: boolean;
 }
 
 /**
- * Writes what each test of a traced Playwright run depended on, for `nzyme git affected --record`
+ * Writes what each test of a traced Playwright run depended on, for `nzyme git affected-record`
  * to record as test variants: the server code its trace label and time window attribute to it (see
  * `attributeExecution`), the browser code and assets of its `traceTest` attachment, and the run's
  * startup code. The results are written once the run ends: Playwright stops the web servers before
@@ -53,9 +50,6 @@ export default class TraceReporter implements Reporter {
     }
 
     onBegin(config: FullConfig, suite: Suite): void {
-        if (!this.options.ownsServers) {
-            console.warn('[@nzyme/trace] the servers were not started by this run: only failed tests are recorded.');
-        }
         // Emptied now, so a run that dies before `onEnd` leaves no earlier run's results behind.
         writeFileSync(this.options.resultsFile, '');
 
@@ -65,7 +59,7 @@ export default class TraceReporter implements Reporter {
             const unit = getPlaywrightTestUnit({
                 realRoot,
                 realRootDir,
-                // As Playwright's JSON report writes it, which `--units` reads.
+                // As Playwright's JSON report writes it, which `nzyme git affected-test-list --units` reads.
                 location: relativePosixPath(config.rootDir, test.location.file),
                 title: [...getDescribeTitles(test), test.title],
             });
@@ -93,7 +87,7 @@ export default class TraceReporter implements Reporter {
 
     async onEnd(): Promise<void> {
         try {
-            const lines = this.options.ownsServers ? await this.describeTracedRun() : this.describeFailures();
+            const lines = await this.describeRun();
             await writeFile(this.options.resultsFile, lines.map(line => `${JSON.stringify(line)}\n`).join(''));
         } catch (error) {
             console.error('[@nzyme/trace] writing the traced results failed', error);
@@ -104,8 +98,8 @@ export default class TraceReporter implements Reporter {
         return false;
     }
 
-    /** The result lines of a run on servers it started, attributed from the trace in one pass. */
-    private async describeTracedRun(): Promise<TracedTestResult[]> {
+    /** The result lines of the run, attributed from the trace in one pass. */
+    private async describeRun(): Promise<TracedTestResult[]> {
         const attribution = attributeExecution(
             await readTraceDir(this.options.traceDir),
             this.attempts.map(attempt => attempt.window),
@@ -130,18 +124,6 @@ export default class TraceReporter implements Reporter {
             });
             if (line) {
                 lines.push(line);
-            }
-        }
-        return lines;
-    }
-
-    /** On servers this run did not start, only failures: they invalidate variants and are audited. */
-    private describeFailures(): TracedTestResult[] {
-        const lines: TracedTestResult[] = [];
-        for (const { test, result } of this.attempts) {
-            const unit = this.units.get(test.id);
-            if (unit && isFailure(test, result)) {
-                lines.push({ unit, status: 'failed' });
             }
         }
         return lines;

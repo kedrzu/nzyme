@@ -67,8 +67,26 @@ Two hashes per file, in `@nzyme/affected`.
   package, as on the base-diff path), and a suite fingerprint: the suite's `fullRunTriggers` and everything they
   import, the files that ran at startup, modules imported for side effects only, and files with a
   computed `import(…)`. A suite fingerprint that no longer matches reruns the whole suite; its config
-  hash covers the triggers, tracing, aliases and `rewrites`. The variant graph links each rewrite target
-  to its source (`x.loc.ts` imports `x.loc.yaml`), so a generated module's source is a dependency.
+  hash covers the triggers, tracing, aliases and `rewrites`. A trigger with no glob character names one
+  file that counts while it exists even when git ignores it, so an install or build stamp can be one.
+  The variant graph links each rewrite target to its source (`x.loc.ts` imports `x.loc.yaml`), so a
+  generated module's source is a dependency.
+- **Inputs no import shows.** A test reads fixtures through `fs`, or loads modules through a computed
+  `import()` (``import(`./actions/${file}`)`` over a `readdir`). Neither the graph nor the trace sees
+  them, and the base diff's answer — a changed un-imported file seeds its whole package — applies only
+  to a test with no variant. So a variant also holds, in full, every file with no import source kind
+  of each package owning one of its files (minus `ignore`), and every file under the directory of a
+  file with a computed `import()` — in a static suite with what those import too. Each such set is
+  stored as the digest of its sorted file list, so a fixture or a module added or removed is a change.
+  A read reaching into another package (a test reading every package's manifest) is still not seen:
+  such an input must be a `fullRunTriggers` entry.
+- **Builds.** The import graph resolves a workspace package's imports to its sources, but Bun and
+  Vitest load the package's build. A static run on a stale build would record a variant hashing sources
+  that did not run, and the test would then be skipped while they stay unchanged. So a static record
+  checks every file loaded across a package boundary (and all that is reached from it) against the
+  TypeScript build infos of its package — `tsgo` records the XXH3-128 of each source's text — and is
+  refused when a build info lists the file with another version. A file no build info lists (a `.vue`
+  file) runs from source. A traced run proves the same through the probe's own build check.
 - **Code that runs once in a server.** A long-lived server serves every test, so code that runs once
   and keeps state — a lazy singleton's setup, a memo, a cache — runs only in the first test that needs
   it, and later tests that use what it built never execute it. A mutation campaign found a body change
@@ -79,10 +97,13 @@ Two hashes per file, in `@nzyme/affected`.
   mutations then select every test they break (34 and 11 tests), and a single-file historical edit
   selects 27.3 tests on average instead of 22.8. Startup files need nothing extra: the suite
   fingerprint holds them in full.
-- **Selection.** A test is skipped when any variant matches. A static suite's test with no variant falls
-  back to the base diff; a traced suite's test with no variant runs. Only a pass records; a failure
-  invalidates the variants matching the current code, so the test runs until it passes. A record is
-  refused when a file the test depends on changed during the run.
+- **Selection.** A test is skipped when any variant matches. A traced suite's test with no variant runs.
+  A static suite's test with no variant runs when the suite's triggers changed (the selection reports a
+  full run): a dependency update must never let a test skip, and once the update is committed, pulled
+  or checked out the base diff no longer sees it. Otherwise it falls back to the base diff. Only a
+  pass records; a failure invalidates the variants matching the current code, so the test runs until
+  it passes. A record is refused when a file the test depends on changed during the run, or when a
+  static test ran on a stale build.
 - **Store.** `<git-common-dir>/nzyme-affected/v<N>/<suite>/<hash(unit)>/<variant>.json`, written
   atomically, at most 20 variants per test (the least recently matched go first). It is shared by every
   worktree of a clone, which is safe because a variant depends on content only, never on a branch. A
@@ -90,8 +111,8 @@ Two hashes per file, in `@nzyme/affected`.
   path, mtime and size and never shared: two worktrees can hold different content under the same key.
 - **Bun-only core, recording in the CLI.** Fingerprinting uses `Bun.Transpiler`, so `@nzyme/affected`
   runs on Bun. Playwright's runner and reporters run on Node, so the reporter only writes a results file;
-  `nzyme git affected --record` records it against the selection snapshot taken before the run.
-- **Self-check.** A traced run under `--record --full` runs everything, selects anyway and reports a
+  `nzyme git affected-record` records it against the selection snapshot taken before the run.
+- **Self-check.** A traced run under `nzyme git affected-record --full` runs everything, selects anyway and reports a
   failed test the selection would have skipped as a tracing gap. A static suite has none: its full run
   goes around the selection.
 

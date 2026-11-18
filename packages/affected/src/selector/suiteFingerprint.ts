@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 import { getMd5Hash } from '@nzyme/crypto';
@@ -29,7 +29,7 @@ export interface BuildSuiteFingerprintOptions {
     resolver: ImportResolver;
     /** Hash of the selection config (see {@link getSuiteConfigHash}). */
     config: string;
-    /** Root-relative globs of the full-run triggers, global and the suite's own. */
+    /** Root-relative globs of the full-run triggers, global and the suite's own (see {@link findTriggerFiles}). */
     triggers: string[];
     /** Files whose functions ran at startup. */
     startup: Iterable<string>;
@@ -38,9 +38,16 @@ export interface BuildSuiteFingerprintOptions {
     readState: ReadFileState;
 }
 
+/** The outcome of {@link buildSuiteFingerprint}. */
+export interface BuildSuiteFingerprintResult {
+    suite: SuiteFingerprint;
+    /** The scanned files with a computed `import(…)`, sorted. */
+    computedDynamicImports: string[];
+}
+
 /**
  * Builds the suite fingerprint a recorded variant carries. Inputs, by role:
- * - `trigger` — walked files matching a trigger glob and everything they import, transitively;
+ * - `trigger` — the trigger files ({@link findTriggerFiles}) and everything they import, transitively;
  * - `startup` — files whose functions ran at startup;
  * - `side-effect` — modules a scanned file imports for side effects only (`import 'x'`);
  * - `dynamic-import` — scanned files with a computed `import(…)`, whose target nobody can tell.
@@ -48,16 +55,19 @@ export interface BuildSuiteFingerprintOptions {
  * Every input is hashed in full; a file that is missing now is left out (the variant's own files
  * catch a missing file that matters). A file with several roles keeps the first in this order.
  */
-export async function buildSuiteFingerprint(options: BuildSuiteFingerprintOptions): Promise<SuiteFingerprint> {
+export async function buildSuiteFingerprint(
+    options: BuildSuiteFingerprintOptions,
+): Promise<BuildSuiteFingerprintResult> {
     const { graph } = options;
     const roles = new Map<string, SuiteInputRole>();
+    const computedDynamicImports: string[] = [];
     function add(file: string, role: SuiteInputRole) {
         if (!roles.has(file)) {
             roles.set(file, role);
         }
     }
 
-    const triggerFiles = matchTriggerFiles(graph.files, options.triggers);
+    const triggerFiles = await findTriggerFiles(options.root, graph.files, options.triggers);
     for (const file of [...triggerFiles, ...collectImportClosure(graph, triggerFiles)]) {
         add(file, 'trigger');
     }
@@ -83,6 +93,7 @@ export async function buildSuiteFingerprint(options: BuildSuiteFingerprintOption
         }
         if (effects.computedDynamicImport) {
             add(file, 'dynamic-import');
+            computedDynamicImports.push(file);
         }
     }
 
@@ -95,7 +106,10 @@ export async function buildSuiteFingerprint(options: BuildSuiteFingerprintOption
         }
     }
 
-    return { hash: getMd5Hash(JSON.stringify([options.config, inputs])), config: options.config, inputs };
+    return {
+        suite: { hash: getMd5Hash(JSON.stringify([options.config, inputs])), config: options.config, inputs },
+        computedDynamicImports: computedDynamicImports.toSorted(),
+    };
 }
 
 /** Options of {@link findSuiteChange}. */
@@ -103,7 +117,7 @@ export interface FindSuiteChangeOptions {
     suite: SuiteFingerprint;
     /** Hash of the current selection config. */
     config: string;
-    /** Walked files matching a trigger glob now. */
+    /** The trigger files now ({@link findTriggerFiles}). */
     triggerFiles: string[];
     readState: ReadFileState;
 }
@@ -135,12 +149,27 @@ export async function findSuiteChange(options: FindSuiteChangeOptions): Promise<
 }
 
 /**
- * The walked files matching a root-relative trigger glob, sorted.
- * @__NO_SIDE_EFFECTS__
+ * The trigger files, sorted: the walked files matching a root-relative trigger glob, and each trigger
+ * with no glob character that names an existing file — even one git ignores and the walk skips (an
+ * install stamp under `node_modules/`).
  */
-export function matchTriggerFiles(files: readonly string[], triggers: readonly string[]): string[] {
+export async function findTriggerFiles(
+    root: string,
+    files: readonly string[],
+    triggers: readonly string[],
+): Promise<string[]> {
     const globs = triggers.map(trigger => new Bun.Glob(trigger));
-    return files.filter(file => globs.some(glob => glob.match(file))).toSorted();
+    const found = new Set(files.filter(file => globs.some(glob => glob.match(file))));
+    for (const trigger of triggers) {
+        if (found.has(trigger) || /[*?[\]{}!\\]/.test(trigger)) {
+            continue;
+        }
+        const stats = await stat(path.join(root, trigger)).catch(() => null);
+        if (stats?.isFile()) {
+            found.add(trigger);
+        }
+    }
+    return [...found].toSorted();
 }
 
 /** Options of {@link getSuiteConfigHash}. */

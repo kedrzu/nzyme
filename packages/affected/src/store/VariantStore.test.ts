@@ -29,6 +29,7 @@ test('concurrent writers in separate processes never leave a partial variant, an
             await store.write({
                 unit: ${JSON.stringify(UNIT)},
                 files: { ['src/' + process.env.WRITER + '-' + i + '.ts']: { body: 'b'.repeat(100_000), top: 't' } },
+                listings: {},
                 suite: { hash: 's', config: 'c', inputs: {} },
                 recordedAt: new Date().toISOString(),
             });
@@ -113,7 +114,7 @@ test('opening a store removes other format versions and tests nothing matched in
 
     await VariantStore.openAt(root, 'e2e');
 
-    expect(await fs.readdir(root)).toEqual(['v1']);
+    expect(await fs.readdir(root)).toEqual(['v2']);
     expect(await store.read(UNIT)).toEqual([fresh]);
     expect(await store.read(gone)).toEqual([]);
     expect(await fs.readdir(path.dirname(staleFile)).catch(() => 'removed')).toBe('removed');
@@ -121,7 +122,13 @@ test('opening a store removes other format versions and tests nothing matched in
 });
 
 function createVariant(top: string, recordedAt: string): Variant {
-    return { unit: UNIT, files: { 'src/a.ts': { top } }, suite: { hash: 's', config: 'c', inputs: {} }, recordedAt };
+    return {
+        unit: UNIT,
+        files: { 'src/a.ts': { top } },
+        listings: {},
+        suite: { hash: 's', config: 'c', inputs: {} },
+        recordedAt,
+    };
 }
 
 async function listAllFiles(dir: string): Promise<string[]> {

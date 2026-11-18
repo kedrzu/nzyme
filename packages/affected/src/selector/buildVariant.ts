@@ -1,9 +1,13 @@
+import path from 'node:path';
+
 import { findOwningPackageDir } from '@nzyme/project-utils/findOwningPackageDir.js';
 import type { ImportGraph } from '@nzyme/project-utils/importGraph/buildImportGraph.js';
 import type { ImportResolver } from '@nzyme/project-utils/importGraph/resolveImportTarget.js';
 
 import type { FileHash, TestUnit, Variant } from '../store/VariantStore.js';
 import { collectImportClosure } from './collectImportClosure.js';
+import { getFileListingKey, hashFileList, listFiles } from './FileListing.js';
+import type { FileListing } from './FileListing.js';
 import type { FileHashLevel } from './FileStates.js';
 import { toFileHash } from './FileStates.js';
 import { buildSuiteFingerprint } from './suiteFingerprint.js';
@@ -16,6 +20,10 @@ export interface BuildVariantOptions {
     resolver: ImportResolver;
     /** Root-relative directories of the workspace packages; `''` is never one. */
     packageDirs: string[];
+    /** Whether a root-relative file matches an `ignore` glob of the config. */
+    isIgnored: (file: string) => boolean;
+    /** Whether the suite traces execution: an untraced test depends on all its import closure in full. */
+    traced: boolean;
     unit: TestUnit;
     /** Root-relative files the test runs from: its own file and its test-side helpers. */
     entry: string[];
@@ -49,12 +57,21 @@ export type BuildVariantResult = { variant: Variant } | { missing: string };
  *   file itself. Except a file a server process ran anywhere in the run: in full, since code that
  *   ran once and kept state (a lazy singleton's setup) served this test too;
  * - assets — in full; most have no structure to split, so they are hashed by bytes;
+ * - every file under the directory of a file above with a computed `import(…)`, which may load any
+ *   of them — in full, and so is what they import when the suite is not traced (a traced run lists
+ *   what ran);
  * - the `package.json` of every workspace package owning one of the files above — in full, as the base
  *   diff treats a package's manifest as a change of all its files: its dependencies, `exports` and
- *   `imports` decide what the package's code loads.
+ *   `imports` decide what the package's code loads;
+ * - the files of each such package that nothing imports (fixtures, data a test reads through `fs`) —
+ *   in full, as the base diff seeds the whole package from a change to one.
+ *
+ * The last two sets are {@link FileListing}s: the variant also stores the digest of each one's file
+ * list, so a file appearing in it or leaving it is a change. A read reaching into another package (a
+ * test reading every package's manifest) is still not seen: such an input must be a full-run trigger.
  *
  * A file whose structure cannot be split is hashed by its bytes at any level. The suite fingerprint
- * (see {@link buildSuiteFingerprint}) is scanned from these files and the startup files.
+ * (see {@link buildSuiteFingerprint}) is scanned from the test's files and the startup files.
  */
 export async function buildVariant(options: BuildVariantOptions): Promise<BuildVariantResult> {
     const { graph } = options;
@@ -75,11 +92,38 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
         }
     }
 
-    for (const file of levels.keys()) {
-        const owner = findOwningPackageDir(file, options.packageDirs);
-        if (owner !== '') {
-            levels.set(`${owner}/package.json`, 'full');
+    const { suite, computedDynamicImports } = await buildSuiteFingerprint({
+        root: options.root,
+        graph,
+        resolver: options.resolver,
+        config: options.config,
+        triggers: options.triggers,
+        startup: options.startup,
+        scanned: [...levels.keys(), ...options.startup],
+        readState: options.readState,
+    });
+
+    const context = { files: graph.files, packageDirs: options.packageDirs, isIgnored: options.isIgnored };
+    const listings: Record<string, string> = {};
+
+    for (const file of computedDynamicImports) {
+        const dir = path.posix.dirname(file);
+        const loadable = addListing({ kind: 'directory', dir: dir === '.' ? '' : dir });
+        if (!options.traced) {
+            for (const imported of collectImportClosure(graph, loadable)) {
+                levels.set(imported, 'full');
+            }
         }
+    }
+
+    const owners = new Set<string>();
+    for (const file of levels.keys()) {
+        owners.add(findOwningPackageDir(file, options.packageDirs));
+    }
+    owners.delete('');
+    for (const owner of owners) {
+        levels.set(`${owner}/package.json`, 'full');
+        addListing({ kind: 'package', dir: owner });
     }
 
     const files: Record<string, FileHash> = {};
@@ -91,16 +135,15 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
         files[file] = toFileHash(state, level);
     }
 
-    const suite = await buildSuiteFingerprint({
-        root: options.root,
-        graph,
-        resolver: options.resolver,
-        config: options.config,
-        triggers: options.triggers,
-        startup: options.startup,
-        scanned: [...levels.keys(), ...options.startup],
-        readState: options.readState,
-    });
+    return { variant: { unit: options.unit, files, listings, suite, recordedAt: options.recordedAt } };
 
-    return { variant: { unit: options.unit, files, suite, recordedAt: options.recordedAt } };
+    /** Adds a listing's digest, and its files in full; returns the files. */
+    function addListing(listing: FileListing): string[] {
+        const listed = listFiles(listing, context);
+        listings[getFileListingKey(listing)] = hashFileList(listed);
+        for (const file of listed) {
+            levels.set(file, 'full');
+        }
+        return listed;
+    }
 }

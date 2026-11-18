@@ -1,8 +1,9 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 import type { TraceMap } from '@jridgewell/trace-mapping';
-import { createXXHash128 } from 'hash-wasm';
+
+import { createBuildInfoReader } from '@nzyme/affected/build/createBuildInfoReader.js';
 
 import { toSourcePath } from './toSourcePath.js';
 
@@ -39,11 +40,9 @@ const CODE_SOURCE = /\.(?:[cm]?[jt]sx?|vue)$/;
  * per checker, so create one per process.
  */
 export async function createBuildChecker(root: string): Promise<BuildChecker> {
-    const hasher = await createXXHash128();
+    const buildInfos = await createBuildInfoReader();
     const texts = new Map<string, string | null>();
     const textHashes = new Map<string, string>();
-    const buildInfosInDir = new Map<string, string[]>();
-    const buildInfos = new Map<string, BuildInfoVersions>();
     const results = new Map<string, boolean>();
 
     return { isCurrent };
@@ -85,8 +84,8 @@ export async function createBuildChecker(root: string): Promise<BuildChecker> {
             return false;
         }
 
-        const version = findBuildInfoVersion(path.dirname(builtFile), input);
-        return version !== undefined && version === hashText(input, text);
+        const versions = findBuildInfoVersions(path.dirname(builtFile), input);
+        return versions.includes(hashText(input, text));
     }
 
     function readText(file: string): string | null {
@@ -105,96 +104,22 @@ export async function createBuildChecker(root: string): Promise<BuildChecker> {
     function hashText(file: string, text: string): string {
         let hash = textHashes.get(file);
         if (hash === undefined) {
-            hasher.init();
-            hasher.update(text);
-            hash = hasher.digest('hex');
+            hash = buildInfos.hashText(text);
             textHashes.set(file, hash);
         }
         return hash;
     }
 
-    /** The version a build info in `dir` or above (up to the root) records for `input`. */
-    function findBuildInfoVersion(dir: string, input: string): string | undefined {
+    /** The versions the build infos of the nearest directory at or above `dir` (up to the root) listing `input` record for it. */
+    function findBuildInfoVersions(dir: string, input: string): string[] {
         for (let current = dir; ; current = path.dirname(current)) {
-            for (const buildInfo of listBuildInfos(current)) {
-                const version = readBuildInfo(buildInfo).get(input);
-                if (version !== undefined) {
-                    return version;
-                }
+            const versions = buildInfos.readVersions(current, input);
+            if (versions.length > 0) {
+                return versions;
             }
             if (current === root || path.dirname(current) === current || !current.startsWith(root)) {
-                return undefined;
+                return [];
             }
         }
     }
-
-    function listBuildInfos(dir: string): string[] {
-        let files = buildInfosInDir.get(dir);
-        if (!files) {
-            try {
-                files = readdirSync(dir)
-                    .filter(name => name.endsWith('.tsbuildinfo'))
-                    .map(name => path.join(dir, name));
-            } catch {
-                files = [];
-            }
-            buildInfosInDir.set(dir, files);
-        }
-        return files;
-    }
-
-    function readBuildInfo(file: string): BuildInfoVersions {
-        let versions = buildInfos.get(file);
-        if (!versions) {
-            versions = parseBuildInfo(file);
-            buildInfos.set(file, versions);
-        }
-        return versions;
-    }
-}
-
-/** Source versions of a build info, by absolute path; also by lower-cased path, as tsgo writes on a case-insensitive file system. */
-interface BuildInfoVersions {
-    get(file: string): string | undefined;
-}
-
-function parseBuildInfo(file: string): BuildInfoVersions {
-    const exact = new Map<string, string>();
-    const folded = new Map<string, string>();
-    try {
-        const info: unknown = JSON.parse(readFileSync(file, 'utf8'));
-        const fileNames = getArray(info, 'fileNames');
-        const fileInfos = getArray(info, 'fileInfos');
-        for (const [index, name] of fileNames.entries()) {
-            const version = getVersion(fileInfos[index]);
-            if (typeof name === 'string' && version !== undefined) {
-                const absolute = path.resolve(path.dirname(file), name);
-                exact.set(absolute, version);
-                folded.set(absolute.toLowerCase(), version);
-            }
-        }
-    } catch {
-        // An unreadable build info shows nothing current.
-    }
-    return { get: input => exact.get(input) ?? folded.get(input.toLowerCase()) };
-}
-
-function getArray(value: unknown, key: string): unknown[] {
-    if (typeof value === 'object' && value !== null && key in value) {
-        const field: unknown = Reflect.get(value, key);
-        return Array.isArray(field) ? field : [];
-    }
-    return [];
-}
-
-/** A `fileInfos` entry: the version string, or an object holding it. */
-function getVersion(fileInfo: unknown): string | undefined {
-    if (typeof fileInfo === 'string') {
-        return fileInfo;
-    }
-    if (typeof fileInfo === 'object' && fileInfo !== null && 'version' in fileInfo) {
-        const version: unknown = fileInfo.version;
-        return typeof version === 'string' ? version : undefined;
-    }
-    return undefined;
 }

@@ -20,8 +20,20 @@ test depended on when it last passed, with the hashes of that code. Bun only. Th
 
 A suite's `patterns` are optional: they are only the default of a `--suite` run given no patterns.
 
-A suite's `fullRunTriggers` add to the global ones. A test with no matching variant runs: in a static
-suite only when the base diff selects it, in a `traced` suite always.
+A suite's `fullRunTriggers` add to the global ones. A trigger with no glob character names one file,
+which counts while it exists even when git ignores it (an install stamp). A test with no matching
+variant runs: in a `traced` suite always; in a static suite when the suite's triggers changed (a
+dependency update never lets a test skip), otherwise only when the base diff selects it.
+
+A test of a static suite runs from its own package's sources and from the builds of the packages it
+imports, so a record is refused (`stale-build`) when one of those builds was not made from the current
+sources, by the TypeScript build info of the package.
+
+A variant cannot see a file a test reads through `fs` or loads through a computed `import()`. It
+covers both by listing: every file nothing imports of each package owning one of its files (minus
+`ignore`), and every file under the directory of a file with a computed `import()`; a file added to
+or removed from either is a change too. A read reaching into another package (a test reading every
+package's manifest) is still not seen, so such an input must be a `fullRunTriggers` entry.
 
 ## Modules
 
@@ -32,11 +44,14 @@ suite only when the base diff selects it, in a `traced` suite always.
 - `selector/buildVariant.ts` — what a variant holds: entry files and their imports in full, executed
   files in full, their static imports `top` only — in full when a server ran them anywhere in the run
   (`TestRun.runExecuted`) — assets by bytes, and the `package.json` of every workspace package owning
-  one of its files, in full. In the variant graph a rewrite target imports its source
-  (`x.loc.ts` → `x.loc.yaml`).
+  one of its files, in full; plus the file listings (`selector/FileListing.ts`) above. In the variant
+  graph a rewrite target imports its source (`x.loc.ts` → `x.loc.yaml`).
+- `selector/findStaleBuildFile.ts` — the build-freshness check of a static suite's record.
+- `build/createBuildInfoReader.ts` — the source versions TypeScript build infos record, shared with
+  `@nzyme/trace`'s build check.
 - `store/VariantStore.ts` — the variants, in `<git-common-dir>/nzyme-affected/`, shared by every
   worktree of a clone; at most 20 per test.
 - `junit/readJunitResults.ts` — per-file results of a bun test or Vitest JUnit report.
 - `playwright/` — the Playwright test list and `TracedTestResult`, the line `@nzyme/trace`'s reporter
-  writes for `nzyme git affected --record`.
+  writes for `nzyme git affected-record`.
 - `base/` — selection by the import graph since a base.

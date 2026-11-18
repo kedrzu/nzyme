@@ -42,7 +42,6 @@
         "@nzyme/affected": "workspace:*",
         "@nzyme/project-utils": "workspace:*",
         "@nzyme/utils": "workspace:*",
-        "hash-wasm": "^4.12.0",
         "oxc-parser": "^0.152.0"
     },
     "devDependencies": {

@@ -12,7 +12,7 @@ import { getMd5Hash } from '@nzyme/crypto';
  * Version of the stored variant format. Bumping it moves the store to a new `v<N>` directory, so a
  * variant written by another version is never read: such a test simply has no variant.
  */
-const STORE_VERSION = 1;
+const STORE_VERSION = 2;
 
 /** Variants kept per test; recording one more evicts the least recently matched. */
 const MAX_VARIANTS_PER_TEST = 20;
@@ -67,6 +67,12 @@ export interface Variant {
     unit: TestUnit;
     /** Root-relative path → hash. */
     files: Record<string, FileHash>;
+    /**
+     * File sets the variant depends on as sets, so a file added to one or removed from it is a change
+     * too: listing key (`<kind>:<dir>`, see `FileListing`) → digest of the sorted root-relative paths.
+     * The files themselves are in `files`.
+     */
+    listings: Record<string, string>;
     suite: SuiteFingerprint;
     /** ISO timestamp. */
     recordedAt: string;
@@ -304,13 +310,20 @@ function parseVariant(content: string | undefined): Variant | undefined {
         value.version !== STORE_VERSION ||
         !isTestUnit(value.unit) ||
         !isRecordOf(value.files, isFileHash) ||
+        !isRecordOf(value.listings, isString) ||
         !isSuiteFingerprint(value.suite) ||
         typeof value.recordedAt !== 'string'
     ) {
         return undefined;
     }
 
-    return { unit: value.unit, files: value.files, suite: value.suite, recordedAt: value.recordedAt };
+    return {
+        unit: value.unit,
+        files: value.files,
+        listings: value.listings,
+        suite: value.suite,
+        recordedAt: value.recordedAt,
+    };
 }
 
 function isTestUnit(value: unknown): value is TestUnit {

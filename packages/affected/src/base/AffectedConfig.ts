@@ -17,6 +17,10 @@ const { parseArray, parseStringArray, parseString, configError } = createConfigP
  * every directory says so: `**\/tsconfig*.json`. A source file a trigger file imports, transitively,
  * triggers too — list the roots (the test preload, a `.storybook/preview.ts`), not what they import.
  *
+ * For the variants of `suites`, a trigger with no glob character names one root-relative file that
+ * counts while it exists even when git ignores it (an install stamp, `node_modules/.install-stamp`):
+ * a variant recorded before it appeared or changed is stale. The base diff never lists an ignored file.
+ *
  * @example
  * ```json
  * {
@@ -55,12 +59,13 @@ export interface AffectedSuiteConfig {
     /**
      * Selection globs of the suite's test files, with the rule of `nzyme git affected` patterns: the
      * default of a `--suite` run given no patterns. Absent when every caller passes its own (or selects
-     * through `--units`/`--record`, which take no patterns).
+     * through `nzyme git affected-test-list`/`affected-record`, which take no patterns).
      */
     patterns?: string[];
     /**
      * Whether a run records what each test executed. A test of a traced suite with no recorded
-     * variant always runs; one of a static suite falls back to the base diff. Default `false`.
+     * variant always runs; one of a static suite runs when the suite's triggers changed (a dependency
+     * update never lets a test skip) and otherwise falls back to the base diff. Default `false`.
      */
     traced: boolean;
     /**

@@ -22,8 +22,11 @@ export interface SelectedTest<TReason> {
 /**
  * Why a test runs:
  * - `no-variant` — nothing recorded for it (a traced suite);
- * - `changed` — its newest variant with a current suite fingerprint depends on `file`, which changed;
- * - `suite-changed` — every variant's suite fingerprint is stale;
+ * - `changed` — its newest variant with a current suite fingerprint depends on `file`, which changed —
+ *   or `file` is a listing key (`package:<dir>`, `directory:<dir>`, see `FileListing`) whose files
+ *   gained or lost one;
+ * - `suite-changed` — every variant's suite fingerprint is stale, or (a test with no variant) the
+ *   suite's inputs changed (`TestSelection.fullRun`);
  * - `affected` — nothing recorded for it, and the change since the base reaches it (a static suite).
  */
 export type TestRunReason =

@@ -1,6 +1,6 @@
+import { getPackageDirs } from '@nzyme/project-utils/getPackageDirs.js';
 import { getPackages } from '@nzyme/project-utils/getPackages.js';
 import { buildImportGraph } from '@nzyme/project-utils/importGraph/buildImportGraph.js';
-import { relativePosixPath } from '@nzyme/project-utils/relativePosixPath.js';
 import { resolveAffectedBase } from '@nzyme/project-utils/resolveAffectedBase.js';
 import type { AffectedBase, AffectedBaseEnv } from '@nzyme/project-utils/resolveAffectedBase.js';
 
@@ -57,9 +57,7 @@ export async function selectAffectedSinceBase(options: SelectAffectedSinceBaseOp
         ]),
     });
 
-    const packageDirs = packages
-        .map(pkg => relativePosixPath(root, pkg.path))
-        .filter(dir => dir !== '' && !dir.startsWith('..'));
+    const packageDirs = getPackageDirs(root, packages);
     const selection = selectAffectedFiles({ graph, changedFiles, config, patterns: options.patterns, packageDirs });
 
     return { base, changedFiles, selection, packageDirs };

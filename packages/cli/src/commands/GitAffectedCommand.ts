@@ -17,10 +17,10 @@ import { Command } from '@nzyme/cli-core/Command.js';
 import { spawnForExitCode } from '@nzyme/cli-core/utils/spawnForExitCode.js';
 import type { SpawnForExitCodeResult } from '@nzyme/cli-core/utils/spawnForExitCode.js';
 import { findOwningPackageDir } from '@nzyme/project-utils/findOwningPackageDir.js';
+import { getPackageDirs } from '@nzyme/project-utils/getPackageDirs.js';
 import { getPackages } from '@nzyme/project-utils/getPackages.js';
 import { GitRepository } from '@nzyme/project-utils/git/GitRepository.js';
 import { walkProjectFiles } from '@nzyme/project-utils/importGraph/walkProjectFiles.js';
-import { relativePosixPath } from '@nzyme/project-utils/relativePosixPath.js';
 import type { AffectedBase } from '@nzyme/project-utils/resolveAffectedBase.js';
 import { assert } from '@nzyme/utils/assert.js';
 
@@ -221,7 +221,7 @@ export class GitAffectedCommand extends Command {
             return 0;
         }
 
-        const packageDirs = args.perPackage ? await getPackageDirs(root) : [];
+        const packageDirs = args.perPackage ? getPackageDirs(root, await getPackages(root)) : [];
         if (args.junit === undefined) {
             return await this.runOnFiles({ root, command: args.command, files: selected, packageDirs, args });
         }
@@ -652,12 +652,6 @@ function splitInlineValue(token: string): [string, string | undefined] {
 
 function isValueOption(name: string): name is keyof typeof VALUE_OPTIONS {
     return Object.hasOwn(VALUE_OPTIONS, name);
-}
-
-/** Root-relative directories of the workspace packages, for `--per-package`. */
-async function getPackageDirs(root: string): Promise<string[]> {
-    const packages = await getPackages(root);
-    return packages.map(pkg => relativePosixPath(root, pkg.path)).filter(dir => dir !== '' && !dir.startsWith('..'));
 }
 
 /** `nzyme git affected: recorded 5 · 1 failed (2 variants invalidated) · 1 not recorded (a.test.ts: edited b.ts)`. */

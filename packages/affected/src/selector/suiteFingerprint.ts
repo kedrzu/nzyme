@@ -5,6 +5,7 @@ import { getMd5Hash } from '@nzyme/crypto';
 import type { ImportGraph } from '@nzyme/project-utils/importGraph/buildImportGraph.js';
 import type { ImportAlias, ImportResolver } from '@nzyme/project-utils/importGraph/resolveImportTarget.js';
 
+import type { AffectedRewrite } from '../base/AffectedConfig.js';
 import type { SuiteFingerprint, SuiteInput, SuiteInputRole } from '../store/VariantStore.js';
 import { collectImportClosure } from './collectImportClosure.js';
 import type { FileState } from './FileStates.js';
@@ -147,13 +148,14 @@ export interface GetSuiteConfigHashOptions {
     triggers: string[];
     traced: boolean;
     aliases: ImportAlias[];
+    rewrites: AffectedRewrite[];
 }
 
 /**
- * Hash of the config that decides what a variant depends on: the triggers, tracing and the aliases
- * the import graph resolves through. Changing any of it invalidates every variant of the suite.
+ * Hash of the config that decides what a variant depends on: the triggers, tracing, and the aliases
+ * and rewrites the import graph resolves through. Changing any of it invalidates every variant of the suite.
  * @__NO_SIDE_EFFECTS__
  */
 export function getSuiteConfigHash(options: GetSuiteConfigHashOptions): string {
-    return getMd5Hash(JSON.stringify([options.triggers, options.traced, options.aliases]));
+    return getMd5Hash(JSON.stringify([options.triggers, options.traced, options.aliases, options.rewrites]));
 }

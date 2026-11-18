@@ -1,3 +1,4 @@
+import { findOwningPackageDir } from '@nzyme/project-utils/findOwningPackageDir.js';
 import type { ImportGraph } from '@nzyme/project-utils/importGraph/buildImportGraph.js';
 import type { ImportResolver } from '@nzyme/project-utils/importGraph/resolveImportTarget.js';
 
@@ -13,6 +14,8 @@ export interface BuildVariantOptions {
     root: string;
     graph: ImportGraph;
     resolver: ImportResolver;
+    /** Root-relative directories of the workspace packages; `''` is never one. */
+    packageDirs: string[];
     unit: TestUnit;
     /** Root-relative files the test runs from: its own file and its test-side helpers. */
     entry: string[];
@@ -45,7 +48,10 @@ export type BuildVariantResult = { variant: Variant } | { missing: string };
  *   `import('…')` is not followed: a lazily loaded module the test reached ran, so it is an executed
  *   file itself. Except a file a server process ran anywhere in the run: in full, since code that
  *   ran once and kept state (a lazy singleton's setup) served this test too;
- * - assets — in full; most have no structure to split, so they are hashed by bytes.
+ * - assets — in full; most have no structure to split, so they are hashed by bytes;
+ * - the `package.json` of every workspace package owning one of the files above — in full, as the base
+ *   diff treats a package's manifest as a change of all its files: its dependencies, `exports` and
+ *   `imports` decide what the package's code loads.
  *
  * A file whose structure cannot be split is hashed by its bytes at any level. The suite fingerprint
  * (see {@link buildSuiteFingerprint}) is scanned from these files and the startup files.
@@ -66,6 +72,13 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
     for (const file of collectImportClosure(graph, options.executed, { staticOnly: true })) {
         if (!levels.has(file)) {
             levels.set(file, ranInRun.has(file) ? 'full' : 'top');
+        }
+    }
+
+    for (const file of levels.keys()) {
+        const owner = findOwningPackageDir(file, options.packageDirs);
+        if (owner !== '') {
+            levels.set(`${owner}/package.json`, 'full');
         }
     }
 

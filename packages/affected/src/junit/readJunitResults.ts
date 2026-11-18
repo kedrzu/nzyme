@@ -7,8 +7,9 @@ import { xmlParse } from '@nzyme/xml-utils/xmlParse.js';
  * The outcome of one test file in a JUnit report:
  * - `failed` — a testcase has a `<failure>` or `<error>`, or a `<testsuite>` of the file counts failures
  *   or errors no testcase shows (a failed `beforeAll`);
- * - `passed` — not failed, and at least one testcase ran;
- * - `skipped` — every testcase was skipped.
+ * - `skipped` — not failed, and a testcase was skipped: the run did not cover the whole file (a name
+ *   filter, a `.skip`/`.todo`), so it proves nothing about the file and must not be recorded as passing;
+ * - `passed` — every testcase ran and passed.
  */
 export interface JunitFileResult {
     /** The path as the report names it: absolute, or relative to the runner's root. */
@@ -56,7 +57,7 @@ export function parseJunitResults(xml: string): JunitFileResult[] {
 
     function setStatus(file: string, status: JunitFileResult['status']): void {
         const current = results.get(file);
-        if (current === undefined || current === 'skipped' || status === 'failed') {
+        if (current === undefined || current === 'passed' || status === 'failed') {
             results.set(file, status);
         }
     }

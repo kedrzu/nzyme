@@ -32,11 +32,17 @@ test('parses a full config, keeping the defaults for absent fields', () => {
         rewrites: [],
         fullRunTriggers: [],
         ignore: ['docs/**'],
-        suites: { unit: { patterns: ['*.test.ts'], traced: false, fullRunTriggers: [] } },
+        suites: {
+            unit: { patterns: ['*.test.ts'], traced: false, fullRunTriggers: [] },
+            e2e: { traced: true, fullRunTriggers: [] },
+        },
     };
-    expect(parseAffectedConfig({ ignore: ['docs/**'], suites: { unit: { patterns: ['*.test.ts'] } } })).toEqual(
-        expected,
-    );
+    expect(
+        parseAffectedConfig({
+            ignore: ['docs/**'],
+            suites: { unit: { patterns: ['*.test.ts'] }, e2e: { traced: true } },
+        }),
+    ).toEqual(expected);
 });
 
 test('a malformed config throws, naming the offending path', () => {

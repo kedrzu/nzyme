@@ -52,8 +52,12 @@ export interface AffectedConfig {
 
 /** One suite of `nzyme.affected.suites`. */
 export interface AffectedSuiteConfig {
-    /** Selection globs of the suite's test files, with the rule of `nzyme git affected` patterns. */
-    patterns: string[];
+    /**
+     * Selection globs of the suite's test files, with the rule of `nzyme git affected` patterns: the
+     * default of a `--suite` run given no patterns. Absent when every caller passes its own (or selects
+     * through `--units`/`--record`, which take no patterns).
+     */
+    patterns?: string[];
     /**
      * Whether a run records what each test executed. A test of a traced suite with no recorded
      * variant always runs; one of a static suite falls back to the base diff. Default `false`.
@@ -154,22 +158,24 @@ function parseSuite(value: unknown, path: string): AffectedSuiteConfig {
         throw configError(path, 'an object');
     }
 
-    const patterns = parseStringArray(value.patterns, `${path}.patterns`);
-    if (patterns.length === 0) {
-        throw configError(`${path}.patterns`, 'a non-empty array of strings');
-    }
     if (value.traced !== undefined && typeof value.traced !== 'boolean') {
         throw configError(`${path}.traced`, 'a boolean');
     }
 
-    return {
-        patterns,
+    const suite: AffectedSuiteConfig = {
         traced: value.traced ?? false,
         fullRunTriggers:
             value.fullRunTriggers === undefined
                 ? []
                 : parseStringArray(value.fullRunTriggers, `${path}.fullRunTriggers`),
     };
+    if (value.patterns !== undefined) {
+        suite.patterns = parseStringArray(value.patterns, `${path}.patterns`);
+        if (suite.patterns.length === 0) {
+            throw configError(`${path}.patterns`, 'a non-empty array of strings');
+        }
+    }
+    return suite;
 }
 
 /** Validates one `aliases` entry. */

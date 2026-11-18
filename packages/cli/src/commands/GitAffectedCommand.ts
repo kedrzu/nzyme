@@ -78,7 +78,7 @@ export class GitAffectedCommand extends Command {
             \`--suite <name>\` selects the tests of a suite of \`nzyme.affected.suites\` from their
             recorded variants instead: a test is skipped while one of its variants matches the
             current code; one without a variant runs (a traced suite) or is selected by the base
-            diff as above (a static suite). The patterns default to the suite's; the output, the
+            diff as above (a static suite). The patterns default to the suite's, when it has them; the output, the
             command and the empty-selection rule are the same. A summary with the reasons goes to
             stderr. \`--full\` runs every test of the suite, still selecting, for the audit below.
 
@@ -202,7 +202,13 @@ export class GitAffectedCommand extends Command {
         const config = await readAffectedConfig(root);
         const suiteConfig = config.suites[suite];
         assert(suiteConfig, `openTestSelector accepted suite "${suite}".`);
-        const matchesPattern = createPatternMatcher(args.patterns.length > 0 ? args.patterns : suiteConfig.patterns);
+        const patterns = args.patterns.length > 0 ? args.patterns : suiteConfig.patterns;
+        if (patterns === undefined) {
+            throw new UsageError(
+                `--suite ${suite} has no patterns in nzyme.affected.suites.${suite}: pass them on the command line.`,
+            );
+        }
+        const matchesPattern = createPatternMatcher(patterns);
         const files = (await walkProjectFiles(root)).filter(file => matchesPattern(file));
         const selection = await selector.select(files.map(file => ({ file })));
         this.context.stderr.write(`nzyme git affected --suite ${suite}: ${describeTestSelection(selection)}\n`);
@@ -597,7 +603,7 @@ function validatePlainArgs(args: AffectedArgs): void {
     }
 }
 
-/** `--suite` over test files: the patterns default to the suite's. */
+/** `--suite` over test files: the patterns default to the suite's, when it has them. */
 function validateSuiteFileArgs(args: AffectedArgs): void {
     if (args.testListOut !== undefined) {
         throw new UsageError('--test-list-out needs --units <file>.');
@@ -667,7 +673,9 @@ function describeRecording(recording: JunitRecording): string {
         parts.push(`${recording.refused.length} not recorded (${refusals.join(', ')})`);
     }
     if (recording.unreported.length > 0) {
-        parts.push(`${recording.unreported.length} without a passing testcase in the report`);
+        parts.push(
+            `${recording.unreported.length} not passed in full in the report (a testcase skipped, or not reported)`,
+        );
     }
     return parts.join(' · ');
 }

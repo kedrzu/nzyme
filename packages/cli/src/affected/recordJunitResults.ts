@@ -25,15 +25,18 @@ export interface JunitRecording {
     failed: TestUnit[];
     /** Variants removed for the failed files. */
     invalidated: number;
-    /** Ran, but in the report with every testcase skipped, or not at all (a file that failed to load). */
+    /**
+     * Ran, but in the report with a testcase skipped (a name-filtered run covers only part of a file),
+     * or not at all (a file that failed to load).
+     */
     unreported: string[];
 }
 
 /**
  * Records, per test file, the outcome of a run from its JUnit report: a file all of whose testcases
  * passed gets a variant (its entry is the file itself; imports are followed), a file with any failure
- * has its matching variants invalidated, so it runs again. A file the report does not show passing is
- * never recorded. Throws when the report cannot be read.
+ * has its matching variants invalidated, so it runs again. A file the report does not show passing in
+ * full (a testcase skipped, or not reported at all) is neither recorded nor invalidated. Throws when the report cannot be read.
  *
  * Report paths are absolute or relative to the runner's root, which need not be the git root
  * (vitest's `root`): one is matched to a ran file exactly, else by path suffix when that is unique.
@@ -64,7 +67,10 @@ export async function recordJunitResults(options: RecordJunitResultsOptions): Pr
     return recording;
 }
 
-/** Maps each ran file to its outcome in the report; a failure wins over anything else reported for it. */
+/**
+ * Maps each ran file to its outcome in the report: a failure wins over anything else reported for it,
+ * and a skip over a pass.
+ */
 function matchRanFiles(
     results: readonly JunitFileResult[],
     ranFiles: readonly string[],
@@ -79,7 +85,7 @@ function matchRanFiles(
             continue;
         }
         const current = statuses.get(file);
-        if (current === undefined || current === 'skipped' || result.status === 'failed') {
+        if (current === undefined || current === 'passed' || result.status === 'failed') {
             statuses.set(file, result.status);
         }
     }

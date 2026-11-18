@@ -93,15 +93,16 @@ jobs:
       - name: Format
         run: bun run format:check
 
-      # `bun run test` (not `bun test`) — `test` is a bun builtin; the bare form would ignore the script.
-      - name: Test
-        run: bun run test
-
-      # The browser build has to match the `playwright` that `@nzyme/vue` installed, so it is installed
-      # through that package's own binary rather than a global `playwright`.
+      # Before the tests: `@nzyme/stealth-browser`'s tests launch a real Chromium, as do the component
+      # tests. The browser build has to match the `playwright` that `@nzyme/vue` installed, so it is
+      # installed through that package's own binary rather than a global `playwright`.
       - name: Install Chromium
         working-directory: packages/vue
         run: bun x playwright install --with-deps chromium
+
+      # `bun run test` (not `bun test`) — `test` is a bun builtin; the bare form would ignore the script.
+      - name: Test
+        run: bun run test
 
       - name: Component tests
         run: bun run test:components

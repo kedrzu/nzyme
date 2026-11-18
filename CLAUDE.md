@@ -16,7 +16,8 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
   - `tsconfig`, `eslint` (also the oxlint preset), `oxlint` (custom rules), `project-utils`,
     `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`
 - **Integrations:** `aws`, `pulumi`, `slack`, `apis`, `bitwarden` (a Secrets Manager store for `secrets`),
-  `discord-cli` (the Discord REST API through `openapi-cli`, as a bot)
+  `discord-cli` (the Discord REST API through `openapi-cli`, as a bot), `stealth-browser` (a stealth Chrome over CDP
+  for AI agents: launch, proxy, CLI)
 - **Private, never published:** `github-cli`, `linear`, `sentry-cli`, `logging-ui`
 
 `bun run index` (also run by setup) generates a gitignored code map:

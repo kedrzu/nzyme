@@ -138,22 +138,6 @@ test('without a command, prints the selected files on stdout', async () => {
     expect(result.stdout).toBe(`${VALUE_TEST}\n${USES_TEST}\n`);
 });
 
-test('--full runs every file, invalidates a failed one and reports that the selection skipped it', async () => {
-    await runSuite({});
-
-    const full = await runSuite({ FAIL: USES_TEST }, ['--full']);
-
-    expect(full.exitCode).toBe(1);
-    expect(await readRan()).toHaveLength(3);
-    expect(full.stderr).toContain('1 failed (1 variants invalidated)');
-    expect(full.stderr).toContain(`${USES_TEST} failed, yet the selection skipped it (variant)`);
-
-    const next = await runSuite({});
-
-    expect(next.stderr).toContain('1 run (affected since base)');
-    expect(await readRan()).toEqual([USES_TEST]);
-});
-
 test('--per-package reads the report after each package, so every package records its files', async () => {
     // The runner sees paths relative to the package, as vitest reports them.
     const first = await runSuite({ FAIL: 'src/value.test.ts' }, ['--per-package']);
@@ -345,6 +329,7 @@ test.each([
     [['--suite', 'e2e', '--record', 'r.ndjson'], '--record needs --snapshot <file>'],
     [['--suite', 'e2e', '--record', 'r.ndjson', '--snapshot', 's.json', '*.spec.ts'], '--record takes no patterns'],
     [['--suite', 'unit', '--snapshot', 's.json'], '--snapshot needs --units <file> or --record <file>.'],
+    [['--suite', 'unit', '--full', '--', 'true'], '--full needs --record <file>'],
     [['--suite', 'nope'], 'Unknown test suite "nope"'],
 ])('%p is refused', async (args, message) => {
     const result = await runAffected(args);

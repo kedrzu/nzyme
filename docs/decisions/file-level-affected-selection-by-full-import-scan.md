@@ -118,9 +118,9 @@ and what they hash: `variant-based-test-selection.md`.
   `--test-list` format. Playwright trims each `›`-separated token and matches the title path as a
   prefix, so a title it could not read back cuts the line there: it selects more tests, never fewer.
   Recording an e2e test is the reporter's job, not this command's.
-- **The self-check is local to `--full`.** Only a run that executes tests the selection skipped can
-  find one that fails while a variant claims nothing changed; `--full` runs every file, selects anyway
-  and reports such a file as a hole in what the selection sees, after invalidating its variants.
+- **A static suite has no self-check.** Only a run that executes tests the selection skipped can
+  find one that fails while a variant claims nothing changed, and a static suite's full run goes around
+  the selection (the consumer runs every file directly). The traced suite keeps one: `--record --full`.
 - **stdout stays the contract.** Without `--suite` nothing changed; with it the output, the command
   and the empty-selection rule are the same, and the summary with reasons
   (`2 run (changed: a.ts) · 40 skipped (variant match)`) goes to stderr.

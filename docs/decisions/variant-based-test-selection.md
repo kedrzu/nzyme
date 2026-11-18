@@ -91,8 +91,9 @@ Two hashes per file, in `@nzyme/affected`.
 - **Bun-only core, recording in the CLI.** Fingerprinting uses `Bun.Transpiler`, so `@nzyme/affected`
   runs on Bun. Playwright's runner and reporters run on Node, so the reporter only writes a results file;
   `nzyme git affected --record` records it against the selection snapshot taken before the run.
-- **Self-check.** `--full` runs everything, selects anyway and reports a failed test the selection would
-  have skipped as a tracing gap.
+- **Self-check.** A traced run under `--record --full` runs everything, selects anyway and reports a
+  failed test the selection would have skipped as a tracing gap. A static suite has none: its full run
+  goes around the selection.
 
 How a traced test's execution is attributed to it is the consumer's decision (healed:
 `docs/decisions/e2e-test-attribution-by-label-and-time-window.md`); keeping the trust it relies on

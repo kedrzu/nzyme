@@ -46,7 +46,7 @@ export class GitAffectedCommand extends Command {
         description: 'Select the files a change can affect, and print them or run a command on them',
         details: `
             Usage: \`nzyme git affected [--base|-b <ref>] [--per-package] <pattern…> [-- <cmd…>]\`,
-            \`nzyme git affected --suite <name> [--per-package] [--junit <file>] [--full] [<pattern…>] [-- <cmd…>]\`,
+            \`nzyme git affected --suite <name> [--per-package] [--junit <file>] [<pattern…>] [-- <cmd…>]\`,
             \`nzyme git affected --suite <name> --units <file> --test-list-out <file> [--snapshot <file>]\`
             or \`nzyme git affected --suite <name> --record <file> --snapshot <file> [--full]\`.
 
@@ -80,13 +80,11 @@ export class GitAffectedCommand extends Command {
             current code; one without a variant runs (a traced suite) or is selected by the base
             diff as above (a static suite). The patterns default to the suite's, when it has them; the output, the
             command and the empty-selection rule are the same. A summary with the reasons goes to
-            stderr. \`--full\` runs every test of the suite, still selecting, for the audit below.
+            stderr.
 
             \`--junit <file>\` (with \`--suite\` and a command): after the command, reads the
             JUnit report it wrote (bun test, vitest) and records a variant of each test file whose
-            testcases all passed; a file with a failure has its matching variants invalidated, and
-            one the selection skipped yet failed (under \`--full\`) is reported as a hole in what
-            the selection sees. The file is deleted before each run, so a run that writes no report
+            testcases all passed; a file with a failure has its matching variants invalidated. The file is deleted before each run, so a run that writes no report
             records nothing rather than a stale one; with \`--per-package\` it is read after each
             package's run, before the next overwrites it — pass the command an absolute path, as
             it runs in the package directory. An unreadable report records nothing; the exit code
@@ -213,10 +211,7 @@ export class GitAffectedCommand extends Command {
         const selection = await selector.select(files.map(file => ({ file })));
         this.context.stderr.write(`nzyme git affected --suite ${suite}: ${describeTestSelection(selection)}\n`);
 
-        const selected = args.full ? files : selection.run.map(test => test.unit.file);
-        if (args.full) {
-            this.context.stderr.write(`nzyme git affected: --full runs all ${files.length} files\n`);
-        }
+        const selected = selection.run.map(test => test.unit.file);
         if (selected.length === 0) {
             this.context.stderr.write('no affected files\n');
             return 0;
@@ -251,7 +246,7 @@ export class GitAffectedCommand extends Command {
             },
         });
         if (recordings.length > 0) {
-            this.reportRecording(mergeRecordings(recordings), selector, selection);
+            this.context.stderr.write(`${describeRecording(mergeRecordings(recordings))}\n`);
         }
         return exitCode;
     }
@@ -342,22 +337,6 @@ export class GitAffectedCommand extends Command {
     }
 
     /**
-     * Prints what was recorded, then the failed files the selection had skipped (only an explicit
-     * `--full` run executes those): a dependency neither a variant nor the import graph saw. Their
-     * matching variants are already invalidated, as are those of every failed file.
-     */
-    private reportRecording(recording: JunitRecording, selector: TestSelector, selection: TestSelection): void {
-        const { stderr } = this.context;
-        stderr.write(`${describeRecording(recording)}\n`);
-        for (const { unit, reason } of selector.audit(recording.failed, selection)) {
-            stderr.write(
-                `nzyme git affected: ${unit.file} failed, yet the selection skipped it (${reason.kind}) — ` +
-                    'a dependency it does not see; its variants were invalidated\n',
-            );
-        }
-    }
-
-    /**
      * Runs the command on `files`, once or per owning package; an interrupt stops the run after the
      * current package. With `junit`, the report is deleted before each run and handed over after it.
      */
@@ -429,7 +408,7 @@ interface AffectedArgs {
     snapshot?: string;
     /** `--record <file>`: the results file of a traced run, to record. */
     record?: string;
-    /** `--full`: run every test of the suite; the selection is still made, for the audit. */
+    /** `--full` (with `--record`): report the failed tests the selection would have skipped. */
     full: boolean;
 }
 
@@ -528,7 +507,7 @@ function isHelpRequest(argv: string[]): boolean {
 }
 
 /**
- * Parses `[--base <ref>|-b <ref>] [--per-package] [--suite <name> [--junit <file>] [--full] | --suite
+ * Parses `[--base <ref>|-b <ref>] [--per-package] [--suite <name> [--junit <file>] | --suite
  * <name> --units <file> --test-list-out <file> [--snapshot <file>] | --suite <name> --record <file>
  * --snapshot <file> [--full]] <pattern…> [-- <cmd…>]`. A value option also takes
  * `--name=<value>`. Options may stand anywhere before `--`; everything after it is the command, untouched.
@@ -616,6 +595,9 @@ function validateSuiteFileArgs(args: AffectedArgs): void {
     }
     if (args.junit !== undefined && !args.command) {
         throw new UsageError('--junit needs the command that writes the report after `--`.');
+    }
+    if (args.full) {
+        throw new UsageError('--full needs --record <file>: only a traced run is audited.');
     }
 }
 

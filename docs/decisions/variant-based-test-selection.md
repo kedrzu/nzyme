@@ -20,7 +20,7 @@ The idea: record, from a passing run, what a test depended on together with the 
 (unit, stories) takes the dependencies from the import graph; a traced suite (e2e) from what the
 `@nzyme/trace` probe saw the test execute. The open questions are what to hash and where to keep it.
 
-> **Measured 2026-11-16 on healed** (`.context/trace-spike/` there): the e2e stack loads 717 modules; the
+> **Measured 2026-11-16 in a spike on a consuming project**: the e2e stack loads 717 modules; the
 > files the widest test (`journeys/consultation.spec.ts`) executed, plus everything they import, cover
 > 557 of them (78%). Loading a module is not using it: at startup every module's top level runs, but
 > function bodies run only when a test needs them.

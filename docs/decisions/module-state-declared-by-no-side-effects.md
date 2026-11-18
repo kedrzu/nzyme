@@ -13,8 +13,8 @@ primed a cache or a registry, and its variant then lacks the code that did it. S
 module level, so it has to be visible there: everything a module creates at load time is either
 immutable or made by a factory someone has vouched for.
 
-> **Measured 2026-11-16 on healed's e2e stack** (717 modules, `.context/trace-spike/global-state.ts`
-> there): about 13 places hold module-level state — constant sets, memoisation caches, two `let`s and one
+> **Measured 2026-11-16 in a spike on a consuming project's e2e stack** (717 modules):
+> about 13 places hold module-level state — constant sets, memoisation caches, two `let`s and one
 > registry. Top-level initialisers call 63 distinct functions, most of them `define*` factories and
 > `z.*` schema builders.
 

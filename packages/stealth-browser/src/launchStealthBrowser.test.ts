@@ -407,6 +407,23 @@ test('clients of two groups see and drive only their own pages', async () => {
     expect(mentions(a, targetB)).toBe(false);
 }, 30_000);
 
+test("a popup a client's command opens joins its group and becomes the group's last used over its opener", async () => {
+    const browser = await startBrowser();
+    const client = connectClient(browser, 'group-a');
+    const opener = await createTarget(client);
+    const sessionId = await attachClient(client, opener);
+    await evaluateIn(client, sessionId, '1');
+    expect(browser.groups.lastUsed('group-a')).toBe(opener);
+
+    // Opened while the command runs, so the popup is claimed before the browser answers it.
+    await evaluateIn(client, sessionId, "window.open('about:blank', '_blank', 'popup'); 1", { userGesture: true });
+    await waitUntil(() => browser.groups.targets('group-a').length === 2, { timeoutMs: TIMEOUT_MS });
+
+    const popup = browser.groups.targets('group-a').find(targetId => targetId !== opener);
+    expect(popup).toBeString();
+    expect(browser.groups.lastUsed('group-a')).toBe(popup);
+}, 30_000);
+
 test('a page, its frame, its worker and its service worker all name Google Chrome from their first script', async () => {
     const browser = await startBrowser();
     const client = connectClient(browser, 'group-a');

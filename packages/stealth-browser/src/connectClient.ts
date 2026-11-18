@@ -249,9 +249,11 @@ export function connectClient<D>(params: ConnectClientParams<D>): CdpClient {
         }
     }
 
+    /**
+     * Runs a decision. A let-through command makes its session's target the group's last used before it is sent, so a
+     * popup the command opens, claimed when it appears, comes after it.
+     */
     async function execute(id: number, decision: StealthDecision) {
-        /** The session a let-through command acted on: its target is the group's last used once the browser answered. */
-        let sessionId: string | undefined;
         try {
             switch (decision.type) {
                 case 'reply':
@@ -261,15 +263,15 @@ export function connectClient<D>(params: ConnectClientParams<D>): CdpClient {
                     sendError(id, SERVER_ERROR, decision.message);
                     return;
                 case 'isolate':
-                    sessionId = decision.call.sessionId;
+                    touchSession(decision.call.sessionId);
                     sendReply(id, await worlds.send(decision.call));
                     return;
                 case 'createWorld':
-                    sessionId = decision.sessionId;
+                    touchSession(decision.sessionId);
                     sendReply(id, await worlds.createClientWorld(decision.sessionId, decision.world));
                     return;
                 case 'forward':
-                    sessionId = decision.sessionId;
+                    touchSession(decision.sessionId);
                     sendReply(id, await forward(decision.method, decision.params, decision.sessionId));
                     break;
             }
@@ -279,8 +281,6 @@ export function connectClient<D>(params: ConnectClientParams<D>): CdpClient {
             } else {
                 sendError(id, SERVER_ERROR, error instanceof Error ? error.message : 'The command failed');
             }
-        } finally {
-            touchSession(sessionId);
         }
     }
 

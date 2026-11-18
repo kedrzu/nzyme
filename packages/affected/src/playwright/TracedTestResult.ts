@@ -1,5 +1,7 @@
 import { readFile } from 'node:fs/promises';
 
+import { isErrorCode } from '@nzyme/utils/isErrorCode.js';
+
 import type { TestUnit } from '../store/VariantStore.js';
 
 /**
@@ -53,7 +55,7 @@ export async function readTracedTestResults(file: string): Promise<TracedTestRes
     try {
         text = await readFile(file, 'utf8');
     } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (isErrorCode(error, 'ENOENT')) {
             return [];
         }
         throw error;

@@ -159,6 +159,7 @@
         "@nzyme/ioc": "workspace:*",
         "@nzyme/logging": "workspace:*",
         "@nzyme/types": "workspace:*",
+        "@nzyme/utils": "workspace:*",
       },
       "devDependencies": {
         "@nzyme/ioc-testing": "workspace:*",
@@ -739,6 +740,7 @@
         "@jridgewell/trace-mapping": "^0.3.31",
         "@nzyme/affected": "workspace:*",
         "@nzyme/project-utils": "workspace:*",
+        "@nzyme/utils": "workspace:*",
         "hash-wasm": "^4.12.0",
         "oxc-parser": "^0.152.0",
       },

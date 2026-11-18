@@ -3,6 +3,7 @@ import { mkdir, readdir, readFile, rename, rm, rmdir, stat, unlink, utimes, writ
 import path from 'node:path';
 
 import { GitRepository } from '@nzyme/project-utils/git/GitRepository.js';
+import { isErrorCode } from '@nzyme/utils/isErrorCode.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
 import { getMd5Hash } from '@nzyme/crypto';
@@ -283,10 +284,6 @@ async function ignoreMissing<T>(promise: Promise<T>): Promise<T | undefined> {
         }
         throw error;
     }
-}
-
-function isErrorCode(error: unknown, code: string): boolean {
-    return error instanceof Error && 'code' in error && error.code === code;
 }
 
 /** A stored variant, or `undefined` for anything that is not one of the current version. */

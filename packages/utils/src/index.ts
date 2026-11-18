@@ -64,6 +64,7 @@ export * from './getMailToUrl.js';
 export * from './getObjectEntries.js';
 export * from './getObjectKeys.js';
 export * from './getTopLevelDomain.js';
+export * from './isErrorCode.js';
 export * from './isFunction.js';
 export * from './isPlainObject.js';
 export * from './map.js';

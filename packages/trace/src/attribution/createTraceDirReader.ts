@@ -1,6 +1,8 @@
 import { open, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
+import { isErrorCode } from '@nzyme/utils/isErrorCode.js';
+
 import type { TraceLine } from '../TraceLine.js';
 import type { TraceProcess } from './TraceProcess.js';
 
@@ -28,7 +30,7 @@ export function createTraceDirReader(traceDir: string): TraceDirReader {
         try {
             names = await readdir(traceDir);
         } catch (error) {
-            if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            if (isErrorCode(error, 'ENOENT')) {
                 return [];
             }
             throw error;

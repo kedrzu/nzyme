@@ -18,6 +18,12 @@ export interface BrandOverride {
     start(): Promise<void>;
     /** Brands the targets the proxy's auto-attach holds; call it with every event, after the registry observed it. */
     observe(event: CdpEvent): void;
+    /**
+     * Settles once the browser has answered the brand of a target: navigate a new page only then. Sent before it, the
+     * first navigation can commit, under load, with the browser's own name (a page then read Chromium in about 1 of 20
+     * runs). Settles at once for a target the brand never held.
+     */
+    whenBranded(targetId: string): Promise<void>;
 }
 
 /** What the brand needs of its browser run. */
@@ -57,8 +63,10 @@ const READ_IDENTITY = `navigator.userAgentData
 export function createBrandOverride(params: CreateBrandOverrideParams): BrandOverride {
     const { send, registry, logger } = params;
     let override: UserAgentOverride | null = null;
+    /** The answer to each held target's brand, until the target is destroyed. */
+    const brandings = new Map<string, Promise<void>>();
 
-    return { start, observe };
+    return { start, observe, whenBranded: targetId => brandings.get(targetId) ?? Promise.resolve() };
 
     async function start() {
         override = buildChromeBrand(...(await readIdentity()));
@@ -66,6 +74,13 @@ export function createBrandOverride(params: CreateBrandOverrideParams): BrandOve
     }
 
     function observe(event: CdpEvent) {
+        if (event.method === 'Target.targetDestroyed') {
+            const targetId = isPlainObject(event.params) ? event.params['targetId'] : undefined;
+            if (typeof targetId === 'string') {
+                brandings.delete(targetId);
+            }
+            return;
+        }
         if (event.method !== 'Target.attachedToTarget') {
             return;
         }
@@ -76,7 +91,7 @@ export function createBrandOverride(params: CreateBrandOverrideParams): BrandOve
         }
 
         if (override != null && BRANDED_TYPES.has(info.type)) {
-            void sendOnSession('Emulation.setUserAgentOverride', override, sessionId);
+            brandings.set(info.targetId, sendOnSession('Emulation.setUserAgentOverride', override, sessionId));
             void sendOnSession('Target.setAutoAttach', HOLD_NEW_TARGETS, sessionId);
             void sendOnSession('Runtime.runIfWaitingForDebugger', {}, sessionId);
         } else {
@@ -125,6 +140,7 @@ export function createBrandOverride(params: CreateBrandOverrideParams): BrandOve
         if (typeof targetId !== 'string') {
             throw new TypeError('Target.createTarget gave no target id');
         }
+        registry.claimProxyTarget(targetId);
         try {
             const sessionId = await attachTargetSession({ send, registry, originator: { type: 'proxy' }, targetId });
             await send('Page.navigate', { url: IDENTITY_PAGE_URL }, sessionId);

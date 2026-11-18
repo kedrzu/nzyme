@@ -11,19 +11,26 @@ import { withTimeout } from '@nzyme/utils/withTimeout.js';
 import { attachTargetSession } from './attachTargetSession.js';
 import { buildStealthArgs } from './buildStealthArgs.js';
 import { CdpError } from './CdpTypes.js';
-import type { CdpErrorReply, CdpEvent } from './CdpTypes.js';
+import type { CdpErrorReply, CdpEvent, CdpPolicy, CdpSocket } from './CdpTypes.js';
+import { connectClient } from './connectClient.js';
+import type { CdpClient } from './connectClient.js';
 import { createBrandOverride } from './createBrandOverride.js';
 import { createSessionRegistry } from './createSessionRegistry.js';
 import { splitPipeFrames } from './splitPipeFrames.js';
 
-/** How the browser is launched. */
-export interface LaunchStealthBrowserOptions {
+/** How the browser is launched, and what its clients may do. */
+export interface LaunchStealthBrowserOptions<D = unknown> {
     /** The Chrome (or Chrome for Testing) binary. */
     executablePath: string;
     /** The profile folder: cookies and logins live here. */
     userDataDir: string;
     /** Appended to the base command line, e.g. `--headless=new`. */
     args?: string[];
+    /**
+     * Judges each client request after the proxy's session and target checks and before its stealth rules, which no
+     * policy can lift; `D` is the data the caller passes to `connect` for each client.
+     */
+    policy?: CdpPolicy<D>;
     /** How long configuring the started browser, reading its identity included, may take; 15 s by default. */
     startTimeoutMs?: number;
     logger?: Logger;
@@ -45,11 +52,19 @@ export interface StealthBrowserGroups {
     lastUsed(group: string): string | undefined;
 }
 
+/** A client `connect` adds. */
+export interface StealthBrowserClientOptions<D = unknown> {
+    /** The group whose pages the client sees and the pages it creates join; none: every page but the proxy's own. */
+    group?: string;
+    /** Handed to the policy with each of the client's requests. */
+    data: D;
+}
+
 /**
  * A launched browser driven over `--remote-debugging-pipe`, so no other local process can reach it. Every page and
  * worker in it names itself Google Chrome from its first script on.
  */
-export interface StealthBrowser {
+export interface StealthBrowser<D = unknown> {
     pid: number;
     /** Settles once the process is gone; pending calls are rejected by then. */
     exited: Promise<StealthBrowserExit>;
@@ -61,12 +76,19 @@ export interface StealthBrowser {
     send(method: string, params?: object, sessionId?: string): Promise<unknown>;
     /**
      * Attaches a flat session to `targetId` that belongs to the browser's owner, never to a client, and resolves with its
-     * id. The caller detaches it with `Target.detachFromTarget` when done.
+     * id once the browser has answered the target's brand, so a new page navigated on the session reads the brand from
+     * its first script. The caller detaches it with `Target.detachFromTarget` when done.
      */
     attach(targetId: string): Promise<string>;
     /** Subscribes to every CDP event, delivered after the session registry and the brand saw it; returns the unsubscribe. */
     onEvent(listener: (event: CdpEvent) => void): () => void;
     groups: StealthBrowserGroups;
+    /**
+     * Connects a client: the caller feeds it the socket's messages (`receive`) and tells it when the socket closed
+     * (`close`). Its commands go through the proxy's checks, the policy and the stealth rules; it sees only its own
+     * sessions and the targets of its group. When the browser exits, the socket is closed with 1011.
+     */
+    connect(socket: CdpSocket, client: StealthBrowserClientOptions<D>): CdpClient;
     /** Closes the browser and resolves once its process is gone. */
     close(): Promise<void>;
 }
@@ -77,6 +99,14 @@ interface PendingCall {
     reject(error: Error): void;
 }
 
+/** A connected client and its socket, closed when the browser exits. */
+interface ConnectedClient {
+    socket: CdpSocket;
+    client: CdpClient;
+}
+
+/** WebSocket close code: the server met a condition it cannot go on from. */
+const CLOSE_SERVER_ERROR = 1011;
 /** How long configuring the browser at launch, reading its own identity included, may take before the launch fails. */
 const START_TIMEOUT_MS = 15_000;
 /** How long `close` waits for the browser to exit on its own before killing it. */
@@ -89,13 +119,17 @@ const STDERR_TAIL_LENGTH = 2000;
  * nothing reaches the browser before it is configured. When configuring fails or takes longer than `startTimeoutMs`
  * (a browser that never answers), the process is killed and the launch rejects.
  */
-export async function launchStealthBrowser(options: LaunchStealthBrowserOptions): Promise<StealthBrowser> {
+export async function launchStealthBrowser<D = unknown>(
+    options: LaunchStealthBrowserOptions<D>,
+): Promise<StealthBrowser<D>> {
     const logger = options.logger ?? createLogger('StealthBrowser');
     const startTimeoutMs = options.startTimeoutMs ?? START_TIMEOUT_MS;
     const registry = createSessionRegistry();
     const pending = new Map<number, PendingCall>();
     const listeners = new Set<(event: CdpEvent) => void>();
+    const clients = new Set<ConnectedClient>();
     let lastId = 0;
+    let lastClientId = 0;
     let running = true;
     let closing = false;
     let stderrTail = '';
@@ -135,7 +169,7 @@ export async function launchStealthBrowser(options: LaunchStealthBrowserOptions)
             },
         });
     } catch (error) {
-        logger.error('The browser could not be configured', { error });
+        logger.error('The browser could not be configured', { error, pid });
         child.kill('SIGKILL');
         await exited;
         throw error;
@@ -153,6 +187,7 @@ export async function launchStealthBrowser(options: LaunchStealthBrowserOptions)
             targets: group => registry.getTargets(group),
             lastUsed: group => registry.lastUsed(group),
         },
+        connect,
         close,
     };
 
@@ -169,6 +204,8 @@ export async function launchStealthBrowser(options: LaunchStealthBrowserOptions)
     }
 
     async function attach(targetId: string) {
+        // Navigated before the brand is answered, a new page's first script can read the browser's own name under load.
+        await brand.whenBranded(targetId);
         const sessionId = await attachTargetSession({ send, registry, originator: { type: 'proxy' }, targetId });
         registry.claimSession({ type: 'proxy' }, sessionId, targetId);
         return sessionId;
@@ -178,6 +215,36 @@ export async function launchStealthBrowser(options: LaunchStealthBrowserOptions)
         listeners.add(listener);
         return () => {
             listeners.delete(listener);
+        };
+    }
+
+    function connect(socket: CdpSocket, client: StealthBrowserClientOptions<D>): CdpClient {
+        const connected: ConnectedClient = {
+            socket,
+            client: connectClient({
+                clientId: `client-${++lastClientId}`,
+                group: client.group,
+                data: client.data,
+                socket,
+                send,
+                registry,
+                brand,
+                onEvent,
+                policy: options.policy,
+                logger,
+            }),
+        };
+        if (!running) {
+            closeClient(connected);
+            return connected.client;
+        }
+        clients.add(connected);
+        return {
+            receive: text => connected.client.receive(text),
+            close: () => {
+                clients.delete(connected);
+                connected.client.close();
+            },
         };
     }
 
@@ -275,6 +342,10 @@ export async function launchStealthBrowser(options: LaunchStealthBrowserOptions)
         }
         pending.clear();
         registry.clear();
+        for (const connected of clients) {
+            closeClient(connected);
+        }
+        clients.clear();
         if (closing) {
             logger.info('The browser closed', { code, signal });
         } else {
@@ -282,6 +353,12 @@ export async function launchStealthBrowser(options: LaunchStealthBrowserOptions)
         }
         return { code, signal };
     }
+}
+
+/** Closes a client's socket and the client: the browser it drove is gone. */
+function closeClient(connected: ConnectedClient) {
+    connected.client.close();
+    connected.socket.close(CLOSE_SERVER_ERROR, 'The browser exited');
 }
 
 /** The browser's stderr and its two ends of the debugging pipe; kills the browser when one is missing. */

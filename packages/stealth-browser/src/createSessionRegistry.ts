@@ -15,6 +15,13 @@ export interface SessionRegistry {
     observe(event: CdpEvent): void;
     /** Gives a target to a group, e.g. the page a client's `Target.createTarget` made; counts as a use. */
     claimTarget(group: string, targetId: string): void;
+    /**
+     * Marks a target the proxy opened for itself, e.g. the page it reads the browser's identity in: no client sees or
+     * names it, grouped or not. Forgotten once the target is destroyed.
+     */
+    claimProxyTarget(targetId: string): void;
+    /** Whether a target is the proxy's own (`claimProxyTarget`). */
+    isProxyTarget(targetId: string): boolean;
     /** Gives a session on `targetId` to an originator, e.g. from a `Target.attachToTarget` reply. */
     claimSession(originator: SessionOriginator, sessionId: string, targetId: string): void;
     /**
@@ -59,6 +66,7 @@ interface ExpectedAttach {
  */
 export function createSessionRegistry(): SessionRegistry {
     const targetGroups = new Map<string, string>();
+    const proxyTargets = new Set<string>();
     const sessions = new Map<string, SessionRecord>();
     /** Pending top-level attaches per target, in the order they were sent: the browser answers the pipe in order. */
     const expectedAttaches = new Map<string, ExpectedAttach[]>();
@@ -69,6 +77,10 @@ export function createSessionRegistry(): SessionRegistry {
     return {
         observe,
         claimTarget,
+        claimProxyTarget: targetId => {
+            proxyTargets.add(targetId);
+        },
+        isProxyTarget: targetId => proxyTargets.has(targetId),
         claimSession,
         expectAttach,
         getTargetGroup: targetId => targetGroups.get(targetId),
@@ -200,6 +212,7 @@ export function createSessionRegistry(): SessionRegistry {
 
     function forgetTarget(targetId: string) {
         targetGroups.delete(targetId);
+        proxyTargets.delete(targetId);
         touchedAt.delete(targetId);
         expectedAttaches.delete(targetId);
         for (const [sessionId, session] of sessions) {
@@ -211,6 +224,7 @@ export function createSessionRegistry(): SessionRegistry {
 
     function clear() {
         targetGroups.clear();
+        proxyTargets.clear();
         sessions.clear();
         expectedAttaches.clear();
         touchedAt.clear();

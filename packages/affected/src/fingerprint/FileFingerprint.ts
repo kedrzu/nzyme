@@ -10,8 +10,8 @@ export interface FileFingerprint {
 }
 
 /**
- * A file's fingerprint, or `'whole'` when it has no structure to split — not a script, or a script
- * that does not parse. A `'whole'` file counts as changed as a whole whenever its bytes change, and
+ * A file's fingerprint, or `'whole'` when it has no structure to split — not a script, SFC or
+ * stylesheet, or one that does not parse. A `'whole'` file counts as changed as a whole whenever its bytes change, and
  * comparing the bytes is the caller's job.
  */
 export type FileFingerprintResult = FileFingerprint | 'whole';

@@ -45,6 +45,33 @@ test('comments and formatting in script setup change no hash', () => {
     expect(changedParts(base, after)).toEqual([]);
 });
 
+test('comments in a style block change no hash', () => {
+    const scss = base.replace('<style scoped>', '<style scoped lang="scss">');
+    expect(changedParts(scss, scss.replace('.card { color: red; }', '.card { color: red; } // note'))).toEqual([]);
+    expect(changedParts(scss, scss.replace('color: red;', '/* why */ color: red;'))).toEqual([]);
+    expect(changedParts(base, base.replace('color: red;', '/* why */ color: red;'))).toEqual([]);
+});
+
+test('comment markers in style strings and urls are content', () => {
+    const scss = base.replace('<style scoped>', '<style scoped lang="scss">');
+    const withUrl = scss.replace('color: red;', 'background: url(http://a/b.png);');
+    expect(changedParts(withUrl, withUrl.replace('http://a/b.png', 'http://a/c.png'))).toEqual(['body']);
+
+    const withQuotedUrl = scss.replace('color: red;', 'background: url("//cdn/a.png");');
+    expect(changedParts(withQuotedUrl, withQuotedUrl.replace('//cdn/a.png', '//cdn/b.png'))).toEqual(['body']);
+
+    const withContent = scss.replace('color: red;', 'content: "//x";');
+    expect(changedParts(withContent, withContent.replace('"//x"', '"//y"'))).toEqual(['body']);
+
+    const withOpener = scss.replace('color: red; }', "content: '/*'; color: red; } /* end */");
+    expect(changedParts(withOpener, withOpener.replace('color: red', 'color: blue'))).toEqual(['body']);
+});
+
+test('// is not a comment in a plain CSS style block', () => {
+    const withSlashes = base.replace('color: red;', 'color: red; //x');
+    expect(changedParts(withSlashes, withSlashes.replace('//x', '//y'))).toEqual(['body']);
+});
+
 test('a plain script is split like a module', () => {
     expect(changedParts(base, base.replace("'card_'", "'panel_'"))).toEqual(['body']);
     expect(changedParts(base, base.replace("['sm', 'lg']", "['sm', 'md', 'lg']"))).toEqual(['top']);

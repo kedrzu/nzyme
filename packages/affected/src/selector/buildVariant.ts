@@ -45,7 +45,7 @@ export type BuildVariantResult = { variant: Variant } | { missing: string };
  *   `import('…')` is not followed: a lazily loaded module the test reached ran, so it is an executed
  *   file itself. Except a file a server process ran anywhere in the run: in full, since code that
  *   ran once and kept state (a lazy singleton's setup) served this test too;
- * - assets — by bytes (they have no structure to split).
+ * - assets — in full; most have no structure to split, so they are hashed by bytes.
  *
  * A file whose structure cannot be split is hashed by its bytes at any level. The suite fingerprint
  * (see {@link buildSuiteFingerprint}) is scanned from these files and the startup files.

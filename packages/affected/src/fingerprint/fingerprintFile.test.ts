@@ -98,6 +98,18 @@ test('TSX and JS modules are split like TS', () => {
     expect(changedParts('a.mjs', js, `import { c } from './c.js';\n${js}`)).toEqual(['top']);
 });
 
+test('a stylesheet ignores comments and formatting, and any other change changes both hashes', () => {
+    const scss = `$gap: 4px;\n.card {\n    margin: $gap;\n    background: url(http://a/b.png);\n}\n`;
+    const commented = `// Card spacing.\n$gap: 4px; /* base unit */\n.card { margin: $gap;   background: url(http://a/b.png); }`;
+    expect(changedParts('card.scss', scss, commented)).toEqual([]);
+    expect(changedParts('card.scss', scss, scss.replace('4px', '8px'))).toEqual(['body', 'top']);
+    expect(changedParts('card.less', scss, scss.replace('b.png', 'c.png'))).toEqual(['body', 'top']);
+
+    const css = '.card { color: red; }';
+    expect(changedParts('card.css', css, `/* Card. */\n${css}`)).toEqual([]);
+    expect(changedParts('card.css', css, css.replace('red', 'blue'))).toEqual(['body', 'top']);
+});
+
 test('a non-script file is whole', () => {
     expect(fingerprintFile('logo.png', 'PNG')).toBe('whole');
     expect(fingerprintFile('config.json', '{}')).toBe('whole');

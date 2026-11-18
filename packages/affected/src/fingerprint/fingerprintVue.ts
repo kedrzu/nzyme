@@ -5,6 +5,8 @@ import { parseSync } from 'oxc-parser';
 import type { FileFingerprintResult } from './FileFingerprint.js';
 import { fingerprintScript } from './fingerprintScript.js';
 import type { ScriptLoader } from './fingerprintScript.js';
+import { normalizeStyle } from './fingerprintStyle.js';
+import { normalizeWhitespace } from './normalizeWhitespace.js';
 import { getMd5Hash } from '@nzyme/crypto';
 
 /**
@@ -13,8 +15,8 @@ import { getMd5Hash } from '@nzyme/crypto';
  * is fingerprinted like a script module: its function bodies join `body`, its rest is `top`.
  *
  * `<script setup>` keeps its types: `defineProps<T>()` and `defineEmits<T>()` compile them into
- * runtime declarations. Only its comments and formatting are ignored; the other blocks ignore
- * formatting only. Block attributes (`lang`, `scoped`, `src`, …) are part of the hash.
+ * runtime declarations. Its comments and formatting are ignored, and so are those of `<style>`
+ * (see {@link normalizeStyle}); the other blocks ignore formatting only. Block attributes (`lang`, `scoped`, `src`, …) are part of the hash.
  * @__NO_SIDE_EFFECTS__
  */
 export function fingerprintVue(path: string, content: string): FileFingerprintResult {
@@ -24,10 +26,13 @@ export function fingerprintVue(path: string, content: string): FileFingerprintRe
     }
 
     const bodyParts: string[] = [];
-    for (const block of [descriptor.template, ...descriptor.styles, ...descriptor.customBlocks]) {
+    for (const block of [descriptor.template, ...descriptor.customBlocks]) {
         if (block) {
             bodyParts.push(serializeBlock(block, normalizeWhitespace(block.content)));
         }
+    }
+    for (const block of descriptor.styles) {
+        bodyParts.push(serializeBlock(block, normalizeStyle(block.content, block.lang)));
     }
 
     if (descriptor.scriptSetup) {
@@ -95,8 +100,4 @@ function stripScriptComments(block: SFCBlock) {
 
 function serializeBlock(block: SFCBlock, content: string) {
     return JSON.stringify([block.type, block.attrs, content]);
-}
-
-function normalizeWhitespace(text: string) {
-    return text.replaceAll(/\s+/g, ' ').trim();
 }

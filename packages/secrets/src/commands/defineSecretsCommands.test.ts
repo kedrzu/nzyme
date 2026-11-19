@@ -12,9 +12,11 @@ import { createContainer } from '@nzyme/ioc/Container.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 
+import { createMemoryKeychain } from '../__fixtures__/createMemoryKeychain.js';
 import { createMemoryStore } from '../__fixtures__/createMemoryStore.js';
+import { keychainStore } from '../keychainStore.js';
 import type { SecretStore } from '../SecretStore.js';
-import { SENTINEL as RUN_SENTINEL } from './__fixtures__/secretsCli.js';
+import { KEYCHAIN_VALUE, SENTINEL as RUN_SENTINEL } from './__fixtures__/secretsCli.js';
 import { defineSecretsCommands } from './defineSecretsCommands.js';
 import type { SecretsProvider } from './SecretsCommandsOptions.js';
 
@@ -102,6 +104,22 @@ test('run puts the named secrets (earlier store wins) into the env, strips every
     });
     expect(JSON.stringify(child.argv)).not.toContain(RUN_SENTINEL);
     expect(JSON.stringify(child.argv)).toContain('arg');
+});
+
+test('run hands a value held by a keychain store to the child', async () => {
+    const result = await runFixtureCli([
+        'secrets',
+        'run',
+        'KEYCHAIN_KEY',
+        '--',
+        process.execPath,
+        '-e',
+        'process.stdout.write(process.env.KEYCHAIN_KEY ?? "")',
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe(KEYCHAIN_VALUE);
+    expect(result.stderr).not.toContain(KEYCHAIN_VALUE);
 });
 
 test('run lets a variable set in the environment win and reports it on stderr only', async () => {
@@ -394,6 +412,19 @@ test('list shows every key of every store with its store id, never a value', asy
     expectNoLeak(result, 'db-value');
     expectNoLeak(result, 'smtp-value');
     expectNoLeak(result, 'env-value');
+});
+
+test('set then list through a keychain store shows the key under keychain:<scope>, never the value', async () => {
+    const store = keychainStore({ scope: 'app', keychain: createMemoryKeychain() });
+
+    const set = await runCommand({ stores: [store], args: ['secrets', 'set', 'NAME'], stdin: SENTINEL });
+    const list = await runCommand({ stores: [store], args: ['secrets', 'list'] });
+
+    expect(set.exitCode).toBe(0);
+    expectNoLeak(set, SENTINEL);
+    expect(list.exitCode).toBe(0);
+    expect(list.stdout).toBe('NAME  keychain:app\n');
+    expectNoLeak(list, SENTINEL);
 });
 
 // --- login ---

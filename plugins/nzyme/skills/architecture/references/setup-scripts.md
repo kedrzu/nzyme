@@ -10,7 +10,7 @@ build half of that same command. Paseo runs it for every worktree it cuts.
   1. **bun floor:** fails when the local bun is older than `packageManager`; newer passes. The
      version has one home, `package.json`.
   2. **Pen merge driver** (only with the design in Pen element, `references/design-in-pen.md`): two
-     idempotent `git config` lines registering `bun nzyme pen merge` as the `pen` driver, before the
+     idempotent `git config` lines registering `bun <product> pen merge` as the `pen` driver, before the
      catch-up merge, which may be the first to touch a `.pen` file.
   3. **Worktree catch-up** (worktrees only, never CI or the main checkout): finds the branch's base —
      the open PR's, else the one Paseo recorded in `<git-dir>/paseo/worktree.json` — and only when it is
@@ -66,7 +66,7 @@ Older alternatives found in product repos and not used: a monolithic `setup.sh` 
   browser matches the version the tests run; CI adds `--with-deps` because a fresh runner lacks the
   browser's system libraries.
 - `setup.sh.tmpl` keeps `# {{if pen}}` … `# {{end}}` when the design in Pen element is in play, and
-  drops the marker lines either way.
+  drops the marker lines either way. `{{cli}}` is the product CLI's binary name.
 - `paseo.json.tmpl`: `{{branchNameInstructions}}`, `{{commitMessageInstructions}}`,
   `{{pullRequestInstructions}}` follow the repo's commit convention — its `git-workflow` skill or
   `CLAUDE.md` when it has one, else ask. With Conventional Commits, take the three strings from

@@ -14,8 +14,8 @@ plaintext `.env`, copied between machines and worktrees by hand. They need one m
   ever committed, and rotation means a commit);
 - reaches code through the existing `defineEnvVariable` injectables, so no consumer of a variable
   changes;
-- works for a repo with its own product CLI and for one that has only the `nzyme` binary
-  (`nzyme-cli-plugins.md`).
+- works through a product CLI that registers the commands (`nzyme-cli-plugins.md` once let the
+  `nzyme` binary load them; replaced by `product-clis-over-nzyme-plugins.md`).
 
 Healed has its own environments and AWS-account conventions, which other repos do not share.
 
@@ -66,7 +66,7 @@ its conventions require.
   no store call. The user asked for it; the TTL is required, with no default, so every repo chooses
   how stale a value may be.
 - **Commands:** `defineSecretsCommands({ provider })` gives `secrets login|set|list|run|refresh`,
-  registered as a plugin or in a product CLI.
+  registered in a product CLI.
 
 ## Consequences
 

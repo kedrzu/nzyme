@@ -22,10 +22,12 @@ API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-c
   document's sources. A repo without one has each process that reads secrets in development call
   `await loadSecrets(container, stores)` before resolving anything that reads them. Production gets
   the variables from its platform and skips it.
-- **Commands** — `defineSecretsCommands({ provider })` (a service resolving to `{ stores, target }`; `target(name)` returns the store a key is written to or throws to refuse it) registered in the product's CLI, or, with no
-  product CLI, a plugin module (`tools/secrets.ts`) listed under `nzyme.plugins` in the root
-  `package.json`, run as `bun nzyme secrets …`. Every `@nzyme/*` package, `@nzyme/cli` included, is
-  one version installed in the repo.
+- **Declarations** — every secret is a `defineSecret(name, { description, enabled?, meta? })` export of one
+  module (`secrets.ts`); `getSecretDefinitions(module)` collects them.
+- **Commands** — `defineSecretsCommands({ provider })` registered in the product CLI (`references/product-cli.md`),
+  run as `bun <product> secrets …`. The provider is a service built with
+  `secretsProvider({ secrets: getSecretDefinitions(secrets), store })`. Several stores need a composite
+  `SecretStore` of the repo's own. Every `@nzyme/*` package is one version installed in the repo.
 - **CI** — a job that needs secrets gets `BWS_ACCESS_TOKEN` (a read-only machine account's token) from a GitHub
   Actions secret and runs through `secrets run <KEY>... --`, naming the keys it needs. The `Build` job needs none
   (`references/github.md`).
@@ -38,11 +40,13 @@ API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-c
 - The store and its project ids: from the user, once; ids go into the provider as code (a project id
   is not a secret).
 - The prefix of each store: the repo's own convention for where a tier or environment's secrets live.
-- The command prefix: the product CLI's binary name, or `bun nzyme`.
+- The command prefix: the product CLI's binary name.
 
 ## Compare
 
 - Credentials read through `defineEnvVariable` with no `@nzyme/secrets` store: a difference.
+- No `defineSecret` declarations (a provider with only `stores` and `target`), or `bun nzyme secrets` or an
+  `nzyme.plugins` entry in use: a difference.
 - A dotenv file holding credentials (`.env`, `.env.*`, `.dev.vars`): a difference. Migrate it
   once, with no tool for it: pipe its value from the file into
   `secrets set <NAME>` (`sed -n 's/^NAME=//p' .env | secrets set NAME`, unquoting a quoted value in

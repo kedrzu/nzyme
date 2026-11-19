@@ -44,7 +44,7 @@ reference adds the files around them.
     `test-results/`, `.claude/.gitignore` ignores `settings.local.json` and
     `worktrees/` (`assets/claude-gitignore.tmpl`). The rule moves and disappears with the directory.
   - **Produced anywhere in the tree → the root**, e.g. `.wrangler/`, `.dev.vars`, `.dev.vars.*` for
-    Cloudflare Workers; `target/` for Rust; `.playwright-mcp/` when agents use the Playwright MCP;
+    Cloudflare Workers; `target/` for Rust;
     `!.env.example` when the repo commits one.
   - **Files a contributor's machine writes into any checkout** are the repo's too, so a fresh clone
     is clean on every machine without a global gitignore: OS metadata (`.DS_Store`, `Thumbs.db`) and

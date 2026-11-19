@@ -102,7 +102,12 @@ Two hashes per file, in `@nzyme/affected`.
   full run): a dependency update must never let a test skip, and once the update is committed, pulled
   or checked out the base diff no longer sees it. Otherwise it falls back to the base diff. Only a
   pass records; a failure invalidates the variants matching the current code, so the test runs until
-  it passes. A record is refused when a file the test depends on changed during the run, or when a
+  it passes. One failed attempt outweighs any passed ones of the same run (retries, repeats), so a
+  flaky test is not skipped on its lucky attempt, and a run that lost its selection snapshot still
+  invalidates for its failures. Remembering a failure across runs, so that a later pass on the same
+  code would not record either, was not taken: a failure is almost always followed by a code change
+  that no longer matches it, so it would guard only reruns of unchanged code, at the cost of a new
+  kind of record. A record is refused when a file the test depends on changed during the run, or when a
   static test ran on a stale build.
 - **Store.** `<git-common-dir>/nzyme-affected/v<N>/<suite>/<hash(unit)>/<variant>.json`, written
   atomically, at most 20 variants per test (the least recently matched go first). It is shared by every

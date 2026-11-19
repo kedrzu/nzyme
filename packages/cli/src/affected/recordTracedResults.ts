@@ -8,37 +8,54 @@ export interface TracedRecording {
     recorded: number;
     /** Passed attempts recorded nothing, counted by reason: an incomplete trace or a refused record. */
     refused: Map<string, number>;
-    /** Tests whose last attempt failed. */
+    /** Tests with a failed attempt in the run. */
     failed: TestUnit[];
     /** Variants removed for failed attempts. */
     invalidated: number;
 }
 
+/** Options of {@link recordTracedResults}. */
+export interface RecordTracedResultsOptions {
+    /** Only invalidate for the failed tests and record nothing: the run has no snapshot to record against. */
+    invalidateOnly?: boolean;
+}
+
 /**
- * Records the results a traced run wrote (`@nzyme/trace`'s Playwright reporter), in order: a passed
- * attempt with a complete trace becomes a variant, a failed one invalidates the test's matching
- * variants, and a passed one with an incomplete trace records nothing. Every variant gets the files
- * any attempt of the run, failed and incomplete ones included, executed in a server process
- * (`TestRun.runExecuted`): a lazy singleton the first test initialized serves every later one,
- * whatever that first test's outcome.
+ * Records the results a traced run wrote (`@nzyme/trace`'s Playwright reporter): a test with a failed
+ * attempt anywhere in the run (`--retries`, `--repeat-each`) records nothing and invalidates its
+ * matching variants, whatever its other attempts did, so a flaky test keeps running instead of being
+ * skipped on its lucky attempt. A passed attempt of any other test with a complete trace becomes a
+ * variant; one with an incomplete trace records nothing. Every variant gets the files any attempt of
+ * the run, failed and incomplete ones included, executed in a server process (`TestRun.runExecuted`):
+ * a lazy singleton the first test initialized serves every later one, whatever that first test's
+ * outcome.
  */
 export async function recordTracedResults(
     selector: TestSelector,
     results: readonly TracedTestResult[],
+    options: RecordTracedResultsOptions = {},
 ): Promise<TracedRecording> {
     const recording: TracedRecording = { recorded: 0, refused: new Map(), failed: [], invalidated: 0 };
-    const lastFailed = new Map<string, TestUnit | undefined>();
+    const failed = new Map<string, TestUnit>();
+    for (const result of results) {
+        if (result.status === 'failed') {
+            failed.set(getTestUnitKey(result.unit), result.unit);
+        }
+    }
     const runExecuted = collectServerExecuted(results);
 
+    for (const unit of failed.values()) {
+        recording.failed.push(unit);
+        recording.invalidated += await selector.invalidate(unit);
+    }
+    if (options.invalidateOnly) {
+        return recording;
+    }
+
     for (const result of results) {
-        const key = getTestUnitKey(result.unit);
-        if (result.status === 'failed') {
-            lastFailed.set(key, result.unit);
-            recording.invalidated += await selector.invalidate(result.unit);
+        if (result.status === 'failed' || failed.has(getTestUnitKey(result.unit))) {
             continue;
         }
-
-        lastFailed.set(key, undefined);
         if (!result.complete) {
             countRefusal(recording, result.reason);
             continue;
@@ -58,11 +75,6 @@ export async function recordTracedResults(
         }
     }
 
-    for (const unit of lastFailed.values()) {
-        if (unit) {
-            recording.failed.push(unit);
-        }
-    }
     return recording;
 }
 

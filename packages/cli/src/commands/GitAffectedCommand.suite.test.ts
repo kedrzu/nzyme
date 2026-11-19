@@ -312,13 +312,30 @@ test('record --full invalidates a failed test and reports the selection skipped 
     expect((await selectE2e()).stderr).toContain('2 run (no variant) · 0 skipped');
 });
 
-test('record without a readable snapshot records nothing and exits 0', async () => {
+test('record of a test that failed once and then passed in the run records nothing and reports it failed', async () => {
+    await selectE2e();
+    await writeResults([{ unit: TOP, status: 'failed', executed: [] }, traced(TOP, []), traced(IN_GROUP, [])]);
+
+    const record = await recordE2e();
+
+    expect(record.stderr).toContain('recorded 1 · 1 failed');
+    expect((await selectE2e()).stderr).toContain('1 run (no variant) · 1 skipped (variant match)');
+});
+
+test('record without a readable snapshot records nothing, still invalidates for a failed test, and exits 0', async () => {
+    await selectE2e();
     await writeResults([traced(TOP, [])]);
+    await recordE2e();
+    expect((await selectE2e()).stderr).toContain('1 skipped (variant match)');
+    await fs.rm(snapshotFile());
+    await writeResults([{ unit: TOP, status: 'failed', executed: [] }, traced(IN_GROUP, [])]);
 
     const record = await recordE2e();
 
     expect(record.exitCode).toBe(0);
     expect(record.stderr).toContain('no variants recorded, cannot read the snapshot');
+    expect(record.stderr).toContain('1 failed (1 variants invalidated)');
+    expect((await selectE2e()).stderr).toContain('2 run (no variant) · 0 skipped');
 });
 
 test.each([

@@ -28,8 +28,9 @@ export class GitAffectedRecordCommand extends Command {
             Reads the results file the \`@nzyme/trace\` reporter wrote (\`--results\`): a passed test
             with a complete trace gets a variant, unless a file it depends on was edited since the
             selection the snapshot holds (\`--snapshot\`, written by \`nzyme git affected-test-list\`);
-            a failed test has its matching variants invalidated; an incomplete trace records nothing
-            and is counted by reason. Always exits 0.
+            a test with any failed attempt has its matching variants invalidated and records nothing,
+            also when the snapshot is missing; an incomplete trace records nothing and is counted by
+            reason. Always exits 0.
 
             \`--full\`, after a run of every test, also reports each failed test the selection had
             skipped — a tracing gap.
@@ -66,23 +67,21 @@ export class GitAffectedRecordCommand extends Command {
     override async run() {
         const { stderr } = this.context;
         const root = await new GitRepository(this.cwd).git(['rev-parse', '--show-toplevel']);
-        let snapshot: SelectionSnapshot;
-        try {
-            snapshot = JSON.parse(await readFile(path.resolve(this.cwd, this.snapshot), 'utf8')) as SelectionSnapshot;
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            stderr.write(`nzyme git affected: no variants recorded, cannot read the snapshot: ${message}\n`);
-            return 0;
-        }
-        if (snapshot.suite !== this.suite) {
-            stderr.write(
-                `nzyme git affected: no variants recorded, the snapshot is of suite "${snapshot.suite}", not "${this.suite}"\n`,
-            );
+        const snapshot = await this.readSnapshot();
+        const results = await readTracedTestResults(path.resolve(this.cwd, this.results));
+
+        if (typeof snapshot === 'string') {
+            // A failure still disproves the variants it matches; only recording needs the snapshot.
+            const selector = await openTestSelector({ root, suite: this.suite });
+            const recording = await recordTracedResults(selector, results, { invalidateOnly: true });
+            stderr.write(`nzyme git affected: no variants recorded, ${snapshot}\n`);
+            if (recording.failed.length > 0) {
+                stderr.write(`${describeTracedRecording(recording)}\n`);
+            }
             return 0;
         }
 
         const selector = await openTestSelector({ root, suite: this.suite, snapshot: snapshot.selector });
-        const results = await readTracedTestResults(path.resolve(this.cwd, this.results));
         const recording = await recordTracedResults(selector, results);
         stderr.write(`${describeTracedRecording(recording)}\n`);
         if (!this.full) {
@@ -95,6 +94,21 @@ export class GitAffectedRecordCommand extends Command {
             );
         }
         return 0;
+    }
+
+    /** The snapshot of this suite, or why there is none to record against. */
+    private async readSnapshot(): Promise<SelectionSnapshot | string> {
+        let snapshot: SelectionSnapshot;
+        try {
+            snapshot = JSON.parse(await readFile(path.resolve(this.cwd, this.snapshot), 'utf8')) as SelectionSnapshot;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            return `cannot read the snapshot: ${message}`;
+        }
+        if (snapshot.suite !== this.suite) {
+            return `the snapshot is of suite "${snapshot.suite}", not "${this.suite}"`;
+        }
+        return snapshot;
     }
 }
 

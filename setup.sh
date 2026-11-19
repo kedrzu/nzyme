@@ -124,6 +124,18 @@ fi
 
 bash setup.build.sh
 
+# --- Claude Code plugins ---
+
+# Project-scope plugin installs are recorded per checkout path, so every clone and worktree needs its
+# own (scripts/claude-plugins.sh). Not inside a product repo: sessions there start at the product root,
+# whose setup runs the same script.
+if [ "$CI" != "true" ] && [ -z "$SUPERPROJECT" ]; then
+    echo ""
+    echo "🧩 Setting up the project's Claude Code plugins..."
+    echo ""
+    bash scripts/claude-plugins.sh || warn "Some Claude Code plugins were not set up: see the lines above."
+fi
+
 # --- Code index (agent navigation) ---
 
 # Not part of setup.build.sh: CI has no agent to read it. Non-fatal — an indexing failure must never

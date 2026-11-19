@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/xml-utils",
-    "version": "0.15.1",
+    "version": "0.16.0",
     "description": "XML parsing utilities",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

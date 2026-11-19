@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/aws",
-    "version": "0.15.1",
+    "version": "0.16.0",
     "description": "AWS SDK helpers",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
@@ -41,6 +41,7 @@
         "@aws-sdk/client-s3": "^3.1152.0",
         "@aws-sdk/client-sqs": "^3.1152.0",
         "@aws-sdk/client-ssm": "^3.1152.0",
+        "@aws-sdk/credential-provider-ini": "^3.972.86",
         "@nzyme/fetch-utils": "workspace:*",
         "@nzyme/ioc": "workspace:*",
         "@nzyme/logging": "workspace:*",

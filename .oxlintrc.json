@@ -68,6 +68,8 @@
                 "packages/*/scripts/**",
                 "packages/cli/bin/**",
                 "packages/cli/src/cli.ts",
+                "packages/stealth-browser/bin/**",
+                "packages/stealth-browser/src/cli.ts",
                 "packages/pulumi/src/compileFunction.worker.ts"
             ],
             "rules": { "nzyme/no-module-state": "off" }

@@ -35,9 +35,9 @@ export interface CreateBrandOverrideParams {
 }
 
 /** The targets a page's script can read the brand in: documents, out-of-process frames and every kind of worker. */
-const BRANDED_TYPES = new Set(['page', 'iframe', 'worker', 'shared_worker', 'service_worker']);
+const BRANDED_TYPES: ReadonlySet<string> = new Set(['page', 'iframe', 'worker', 'shared_worker', 'service_worker']);
 /** The auto-attach the proxy holds every new target with, at the browser and on each of its own sessions. */
-const HOLD_NEW_TARGETS = { autoAttach: true, waitForDebuggerOnStart: true, flatten: true };
+const HOLD_NEW_TARGETS = { autoAttach: true, waitForDebuggerOnStart: true, flatten: true } as const;
 /**
  * A page of the browser's own, a secure context with no web content: `about:blank` has no `navigator.userAgentData`,
  * and a web page would mean the network.

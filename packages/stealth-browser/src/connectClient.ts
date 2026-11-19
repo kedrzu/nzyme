@@ -53,7 +53,7 @@ const SERVER_ERROR = -32_000;
 const PARSE_ERROR = -32_700;
 
 /** The target lifecycle events a client gets for the targets it sees once it discovers targets. */
-const TARGET_EVENTS = new Set([
+const TARGET_EVENTS: ReadonlySet<string> = new Set([
     'Target.targetCreated',
     'Target.targetInfoChanged',
     'Target.targetDestroyed',

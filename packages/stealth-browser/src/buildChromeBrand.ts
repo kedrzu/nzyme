@@ -32,9 +32,9 @@ export interface UserAgentOverride {
 /** The brand Google Chrome adds to the lists; Chrome for Testing is built with Chromium branding and has none. */
 const CHROME_BRAND = 'Google Chrome';
 /** The characters a GREASE brand is made of, in Chromium's order. */
-const GREASE_CHARS = [' ', '(', ':', '-', '.', '/', ')', ';', '=', '?', '_'];
+const GREASE_CHARS: readonly string[] = [' ', '(', ':', '-', '.', '/', ')', ';', '=', '?', '_'];
 /** The versions a GREASE brand carries, in Chromium's order. */
-const GREASE_VERSIONS = ['8', '99', '24'];
+const GREASE_VERSIONS: readonly string[] = ['8', '99', '24'];
 /** The stable permutations of a three-brand list, indexed by the major version (`GetRandomOrder`). */
 const THREE_BRAND_ORDERS = [
     [0, 1, 2],
@@ -43,7 +43,7 @@ const THREE_BRAND_ORDERS = [
     [1, 2, 0],
     [2, 0, 1],
     [2, 1, 0],
-];
+] as const;
 
 /**
  * Turns the identity Chrome for Testing reports into Google Chrome's: the same user agent string, platform, versions

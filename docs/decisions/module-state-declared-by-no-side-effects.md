@@ -38,15 +38,18 @@ immutable or made by a factory someone has vouched for.
 The `nzyme/no-module-state` oxlint rule (`packages/oxlint/src/noModuleState.ts`). At a module's top
 level it allows:
 
-- functions, primitives and immutable values: `as const`, `Object.freeze`, a declared `Readonly*` type
-  (`ReadonlyMap`/`ReadonlySet` for collections, since `Readonly<Map>` still allows `.set()`);
+- functions, primitives and immutable values: `as const` or `Immutable<…>` (`@nzyme/types`), which are
+  deep, and `Object.freeze`, `Readonly<…>`, `readonly T[]`, `ReadonlyMap` and `ReadonlySet`, which are
+  shallow (`ReadonlyMap`/`ReadonlySet` for collections, since `Readonly<Map>` still allows `.set()`).
+  A literal nested under a shallow value is reported unless it is immutable on its own;
 - calls to functions whose declaration carries `@__NO_SIDE_EFFECTS__` — the author vouches the function is
   idempotent and tested; `createCache`/`createMemo` of `@nzyme/utils` are the declared way to cache;
 - calls into packages listed in `externalPackages` (`zod`, `drizzle-orm/pg-core`, or one export:
   `effect#Context`), which cannot be annotated; a member chain or curried call counts when it starts there.
 
 It rejects `let`/`var`, mutable literals and collections, undeclared calls, load-time statements and
-mutable static fields. TypeScript then refuses writes to what the rule let through as immutable.
+mutable static fields. TypeScript then refuses writes to what the rule let through as immutable, to the depth the value
+declares.
 
 Exclusions live in each repository's config, with a reason, not in the rule: test and spec files (the unit
 a selection runs or skips whole), `.vue` files (`<script setup>` runs per instance), tool config files,

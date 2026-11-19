@@ -231,18 +231,12 @@ async function obtainSecondFactor(token: string, response: Response) {
 }
 
 async function authenticateInBrowser(token: string, challenge: WebAuthChallenge) {
-    // The registry hands out the link before npmjs.com knows it, and a link opened too early shows npm's
-    // not-found page; wait until the site answers with something else.
-    for (let attempt = 0; attempt < 30; attempt++) {
-        const page = await fetch(challenge.authUrl, { redirect: 'manual' });
-        if (page.status !== 404) {
-            break;
-        }
-        await Bun.sleep(1000);
-    }
-
-    console.log(`Confirm in the browser: ${challenge.authUrl}`);
-    await $`open ${challenge.authUrl}`.quiet().nothrow();
+    // npmjs.com sometimes sends a signed-in browser from the link to its home page instead of asking for the
+    // passkey; its passkey page, pointed back at the link, asks every time.
+    const auth = new URL(challenge.authUrl);
+    const url = `${auth.origin}/escalate/webauthn?next=${encodeURIComponent(auth.pathname)}`;
+    console.log(`Confirm in the browser: ${url}`);
+    await $`open ${url}`.quiet().nothrow();
 
     for (;;) {
         const response = await fetch(challenge.doneUrl, { headers: authHeaders(token, null) });

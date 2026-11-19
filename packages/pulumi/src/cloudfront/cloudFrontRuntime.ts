@@ -1,3 +1,5 @@
+import type { Immutable } from '@nzyme/types/Immutable.js';
+
 /**
  * Where a single entry of the runtime model comes from. Every entry carries one, because the three
  * sources are trusted for different reasons and go stale in different ways.
@@ -121,7 +123,7 @@ const TYPED_ARRAYS = [
 /**
  * The `cloudfront-js-2.0` runtime model. See {@link CloudFrontRuntime} for why it exists.
  */
-export const cloudFrontRuntime: Readonly<CloudFrontRuntime> = {
+export const cloudFrontRuntime: Immutable<CloudFrontRuntime> = {
     docUrl: 'https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/functions-javascript-runtime-20.html',
     docReadOn: '2026-09-04',
     maxFunctionBytes: 10_240,

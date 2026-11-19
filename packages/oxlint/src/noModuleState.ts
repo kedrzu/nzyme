@@ -1,3 +1,5 @@
+import type { Immutable } from '@nzyme/types/Immutable.js';
+
 import { isNode } from './isNode.js';
 import type { SpecifierResolver } from './noSideEffectsDeclaration.js';
 import { findVariable, hasAnnotationInFile, isAnnotatedExport } from './noSideEffectsDeclaration.js';
@@ -17,7 +19,7 @@ const MESSAGES = {
     mutableBinding:
         '`{{kind}}` at module top level is state that outlives a call. Use `const`, or move the state into a declared factory such as `createMemo`/`createCache` from `@nzyme/utils`.',
     mutableValue:
-        'A mutable {{what}} at module top level is state that outlives a call. Make it immutable (`as const`, `Object.freeze(…)`, a `Readonly*` type), or create it through a function annotated `@__NO_SIDE_EFFECTS__`.',
+        'A mutable {{what}} at module top level is state that outlives a call. Make it immutable all the way down (`as const`, or an `Immutable<…>` type from `@nzyme/types/Immutable.js`; `Object.freeze(…)` and the `Readonly*` types cover only the top level), or create it through a function annotated `@__NO_SIDE_EFFECTS__`.',
     undeclaredCall:
         '`{{name}}` is called at module top level but is not declared `@__NO_SIDE_EFFECTS__`. Annotate it if it is idempotent and tested, list its package in `externalPackages`, or call it lazily.',
     loadTimeEffect:
@@ -29,17 +31,23 @@ const MESSAGES = {
 type MessageId = keyof typeof MESSAGES;
 
 /**
- * How immutable the value at a position is made by what surrounds it. `immutable`: a declared
- * `Readonly<…>`/readonly type, `as const` or `Object.freeze` makes TypeScript refuse writes to an
- * object or array literal there. A collection constructor name: the position's declared type is
- * that collection's readonly interface (`ReadonlyMap` for `Map`), which is the only thing that stops
- * `.set()` — `Readonly<Map>` does not, and `WeakMap`/`WeakSet` have no readonly interface at all.
+ * How immutable the value at a position is made by what surrounds it, which decides whether an
+ * object or array literal may sit there:
+ * - `deep`: `as const` or a declared `Immutable<…>` (`@nzyme/types`) makes TypeScript refuse writes
+ *   to the literal and to every literal nested in it;
+ * - `shallow`: a declared `Readonly<…>` or `Object.freeze` refuses writes to the literal itself only,
+ *   so a literal nested in it is `mutable` again;
+ * - a collection constructor name: the position's declared type is that collection's readonly
+ *   interface (`ReadonlyMap` for `Map`, `readonly T[]`), which is the only thing that stops `.set()` —
+ *   `Readonly<Map>` does not, and `WeakMap`/`WeakSet` have no readonly interface at all. It is shallow
+ *   too: the elements it holds are `mutable`.
  */
-type Mutability = 'mutable' | 'immutable' | 'Array' | 'Map' | 'Set';
+type Mutability = 'mutable' | 'shallow' | 'deep' | 'Array' | 'Map' | 'Set';
 
-/** Readonly type names, and the collection whose mutating methods each one hides. */
+/** Readonly type names, and how far each one makes a value immutable. */
 const READONLY_TYPES: ReadonlyMap<string, Mutability> = new Map<string, Mutability>([
-    ['Readonly', 'immutable'],
+    ['Immutable', 'deep'],
+    ['Readonly', 'shallow'],
     ['ReadonlyArray', 'Array'],
     ['ReadonlyMap', 'Map'],
     ['ReadonlySet', 'Set'],
@@ -139,7 +147,7 @@ const resolveSourceSpecifier: SpecifierResolver = (fromFile, specifier) =>
  * `drizzle-orm/pg-core`). An entry covers the specifier itself, every subpath below it, and every
  * call chained onto a call into it (`z.string().min(1)`); `pkg#name` narrows it to one export.
  */
-export const noModuleState: Readonly<OxlintRule> = {
+export const noModuleState: Immutable<OxlintRule> = {
     meta: {
         type: 'problem',
         docs: {
@@ -258,7 +266,7 @@ export const noModuleState: Readonly<OxlintRule> = {
 
         function checkClass(node: OxlintAnyNode): void {
             if (node.superClass != null) {
-                checkValue(node.superClass, 'immutable');
+                checkValue(node.superClass, 'deep');
             }
 
             const body: OxlintAnyNode | undefined = Array.isArray(node.body) ? undefined : (node.body ?? undefined);
@@ -323,7 +331,10 @@ export const noModuleState: Readonly<OxlintRule> = {
                     if (node.expression != null) {
                         const asserted =
                             node.typeAnnotation == null ? 'mutable' : mutabilityOfType(node.typeAnnotation);
-                        checkValue(node.expression, asserted === 'mutable' ? mutability : asserted);
+                        checkValue(
+                            node.expression,
+                            asserted === 'mutable' || mutability === 'deep' ? mutability : asserted,
+                        );
                     }
                     return;
                 case 'UnaryExpression':
@@ -341,9 +352,9 @@ export const noModuleState: Readonly<OxlintRule> = {
                     return;
                 case 'MemberExpression':
                     // Reading a property stores nothing new; only what is evaluated to get there counts.
-                    checkOptional(node.object, 'immutable');
+                    checkOptional(node.object, 'deep');
                     if (node.computed === true) {
-                        checkOptional(node.property, 'immutable');
+                        checkOptional(node.property, 'deep');
                     }
                     return;
                 case 'ChainExpression':
@@ -357,23 +368,24 @@ export const noModuleState: Readonly<OxlintRule> = {
                         report(value, 'mutableValue', { what: 'object' });
                         return;
                     }
-                    checkEach(node.properties, 'immutable');
+                    checkEach(node.properties, nestedMutability(mutability));
                     return;
                 case 'ArrayExpression':
                     if (mutability === 'mutable') {
                         report(value, 'mutableValue', { what: 'array' });
                         return;
                     }
-                    checkEach(node.elements, 'immutable');
+                    checkEach(node.elements, nestedMutability(mutability));
                     return;
                 case 'Property':
+                    // Reached through the object's properties: `mutability` is already the nested one.
                     if (node.computed === true) {
-                        checkOptional(node.key, 'immutable');
+                        checkOptional(node.key, 'deep');
                     }
-                    checkOptional(node.value, 'immutable');
+                    checkOptional(node.value, mutability);
                     return;
                 case 'SpreadElement':
-                    checkOptional(node.argument, 'immutable');
+                    checkOptional(node.argument, mutability);
                     return;
                 case 'NewExpression':
                     checkNew(node, mutability);
@@ -414,7 +426,9 @@ export const noModuleState: Readonly<OxlintRule> = {
             if (isGlobalIdentifier(callee) && COLLECTION_CONSTRUCTORS.has(callee.name)) {
                 if (mutability !== callee.name) {
                     report(node, 'mutableValue', { what: `\`${callee.name}\`` });
+                    return;
                 }
+                checkCollectionItems(node, callee.name);
                 return;
             }
 
@@ -431,6 +445,29 @@ export const noModuleState: Readonly<OxlintRule> = {
             report(node, 'undeclaredCall', { name: `new ${calleeName(callee)}` });
         }
 
+        /**
+         * Checks what a readonly collection is built from. Its readonly interface is shallow, so the
+         * values it keeps — a `Map` entry's value, a `Set` or `Array` element — are `mutable`
+         * positions; the entry arrays and the array literal around them are only read. Any other
+         * argument is not looked into.
+         */
+        function checkCollectionItems(node: OxlintAnyNode, collection: string): void {
+            for (const argument of node.arguments ?? []) {
+                const iterable: OxlintAnyNode = argument;
+                if (iterable.type !== 'ArrayExpression') {
+                    continue;
+                }
+                for (const item of iterable.elements ?? []) {
+                    const entry: OxlintAnyNode | null = item;
+                    if (collection === 'Map' && entry?.type === 'ArrayExpression') {
+                        checkEach(entry.elements, 'mutable');
+                    } else {
+                        checkOptional(item, 'mutable');
+                    }
+                }
+            }
+        }
+
         function checkCall(node: OxlintAnyNode, mutability: Mutability): void {
             const callee = node.callee;
             if (callee == null) {
@@ -439,7 +476,7 @@ export const noModuleState: Readonly<OxlintRule> = {
 
             if (isGlobalMember(callee, 'Object', 'freeze')) {
                 for (const argument of node.arguments ?? []) {
-                    checkValue(argument, 'immutable');
+                    checkValue(argument, mutability === 'deep' ? 'deep' : 'shallow');
                 }
                 return;
             }
@@ -648,7 +685,10 @@ function mutabilityOfAnnotation(annotation: OxlintTsTypeAnnotation | OxlintNode 
         : 'mutable';
 }
 
-/** `as const`, `readonly T[]` and the `Readonly*` types; nothing deeper is inferred. */
+/**
+ * `as const`, `Immutable<…>`, `readonly T[]` and the `Readonly*` types; nothing is inferred from the
+ * type arguments, so a readonly type spelled inside `Readonly<…>` still leaves its literal `mutable`.
+ */
 function mutabilityOfType(type: OxlintNode): Mutability {
     if (isNode(type, 'TSTypeOperator')) {
         return type.operator === 'readonly' ? 'Array' : 'mutable';
@@ -656,10 +696,15 @@ function mutabilityOfType(type: OxlintNode): Mutability {
 
     if (isNode(type, 'TSTypeReference') && isNode(type.typeName, 'Identifier')) {
         const name = type.typeName.name;
-        return name === 'const' ? 'immutable' : (READONLY_TYPES.get(name) ?? 'mutable');
+        return name === 'const' ? 'deep' : (READONLY_TYPES.get(name) ?? 'mutable');
     }
 
     return 'mutable';
+}
+
+/** The mutability of a literal nested in one at `mutability`: only `deep` reaches it. */
+function nestedMutability(mutability: Mutability): Mutability {
+    return mutability === 'deep' ? 'deep' : 'mutable';
 }
 
 /** The identifier a member/call chain starts from: `z` in `z.string().min(1)`. */

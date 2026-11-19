@@ -1,4 +1,5 @@
 import { onMounted, onUnmounted } from 'vue';
+import type { Immutable } from '@nzyme/types/Immutable.js';
 
 interface KeyConfig {
     code: number;
@@ -8,7 +9,7 @@ interface KeyConfig {
 type Key = 'ArrowLeft' | 'ArrowRight' | 'Enter' | 'Escape';
 type KeyCallback = (e: KeyboardEvent) => void;
 
-const keyConfigs: Readonly<Record<Key, KeyConfig>> = {
+const keyConfigs: Immutable<Record<Key, KeyConfig>> = {
     Escape: {
         code: 27,
         alternative: 'Esc',

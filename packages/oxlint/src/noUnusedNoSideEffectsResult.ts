@@ -1,3 +1,5 @@
+import type { Immutable } from '@nzyme/types/Immutable.js';
+
 import { isNode } from './isNode.js';
 import { findVariable, hasAnnotationInFile, isAnnotatedExport } from './noSideEffectsDeclaration.js';
 import type {
@@ -29,7 +31,7 @@ const MESSAGE_ID = 'unusedResult';
  * matches any of the ~510 annotated ones, so resolving package entry points would add a
  * node_modules walk to every lint run for no finding.
  */
-export const noUnusedNoSideEffectsResult: Readonly<OxlintRule> = {
+export const noUnusedNoSideEffectsResult: Immutable<OxlintRule> = {
     meta: {
         type: 'problem',
         docs: {

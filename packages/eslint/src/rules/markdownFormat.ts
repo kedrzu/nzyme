@@ -4,6 +4,8 @@ import type { MarkdownRuleDefinition } from '@eslint/markdown';
 
 import { isFileIgnored } from '@nzyme/project-utils/isFileIgnored.js';
 
+import type { Immutable } from '@nzyme/types/Immutable.js';
+
 import { formatMarkdown } from './formatMarkdown.js';
 
 /**
@@ -14,7 +16,7 @@ import { formatMarkdown } from './formatMarkdown.js';
  * Gitignored files are skipped: ESLint does not read `.gitignore`, and generated Markdown (code
  * indexes, local notes) is not ours to format.
  */
-export const markdownFormat: Readonly<MarkdownRuleDefinition> = {
+export const markdownFormat: Immutable<MarkdownRuleDefinition> = {
     meta: {
         type: 'layout',
         fixable: 'code',

@@ -1,5 +1,7 @@
 import type { Rule } from 'eslint';
 
+import type { Immutable } from '@nzyme/types/Immutable.js';
+
 import { propertyName, publishedPackageRoot } from './jsonPackage.js';
 
 /**
@@ -9,7 +11,7 @@ import { propertyName, publishedPackageRoot } from './jsonPackage.js';
  *
  * Private packages are skipped.
  */
-export const publishAccessPublic: Readonly<Rule.RuleModule> = {
+export const publishAccessPublic: Immutable<Rule.RuleModule> = {
     meta: {
         type: 'problem',
         schema: [],

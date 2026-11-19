@@ -228,6 +228,7 @@
         "@eslint/markdown": "^8.0.3",
         "@nzyme/oxlint": "workspace:*",
         "@nzyme/project-utils": "workspace:*",
+        "@nzyme/types": "workspace:*",
         "@nzyme/utils": "workspace:*",
         "@typescript-eslint/parser": "^8.71.2",
         "eslint-plugin-vue": "^10.11.1",
@@ -527,6 +528,9 @@
     "packages/oxlint": {
       "name": "@nzyme/oxlint",
       "version": "0.15.1",
+      "dependencies": {
+        "@nzyme/types": "workspace:*",
+      },
       "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
         "@types/bun": "^1.4.4",

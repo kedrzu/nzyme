@@ -42,7 +42,7 @@ export const BUILTIN_DEFINE_KINDS: readonly DefineSymbolKind[] = [
     { kind: 'command', section: 'Commands', callee: 'defineCommand', nameKey: 'name', order: 20 },
     { kind: 'factory', section: 'Factories', callee: 'defineFactory', nameKey: 'name', order: 30 },
     { kind: 'endpoint', section: 'Endpoints', callee: 'defineEndpoint', nameKey: 'name', order: 50 },
-];
+] as const;
 
 /** Section title + render order for the kinds that aren't `defineX` DSL calls. */
 export const EXTRA_SECTIONS = {
@@ -58,7 +58,7 @@ const DEFAULT_DEFINE_KIND_ORDER = 55;
 const RESERVED_KINDS: ReadonlySet<string> = new Set([
     ...BUILTIN_DEFINE_KINDS.map(kind => kind.kind),
     ...Object.keys(EXTRA_SECTIONS),
-]);
+] as const);
 
 /**
  * Resolves a repo's {@link NzymeIndexConfig} into the settings the indexer runs on: defaults

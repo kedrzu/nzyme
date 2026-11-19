@@ -3,13 +3,13 @@ import type { ExtractPropTypes, PropType } from 'vue';
 import { defineTransition } from './defineTransition.js';
 import css from './TransitionSlide.module.scss';
 
-const transitionProps = Object.freeze({
+const transitionProps = {
     direction: {
         type: String as PropType<'down' | 'left' | 'right' | 'up'>,
         default: 'down',
     },
     fade: Boolean,
-});
+} as const;
 
 /** Directional slide transition component with optional fade. */
 export const TransitionSlide = defineTransition({

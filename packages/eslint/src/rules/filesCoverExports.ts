@@ -1,6 +1,8 @@
 import type { Rule } from 'eslint';
 import type { AST } from 'jsonc-eslint-parser';
 
+import type { Immutable } from '@nzyme/types/Immutable.js';
+
 import { propertyName, publishedPackageRoot } from './jsonPackage.js';
 
 /**
@@ -11,7 +13,7 @@ import { propertyName, publishedPackageRoot } from './jsonPackage.js';
  * Targets of the `source` condition are exempt (they point at `src`, which is deliberately not
  * published), and so are private packages and packages without `files` (npm then ships everything).
  */
-export const filesCoverExports: Readonly<Rule.RuleModule> = {
+export const filesCoverExports: Immutable<Rule.RuleModule> = {
     meta: {
         type: 'problem',
         schema: [],

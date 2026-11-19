@@ -1,5 +1,7 @@
 import type { ESLint } from 'eslint';
 
+import type { Immutable } from '@nzyme/types/Immutable.js';
+
 import { exportsSourceFirst } from './rules/exportsSourceFirst.js';
 import { filesCoverExports } from './rules/filesCoverExports.js';
 import { markdownFormat } from './rules/markdownFormat.js';
@@ -9,7 +11,7 @@ import { publishAccessPublic } from './rules/publishAccessPublic.js';
  * The `nzyme` ESLint plugin with every custom rule. Presets share this one object: flat config
  * refuses two different plugin objects registered under the same name.
  */
-export const nzymePlugin: Readonly<ESLint.Plugin> = {
+export const nzymePlugin: Immutable<ESLint.Plugin> = {
     meta: { name: '@nzyme/eslint' },
     rules: {
         'exports-source-first': exportsSourceFirst,

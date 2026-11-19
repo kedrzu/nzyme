@@ -6,6 +6,6 @@ import { PenMergeCommand } from './commands/PenMergeCommand.js';
 import { PenRenderCommand } from './commands/PenRenderCommand.js';
 
 /** The `pen` commands, for a repo to list under `nzyme.plugins` (through a file re-exporting this). */
-export default Object.freeze({
+export default {
     commands: [PenCheckCommand, PenMergeCommand, PenDiffCommand, PenRenderCommand],
-}) satisfies NzymePlugin;
+} as const satisfies NzymePlugin;

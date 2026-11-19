@@ -15,7 +15,7 @@ export interface ExecuteOptions {
     /** Optional title for the CLI program */
     title?: string;
     /** List of commands to register */
-    commands: CommandClass[];
+    commands: readonly CommandClass[];
     /** Container to use for the CLI program */
     container?: Container;
     /**

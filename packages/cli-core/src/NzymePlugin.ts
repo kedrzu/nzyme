@@ -6,5 +6,5 @@ import type { CommandClass } from './Command.js';
  */
 export interface NzymePlugin {
     /** Commands to add to the binary. Must extend the `Command` of the `@nzyme/cli-core` it runs. */
-    commands: CommandClass[];
+    commands: readonly CommandClass[];
 }

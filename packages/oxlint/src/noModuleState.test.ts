@@ -70,8 +70,14 @@ export enum Kind {
     });
 
     it('allows a value made immutable by `as const`, `Object.freeze` or a declared readonly type', async () => {
-        const source = `export const LIST = ['a', 'b'] as const;
-export const OBJECT = Object.freeze({ a: 1, nested: { b: [2] } });
+        const source = `import type { Immutable } from '@nzyme/types/Immutable.js';
+
+export const LIST = ['a', 'b'] as const;
+export const DEEP = { a: 1, nested: { b: [2] } } as const;
+export const DEEP_TYPED: Immutable<{ nested: { b: number[] } }> = { nested: { b: [2] } };
+export const OBJECT = Object.freeze({ a: 1, nested: Object.freeze({ b: [2] as const }) });
+export const FROZEN_DEEP = Object.freeze({ nested: { b: [2] } }) as const;
+export const GROUPS: ReadonlyMap<string, readonly string[]> = new Map([['a', ['x'] as const]]);
 export const NAMES: ReadonlySet<string> = new Set(['a']);
 export const BY_ID: ReadonlyMap<string, number> = new Map([['a', 1]]);
 export const ITEMS: readonly string[] = ['a'];
@@ -116,6 +122,23 @@ export const RECORD: Readonly<Record<string, Map<string, number>>> = { a: new We
             lineOf(source, 'export const TYPED'),
             lineOf(source, 'export const ENTRIES'),
             lineOf(source, 'export const RECORD'),
+        ]);
+    });
+
+    it('rejects a literal nested in a value `Object.freeze` or a readonly type makes immutable only at the top', async () => {
+        const source = `export const FROZEN = Object.freeze({ a: 1, nested: { b: 2 } });
+export const CONFIG: Readonly<{ items: string[] }> = { items: [] };
+export const ITEMS: readonly string[][] = [['a']];
+export const GROUPS: ReadonlyMap<string, string[]> = new Map([['a', ['x']]]);
+export const TAGS: ReadonlySet<{ id: number }> = new Set([{ id: 1 }]);
+`;
+
+        expect(await lintCase(source)).toEqual([
+            lineOf(source, 'export const FROZEN'),
+            lineOf(source, 'export const CONFIG'),
+            lineOf(source, 'export const ITEMS'),
+            lineOf(source, 'export const GROUPS'),
+            lineOf(source, 'export const TAGS'),
         ]);
     });
 

@@ -5,6 +5,7 @@ import type { ImportGraph } from '@nzyme/project-utils/importGraph/buildImportGr
 import type { ImportResolver } from '@nzyme/project-utils/importGraph/resolveImportTarget.js';
 
 import type { FileHash, TestUnit, Variant } from '../store/VariantStore.js';
+import type { FsReads } from './openTestSelector.js';
 import { collectImportClosure } from './collectImportClosure.js';
 import { getFileListingKey, hashFileList, listFiles } from './FileListing.js';
 import type { FileListing } from './FileListing.js';
@@ -35,6 +36,8 @@ export interface BuildVariantOptions {
     assets: string[];
     /** Root-relative files whose functions ran at startup, before any test. */
     startup: string[];
+    /** What the test accessed through the file system, when its run was traced (`TestRun.fsReads`). */
+    fsReads?: FsReads;
     /** Hash of the suite's selection config. */
     config: string;
     /** Root-relative globs of the suite's full-run triggers. */
@@ -66,7 +69,11 @@ export type BuildVariantResult = { variant: Variant } | { missing: string };
  *   root, whose manifest is the root `package.json`;
  * - the files of each such package that nothing imports (fixtures, data a test reads through `fs`) —
  *   in full, as the base diff seeds the whole package from a change to one; for the root, the files
- *   outside every package.
+ *   outside every package. Not when the run traced the test's file accesses and the test started no
+ *   process, worker or `Bun.build`: its reads below say exactly what it read;
+ * - the files the test read through the file system, where it traced them — in full, wherever they
+ *   are, an `ignore` glob notwithstanding, as long as they are walked files; and the list of each
+ *   directory whose entries it read.
  *
  * The last two sets are {@link FileListing}s: the variant also stores the digest of each one's file
  * list, so a file appearing in it or leaving it is a change. A read reaching into another package (a
@@ -122,9 +129,28 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
     for (const file of levels.keys()) {
         owners.add(findOwningPackageDir(file, options.packageDirs));
     }
+    // A test that started a process, a worker or `Bun.build` may have read anything through it.
+    const listsPackages = options.fsReads === undefined || options.fsReads.opaque;
     for (const owner of owners) {
         levels.set(owner === '' ? 'package.json' : `${owner}/package.json`, 'full');
-        addListing({ kind: 'package', dir: owner });
+        if (listsPackages) {
+            addListing({ kind: 'package', dir: owner });
+        }
+    }
+
+    if (options.fsReads) {
+        const walked = new Set(graph.files);
+        for (const file of options.fsReads.files) {
+            if (walked.has(file)) {
+                levels.set(file, 'full');
+            }
+        }
+        for (const dir of options.fsReads.dirs) {
+            addListing({ kind: 'entries', dir }, { hashFiles: false });
+        }
+        for (const dir of options.fsReads.trees) {
+            addListing({ kind: 'tree', dir }, { hashFiles: false });
+        }
     }
 
     const files: Record<string, FileHash> = {};
@@ -138,12 +164,14 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
 
     return { variant: { unit: options.unit, files, listings, suite, recordedAt: options.recordedAt } };
 
-    /** Adds a listing's digest, and its files in full; returns the files. */
-    function addListing(listing: FileListing): string[] {
+    /** Adds a listing's digest, and unless told otherwise its files in full; returns the files. */
+    function addListing(listing: FileListing, { hashFiles = true } = {}): string[] {
         const listed = listFiles(listing, context);
         listings[getFileListingKey(listing)] = hashFileList(listed);
-        for (const file of listed) {
-            levels.set(file, 'full');
+        if (hashFiles) {
+            for (const file of listed) {
+                levels.set(file, 'full');
+            }
         }
         return listed;
     }

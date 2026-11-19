@@ -1,13 +1,15 @@
-import { rm } from 'node:fs/promises';
-import { constants } from 'node:os';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { constants, tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { readAffectedConfig } from '@nzyme/affected/base/AffectedConfig.js';
 import { createPatternMatcher } from '@nzyme/affected/base/createPatternMatcher.js';
+import { FS_TRACE_DIR_ENV } from '@nzyme/affected/fsTrace/FsTraceLine.js';
+import { readFsTrace } from '@nzyme/affected/fsTrace/readFsTrace.js';
 import { selectAffectedSinceBase } from '@nzyme/affected/base/selectAffectedSinceBase.js';
 import type { AffectedSelection } from '@nzyme/affected/base/selectAffectedFiles.js';
 import { openTestSelector } from '@nzyme/affected/selector/openTestSelector.js';
-import type { TestSelector } from '@nzyme/affected/selector/openTestSelector.js';
+import type { FsReads, TestSelector } from '@nzyme/affected/selector/openTestSelector.js';
 import { Option, UsageError } from '@nzyme/cli-core';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { spawnForExitCode } from '@nzyme/cli-core/utils/spawnForExitCode.js';
@@ -82,7 +84,9 @@ export class GitAffectedCommand extends Command {
             deleted before each run, so a run that writes no report records nothing rather than a
             stale one; with \`--per-package\` it is read after each package's run, before the next
             overwrites it — pass the command an absolute path, as it runs in the package directory.
-            An unreadable report records nothing; the exit code stays the command's.
+            An unreadable report records nothing; the exit code stays the command's. The command gets
+            \`NZYME_FS_TRACE_DIR\`: when its test runner loads \`@nzyme/trace\`'s file-access preload,
+            each variant holds the files its test read instead of every non-code file of its packages.
         `,
         examples: [
             ['List the tests affected by the change', "nzyme git affected '*.test.ts'"],
@@ -184,22 +188,29 @@ export class GitAffectedCommand extends Command {
 
         const junitFile = path.resolve(this.cwd, args.junit);
         const recordings: JunitRecording[] = [];
-        const exitCode = await this.runOnFiles({
-            root,
-            command: args.command,
-            files: selected,
-            packageDirs,
-            args,
-            junit: {
-                file: junitFile,
-                onReport: async ranFiles => {
-                    const recording = await this.recordFromJunit({ root, selector, junitFile, ranFiles });
-                    if (recording) {
-                        recordings.push(recording);
-                    }
+        const traceDir = await mkdtemp(path.join(tmpdir(), 'nzyme-fs-trace-'));
+        let exitCode: number;
+        try {
+            exitCode = await this.runOnFiles({
+                root,
+                command: args.command,
+                files: selected,
+                packageDirs,
+                args,
+                junit: {
+                    file: junitFile,
+                    traceDir,
+                    onReport: async (ranFiles, fsTrace) => {
+                        const recording = await this.recordFromJunit({ root, selector, junitFile, ranFiles, fsTrace });
+                        if (recording) {
+                            recordings.push(recording);
+                        }
+                    },
                 },
-            },
-        });
+            });
+        } finally {
+            await rm(traceDir, { recursive: true, force: true });
+        }
         if (recordings.length > 0) {
             this.context.stderr.write(`${describeRecording(mergeRecordings(recordings))}\n`);
         }
@@ -236,10 +247,16 @@ export class GitAffectedCommand extends Command {
             }
             if (junit) {
                 await rm(junit.file, { force: true });
+                await rm(junit.traceDir, { recursive: true, force: true });
+                await mkdir(junit.traceDir);
             }
-            const result = await this.runCommand(command, path.join(root, group.dir), group.files);
+            const env = junit ? { ...process.env, [FS_TRACE_DIR_ENV]: junit.traceDir } : undefined;
+            const result = await this.runCommand({ command, cwd: path.join(root, group.dir), files: group.files, env });
             if (junit) {
-                await junit.onReport(group.files.map(file => (group.dir === '' ? file : `${group.dir}/${file}`)));
+                await junit.onReport(
+                    group.files.map(file => (group.dir === '' ? file : `${group.dir}/${file}`)),
+                    await readFsTrace(junit.traceDir, root),
+                );
             }
             if (exitCode === 0) {
                 exitCode = result.exitCode;
@@ -255,16 +272,14 @@ export class GitAffectedCommand extends Command {
     }
 
     /** Runs the command in `cwd` with `files` (relative to it) as trailing arguments. */
-    private async runCommand(
-        command: AffectedRunCommand,
-        cwd: string,
-        files: string[],
-    ): Promise<SpawnForExitCodeResult> {
+    private async runCommand(options: RunCommandOptions): Promise<SpawnForExitCodeResult> {
+        const { command, files } = options;
         const result = await spawnForExitCode({
             executable: command.executable,
             args: [...command.args, ...files],
             stdio: 'inherit',
-            cwd,
+            cwd: options.cwd,
+            env: options.env,
         });
 
         if (result.error) {
@@ -313,12 +328,28 @@ interface RunOnFilesOptions {
     junit?: RunJunit;
 }
 
+/** Options of `GitAffectedCommand.runCommand`. */
+interface RunCommandOptions {
+    command: AffectedRunCommand;
+    /** Absolute working directory. */
+    cwd: string;
+    /** Files relative to `cwd`, passed as trailing arguments. */
+    files: string[];
+    /** The child's environment; this process's own when omitted. */
+    env?: NodeJS.ProcessEnv;
+}
+
 /** The JUnit report of `GitAffectedCommand.runOnFiles`. */
 interface RunJunit {
     /** Absolute path of the report; deleted before each run. */
     file: string;
-    /** Called after each run (each package, with `--per-package`) with the root-relative files it ran. */
-    onReport(ranFiles: string[]): Promise<void>;
+    /** The directory the command's file-access trace goes to (`NZYME_FS_TRACE_DIR`); emptied before each run. */
+    traceDir: string;
+    /**
+     * Called after each run (each package, with `--per-package`) with the root-relative files it ran
+     * and its file-access trace, `null` when the run was not traced.
+     */
+    onReport(ranFiles: string[], fsTrace: ReadonlyMap<string, FsReads> | null): Promise<void>;
 }
 
 /** Options of `GitAffectedCommand.recordFromJunit`. */
@@ -329,6 +360,8 @@ interface RecordFromJunitOptions {
     junitFile: string;
     /** Root-relative test files the command ran. */
     ranFiles: string[];
+    /** The run's file accesses per test file, `null` when it was not traced. */
+    fsTrace: ReadonlyMap<string, FsReads> | null;
 }
 
 /** Options taking a value: `--name <value>` or `--name=<value>`. */

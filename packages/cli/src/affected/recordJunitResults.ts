@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import { mergeJunitStatus, readJunitResults } from '@nzyme/affected/junit/readJunitResults.js';
 import type { JunitFileResult } from '@nzyme/affected/junit/readJunitResults.js';
-import type { RecordRefusal, TestSelector } from '@nzyme/affected/selector/openTestSelector.js';
+import type { FsReads, RecordRefusal, TestSelector } from '@nzyme/affected/selector/openTestSelector.js';
 import { relativePosixPath } from '@nzyme/project-utils/relativePosixPath.js';
 
 /** Options of {@link recordJunitResults}. */
@@ -14,6 +14,8 @@ export interface RecordJunitResultsOptions {
     junitFile: string;
     /** Root-relative test files the command ran. */
     ranFiles: readonly string[];
+    /** The run's file accesses per test file (`readFsTrace`), or `null` when the run was not traced. */
+    fsTrace: ReadonlyMap<string, FsReads> | null;
 }
 
 /** What {@link recordJunitResults} did with each test file the command ran. */
@@ -33,7 +35,8 @@ export interface JunitRecording {
  * Records, per test file, the outcome of a run from its JUnit report: a file all of whose testcases
  * passed gets a variant (its entry is the file itself; imports are followed); a file with any failure,
  * or one the report does not show passing in full (a testcase skipped, or not reported at all), gets
- * none. Nothing is invalidated: the command ran only files no variant matched, so a failed one has no
+ * none. A traced run (`fsTrace`) adds what each file read; a file it shows nothing for read nothing.
+ * Nothing is invalidated: the command ran only files no variant matched, so a failed one has no
  * matching variant to remove and runs again as it is. Throws when the report cannot be read.
  *
  * Report paths are absolute or relative to the runner's root, which need not be the git root
@@ -50,7 +53,11 @@ export async function recordJunitResults(options: RecordJunitResultsOptions): Pr
         if (status === 'failed') {
             recording.failed.push(file);
         } else if (status === 'passed') {
-            const result = await selector.record({ file }, { status: 'passed', entry: [file] });
+            // Traced, and nothing recorded for the file: it read nothing.
+            const fsReads = options.fsTrace
+                ? (options.fsTrace.get(file) ?? { files: [], dirs: [], trees: [], opaque: false })
+                : undefined;
+            const result = await selector.record({ file }, { status: 'passed', entry: [file], fsReads });
             if (result.recorded) {
                 recording.recorded.push(file);
             } else {

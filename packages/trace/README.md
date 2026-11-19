@@ -23,6 +23,24 @@ The probe instruments every JavaScript file under the project root (the workspac
 the working directory) outside `node_modules`, and maps each function to its original source file
 through the file's source map. Sources outside the root or in `node_modules` are not recorded.
 
+## File accesses of `bun test`
+
+`@nzyme/trace/fs-preload` records which files each test file of a `bun test` run reads, for
+`nzyme git affected --junit` to store with the test's variant. List it first in `bunfig.toml`:
+
+```toml
+[test]
+preload = ["@nzyme/trace/fs-preload", "./test/setup.ts"]
+```
+
+It wraps `node:fs`, `node:fs/promises`, `Bun.file`, `Bun.write` and `Bun.Glob` scans, and marks a test
+file that starts a process, a worker or `Bun.build` as opaque, since what those read is not seen.
+It reaches the named imports (`import { readFileSync } from 'node:fs'`) only of modules that import
+`node:fs` after it loads; check that in a test of your own with `isFsTraced(readFileSync)`
+(`fs/isFsTraced.js`). With `NZYME_FS_TRACE_DIR` unset the functions stay wrapped but nothing is
+recorded. Accesses go to `Bun.main`, the file `bun test` is running, one `<pid>.ndjson` per process;
+the line types are `FsTraceLine` of `@nzyme/affected`.
+
 ## Labels
 
 Infrastructure code, not domain code, carries the label:

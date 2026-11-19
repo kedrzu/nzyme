@@ -29,11 +29,16 @@ A test of a static suite runs from its own package's sources and from the builds
 imports, so a record is refused (`stale-build`) when one of those builds was not made from the current
 sources, by the TypeScript build info of the package.
 
-A variant cannot see a file a test reads through `fs` or loads through a computed `import()`. It
-covers both by listing: every file nothing imports of each package owning one of its files (minus
-`ignore`), and every file under the directory of a file with a computed `import()`; a file added to
-or removed from either is a change too. A read reaching into another package (a test reading every
-package's manifest) is still not seen, so such an input must be a `fullRunTriggers` entry.
+No import shows a file a test reads through `fs` or a module it loads through a computed `import()`.
+A computed `import()` ties the variant to every file under its file's directory. For `fs` reads, a
+static suite's run can be traced: `nzyme git affected --junit` sets `NZYME_FS_TRACE_DIR`, and with
+`@nzyme/trace/fs-preload` first among the runner's preloads each test file's reads are recorded
+(`fsTrace/readFsTrace.ts`). The variant then holds the walked files the test read, in full and wherever
+they are (an `ignore` glob does not hide them), and the list of each directory it read the entries
+of. An untraced run, or a test that started a process, a worker or `Bun.build` (whose reads the trace
+cannot see), falls back to every file nothing imports of each package owning one of its files (minus
+`ignore`), where a read reaching into another package is not seen and must be a `fullRunTriggers`
+entry. A file added to or removed from any listed set is a change too.
 
 ## Modules
 

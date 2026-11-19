@@ -11,10 +11,17 @@ import { assertNever } from '@nzyme/utils/assertNever.js';
  *   `ignore` glob matches: what a test reads through `fs`, which no import shows. The base diff seeds
  *   the whole package from such a file the same way;
  * - `directory` — every file under `dir`, the directory of a file with a computed `import(…)`: any
- *   of them may be what it loads.
+ *   of them may be what it loads;
+ * - `entries` — the names directly in `dir` (a file, or the first segment of a deeper one): a
+ *   directory the test read the entries of (`readdir`);
+ * - `tree` — every file under `dir`: a directory the test read recursively (a recursive `readdir`,
+ *   a glob scan).
+ *
+ * The files of `package` and `directory` are part of the variant in full; `entries` and `tree` hold
+ * only the list, the test's own reads say which of their files it read.
  */
 export interface FileListing {
-    kind: 'package' | 'directory';
+    kind: 'package' | 'directory' | 'entries' | 'tree';
     /** Root-relative directory; `''` is the root. */
     dir: string;
 }
@@ -30,7 +37,7 @@ export interface FileListingContext {
 }
 
 /**
- * The walked files of a listing, sorted.
+ * The walked files of a listing (for `entries`, the names), sorted.
  * @__NO_SIDE_EFFECTS__
  */
 export function listFiles(listing: FileListing, context: FileListingContext): string[] {
@@ -45,7 +52,10 @@ export function listFiles(listing: FileListing, context: FileListingContext): st
                     findOwningPackageDir(file, context.packageDirs) === listing.dir,
             );
         case 'directory':
+        case 'tree':
             return under;
+        case 'entries':
+            return [...new Set(under.map(file => file.slice(prefix.length).split('/')[0] ?? ''))].toSorted();
         default:
             return assertNever(listing.kind);
     }
@@ -70,6 +80,8 @@ export function parseFileListingKey(key: string): FileListing | null {
     switch (kind) {
         case 'package':
         case 'directory':
+        case 'entries':
+        case 'tree':
             return separator === -1 ? null : { kind, dir };
         default:
             return null;

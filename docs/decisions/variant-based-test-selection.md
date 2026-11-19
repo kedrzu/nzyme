@@ -78,8 +78,19 @@ Two hashes per file, in `@nzyme/affected`.
   of each package owning one of its files (minus `ignore`), and every file under the directory of a
   file with a computed `import()` — in a static suite with what those import too. Each such set is
   stored as the digest of its sorted file list, so a fixture or a module added or removed is a change.
-  A read reaching into another package (a test reading every package's manifest) is still not seen:
-  such an input must be a `fullRunTriggers` entry.
+  A read reaching into another package (a test reading every package's manifest) is not seen this
+  way, so a static suite's run traces its `fs` reads instead: `@nzyme/trace/fs-preload`, the runner's
+  first preload, wraps `node:fs`, `node:fs/promises` and `Bun.file`/`Bun.write`/`Bun.Glob` (patched
+  through `process.getBuiltinModule` and re-synced into the named imports, which only reaches modules
+  that import `node:fs` after it) and attributes each access to `Bun.main`, the test file `bun test`
+  is running. A traced test's variant holds the walked files it read, whatever `ignore` says, and the
+  entry list of each directory it read, instead of its packages' un-imported files. A file it wrote
+  itself, a missing one and one outside the walk (`node_modules`, a gitignored build) are not inputs.
+  What it cannot see — a child process, a worker, `Bun.build`, a native addon — keeps the package
+  listing: a test that starts any of those is marked opaque. Measured on 181 test files, tracing costs
+  about 3% of the run; an access a test leaves running past its file goes to the next file, which only
+  adds an input. Tracing module loading as well would replace the computed-`import()` listing; it was
+  not needed yet.
 - **Builds.** The import graph resolves a workspace package's imports to its sources, but Bun and
   Vitest load the package's build. A static run on a stale build would record a variant hashing sources
   that did not run, and the test would then be skipped while they stay unchanged. So a static record

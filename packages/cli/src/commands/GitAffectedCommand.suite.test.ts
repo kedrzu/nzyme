@@ -27,6 +27,7 @@ const HERMETIC_GIT_ENV = {
 /**
  * A fake test runner: `sh -c RUNNER sh <junit> <file…>` writes a JUnit report with one testcase per
  * file, failing the file named by `$FAIL` (and exiting 1), and appends the files to `$OUT/ran.txt`.
+ * With `$TRACE_READ`, it also writes a file-access trace in which every file read that path.
  */
 const RUNNER = [
     'out="$1"; shift; code=0',
@@ -34,6 +35,8 @@ const RUNNER = [
     '  if [ "$f" = "$FAIL" ]; then code=1; echo "<testsuite name=\\"$f\\" file=\\"$f\\"><testcase name=\\"t\\" file=\\"$f\\"><failure message=\\"x\\"/></testcase></testsuite>";',
     '  else echo "<testsuite name=\\"$f\\" file=\\"$f\\"><testcase name=\\"t\\" file=\\"$f\\"/></testsuite>"; fi',
     'done; echo "</testsuites>"; } > "$out"',
+    'if [ -n "$TRACE_READ" ]; then trace="$NZYME_FS_TRACE_DIR/1.ndjson"; echo \'{"type":"start"}\' > "$trace";',
+    '  for f in "$@"; do echo "{\\"type\\":\\"access\\",\\"kind\\":\\"read\\",\\"test\\":\\"$PWD/$f\\",\\"path\\":\\"$TRACE_READ\\"}" >> "$trace"; done; fi',
     'printf "%s\\n" "$@" >> "$OUT/ran.txt"; exit $code',
 ].join('\n');
 
@@ -120,6 +123,16 @@ test('records the files that passed, skips them next time, and runs a failed one
     expect(third.stderr).toContain('0 run · 3 skipped (2 variant match; 1 unaffected since base)');
     expect(third.stderr).toContain('no affected files\n');
     expect(await readRan()).toEqual([]);
+});
+
+test('a traced run records the files each test read, wherever they are', async () => {
+    await write('docs/data.json', '{}');
+    await runSuite({ TRACE_READ: path.join(repo, 'docs/data.json') });
+    expect((await runSuite({})).stderr).toContain('0 run · 3 skipped');
+
+    await write('docs/data.json', '{"changed":true}');
+
+    expect((await runSuite({})).stderr).toContain('2 run (changed: docs/data.json)');
 });
 
 test('a change to a recorded dependency runs the test again, naming the file', async () => {

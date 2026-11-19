@@ -14,7 +14,9 @@
     "type": "module",
     "sideEffects": [
         "./dist/probe/preload.js",
-        "./src/probe/preload.ts"
+        "./src/probe/preload.ts",
+        "./dist/fs/fsPreload.js",
+        "./src/fs/fsPreload.ts"
     ],
     "exports": {
         "./preload": {
@@ -22,6 +24,12 @@
             "source": "./src/probe/preload.ts",
             "import": "./dist/probe/preload.js",
             "default": "./dist/probe/preload.js"
+        },
+        "./fs-preload": {
+            "types": "./dist/fs/fsPreload.d.ts",
+            "source": "./src/fs/fsPreload.ts",
+            "import": "./dist/fs/fsPreload.js",
+            "default": "./dist/fs/fsPreload.js"
         },
         "./*.js": {
             "types": "./dist/*.d.ts",

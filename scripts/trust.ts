@@ -1,22 +1,28 @@
 /**
- * Checks that every public package can be published by the release workflow through npm trusted
- * publishing (OIDC), and fixes what is missing, asking before each step:
+ * Makes every public package publishable by the release workflow through npm trusted publishing (OIDC),
+ * asking before each step:
  *
- * 1. a package that is not on npm yet is built, packed and published from this checkout, because
- *    npm accepts a trusted publisher only for a package that already exists;
- * 2. a package without a trusted publisher for `.github/workflows/release.yml` gets one.
+ * 1. a package that is not on npm yet is built, packed and published from this checkout, because npm
+ *    accepts a trusted publisher only for a package that already exists;
+ * 2. every package whose trusted publisher is not proven gets one for `.github/workflows/release.yml`.
  *
- * Run it locally after `npm login`; the npm account needs two-factor authentication, and npm asks for
- * it on every write. Bootstrap a new package from the release commit (`origin/release`), so that its
- * first version matches what the release workflow publishes for the others.
+ * A package is proven trusted when its latest version was published through a trusted publisher; the
+ * others are not checked first, because every call to npm's trust API costs a second factor. Adding a
+ * configuration a package already has is left to npm.
  *
- * Usage: `bun trust`
+ * The npm account needs two-factor authentication. Every write needs a fresh second factor: the script
+ * opens npm's browser authentication (a passkey or security key) and waits for it, or asks for a
+ * one-time password when the account uses an authenticator app.
+ *
+ * Bootstrap a new package from the release commit (`origin/release`), so that its first version matches
+ * what the release workflow publishes for the others.
+ *
+ * Usage: `bun trust [package...]` — the package names limit the run to those packages.
  */
-import { mkdtemp } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdtemp, readFile } from 'node:fs/promises';
+import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
-import { createInterface } from 'node:readline/promises';
 
 import { $ } from 'bun';
 
@@ -25,48 +31,38 @@ import type { WorkspacePackage } from './publish.js';
 
 const REPOSITORY = 'kedrzu/nzyme';
 const WORKFLOW = 'release.yml';
+const REGISTRY = 'https://registry.npmjs.org';
 const ROOT = path.resolve(import.meta.dir, '..');
 
-/** Where a package stands with npm trusted publishing. */
-type TrustState = 'trusted' | 'untrusted' | 'unpublished';
+/** Where a package stands with npm trusted publishing, as far as npm tells without a second factor. */
+type TrustState = 'trusted' | 'unverified' | 'unpublished';
 
-/** A trust configuration as `npm trust list --json` prints it for a GitHub provider. */
-interface TrustConfig {
-    type?: string;
-    repository?: string;
-    file?: string;
-}
-
-const STATE_ICONS: Record<TrustState, string> = {
-    trusted: '✅',
-    untrusted: '⚠️ ',
-    unpublished: '❌',
+const STATE_LABELS: Record<TrustState, string> = {
+    trusted: '✅ trusted',
+    unverified: '❔ no trusted publish yet',
+    unpublished: '❌ not on npm',
 };
 
-/** The part of `npm profile get --json` the script reads. */
-interface NpmProfile {
-    tfa: false | { mode: string; pending: boolean };
+/** The body npm answers with when a request needs a second factor through the browser. */
+interface WebAuthChallenge {
+    authUrl: string;
+    doneUrl: string;
 }
+
+/**
+ * One line reader for the whole run: a reader per question would swallow the answers piped in after its
+ * own, and `node:readline` closes itself at the end of piped input, before the next question.
+ */
+const answers = console[Symbol.asyncIterator]();
 
 if (import.meta.main) {
     await main();
 }
 
 async function main() {
-    const npm = await createNpm();
-    const user = await npm.read(['whoami']);
-    if (user == null) {
+    const token = readRegistryToken(await readFile(path.join(homedir(), '.npmrc'), 'utf8').catch(() => ''));
+    if (token == null) {
         console.error('Not logged in to npm: run `npm login` first.');
-        process.exit(1);
-    }
-    console.log(`npm user: ${user.trim()}\n`);
-
-    // npm refuses every `npm trust` call (403) for an account without two-factor authentication.
-    const profile = JSON.parse(await npm.run(['profile', 'get', '--json'])) as NpmProfile;
-    if (profile.tfa === false || profile.tfa.pending) {
-        console.error(
-            'Enable two-factor authentication on the npm account first: npm profile enable-2fa auth-and-writes',
-        );
         process.exit(1);
     }
 
@@ -74,26 +70,28 @@ async function main() {
     const publishable = packages.filter(pkg => !pkg.private);
     assertNoPrivateDependencies(publishable, packages);
 
+    const only = process.argv.slice(2);
+    const selected = only.length > 0 ? publishable.filter(pkg => only.includes(pkg.name)) : publishable;
+
     const states = new Map<WorkspacePackage, TrustState>();
-    for (const pkg of publishable) {
-        const state = await readTrustState(npm, pkg);
+    for (const pkg of selected) {
+        const state = await readTrustState(pkg);
         states.set(pkg, state);
-        console.log(`${STATE_ICONS[state]} ${pkg.name} — ${state}`);
+        console.log(`${STATE_LABELS[state]} — ${pkg.name}`);
     }
 
-    let untrusted = publishable.filter(pkg => states.get(pkg) !== 'trusted');
+    let untrusted = selected.filter(pkg => states.get(pkg) !== 'trusted');
     if (untrusted.length === 0) {
-        console.log('\nEvery public package has a trusted publisher.');
+        console.log('\nEvery package has published through a trusted publisher.');
         return;
     }
 
     const unpublished = untrusted.filter(pkg => states.get(pkg) === 'unpublished');
     if (unpublished.length > 0) {
         const head = (await $`git rev-parse --short HEAD`.quiet().text()).trim();
-        const names = unpublished.map(pkg => `${pkg.name}@${pkg.version}`).join(', ');
-        console.log(`\nNot on npm yet: ${names}`);
-        if (await confirm(`Build and publish them from ${head}?`)) {
-            await bootstrap(npm, unpublished);
+        console.log(`\nNot on npm yet: ${unpublished.map(pkg => `${pkg.name}@${pkg.version}`).join(', ')}`);
+        if (await confirm(`Build and publish them from ${head}? Each one needs a second factor.`)) {
+            await bootstrap(token, unpublished);
         } else {
             console.log('Skipped: a package must be on npm before it can get a trusted publisher.');
             untrusted = untrusted.filter(pkg => states.get(pkg) !== 'unpublished');
@@ -103,103 +101,63 @@ async function main() {
         }
     }
 
-    console.log(`\nWithout a trusted publisher: ${untrusted.map(pkg => pkg.name).join(', ')}`);
-    if (!(await confirm(`Trust ${REPOSITORY} / ${WORKFLOW} to publish them?`))) {
+    console.log(`\nTo trust ${REPOSITORY} / ${WORKFLOW}: ${untrusted.map(pkg => pkg.name).join(', ')}`);
+    if (!(await confirm(`Add the trusted publisher? Each package needs a second factor.`))) {
         return;
     }
 
     for (const pkg of untrusted) {
-        await npm.run(['trust', 'github', pkg.name, '--repo', REPOSITORY, '--file', WORKFLOW, '--yes']);
+        await addTrustedPublisher(token, pkg);
         console.log(`🔐 ${pkg.name}`);
     }
 }
 
-/** Runs npm commands, asking for a one-time password whenever npm requires a new one. */
-interface Npm {
-    /** Runs a command and returns its output; throws when it fails. */
-    run(args: string[]): Promise<string>;
-    /** Runs a read-only command and returns its output, or `null` when the package or user is not found. */
-    read(args: string[]): Promise<string | null>;
-}
-
 /**
- * Creates the npm runner: the installed npm when it has `npm trust`, otherwise the latest npm. With
- * two-factor authentication npm wants a one-time password even to read trust configurations; it is
- * asked for once and reused until npm rejects it.
+ * Reads the npmjs.org auth token from the contents of an `.npmrc` (`npm config get` refuses to print it).
+ *
+ * @returns the token, or `null` when the file has none
  */
-async function createNpm(): Promise<Npm> {
-    const local = await $`npm trust --help`.quiet().nothrow();
-    const command = local.exitCode === 0 ? ['npm'] : ['npx', '--yes', 'npm@latest'];
-    let otp: string | null = null;
-
-    return {
-        run: async args => {
-            const output = await execute(args);
-            if (output.status !== 'ok') {
-                throw new Error(`npm ${args.join(' ')} failed:\n${output.stderr}`);
-            }
-            return output.stdout;
-        },
-        read: async args => {
-            const output = await execute(args);
-            if (output.status === 'not-found') {
-                return null;
-            }
-            if (output.status === 'failed') {
-                throw new Error(`npm ${args.join(' ')} failed:\n${output.stderr}`);
-            }
-            return output.stdout;
-        },
-    };
-
-    async function execute(args: string[]) {
-        for (;;) {
-            // Through the environment: `npm trust` rejects an `--otp` flag it does not declare.
-            const env = otp == null ? process.env : { ...process.env, npm_config_otp: otp };
-            const result = await $`${command} ${args}`.cwd(ROOT).env(env).quiet().nothrow();
-            const stdout = result.stdout.toString();
-            const stderr = result.stderr.toString();
-            if (result.exitCode === 0) {
-                return { status: 'ok' as const, stdout, stderr };
-            }
-            if (stderr.includes('EOTP')) {
-                otp = await ask(otp == null ? 'npm one-time password: ' : 'npm rejected the password, a new one: ');
-                continue;
-            }
-            // E404 is a package that was never published; E401 is `whoami` without a login.
-            const notFound = stderr.includes('E404') || stderr.includes('E401');
-            return { status: notFound ? ('not-found' as const) : ('failed' as const), stdout, stderr };
-        }
-    }
+export function readRegistryToken(npmrc: string) {
+    const match = /^\/\/registry\.npmjs\.org\/:_authToken=(.+)$/m.exec(npmrc);
+    return match?.[1]?.trim() ?? null;
 }
 
-async function readTrustState(npm: Npm, pkg: WorkspacePackage): Promise<TrustState> {
-    if ((await npm.read(['view', pkg.name, 'name'])) == null) {
+async function readTrustState(pkg: WorkspacePackage): Promise<TrustState> {
+    const response = await fetch(`${REGISTRY}/${encodePackageName(pkg.name)}/latest`);
+    if (response.status === 404) {
         return 'unpublished';
     }
-
-    const configs = parseTrustList(await npm.run(['trust', 'list', pkg.name, '--json']));
-    const trusted = configs.some(
-        config => config.type === 'github' && config.repository === REPOSITORY && config.file === WORKFLOW,
-    );
-    return trusted ? 'trusted' : 'untrusted';
-}
-
-/**
- * Parses `npm trust list --json`, which prints one indented JSON object per configuration, one after
- * another, and nothing when there is none.
- */
-export function parseTrustList(output: string): TrustConfig[] {
-    const trimmed = output.trim();
-    if (trimmed === '') {
-        return [];
+    if (!response.ok) {
+        throw new Error(`Reading ${pkg.name} from npm failed: HTTP ${response.status}`);
     }
 
-    // Top-level objects close and open at column 0; nested ones are indented.
-    return JSON.parse(`[${trimmed.replaceAll(/^\}\s*^\{/gm, '},{')}]`) as TrustConfig[];
+    const manifest = (await response.json()) as { _npmUser?: { trustedPublisher?: unknown } };
+    return manifest._npmUser?.trustedPublisher == null ? 'unverified' : 'trusted';
 }
 
-async function bootstrap(npm: Npm, packages: WorkspacePackage[]) {
+async function addTrustedPublisher(token: string, pkg: WorkspacePackage) {
+    const body = JSON.stringify([
+        {
+            type: 'github',
+            claims: { repository: REPOSITORY, workflow_ref: { file: WORKFLOW } },
+            permissions: ['createPackage'],
+        },
+    ]);
+    const response = await requestWithSecondFactor(token, otp =>
+        fetch(`${REGISTRY}/-/package/${encodePackageName(pkg.name)}/trust`, {
+            method: 'POST',
+            headers: { ...authHeaders(token, otp), 'content-type': 'application/json' },
+            body,
+        }),
+    );
+    if (!response.ok) {
+        throw new Error(
+            `Adding the trusted publisher to ${pkg.name} failed: HTTP ${response.status} ${await response.text()}`,
+        );
+    }
+}
+
+async function bootstrap(token: string, packages: WorkspacePackage[]) {
     const projects = packages.map(pkg => pkg.name).join(',');
     const build = Bun.spawn(['bun', 'nx', 'run-many', '-t', 'build', '-p', projects], {
         cwd: ROOT,
@@ -213,9 +171,88 @@ async function bootstrap(npm: Npm, packages: WorkspacePackage[]) {
     for (const pkg of packages) {
         const tarball = await pack(pkg, outDir);
         await assertNoWorkspaceProtocol(pkg, tarball);
-        await npm.run(['publish', tarball, '--access', 'public']);
+        await publishTarball(token, pkg, tarball);
         console.log(`📦 ${pkg.name}@${pkg.version}`);
     }
+}
+
+/**
+ * Publishes through `npm publish`, with a second factor the script obtained itself: npm prints its own
+ * browser link redacted when it is not attached to a terminal. The factor is asked for on a read of the
+ * package's trust configurations, which needs one too, and handed to npm as its `otp` setting.
+ */
+async function publishTarball(token: string, pkg: WorkspacePackage, tarball: string) {
+    const probe = await fetch(`${REGISTRY}/-/package/${encodePackageName('@nzyme/utils')}/trust`, {
+        headers: authHeaders(token, null),
+    });
+    const otp = await obtainSecondFactor(token, probe);
+
+    const result = await $`npm publish ${tarball} --access public`
+        .cwd(ROOT)
+        .env({ ...process.env, npm_config_otp: otp })
+        .quiet()
+        .nothrow();
+    if (result.exitCode !== 0) {
+        throw new Error(`npm publish ${pkg.name} failed:\n${result.stderr.toString()}`);
+    }
+}
+
+/**
+ * Sends a request, and when npm answers that it needs a second factor, obtains one and sends it again:
+ * through the browser when npm offers it (a passkey or security key), otherwise as a one-time password
+ * typed in. A second factor is good for one request only.
+ */
+async function requestWithSecondFactor(token: string, send: (otp: string | null) => Promise<Response>) {
+    const first = await send(null);
+    if (first.status !== 401) {
+        return first;
+    }
+
+    return await send(await obtainSecondFactor(token, first));
+}
+
+/** Obtains a second factor for npm's 401 answer to a request that needs one. */
+async function obtainSecondFactor(token: string, response: Response) {
+    if (response.status !== 401) {
+        throw new Error(`npm asked for no second factor: HTTP ${response.status}`);
+    }
+
+    const challenge = (await response.json().catch(() => null)) as Partial<WebAuthChallenge> | null;
+    if (challenge?.authUrl != null && challenge.doneUrl != null) {
+        return await authenticateInBrowser(token, { authUrl: challenge.authUrl, doneUrl: challenge.doneUrl });
+    }
+
+    return await ask('npm one-time password: ');
+}
+
+async function authenticateInBrowser(token: string, challenge: WebAuthChallenge) {
+    console.log(`Confirm in the browser: ${challenge.authUrl}`);
+    await $`open ${challenge.authUrl}`.quiet().nothrow();
+
+    for (;;) {
+        const response = await fetch(challenge.doneUrl, { headers: authHeaders(token, null) });
+        if (response.status === 200) {
+            const { token: otp } = (await response.json()) as { token: string };
+            return otp;
+        }
+        if (response.status !== 202) {
+            throw new Error(`npm browser authentication failed: HTTP ${response.status} ${await response.text()}`);
+        }
+        const retryAfter = Number(response.headers.get('retry-after') ?? '1');
+        await Bun.sleep(Math.max(retryAfter, 1) * 1000);
+    }
+}
+
+function authHeaders(token: string, otp: string | null): Record<string, string> {
+    return {
+        authorization: `Bearer ${token}`,
+        'npm-auth-type': 'web',
+        ...(otp == null ? {} : { 'npm-otp': otp }),
+    };
+}
+
+function encodePackageName(name: string) {
+    return name.replace('/', '%2f');
 }
 
 /** Asks a yes/no question on the terminal; anything but "y" or "yes" is a no. */
@@ -225,10 +262,7 @@ async function confirm(question: string) {
 }
 
 async function ask(question: string) {
-    const readline = createInterface({ input: process.stdin, output: process.stdout });
-    try {
-        return (await readline.question(question)).trim();
-    } finally {
-        readline.close();
-    }
+    process.stdout.write(question);
+    const answer = await answers.next();
+    return answer.done ? '' : answer.value.trim();
 }

@@ -170,7 +170,7 @@ jobs:
         run: bun run test:components
 
       # Authenticates through OIDC only: every package needs a trusted publisher for this workflow, and a
-      # package's first version is published locally (`bun scripts/trust.ts`).
+      # package's first version is published locally (`bun trust`).
       - name: Publish to npm
         run: bun scripts/publish.ts
 

@@ -28,6 +28,7 @@
         "setup": "zsh setup.sh",
         "test": "bun test ./packages/*/src ./scripts",
         "test:components": "nx run-many -t test:components",
+        "trust": "bun scripts/trust.ts",
         "typecheck": "tsgo --build && tsgo -p scripts",
         "update": "bun update -i -r --latest",
         "watch": "tsgo --build --watch"

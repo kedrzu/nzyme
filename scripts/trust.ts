@@ -10,7 +10,7 @@
  * it on every write. Bootstrap a new package from the release commit (`origin/release`), so that its
  * first version matches what the release workflow publishes for the others.
  *
- * Usage: `bun scripts/trust.ts`
+ * Usage: `bun trust`
  */
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';

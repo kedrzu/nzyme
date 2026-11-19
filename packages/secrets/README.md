@@ -174,8 +174,37 @@ Bitwarden, a read-only machine account) and its writes are refused.
 
 ## Stores
 
+- `keychainStore` from `@nzyme/secrets/keychainStore.js` — the OS keychain of the current user (see [Keychain store](#keychain-store)).
 - [`@nzyme/bitwarden`](../bitwarden/README.md) — Bitwarden Secrets Manager.
 - `parameterStore` from `@nzyme/aws/ssm.js` — AWS Systems Manager Parameter Store: a path prefix (`/secrets/dev/`, direct children only) or a name prefix (`FOOBAR_`); credentials from the AWS provider chain or a `profile`, no `login`; an explicit `endpoint` keeps the store on real AWS when `AWS_ENDPOINT_URL` points the process at an emulator.
 
 A store is an object implementing `SecretStore` (`id` (which includes the prefix), `readAll`, `write`, optional `login`,
 `refresh`, `credentialEnv`).
+
+## Keychain store
+
+The simplest store: secrets of one user on one machine, kept in the OS keychain (through `Bun.secrets`,
+service `nzyme-secrets`). No account, no credentials, no network.
+
+```ts
+import { keychainStore } from '@nzyme/secrets/keychainStore.js';
+
+const dev = keychainStore({ scope: 'myapp-dev' });
+const personal = keychainStore({ scope: 'personal' });
+```
+
+- **Scope:** each scope is an independent set of keys, with the store id `keychain:<scope>`. A scope must
+  not be empty, blank or contain `:`.
+- **Layout:** one keychain item per secret, `keychain:<scope>:<key>`, holding the raw value, so each one
+  is visible and editable in Keychain Access. `Bun.secrets` cannot list items, so the item
+  `keychain:<scope>` holds the scope's keys as a JSON array. A key listed there whose item is gone is
+  skipped; a malformed list makes reads and writes fail, naming the store, and a write never replaces it.
+- **Writes:** value items first, the key list last, so an interrupted write never lists a key without a
+  value. A write that fails part-way keeps the values written before the failure, and two concurrent
+  writes to one scope can drop a key from the list. Writing the key again repairs both.
+- **No `login`:** the OS session unlocks the keychain. Wrapping the store in `cached()` gains nothing.
+- **Bun only:** outside Bun the store throws when read or written.
+
+The keychain protects the values from other users and from a stolen disk, not from code you run (see
+[Cache](#cache)). There is no way to share the secrets with another machine or person: use a remote
+store for that.

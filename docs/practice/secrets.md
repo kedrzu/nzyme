@@ -1,6 +1,7 @@
 # Secrets
 
-The repo keeps its secrets in a remote store (Bitwarden Secrets Manager today) behind a login.
+The repo keeps its secrets in a remote store (Bitwarden Secrets Manager today) behind a login, or, for
+secrets of one developer on one machine, in the local OS keychain (`keychainStore`).
 A store is scoped by a prefix and its secrets are keyed by the variable name. A repo with a config
 document lists `secretsSource(store)` among its sources; otherwise the app calls
 `loadSecrets(container, stores)` at startup, so the code reads secrets through `defineEnvVariable` like any

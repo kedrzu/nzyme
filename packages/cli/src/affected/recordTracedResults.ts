@@ -57,7 +57,7 @@ export async function recordTracedResults(
             continue;
         }
         if (!result.complete) {
-            countRefusal(recording, result.reason);
+            countRefusal(result.reason);
             continue;
         }
         const recorded = await selector.record(result.unit, {
@@ -71,11 +71,15 @@ export async function recordTracedResults(
         if (recorded.recorded) {
             recording.recorded++;
         } else {
-            countRefusal(recording, recorded.reason.kind);
+            countRefusal(recorded.reason.kind);
         }
     }
 
     return recording;
+
+    function countRefusal(reason: string): void {
+        recording.refused.set(reason, (recording.refused.get(reason) ?? 0) + 1);
+    }
 }
 
 /**
@@ -90,8 +94,4 @@ function collectServerExecuted(results: readonly TracedTestResult[]): string[] {
         }
     }
     return [...executed];
-}
-
-function countRefusal(recording: TracedRecording, reason: string): void {
-    recording.refused.set(reason, (recording.refused.get(reason) ?? 0) + 1);
 }

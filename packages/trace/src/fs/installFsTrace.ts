@@ -15,19 +15,33 @@ export interface InstallFsTraceOptions {
 /** How a wrapped function's arguments map to accesses. */
 type AccessOf = (args: unknown[]) => [FsAccessKind, unknown][];
 
-const READ_PATH: AccessOf = args => [['read', args[0]]];
-const WRITE_PATH: AccessOf = args => [['write', args[0]]];
-const COPY: AccessOf = args => [
-    ['read', args[0]],
-    ['write', args[1]],
-];
-const RENAME: AccessOf = args => [
-    ['write', args[0]],
-    ['write', args[1]],
-];
-const LIST: AccessOf = args => [[hasOption(args[1], 'recursive') ? 'tree' : 'list', args[0]]];
-const OPEN: AccessOf = args => [[isWriteFlag(args[1]) ? 'write' : 'read', args[0]]];
-const OPAQUE: AccessOf = () => [['opaque', '']];
+function READ_PATH(args: unknown[]): ReturnType<AccessOf> {
+    return [['read', args[0]]];
+}
+function WRITE_PATH(args: unknown[]): ReturnType<AccessOf> {
+    return [['write', args[0]]];
+}
+function COPY(args: unknown[]): ReturnType<AccessOf> {
+    return [
+        ['read', args[0]],
+        ['write', args[1]],
+    ];
+}
+function RENAME(args: unknown[]): ReturnType<AccessOf> {
+    return [
+        ['write', args[0]],
+        ['write', args[1]],
+    ];
+}
+function LIST(args: unknown[]): ReturnType<AccessOf> {
+    return [[hasOption(args[1], 'recursive') ? 'tree' : 'list', args[0]]];
+}
+function OPEN(args: unknown[]): ReturnType<AccessOf> {
+    return [[isWriteFlag(args[1]) ? 'write' : 'read', args[0]]];
+}
+function OPAQUE(): ReturnType<AccessOf> {
+    return [['opaque', '']];
+}
 
 /** The `node:fs` functions (callback and sync), and the accesses each makes. */
 const FS_FUNCTIONS: ReadonlyMap<string, AccessOf> = new Map([

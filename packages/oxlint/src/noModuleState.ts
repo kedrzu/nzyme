@@ -1,7 +1,6 @@
 import type { Immutable } from '@nzyme/types/Immutable.js';
 
 import { isNode } from './isNode.js';
-import type { SpecifierResolver } from './noSideEffectsDeclaration.js';
 import { findVariable, hasAnnotationInFile, isAnnotatedExport } from './noSideEffectsDeclaration.js';
 import type {
     OxlintAnyNode,
@@ -127,8 +126,9 @@ const TYPE_WRAPPERS: ReadonlySet<string> = new Set([
 ]);
 
 /** A specifier is resolved as written first, then as a workspace package's source. */
-const resolveSourceSpecifier: SpecifierResolver = (fromFile, specifier) =>
-    resolveImportSpecifier(fromFile, specifier) ?? resolvePackageSpecifier(fromFile, specifier);
+function resolveSourceSpecifier(fromFile: string, specifier: string): string | undefined {
+    return resolveImportSpecifier(fromFile, specifier) ?? resolvePackageSpecifier(fromFile, specifier);
+}
 
 /**
  * Rejects module-level state that nobody declared.

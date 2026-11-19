@@ -43,6 +43,11 @@ const STATE_ICONS: Record<TrustState, string> = {
     unpublished: '❌',
 };
 
+/** The part of `npm profile get --json` the script reads. */
+interface NpmProfile {
+    tfa: false | { mode: string; pending: boolean };
+}
+
 if (import.meta.main) {
     await main();
 }
@@ -55,6 +60,15 @@ async function main() {
         process.exit(1);
     }
     console.log(`npm user: ${user.stdout.toString().trim()}\n`);
+
+    // npm refuses every `npm trust` call (403) for an account without two-factor authentication.
+    const profile = (await $`${npm} profile get --json`.quiet().json()) as NpmProfile;
+    if (profile.tfa === false || profile.tfa.pending) {
+        console.error(
+            'Enable two-factor authentication on the npm account first: npm profile enable-2fa auth-and-writes',
+        );
+        process.exit(1);
+    }
 
     const packages = await readWorkspacePackages();
     const publishable = packages.filter(pkg => !pkg.private);

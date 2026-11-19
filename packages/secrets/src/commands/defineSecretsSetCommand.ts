@@ -1,8 +1,10 @@
 import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
+import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 
 import { promptSecret } from './promptSecret.js';
+import { getSecretDeclarations, getUndeclaredReason } from './utils/getSecretDeclarations.js';
 import { readHiddenInput } from './utils/readHiddenInput.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
 
@@ -28,6 +30,10 @@ export function defineSecretsSetCommand(options: SecretsCommandsOptions): Comman
                 the value reaching its transcript. \`--prompt=<hint>\` shows the hint in the dialog
                 (the \`=\` is required). The value is trimmed and must be one line; only the name,
                 store and character count are printed.
+
+                When the project declares its secrets, a name that is not declared with
+                \`defineSecret\`, or not enabled in this environment, is refused before anything is
+                asked or written.
             `,
             examples: [
                 ['Set a secret interactively', 'secrets set DB_PASSWORD'],
@@ -46,8 +52,17 @@ export function defineSecretsSetCommand(options: SecretsCommandsOptions): Comman
         });
 
         override async run() {
-            // Resolved first: a refused name throws here, before any prompt or write.
-            const store = this.container.resolve(options.provider).target(this.name);
+            // Checked first: a refused name throws here, before any prompt or write.
+            const provider = this.container.resolve(options.provider);
+            if (provider.secrets) {
+                const declarations = getSecretDeclarations(provider.secrets, this.container.resolve(EnvVariables));
+                const reason = getUndeclaredReason(declarations, this.name);
+                if (reason) {
+                    throw new UsageError(`Refusing to write ${this.name}: ${reason}.`);
+                }
+            }
+
+            const store = provider.target(this.name);
 
             const prompted = this.prompt !== undefined && this.prompt !== false;
             const value = prompted

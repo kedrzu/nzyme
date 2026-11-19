@@ -15,7 +15,7 @@ const NAME = 'API_KEY';
  * backslash, `&` and `<…>` are markup to zenity's and kdialog's labels, like the `_` in the name.
  */
 const HINT = `Settings → "API" → it's the 'live' key in C:\\new & <b>`;
-const TITLE = `${NAME} - nzyme secrets`;
+const TITLE = `${NAME} - secrets`;
 const MESSAGE = `${NAME}\n\n${HINT}\n\nNothing you type here is visible to the agent.`;
 
 type Tool = 'osascript' | 'powershell.exe' | 'zenity' | 'kdialog';

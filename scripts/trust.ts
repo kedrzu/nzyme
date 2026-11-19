@@ -240,6 +240,9 @@ async function authenticateInBrowser(token: string, challenge: WebAuthChallenge)
             const { token: otp } = (await response.json()) as { token: string };
             return otp;
         }
+        if (response.status === 404) {
+            throw new Error('The browser confirmation expired: npm drops it when it is not given within minutes.');
+        }
         if (response.status !== 202) {
             throw new Error(`npm browser authentication failed: HTTP ${response.status} ${await response.text()}`);
         }

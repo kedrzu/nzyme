@@ -97,7 +97,8 @@ export async function readWorkspacePackages() {
     return packages.toSorted((a, b) => a.name.localeCompare(b.name));
 }
 
-function assertNoPrivateDependencies(publishable: WorkspacePackage[], all: WorkspacePackage[]) {
+/** Throws when a public package depends on a private workspace package, which npm users could not install. */
+export function assertNoPrivateDependencies(publishable: WorkspacePackage[], all: WorkspacePackage[]) {
     const privateNames = new Set(all.filter(pkg => pkg.private).map(pkg => pkg.name));
     const problems: string[] = [];
     for (const pkg of publishable) {
@@ -172,7 +173,12 @@ async function isPublished(pkg: WorkspacePackage) {
     throw new Error(`npm view ${pkg.name}@${pkg.version} failed:\n${result.stderr.toString()}`);
 }
 
-async function pack(pkg: WorkspacePackage, outDir: string) {
+/**
+ * Packs a package with `bun pm pack`, which rewrites `workspace:*` dependencies to exact versions.
+ *
+ * @returns the path of the tarball, in a fresh directory under `outDir`
+ */
+export async function pack(pkg: WorkspacePackage, outDir: string) {
     const destination = await mkdtemp(path.join(outDir, 'pkg-'));
     await $`bun pm pack --destination ${destination} --quiet`.cwd(pkg.dir).quiet();
 
@@ -184,7 +190,8 @@ async function pack(pkg: WorkspacePackage, outDir: string) {
     return path.join(destination, tarball);
 }
 
-async function assertNoWorkspaceProtocol(pkg: WorkspacePackage, tarball: string) {
+/** Throws when the packed `package.json` still contains a `workspace:` dependency. */
+export async function assertNoWorkspaceProtocol(pkg: WorkspacePackage, tarball: string) {
     const manifest = await $`tar -xOzf ${tarball} package/package.json`.quiet().text();
     if (manifest.includes('workspace:')) {
         throw new Error(`${pkg.name}: the packed package.json still contains a workspace: dependency`);

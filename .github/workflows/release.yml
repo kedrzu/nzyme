@@ -169,14 +169,8 @@ jobs:
       - name: Component tests
         run: bun run test:components
 
-      # Only needed to bootstrap packages that are not on npm yet (trusted publishing can only be
-      # configured for an existing package). Without the secret, npm authenticates through OIDC.
-      - name: Configure npm token
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        if: env.NPM_TOKEN != ''
-        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
-
+      # Authenticates through OIDC only: every package needs a trusted publisher for this workflow, and a
+      # package's first version is published locally (`bun scripts/trust.ts`).
       - name: Publish to npm
         run: bun scripts/publish.ts
 

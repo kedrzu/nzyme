@@ -65,6 +65,7 @@ Option D.
     on the release PR (the publish job builds and tests anyway), and `promote.yml` calls `release.yml`
     explicitly.
   - Trusted publishing can only be configured for packages that already exist on npm, so a package's first
-    publish needs a temporary `NPM_TOKEN`.
+    version is published by a maintainer from their machine (`bun scripts/trust.ts`, which also adds the
+    trusted publisher). The npm account needs two-factor authentication for both.
   - Branch protection on `main`/`release` must let the bot push the back-merge and promotion, or a
     `RELEASE_BOT_TOKEN` must be provided.

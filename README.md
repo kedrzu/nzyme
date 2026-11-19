@@ -46,6 +46,8 @@ claude plugin install dev@kedrzu-skills  # likewise design-doc, git, web-search,
 3. Every push to `release` updates the release PR `chore(release): vX` with the next version and its
    [CHANGELOG](CHANGELOG.md) entry. Merging it publishes to npm (trusted publishing, with provenance),
    tags `vX` and creates the GitHub Release. `release` is then merged back into `main`.
+4. A new public package must be on npm, with a trusted publisher, before the release that ships it:
+   run `bun scripts/trust.ts` after `npm login`, from `release`.
 
 The reasoning is in [docs/decisions/release-line-on-nx-release.md](docs/decisions/release-line-on-nx-release.md).
 

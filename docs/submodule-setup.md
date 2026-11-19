@@ -216,6 +216,11 @@ A product's setup script (Paseo runs it for every new worktree through `paseo.js
 2. The build above.
 3. Optionally `nzyme index`, to generate the code map for agents. It covers nzyme's packages too;
    configure it under `nzyme.index` in the product's `package.json`.
+4. `bash nzyme/scripts/claude-plugins.sh`, when the product enables Claude Code plugins in
+   `.claude/settings.json`. Claude Code records a project-scope install against the checkout's path,
+   so each worktree needs its own; without it the plugins show as enabled but not installed. The
+   script also trusts the checkout, so plugins symlinked into `.claude/skills/` load. It exits 1 when
+   it skipped a step: report that as a warning, never fail the setup on it.
 
 ## Agents
 

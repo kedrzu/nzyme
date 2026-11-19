@@ -15,6 +15,10 @@
 #    neither for this checkout nor for the user, nor symlinked into `.claude/skills/`. A missing
 #    marketplace is added from the source in `extraKnownMarketplaces`.
 #
+# `claude plugin install` and `uninstall` at project scope rewrite `.claude/settings.json`, a tracked
+# file: the script restores it byte for byte. A plugin both enabled there and symlinked into
+# `.claude/skills/` is reported, since only the repo can drop the entry.
+#
 # Never installs anything at user scope. Exits 1 when a step was skipped; each skipped step is printed
 # with the command to run by hand.
 
@@ -37,6 +41,10 @@ if [ ! -f .claude/settings.json ]; then
     echo "No .claude/settings.json in $here: no plugins to set up."
     exit 0
 fi
+
+settings_backup=$(mktemp)
+cp .claude/settings.json "$settings_backup"
+trap 'cp "$settings_backup" .claude/settings.json; rm -f "$settings_backup"' EXIT
 
 # --- 1. Trust ---
 
@@ -66,7 +74,7 @@ if ! plugins=$(claude plugin list --json 2> /dev/null); then
 fi
 marketplaces=$(claude plugin marketplace list --json 2> /dev/null || echo '[]')
 
-# One line per action: `uninstall <plugin> <scope>`, `shadowed <plugin>` or
+# One line per action: `uninstall <plugin> <scope>`, `shadowed <plugin>`, `symlinked <plugin>` or
 # `install <plugin> <marketplace> <source>` (source empty when settings do not declare the marketplace,
 # or when the machine already knows it).
 plan=$(PLUGINS="$plugins" MARKETPLACES="$marketplaces" python3 -I - "$here" << 'PY'
@@ -91,8 +99,12 @@ for name, m in settings.get("extraKnownMarketplaces", {}).items():
     s = m.get("source", {})
     sources[name] = s.get("repo") or s.get("url") or s.get("path") or ""
 for plugin, enabled in settings.get("enabledPlugins", {}).items():
+    if not enabled or "@" not in plugin:
+        continue
     # A plugin symlinked into `.claude/skills/` is already there; installing it would shadow it.
-    if enabled and plugin not in installed and "@" in plugin and plugin.rsplit("@", 1)[0] not in local:
+    if plugin.rsplit("@", 1)[0] in local:
+        print("symlinked", plugin)
+    elif plugin not in installed:
         marketplace = plugin.rsplit("@", 1)[1]
         print("install", plugin, marketplace, "" if marketplace in known else sources.get(marketplace, ""))
 PY
@@ -118,6 +130,9 @@ while read -r action plugin arg source; do
             else
                 skip "Could not remove $plugin, which hides .claude/skills/${plugin%@*}: run 'claude plugin uninstall $plugin --scope $arg'."
             fi
+            ;;
+        symlinked)
+            skip "$plugin is enabled in .claude/settings.json but loads from .claude/skills/${plugin%@*}: remove it from enabledPlugins (and its marketplace, if nothing else uses it)."
             ;;
         shadowed)
             skip "$plugin is installed for all projects and hides .claude/skills/${plugin%@*}: uninstall it if no other project needs it ('claude plugin uninstall $plugin')."

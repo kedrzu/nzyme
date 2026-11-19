@@ -71,6 +71,11 @@ async function main() {
     assertNoPrivateDependencies(publishable, packages);
 
     const only = process.argv.slice(2);
+    const unknown = only.filter(name => !publishable.some(pkg => pkg.name === name));
+    if (unknown.length > 0) {
+        console.error(`Not a public workspace package: ${unknown.join(', ')}`);
+        process.exit(1);
+    }
     const selected = only.length > 0 ? publishable.filter(pkg => only.includes(pkg.name)) : publishable;
 
     const states = new Map<WorkspacePackage, TrustState>();

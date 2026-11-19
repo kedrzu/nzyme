@@ -62,9 +62,11 @@ export type BuildVariantResult = { variant: Variant } | { missing: string };
  *   what ran);
  * - the `package.json` of every workspace package owning one of the files above — in full, as the base
  *   diff treats a package's manifest as a change of all its files: its dependencies, `exports` and
- *   `imports` decide what the package's code loads;
+ *   `imports` decide what the package's code loads. A file outside every package belongs to the
+ *   root, whose manifest is the root `package.json`;
  * - the files of each such package that nothing imports (fixtures, data a test reads through `fs`) —
- *   in full, as the base diff seeds the whole package from a change to one.
+ *   in full, as the base diff seeds the whole package from a change to one; for the root, the files
+ *   outside every package.
  *
  * The last two sets are {@link FileListing}s: the variant also stores the digest of each one's file
  * list, so a file appearing in it or leaving it is a change. A read reaching into another package (a
@@ -120,9 +122,8 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
     for (const file of levels.keys()) {
         owners.add(findOwningPackageDir(file, options.packageDirs));
     }
-    owners.delete('');
     for (const owner of owners) {
-        levels.set(`${owner}/package.json`, 'full');
+        levels.set(owner === '' ? 'package.json' : `${owner}/package.json`, 'full');
         addListing({ kind: 'package', dir: owner });
     }
 

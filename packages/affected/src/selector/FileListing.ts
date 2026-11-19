@@ -6,9 +6,10 @@ import { assertNever } from '@nzyme/utils/assertNever.js';
 /**
  * A set of walked files a variant depends on as a set — its inputs nothing imports, so a file
  * appearing in it or leaving it is a change too:
- * - `package` — the files of the workspace package at `dir` with no import source kind (fixtures,
- *   data, templates; `getImportSourceKind`) that no `ignore` glob matches: what a test reads through
- *   `fs`, which no import shows. The base diff seeds the whole package from such a file the same way;
+ * - `package` — the files of the workspace package at `dir` (for `''`, the files outside every
+ *   package) with no import source kind (fixtures, data, templates; `getImportSourceKind`) that no
+ *   `ignore` glob matches: what a test reads through `fs`, which no import shows. The base diff seeds
+ *   the whole package from such a file the same way;
  * - `directory` — every file under `dir`, the directory of a file with a computed `import(…)`: any
  *   of them may be what it loads.
  */

@@ -1,6 +1,7 @@
 import { readFile, readdir, realpath } from 'node:fs/promises';
 import path from 'node:path';
 
+import { relativeInsidePosixPath } from '@nzyme/project-utils/relativeInsidePosixPath.js';
 import { isErrorCode } from '@nzyme/utils/isErrorCode.js';
 import { parseNdjson } from '@nzyme/utils/parseNdjson.js';
 
@@ -85,11 +86,10 @@ interface TestAccesses {
 /** `/`-separated and relative to one of `roots` (`''` for a root itself), or `null` outside them or in a `node_modules`. */
 function toRootRelative(file: string, roots: readonly string[]): string | null {
     for (const root of roots) {
-        const relative = path.relative(root, file);
-        if (relative.startsWith('..') || path.isAbsolute(relative)) {
+        const posix = relativeInsidePosixPath(root, file);
+        if (posix === null) {
             continue;
         }
-        const posix = relative.split(path.sep).join('/');
         return posix.split('/').includes('node_modules') ? null : posix;
     }
     return null;

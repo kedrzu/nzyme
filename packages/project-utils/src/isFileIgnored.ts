@@ -6,6 +6,7 @@ import parseGitignore from 'parse-gitignore';
 import { createCache } from '@nzyme/utils/createCache.js';
 
 import { getProjectRoot } from './getProjectRoot.js';
+import { relativeInsidePosixPath } from './relativeInsidePosixPath.js';
 
 interface CompiledPattern {
     regex: RegExp;
@@ -134,8 +135,8 @@ function matchesGitignore(target: string, isDirectory: boolean, gitRoot: string)
 }
 
 function isInside(root: string, target: string): boolean {
-    const relative = path.relative(root, target);
-    return relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
+    const relative = relativeInsidePosixPath(root, target);
+    return relative !== null && relative !== '';
 }
 
 /**

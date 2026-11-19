@@ -19,6 +19,7 @@ export * from './loadEnvVariables.js';
 export * from './lsofListenArgs.js';
 export * from './readEnvVariables.js';
 export * from './readNzymeConfig.js';
+export * from './relativeInsidePosixPath.js';
 export * from './relativePosixPath.js';
 export * from './resolveAffectedBase.js';
 export * from './resolveLocalPath.js';

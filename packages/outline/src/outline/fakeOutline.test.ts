@@ -192,7 +192,7 @@ test('updatedAt gt filters to what changed since a point in time', async () => {
     expect(changed.data.map(document => document.title)).toEqual(['Touched again']);
 });
 
-test('archive hides a subtree from the default list and the collection tree, but a filter on archivedAt finds it', async () => {
+test('archive hides a subtree from the default list, but a filter on archivedAt finds it', async () => {
     const outline = fakeOutline();
     const ana = outline.addUser({ name: 'Ana' });
     const wiki = outline.addCollection({ name: 'Wiki', permission: 'read_write' });
@@ -204,27 +204,35 @@ test('archive hides a subtree from the default list and the collection tree, but
 
     expect(archived.archivedAt).not.toBeNull();
     expect((await client.documents.list()).data).toEqual([]);
-    expect(await client.collections.documents({ id: wiki.id })).toEqual([]);
     const archivedList = await client.documents.list({
         filters: [{ field: 'archivedAt', operator: 'gt', value: '2000-01-01T00:00:00Z' }],
     });
     expect(archivedList.data.map(document => document.id).toSorted()).toEqual([parent.id, child.id].toSorted());
 });
 
-test('delete removes the document everywhere', async () => {
+test('delete moves the document to the trash: gone from lists, info answers with deletedAt to an editor only', async () => {
     const outline = fakeOutline();
     const ana = outline.addUser({ name: 'Ana' });
-    const wiki = outline.addCollection({ name: 'Wiki', permission: 'read_write' });
+    const bob = outline.addUser({ name: 'Bob' });
+    const wiki = outline.addCollection({
+        name: 'Wiki',
+        permission: 'read',
+        members: [{ user: ana, permission: 'read_write' }],
+    });
     const doc = outline.addDocument({ collection: wiki, title: 'Doc', createdBy: ana });
     const client = outline.clientAs(ana);
+    expect((await client.documents.info({ id: doc.id })).deletedAt).toBeNull();
 
     await client.documents.delete({ id: doc.id });
 
-    await expect(client.documents.info({ id: doc.id })).rejects.toMatchObject({ status: 404 });
     expect((await client.documents.list()).data).toEqual([]);
+    expect((await client.documents.info({ id: doc.id })).deletedAt).not.toBeNull();
+    await expect(outline.clientAs(bob).documents.info({ id: doc.id })).rejects.toMatchObject({ status: 403 });
+    await expect(client.documents.update({ id: doc.id, text: 'Edit' })).rejects.toMatchObject({ status: 404 });
+    await expect(client.documents.info({ id: crypto.randomUUID() })).rejects.toMatchObject({ status: 404 });
 });
 
-test('create, publish a draft, move with an index: the collection tree follows', async () => {
+test('create, publish a draft, move a subtree to another collection', async () => {
     const outline = fakeOutline();
     const ana = outline.addUser({ name: 'Ana' });
     const wiki = outline.addCollection({ name: 'Wiki', permission: 'read_write' });
@@ -234,18 +242,16 @@ test('create, publish a draft, move with an index: the collection tree follows',
     const b = await client.documents.create({ title: 'B', collectionId: wiki.id, publish: true });
     const draft = await client.documents.create({ title: 'Draft', collectionId: wiki.id });
     expect(draft.publishedAt).toBeNull();
-    expect((await client.collections.documents({ id: wiki.id })).map(node => node.title)).toEqual(['A', 'B']);
 
-    await client.documents.update({ id: draft.id, publish: true });
-    await client.documents.move({ id: draft.id, collectionId: wiki.id, index: 0 });
-    expect((await client.collections.documents({ id: wiki.id })).map(node => node.title)).toEqual(['Draft', 'A', 'B']);
+    expect((await client.documents.update({ id: draft.id, publish: true })).publishedAt).not.toBeNull();
     await client.documents.move({ id: b.id, parentDocumentId: a.id });
     const moved = await client.documents.move({ id: a.id, collectionId: other.id });
 
-    expect((await client.collections.documents({ id: wiki.id })).map(node => node.title)).toEqual(['Draft']);
-    const tree = await client.collections.documents({ id: other.id });
-    expect(tree.map(node => [node.title, node.children.map(child => child.title)])).toEqual([['A', ['B']]]);
-    expect(moved.documents.map(document => document.collectionId)).toEqual([other.id, other.id]);
+    expect(moved.documents.map(document => [document.title, document.collectionId])).toEqual([
+        ['A', other.id],
+        ['B', other.id],
+    ]);
+    expect((await client.documents.info({ id: b.id })).parentDocumentId).toBe(a.id);
 });
 
 test('publishing needs a collection', async () => {
@@ -286,29 +292,6 @@ test('limit above 100 is rejected like the real API', async () => {
     const ana = outline.addUser({ name: 'Ana' });
 
     await expect(outline.clientAs(ana).documents.list({ limit: 101 })).rejects.toMatchObject({ status: 400 });
-});
-
-test('collections.create makes a private collection its creator can read, and others cannot see', async () => {
-    const outline = fakeOutline();
-    const ana = outline.addUser({ name: 'Ana' });
-    const bob = outline.addUser({ name: 'Bob' });
-    const client = outline.clientAs(ana);
-
-    const created = await client.collections.create({ name: 'Scratch', permission: null });
-
-    expect(created).toMatchObject({ name: 'Scratch', permission: null });
-    expect(await client.collections.info({ id: created.id })).toEqual(created);
-    expect((await client.collections.list()).data.map(collection => collection.id)).toEqual([created.id]);
-    expect((await outline.clientAs(bob).collections.list()).data).toEqual([]);
-    await expect(outline.clientAs(bob).collections.info({ id: created.id })).rejects.toMatchObject({ status: 403 });
-    await expect(
-        client.documents.create({ title: 'Inside', collectionId: created.id, publish: true }),
-    ).resolves.toMatchObject({ collectionId: created.id });
-    const invalid = await outline.fetchAs(ana)(`${outline.url}/api/collections.create`, {
-        method: 'POST',
-        body: JSON.stringify({ name: 'Bad', permission: 'admin' }),
-    });
-    expect(invalid.status).toBe(400);
 });
 
 test('outlineLikeNormalizer applies each observed rule and is idempotent', () => {

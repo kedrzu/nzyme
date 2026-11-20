@@ -350,13 +350,17 @@ export async function push(options: PushOptions): Promise<PushReport> {
 
     /** A document created for this file by an earlier run that never finished: take it over instead of creating again. */
     async function adoptCreated(path: string, read: FileRead, id: string) {
-        let remote: OutlineDocument;
+        let remote: OutlineDocument | null;
         try {
             remote = await client.documents.info({ id });
         } catch (error) {
             if (!(error instanceof OutlineApiError) || (error.status !== 403 && error.status !== 404)) {
                 throw error;
             }
+            remote = null;
+        }
+        // Outline still answers for a trashed document to whoever may restore it.
+        if (remote == null || remote.deletedAt != null) {
             dropPendingCreate(id);
             report.skipped.push({ path, reason: 'The document created for this file is gone from Outline.' });
             return;

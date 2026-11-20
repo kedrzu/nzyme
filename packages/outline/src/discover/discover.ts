@@ -93,7 +93,7 @@ export interface FullOptions {
 export async function discoverFull(client: OutlineClient, options: FullOptions): Promise<FullDiscovery> {
     const found = new Map<string, OutlineDocument>();
     const add = (document: OutlineDocument) => {
-        if (document.archivedAt == null && !found.has(document.id)) {
+        if (document.archivedAt == null && document.deletedAt == null && !found.has(document.id)) {
             found.set(document.id, document);
         }
     };
@@ -130,7 +130,7 @@ export async function discoverFull(client: OutlineClient, options: FullOptions):
     return { documents, collections, cursor: advanceCursor(options.cursor, documents) };
 }
 
-/** The document, or `null` when Outline says it is deleted or out of the user's reach. */
+/** The document, or `null` when Outline refuses it; one in the trash comes back with `deletedAt` set, which `add` drops. */
 async function findDocument(client: OutlineClient, id: string) {
     try {
         return await client.documents.info({ id });

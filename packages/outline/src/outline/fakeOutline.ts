@@ -13,7 +13,6 @@ import type {
     OutlineFilterField,
     OutlineFilterOperator,
     OutlineGroup,
-    OutlineNavigationNode,
     OutlinePagination,
     OutlinePermission,
     OutlineUser,
@@ -230,7 +229,6 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
     const users: FakeUser[] = [];
     const groups: GroupRecord[] = [];
     const collections: CollectionRecord[] = [];
-    // The array order is the sibling order of documents.
     const documents: DocumentRecord[] = [];
     const documentMemberships: OutlineDocumentMembership[] = [];
     const documentGroupMemberships: OutlineDocumentGroupMembership[] = [];
@@ -244,9 +242,6 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         'users.list': usersList,
         'groups.list': groupsList,
         'collections.list': collectionsList,
-        'collections.info': collectionsInfo,
-        'collections.create': collectionsCreate,
-        'collections.documents': collectionsDocuments,
         'documents.list': documentsList,
         'documents.drafts': documentsDrafts,
         'documents.search': documentsSearch,
@@ -460,14 +455,16 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         ]);
     }
 
+    /** No access to a document in the trash; otherwise as `grantedAccess`. */
+    function documentAccess(user: FakeUser, document: DocumentRecord) {
+        return document.deletedAt == null ? grantedAccess(user, document) : null;
+    }
+
     /**
      * A draft is visible to its creator and its direct members only. A published document is visible through
      * its collection, or through a direct share on it or on any ancestor (the share reaches the subtree).
      */
-    function documentAccess(user: FakeUser, document: DocumentRecord) {
-        if (document.deletedAt != null) {
-            return null;
-        }
+    function grantedAccess(user: FakeUser, document: DocumentRecord) {
         if (document.publishedAt == null) {
             return strongest([document.createdById === user.id ? 'admin' : null, directDocumentAccess(user, document)]);
         }
@@ -563,36 +560,6 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         return okPage(body, visible.map(presentCollection));
     }
 
-    function collectionsInfo({ user, body }: Call) {
-        const collection = requireCollection(requireString(body, 'id'));
-        requireAccess(collectionAccess(user, collection.id), 'read');
-        return ok(presentCollection(collection));
-    }
-
-    /** Like Outline, the creator becomes an admin member, so a private collection stays visible to them. */
-    function collectionsCreate({ user, body }: Call) {
-        const permission = body.permission ?? null;
-        if (permission !== null && permission !== 'read' && permission !== 'read_write') {
-            invalid('permission', 'read | read_write | null');
-        }
-        return ok(
-            addCollection({
-                name: requireString(body, 'name'),
-                permission,
-                members: [{ user, permission: 'admin' }],
-            }),
-        );
-    }
-
-    function collectionsDocuments({ user, body }: Call) {
-        const id = requireString(body, 'id');
-        if (!collections.some(collection => collection.id === id)) {
-            throw new FakeApiError(404, 'not_found', 'Collection not found');
-        }
-        requireAccess(collectionAccess(user, id), 'read');
-        return ok(navigationNodes(id, null));
-    }
-
     function documentsList({ user, body }: Call) {
         const matching = listVisibleDocuments(user, readFilters(body));
         return okPage(body, matching.map(presentDocument));
@@ -632,8 +599,18 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         );
     }
 
+    /**
+     * Like Outline, a document in the trash still answers, with `deletedAt` set, to anyone who may restore it
+     * (edit rights on it, or the creator of a draft); others get 403.
+     */
     function documentsInfo({ user, body }: Call) {
-        return ok(presentDocument(authorizeDocument(user, requireString(body, 'id'), 'read')));
+        const id = requireString(body, 'id');
+        const trashed = documents.find(candidate => candidate.id === id && candidate.deletedAt != null);
+        if (trashed != null) {
+            requireAccess(grantedAccess(user, trashed), 'write');
+            return ok(presentDocument(trashed));
+        }
+        return ok(presentDocument(authorizeDocument(user, id, 'read')));
     }
 
     function documentsCreate({ user, body }: Call) {
@@ -734,7 +711,6 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
                 member.updatedAt = stamp;
             }
         }
-        placeAmongSiblings(document, optionalInteger(body, 'index'));
         return ok({ documents: subtree.map(presentDocument) });
     }
 
@@ -752,7 +728,7 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         return ok(presentDocument(document));
     }
 
-    /** Deleting moves the subtree to the trash: it disappears from every endpoint. */
+    /** Deleting moves the subtree to the trash: it disappears from every endpoint but `documents.info`. */
     function documentsDelete({ user, body }: Call) {
         const document = authorizeDocument(user, requireString(body, 'id'), 'write');
         const stamp = tick();
@@ -900,31 +876,6 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
             .flatMap(child => [child, ...descendantsOf(child)]);
     }
 
-    function navigationNodes(collectionId: string, parentId: string | null): OutlineNavigationNode[] {
-        return documents
-            .filter(document => document.collectionId === collectionId && document.parentDocumentId === parentId)
-            .filter(
-                document => document.publishedAt != null && document.archivedAt == null && document.deletedAt == null,
-            )
-            .map(document => ({
-                id: document.id,
-                title: document.title,
-                url: `/doc/${document.id}`,
-                children: navigationNodes(collectionId, document.id),
-            }));
-    }
-
-    function placeAmongSiblings(document: DocumentRecord, index: number | undefined) {
-        documents.splice(documents.indexOf(document), 1);
-        const siblings = documents.filter(
-            candidate =>
-                candidate.collectionId === document.collectionId &&
-                candidate.parentDocumentId === document.parentDocumentId,
-        );
-        const before = index == null ? undefined : siblings[index];
-        documents.splice(before == null ? documents.length : documents.indexOf(before), 0, document);
-    }
-
     function upsertUserMembership(documentId: string, userId: string, permission: OutlinePermission) {
         const existing = documentMemberships.find(
             membership => membership.documentId === documentId && membership.userId === userId,
@@ -1011,6 +962,7 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
             updatedAt: record.updatedAt,
             publishedAt: record.publishedAt,
             archivedAt: record.archivedAt,
+            deletedAt: record.deletedAt,
             createdBy: { id: creator.id, name: creator.name },
             updatedBy: { id: updater.id, name: updater.name },
         };

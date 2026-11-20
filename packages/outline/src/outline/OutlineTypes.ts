@@ -41,6 +41,8 @@ export interface OutlineDocument {
     /** `null` for a draft. */
     publishedAt: string | null;
     archivedAt: string | null;
+    /** Set while the document is in the trash; `documents.info` still answers for it to anyone who may restore it. */
+    deletedAt: string | null;
     createdBy: OutlineUserRef;
     /** Who saved the current revision. */
     updatedBy: OutlineUserRef;

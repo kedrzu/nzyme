@@ -8,7 +8,7 @@ import { Cli } from 'clipanion';
 
 import type { CommandContext } from '@nzyme/cli-core/Command.js';
 import { createContainer } from '@nzyme/ioc/Container.js';
-import type { Keychain } from '@nzyme/secrets/osKeychain.js';
+import { createMemoryKeychain } from '@nzyme/secrets/__fixtures__/createMemoryKeychain.js';
 
 import { outlineTokenStore } from '../auth/tokens.js';
 import { fakeOutline } from '../outline/fakeOutline.js';
@@ -20,7 +20,7 @@ const CODE = 'auth-code-SECRET';
 
 test('login never prints a token, the authorization code or the PKCE verifier', async () => {
     const outline = stubOutline();
-    const keychain = memoryKeychain();
+    const keychain = createMemoryKeychain();
     const visits: Promise<unknown>[] = [];
     const repo = await mkdtemp(join(await realpath(tmpdir()), 'outline-login-cmd-'));
     expect((await Bun.$`git init --quiet ${repo}`.nothrow()).exitCode).toBe(0);
@@ -112,7 +112,7 @@ async function sharingWorld() {
         },
     });
     const url = `http://127.0.0.1:${server.port}`;
-    const keychain = memoryKeychain();
+    const keychain = createMemoryKeychain();
     await outlineTokenStore({ url, keychain }).write({
         accessToken: ana.token,
         accessTokenExpiresAt: Date.now() + 60 * 60 * 1000,
@@ -212,17 +212,4 @@ function stubOutline() {
         },
     });
     return { url: `http://127.0.0.1:${server.port}`, tokenRequests, stop: () => void server.stop(true) };
-}
-
-function memoryKeychain(): Keychain & { values: Map<string, string> } {
-    const values = new Map<string, string>();
-    return {
-        values,
-        get: name => Promise.resolve(values.get(name) ?? null),
-        set: (name, value) => {
-            values.set(name, value);
-            return Promise.resolve();
-        },
-        delete: name => Promise.resolve(values.delete(name)),
-    };
 }

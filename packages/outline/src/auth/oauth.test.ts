@@ -5,7 +5,7 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import type { Keychain } from '@nzyme/secrets/osKeychain.js';
+import { createMemoryKeychain } from '@nzyme/secrets/__fixtures__/createMemoryKeychain.js';
 
 import { LoginFailedError, login } from './oauth.js';
 import { outlineTokenStore } from './tokens.js';
@@ -18,7 +18,7 @@ const NOW = 1_800_000_000_000;
 
 test('logs in through the browser with PKCE and stores the verified tokens', async () => {
     const outline = stubOutline();
-    const keychain = memoryKeychain();
+    const keychain = createMemoryKeychain();
     const store = outlineTokenStore({ url: outline.url, keychain });
     const browser = stubBrowser();
 
@@ -65,7 +65,7 @@ test('logs in through the browser with PKCE and stores the verified tokens', asy
 
 test('a callback with a wrong state aborts the login before any code is exchanged', async () => {
     const outline = stubOutline({ callbackState: 'forged-state' });
-    const keychain = memoryKeychain();
+    const keychain = createMemoryKeychain();
     const browser = stubBrowser();
 
     const result = login({
@@ -91,7 +91,7 @@ test('gives up when the browser never comes back, and frees the port', async () 
     const result = login({
         url: outline.url,
         clientId: 'client-1',
-        store: outlineTokenStore({ url: outline.url, keychain: memoryKeychain() }),
+        store: outlineTokenStore({ url: outline.url, keychain: createMemoryKeychain() }),
         lockPath: await tempLockPath(),
         openBrowser: url => {
             callback = new URL(url).searchParams.get('redirect_uri') ?? '';
@@ -107,7 +107,7 @@ test('gives up when the browser never comes back, and frees the port', async () 
 
 test('a failed token exchange stores nothing and its error carries neither the code nor the verifier', async () => {
     const outline = stubOutline({ tokenFailure: true });
-    const keychain = memoryKeychain();
+    const keychain = createMemoryKeychain();
     const browser = stubBrowser();
 
     const error = await login({
@@ -195,19 +195,6 @@ function stubBrowser() {
         visits.push(fetch(url).then(async response => ({ status: response.status, text: await response.text() })));
         return Promise.resolve();
     }
-}
-
-function memoryKeychain(): Keychain & { values: Map<string, string> } {
-    const values = new Map<string, string>();
-    return {
-        values,
-        get: name => Promise.resolve(values.get(name) ?? null),
-        set: (name, value) => {
-            values.set(name, value);
-            return Promise.resolve();
-        },
-        delete: name => Promise.resolve(values.delete(name)),
-    };
 }
 
 async function tempLockPath() {

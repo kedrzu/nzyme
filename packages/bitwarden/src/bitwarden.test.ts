@@ -2,7 +2,7 @@ import { Buffer } from 'node:buffer';
 
 import { afterEach, expect, test } from 'bun:test';
 
-import type { Keychain } from '@nzyme/secrets/osKeychain.js';
+import { createMemoryKeychain } from '@nzyme/secrets/__fixtures__/createMemoryKeychain.js';
 
 import type {
     BitwardenSecret,
@@ -620,18 +620,6 @@ function createAccessToken() {
 
 function base64Url(value: object) {
     return Buffer.from(JSON.stringify(value)).toString('base64url');
-}
-
-function createMemoryKeychain(): Keychain {
-    const values = new Map<string, string>();
-    return {
-        get: name => Promise.resolve(values.get(name) ?? null),
-        set: (name, value) => {
-            values.set(name, value);
-            return Promise.resolve();
-        },
-        delete: name => Promise.resolve(values.delete(name)),
-    };
 }
 
 async function catchError(promise: Promise<unknown>) {

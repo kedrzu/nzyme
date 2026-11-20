@@ -3,7 +3,7 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import type { Keychain } from '@nzyme/secrets/osKeychain.js';
+import { createMemoryKeychain } from '@nzyme/secrets/__fixtures__/createMemoryKeychain.js';
 
 import { acquireLock, tryAcquireLock } from '../state/lock.js';
 import { LoginRequiredError, TokenRequestError, createTokenProvider, outlineTokenStore } from './tokens.js';
@@ -95,14 +95,15 @@ test('with the lock held by the caller, concurrent calls share one refresh', asy
 
 test('a rotated token that cannot be stored is never handed out', async () => {
     const outline = stubTokenEndpoint();
-    const keychain = memoryKeychain();
+    let failWrites = false;
+    const keychain = createMemoryKeychain({ failSet: () => failWrites });
     const store = outlineTokenStore({ url: outline.url, keychain });
     await store.write(tokens({ access: 'ol_at_1', refresh: 'ol_rt_1', expiresAt: NOW - MINUTE }));
-    keychain.failWrites = true;
+    failWrites = true;
 
     const result = provider({ url: outline.url, store, lock: { kind: 'held' } })();
 
-    await expect(result).rejects.toThrow('keychain is locked');
+    await expect(result).rejects.toThrow('keychain refused to set');
     expect(outline.requests).toHaveLength(1);
 });
 
@@ -229,22 +230,5 @@ function stubTokenEndpoint(respond?: (form: URLSearchParams) => Response | undef
 }
 
 function memoryStore(url: string) {
-    return outlineTokenStore({ url, keychain: memoryKeychain() });
-}
-
-function memoryKeychain(): Keychain & { failWrites: boolean } {
-    const values = new Map<string, string>();
-    const keychain = {
-        failWrites: false,
-        get: (name: string) => Promise.resolve(values.get(name) ?? null),
-        set: (name: string, value: string) => {
-            if (keychain.failWrites) {
-                return Promise.reject(new Error('keychain is locked'));
-            }
-            values.set(name, value);
-            return Promise.resolve();
-        },
-        delete: (name: string) => Promise.resolve(values.delete(name)),
-    };
-    return keychain;
+    return outlineTokenStore({ url, keychain: createMemoryKeychain() });
 }

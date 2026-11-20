@@ -4,8 +4,9 @@ import * as path from 'node:path';
 
 import { afterAll, beforeAll, expect, test } from 'bun:test';
 
-import type { FileAccess } from './localFiles.js';
-import { localFile, mimeTypeOf, resolveLocalFile, resolveWritablePath, safeFileName } from './localFiles.js';
+import type { FileAccess } from '@nzyme/node-utils/FileAccess.js';
+
+import { localFile, mimeTypeOf, resolveWritablePath, safeFileName } from './localFiles.js';
 
 let tmp: string;
 let repo: string;
@@ -30,28 +31,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
     await fs.rm(tmp, { recursive: true, force: true });
-});
-
-test('resolveLocalFile accepts repo-relative, absolute and vault-via-symlink paths', async () => {
-    const pdf = path.join(repo, '.context', 'outbox', 'raport.pdf');
-    expect(await resolveLocalFile('.context/outbox/raport.pdf', access)).toBe(pdf);
-    expect(await resolveLocalFile(pdf, access)).toBe(pdf);
-    expect(await resolveLocalFile('obsidian/Projekty/szafa 1.png', access)).toBe(
-        path.join(vault, 'Projekty', 'szafa 1.png'),
-    );
-});
-
-test('resolveLocalFile refuses anything outside the roots', async () => {
-    await expect(resolveLocalFile('../outside.txt', access)).rejects.toThrow(/outside/);
-    await expect(resolveLocalFile('leak.txt', access)).rejects.toThrow(/outside/);
-    await expect(resolveLocalFile('/etc/hosts', access)).rejects.toThrow(/outside/);
-});
-
-test('resolveLocalFile refuses secrets, directories, missing files and ~', async () => {
-    await expect(resolveLocalFile('.env', access)).rejects.toThrow(/secrets/);
-    await expect(resolveLocalFile('obsidian/Projekty', access)).rejects.toThrow(/regular file/);
-    await expect(resolveLocalFile('nope.png', access)).rejects.toThrow(/not found/);
-    await expect(resolveLocalFile('~/a.png', access)).rejects.toThrow(/absolute/);
 });
 
 test('localFile describes the file with a type from its extension', async () => {

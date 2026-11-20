@@ -2,8 +2,9 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterAll, beforeAll, expect, test } from 'bun:test';
-import { assertTotalSize, loadLocalFile, MAX_ATTACHMENTS_BYTES, resolveLocalFile } from './localFiles.js';
-import type { FileAccess } from './localFiles.js';
+
+import type { FileAccess } from '@nzyme/node-utils/FileAccess.js';
+import { assertTotalSize, loadLocalFile, MAX_ATTACHMENTS_BYTES } from './localFiles.js';
 
 let tmp: string;
 let repo: string;
@@ -30,33 +31,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
     await fs.rm(tmp, { recursive: true, force: true });
-});
-
-test('resolveLocalFile: accepts repo-relative, absolute and vault-via-symlink paths', async () => {
-    const pdf = path.join(repo, '.context', 'outbox', 'raport.pdf');
-    expect(await resolveLocalFile('.context/outbox/raport.pdf', access)).toBe(pdf);
-    expect(await resolveLocalFile(pdf, access)).toBe(pdf);
-    expect(await resolveLocalFile('obsidian/Projekty/szafa 1.png', access)).toBe(
-        path.join(vault, 'Projekty', 'szafa 1.png'),
-    );
-});
-
-test('resolveLocalFile: refuses anything outside the roots', async () => {
-    await expect(resolveLocalFile('../outside.txt', access)).rejects.toThrow(/outside/);
-    await expect(resolveLocalFile('leak.txt', access)).rejects.toThrow(/outside/);
-    await expect(resolveLocalFile('/etc/hosts', access)).rejects.toThrow(/outside/);
-});
-
-test('resolveLocalFile: refuses every secret-file name pattern', async () => {
-    for (const name of ['.env', '.env.production', 'work-credentials.json', 'work-tokens.json']) {
-        await expect(resolveLocalFile(name, access)).rejects.toThrow(/secrets/);
-    }
-});
-
-test('resolveLocalFile: refuses directories, missing files and ~', async () => {
-    await expect(resolveLocalFile('obsidian/Projekty', access)).rejects.toThrow(/regular file/);
-    await expect(resolveLocalFile('nope.png', access)).rejects.toThrow(/not found/);
-    await expect(resolveLocalFile('~/a.png', access)).rejects.toThrow(/absolute/);
 });
 
 test('loadLocalFile: reads the file with a type from its extension', async () => {

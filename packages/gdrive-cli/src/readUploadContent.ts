@@ -4,8 +4,8 @@ import { buffer } from 'node:stream/consumers';
 
 import { UsageError } from '@nzyme/cli-core';
 
-import type { FileAccess } from './localFiles.js';
 import { localFile } from './localFiles.js';
+import type { FileAccess } from '@nzyme/node-utils/FileAccess.js';
 
 /** Options of {@link readUploadContent}. */
 export interface ReadUploadContentOptions {

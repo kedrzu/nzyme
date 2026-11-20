@@ -198,7 +198,7 @@ test('download saves an export under the downloads directory and refuses a path 
     expect(pdf.exitCode).toBe(0);
     expect(await fs.readFile(path.join(downloadsDir, 'invoices', 'Invoice.pdf'), 'utf8')).toBe('%PDF');
     expect(outside.exitCode).toBe(1);
-    expect(outside.errors).toContain('is outside the directories Drive commands may write');
+    expect(outside.errors).toContain('is outside the directories this command may write');
     expect(await fs.readdir(elsewhere)).toEqual([]);
     expect(again.exitCode).toBe(1);
     expect(again.errors).toContain('already exists - pass --overwrite');
@@ -255,7 +255,7 @@ test('upload and update refuse a secrets file and make no call', async () => {
     }
 
     expect(outside.exitCode).toBe(1);
-    expect(outside.errors).toContain('is outside the directories Drive commands may read');
+    expect(outside.errors).toContain('is outside the directories this command may read');
     expect(drive.requests.filter(request => request.method !== 'GET')).toEqual([]);
 });
 

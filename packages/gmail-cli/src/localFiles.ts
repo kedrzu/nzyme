@@ -10,6 +10,9 @@ import * as path from 'node:path';
 
 import { detectMimeType } from 'nodemailer/lib/mime-funcs/mime-types';
 
+import { expandHome } from '@nzyme/node-utils/expandHome.js';
+import type { FileAccess } from '@nzyme/node-utils/FileAccess.js';
+import { resolveReadableFile } from '@nzyme/node-utils/resolveReadableFile.js';
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
 
 import type { RawAttachment } from './compose.js';
@@ -17,13 +20,6 @@ import type { GmailFilesOptions } from './GmailCommandsOptions.js';
 
 /** Gmail refuses to send anything bigger; checking up front beats a half-made draft. */
 export const MAX_ATTACHMENTS_BYTES = 25 * 1024 * 1024;
-
-export interface FileAccess {
-    /** Relative paths resolve here. */
-    baseDir: string;
-    /** Files must live under one of these. */
-    roots: string[];
-}
 
 /**
  * The directory `attachment save` writes to: `files.attachmentsDir` with `~` expanded, or
@@ -48,55 +44,10 @@ export function draftFileAccess(files: GmailFilesOptions | undefined): FileAcces
 }
 
 /**
- * Whether a configured directory is absolute or home-relative (`~`), as `files` options must be.
- * @__NO_SIDE_EFFECTS__
- */
-export function isConfiguredPath(dir: string): boolean {
-    return path.isAbsolute(dir) || dir === '~' || dir.startsWith('~/');
-}
-
-/**
- * Absolute path of a readable regular file inside the allowed roots, or an error.
- */
-export async function resolveLocalFile(input: string, access: FileAccess): Promise<string> {
-    const p = input.trim();
-    if (!p) {
-        throw new Error('Empty file path');
-    }
-    if (p.startsWith('~')) {
-        throw new Error(`'${p}': use an absolute path instead of ~`);
-    }
-
-    const candidate = path.resolve(access.baseDir, p);
-    let real: string;
-    try {
-        real = await fs.realpath(candidate);
-    } catch {
-        throw new Error(`File not found: ${p}`);
-    }
-
-    const roots = await realRoots(access.roots);
-    if (!roots.some(root => isInside(real, root))) {
-        throw new Error(
-            `'${p}' is outside the directories attachments may be read from ` +
-                `(${access.roots.join(', ')}). Copy the file into the project directory first.`,
-        );
-    }
-    if (isSecretFile(real)) {
-        throw new Error(`'${p}' looks like a secrets file - refusing to attach it`);
-    }
-    const stat = await fs.stat(real);
-    if (!stat.isFile()) {
-        throw new Error(`'${p}' is not a regular file`);
-    }
-    return real;
-}
-
-/**
  * Reads an allowed local file as an attachment, typed by its extension.
  */
 export async function loadLocalFile(input: string, access: FileAccess): Promise<RawAttachment> {
-    const real = await resolveLocalFile(input, access);
+    const real = await resolveReadableFile(input, access);
     const filename = path.basename(real);
     return {
         filename,
@@ -119,26 +70,6 @@ export function assertTotalSize(attachments: RawAttachment[]): void {
                 'Share big files via a link instead.',
         );
     }
-}
-
-function expandHome(dir: string): string {
-    return dir === '~' || dir.startsWith('~/') ? path.join(os.homedir(), dir.slice(1)) : dir;
-}
-
-// Secrets living next to the allowed files: .env files, OAuth credentials/tokens.
-function isSecretFile(filePath: string): boolean {
-    const name = path.basename(filePath).toLowerCase();
-    return name.startsWith('.env') || /-(credentials|tokens)\.json$/.test(name);
-}
-
-function isInside(filePath: string, root: string): boolean {
-    const rel = path.relative(root, filePath);
-    return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
-}
-
-async function realRoots(roots: string[]): Promise<string[]> {
-    const resolved = await Promise.all(roots.map(r => fs.realpath(r).catch(() => null)));
-    return resolved.filter(r => r !== null);
 }
 
 function megabytes(bytes: number): string {

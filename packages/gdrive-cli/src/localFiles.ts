@@ -8,17 +8,14 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+import { assertFileAccess } from '@nzyme/node-utils/assertFileAccess.js';
+import { checkPathInput } from '@nzyme/node-utils/checkPathInput.js';
+import { expandHome } from '@nzyme/node-utils/expandHome.js';
+import type { FileAccess } from '@nzyme/node-utils/FileAccess.js';
+import { resolveReadableFile } from '@nzyme/node-utils/resolveReadableFile.js';
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
 
 import type { DriveFilesOptions } from './DriveCommandsOptions.js';
-
-/** Where local files may be read and written. */
-export interface FileAccess {
-    /** Relative paths resolve here. */
-    baseDir: string;
-    /** Files must live under one of these. */
-    roots: string[];
-}
 
 /** An allowed local file to upload. */
 export interface LocalFile {
@@ -51,39 +48,10 @@ export function driveFileAccess(files: DriveFilesOptions | undefined): FileAcces
 }
 
 /**
- * Whether a configured directory is absolute or home-relative (`~`), as `files` options must be.
- * @__NO_SIDE_EFFECTS__
- */
-export function isConfiguredPath(dir: string): boolean {
-    return path.isAbsolute(dir) || dir === '~' || dir.startsWith('~/');
-}
-
-/**
- * Absolute path of a readable regular file inside the allowed roots, or an error.
- */
-export async function resolveLocalFile(input: string, access: FileAccess): Promise<string> {
-    const p = checkInput(input);
-    let real: string;
-    try {
-        real = await fs.realpath(path.resolve(access.baseDir, p));
-    } catch {
-        throw new Error(`File not found: ${p}`);
-    }
-
-    await assertAllowed(real, p, access, 'read');
-    const stat = await fs.stat(real);
-    if (!stat.isFile()) {
-        throw new Error(`'${p}' is not a regular file`);
-    }
-
-    return real;
-}
-
-/**
  * An allowed local file, typed by its extension.
  */
 export async function localFile(input: string, access: FileAccess): Promise<LocalFile> {
-    const real = await resolveLocalFile(input, access);
+    const real = await resolveReadableFile(input, access);
     const filename = path.basename(real);
     const stat = await fs.stat(real);
     return { path: real, filename, mimeType: mimeTypeOf(filename), size: stat.size };
@@ -113,7 +81,7 @@ export async function resolveWritablePath(
     access: FileAccess,
     overwrite = false,
 ): Promise<string> {
-    const p = checkInput(input);
+    const p = checkPathInput(input);
     let target = path.resolve(access.baseDir, p);
     const isDir = /[\\/]$/.test(p) || (await isDirectory(target));
     if (isDir) {
@@ -127,11 +95,16 @@ export async function resolveWritablePath(
     }
 
     const rest = path.relative(existing, path.dirname(target));
-    await assertAllowed(path.join(await fs.realpath(existing), rest, path.basename(target)), p, access, 'write');
+    await assertFileAccess({
+        real: path.join(await fs.realpath(existing), rest, path.basename(target)),
+        shown: p,
+        access,
+        verb: 'write',
+    });
 
     await fs.mkdir(path.dirname(target), { recursive: true });
     const real = path.join(await fs.realpath(path.dirname(target)), path.basename(target));
-    await assertAllowed(real, p, access, 'write');
+    await assertFileAccess({ real, shown: p, access, verb: 'write' });
 
     const stat = await fs.lstat(real).catch(() => null);
     if (stat) {
@@ -156,53 +129,6 @@ export function safeFileName(name: string): string {
     const replaced = Array.from(name, char => (char < ' ' || '\\/:*?"<>|'.includes(char) ? '_' : char)).join('');
     const cleaned = replaced.replace(/^\.+/, '_').trim();
     return cleaned || 'download';
-}
-
-function expandHome(dir: string): string {
-    return dir === '~' || dir.startsWith('~/') ? path.join(os.homedir(), dir.slice(1)) : dir;
-}
-
-function checkInput(input: string): string {
-    const p = input.trim();
-    if (!p) {
-        throw new Error('Empty file path');
-    }
-
-    if (p.startsWith('~')) {
-        throw new Error(`'${p}': use an absolute path instead of ~`);
-    }
-
-    return p;
-}
-
-async function assertAllowed(real: string, shown: string, access: FileAccess, verb: 'read' | 'write') {
-    const roots = await realRoots(access.roots);
-    if (!roots.some(root => isInside(real, root))) {
-        throw new Error(
-            `'${shown}' is outside the directories Drive commands may ${verb} ` +
-                `(${access.roots.join(', ')}). Use a path inside the project directory.`,
-        );
-    }
-
-    if (isSecretFile(real)) {
-        throw new Error(`'${shown}' looks like a secrets file - refusing to ${verb} it`);
-    }
-}
-
-// Secrets living next to the allowed files: .env files, OAuth credentials/tokens.
-function isSecretFile(filePath: string): boolean {
-    const name = path.basename(filePath).toLowerCase();
-    return name.startsWith('.env') || /-(credentials|tokens)\.json$/.test(name);
-}
-
-function isInside(filePath: string, root: string): boolean {
-    const rel = path.relative(root, filePath);
-    return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
-}
-
-async function realRoots(roots: string[]): Promise<string[]> {
-    const resolved = await Promise.all(roots.map(r => fs.realpath(r).catch(() => null)));
-    return resolved.filter(r => r !== null);
 }
 
 async function isDirectory(target: string) {

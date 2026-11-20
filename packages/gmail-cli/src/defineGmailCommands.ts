@@ -1,6 +1,7 @@
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { defineGoogleAccountsCommand } from '@nzyme/google-auth/defineGoogleAccountsCommand.js';
 import { defineGoogleAuthCommand } from '@nzyme/google-auth/defineGoogleAuthCommand.js';
+import { isAbsoluteOrHomePath } from '@nzyme/node-utils/isAbsoluteOrHomePath.js';
 
 import { defineGmailAttachmentSaveCommand } from './defineGmailAttachmentSaveCommand.js';
 import { defineGmailDraftCreateCommand } from './defineGmailDraftCreateCommand.js';
@@ -18,7 +19,6 @@ import { defineGmailThreadLabelCommand } from './defineGmailThreadLabelCommand.j
 import type { GmailCommandParams, GmailCommandsOptions } from './GmailCommandsOptions.js';
 import { gmailService } from './gmailService.js';
 import { validateLabelRules } from './labelRules.js';
-import { isConfiguredPath } from './localFiles.js';
 
 /**
  * Defines the Gmail commands: sign-in and accounts, search, reading threads and messages, thread labels
@@ -34,7 +34,7 @@ export function defineGmailCommands(options: GmailCommandsOptions): CommandClass
     const problems = labels ? validateLabelRules(labels) : [];
     const dirs = [...(files?.roots ?? []), ...(files?.attachmentsDir ? [files.attachmentsDir] : [])];
     for (const dir of dirs) {
-        if (!isConfiguredPath(dir)) {
+        if (!isAbsoluteOrHomePath(dir)) {
             problems.push(`files: '${dir}' must be absolute or start with ~`);
         }
     }

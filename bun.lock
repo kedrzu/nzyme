@@ -265,6 +265,7 @@
         "@nzyme/cli-core": "workspace:*",
         "@nzyme/google-auth": "workspace:*",
         "@nzyme/ioc": "workspace:*",
+        "@nzyme/node-utils": "workspace:*",
         "@nzyme/project-utils": "workspace:*",
         "@nzyme/utils": "workspace:*",
       },
@@ -307,6 +308,7 @@
         "@nzyme/cli-core": "workspace:*",
         "@nzyme/google-auth": "workspace:*",
         "@nzyme/ioc": "workspace:*",
+        "@nzyme/node-utils": "workspace:*",
         "@nzyme/project-utils": "workspace:*",
         "@nzyme/utils": "workspace:*",
         "email-forward-parser": "^1.7.2",
@@ -512,6 +514,7 @@
       "version": "0.16.0",
       "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",
+        "@types/bun": "^1.4.3",
         "@types/node": "26.6.6",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "oxfmt": "0.77.0",

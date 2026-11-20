@@ -1,6 +1,7 @@
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { defineGoogleAccountsCommand } from '@nzyme/google-auth/defineGoogleAccountsCommand.js';
 import { defineGoogleAuthCommand } from '@nzyme/google-auth/defineGoogleAuthCommand.js';
+import { isAbsoluteOrHomePath } from '@nzyme/node-utils/isAbsoluteOrHomePath.js';
 
 import { defineDriveDownloadCommand } from './defineDriveDownloadCommand.js';
 import { defineDriveDrivesCommand } from './defineDriveDrivesCommand.js';
@@ -15,7 +16,6 @@ import { defineDriveUpdateCommand } from './defineDriveUpdateCommand.js';
 import { defineDriveUploadCommand } from './defineDriveUploadCommand.js';
 import type { DriveCommandParams, DriveCommandsOptions } from './DriveCommandsOptions.js';
 import { driveService } from './driveService.js';
-import { isConfiguredPath } from './localFiles.js';
 import type { DrivePermission } from './permissions.js';
 import { effectivePermissions, validatePermissions } from './permissions.js';
 
@@ -33,7 +33,7 @@ export function defineDriveCommands(options: DriveCommandsOptions): CommandClass
     const problems = options.permissions === undefined ? [] : validatePermissions(options.permissions);
     const dirs = [...(files?.roots ?? []), ...(files?.downloadsDir ? [files.downloadsDir] : [])];
     for (const dir of dirs) {
-        if (!isConfiguredPath(dir)) {
+        if (!isAbsoluteOrHomePath(dir)) {
             problems.push(`files: '${dir}' must be absolute or start with ~`);
         }
     }

@@ -241,7 +241,7 @@ test('draft create replies in a thread with the signature, the quote, an attachm
 });
 
 test.each([
-    ['a file outside the allowed directories', 'outside', 'is outside the directories attachments may be read from'],
+    ['a file outside the allowed directories', 'outside', 'is outside the directories this command may read'],
     ['a secrets file', '.env', 'looks like a secrets file'],
 ])('draft create refuses %s and writes no draft', async (_name, file, reason) => {
     const root = await tempDir();

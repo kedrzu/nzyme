@@ -67,6 +67,5 @@
         "statusBar.debuggingBackground": "#273295",
         "statusBar.debuggingForeground": "#e7e7e7",
         "statusBar.inactiveBackground": "#273295"
-    },
-    "peacock.color": "#273295"
+    }
 }

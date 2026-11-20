@@ -139,7 +139,6 @@
       "version": "0.17.0",
       "dependencies": {
         "@nzyme/ioc": "workspace:*",
-        "@nzyme/logging": "workspace:*",
         "@nzyme/types": "workspace:*",
       },
       "devDependencies": {

@@ -75,7 +75,7 @@ test('meta is typed through to the definition', () => {
     expect(Plain.meta.secret).toBeUndefined();
 });
 
-test('the first source wins per key and overridden keys are reported by name, never value', async () => {
+test('the first source wins per key and nothing is logged', async () => {
     const { container, logs } = createTestContainer();
     await loadConfig(container, [
         memorySource('first', { A: SENTINEL, B: 'b1' }),
@@ -83,13 +83,7 @@ test('the first source wins per key and overridden keys are reported by name, ne
     ]);
 
     expect(container.resolve(RuntimeConfig)).toEqual({ A: SENTINEL, B: 'b1', C: 'c2' });
-    expect(logs.find(log => log.message === 'Config loaded')?.data).toEqual({
-        sources: ['first', 'second'],
-        keys: 3,
-        overridden: ['B'],
-    });
-    expect(JSON.stringify(logs)).not.toContain(SENTINEL);
-    expect(JSON.stringify(logs)).not.toContain('b2');
+    expect(logs).toEqual([]);
 });
 
 test('envSource takes only non-empty entries, so an empty variable never shadows a later source', async () => {

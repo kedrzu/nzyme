@@ -1,8 +1,9 @@
-import { assert } from '@nzyme/utils/assert.js';
 import { copyFile, mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 
-import { DRAFTS_FOLDER, SHARED_FOLDER } from '../discover/tree.js';
+import { assert } from '@nzyme/utils/assert.js';
+
+import { ATTACHMENTS_FOLDER, DRAFTS_FOLDER, SHARED_FOLDER } from '../discover/tree.js';
 import { parseDocFile, serializeDocFile } from '../doc/codec.js';
 import type { DocFile } from '../doc/codec.js';
 import {
@@ -19,9 +20,11 @@ import { contentHash } from '../state/contentHash.js';
 import type { DocState, StateStore, SyncState } from '../state/StateStore.js';
 import { isErrorCode } from '../utils/isErrorCode.js';
 import { isInside } from '../utils/isInside.js';
+import { pathDepth } from '../utils/pathDepth.js';
 import { pathExists } from '../utils/pathExists.js';
 import { readFileIfExists } from '../utils/readFileIfExists.js';
 import { writeFileAtomic } from '../utils/writeFileAtomic.js';
+import { writeFileIfUnchanged } from '../utils/writeFileIfUnchanged.js';
 import { localContent } from './localContent.js';
 import { hasConflictMarkers, mergeDocument } from './merge.js';
 
@@ -88,8 +91,6 @@ export interface RefusedArchives {
  * the tracked files go. See `archiveRefusal`.
  */
 const SMALL_DELETE = 3;
-
-const ATTACHMENTS_FOLDER = '_attachments';
 /** An `outline:` line, read from a frontmatter block too broken to parse, so its document is not taken as deleted. */
 const BROKEN_FRONTMATTER_ID = /^outline:\s*["']?([\w-]+)/m;
 
@@ -186,7 +187,9 @@ export async function push(options: PushOptions): Promise<PushReport> {
         }
 
         // Parents first, so a child finds its parent created or moved already.
-        for (const file of files.toSorted((a, b) => depth(a.path) - depth(b.path) || a.path.localeCompare(b.path))) {
+        for (const file of files.toSorted(
+            (a, b) => pathDepth(a.path) - pathDepth(b.path) || a.path.localeCompare(b.path),
+        )) {
             if (now() >= deadline) {
                 report.stoppedAtDeadline = true;
                 break;
@@ -706,7 +709,7 @@ export async function push(options: PushOptions): Promise<PushReport> {
      */
     async function archiveVanished(vanished: DocState[], present: Set<string>) {
         for (const document of vanished.toSorted(
-            (a, b) => depth(b.path) - depth(a.path) || a.path.localeCompare(b.path),
+            (a, b) => pathDepth(b.path) - pathDepth(a.path) || a.path.localeCompare(b.path),
         )) {
             if (now() >= deadline) {
                 report.stoppedAtDeadline = true;
@@ -785,15 +788,13 @@ export async function push(options: PushOptions): Promise<PushReport> {
         return { kind: 'collection', collectionId, parentId };
     }
 
-    /** Writes `content` unless the file no longer hashes to `startHash` (edited meanwhile); then it waits for the next push. */
+    /** Writes `content` unless the file was edited meanwhile (it hashes differently from `startHash`); then it waits for the next push. */
     async function writeIfUnchanged(path: string, startHash: string, content: string) {
-        const current = await readFileIfExists(join(documentsDir, path));
-        if (current == null || contentHash(current) !== startHash) {
+        const written = await writeFileIfUnchanged(join(documentsDir, path), startHash, content);
+        if (!written) {
             report.skipped.push({ path, reason: 'The file changed while the push ran; sent next time.' });
-            return false;
         }
-        await writeFileAtomic(join(documentsDir, path), content);
-        return true;
+        return written;
     }
 
     function dropPendingCreate(id: string) {
@@ -860,8 +861,4 @@ function agreedFrom(remote: OutlineDocument): Agreed {
         collectionId: remote.collectionId,
         parentId: remote.parentDocumentId,
     };
-}
-
-function depth(path: string) {
-    return path.split('/').length;
 }

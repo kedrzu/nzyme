@@ -1,9 +1,10 @@
-import { assert } from '@nzyme/utils/assert.js';
 import { mkdir, readdir, rename, rm, rmdir } from 'node:fs/promises';
 import { basename, dirname, join, relative } from 'node:path';
 
+import { assert } from '@nzyme/utils/assert.js';
+
 import { discoverFull, discoverIncremental } from '../discover/discover.js';
-import { DRAFTS_FOLDER, assignPaths } from '../discover/tree.js';
+import { ATTACHMENTS_FOLDER, DRAFTS_FOLDER, assignPaths } from '../discover/tree.js';
 import type { TreeDocument, TreeResult } from '../discover/tree.js';
 import { parseDocFile } from '../doc/codec.js';
 import { findOutlineAttachments } from '../doc/links.js';
@@ -14,9 +15,11 @@ import { contentHash } from '../state/contentHash.js';
 import type { DocState, StateStore, SyncState } from '../state/StateStore.js';
 import { isErrorCode } from '../utils/isErrorCode.js';
 import { isInside } from '../utils/isInside.js';
+import { pathDepth } from '../utils/pathDepth.js';
 import { pathExists } from '../utils/pathExists.js';
 import { readFileIfExists } from '../utils/readFileIfExists.js';
 import { writeFileAtomic } from '../utils/writeFileAtomic.js';
+import { writeFileIfUnchanged } from '../utils/writeFileIfUnchanged.js';
 import { localContent } from './localContent.js';
 import { hasConflictMarkers, mergeDocument } from './merge.js';
 
@@ -132,7 +135,7 @@ export async function pull(options: PullOptions): Promise<PullReport> {
             })
             .filter(({ remote, path }) => needsWork(state.documents[remote.id], remote, path))
             // Parents first, so a moved parent takes its children's folder along before they are looked at.
-            .toSorted((a, b) => depth(a.path) - depth(b.path) || a.remote.id.localeCompare(b.remote.id));
+            .toSorted((a, b) => pathDepth(a.path) - pathDepth(b.path) || a.remote.id.localeCompare(b.remote.id));
 
         for (const { remote, path } of initial ? resumeAfter(work, state.initialPull.position) : work) {
             if (now() >= deadline) {
@@ -309,15 +312,13 @@ export async function pull(options: PullOptions): Promise<PullReport> {
         }
     }
 
-    /** Writes `content` unless the file no longer hashes to `startHash` (edited meanwhile); then it waits for the next pull. */
+    /** Writes `content` unless the file was edited meanwhile (it hashes differently from `startHash`); then it waits for the next pull. */
     async function writeIfUnchanged(path: string, startHash: string, content: string) {
-        const current = await readFileIfExists(join(documentsDir, path));
-        if (current == null || contentHash(current) !== startHash) {
+        const written = await writeFileIfUnchanged(join(documentsDir, path), startHash, content);
+        if (!written) {
             report.skipped.push({ path, reason: 'The file changed while the pull ran.' });
-            return false;
         }
-        await writeFileAtomic(join(documentsDir, path), content);
-        return true;
+        return written;
     }
 
     /** Full pass only: documents Outline confirmed archived, deleted or no longer shared. Unsent local changes go to `recoveredDir`. */
@@ -333,7 +334,7 @@ export async function pull(options: PullOptions): Promise<PullReport> {
                 for (const attachment of findOutlineAttachments(bytes.toString('utf8'))) {
                     await rm(join(dirname(file), attachment.path), { force: true });
                 }
-                await removeEmptyFolders(join(dirname(file), '_attachments'));
+                await removeEmptyFolders(join(dirname(file), ATTACHMENTS_FOLDER));
                 report.removed.push(document.path);
             } else if (bytes != null) {
                 const recovered = await recover(document.path, bytes.toString('utf8'));
@@ -366,7 +367,7 @@ export async function pull(options: PullOptions): Promise<PullReport> {
                 await rename(from, to);
             }
         }
-        await removeEmptyFolders(join(fromFolder, '_attachments'));
+        await removeEmptyFolders(join(fromFolder, ATTACHMENTS_FOLDER));
     }
 
     /** After a rewrite, deletes the attachments the old content linked to and the new one does not. */
@@ -378,7 +379,7 @@ export async function pull(options: PullOptions): Promise<PullReport> {
                 await rm(join(folder, attachment.path), { force: true });
             }
         }
-        await removeEmptyFolders(join(folder, '_attachments'));
+        await removeEmptyFolders(join(folder, ATTACHMENTS_FOLDER));
     }
 
     /** Every tracked file's Outline attachments that are not on disk yet; a failed download is retried next pull. */
@@ -514,8 +515,4 @@ async function freePath(root: string, path: string) {
 
 function stem(path: string) {
     return path.slice(0, -'.md'.length);
-}
-
-function depth(path: string) {
-    return path.split('/').length;
 }

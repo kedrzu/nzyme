@@ -99,8 +99,12 @@ export async function discoverFull(client: OutlineClient, options: FullOptions):
     };
 
     const collections = await listAll(page => client.collections.list(page));
-    (await listAll(page => client.documents.list(page))).forEach(add);
-    (await listAll(page => client.documents.drafts(page))).forEach(add);
+    for (const document of await listAll(page => client.documents.list(page))) {
+        add(document);
+    }
+    for (const document of await listAll(page => client.documents.drafts(page))) {
+        add(document);
+    }
 
     const sharedRoots = [
         ...(await listSharedRoots(page => client.userMemberships.list(page))),

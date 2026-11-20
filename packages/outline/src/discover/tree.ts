@@ -5,6 +5,8 @@ import type { DocState } from '../state/StateStore.js';
 export const DRAFTS_FOLDER = 'drafts';
 /** Folder for documents shared with the user whose collection or parent the user cannot see. */
 export const SHARED_FOLDER = 'shared-with-me';
+/** Folder next to a document that holds its attachments; sync's own, so never read as documents. */
+export const ATTACHMENTS_FOLDER = '_attachments';
 
 const RESERVED_ROOT_FOLDERS = [DRAFTS_FOLDER, SHARED_FOLDER];
 

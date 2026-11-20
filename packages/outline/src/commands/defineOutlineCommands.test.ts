@@ -1,9 +1,10 @@
 import { expect, spyOn, test } from 'bun:test';
-import { Cli } from 'clipanion';
 import { mkdir, mkdtemp, realpath, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough, Readable } from 'node:stream';
+
+import { Cli } from 'clipanion';
 
 import type { CommandContext } from '@nzyme/cli-core/Command.js';
 import { createContainer } from '@nzyme/ioc/Container.js';

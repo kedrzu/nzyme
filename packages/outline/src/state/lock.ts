@@ -1,6 +1,7 @@
-import { waitFor } from '@nzyme/utils/waitFor.js';
 import { randomUUID } from 'node:crypto';
 import { link, open, rename, rm, stat } from 'node:fs/promises';
+
+import { waitFor } from '@nzyme/utils/waitFor.js';
 
 import { isErrorCode } from '../utils/isErrorCode.js';
 import { readTextIfExists } from '../utils/readTextIfExists.js';

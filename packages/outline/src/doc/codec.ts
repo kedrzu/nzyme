@@ -1,5 +1,6 @@
-import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 import { parseDocument, stringify, Document } from 'yaml';
+
+import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
 /** A local document file as the sync sees it. */
 export interface DocFile {

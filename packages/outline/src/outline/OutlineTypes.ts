@@ -27,6 +27,22 @@ export interface OutlineCollection {
     permission: OutlineCollectionPermission;
 }
 
+/** A user's membership of a collection, as `collections.memberships` returns it. */
+export interface OutlineCollectionMembership {
+    id: string;
+    collectionId: string;
+    userId: string;
+    permission: OutlinePermission;
+}
+
+/** A group's membership of a collection, as `collections.group_memberships` returns it. */
+export interface OutlineCollectionGroupMembership {
+    id: string;
+    collectionId: string;
+    groupId: string;
+    permission: OutlinePermission;
+}
+
 export interface OutlineDocument {
     id: string;
     title: string;
@@ -213,6 +229,16 @@ export interface DocumentsAddGroupResult {
 
 /** The groups a document is shared with, as `documents.group_memberships` returns them. */
 export type DocumentGroupMembershipsResult = DocumentsAddGroupResult;
+
+export interface CollectionMembershipsResult {
+    users: OutlineUser[];
+    memberships: OutlineCollectionMembership[];
+}
+
+export interface CollectionGroupMembershipsResult {
+    groups: OutlineGroup[];
+    groupMemberships: OutlineCollectionGroupMembership[];
+}
 
 export interface UserMembershipsResult {
     memberships: OutlineDocumentMembership[];

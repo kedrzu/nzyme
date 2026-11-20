@@ -4,6 +4,8 @@ import { OutlineApiError, OutlineConflictError, OutlineNetworkError, OutlineRate
 import type {
     AttachmentsCreateParams,
     CollectionsCreateParams,
+    CollectionGroupMembershipsResult,
+    CollectionMembershipsResult,
     DocumentGroupMembershipsResult,
     DocumentMembershipsResult,
     DocumentsAddGroupParams,
@@ -123,6 +125,15 @@ export class OutlineClient {
         info: (params: { id: string }) => this.callData<OutlineCollection>('collections.info', params),
         create: (params: CollectionsCreateParams) => this.callData<OutlineCollection>('collections.create', params),
         documents: (params: { id: string }) => this.callData<OutlineNavigationNode[]>('collections.documents', params),
+        /** One page of the users with direct access to a collection; the list is under `data`, so `listAll` takes it. */
+        memberships: async (params: { id: string } & OutlinePageParams) => ({
+            data: (await this.callData<CollectionMembershipsResult>('collections.memberships', params)).memberships,
+        }),
+        /** One page of the groups with access to a collection. */
+        groupMemberships: async (params: { id: string } & OutlinePageParams) => ({
+            data: (await this.callData<CollectionGroupMembershipsResult>('collections.group_memberships', params))
+                .groupMemberships,
+        }),
     };
 
     readonly userMemberships = {

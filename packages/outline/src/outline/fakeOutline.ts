@@ -242,6 +242,8 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         'users.list': usersList,
         'groups.list': groupsList,
         'collections.list': collectionsList,
+        'collections.memberships': collectionsMemberships,
+        'collections.group_memberships': collectionsGroupMemberships,
         'documents.list': documentsList,
         'documents.drafts': documentsDrafts,
         'documents.search': documentsSearch,
@@ -558,6 +560,40 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
     function collectionsList({ user, body }: Call) {
         const visible = collections.filter(collection => collectionAccess(user, collection.id) != null);
         return okPage(body, visible.map(presentCollection));
+    }
+
+    /** Like Outline, listing who is in a collection needs the right to read it. */
+    function collectionsMemberships({ user, body }: Call) {
+        const collection = requireReadableCollection(user, requireString(body, 'id'));
+        const memberships = collection.members.map(member => ({
+            id: `${collection.id}:${member.userId}`,
+            collectionId: collection.id,
+            userId: member.userId,
+            permission: member.permission,
+        }));
+        const { items, pagination } = paginate(body, memberships);
+        return ok({ memberships: items, users: items.map(item => presentUser(requireUser(item.userId))) }, pagination);
+    }
+
+    function collectionsGroupMemberships({ user, body }: Call) {
+        const collection = requireReadableCollection(user, requireString(body, 'id'));
+        const memberships = collection.groupMembers.map(member => ({
+            id: `${collection.id}:${member.groupId}`,
+            collectionId: collection.id,
+            groupId: member.groupId,
+            permission: member.permission,
+        }));
+        const { items, pagination } = paginate(body, memberships);
+        const shared = groups.filter(group => items.some(membership => membership.groupId === group.id));
+        return ok({ groupMemberships: items, groups: shared.map(presentGroup) }, pagination);
+    }
+
+    function requireReadableCollection(user: FakeUser, id: string) {
+        const collection = requireCollection(id);
+        if (collectionAccess(user, id) == null) {
+            throw new FakeApiError(404, 'not_found', 'Collection not found');
+        }
+        return collection;
     }
 
     function documentsList({ user, body }: Call) {

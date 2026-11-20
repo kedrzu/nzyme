@@ -47,7 +47,7 @@ The documents live in the repo's main checkout, in `documents/`:
 - A collection is a folder; a document is `<slug>.md`, and its children are in `<slug>/` next to it.
 - `drafts/` holds the user's unpublished documents; `shared-with-me/` the documents shared with the user whose collection the user cannot see.
 - `_attachments/<id>-<name>` holds the files a document links to; a link to a local file is uploaded on the next push.
-- A file put at the root of `documents/` is created in the user's private collection (`privateCollection`); until that collection exists, the file is not sent.
+- A file put at the root of `documents/` is created in the user's private collection (`privateCollection`); the collection counts only while the user is its sole member (no other users or groups, no workspace-wide access), so one an admin created for them does not qualify. Until a private collection exists, the file is not sent.
 - `recovered/` holds files whose document is gone from Outline while they had unsent edits.
 
 A file is a Markdown body under a `# ` title line, with optional frontmatter:

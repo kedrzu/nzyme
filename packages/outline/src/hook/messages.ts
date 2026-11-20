@@ -83,10 +83,15 @@ export function renderReport(params: RenderReportParams): string {
         const missingCollection = lookup != null && lookup.id == null;
         const atRoot = missingCollection ? push.skipped.filter(skip => !skip.path.includes('/')) : [];
         if (lookup != null && atRoot.length > 0) {
+            const why =
+                lookup.sharedWith == null
+                    ? 'which does not exist'
+                    : `which exists but is shared with ${lookup.sharedWith} other member(s) or group(s), so it is not private`;
             paragraphs.push(
                 `Outline sync: a file at the top of ${documents} goes to the user's private Outline collection ` +
-                    `"${lookup.name}", which does not exist, so these were not sent: ${docs(atRoot.map(skip => skip.path))}. ` +
-                    `Tell the user ${plain} that they or an Outline admin need to create a private collection named "${lookup.name}"; ` +
+                    `"${lookup.name}", ${why}, so these were not sent: ${docs(atRoot.map(skip => skip.path))}. ` +
+                    `Tell the user ${plain} that they need to create a collection named "${lookup.name}" themselves, ` +
+                    'with no workspace-wide access and nobody else added (one created by an admin keeps the admin as a member); ' +
                     "until then a document can go into an existing collection's folder instead.",
             );
         }

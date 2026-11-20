@@ -203,6 +203,42 @@ test('without the private collection a new file at the top of the folder is not 
     expect(world.outline.requests.filter(request => request.method === 'documents.create')).toEqual([]);
 });
 
+test('a collection with the right name but another member is not private, and the agent is told why', async () => {
+    const world = await setup({ privateCollection: 'Shared by admin' });
+    world.outline.addCollection({
+        name: 'Shared by admin',
+        members: [
+            { user: world.ana, permission: 'admin' },
+            { user: world.bob, permission: 'admin' },
+        ],
+    });
+    await world.hook('session-start');
+    await world.write('idea.md', '# Idea\n\nSomething new.');
+
+    world.clock += 2 * MINUTE;
+    const context = contextOf(await world.hook('prompt'));
+
+    expect(context).toContain('"Shared by admin", which exists but is shared with 1 other member(s) or group(s)');
+    expect(context).toContain('create a collection named "Shared by admin" themselves');
+    expect(world.outline.requests.filter(request => request.method === 'documents.create')).toEqual([]);
+});
+
+test('a collection shared with a group is not private either', async () => {
+    const world = await setup({ privateCollection: 'Group shared' });
+    const team = world.outline.addGroup({ name: 'Team', members: [world.ana] });
+    world.outline.addCollection({
+        name: 'Group shared',
+        members: [{ user: world.ana, permission: 'admin' }],
+        groups: [{ group: team, permission: 'read_write' }],
+    });
+    await world.hook('session-start');
+    await world.write('idea.md', '# Idea\n\nSomething new.');
+
+    world.clock += 2 * MINUTE;
+
+    expect(contextOf(await world.hook('prompt'))).toContain('shared with 1 other member(s) or group(s)');
+});
+
 test('session end sends local edits and prints nothing', async () => {
     const world = await setup();
     const offer = world.addDocument('Offer');

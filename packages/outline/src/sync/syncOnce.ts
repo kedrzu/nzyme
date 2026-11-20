@@ -38,8 +38,10 @@ export interface SyncRun {
 export interface PrivateCollectionLookup {
     /** The name the collection was looked up by. */
     name: string;
-    /** `null` when no private collection of that name is visible. */
+    /** `null` when no private collection of that name is usable. */
     id: string | null;
+    /** Set when a collection of that name exists but has other members, so it was not accepted. */
+    sharedWith?: number;
 }
 
 /**
@@ -86,7 +88,10 @@ async function trackedFolderMissing(workspace: Workspace): Promise<boolean> {
     return Object.keys(state.documents).length > 0;
 }
 
-/** Only a private collection (no workspace-wide permission) qualifies: what is created there must not be shared. */
+/**
+ * Only a collection nobody else can read qualifies: no workspace-wide permission and the user as its only member,
+ * directly and through groups. A same-named collection made by an admin keeps the admin as a member, so it does not.
+ */
 async function findPrivateCollection(
     client: OutlineClient,
     nameFor: (user: OutlineUser) => string,
@@ -94,6 +99,18 @@ async function findPrivateCollection(
     const { user } = await client.auth.info();
     const name = nameFor(user);
     const collections = await listAll(page => client.collections.list(page));
-    const match = collections.find(collection => collection.permission === null && collection.name === name);
-    return { name, id: match?.id ?? null };
+    let sharedWith: number | undefined;
+    for (const collection of collections) {
+        if (collection.permission !== null || collection.name !== name) {
+            continue;
+        }
+        const users = await listAll(page => client.collections.memberships({ id: collection.id, ...page }));
+        const groups = await listAll(page => client.collections.groupMemberships({ id: collection.id, ...page }));
+        const others = users.filter(membership => membership.userId !== user.id).length + groups.length;
+        if (others === 0) {
+            return { name, id: collection.id };
+        }
+        sharedWith = Math.max(sharedWith ?? 0, others);
+    }
+    return { name, id: null, ...(sharedWith == null ? {} : { sharedWith }) };
 }

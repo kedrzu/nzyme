@@ -4,10 +4,10 @@ import { basename, dirname, join, relative } from 'node:path';
 import { assert } from '@nzyme/utils/assert.js';
 
 import { discoverFull, discoverIncremental } from '../discover/discover.js';
-import { ATTACHMENTS_FOLDER, DRAFTS_FOLDER, assignPaths } from '../discover/tree.js';
+import { DRAFTS_FOLDER, assignPaths } from '../discover/tree.js';
 import type { TreeDocument, TreeResult } from '../discover/tree.js';
 import { parseDocFile } from '../doc/codec.js';
-import { findOutlineAttachments } from '../doc/links.js';
+import { ATTACHMENTS_FOLDER, findOutlineAttachments } from '../doc/links.js';
 import { pickFreeName } from '../doc/naming.js';
 import type { OutlineClient } from '../outline/OutlineClient.js';
 import type { OutlineDocument } from '../outline/OutlineTypes.js';

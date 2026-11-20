@@ -9,6 +9,8 @@ export interface LocalAttachmentRef {
     image: boolean;
 }
 
+/** Folder next to a document that holds its attachments; sync's own, so never read as documents. */
+export const ATTACHMENTS_FOLDER = '_attachments';
 const ID = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
 /** `![text](` or `[text](`: group 1 is the whole opener, group 2 the text. */
 const OPENER = String.raw`(!?\[([^\]\n]*)\]\()`;
@@ -20,8 +22,8 @@ const OUTLINE_LINK = new RegExp(
     'g',
 );
 const LOCAL_LINK = new RegExp(`${OPENER}([^)\\s]+)${LINK_END}`, 'g');
-const LOCAL_ATTACHMENT_PATH = new RegExp(`^(?:\\./)?_attachments/(${ID})(?:-[^/]*)?$`);
-const ATTACHMENTS_DIR = /^(?:\.\/)?_attachments\//;
+const LOCAL_ATTACHMENT_PATH = new RegExp(`^(?:\\./)?${ATTACHMENTS_FOLDER}/(${ID})(?:-[^/]*)?$`);
+const ATTACHMENTS_DIR = new RegExp(`^(?:\\./)?${ATTACHMENTS_FOLDER}/`);
 const URL_SCHEME = /^(?:[a-z][a-z0-9+.-]*:|\/|#)/i;
 
 /**
@@ -36,7 +38,7 @@ const URL_SCHEME = /^(?:[a-z][a-z0-9+.-]*:|\/|#)/i;
 export function toLocalLinks(text: string): string {
     return text.replace(OUTLINE_LINK, (_match, opener: string, label: string, id: string, end: string) => {
         const name = attachmentName(label);
-        return `${opener}_attachments/${id}${name === '' ? '' : `-${name}`}${end}`;
+        return `${opener}${ATTACHMENTS_FOLDER}/${id}${name === '' ? '' : `-${name}`}${end}`;
     });
 }
 

@@ -3,10 +3,11 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 
 import { assert } from '@nzyme/utils/assert.js';
 
-import { ATTACHMENTS_FOLDER, DRAFTS_FOLDER, SHARED_FOLDER } from '../discover/tree.js';
+import { DRAFTS_FOLDER, SHARED_FOLDER } from '../discover/tree.js';
 import { parseDocFile, serializeDocFile } from '../doc/codec.js';
 import type { DocFile } from '../doc/codec.js';
 import {
+    ATTACHMENTS_FOLDER,
     findLocalAttachments,
     findOutlineAttachments,
     linkUploadedAttachments,

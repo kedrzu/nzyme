@@ -46,8 +46,8 @@ This is a published library with several consumers.
 
 Run from the repo root:
 
-- `zsh setup.sh` — full setup. In a worktree it also catches up with the branch's base (`origin/main` or
-  `origin/release`) and copies `.env`. `bash setup.build.sh` is the build half, shared with CI:
+- `zsh setup.sh` — full setup. In a worktree it also catches up with the branch's base (`origin/main`) and
+  copies `.env`. `bash setup.build.sh` is the build half, shared with CI:
   install, `nzyme` CLI, generated files, all package builds.
 - `bun run build --exclude=@nzyme/logging-ui` — Nx build of all packages, as CI runs it (the bare
   script includes `logging-ui`); `bun watch` rebuilds on change.
@@ -103,7 +103,7 @@ These always apply. Everything else — organization, naming, casting, JSDoc, de
 
 # Publishing
 
-Releases come from the `release` branch through a release PR (`docs/decisions/release-line-on-nx-release.md`).
+Releases are cut from `main` by the manual **Release** workflow (`docs/decisions/release-from-main-on-demand.md`).
 The `git-workflow` skill covers what a contributor does.
 
 `bun run lint:check` enforces, on every non-private `package.json`: `license`, `description`,

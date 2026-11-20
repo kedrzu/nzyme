@@ -88,7 +88,10 @@ Values are kept only in the keychain, never in a file. Any `bun` process of the 
 ## Commands in the product CLI
 
 The `nzyme` binary loads no project code. A repo registers the commands in its own CLI (a
-`packages/cli` workspace package with a `bin`, run as `bun <product> …`):
+`packages/cli` workspace package with a `bin`), and adds the wrapper `"secrets": "<product> secrets"` to
+the root `package.json`, so they run as `bun secrets …` in every repo. A sub-package's own scripts
+call the binary instead (`<product> secrets run -- …`): Bun looks up scripts only in the nearest
+`package.json`.
 
 ```ts
 // packages/cli/src/cli.ts

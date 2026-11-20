@@ -98,7 +98,7 @@ platform or technology (Cloudflare, Supabase, …) is added here as one more row
 |SQL with Drizzle|database, Postgres, SQL, Drizzle, migrations|`drizzle-orm` or `drizzle-kit` in a `package.json`|`nzyme/docs/practice/drizzle.md`|`nzyme/docs/practice/drizzle.md`|
 |Secrets|secret, API key, token, credentials, password|`@nzyme/secrets`, `defineEnvVariable` holding credentials, a dotenv file with credentials|`references/secrets.md`|`nzyme/docs/practice/secrets.md`|
 |Third-party APIs|integration, vendor API, OpenAPI, GraphQL, webhook client|an OpenAPI spec or `.graphql` SDL in a package, `@nzyme/openapi`|`nzyme/docs/practice/api-clients.md`|`nzyme/docs/practice/api-clients.md`|
-|Product CLI|CLI, command, `bun <product>`, secrets or pen commands|`packages/cli` with a `bin`; `nzyme.plugins` in a `package.json`|`references/product-cli.md`|`nzyme/docs/decisions/product-clis-over-nzyme-plugins.md`|
+|Product CLI|CLI, command, `bun secrets`, `bun pen`, secrets or pen commands|`packages/cli` with a `bin`; `secrets`/`pen` scripts or `nzyme.plugins` in the root `package.json`|`references/product-cli.md`|`nzyme/docs/decisions/product-clis-over-nzyme-plugins.md`|
 |Design in Pen|design, Pen, mockups, screens to draw|`ARCHITECTURE.md` records that the repo designs in Pen; a tracked `*.pen` (suggests it)|`references/design-in-pen.md`|`nzyme/docs/practice/design.md`|
 
 A backend (server package, hosting, deployment) is not part of the default architecture and has no

@@ -13,8 +13,8 @@ Every `@nzyme/*` package in a repo must be one version.
 
 ## Commands in the product CLI
 
-Register the commands in the repo's own CLI (a `packages/cli` workspace package, run as
-`bun <product> …`):
+Register the commands in the repo's own CLI (a `packages/cli` workspace package), and add the wrapper
+`"pen": "<product> pen"` to the root `package.json`, so they run as `bun pen …` in every repo:
 
 ```ts
 import { execute } from '@nzyme/cli-core/execute.js';

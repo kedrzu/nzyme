@@ -36,6 +36,14 @@ and registers `definePenCommands()` and `defineSecretsCommands({ provider })` in
 ## Consequences
 
 - Breaking for repos using `nzyme.plugins`: they add `packages/cli` and change `nzyme secrets|pen …` to
-  `bun <product> secrets|pen …`, the pen merge driver and `pen check` in lint included.
+  `bun secrets|pen …`, the pen merge driver and `pen check` in lint included.
+- Each shared command group gets a wrapper script in the root `package.json` (`"secrets": "<product> secrets"`,
+  `"pen": "<product> pen"`), so docs, skills and templates read the same in every repo and name no product.
+
+> **Checked 2026-11-20 (Bun 1.4.4):** with `"pen": "prod pen"` in the root `package.json`,
+> `bun pen merge base ours theirs 'p a t h'` handed the CLI `["pen","merge","base","ours","theirs","p a t h"]`,
+> and `bun secrets run -- echo hi` handed it `["secrets","run","--","echo","hi"]`; Bun's `$ …` echo went to
+> stderr. From a sub-package directory `bun secrets` failed with `Script not found "secrets"`.
+
 - `nzyme submodule bump` and every other built-in run touch no product code.
 - Commands are no longer available in a repo with no CLI of its own: it needs the small package above.

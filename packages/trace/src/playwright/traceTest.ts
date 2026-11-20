@@ -2,6 +2,7 @@ import { test } from '@playwright/test';
 import type { Browser, BrowserContext, LaunchOptions, Page } from '@playwright/test';
 
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 
 import { createBuildChecker } from '../probe/createBuildChecker.js';
 import type { BuildChecker } from '../probe/createBuildChecker.js';
@@ -54,11 +55,7 @@ interface BrowserTracer {
  * Chromium features that swap the renderer process on a navigation (`page.goto`) and so drop the
  * coverage of the page before it: with them, a test navigating twice loses its first page's code.
  */
-const PROCESS_SWAP_FEATURES: readonly string[] = [
-    'BackForwardCache',
-    'ProactivelySwapBrowsingInstance',
-    'RenderDocument',
-];
+const PROCESS_SWAP_FEATURES = immutable(['BackForwardCache', 'ProactivelySwapBrowsingInstance', 'RenderDocument']);
 
 /**
  * A Playwright `test` that traces each test for test selection: every browser context of the test —

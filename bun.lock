@@ -93,6 +93,7 @@
       "dependencies": {
         "@nzyme/openapi": "workspace:*",
         "@nzyme/secrets": "workspace:*",
+        "@nzyme/utils": "workspace:*",
       },
       "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

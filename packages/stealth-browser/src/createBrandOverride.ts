@@ -1,5 +1,6 @@
 import type { Logger } from '@nzyme/logging/Logger.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 
 import { attachTargetSession } from './attachTargetSession.js';
 import { buildChromeBrand } from './buildChromeBrand.js';
@@ -35,7 +36,7 @@ export interface CreateBrandOverrideParams {
 }
 
 /** The targets a page's script can read the brand in: documents, out-of-process frames and every kind of worker. */
-const BRANDED_TYPES: ReadonlySet<string> = new Set(['page', 'iframe', 'worker', 'shared_worker', 'service_worker']);
+const BRANDED_TYPES = immutable(new Set(['page', 'iframe', 'worker', 'shared_worker', 'service_worker']));
 /** The auto-attach the proxy holds every new target with, at the browser and on each of its own sessions. */
 const HOLD_NEW_TARGETS = { autoAttach: true, waitForDebuggerOnStart: true, flatten: true } as const;
 /**

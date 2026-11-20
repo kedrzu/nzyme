@@ -1,3 +1,5 @@
+import { immutable } from '@nzyme/utils/immutable.js';
+
 import type { CdpRequest } from './CdpTypes.js';
 import { ISOLATED_WORLD_NAME } from './createIsolatedWorlds.js';
 import type { ClientWorld, IsolatedCall, IsolatedWorlds } from './createIsolatedWorlds.js';
@@ -22,15 +24,17 @@ export type StealthDecision =
  * `runScript` and `queryObjects` act in a context the client names by id, which may be the page's own world; a
  * binding (`addBinding`) exists for page code to call.
  */
-const RUNTIME_METHODS: ReadonlySet<string> = new Set([
-    'evaluate',
-    'callFunctionOn',
-    'getProperties',
-    'awaitPromise',
-    'releaseObject',
-    'releaseObjectGroup',
-    'runIfWaitingForDebugger',
-]);
+const RUNTIME_METHODS = immutable(
+    new Set([
+        'evaluate',
+        'callFunctionOn',
+        'getProperties',
+        'awaitPromise',
+        'releaseObject',
+        'releaseObjectGroup',
+        'runIfWaitingForDebugger',
+    ]),
+);
 
 /** Refused because they let a client step around the per-message checks or reach the proxy's own state; with why. */
 const REFUSED_METHODS: Readonly<Record<string, string>> = {

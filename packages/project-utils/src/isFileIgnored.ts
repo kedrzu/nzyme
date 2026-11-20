@@ -4,6 +4,7 @@ import fs from 'fs-extra';
 import parseGitignore from 'parse-gitignore';
 
 import { createCache } from '@nzyme/utils/createCache.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 
 import { getProjectRoot } from './getProjectRoot.js';
 import { relativeInsidePosixPath } from './relativeInsidePosixPath.js';
@@ -35,7 +36,7 @@ const directoryIgnoredCache = createCache({
 // Cache of git roots per directory
 const gitRootCache = createCache({ getValue: findGitRoot });
 const projectRoot = getProjectRoot();
-const commonIgnorePaths: readonly string[] = ['.git', '.turbo', '.nx', '.yarn', 'node_modules'];
+const commonIgnorePaths = immutable(['.git', '.turbo', '.nx', '.yarn', 'node_modules']);
 
 /**
  * Checks if a file or directory path should be ignored by the file system watcher.

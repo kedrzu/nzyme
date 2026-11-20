@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import type { FsAccessKind, FsTraceLine } from '@nzyme/affected/fsTrace/FsTraceLine.js';
 import { assert } from '@nzyme/utils/assert.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 
 import { FS_TRACED } from './isFsTraced.js';
 
@@ -71,7 +72,7 @@ const FS_PROMISES_FUNCTIONS: ReadonlyMap<string, AccessOf> = new Map([
 ]);
 
 /** The `node:child_process` functions: each starts a process. */
-const CHILD_PROCESS_FUNCTIONS: readonly string[] = [
+const CHILD_PROCESS_FUNCTIONS = immutable([
     'spawn',
     'spawnSync',
     'exec',
@@ -79,7 +80,7 @@ const CHILD_PROCESS_FUNCTIONS: readonly string[] = [
     'execFile',
     'execFileSync',
     'fork',
-];
+]);
 
 /** The `Bun` functions; `$` is the shell, whose builtins (`cat`, `ls`) read files in-process. */
 const BUN_FUNCTIONS: ReadonlyMap<string, AccessOf> = new Map([

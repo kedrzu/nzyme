@@ -1,5 +1,6 @@
 import { assert } from '@nzyme/utils/assert.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 
 import { CdpError } from './CdpTypes.js';
 
@@ -50,7 +51,7 @@ export interface IsolatedWorlds {
 }
 
 /** The browser's errors for a context or frame that went away with a navigation. */
-const GONE_ERRORS: readonly string[] = ['Cannot find context with specified id', 'No frame for given id found'];
+const GONE_ERRORS = immutable(['Cannot find context with specified id', 'No frame for given id found']);
 
 /** The CDP error code of a method the target does not have: a worker has no Page domain. */
 const METHOD_NOT_FOUND = -32_601;

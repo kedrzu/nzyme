@@ -1,3 +1,5 @@
+import { immutable } from '@nzyme/utils/immutable.js';
+
 import type { NzymeIndexConfig } from './NzymeIndexConfig.js';
 
 /**
@@ -55,10 +57,9 @@ export const EXTRA_SECTIONS = {
 const DEFAULT_DEFINE_KIND_ORDER = 55;
 
 /** Kinds a configured `defineX` kind may not reuse — they already mean something else. */
-const RESERVED_KINDS: ReadonlySet<string> = new Set([
-    ...BUILTIN_DEFINE_KINDS.map(kind => kind.kind),
-    ...Object.keys(EXTRA_SECTIONS),
-] as const);
+const RESERVED_KINDS = immutable(
+    new Set([...BUILTIN_DEFINE_KINDS.map(kind => kind.kind), ...Object.keys(EXTRA_SECTIONS)] as const),
+);
 
 /**
  * Resolves a repo's {@link NzymeIndexConfig} into the settings the indexer runs on: defaults

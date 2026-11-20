@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { createCache } from '@nzyme/utils/createCache.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 
 /** One operation of the spec, flattened from `paths`. */
 export interface OpenApiOperation {
@@ -32,7 +33,7 @@ export interface OpenApiSpec {
     schemas: Record<string, unknown>;
 }
 
-const METHODS: readonly string[] = ['get', 'post', 'put', 'patch', 'delete'];
+const METHODS = immutable(['get', 'post', 'put', 'patch', 'delete']);
 
 const specs = createCache({
     getValue: (specPath: string) => parseOpenApiSpec(specPath, JSON.parse(readFileSync(specPath, 'utf8'))),

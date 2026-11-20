@@ -1,3 +1,5 @@
+import { immutable } from '@nzyme/utils/immutable.js';
+
 /** One brand of a CDP `UserAgentMetadata` list, as `navigator.userAgentData.brands` shows it. */
 export interface BrandVersion {
     brand: string;
@@ -32,9 +34,9 @@ export interface UserAgentOverride {
 /** The brand Google Chrome adds to the lists; Chrome for Testing is built with Chromium branding and has none. */
 const CHROME_BRAND = 'Google Chrome';
 /** The characters a GREASE brand is made of, in Chromium's order. */
-const GREASE_CHARS: readonly string[] = [' ', '(', ':', '-', '.', '/', ')', ';', '=', '?', '_'];
+const GREASE_CHARS = immutable([' ', '(', ':', '-', '.', '/', ')', ';', '=', '?', '_']);
 /** The versions a GREASE brand carries, in Chromium's order. */
-const GREASE_VERSIONS: readonly string[] = ['8', '99', '24'];
+const GREASE_VERSIONS = immutable(['8', '99', '24']);
 /** The stable permutations of a three-brand list, indexed by the major version (`GetRandomOrder`). */
 const THREE_BRAND_ORDERS = [
     [0, 1, 2],

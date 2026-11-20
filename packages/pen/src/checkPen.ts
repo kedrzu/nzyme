@@ -1,15 +1,17 @@
+import { immutable } from '@nzyme/utils/immutable.js';
+
 import type { PenDocument, PenIndexEntry, PenNode } from './PenDocument.js';
 import { indexPen, isPenReplacement, parsePen, walkPen } from './PenDocument.js';
 
 /** Format versions the tooling was written against; another one is reported as a warning. */
-const KNOWN_VERSIONS: ReadonlySet<string> = new Set(['2.22']);
+const KNOWN_VERSIONS = immutable(new Set(['2.22']));
 
 /**
  * Properties holding free text a person typed, where a leading `$` is text ("$5 off"), not a
  * variable reference. `content` can bind a variable too, but text starting with `$` is far more
  * likely there, so it is never checked.
  */
-const FREE_TEXT_KEYS: ReadonlySet<string> = new Set(['content', 'name', 'context', 'metadata']);
+const FREE_TEXT_KEYS = immutable(new Set(['content', 'name', 'context', 'metadata']));
 
 /** Matches a line git writes to mark a conflict. JSON a `.pen` holds never starts a line with one. */
 const CONFLICT_MARKER = /^(<{7}|={7}|>{7})(\s|$)/;

@@ -1,6 +1,7 @@
 import { createLogger } from '@nzyme/logging/createLogger.js';
 import type { Logger } from '@nzyme/logging/Logger.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 
 import type { CdpEvent, CdpRequest } from './CdpTypes.js';
 import type { SessionRegistry } from './createSessionRegistry.js';
@@ -106,11 +107,11 @@ const BLOCK_MEMORY_MS = 60 * MINUTE_MS;
 /** The longest wait held silently; agent-browser gives a command 30 s. */
 const MAX_HOLD_MS = 15 * SECOND_MS;
 /** Main-document statuses that are a block. */
-const BLOCK_STATUSES: ReadonlySet<number> = new Set([403, 429]);
+const BLOCK_STATUSES = immutable(new Set([403, 429]));
 /** The commands that surely load a page, so take the site's slot when let through. */
-const LOADING_METHODS: ReadonlySet<string> = new Set(['Page.navigate', 'Page.reload', 'Target.createTarget']);
+const LOADING_METHODS = immutable(new Set(['Page.navigate', 'Page.reload', 'Target.createTarget']));
 /** The expressions agent-browser goes back and forward with; like a click, they wait but take no slot. */
-const HISTORY_STEPS: ReadonlySet<string> = new Set(['history.back()', 'history.forward()']);
+const HISTORY_STEPS = immutable(new Set(['history.back()', 'history.forward()']));
 
 const DEFAULT_MESSAGES: Readonly<SitePaceMessages> = {
     paused: (site, waitMs, afterBlock, intervalMs) => {

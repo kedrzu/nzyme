@@ -1,6 +1,8 @@
 import presetEnv from '@babel/preset-env';
 import type { ConfigAPI, PresetItem, PresetObject } from '@babel/core';
 
+import { immutable } from '@nzyme/utils/immutable.js';
+
 import { cloudFrontMethodsPlugin } from './cloudFrontMethodsPlugin.js';
 
 /**
@@ -12,7 +14,7 @@ import { cloudFrontMethodsPlugin } from './cloudFrontMethodsPlugin.js';
  * for an edge function. The runtime's own limit — no `async` closures passed as arguments — is not
  * expressible here; no CloudFront Function uses `async` today.
  */
-const PRESET_ENV_EXCLUDE: readonly string[] = [
+const PRESET_ENV_EXCLUDE = immutable([
     'transform-arrow-functions',
     'transform-async-to-generator',
     'transform-block-scoping',
@@ -23,7 +25,7 @@ const PRESET_ENV_EXCLUDE: readonly string[] = [
     'transform-sticky-regex',
     'transform-template-literals',
     'transform-typeof-symbol',
-];
+]);
 
 /**
  * `PresetObject` in `@babel/core` 8 omits `presets`, even though Babel resolves nested presets. Typed

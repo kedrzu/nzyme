@@ -72,21 +72,21 @@ test('a lock whose process is dead is taken over', async () => {
     expect(handle).not.toBeNull();
 });
 
-test('a lock of a live process is taken over only after 10 minutes', async () => {
+test('a lock of a live process is kept for hours and taken over only after 24 hours', async () => {
     const lockPath = join(await mkdtemp(join(tmpdir(), 'lock-')), 'lock');
-    const minutes = (count: number): number => count * 60 * 1000;
+    const hours = (count: number): number => count * 60 * 60 * 1000;
 
-    await writeFile(lockPath, `${process.pid} ${Date.now() - minutes(9)} live`);
+    await writeFile(lockPath, `${process.pid} ${Date.now() - hours(2)} live`);
     expect(await tryAcquireLock(lockPath)).toBeNull();
 
-    await writeFile(lockPath, `${process.pid} ${Date.now() - minutes(11)} old`);
+    await writeFile(lockPath, `${process.pid} ${Date.now() - hours(25)} recycled`);
     expect(await tryAcquireLock(lockPath)).not.toBeNull();
 });
 
 test('release leaves a lock that another process took over', async () => {
     const lockPath = join(await mkdtemp(join(tmpdir(), 'lock-')), 'lock');
     const first = await tryAcquireLock(lockPath);
-    await writeFile(lockPath, `${process.pid} ${Date.now() - 11 * 60 * 1000} stale`);
+    await writeFile(lockPath, `${process.pid} ${Date.now() - 25 * 60 * 60 * 1000} stale`);
     const second = await tryAcquireLock(lockPath);
     expect(second).not.toBeNull();
 

@@ -5,8 +5,13 @@ import { link, open, rename, rm, stat } from 'node:fs/promises';
 import { isErrorCode } from '../utils/isErrorCode.js';
 import { readTextIfExists } from '../utils/readTextIfExists.js';
 
-/** A lock older than this belongs to a process that was killed without releasing it. */
-const STALE_AFTER_MS = 10 * 60 * 1000;
+/**
+ * A lock held by a live pid for longer than this belongs to a killed process whose pid was reused
+ * (after a reboot, say). Far above the longest legitimate hold: a first full pull of a large workspace.
+ */
+const RECYCLED_PID_AFTER_MS = 24 * 60 * 60 * 1000;
+/** A lock file still without a claim after this was left by a process killed while writing it. */
+const UNCLAIMED_AFTER_MS = 10 * 60 * 1000;
 const POLL_MS = 100;
 
 export interface AcquireLockOptions {
@@ -28,7 +33,7 @@ interface LockClaim {
 
 /**
  * Takes the lock file at `path` unless another live process holds it. A lock is taken over when its
- * owner's pid is dead or it is older than 10 minutes. Returns `null` while the lock is held, so hooks
+ * owner's pid is dead, or after 24 hours in case the pid was reused by another process. Returns `null` while the lock is held, so hooks
  * that must not wait (session start, prompt) skip the sync.
  */
 export async function tryAcquireLock(path: string): Promise<LockHandle | null> {
@@ -127,11 +132,12 @@ async function restore(aside: string, path: string): Promise<void> {
 async function isStale(path: string, text: string): Promise<boolean> {
     const claim = parseClaim(text);
     if (claim) {
-        return Date.now() - claim.takenAt > STALE_AFTER_MS || !isAlive(claim.pid);
+        // Age alone must not end a live hold: `outline pull` and `outline sync` may run for hours.
+        return !isAlive(claim.pid) || Date.now() - claim.takenAt > RECYCLED_PID_AFTER_MS;
     }
     // Content not written yet (the owner is between creating the file and writing it), or garbage.
     try {
-        return Date.now() - (await stat(path)).mtimeMs > STALE_AFTER_MS;
+        return Date.now() - (await stat(path)).mtimeMs > UNCLAIMED_AFTER_MS;
     } catch (error) {
         if (isErrorCode(error, 'ENOENT')) {
             return false;

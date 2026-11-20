@@ -1,7 +1,8 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { StateStore } from '../state/StateStore.js';
+import { readTextIfExists } from '../utils/readTextIfExists.js';
 
 export interface ResolveWorkspaceOptions {
     /** Any directory inside the repo: the main checkout or one of its worktrees. */
@@ -26,7 +27,8 @@ export interface Workspace {
 
 /**
  * Finds the clone `cwd` belongs to. The documents live in its main checkout and the state in its common git
- * directory, so several worktrees share one sync. `null` outside a git repo, or for a bare one.
+ * directory, so several worktrees share one sync. Both synced folders are added to the clone's `info/exclude`, so
+ * private documents never reach a commit. `null` outside a git repo, or for a bare one.
  */
 export async function resolveWorkspace(options: ResolveWorkspaceOptions): Promise<Workspace | null> {
     const revParse = await git(options.cwd, [
@@ -48,6 +50,7 @@ export async function resolveWorkspace(options: ResolveWorkspaceOptions): Promis
     const mainDir = first.slice('worktree '.length);
     const stateDir = join(commonDir, 'outline-sync');
     await mkdir(stateDir, { recursive: true });
+    await excludeFromGit(commonDir, [options.folder, options.recovered]);
     return {
         mainDir,
         workTree,
@@ -58,7 +61,26 @@ export async function resolveWorkspace(options: ResolveWorkspaceOptions): Promis
 }
 
 async function git(cwd: string, args: string[]): Promise<string | null> {
-    const child = Bun.spawn(['git', '-C', cwd, ...args], { stdout: 'pipe', stderr: 'ignore' });
+    const child = Bun.spawn(['git', '-C', cwd, ...args], {
+        stdout: 'pipe',
+        stderr: 'ignore',
+    });
     const [output, exitCode] = await Promise.all([new Response(child.stdout).text(), child.exited]);
     return exitCode === 0 ? output.trim() : null;
+}
+
+/** Appends each folder, anchored to the repo root, to `<commonDir>/info/exclude` unless a line for it is there. */
+async function excludeFromGit(commonDir: string, folders: string[]): Promise<void> {
+    const excludePath = join(commonDir, 'info', 'exclude');
+    const current = (await readTextIfExists(excludePath)) ?? '';
+    const lines = new Set(current.split('\n').map(line => line.trim()));
+    const missing = folders
+        .map(folder => `/${folder.replace(/^\.?\/+/, '').replace(/\/+$/, '')}`)
+        .filter(line => !lines.has(line));
+    if (missing.length === 0) {
+        return;
+    }
+    await mkdir(join(commonDir, 'info'), { recursive: true });
+    const separator = current === '' || current.endsWith('\n') ? '' : '\n';
+    await writeFile(excludePath, `${current}${separator}${missing.join('\n')}\n`);
 }

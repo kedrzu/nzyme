@@ -6,12 +6,7 @@ import { assert } from '@nzyme/utils/assert.js';
 /** Gmail as a Google service: its scopes, and the account's address from its profile. */
 export const gmailService: GoogleService = {
     name: 'GMAIL',
-    scopes: [
-        'https://www.googleapis.com/auth/gmail.readonly',
-        'https://www.googleapis.com/auth/gmail.modify',
-        'https://www.googleapis.com/auth/gmail.compose',
-        'https://www.googleapis.com/auth/gmail.labels',
-    ],
+    scopes: ['https://www.googleapis.com/auth/gmail.modify'],
     async resolveEmail(auth, rootUrl) {
         const profile = await gmail({ version: 'v1', auth }).users.getProfile({ userId: 'me' }, { rootUrl });
         const email = profile.data.emailAddress;

@@ -76,7 +76,6 @@ export const LIST = ['a', 'b'] as const;
 export const DEEP = { a: 1, nested: { b: [2] } } as const;
 export const DEEP_TYPED: Immutable<{ nested: { b: number[] } }> = { nested: { b: [2] } };
 export const OBJECT = Object.freeze({ a: 1, nested: Object.freeze({ b: [2] as const }) });
-export const FROZEN_DEEP = Object.freeze({ nested: { b: [2] } }) as const;
 export const GROUPS: ReadonlyMap<string, readonly string[]> = new Map([['a', ['x'] as const]]);
 export const NAMES: ReadonlySet<string> = new Set(['a']);
 export const BY_ID: ReadonlyMap<string, number> = new Map([['a', 1]]);
@@ -84,6 +83,17 @@ export const ITEMS: readonly string[] = ['a'];
 export const ITEMS_ARRAY: ReadonlyArray<string> = ['a'];
 export const CONFIG: Readonly<{ a: number }> = { a: 1 };
 export const FROM_ENTRIES: Readonly<Record<string, number>> = Object.fromEntries([['a', 1]]);
+export const SRC = ['a', 'b'] as const;
+export const MAPPED: ReadonlyMap<string, readonly string[]> = new Map(SRC.map(k => [k, [k] as const]));
+export const BY_KEY: ReadonlySet<string> = new Set(Object.keys(CONFIG));
+export const FROM_CONFIG: ReadonlyMap<string, number> = new Map(Object.entries(CONFIG));
+export const SPREAD: readonly string[] = Array.from([...SRC, 'c']);
+export const FLAT: Readonly<Record<string, string>> = Object.fromEntries(
+    SRC.flatMap(k => SRC.map(v => [k + v, k] as const)),
+);
+export const SPREAD_CONST: ReadonlySet<string> = new Set([...SRC, ...Object.keys(CONFIG)] as const);
+export const RANGE: readonly number[] = Array.from({ length: 2 }, (_, i) => i);
+export const DEEP_FROM: Immutable<{ list: string[] }[]> = Array.from(SRC, k => ({ list: [k] }));
 `;
 
         expect(await lintCase(source)).toEqual([]);
@@ -131,6 +141,8 @@ export const CONFIG: Readonly<{ items: string[] }> = { items: [] };
 export const ITEMS: readonly string[][] = [['a']];
 export const GROUPS: ReadonlyMap<string, string[]> = new Map([['a', ['x']]]);
 export const TAGS: ReadonlySet<{ id: number }> = new Set([{ id: 1 }]);
+export const ASSERTED = { a: [1] as number[] } as const;
+export const IN_CONST = { a: Object.freeze({ b: [2] }), keys: Object.keys({}) } as const;
 `;
 
         expect(await lintCase(source)).toEqual([
@@ -139,6 +151,38 @@ export const TAGS: ReadonlySet<{ id: number }> = new Set([{ id: 1 }]);
             lineOf(source, 'export const ITEMS'),
             lineOf(source, 'export const GROUPS'),
             lineOf(source, 'export const TAGS'),
+            lineOf(source, 'export const ASSERTED'),
+            lineOf(source, 'export const IN_CONST'),
+            lineOf(source, 'export const IN_CONST'),
+        ]);
+    });
+
+    it('rejects mutable items kept by a value built from a call or a non-literal iterable under a shallow readonly type', async () => {
+        const source = `const SRC = ['a', 'b'] as const;
+declare function load(): string[][];
+export const FROM_ENTRIES: Readonly<Record<string, string[]>> = Object.fromEntries([['a', []]]);
+export const MAPPED: ReadonlyMap<string, string[]> = new Map(SRC.map(k => [k, []]));
+export const FROM: readonly string[][] = Array.from({ length: 2 }, () => []);
+export const OF: readonly string[][] = Array.of([]);
+export const LITERAL: ReadonlyMap<string, string[]> = new Map([['a', []]]);
+export const BLOCK: readonly string[][] = Array.from(SRC, k => {
+    return [k];
+});
+export const LOADED: ReadonlySet<string[]> = new Set(load());
+export const FLAT: readonly string[][] = Array.from(SRC.flatMap(k => [[k]]));
+export const PAIRS: readonly (readonly [string, string])[] = Object.entries({ a: 'b' });
+`;
+
+        expect(await lintCase(source)).toEqual([
+            lineOf(source, 'export const FROM_ENTRIES'),
+            lineOf(source, 'export const MAPPED'),
+            lineOf(source, 'export const FROM:'),
+            lineOf(source, 'export const OF'),
+            lineOf(source, 'export const LITERAL'),
+            lineOf(source, 'export const BLOCK'),
+            lineOf(source, 'export const LOADED'),
+            lineOf(source, 'export const FLAT'),
+            lineOf(source, 'export const PAIRS'),
         ]);
     });
 

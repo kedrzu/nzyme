@@ -1,7 +1,5 @@
 import type { Rule } from 'eslint';
 
-import type { Immutable } from '@nzyme/types/Immutable.js';
-
 import { propertyName, publishedPackageRoot } from './jsonPackage.js';
 
 /**
@@ -11,7 +9,8 @@ import { propertyName, publishedPackageRoot } from './jsonPackage.js';
  *
  * Private packages are skipped.
  */
-export const publishAccessPublic: Immutable<Rule.RuleModule> = {
+// oxlint-disable-next-line nzyme/no-module-state -- ESLint types its rule and plugin objects with mutable arrays (`meta.schema`, `docs.dialects`), so this one cannot be typed `Immutable`; nothing writes it.
+export const publishAccessPublic: Rule.RuleModule = {
     meta: {
         type: 'problem',
         schema: [],

@@ -6,6 +6,7 @@ import type {
     OxlintAnyNode,
     OxlintDefinition,
     OxlintIdentifier,
+    OxlintMemberExpression,
     OxlintNode,
     OxlintRule,
     OxlintTsTypeAnnotation,
@@ -25,6 +26,8 @@ const MESSAGES = {
         'This statement runs when the module loads and can leave state behind. Move it into a function, or disable the rule here with a comment saying why the module must hold this state.',
     mutableStaticField:
         'A static class field that is not `readonly` is state that outlives a call. Make it `readonly` with an immutable value.',
+    uninspectableItems:
+        'The values this {{what}} keeps are built where this rule cannot see them, and its readonly type makes only the top level immutable. Build them from literals or existing constants, type the value `Immutable<…>` from `@nzyme/types/Immutable.js`, or create it through a function annotated `@__NO_SIDE_EFFECTS__`.',
 } as const;
 
 type MessageId = keyof typeof MESSAGES;
@@ -32,8 +35,11 @@ type MessageId = keyof typeof MESSAGES;
 /**
  * How immutable the value at a position is made by what surrounds it, which decides whether an
  * object or array literal may sit there:
- * - `deep`: `as const` or a declared `Immutable<…>` (`@nzyme/types`) makes TypeScript refuse writes
- *   to the literal and to every literal nested in it;
+ * - `deep`: a declared `Immutable<…>` (`@nzyme/types`) makes TypeScript refuse writes to the value
+ *   and to everything reached through it, whatever built it;
+ * - `const`: `as const` makes TypeScript refuse writes to the literal and to every literal nested in
+ *   it, but not to what a call returns there, nor to a part asserted to a mutable type
+ *   (`{ a: [] as string[] } as const`);
  * - `shallow`: a declared `Readonly<…>` or `Object.freeze` refuses writes to the literal itself only,
  *   so a literal nested in it is `mutable` again;
  * - a collection constructor name: the position's declared type is that collection's readonly
@@ -41,7 +47,7 @@ type MessageId = keyof typeof MESSAGES;
  *   `Readonly<Map>` does not, and `WeakMap`/`WeakSet` have no readonly interface at all. It is shallow
  *   too: the elements it holds are `mutable`.
  */
-type Mutability = 'mutable' | 'shallow' | 'deep' | 'Array' | 'Map' | 'Set';
+type Mutability = 'mutable' | 'shallow' | 'deep' | 'const' | 'Array' | 'Map' | 'Set';
 
 /** Readonly type names, and how far each one makes a value immutable. */
 const READONLY_TYPES: ReadonlyMap<string, Mutability> = new Map<string, Mutability>([
@@ -51,6 +57,12 @@ const READONLY_TYPES: ReadonlyMap<string, Mutability> = new Map<string, Mutabili
     ['ReadonlyMap', 'Map'],
     ['ReadonlySet', 'Set'],
 ]);
+
+/**
+ * How a value keeps the items an iterable yields: whole, as an array or `Set` element, or as an entry
+ * pair whose halves it keeps (a `Map`, `Object.fromEntries`).
+ */
+type ItemRole = 'element' | 'entry';
 
 /** Collections whose `new` is a mutable value unless its readonly interface is declared. */
 const COLLECTION_CONSTRUCTORS: ReadonlySet<string> = new Set(['Array', 'Map', 'Set', 'WeakMap', 'WeakSet']);
@@ -91,8 +103,9 @@ const PRIMITIVE_STATIC_CALLS: ReadonlySet<string> = new Set([
 
 /**
  * `Global.method` calls that build a fresh object or array from their arguments and touch nothing
- * else. The result is mutable, so — like an object literal — it is allowed only where a declared
- * `Readonly*` type, `as const` or `Object.freeze` makes it immutable.
+ * else. The result is mutable, so it is allowed only where a declared readonly type or
+ * `Object.freeze` makes it immutable (`as const` does not reach a call), and below a shallow one the
+ * items it keeps must be immutable on their own.
  */
 const FRESH_OBJECT_STATIC_CALLS: ReadonlySet<string> = new Set([
     'Array.from',
@@ -331,10 +344,7 @@ export const noModuleState: Immutable<OxlintRule> = {
                     if (node.expression != null) {
                         const asserted =
                             node.typeAnnotation == null ? 'mutable' : mutabilityOfType(node.typeAnnotation);
-                        checkValue(
-                            node.expression,
-                            asserted === 'mutable' || mutability === 'deep' ? mutability : asserted,
-                        );
+                        checkValue(node.expression, assertedMutability(mutability, asserted));
                     }
                     return;
                 case 'UnaryExpression':
@@ -424,11 +434,16 @@ export const noModuleState: Immutable<OxlintRule> = {
             }
 
             if (isGlobalIdentifier(callee) && COLLECTION_CONSTRUCTORS.has(callee.name)) {
+                const what = `\`${callee.name}\``;
                 if (mutability !== callee.name) {
-                    report(node, 'mutableValue', { what: `\`${callee.name}\`` });
-                    return;
+                    report(node, 'mutableValue', { what });
+                } else if (callee.name === 'Array') {
+                    // `new Array(a, b)` keeps its arguments as elements; `new Array(n)` only a length.
+                    checkEach(node.arguments, 'mutable');
+                } else {
+                    // A readonly collection interface is shallow: the values it keeps are `mutable`.
+                    checkItems({ owner: node, what, iterable: node.arguments?.[0], role: itemRoleOf(callee.name) });
                 }
-                checkCollectionItems(node, callee.name);
                 return;
             }
 
@@ -443,29 +458,6 @@ export const noModuleState: Immutable<OxlintRule> = {
             }
 
             report(node, 'undeclaredCall', { name: `new ${calleeName(callee)}` });
-        }
-
-        /**
-         * Checks what a readonly collection is built from. Its readonly interface is shallow, so the
-         * values it keeps — a `Map` entry's value, a `Set` or `Array` element — are `mutable`
-         * positions; the entry arrays and the array literal around them are only read. Any other
-         * argument is not looked into.
-         */
-        function checkCollectionItems(node: OxlintAnyNode, collection: string): void {
-            for (const argument of node.arguments ?? []) {
-                const iterable: OxlintAnyNode = argument;
-                if (iterable.type !== 'ArrayExpression') {
-                    continue;
-                }
-                for (const item of iterable.elements ?? []) {
-                    const entry: OxlintAnyNode | null = item;
-                    if (collection === 'Map' && entry?.type === 'ArrayExpression') {
-                        checkEach(entry.elements, 'mutable');
-                    } else {
-                        checkOptional(item, 'mutable');
-                    }
-                }
-            }
         }
 
         function checkCall(node: OxlintAnyNode, mutability: Mutability): void {
@@ -483,14 +475,173 @@ export const noModuleState: Immutable<OxlintRule> = {
 
             const staticName = globalStaticCallName(callee);
             if (staticName != null && FRESH_OBJECT_STATIC_CALLS.has(staticName)) {
-                if (mutability === 'mutable') {
-                    report(node, 'mutableValue', { what: `\`${staticName}\` result` });
-                }
+                checkFreshObjectCall(node, staticName, mutability);
                 return;
             }
 
             if (!isAllowedCallee(callee)) {
                 report(node, 'undeclaredCall', { name: calleeName(callee) });
+            }
+        }
+
+        function checkFreshObjectCall(node: OxlintAnyNode, name: string, mutability: Mutability): void {
+            const what = `\`${name}\` result`;
+            if (mutability === 'mutable' || mutability === 'const') {
+                report(node, 'mutableValue', { what });
+                return;
+            }
+
+            // A declared `Immutable<…>` type refuses writes to everything the call builds.
+            if (mutability === 'deep') {
+                return;
+            }
+
+            if (name === 'Object.fromEntries') {
+                checkItems({ owner: node, what, iterable: node.arguments?.[0], role: 'entry' });
+            } else {
+                checkItems({ owner: node, what, iterable: node, role: 'element' });
+            }
+        }
+
+        /**
+         * Checks the items a value under a shallow readonly type keeps from `iterable` — each item, or
+         * what `mapper` returns for it — as `mutable` positions: the readonly type refuses writes to the
+         * value, not to its items. Items read from an existing binding are as immutable as its own
+         * declaration made them; an item built where this rule cannot see it is reported.
+         */
+        function checkItems(params: CheckItemsParams): void {
+            const { owner, what, iterable, mapper } = params;
+            if (mapper != null) {
+                const returned = returnedExpression(mapper);
+                if (returned == null) {
+                    report(owner, 'uninspectableItems', { what });
+                } else {
+                    checkItem(params, returned);
+                }
+                return;
+            }
+
+            if (iterable == null) {
+                return;
+            }
+
+            const node: OxlintAnyNode = iterable;
+            switch (node.type) {
+                case 'Identifier':
+                case 'MemberExpression':
+                case 'Literal':
+                case 'TemplateLiteral':
+                    return;
+                case 'ParenthesizedExpression':
+                case 'TSAsExpression':
+                case 'TSInstantiationExpression':
+                case 'TSNonNullExpression':
+                case 'TSSatisfiesExpression':
+                case 'TSTypeAssertion':
+                    // The value's declared type, not an assertion on its iterable, decides what its items are.
+                    checkItems({ ...params, iterable: unwrapAssertions(node) });
+                    return;
+                case 'ArrayExpression':
+                    for (const element of node.elements ?? []) {
+                        const item: OxlintAnyNode | null = element;
+                        if (item?.type === 'SpreadElement') {
+                            checkItems({ ...params, iterable: item.argument ?? undefined });
+                        } else if (element != null) {
+                            checkItem(params, element);
+                        }
+                    }
+                    return;
+                case 'ObjectExpression':
+                    // An array-like — `{ length: 2 }` — yields its indexed property values.
+                    checkEach(node.properties, 'mutable');
+                    return;
+                case 'CallExpression':
+                    checkCallItems(params, node);
+                    return;
+                default:
+                    report(owner, 'uninspectableItems', { what });
+            }
+        }
+
+        /** The items an iterable built by a call yields, for the calls whose items can be told. */
+        function checkCallItems(params: CheckItemsParams, call: OxlintAnyNode): void {
+            const { owner, what, role } = params;
+            const callee = call.callee;
+            const [first, second] = call.arguments ?? [];
+
+            // `list.map(item => …)` yields what its callback returns.
+            if (callee != null && isNode(callee, 'MemberExpression') && isNamedMember(callee, 'map')) {
+                checkItems({ ...params, iterable: undefined, mapper: first });
+                return;
+            }
+
+            // `list.flatMap(item => …)` yields the items of what its callback returns.
+            if (callee != null && isNode(callee, 'MemberExpression') && isNamedMember(callee, 'flatMap')) {
+                const returned = first == null ? undefined : returnedExpression(first);
+                if (returned == null) {
+                    report(owner, 'uninspectableItems', { what });
+                } else {
+                    checkItems({ ...params, iterable: returned });
+                }
+                return;
+            }
+
+            switch (callee == null ? undefined : globalStaticCallName(callee)) {
+                case 'Object.keys':
+                    // Keys are strings.
+                    return;
+                case 'Array.of':
+                    for (const argument of call.arguments ?? []) {
+                        checkItem(params, argument);
+                    }
+                    return;
+                case 'Array.from':
+                    checkItems({ ...params, iterable: first, mapper: second });
+                    return;
+                case 'Object.values':
+                    checkObjectValues(params, first);
+                    return;
+                case 'Object.entries':
+                    // Each entry is a fresh pair: kept whole it is a mutable array, read as an entry only
+                    // its value is kept.
+                    if (role === 'entry') {
+                        checkObjectValues(params, first);
+                    } else {
+                        report(owner, 'mutableValue', { what: '`Object.entries` pair' });
+                    }
+                    return;
+                default:
+                    report(owner, 'uninspectableItems', { what });
+            }
+        }
+
+        /** The values `Object.values`/`Object.entries` take from `object`. */
+        function checkObjectValues({ owner, what }: CheckItemsParams, object: OxlintNode | undefined): void {
+            if (object == null || isNode(object, 'Identifier') || isNode(object, 'MemberExpression')) {
+                return;
+            }
+
+            const node: OxlintAnyNode = object;
+            if (node.type === 'ObjectExpression') {
+                checkEach(node.properties, 'mutable');
+                return;
+            }
+
+            report(owner, 'uninspectableItems', { what });
+        }
+
+        function checkItem({ owner, what, role }: CheckItemsParams, item: OxlintNode): void {
+            if (role === 'element') {
+                checkValue(item, 'mutable');
+                return;
+            }
+
+            // An entry literal is only read: both halves are kept, the pair itself is not.
+            const entry: OxlintAnyNode = unwrapAssertions(item);
+            if (entry.type === 'ArrayExpression') {
+                checkEach(entry.elements, 'mutable');
+            } else if (entry.type !== 'Identifier' && entry.type !== 'MemberExpression') {
+                report(owner, 'uninspectableItems', { what });
             }
         }
 
@@ -641,6 +792,17 @@ export const noModuleState: Immutable<OxlintRule> = {
     },
 };
 
+interface CheckItemsParams {
+    /** The value the items are kept in, reported when one cannot be seen. */
+    owner: OxlintNode;
+    /** How the report names `owner`. */
+    what: string;
+    iterable?: OxlintNode | undefined;
+    /** A function mapping each item of `iterable` to what is kept instead. */
+    mapper?: OxlintNode | undefined;
+    role: ItemRole;
+}
+
 /** An import binding, by the module it comes from and the export it names. */
 interface ImportedBinding {
     specifier: string;
@@ -696,15 +858,58 @@ function mutabilityOfType(type: OxlintNode): Mutability {
 
     if (isNode(type, 'TSTypeReference') && isNode(type.typeName, 'Identifier')) {
         const name = type.typeName.name;
-        return name === 'const' ? 'deep' : (READONLY_TYPES.get(name) ?? 'mutable');
+        return name === 'const' ? 'const' : (READONLY_TYPES.get(name) ?? 'mutable');
     }
 
     return 'mutable';
 }
 
-/** The mutability of a literal nested in one at `mutability`: only `deep` reaches it. */
+/** The mutability of a literal nested in one at `mutability`: only `deep` and `const` reach it. */
 function nestedMutability(mutability: Mutability): Mutability {
-    return mutability === 'deep' ? 'deep' : 'mutable';
+    return mutability === 'deep' || mutability === 'const' ? mutability : 'mutable';
+}
+
+/**
+ * The mutability of an expression asserted `as` a type that gives `asserted`. A declared
+ * `Immutable<…>` around it still governs; under `as const` the assertion decides that part's type, so
+ * a mutable one wins; under a shallow declared type an assertion only re-states the value's own type.
+ */
+function assertedMutability(mutability: Mutability, asserted: Mutability): Mutability {
+    if (mutability === 'deep') {
+        return 'deep';
+    }
+
+    if (mutability === 'const') {
+        return asserted;
+    }
+
+    return asserted === 'mutable' ? mutability : asserted;
+}
+
+/** What a function passed as a mapper returns, when it is an arrow with an expression body. */
+function returnedExpression(mapper: OxlintNode): OxlintNode | undefined {
+    const node: OxlintAnyNode = mapper;
+    if (node.type !== 'ArrowFunctionExpression' || node.body == null || Array.isArray(node.body)) {
+        return undefined;
+    }
+
+    return node.body.type === 'BlockStatement' ? undefined : node.body;
+}
+
+/** The expression under any type assertions and other wrappers that only speak to the type checker. */
+function unwrapAssertions(node: OxlintNode): OxlintNode {
+    const wrapper: OxlintAnyNode = node;
+    const isWrapper =
+        TYPE_WRAPPERS.has(wrapper.type) || wrapper.type === 'TSAsExpression' || wrapper.type === 'TSTypeAssertion';
+    return isWrapper && wrapper.expression != null ? unwrapAssertions(wrapper.expression) : node;
+}
+
+function itemRoleOf(collection: string): ItemRole {
+    return collection === 'Map' ? 'entry' : 'element';
+}
+
+function isNamedMember(node: OxlintMemberExpression, name: string): boolean {
+    return !node.computed && isNode(node.property, 'Identifier') && node.property.name === name;
 }
 
 /** The identifier a member/call chain starts from: `z` in `z.string().min(1)`. */

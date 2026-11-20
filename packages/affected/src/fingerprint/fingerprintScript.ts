@@ -33,7 +33,8 @@ export const NO_FUNCTION_BODIES = 'd41d8cd98f00b204e9800998ecf8427e';
  * Fingerprints a script module. The script is transpiled to JS, which strips types and comments and
  * reprints the code, so formatting is normalised too. `body` hashes the bodies of the outermost
  * functions (declarations, expressions, arrows, class and object methods); `top` hashes the rest of
- * the module, with those bodies replaced by `{}`.
+ * the module, with those bodies replaced by `{}`. `loadImports` lists the literal `import('…')`
+ * specifiers outside those bodies.
  *
  * A function invoked where it is defined (an IIFE, which is also how TS emits enums and namespaces)
  * runs at load time, so its body stays in `top`; the functions declared inside it are split as usual.
@@ -53,7 +54,7 @@ export function fingerprintScript(code: string, loader: ScriptLoader): FileFinge
         return 'whole';
     }
 
-    const bodies = collectOutermostBodies(program);
+    const { bodies, loadImports } = scanOutermostBodies(program);
 
     let top = '';
     let position = 0;
@@ -68,14 +69,16 @@ export function fingerprintScript(code: string, loader: ScriptLoader): FileFinge
     return {
         body: getMd5Hash(bodyTexts.join('\0')),
         top: getMd5Hash(top),
+        loadImports,
     };
 }
 
 type FunctionLike = FunctionNode | ArrowFunctionExpression;
 
-/** Spans of the outermost function bodies, in source order. */
-function collectOutermostBodies(program: Program) {
+/** Spans of the outermost function bodies, in source order, and the literal `import('…')` specifiers outside them. */
+function scanOutermostBodies(program: Program) {
     const bodies: Span[] = [];
+    const loadImports: string[] = [];
     const invokedInPlace = new Set<FunctionLike>();
     let depth = 0;
 
@@ -93,9 +96,14 @@ function collectOutermostBodies(program: Program) {
         'FunctionExpression:exit': exitFunction,
         ArrowFunctionExpression: enterFunction,
         'ArrowFunctionExpression:exit': exitFunction,
+        ImportExpression(node) {
+            if (depth === 0 && node.source.type === 'Literal' && typeof node.source.value === 'string') {
+                loadImports.push(node.source.value);
+            }
+        },
     }).visit(program);
 
-    return bodies;
+    return { bodies, loadImports };
 
     function enterFunction(node: FunctionLike) {
         if (invokedInPlace.has(node)) {

@@ -33,7 +33,7 @@ export function fingerprintFile(path: string, content: string): FileFingerprintR
         case '.sass':
         case '.less': {
             const hash = getMd5Hash(normalizeWhitespace(content));
-            return { body: hash, top: hash };
+            return { body: hash, top: hash, loadImports: [] };
         }
         default:
             return 'whole';

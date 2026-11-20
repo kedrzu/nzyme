@@ -47,6 +47,8 @@ entry. A file added to or removed from any listed set is a change too.
 - `fingerprint/fingerprintFile.ts` — a file's `body` hash (outermost function bodies) and `top` hash
   (the rest), types and comments stripped in scripts; `.vue` split by block (global styles and the
   `<script setup>` imports are top); SFC blocks and stylesheets hashed with whitespace normalised.
+  It also lists the literal `import('…')`s of the load-time code (`loadImports`), which load with the
+  module.
 - `selector/openTestSelector.ts` — `select`, `record`, `invalidate` and `audit` for one suite.
 - `selector/buildVariant.ts` — what a variant holds: entry files and their imports in full, executed
   files in full, their static imports `top` only — in full when a server ran them anywhere in the run

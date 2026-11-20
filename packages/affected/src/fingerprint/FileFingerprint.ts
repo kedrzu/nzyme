@@ -7,6 +7,11 @@ export interface FileFingerprint {
     body: string;
     /** Hash of the rest of the module: code that runs when the module loads, imports included. */
     top: string;
+    /**
+     * Specifiers of the literal `import('…')` calls in the code that runs on load (outside every
+     * function body): the module loads them whenever it is loaded itself.
+     */
+    loadImports: string[];
 }
 
 /**

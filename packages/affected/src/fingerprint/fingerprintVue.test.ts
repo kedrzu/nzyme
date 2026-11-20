@@ -34,6 +34,13 @@ test('template, script setup and scoped style changes change only body', () => {
     expect(changedParts(base, base.replace('<style scoped>', '<style module>'))).toEqual(['body']);
 });
 
+test('the load imports are those of the plain script; script setup runs per instance', () => {
+    const sfc = base
+        .replace("export const SIZES = ['sm', 'lg'];", "export const SIZES = import('./sizes.js');")
+        .replace('const props', "const icons = import('./icons.js');\nconst props");
+    expect(fingerprintVue('Card.vue', sfc)).toHaveProperty('loadImports', ['./sizes.js']);
+});
+
 test('script setup types are runtime declarations, so they change body', () => {
     expect(changedParts(base, base.replace('title: string', 'title: number'))).toEqual(['body']);
 });

@@ -16,7 +16,8 @@ import { extractEsmSpecifiers } from '@nzyme/project-utils/importGraph/extractIm
  *   import specifiers are also `top`;
  * - a global `<style>` (neither `scoped` nor `module`) is injected when the module loads, so it is `top`;
  * - a plain `<script>` is fingerprinted like a script module: its function bodies join `body`, its
- *   rest joins `top`.
+ *   rest joins `top`, and its `loadImports` are the SFC's (`<script setup>` runs per instance, not on
+ *   load).
  *
  * Blocks other than the plain `<script>` are hashed by their text with whitespace normalised, so a
  * comment-only change in them changes the hash. Block attributes (`lang`, `scoped`, `src`, …) are
@@ -31,6 +32,7 @@ export function fingerprintVue(path: string, content: string): FileFingerprintRe
 
     const bodyParts: string[] = [];
     const topParts: string[] = [];
+    let loadImports: string[] = [];
     for (const block of [descriptor.template, descriptor.scriptSetup, ...descriptor.customBlocks]) {
         if (block) {
             bodyParts.push(serializeBlock(block));
@@ -60,11 +62,13 @@ export function fingerprintVue(path: string, content: string): FileFingerprintRe
 
         bodyParts.push(JSON.stringify([descriptor.script.type, descriptor.script.attrs, script.body]));
         topParts.push(script.top);
+        loadImports = script.loadImports;
     }
 
     return {
         body: getMd5Hash(bodyParts.join('\0')),
         top: getMd5Hash(topParts.join('\0')),
+        loadImports,
     };
 }
 

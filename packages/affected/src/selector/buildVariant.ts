@@ -58,13 +58,16 @@ export type BuildVariantResult = { variant: Variant } | { missing: string };
  *   ran, their function bodies did not (or they would be executed files themselves). Except a file a
  *   server process ran anywhere in the run: in full, since code that ran once and kept state (a lazy
  *   singleton's setup) served this test too;
- * - every module an executed file loads through a literal `import('…')` whose code all runs on load
- *   (constants, a data table, config — see {@link runsOnlyOnLoad}), and what it imports statically
- *   — `top` only, by the same rule: the trace sees only functions, so such a module is never an
- *   executed file. A lazily loaded module with functions is not followed: if the test reached it, its
- *   functions ran and it is an executed file itself, and following a router's lazy routes would tie
- *   every test to every page. The trace says which files ran, not which functions, so the module is
- *   followed even when the function holding the `import()` did not run;
+ * - every module whose code all runs on load (constants, a data table, config — see
+ *   {@link runsOnlyOnLoad}) loaded through a literal `import('…')` by an executed file, by a file one
+ *   imports statically or by such a module itself, and what it imports statically, transitively —
+ *   `top` only, by the same rule: the trace sees only functions, so such a module is never an
+ *   executed file. An executed file counts by any of its literal `import('…')`s — the trace says
+ *   which files ran, not which functions, so the module is followed even when the function holding
+ *   the `import()` did not run; a file that only loaded counts by those in its load-time code,
+ *   outside every function, which ran when it loaded. A lazily loaded module with functions is not
+ *   followed: if the test reached it, its functions ran and it is an executed file itself, and
+ *   following a router's lazy routes would tie every test to every page;
  * - assets — in full; most have no structure to split, so they are hashed by bytes;
  * - every file under the directory of a file above with a computed `import(…)`, which may load any
  *   of them — in full, and so is what they import when the suite is not traced (a traced run lists
@@ -104,7 +107,12 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
         levels.set(file, 'full');
     }
     const ranInRun = new Set(options.runExecuted);
-    const loadedLazily = await collectLoadOnlyLazyImports(graph, options.executed, options.readState);
+    const loadedLazily = await collectLoadOnlyLazyImports({
+        graph,
+        resolver: options.resolver,
+        executed: options.executed,
+        readState: options.readState,
+    });
     for (const file of [
         ...loadedLazily,
         ...collectImportClosure(graph, [...options.executed, ...loadedLazily], { staticOnly: true }),
@@ -192,30 +200,76 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
     }
 }
 
+/** Params of {@link collectLoadOnlyLazyImports}. */
+export interface CollectLoadOnlyLazyImportsParams {
+    graph: ImportGraph;
+    resolver: ImportResolver;
+    /** Root-relative files whose functions ran for the test. */
+    executed: readonly string[];
+    readState: ReadFileState;
+}
+
 /**
- * The modules `executed` files load through a literal `import('…')` whose code all runs on load,
- * transitively: such a module has no function, so whatever it imports dynamically it imports on load.
+ * The modules with no function the test loaded through a literal `import('…')`, transitively. Every
+ * file it loaded counts, the executed files and what they import statically: an executed file by any
+ * of its literal `import('…')`s (the trace says which files ran, not which functions), any other
+ * file by those in its load-time code, which ran when it loaded. A module found is loaded too: its
+ * static imports count, and since it has no function, all of its own `import('…')`s.
  */
-async function collectLoadOnlyLazyImports(
-    graph: ImportGraph,
-    executed: readonly string[],
-    readState: ReadFileState,
-): Promise<Set<string>> {
+async function collectLoadOnlyLazyImports({
+    graph,
+    resolver,
+    executed,
+    readState,
+}: CollectLoadOnlyLazyImportsParams): Promise<Set<string>> {
+    const ran = new Set(executed);
     const found = new Set<string>();
-    const queue = [...executed];
+    const visited = new Set<string>();
+    const queue = [...executed, ...collectImportClosure(graph, executed, { staticOnly: true })];
     for (let file = queue.shift(); file !== undefined; file = queue.shift()) {
-        for (const edge of graph.importsOf(file)) {
-            if (!edge.dynamic || found.has(edge.to)) {
+        if (visited.has(file)) {
+            continue;
+        }
+        visited.add(file);
+        for (const target of await collectLazyImports(file)) {
+            if (found.has(target)) {
                 continue;
             }
-            const state = await readState(edge.to);
+            const state = await readState(target);
             if (state !== null && runsOnlyOnLoad(state)) {
-                found.add(edge.to);
-                queue.push(edge.to);
+                found.add(target);
+                queue.push(target, ...collectImportClosure(graph, [target], { staticOnly: true }));
             }
         }
     }
     return found;
+
+    /** The targets of the file's dynamic import edges that loading or running it reached. */
+    async function collectLazyImports(file: string): Promise<string[]> {
+        const lazy = graph
+            .importsOf(file)
+            .filter(edge => edge.dynamic)
+            .map(edge => edge.to);
+        if (lazy.length === 0 || ran.has(file)) {
+            return lazy;
+        }
+        const state = await readState(file);
+        if (state === null || state.fingerprint === 'whole') {
+            return [];
+        }
+        const loaded = new Set<string>();
+        for (const specifier of state.fingerprint.loadImports) {
+            for (const target of resolver.resolve(file, {
+                specifier,
+                typeOnly: false,
+                dynamic: true,
+                kind: 'module',
+            })) {
+                loaded.add(target);
+            }
+        }
+        return lazy.filter(target => loaded.has(target));
+    }
 }
 
 /** Params of {@link mergeSharedAccesses}. */

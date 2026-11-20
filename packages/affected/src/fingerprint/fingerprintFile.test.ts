@@ -67,6 +67,11 @@ test('a module with no function has the body of no bodies', () => {
     expect(fingerprintFile('table.ts', 'export const ROWS = [1, 2];\n')).toHaveProperty('body', NO_FUNCTION_BODIES);
 });
 
+test('the literal import() calls outside every function body are load imports', () => {
+    const code = `export const table = import('./table.js');\n(() => import('./setup.js'))();\nexport function load() {\n    return import('./page.js');\n}\nexport const lazy = () => import('./lazy.js');\nexport const computed = import(name);\n`;
+    expect(fingerprintFile('routes.ts', code)).toHaveProperty('loadImports', ['./table.js', './setup.js']);
+});
+
 test('a change to top-level code changes only top', () => {
     expect(changedParts('handler.ts', base, base.replace('LIMIT = 10', 'LIMIT = 20'))).toEqual(['top']);
 });

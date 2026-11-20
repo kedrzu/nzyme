@@ -5,7 +5,7 @@ import type { ImportGraph } from '@nzyme/project-utils/importGraph/buildImportGr
 import type { ImportResolver } from '@nzyme/project-utils/importGraph/resolveImportTarget.js';
 
 import type { FileHash, TestUnit, Variant } from '../store/VariantStore.js';
-import type { FsReads } from './openTestSelector.js';
+import type { FsAccesses, FsReads } from './openTestSelector.js';
 import { collectImportClosure } from './collectImportClosure.js';
 import { getFileListingKey, hashFileList, listFiles } from './FileListing.js';
 import type { FileListing } from './FileListing.js';
@@ -69,11 +69,14 @@ export type BuildVariantResult = { variant: Variant } | { missing: string };
  *   root, whose manifest is the root `package.json`;
  * - the files of each such package that nothing imports (fixtures, data a test reads through `fs`) —
  *   in full, as the base diff seeds the whole package from a change to one; for the root, the files
- *   outside every package. Not when the run traced the test's file accesses and the test started no
- *   process, worker or `Bun.build`: its reads below say exactly what it read;
+ *   outside every package. Not when the run traced the test's file accesses and the test did nothing
+ *   the trace cannot see (`FsReads.opaque`): its reads below say exactly what it read;
  * - the files the test read through the file system, where it traced them — in full, wherever they
  *   are, an `ignore` glob notwithstanding, as long as they are walked files; and the list of each
- *   directory whose entries it read.
+ *   directory whose entries it read. With them, what any module among the files above read in another
+ *   test file of the run, which it may have kept and served to this one without reading it again;
+ *   and what code that is no walked file (outside the root, or no frame to tell) read anywhere in
+ *   the run.
  *
  * The last two sets are {@link FileListing}s: the variant also stores the digest of each one's file
  * list, so a file appearing in it or leaving it is a change. A read reaching into another package (a
@@ -125,12 +128,14 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
         }
     }
 
+    const walked = new Set(graph.files);
+    const fsReads = options.fsReads && mergeSharedAccesses(options.fsReads, new Set(levels.keys()), walked);
     const owners = new Set<string>();
     for (const file of levels.keys()) {
         owners.add(findOwningPackageDir(file, options.packageDirs));
     }
-    // A test that started a process, a worker or `Bun.build` may have read anything through it.
-    const listsPackages = options.fsReads === undefined || options.fsReads.opaque;
+    // An opaque test (a process, a worker, the Bun shell, a recursive copy) may have read anything.
+    const listsPackages = fsReads === undefined || fsReads.opaque;
     for (const owner of owners) {
         levels.set(owner === '' ? 'package.json' : `${owner}/package.json`, 'full');
         if (listsPackages) {
@@ -138,17 +143,16 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
         }
     }
 
-    if (options.fsReads) {
-        const walked = new Set(graph.files);
-        for (const file of options.fsReads.files) {
+    if (fsReads) {
+        for (const file of fsReads.files) {
             if (walked.has(file)) {
                 levels.set(file, 'full');
             }
         }
-        for (const dir of options.fsReads.dirs) {
+        for (const dir of fsReads.dirs) {
             addListing({ kind: 'entries', dir }, { hashFiles: false });
         }
-        for (const dir of options.fsReads.trees) {
+        for (const dir of fsReads.trees) {
             addListing({ kind: 'tree', dir }, { hashFiles: false });
         }
     }
@@ -175,4 +179,31 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
         }
         return listed;
     }
+}
+
+/**
+ * The test's own accesses together with those shared by a module it loads (`loaded`), by a `null`
+ * reader, and by a reader that is no walked file — which no test's files can show it does not load.
+ */
+function mergeSharedAccesses(reads: FsReads, loaded: ReadonlySet<string>, walked: ReadonlySet<string>): FsAccesses {
+    const files = new Set(reads.files);
+    const dirs = new Set(reads.dirs);
+    const trees = new Set(reads.trees);
+    let opaque = reads.opaque;
+    for (const shared of reads.shared) {
+        if (shared.reader !== null && walked.has(shared.reader) && !loaded.has(shared.reader)) {
+            continue;
+        }
+        for (const file of shared.files) {
+            files.add(file);
+        }
+        for (const dir of shared.dirs) {
+            dirs.add(dir);
+        }
+        for (const dir of shared.trees) {
+            trees.add(dir);
+        }
+        opaque ||= shared.opaque;
+    }
+    return { files: [...files], dirs: [...dirs], trees: [...trees], opaque };
 }

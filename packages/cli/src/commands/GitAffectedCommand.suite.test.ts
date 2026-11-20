@@ -135,6 +135,17 @@ test('a traced run records the files each test read, wherever they are', async (
     expect((await runSuite({})).stderr).toContain('2 run (changed: docs/data.json)');
 });
 
+test('a traced run records the snapshot file each test may read, which the trace cannot see', async () => {
+    const snapshot = 'packages/alpha/src/__snapshots__/value.test.ts.snap';
+    await write(snapshot, 'exports[`t 1`] = `1`;\n');
+    await write('docs/data.json', '{}');
+    await runSuite({ TRACE_READ: path.join(repo, 'docs/data.json') });
+
+    await write(snapshot, 'exports[`t 1`] = `2`;\n');
+
+    expect((await runSuite({})).stderr).toContain(`1 run (changed: ${snapshot})`);
+});
+
 test('a change to a recorded dependency runs the test again, naming the file', async () => {
     await runSuite({});
     await write('packages/alpha/src/value.ts', 'export const value = 3;\n');

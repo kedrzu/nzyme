@@ -1,8 +1,9 @@
 import path from 'node:path';
 
+import type { FsTrace } from '@nzyme/affected/fsTrace/readFsTrace.js';
 import { mergeJunitStatus, readJunitResults } from '@nzyme/affected/junit/readJunitResults.js';
 import type { JunitFileResult } from '@nzyme/affected/junit/readJunitResults.js';
-import type { FsReads, RecordRefusal, TestSelector } from '@nzyme/affected/selector/openTestSelector.js';
+import type { FsAccesses, FsReads, RecordRefusal, TestSelector } from '@nzyme/affected/selector/openTestSelector.js';
 import { relativePosixPath } from '@nzyme/project-utils/relativePosixPath.js';
 
 /** Options of {@link recordJunitResults}. */
@@ -14,8 +15,8 @@ export interface RecordJunitResultsOptions {
     junitFile: string;
     /** Root-relative test files the command ran. */
     ranFiles: readonly string[];
-    /** The run's file accesses per test file (`readFsTrace`), or `null` when the run was not traced. */
-    fsTrace: ReadonlyMap<string, FsReads> | null;
+    /** The run's file accesses (`readFsTrace`), or `null` when the run was not traced. */
+    fsTrace: FsTrace | null;
 }
 
 /** What {@link recordJunitResults} did with each test file the command ran. */
@@ -35,7 +36,9 @@ export interface JunitRecording {
  * Records, per test file, the outcome of a run from its JUnit report: a file all of whose testcases
  * passed gets a variant (its entry is the file itself; imports are followed); a file with any failure,
  * or one the report does not show passing in full (a testcase skipped, or not reported at all), gets
- * none. A traced run (`fsTrace`) adds what each file read; a file it shows nothing for read nothing.
+ * none. A traced run (`fsTrace`) adds what each file read — a file it shows nothing for read nothing
+ * but its snapshot file, which `bun test` reads natively, out of the trace's sight — and what the
+ * modules it may load read anywhere in the run.
  * Nothing is invalidated: the command ran only files no variant matched, so a failed one has no
  * matching variant to remove and runs again as it is. Throws when the report cannot be read.
  *
@@ -53,10 +56,7 @@ export async function recordJunitResults(options: RecordJunitResultsOptions): Pr
         if (status === 'failed') {
             recording.failed.push(file);
         } else if (status === 'passed') {
-            // Traced, and nothing recorded for the file: it read nothing.
-            const fsReads = options.fsTrace
-                ? (options.fsTrace.get(file) ?? { files: [], dirs: [], trees: [], opaque: false })
-                : undefined;
+            const fsReads = options.fsTrace ? toFsReads(file, options.fsTrace) : undefined;
             const result = await selector.record({ file }, { status: 'passed', entry: [file], fsReads });
             if (result.recorded) {
                 recording.recorded.push(file);
@@ -69,6 +69,18 @@ export async function recordJunitResults(options: RecordJunitResultsOptions): Pr
     }
 
     return recording;
+}
+
+/**
+ * A traced test file's reads: its own (none when the trace shows nothing for it) plus its snapshot
+ * file (`__snapshots__/<file>.snap`), which `toMatchSnapshot` reads without going through `node:fs` —
+ * one that does not exist is not a walked file, so the variant leaves it out — and the run's shared
+ * ones.
+ */
+function toFsReads(file: string, trace: FsTrace): FsReads {
+    const own: FsAccesses = trace.tests.get(file) ?? { files: [], dirs: [], trees: [], opaque: false };
+    const snapshot = path.posix.join(path.posix.dirname(file), '__snapshots__', `${path.posix.basename(file)}.snap`);
+    return { ...own, files: [...new Set([...own.files, snapshot])].toSorted(), shared: trace.shared };
 }
 
 /**

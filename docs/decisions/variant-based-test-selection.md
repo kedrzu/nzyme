@@ -80,16 +80,29 @@ Two hashes per file, in `@nzyme/affected`.
   stored as the digest of its sorted file list, so a fixture or a module added or removed is a change.
   A read reaching into another package (a test reading every package's manifest) is not seen this
   way, so a static suite's run traces its `fs` reads instead: `@nzyme/trace/fs-preload`, the runner's
-  first preload, wraps `node:fs`, `node:fs/promises` and `Bun.file`/`Bun.write`/`Bun.Glob` (patched
+  first preload, wraps the reading functions of `node:fs`, `node:fs/promises` and `Bun.file`/`Bun.Glob` (patched
   through `process.getBuiltinModule` and re-synced into the named imports, which only reaches modules
   that import `node:fs` after it) and attributes each access to `Bun.main`, the test file `bun test`
   is running. A traced test's variant holds the walked files it read, whatever `ignore` says, and the
-  entry list of each directory it read, instead of its packages' un-imported files. A file it wrote
-  itself, a missing one and one outside the walk (`node_modules`, a gitignored build) are not inputs.
-  What it cannot see — a child process, a worker, `Bun.build`, a native addon — keeps the package
-  listing: a test that starts any of those is marked opaque. Measured on 181 test files, tracing costs
-  about 3% of the run; an access a test leaves running past its file goes to the next file, which only
-  adds an input. Tracing module loading as well would replace the computed-`import()` listing; it was
+  entry list of each directory it read, instead of its packages' un-imported files, plus its snapshot
+  file, which `bun test` reads natively. A missing file and one outside the walk (`node_modules`, a
+  gitignored build) are not inputs. Writes are not traced: a test that reads a walked file it wrote
+  itself depends on it. What it cannot see — a child process, a worker, the Bun shell (`Bun.$`),
+  `Bun.build`, a recursive `cp`, a native addon — keeps the package listing: a test that does any of
+  those is marked opaque. Every `bun test` file shares one process, so a module that read a file once
+  and kept what it read — a memo, a cache, a read at load time — serves later test files without
+  touching the disk, in whatever order they run. So each access also names its reader, the innermost
+  stack frame's file outside `node_modules` (a built file mapped to its source through the single
+  source of its source map), and a variant takes, besides its own reads, what every module it loads
+  read anywhere in the run. An access with no such frame goes to every test; a process a package starts
+  from its own callback (`simple-git`, `execa`) has none, so a run that includes such a test keeps
+  the package listing for every test. Capturing the reader cost nothing measurable against
+  run-to-run noise on 180 healed and 29 nzyme test files. A package's own cache
+  reached through two modules is credited to the first only: crediting each package's accesses to
+  every test would hand every `fs-extra` and `graceful-fs` read in the run to every test.
+  Sharing every read with every test instead was measured and rejected: one test reading 947 source
+  files, and another every package manifest, would make about two in three commits rerun everything.
+  An access a test leaves running past its file goes to the next file, which only adds an input. Tracing module loading as well would replace the computed-`import()` listing; it was
   not needed yet.
 - **Builds.** The import graph resolves a workspace package's imports to its sources, but Bun and
   Vitest load the package's build. A static run on a stale build would record a variant hashing sources

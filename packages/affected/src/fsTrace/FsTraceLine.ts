@@ -7,7 +7,7 @@ export const FS_TRACE_DIR_ENV = 'NZYME_FS_TRACE_DIR';
 /**
  * One line of a file-access trace: one NDJSON file per process, `<pid>.ndjson` in
  * `$NZYME_FS_TRACE_DIR`. A `start` line proves the process was traced; each `access` line is the
- * first access of its kind to a path by one test file. Paths are absolute.
+ * first access of its kind to a path by one module during one test file. Paths are absolute.
  */
 export type FsTraceLine = FsTraceStartLine | FsTraceAccessLine;
 
@@ -21,9 +21,8 @@ export interface FsTraceStartLine {
  * - `read` — read or checked it (`readFile`, `stat`, `existsSync`, `Bun.file`, …);
  * - `list` — read a directory's entries (`readdir`, `opendir`);
  * - `tree` — read every path under a directory (a recursive `readdir`, a `Bun.Glob` scan);
- * - `write` — wrote it: a read of it afterwards is the test's own output, not an input;
- * - `opaque` — started a process, a worker or `Bun.build`, whose file reads the trace cannot see
- *   (`path` is empty).
+ * - `opaque` — started a process, a worker, the Bun shell or `Bun.build`, or copied a directory: its
+ *   file reads the trace cannot see (`path` is empty).
  */
 export interface FsTraceAccessLine {
     type: 'access';
@@ -31,7 +30,13 @@ export interface FsTraceAccessLine {
     /** The test file (`Bun.main`) running when the access happened. */
     test: string;
     path: string;
+    /**
+     * The file of the innermost stack frame outside `node_modules` (the module whose code made the
+     * access, or called the package that did: the test file or a module it loaded); absent when no
+     * frame is one.
+     */
+    reader?: string;
 }
 
 /** See {@link FsTraceAccessLine}. */
-export type FsAccessKind = 'read' | 'list' | 'tree' | 'write' | 'opaque';
+export type FsAccessKind = 'read' | 'list' | 'tree' | 'opaque';

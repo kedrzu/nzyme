@@ -6,10 +6,11 @@ import { readAffectedConfig } from '@nzyme/affected/base/AffectedConfig.js';
 import { createPatternMatcher } from '@nzyme/affected/base/createPatternMatcher.js';
 import { FS_TRACE_DIR_ENV } from '@nzyme/affected/fsTrace/FsTraceLine.js';
 import { readFsTrace } from '@nzyme/affected/fsTrace/readFsTrace.js';
+import type { FsTrace } from '@nzyme/affected/fsTrace/readFsTrace.js';
 import { selectAffectedSinceBase } from '@nzyme/affected/base/selectAffectedSinceBase.js';
 import type { AffectedSelection } from '@nzyme/affected/base/selectAffectedFiles.js';
 import { openTestSelector } from '@nzyme/affected/selector/openTestSelector.js';
-import type { FsReads, TestSelector } from '@nzyme/affected/selector/openTestSelector.js';
+import type { TestSelector } from '@nzyme/affected/selector/openTestSelector.js';
 import { Option, UsageError } from '@nzyme/cli-core';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { spawnForExitCode } from '@nzyme/cli-core/utils/spawnForExitCode.js';
@@ -349,7 +350,7 @@ interface RunJunit {
      * Called after each run (each package, with `--per-package`) with the root-relative files it ran
      * and its file-access trace, `null` when the run was not traced.
      */
-    onReport(ranFiles: string[], fsTrace: ReadonlyMap<string, FsReads> | null): Promise<void>;
+    onReport(ranFiles: string[], fsTrace: FsTrace | null): Promise<void>;
 }
 
 /** Options of `GitAffectedCommand.recordFromJunit`. */
@@ -360,8 +361,8 @@ interface RecordFromJunitOptions {
     junitFile: string;
     /** Root-relative test files the command ran. */
     ranFiles: string[];
-    /** The run's file accesses per test file, `null` when it was not traced. */
-    fsTrace: ReadonlyMap<string, FsReads> | null;
+    /** The run's file accesses, `null` when it was not traced. */
+    fsTrace: FsTrace | null;
 }
 
 /** Options taking a value: `--name <value>` or `--name=<value>`. */

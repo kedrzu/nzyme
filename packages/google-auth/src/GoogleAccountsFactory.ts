@@ -146,10 +146,7 @@ export const GoogleAccountsFactory = defineFactory({
             return new OAuth2Client({
                 clientId,
                 clientSecret,
-                endpoints: {
-                    ...(endpoints.oauthTokenUrl ? { oauth2TokenUrl: endpoints.oauthTokenUrl } : {}),
-                    ...(endpoints.oauthAuthUrl ? { oauth2AuthBaseUrl: endpoints.oauthAuthUrl } : {}),
-                },
+                endpoints: endpoints.oauthTokenUrl ? { oauth2TokenUrl: endpoints.oauthTokenUrl } : {},
             });
         }
 

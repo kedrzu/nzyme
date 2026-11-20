@@ -66,7 +66,6 @@ export function startFakeGoogle(options: FakeGoogleOptions) {
     const url = `http://127.0.0.1:${server.port}`;
     const endpoints: GoogleEndpoints = {
         oauthTokenUrl: `${url}/token`,
-        oauthAuthUrl: `${url}/auth`,
         apiRootUrl: url,
     };
 

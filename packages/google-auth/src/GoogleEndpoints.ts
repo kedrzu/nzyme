@@ -7,8 +7,6 @@ import { defineService } from '@nzyme/ioc/Service.js';
 export interface GoogleEndpoints {
     /** The OAuth token endpoint, used to exchange the sign-in code and to refresh. */
     oauthTokenUrl?: string;
-    /** The OAuth consent page the sign-in URL points at. */
-    oauthAuthUrl?: string;
     /** The API root a CLI passes to its API client. */
     apiRootUrl?: string;
 }

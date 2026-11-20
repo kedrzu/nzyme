@@ -3,6 +3,7 @@ import type { gmail_v1 } from '@googleapis/gmail';
 import { assert } from '@nzyme/utils/assert.js';
 
 import { formatFileSize, getHeader, processEmailContent } from './gmailContent.js';
+import { formatHeaderBlock } from './utils/formatHeaderBlock.js';
 
 /** Options of {@link formatGmailMessage}. */
 export interface FormatGmailMessageOptions {
@@ -41,9 +42,6 @@ export function formatGmailMessage(message: gmail_v1.Schema$Message, options: Fo
             `${a.partId} ${a.filename} ${a.mimeType} ${formatFileSize(a.size)}`,
         ]),
     ];
-    const lines = fields
-        .filter(([, value]) => value)
-        .map(([key, value]) => `${key}: ${value.replace(/\s*[\r\n]+\s*/g, ' ')}`);
 
-    return `${lines.join('\n')}\n\n${body}\n`;
+    return `${formatHeaderBlock(fields)}\n${body}\n`;
 }

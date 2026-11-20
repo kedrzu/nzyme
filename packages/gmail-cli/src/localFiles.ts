@@ -10,6 +10,8 @@ import * as path from 'node:path';
 
 import { detectMimeType } from 'nodemailer/lib/mime-funcs/mime-types';
 
+import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
+
 import type { RawAttachment } from './compose.js';
 import type { GmailFilesOptions } from './GmailCommandsOptions.js';
 
@@ -33,6 +35,18 @@ export interface FileAccess {
 export function attachmentsDir(files: GmailFilesOptions | undefined): string {
     const configured = files?.attachmentsDir;
     return configured ? expandHome(configured) : path.join(os.tmpdir(), 'gmail-cli', 'attachments');
+}
+
+/**
+ * Where a draft may read attachments and inline images from: the project directory (the repo root),
+ * `files.roots` and the attachments directory, so a saved attachment can be forwarded. Relative paths
+ * resolve against the working directory, as in any shell command.
+ */
+export function draftFileAccess(files: GmailFilesOptions | undefined): FileAccess {
+    return {
+        baseDir: process.cwd(),
+        roots: [getProjectRoot(), ...(files?.roots ?? []).map(expandHome), attachmentsDir(files)],
+    };
 }
 
 /**

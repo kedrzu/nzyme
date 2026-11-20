@@ -203,6 +203,8 @@ export interface RunCommandsOptions {
     endpoints: GoogleEndpoints;
     /** Called once with the sign-in URL the command printed, standing in for the browser. */
     browser?: (url: URL) => Promise<void>;
+    /** What the command reads from its piped stdin; empty by default. */
+    stdin?: string;
 }
 
 /**
@@ -240,7 +242,7 @@ export async function runCommands(options: RunCommandsOptions): Promise<GoogleCo
     try {
         const code = await cli.run(options.args, {
             container,
-            stdin: Readable.from(['']),
+            stdin: Readable.from([options.stdin ?? '']),
             stdout: stdout.stream,
             stderr: stderr.stream,
         });

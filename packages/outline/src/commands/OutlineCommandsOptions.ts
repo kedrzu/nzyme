@@ -1,3 +1,5 @@
+import type { Keychain } from '@nzyme/secrets/osKeychain.js';
+
 import type { OutlineUser } from '../outline/OutlineTypes.js';
 
 /** Options of {@link defineOutlineCommands}. */
@@ -22,4 +24,8 @@ export interface OutlineCommandsOptions {
     commandHint?: string;
     /** The language the agent speaks to the user, e.g. `Polish`; unset, the user's own language. */
     userLanguage?: string;
+    /** Where the login is kept; the OS keychain by default. For tests. */
+    keychain?: Keychain;
+    /** Opens the authorize URL of `login`; macOS `open` by default. For tests. */
+    openBrowser?: (url: string) => Promise<void>;
 }

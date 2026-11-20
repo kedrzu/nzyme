@@ -53,8 +53,9 @@ export function defineOutlineCommands(options: OutlineCommandsOptions): CommandC
             const info = await login({
                 url,
                 clientId,
-                store: outlineTokenStore({ url }),
+                store: outlineTokenStore({ url, keychain: options.keychain }),
                 lockPath: workspace.store.lockPath,
+                openBrowser: options.openBrowser,
             });
             this.context.stdout.write(`Logged in to Outline as ${info.user.name}.\n`);
         }

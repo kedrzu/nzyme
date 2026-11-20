@@ -89,12 +89,18 @@ export function typeLabel(mimeType: string | null | undefined): string {
     return NATIVE[mimeType]?.label ?? mimeType;
 }
 
+/** A resolved export format: the file extension and the MIME type to request. */
+export interface DownloadFormat {
+    ext: string;
+    mimeType: string;
+}
+
 /**
  * The export `download` makes of a Google file: the requested extension checked against the type, or
  * the type's default. Throws for a type that cannot be exported or a format it does not export to.
  * @__NO_SIDE_EFFECTS__
  */
-export function downloadFormat(mimeType: string, requested?: string): { ext: string; mimeType: string } {
+export function downloadFormat(mimeType: string, requested?: string): DownloadFormat {
     const native = NATIVE[mimeType];
     if (!native) {
         throw new Error(`${mimeType} cannot be exported - only Docs, Sheets, Slides, Drawings and Apps Script can`);
@@ -109,11 +115,17 @@ export function downloadFormat(mimeType: string, requested?: string): { ext: str
     return { ext, mimeType: format };
 }
 
+/** The text export of a Google file, with an optional note on what the text form leaves out. */
+export interface TextExport {
+    mimeType: string;
+    note?: string;
+}
+
 /**
  * The export `read` makes of a Google file, or null when the type has no text form.
  * @__NO_SIDE_EFFECTS__
  */
-export function textExport(mimeType: string): { mimeType: string; note?: string } | null {
+export function textExport(mimeType: string): TextExport | null {
     const native = NATIVE[mimeType];
     const format = native?.text ? formatOf(native.text) : undefined;
     return format ? { mimeType: format, note: native?.textNote } : null;

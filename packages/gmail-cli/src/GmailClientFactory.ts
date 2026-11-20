@@ -2,7 +2,7 @@ import type { gmail_v1 } from '@googleapis/gmail';
 import { gmail } from '@googleapis/gmail';
 
 import { CommandScope } from '@nzyme/cli-core/Command.js';
-import { GoogleAccounts } from '@nzyme/google-auth/GoogleAccounts.js';
+import { GoogleAccountsFactory } from '@nzyme/google-auth/GoogleAccountsFactory.js';
 import { GoogleEndpoints } from '@nzyme/google-auth/GoogleEndpoints.js';
 import { defineFactory } from '@nzyme/ioc/Factory.js';
 
@@ -33,7 +33,7 @@ export interface GmailClient {
 export const GmailClientFactory = defineFactory({
     name: 'GmailClientFactory',
     scope: CommandScope,
-    deps: { googleAccounts: GoogleAccounts, endpoints: GoogleEndpoints },
+    deps: { googleAccounts: GoogleAccountsFactory, endpoints: GoogleEndpoints },
     async setup(
         { googleAccounts, endpoints },
         params: GmailCommandParams,

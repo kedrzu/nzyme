@@ -10,13 +10,20 @@ export interface GoogleToken {
     createdAt: string;
 }
 
+/** What {@link googleTokenKey} builds a key from. */
+export interface GoogleTokenKeyParams {
+    keyPrefix: string;
+    service: GoogleService;
+    email: string;
+}
+
 /**
  * The key an account's refresh token is stored under: `<keyPrefix><service>_TOKEN_<SLUG>`, where
  * `SLUG` is the email upper-cased with every non-alphanumeric character turned into `_`. The slug is
  * lossy; accounts are found by the email inside the value, never by parsing the key.
  * @__NO_SIDE_EFFECTS__
  */
-export function googleTokenKey(keyPrefix: string, service: GoogleService, email: string) {
+export function googleTokenKey({ keyPrefix, service, email }: GoogleTokenKeyParams) {
     return googleTokenKeyPrefix(keyPrefix, service) + email.toUpperCase().replaceAll(/[^A-Z0-9]/g, '_');
 }
 

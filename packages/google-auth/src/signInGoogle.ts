@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto';
 import type { OAuth2Client } from 'google-auth-library';
 import { CodeChallengeMethod } from 'google-auth-library';
 
-import type { GoogleSignedInToken } from './GoogleAccounts.js';
+import type { GoogleSignedInToken } from './GoogleAccountsFactory.js';
 import type { GoogleService } from './GoogleService.js';
 
 const TIMEOUT_MS = 5 * 60 * 1000;
@@ -112,16 +112,20 @@ export async function signInGoogle(params: SignInGoogleParams): Promise<GoogleSi
         const error = requestUrl.searchParams.get('error');
         const received = requestUrl.searchParams.get('code');
         if (requestUrl.searchParams.get('state') !== state || (!received && !error)) {
-            return page(400, 'Unexpected request', 'This is not the sign-in that is waiting.');
+            return page({ status: 400, title: 'Unexpected request', body: 'This is not the sign-in that is waiting.' });
         }
 
         if (!received) {
             callback.reject(new Error(`Google sign-in failed: ${error}`));
-            return page(200, 'Sign-in cancelled', `Google answered: ${error}. You can close this tab.`);
+            return page({
+                status: 200,
+                title: 'Sign-in cancelled',
+                body: `Google answered: ${error}. You can close this tab.`,
+            });
         }
 
         callback.resolve(received);
-        return page(200, 'Signed in', 'Access is granted. You can close this tab.');
+        return page({ status: 200, title: 'Signed in', body: 'Access is granted. You can close this tab.' });
     }
 
     async function exchangeCode(received: string) {
@@ -150,7 +154,14 @@ function openInBrowser(url: string) {
     }
 }
 
-function page(status: number, title: string, body: string) {
+/** The browser page answering the sign-in redirect. */
+export interface PageParams {
+    status: number;
+    title: string;
+    body: string;
+}
+
+function page({ status, title, body }: PageParams) {
     const html =
         `<!doctype html><meta charset="utf-8"><title>${title}</title>` +
         `<body style="font-family:system-ui;max-width:32rem;margin:4rem auto"><h1>${title}</h1><p>${body}</p></body>`;

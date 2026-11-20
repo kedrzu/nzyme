@@ -1,7 +1,7 @@
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
-import { GoogleAccounts } from './GoogleAccounts.js';
+import { GoogleAccountsFactory } from './GoogleAccountsFactory.js';
 import type { GoogleCommandParams } from './GoogleCommandParams.js';
 
 /**
@@ -25,7 +25,7 @@ export function defineGoogleAccountsCommand(params: GoogleCommandParams): Comman
         });
 
         override async run() {
-            const accounts = this.container.resolve(GoogleAccounts)(params, this.cli.binaryName);
+            const accounts = this.container.resolve(GoogleAccountsFactory)(params, this.cli.binaryName);
             for (const account of await accounts.list()) {
                 const status = account.allowed ? account.scopes.join(' ') : 'not allowed';
                 this.context.stdout.write(`${account.email}\t${status}\n`);

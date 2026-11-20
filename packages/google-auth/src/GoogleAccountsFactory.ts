@@ -66,8 +66,8 @@ export interface GoogleAccountsShape {
  * Creates the accounts of a Google service for one command run.
  * @param binaryName The CLI binary, so the sign-in command in errors can be run as is.
  */
-export const GoogleAccounts = defineFactory({
-    name: 'GoogleAccounts',
+export const GoogleAccountsFactory = defineFactory({
+    name: 'GoogleAccountsFactory',
     // Per command: the provider and the logger are resolved from the command's container.
     scope: CommandScope,
     deps: { container: Container, endpoints: GoogleEndpoints, logger: Logger },
@@ -180,7 +180,7 @@ export const GoogleAccounts = defineFactory({
                 );
             }
 
-            const key = googleTokenKey(keyPrefix, service, token.email);
+            const key = googleTokenKey({ keyPrefix, service, email: token.email });
             const existing = (await readSecrets()).get(key);
             const holder = existing ? parseGoogleToken(existing) : undefined;
             if (holder && holder.email.toLowerCase() !== token.email.toLowerCase()) {
@@ -198,7 +198,7 @@ export const GoogleAccounts = defineFactory({
         }
 
         async function writeBack(token: GoogleToken, refreshToken: string) {
-            const key = googleTokenKey(keyPrefix, service, token.email);
+            const key = googleTokenKey({ keyPrefix, service, email: token.email });
             try {
                 const store = provider.target(key);
                 const value: GoogleToken = { ...token, refreshToken };

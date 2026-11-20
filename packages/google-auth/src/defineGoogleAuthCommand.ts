@@ -2,7 +2,7 @@ import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
-import { GoogleAccounts } from './GoogleAccounts.js';
+import { GoogleAccountsFactory } from './GoogleAccountsFactory.js';
 import type { GoogleCommandParams } from './GoogleCommandParams.js';
 import { GoogleEndpoints } from './GoogleEndpoints.js';
 import { signInGoogle } from './signInGoogle.js';
@@ -39,7 +39,7 @@ export function defineGoogleAuthCommand(params: GoogleCommandParams): CommandCla
                 throw new UsageError(`--port must be a port number, got ${this.port}.`);
             }
 
-            const accounts = this.container.resolve(GoogleAccounts)(params, this.cli.binaryName);
+            const accounts = this.container.resolve(GoogleAccountsFactory)(params, this.cli.binaryName);
             const endpoints = this.container.resolve(GoogleEndpoints);
 
             const token = await signInGoogle({

@@ -18,7 +18,7 @@ import type { SecretStore } from '@nzyme/secrets/SecretStore.js';
 
 import { defineGoogleAccountsCommand } from '../defineGoogleAccountsCommand.js';
 import { defineGoogleAuthCommand } from '../defineGoogleAuthCommand.js';
-import { GoogleAccounts } from '../GoogleAccounts.js';
+import { GoogleAccountsFactory } from '../GoogleAccountsFactory.js';
 import type { GoogleAuthOptions } from '../GoogleAuthOptions.js';
 import type { GoogleCommandParams } from '../GoogleCommandParams.js';
 import { GoogleEndpoints } from '../GoogleEndpoints.js';
@@ -292,7 +292,7 @@ function defineWhoamiCommand(params: GoogleCommandParams): CommandClass {
         account = Option.String('--account');
 
         override async run() {
-            const accounts = this.container.resolve(GoogleAccounts)(params, this.cli.binaryName);
+            const accounts = this.container.resolve(GoogleAccountsFactory)(params, this.cli.binaryName);
             const { apiRootUrl } = this.container.resolve(GoogleEndpoints);
             const auth = await accounts.authorize(await accounts.resolveAccount(this.account));
             this.context.stdout.write(`${await params.service.resolveEmail(auth, apiRootUrl)}\n`);

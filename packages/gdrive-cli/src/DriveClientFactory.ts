@@ -2,7 +2,7 @@ import type { drive_v3 } from '@googleapis/drive';
 import { drive } from '@googleapis/drive';
 
 import { CommandScope } from '@nzyme/cli-core/Command.js';
-import { GoogleAccounts } from '@nzyme/google-auth/GoogleAccounts.js';
+import { GoogleAccountsFactory } from '@nzyme/google-auth/GoogleAccountsFactory.js';
 import { GoogleEndpoints } from '@nzyme/google-auth/GoogleEndpoints.js';
 import { defineFactory } from '@nzyme/ioc/Factory.js';
 
@@ -33,7 +33,7 @@ export interface DriveClient {
 export const DriveClientFactory = defineFactory({
     name: 'DriveClientFactory',
     scope: CommandScope,
-    deps: { googleAccounts: GoogleAccounts, endpoints: GoogleEndpoints },
+    deps: { googleAccounts: GoogleAccountsFactory, endpoints: GoogleEndpoints },
     async setup(
         { googleAccounts, endpoints },
         params: DriveCommandParams,

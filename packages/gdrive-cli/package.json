@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/gdrive-cli",
-    "version": "0.16.0",
+    "version": "0.17.1",
     "description": "Agent-facing Google Drive commands: search, read Docs as Markdown and Sheets as CSV, download, upload, and permission switches, never permanent deletion",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

@@ -23,20 +23,22 @@ A typed client for the [Outline](https://www.getoutline.com) API, `fakeOutline`,
    });
    ```
 
-3. Add the hooks to `.claude/settings.json`, replacing `cli` with the product CLI. Every hook has an explicit timeout; the stop hook keeps its own run within 40 s of its 60 s:
+3. Add the hooks to `.claude/settings.json`, replacing `cli` with the product CLI. Every hook has a 60 s timeout; a run starts no new document after 38 s, keeping within it:
 
    ```json
    {
        "hooks": {
            "SessionStart": [{ "hooks": [{ "type": "command", "command": "cli outline hook session-start", "timeout": 60 }] }],
-           "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "cli outline hook prompt", "timeout": 30 }] }],
+           "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "cli outline hook prompt", "timeout": 60 }] }],
            "Stop": [{ "hooks": [{ "type": "command", "command": "cli outline hook stop", "timeout": 60 }] }],
-           "SessionEnd": [{ "hooks": [{ "type": "command", "command": "cli outline hook session-end", "timeout": 30 }] }]
+           "SessionEnd": [{ "hooks": [{ "type": "command", "command": "cli outline hook session-end", "timeout": 60 }] }]
        }
    }
    ```
 
 4. Each user runs `cli outline login` (browser, once), then `cli outline pull` to finish the first download.
+
+   The first run adds `/documents` and `/recovered` (or the configured folders) to the clone's `.git/info/exclude`, so the user's private documents are never committed; keep those lines.
 
 ## How it works for the agent
 
@@ -104,7 +106,6 @@ const documents = await listAll(page => outline.documents.list({ ...page }));
 ```
 
 - Every call is `POST {url}/api/<method>` with `Authorization: Bearer <token>`; `getAccessToken` runs before each request, so a refreshed token is picked up.
-- Requests are paced by two token buckets: 100 per minute overall, 25 per minute for `documents.create` and `attachments.create`.
 - A `429` waits for `Retry-After` and retries the same call. After 10 consecutive `429`s it throws `OutlineRateLimitError`.
 - A `409` (stale `lastRevision`) throws `OutlineConflictError`; any other failure throws `OutlineApiError` with the HTTP status.
 - The token never appears in a thrown error.

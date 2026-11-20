@@ -86,6 +86,31 @@ test('stop blocks once for a conflict its push created, never right after a bloc
     );
 });
 
+test('a prompt that does not sync still reminds of an open conflict, and leaves one-time events for the next run', async () => {
+    const world = await setup();
+    const offer = world.addDocument('Offer');
+    await world.hook('session-start');
+    await world.conflict(offer, 'wiki/offer.md');
+    await world.hook('stop');
+    const state = await world.store.load();
+    await world.store.save({ ...state, events: [{ kind: 'recovered', path: 'wiki/plan.md' }] });
+    const requests = world.outline.requests.length;
+
+    world.clock += 30 * 1000;
+    const recent = contextOf(await world.hook('prompt'));
+    expect(recent).toContain('conflict in `documents/wiki/offer.md`:');
+    expect(recent).not.toContain('moved to recovered/');
+
+    world.clock += MINUTE;
+    const held = await tryAcquireLock(world.store.lockPath);
+    expect(contextOf(await world.hook('prompt'))).toContain('conflict in `documents/wiki/offer.md`:');
+    expect(contextOf(await world.hook('session-start'))).toContain('conflict in `documents/wiki/offer.md`:');
+    await held?.release();
+
+    expect(world.outline.requests.length).toBe(requests);
+    expect((await world.store.load()).events).toEqual([{ kind: 'recovered', path: 'wiki/plan.md' }]);
+});
+
 test('a missing login is told once per session, with the command that logs in; an offline Outline likewise', async () => {
     const world = await setup({ tokens: null });
 

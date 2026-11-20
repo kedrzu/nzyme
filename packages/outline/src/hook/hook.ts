@@ -18,6 +18,7 @@ import type { Workspace } from '../sync/resolveWorkspace.js';
 import { syncOnce } from '../sync/syncOnce.js';
 import type { SyncDeadlines, SyncRun } from '../sync/syncOnce.js';
 import { renderFailure, renderLoginNeeded, renderOffline, renderReport, renderStopBlock } from './messages.js';
+import type { RenderReportParams } from './messages.js';
 
 /** The Claude Code hook events the sync runs on, as `outline hook <event>` names them. */
 export const HOOK_EVENTS = ['session-start', 'prompt', 'stop', 'session-end'] as const;
@@ -55,7 +56,7 @@ interface HookInput {
 
 type FailureKind = 'login' | 'offline' | 'failure';
 
-/** Steps start no new document after these offsets from the hook's start, keeping a run under 40 s of a 60 s hook timeout. */
+/** Steps start no new document after these offsets from the hook's start, keeping a run under 40 s of the 60 s timeout every hook has. */
 const PULL_BUDGET_MS = 20 * 1000;
 const PUSH_BUDGET_MS = 32 * 1000;
 const SHARING_BUDGET_MS = 38 * 1000;
@@ -74,7 +75,8 @@ const LOG_LIMIT_BYTES = 1024 * 1024;
  *
  * - session-start: a full pass (pull, push, sharing), skipped while another session syncs.
  * - prompt: at most once a minute, an incremental pass (a full one every 15 minutes), skipped while another
- *   session syncs. Only these two pull: a file never changes under the agent in the middle of its turn.
+ *   session syncs. Only these two pull: a file never changes under the agent in the middle of its turn. A
+ *   skipped run still reminds the agent of open conflicts and the other states that last until someone acts.
  * - stop: waits up to 15 s for the lock, then push and sharing; blocks once for a conflict it created.
  * - session-end: push and sharing; what it would say stays in the state for the next session.
  */
@@ -102,11 +104,11 @@ async function handleHook(options: RunHookOptions): Promise<string> {
     }
     const { store } = workspace;
     if (event === 'prompt' && (await pulledRecently(store, started))) {
-        return '';
+        return await standingOutput(event, options, workspace);
     }
     const lock = await takeLock(event, store.lockPath);
     if (lock == null) {
-        return '';
+        return event === 'session-start' || event === 'prompt' ? await standingOutput(event, options, workspace) : '';
     }
     try {
         return await runLocked({ options, input, workspace, started, now });
@@ -184,17 +186,44 @@ async function runLocked({ options, input, workspace, started, now }: RunLockedP
         case 'session-end':
             return '';
         case 'session-start':
-        case 'prompt': {
-            const context = await report({ options, input, workspace, run, kind, started });
-            if (context === '') {
-                return '';
-            }
-            const hookEventName = event === 'session-start' ? 'SessionStart' : 'UserPromptSubmit';
-            return JSON.stringify({ hookSpecificOutput: { hookEventName, additionalContext: context } });
-        }
+        case 'prompt':
+            return contextOutput(event, await report({ options, input, workspace, run, kind, started }));
         default:
             return assertNever(event);
     }
+}
+
+function contextOutput(event: 'session-start' | 'prompt', context: string): string {
+    if (context === '') {
+        return '';
+    }
+    const hookEventName = event === 'session-start' ? 'SessionStart' : 'UserPromptSubmit';
+    return JSON.stringify({ hookSpecificOutput: { hookEventName, additionalContext: context } });
+}
+
+/**
+ * A session start or prompt that does not sync (a pull under a minute ago, or another session syncing) still
+ * reminds the agent of the states that last until someone acts, read from the state without the lock. One-time
+ * events wait for the next run, which reports and clears them.
+ */
+async function standingOutput(
+    event: 'session-start' | 'prompt',
+    options: RunHookOptions,
+    workspace: Workspace,
+): Promise<string> {
+    let state: SyncState;
+    try {
+        state = await workspace.store.load();
+    } catch {
+        // A corrupt state is reported by the next run that syncs.
+        return '';
+    }
+    const context = renderReport({
+        ...(await reportSetting(options, workspace)),
+        run: {},
+        state: { ...state, events: [] },
+    });
+    return contextOutput(event, context);
 }
 
 /** Blocks the Stop once for conflicts this push created; never right after a block (`stop_hook_active`). */
@@ -251,22 +280,26 @@ async function report({ options, input, workspace, run, kind, started }: ReportP
         paragraphs.push(failureMessage(kind, options.commandHint, options.userLanguage, store));
     }
     if (state != null) {
-        paragraphs.push(
-            renderReport({
-                run,
-                state,
-                documents: prefix(workspace, workspace.documentsDir, options.folder),
-                recovered: prefix(workspace, workspace.recoveredDir, options.recovered),
-                recoveredFiles: await listRecovered(workspace.recoveredDir),
-                commandHint: options.commandHint,
-                userLanguage: options.userLanguage,
-            }),
-        );
+        paragraphs.push(renderReport({ ...(await reportSetting(options, workspace)), run, state }));
         state.events = [];
         state.lastPullAt = new Date(started).toISOString();
         await store.save(state);
     }
     return paragraphs.filter(paragraph => paragraph !== '').join('\n\n');
+}
+
+/** What a report needs besides the run and the state. */
+async function reportSetting(
+    options: RunHookOptions,
+    workspace: Workspace,
+): Promise<Omit<RenderReportParams, 'run' | 'state'>> {
+    return {
+        documents: prefix(workspace, workspace.documentsDir, options.folder),
+        recovered: prefix(workspace, workspace.recoveredDir, options.recovered),
+        recoveredFiles: await listRecovered(workspace.recoveredDir),
+        commandHint: options.commandHint,
+        userLanguage: options.userLanguage,
+    };
 }
 
 async function takeLock(event: HookEvent, path: string): Promise<LockHandle | null> {

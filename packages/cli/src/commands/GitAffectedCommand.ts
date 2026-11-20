@@ -70,7 +70,8 @@ export class GitAffectedCommand extends Command {
             \`rewrites\` ({ from, to }[] — a changed path ending in \`from\` also changes the path
             ending in \`to\`), \`fullRunTriggers\` and \`ignore\` (globs matched against the
             root-relative path, never the basename). A changed file that a \`fullRunTriggers\` file
-            imports, transitively, also runs everything.
+            imports, transitively, also runs everything. A \`bun.lock\` counts as changed only
+            when what it installs from outside the workspace changed, not its workspace part.
 
             \`--suite <name>\` selects the tests of a suite of \`nzyme.affected.suites\` from their
             recorded variants instead: a test is skipped while one of its variants matches the

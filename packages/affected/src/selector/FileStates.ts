@@ -20,8 +20,8 @@ export type FileHashLevel = 'full' | 'top';
 
 /**
  * Reads root-relative files of one project for hashing. A file is read once; its fingerprint is
- * cached by file extension and the MD5 of its bytes for the life of the object, so a file whose
- * bytes did not change is not parsed again. Nothing is persisted.
+ * cached by path and the MD5 of its bytes for the life of the object, so a file whose bytes did not
+ * change is not parsed again. Nothing is persisted.
  */
 export class FileStates {
     private readonly fingerprints = new Map<string, FileFingerprintResult>();
@@ -38,8 +38,8 @@ export class FileStates {
 
         const bytes = await readFile(absolute);
         const raw = getMd5Hash(bytes);
-        // The extension picks the parser, so it is part of the key.
-        const key = `${path.extname(absolute)}:${raw}`;
+        // The path picks the parser (by extension, or by name for a `bun.lock`), so it is part of the key.
+        const key = `${file}:${raw}`;
         let fingerprint = this.fingerprints.get(key);
         if (fingerprint === undefined) {
             fingerprint = fingerprintFile(absolute, bytes.toString('utf8'));

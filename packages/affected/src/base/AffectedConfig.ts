@@ -21,6 +21,10 @@ const { parseArray, parseStringArray, parseString, configError } = createConfigP
  * counts while it exists even when git ignores it (an install stamp, `node_modules/.install-stamp`):
  * a variant recorded before it appeared or changed is stale. The base diff never lists an ignored file.
  *
+ * A `bun.lock`, as a trigger or any other input, is compared by what it installs from outside the
+ * workspace (`fingerprintBunLock()`): a change confined to its workspace part (a workspace package's
+ * version or dependency list) triggers nothing, since that package's own `package.json` carries it.
+ *
  * @example
  * ```json
  * {

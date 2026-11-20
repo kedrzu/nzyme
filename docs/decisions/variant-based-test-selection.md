@@ -59,6 +59,18 @@ Two hashes per file, in `@nzyme/affected`.
   normalised, so comments count; a global `<style>` and the import specifiers of `<script setup>` act at
   load and are top; a plain `<script>` is split like a module. Stylesheets are hashed by text with
   whitespace normalised. Non-code dependencies (images, fonts) are hashed whole.
+- **Lockfile.** A `bun.lock` is hashed by what it installs from outside the workspace
+  (`fingerprintBunLock()`), in variants and in the base diff alike: the lockfile without its
+  `workspaces` section and without the `packages` entries resolved to `workspace:`. Those parts hold
+  each workspace package's version, `bin` and dependency ranges, which its own `package.json` carries
+  too, and that manifest is already a dependency of every test of the package. So a consumer's bump of
+  the nzyme submodule, which rewrites every `@nzyme/*` version in `workspaces`, is no full run. The
+  rest counts, a key a later format adds included: the external `packages` entries (resolution,
+  dependencies, integrity), `overrides`, `patchedDependencies` (the patch files are separate
+  triggers), `trustedDependencies` (whose install scripts run), catalogs, `lockfileVersion` and
+  `configVersion` (bun's install defaults, such as the linker). A list of what to drop rather than of
+  what to keep, so an unknown key errs towards a rerun. An install stamp a consumer writes for its
+  `node_modules` hashes the same fingerprint, so the two cannot disagree about a workspace-only change.
 - **Variant** = the test's entry files (hashed whole), the executed files (`body` + `top`), their static
   import closure (`top`, except a file a server process ran in the same run, below), the modules with
   no function — constants, a data table, config, JSON — that a loaded file (an executed file, one in

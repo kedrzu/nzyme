@@ -1,6 +1,9 @@
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { GitRepository } from '@nzyme/project-utils/git/GitRepository.js';
+
+import { fingerprintBunLock } from '../fingerprint/fingerprintBunLock.js';
 
 /** A file that differs from the base. Deleted files (and the old path of a rename) are included. */
 export interface ChangedFile {
@@ -25,6 +28,10 @@ export interface CollectChangedFilesOptions {
  * A submodule absent from the base counts as entirely new (all its tracked files). An uninitialised
  * submodule has no local changes and is skipped, unless its gitlink moved between base and `HEAD` —
  * then the change cannot be seen and this throws.
+ *
+ * A modified `bun.lock` that installs the same external code as at the base ({@link fingerprintBunLock})
+ * is not listed: its workspace part changed, and the workspace packages' own `package.json` files
+ * carry that change.
  *
  * Returns sorted, unique paths; a path that exists in the working tree is never reported deleted.
  */
@@ -71,7 +78,10 @@ export async function collectChangedFiles(options: CollectChangedFilesOptions): 
         .toSorted((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 
-/** Working tree vs `base` (renames contribute their old path as deleted) plus untracked, unignored files. */
+/**
+ * Working tree vs `base` (renames contribute their old path as deleted) plus untracked, unignored
+ * files, less a `bun.lock` that installs the same as at `base`.
+ */
 async function diffRepository(git: GitRepository, base: string): Promise<ChangedFile[]> {
     const result: ChangedFile[] = [];
     const diff = splitNul(await git.git(['diff', '--name-status', '-M', '-z', base]));
@@ -80,6 +90,8 @@ async function diffRepository(git: GitRepository, base: string): Promise<Changed
         const first = diff[i++] ?? '';
         if (status.startsWith('R')) {
             result.push({ path: first, deleted: true }, { path: diff[i++] ?? '', deleted: false });
+        } else if (status.startsWith('M') && (await installsSameAsBase(git, base, first))) {
+            continue;
         } else {
             result.push({ path: first, deleted: status.startsWith('D') });
         }
@@ -90,6 +102,22 @@ async function diffRepository(git: GitRepository, base: string): Promise<Changed
     }
 
     return result;
+}
+
+/** Whether `file` is a `bun.lock` whose working-tree copy installs the same external code as at `base`. */
+async function installsSameAsBase(git: GitRepository, base: string, file: string): Promise<boolean> {
+    if (path.posix.basename(file) !== 'bun.lock') {
+        return false;
+    }
+
+    const before = await git.tryGit(['show', `${base}:${file}`]);
+    const now = await readFile(path.join(git.dir, file), 'utf8').catch(() => null);
+    if (!before.ok || now === null) {
+        return false;
+    }
+
+    const fingerprint = fingerprintBunLock(now);
+    return fingerprint !== null && fingerprint === fingerprintBunLock(before.stdout);
 }
 
 /** Submodule paths declared in the working tree's `.gitmodules`. */

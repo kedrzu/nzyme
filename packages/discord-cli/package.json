@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/discord-cli",
-    "version": "0.17.0",
+    "version": "0.17.1",
     "description": "Agent-facing Discord CLI commands over the official Discord OpenAPI spec: browse the spec, GET, and write as a bot",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

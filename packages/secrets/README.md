@@ -191,7 +191,8 @@ const key = container.resolve(STRIPE_KEY);
 
 With declarations the commands follow them:
 
-- **`set`** refuses a name that is not declared or not enabled, before any prompt or write.
+- **`set`** refuses a name that is not declared or not enabled, before any prompt or write. Code that writes a secret itself calls `resolveSecretTarget({ provider, env, name })`
+  (`@nzyme/secrets/resolveSecretTarget.js`) for the same check and the store.
 - **`run -- <command>`** with no keys runs with every declared, enabled secret; named keys must be
   declared and enabled.
 - **`list`** prints the declared, enabled secrets with the store id, `missing`, or

@@ -9,6 +9,6 @@
 export function safeFileName(name: string, fallback: string): string {
     // Control characters sort below the space.
     const replaced = Array.from(name, char => (char < ' ' || '\\/:*?"<>|'.includes(char) ? '_' : char)).join('');
-    const cleaned = replaced.replace(/^\.+/, '_').trim();
+    const cleaned = replaced.trim().replace(/^\.+/, '_');
     return cleaned || fallback;
 }

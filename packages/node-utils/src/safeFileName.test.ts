@@ -16,6 +16,9 @@ test('turns leading dots into one underscore, so no hidden file and no ..', () =
     expect(safeFileName('.bashrc', 'download')).toBe('_bashrc');
     expect(safeFileName('../../.bashrc', 'download')).toBe('__.._.bashrc');
     expect(safeFileName('..', 'download')).toBe('_');
+    expect(safeFileName(' ..', 'download')).toBe('_');
+    expect(safeFileName(' .env', 'download')).toBe('_env');
+    expect(safeFileName('.', 'download')).toBe('_');
 });
 
 test('falls back when nothing is left', () => {

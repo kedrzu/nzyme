@@ -102,16 +102,10 @@ export async function resolveWritablePath({
     }
 
     const rest = path.relative(existing, path.dirname(target));
-    await assertFileAccess({
-        real: path.join(await fs.realpath(existing), rest, path.basename(target)),
-        shown: p,
-        access,
-        verb: 'write',
-    });
+    const real = path.join(await fs.realpath(existing), rest, path.basename(target));
+    await assertFileAccess({ real, shown: p, access, verb: 'write' });
 
     await fs.mkdir(path.dirname(target), { recursive: true });
-    const real = path.join(await fs.realpath(path.dirname(target)), path.basename(target));
-    await assertFileAccess({ real, shown: p, access, verb: 'write' });
 
     const stat = await fs.lstat(real).catch(() => null);
     if (stat) {

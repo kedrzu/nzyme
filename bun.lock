@@ -504,6 +504,20 @@
         "oxfmt": "0.77.0",
       },
     },
+    "packages/outline": {
+      "name": "@nzyme/outline",
+      "version": "0.0.0",
+      "dependencies": {
+        "@nzyme/utils": "workspace:*",
+      },
+      "devDependencies": {
+        "@nzyme/tsconfig": "workspace:*",
+        "@types/bun": "^1.4.3",
+        "@types/node": "26.6.6",
+        "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+        "oxfmt": "0.77.0",
+      },
+    },
     "packages/oxlint": {
       "name": "@nzyme/oxlint",
       "version": "0.16.0",
@@ -1607,6 +1621,8 @@
     "@nzyme/openapi": ["@nzyme/openapi@workspace:packages/openapi"],
 
     "@nzyme/openapi-cli": ["@nzyme/openapi-cli@workspace:packages/openapi-cli"],
+
+    "@nzyme/outline": ["@nzyme/outline@workspace:packages/outline"],
 
     "@nzyme/oxlint": ["@nzyme/oxlint@workspace:packages/oxlint"],
 

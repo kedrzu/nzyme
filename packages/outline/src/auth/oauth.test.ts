@@ -60,7 +60,7 @@ test('logs in through the browser with PKCE and stores the verified tokens', asy
     expect(await store.read()).toEqual(expected);
     const [shown] = await browser.shownPages();
     expect(shown?.status).toBe(200);
-    expect(shown?.text).toContain('Zalogowano');
+    expect(shown?.text).toContain('Logged in to Outline');
 });
 
 test('a callback with a wrong state aborts the login before any code is exchanged', async () => {
@@ -81,7 +81,7 @@ test('a callback with a wrong state aborts the login before any code is exchange
     expect(keychain.values.size).toBe(0);
     const [shown] = await browser.shownPages();
     expect(shown?.status).toBe(400);
-    expect(shown?.text).toContain('Logowanie przerwane');
+    expect(shown?.text).toContain('Login aborted');
 });
 
 test('gives up when the browser never comes back, and frees the port', async () => {

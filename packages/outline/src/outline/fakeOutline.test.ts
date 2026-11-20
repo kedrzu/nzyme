@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { fakeOutline } from './fakeOutline.js';
+import { fakeOutline, outlineLikeNormalizer } from './fakeOutline.js';
 import type { FakeUser } from './fakeOutline.js';
 import { listAll } from './listAll.js';
 import type { OutlineFilter } from './OutlineTypes.js';
@@ -130,7 +130,7 @@ test('documents.memberships lists direct user shares and remove_user deletes one
     expect(after.memberships).toEqual([]);
 });
 
-test('revision rises only when the normalized content changes, and the text goes through the normalizer', async () => {
+test('revision rises on every accepted update, and the text goes through the normalizer', async () => {
     const outline = fakeOutline({ normalizeText: text => text.replaceAll(/\s+$/gm, '') });
     const ana = outline.addUser({ name: 'Ana' });
     const wiki = outline.addCollection({ name: 'Wiki', permission: 'read_write' });
@@ -141,8 +141,8 @@ test('revision rises only when the normalized content changes, and the text goes
     const changed = await client.documents.update({ id: created.id, text: 'b  ' });
 
     expect([created.revision, created.text]).toEqual([1, 'a']);
-    expect(same.revision).toBe(1);
-    expect([changed.revision, changed.text]).toEqual([2, 'b']);
+    expect(same.revision).toBe(2);
+    expect([changed.revision, changed.text]).toEqual([3, 'b']);
     expect(Date.parse(changed.updatedAt)).toBeGreaterThan(Date.parse(created.updatedAt));
 });
 
@@ -257,4 +257,43 @@ test('limit above 100 is rejected like the real API', async () => {
     const ana = outline.addUser({ name: 'Ana' });
 
     await expect(outline.clientAs(ana).documents.list({ limit: 101 })).rejects.toMatchObject({ status: 400 });
+});
+
+test('collections.create makes a private collection its creator can read, and others cannot see', async () => {
+    const outline = fakeOutline();
+    const ana = outline.addUser({ name: 'Ana' });
+    const bob = outline.addUser({ name: 'Bob' });
+    const client = outline.clientAs(ana);
+
+    const created = await client.collections.create({ name: 'Scratch', permission: null });
+
+    expect(created).toMatchObject({ name: 'Scratch', permission: null });
+    expect(await client.collections.info({ id: created.id })).toEqual(created);
+    expect((await client.collections.list()).data.map(collection => collection.id)).toEqual([created.id]);
+    expect((await outline.clientAs(bob).collections.list()).data).toEqual([]);
+    await expect(outline.clientAs(bob).collections.info({ id: created.id })).rejects.toMatchObject({ status: 403 });
+    await expect(
+        client.documents.create({ title: 'Inside', collectionId: created.id, publish: true }),
+    ).resolves.toMatchObject({ collectionId: created.id });
+    const invalid = await outline.fetchAs(ana)(`${outline.url}/api/collections.create`, {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Bad', permission: 'admin' }),
+    });
+    expect(invalid.status).toBe(400);
+});
+
+test('outlineLikeNormalizer applies each observed rule and is idempotent', () => {
+    const cases: [string, string][] = [
+        ['- a\n  - b', '* a\n  * b'],
+        ['| Name | Value |\n| --- | --- |\n| a | b |', '| Name | Value |\n|------|-------|\n| a | b |'],
+        ['_it_ and __bold__ and snake_case_name', '*it* and __bold__ and snake_case_name'],
+        ['one  \ntwo', String.raw`one\ntwo`],
+        ['---text\n---\n--- x', '\\---text\n---\n\\--- x'],
+        ['a\n\n\n\nb', 'a\n\nb'],
+    ];
+    for (const [input, expected] of cases) {
+        const once = outlineLikeNormalizer(input);
+        expect(once).toBe(expected);
+        expect(outlineLikeNormalizer(once)).toBe(once);
+    }
 });

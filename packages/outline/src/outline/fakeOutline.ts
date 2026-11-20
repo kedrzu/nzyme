@@ -29,6 +29,36 @@ export interface FakeOutlineOptions {
     normalizeText?: (text: string) => string;
 }
 
+/**
+ * A simplified stand-in for the Markdown normalization observed in Outline Cloud, for `normalizeText`:
+ * `- ` bullets become `* `; table separator rows are rebuilt with dashes sized to the header cells; `_italic_`
+ * becomes `*italic*` (`__bold__` stays); a hard break (two trailing spaces and a newline inside a paragraph)
+ * becomes a literal backslash-n joining the lines; a line starting with `---` followed by text becomes `\---`;
+ * runs of three or more newlines collapse to one blank line.
+ *
+ * It is not the real thing (the real one needs two writes to converge, among other differences): this one is a
+ * fixed point after a single application, which is what a sync test needs.
+ */
+export function outlineLikeNormalizer(text: string): string {
+    const lines = text
+        .replaceAll(/\n{3,}/g, '\n\n')
+        .replaceAll(/(\S) {2,}\n(?=\S)/g, String.raw`$1\n`)
+        .split('\n');
+    return lines
+        .map((line, index) => {
+            const header = lines[index - 1] ?? '';
+            if (TABLE_SEPARATOR.test(line) && header.includes('|')) {
+                const cells = header.trim().replace(/^\|/, '').replace(/\|$/, '').split('|');
+                return `|${cells.map(cell => '-'.repeat(Math.max(3, cell.length))).join('|')}|`;
+            }
+            return line.replace(/^(\s*)- /, '$1* ').replace(/^---(?=\s*[^\s-])/, String.raw`\---`);
+        })
+        .join('\n')
+        .replaceAll(/(?<![_\w])_(?!_)([^_\n]+?)(?<!_)_(?![_\w])/g, '*$1*');
+}
+
+const TABLE_SEPARATOR = /^\|(\s*:?-{3,}:?\s*\|)+\s*$/;
+
 export interface FakeUser extends OutlineUser {
     /** The bearer token that authenticates as this user. */
     token: string;
@@ -213,6 +243,8 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         'users.list': usersList,
         'groups.list': groupsList,
         'collections.list': collectionsList,
+        'collections.info': collectionsInfo,
+        'collections.create': collectionsCreate,
         'collections.documents': collectionsDocuments,
         'documents.list': documentsList,
         'documents.drafts': documentsDrafts,
@@ -486,6 +518,27 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         return okPage(body, visible.map(presentCollection));
     }
 
+    function collectionsInfo({ user, body }: Call) {
+        const collection = requireCollection(requireString(body, 'id'));
+        requireAccess(collectionAccess(user, collection.id), 'read');
+        return ok(presentCollection(collection));
+    }
+
+    /** Like Outline, the creator becomes an admin member, so a private collection stays visible to them. */
+    function collectionsCreate({ user, body }: Call) {
+        const permission = body.permission ?? null;
+        if (permission !== null && permission !== 'read' && permission !== 'read_write') {
+            invalid('permission', 'read | read_write | null');
+        }
+        return ok(
+            addCollection({
+                name: requireString(body, 'name'),
+                permission,
+                members: [{ user, permission: 'admin' }],
+            }),
+        );
+    }
+
     function collectionsDocuments({ user, body }: Call) {
         const id = requireString(body, 'id');
         if (!collections.some(collection => collection.id === id)) {
@@ -550,8 +603,9 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
     }
 
     /**
-     * Revision rule: `revision` rises by one for each update that changes the (normalized) title or text, or
-     * that publishes a draft. A stale `lastRevision` answers 409 before anything is written.
+     * Revision rule: `revision` rises by one for every accepted update, even one that changes neither title nor
+     * text (real Outline does this for non-trivial documents, so a needless push shows up as a revision bump).
+     * A stale `lastRevision` answers 409 before anything is written.
      */
     function documentsUpdate({ user, body }: Call) {
         const document = authorizeDocument(user, requireString(body, 'id'), 'write');
@@ -572,15 +626,13 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
             requireAccess(collectionAccess(user, collectionId), 'write');
             document.collectionId = collectionId;
         }
-        if (title !== document.title || text !== document.text || publishing) {
-            const stamp = tick();
-            document.title = title;
-            document.text = text;
-            document.revision += 1;
-            document.updatedAt = stamp;
-            if (publishing) {
-                document.publishedAt = stamp;
-            }
+        const stamp = tick();
+        document.title = title;
+        document.text = text;
+        document.revision += 1;
+        document.updatedAt = stamp;
+        if (publishing) {
+            document.publishedAt = stamp;
         }
         return ok(presentDocument(document));
     }
@@ -807,9 +859,11 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
     }
 
     function requireCollection(id: string) {
-        if (!collections.some(collection => collection.id === id)) {
+        const record = collections.find(collection => collection.id === id);
+        if (record == null) {
             throw new FakeApiError(404, 'not_found', 'Collection not found');
         }
+        return record;
     }
 
     function requireUser(id: string) {

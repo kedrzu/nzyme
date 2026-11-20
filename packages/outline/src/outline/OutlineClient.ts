@@ -5,6 +5,7 @@ import { createRateLimiter } from './rateLimiter.js';
 import type { OutlineRateLimitKind, RateLimiter } from './rateLimiter.js';
 import type {
     AttachmentsCreateParams,
+    CollectionsCreateParams,
     DocumentMembershipsResult,
     DocumentsAddGroupParams,
     DocumentsAddGroupResult,
@@ -101,6 +102,8 @@ export class OutlineClient {
 
     readonly collections = {
         list: (params: OutlinePageParams = {}) => this.callPage<OutlineCollection>('collections.list', params),
+        info: (params: { id: string }) => this.callData<OutlineCollection>('collections.info', params),
+        create: (params: CollectionsCreateParams) => this.callData<OutlineCollection>('collections.create', params),
         documents: (params: { id: string }) => this.callData<OutlineNavigationNode[]>('collections.documents', params),
     };
 

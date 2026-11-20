@@ -206,6 +206,12 @@ export interface AttachmentsCreateParams {
     documentId: string;
 }
 
+export interface CollectionsCreateParams {
+    name: string;
+    /** Workspace-wide access; `null` makes the collection private (members only). */
+    permission?: OutlineCollectionPermission;
+}
+
 export interface DocumentsMoveResult {
     documents: OutlineDocument[];
 }

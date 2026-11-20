@@ -1,8 +1,6 @@
 import { waitFor } from '@nzyme/utils/waitFor.js';
 
 import { OutlineApiError, OutlineConflictError, OutlineNetworkError, OutlineRateLimitError } from './errors.js';
-import { createRateLimiter } from './rateLimiter.js';
-import type { OutlineRateLimitKind, RateLimiter } from './rateLimiter.js';
 import type {
     AttachmentsCreateParams,
     CollectionsCreateParams,
@@ -43,8 +41,7 @@ export interface OutlineClientOptions {
     /** Called before every request, so a refreshed token is picked up. */
     getAccessToken: () => Promise<string>;
     fetch?: OutlineFetch;
-    /** Clock and sleep for rate limiting; tests replace them. */
-    now?: () => number;
+    /** Waits out a 429's `Retry-After`; tests replace it. */
     sleep?: (ms: number) => Promise<void>;
 }
 
@@ -55,25 +52,22 @@ interface Envelope<T> {
 
 const MAX_RATE_LIMIT_RETRIES = 10;
 const DEFAULT_RETRY_AFTER_SECONDS = 1;
-const CREATE_METHODS = new Set(['documents.create', 'attachments.create']);
 
 /**
- * Typed client over the Outline endpoints the sync needs. Calls are paced by the rate limiter; a 429 waits
- * `Retry-After` and retries, a 409 throws `OutlineConflictError`, other failures `OutlineApiError`.
+ * Typed client over the Outline endpoints the sync needs. A 429 waits `Retry-After` and retries, a 409
+ * throws `OutlineConflictError`, other failures `OutlineApiError`.
  */
 export class OutlineClient {
     private readonly baseUrl: string;
     private readonly getAccessToken: () => Promise<string>;
     private readonly fetchImpl: OutlineFetch;
     private readonly sleep: (ms: number) => Promise<void>;
-    private readonly limiter: RateLimiter;
 
     constructor(options: OutlineClientOptions) {
         this.baseUrl = options.url.replace(/\/+$/, '');
         this.getAccessToken = options.getAccessToken;
         this.fetchImpl = options.fetch ?? fetch;
         this.sleep = options.sleep ?? waitFor;
-        this.limiter = createRateLimiter({ now: options.now, sleep: this.sleep });
     }
 
     readonly documents = {
@@ -175,9 +169,7 @@ export class OutlineClient {
 
     /** Sends one call, waiting out 429s, and returns the successful response; never returns a failed one. */
     private async send(method: string, body: object, init: RequestInit): Promise<Response> {
-        const kind: OutlineRateLimitKind = CREATE_METHODS.has(method) ? 'create' : 'general';
         for (let attempt = 0; ; attempt++) {
-            await this.limiter.acquire(kind);
             const token = await this.getAccessToken();
             const response = await this.post(method, body, token, init);
             if (response.status < 400) {

@@ -16,7 +16,7 @@ import { unwrapElement } from '../unwrapElement.js';
  * </template>
  * ```
  */
-export const vOnClick: ObjectDirective<ElementOrVue, EventListener, 'capture'> = {
+export const vOnClick: Readonly<ObjectDirective<ElementOrVue, EventListener, 'capture'>> = {
     mounted(el, binding) {
         const element = unwrapElement(el);
         if (element && binding.value) {

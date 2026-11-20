@@ -94,6 +94,7 @@ interface InternalLoadingContext extends LoadingContext {
  */
 const LoadingContextSymbol = defineContext<InternalLoadingContext>('LoadingContext');
 
+// oxlint-disable-next-line nzyme/no-module-state -- hands out context ids unique within the page; nothing depends on their values.
 let counter = 0;
 
 /**

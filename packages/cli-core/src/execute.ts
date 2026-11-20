@@ -18,7 +18,7 @@ export interface ExecuteOptions {
     /** What `--version` prints, usually the version of the package shipping the binary */
     version?: string;
     /** List of commands to register */
-    commands: CommandClass[];
+    commands: readonly CommandClass[];
     /** Container to use for the CLI program */
     container?: Container;
     /**

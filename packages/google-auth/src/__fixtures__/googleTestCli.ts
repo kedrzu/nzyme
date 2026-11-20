@@ -66,7 +66,7 @@ export interface FakeGoogleOptions {
     /** The address `/me` reports. */
     email: string;
     /** The scopes a sign-in grants; {@link SCOPES} by default. */
-    scopes?: string[];
+    scopes?: readonly string[];
     /**
      * Answers every other path, after the access token is checked: a CLI's fake API. A request without
      * the access token gets 401 without reaching it.

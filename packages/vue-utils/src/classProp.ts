@@ -26,4 +26,5 @@ export type ClassProp = Array<ClassValue> | ClassValue | Record<string, boolean>
  * <MyComponent :class="['btn', { 'btn-primary': isPrimary }]" />
  * ```
  */
+// oxlint-disable-next-line nzyme/no-module-state -- Vue's `PropType` admits only a mutable array of constructors, so this list cannot be typed readonly; nothing writes it.
 export const classProp = [String, Object, Array] as PropType<Array<ClassValue> | ClassValue>;

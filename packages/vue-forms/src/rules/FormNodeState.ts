@@ -73,6 +73,7 @@ export interface RuleRegistration {
     readonly routed: ComputedRef<ReadonlyMap<FormNodeState, readonly string[]>>;
 }
 
+// oxlint-disable-next-line nzyme/no-module-state -- keyed by the form node itself: the state belongs to that node, never to another test's form.
 const states = new WeakMap<FormModel, FormNodeState>();
 
 /**

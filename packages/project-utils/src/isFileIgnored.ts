@@ -3,7 +3,11 @@ import path from 'node:path';
 import fs from 'fs-extra';
 import parseGitignore from 'parse-gitignore';
 
+import { createCache } from '@nzyme/utils/createCache.js';
+import { immutable } from '@nzyme/utils/immutable.js';
+
 import { getProjectRoot } from './getProjectRoot.js';
+import { relativeInsidePosixPath } from './relativeInsidePosixPath.js';
 
 interface CompiledPattern {
     regex: RegExp;
@@ -13,19 +17,26 @@ interface CompiledPattern {
     directoryOnly: boolean;
 }
 
+/** A directory to check, with the git root its `.gitignore` files are read up to. */
+interface DirectoryInRepo {
+    dir: string;
+    gitRoot: string;
+}
+
 // Cache of gitignore patterns per directory
-const directoryCache = new Map<string, CompiledPattern[]>();
+const directoryCache = createCache({ getValue: loadPatternsForDirectory });
 
 // Cache of whether a directory is ignored (itself or through an ancestor)
-const directoryIgnoredCache = new Map<string, boolean>();
+const directoryIgnoredCache = createCache({
+    cacheKey: ({ dir }: DirectoryInRepo) => dir,
+    getValue: ({ dir, gitRoot }: DirectoryInRepo) =>
+        isDirectoryIgnored(path.dirname(dir), gitRoot) || matchesGitignore(dir, true, gitRoot),
+});
 
 // Cache of git roots per directory
-const gitRootCache = new Map<string, string>();
+const gitRootCache = createCache({ getValue: findGitRoot });
 const projectRoot = getProjectRoot();
-const commonIgnorePaths = ['.git', '.turbo', '.nx', '.yarn', 'node_modules'];
-
-const commonIgnoreSuffixes = commonIgnorePaths.map(ignorePath => `/${ignorePath}`);
-const commonIgnoreIncludes = commonIgnorePaths.map(ignorePath => `/.${ignorePath}/`);
+const commonIgnorePaths = immutable(['.git', '.turbo', '.nx', '.yarn', 'node_modules']);
 
 /**
  * Checks if a file or directory path should be ignored by the file system watcher.
@@ -50,8 +61,8 @@ const commonIgnoreIncludes = commonIgnorePaths.map(ignorePath => `/.${ignorePath
 export function isFileIgnored(file: string): boolean | undefined {
     // Always ignore common ignore paths
     if (
-        commonIgnoreSuffixes.some(suffix => file.endsWith(suffix)) ||
-        commonIgnoreIncludes.some(include => file.includes(include))
+        commonIgnorePaths.some(ignorePath => file.endsWith(`/${ignorePath}`)) ||
+        commonIgnorePaths.some(ignorePath => file.includes(`/.${ignorePath}/`))
     ) {
         return true;
     }
@@ -59,7 +70,7 @@ export function isFileIgnored(file: string): boolean | undefined {
     const fileDir = path.dirname(file);
 
     // Find git root for this file (handles submodules)
-    const gitRoot = findGitRoot(fileDir);
+    const gitRoot = gitRootCache.get(fileDir);
 
     // Git cannot re-include a file whose parent directory is excluded
     if (isDirectoryIgnored(fileDir, gitRoot)) {
@@ -85,14 +96,7 @@ function isDirectoryIgnored(dir: string, gitRoot: string): boolean {
         return false;
     }
 
-    const cached = directoryIgnoredCache.get(dir);
-    if (cached !== undefined) {
-        return cached;
-    }
-
-    const ignored = isDirectoryIgnored(path.dirname(dir), gitRoot) || matchesGitignore(dir, true, gitRoot);
-    directoryIgnoredCache.set(dir, ignored);
-    return ignored;
+    return directoryIgnoredCache.get({ dir, gitRoot });
 }
 
 /**
@@ -104,7 +108,7 @@ function matchesGitignore(target: string, isDirectory: boolean, gitRoot: string)
     let currentDir = path.dirname(target);
 
     while (true) {
-        const patterns = getCachedPatternsForDirectory(currentDir);
+        const patterns = directoryCache.get(currentDir);
 
         if (patterns.length > 0) {
             const relativeFromDir = path.relative(currentDir, target).replaceAll('\\', '/');
@@ -132,8 +136,8 @@ function matchesGitignore(target: string, isDirectory: boolean, gitRoot: string)
 }
 
 function isInside(root: string, target: string): boolean {
-    const relative = path.relative(root, target);
-    return relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
+    const relative = relativeInsidePosixPath(root, target);
+    return relative !== null && relative !== '';
 }
 
 /**
@@ -162,17 +166,11 @@ export function clearIgnoreCache(): void {
  * @param startDir - The directory to start searching from
  */
 function findGitRoot(startDir: string): string {
-    const cached = gitRootCache.get(startDir);
-    if (cached) {
-        return cached;
-    }
-
     let currentDir = startDir;
 
     while (true) {
         const gitPath = path.join(currentDir, '.git');
         if (fs.existsSync(gitPath)) {
-            gitRootCache.set(startDir, currentDir);
             return currentDir;
         }
 
@@ -180,7 +178,6 @@ function findGitRoot(startDir: string): string {
         // Stop if we can't go higher or reached filesystem root
         if (parentDir === currentDir) {
             // No .git found, use the original start directory
-            gitRootCache.set(startDir, startDir);
             return startDir;
         }
 
@@ -189,14 +186,9 @@ function findGitRoot(startDir: string): string {
 }
 
 /**
- * Gets cached patterns for a directory, loading from .gitignore if not cached.
+ * Loads and compiles the patterns of a directory's `.gitignore`; none when it has no such file.
  */
-function getCachedPatternsForDirectory(dir: string): CompiledPattern[] {
-    const cached = directoryCache.get(dir);
-    if (cached) {
-        return cached;
-    }
-
+function loadPatternsForDirectory(dir: string): CompiledPattern[] {
     // Load .gitignore from this directory
     const gitignorePath = path.join(dir, '.gitignore');
     const patterns: string[] = [];
@@ -211,10 +203,7 @@ function getCachedPatternsForDirectory(dir: string): CompiledPattern[] {
         }
     }
 
-    const compiledPatterns = compilePatterns(patterns);
-
-    directoryCache.set(dir, compiledPatterns);
-    return compiledPatterns;
+    return compilePatterns(patterns);
 }
 
 /**

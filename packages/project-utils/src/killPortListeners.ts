@@ -1,5 +1,6 @@
 import { execa } from 'execa';
 
+import { isErrorCode } from '@nzyme/utils/isErrorCode.js';
 import { waitFor } from '@nzyme/utils/waitFor.js';
 import { withTimeout } from '@nzyme/utils/withTimeout.js';
 
@@ -117,11 +118,10 @@ function signal(pid: number, sig: NodeJS.Signals): SignalResult {
         process.kill(pid, sig);
         return 'sent';
     } catch (err) {
-        const code = (err as NodeJS.ErrnoException).code;
-        if (code === 'ESRCH') {
+        if (isErrorCode(err, 'ESRCH')) {
             return 'gone';
         }
-        if (code === 'EPERM') {
+        if (isErrorCode(err, 'EPERM')) {
             return 'denied';
         }
         throw err;

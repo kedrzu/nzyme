@@ -20,7 +20,7 @@ export interface CacheOptions<TArg, TValue, TKey = TArg> {
  * @template TArg - The type of the argument used to look up values
  * @template TValue - The type of the cached values
  * @param options - Configuration for the cache
- * @returns An object with `get` and `set` methods for accessing the cache
+ * @returns An object with `get`, `set` and `clear` methods for accessing the cache
  *
  * @example
  * ```typescript
@@ -34,6 +34,8 @@ export interface CacheOptions<TArg, TValue, TKey = TArg> {
  * cache.set(5, 20); // Overwrites cached value
  * cache.get(5); // Returns 20
  * ```
+ *
+ * @__NO_SIDE_EFFECTS__
  */
 export function createCache<TArg, TValue, TKey = TArg>(options: CacheOptions<TArg, TValue, TKey>) {
     const cache = new Map<TKey, TValue | undefined>();
@@ -42,6 +44,7 @@ export function createCache<TArg, TValue, TKey = TArg>(options: CacheOptions<TAr
     return {
         get,
         set,
+        clear,
     };
 
     function get(arg: TArg) {
@@ -59,5 +62,10 @@ export function createCache<TArg, TValue, TKey = TArg>(options: CacheOptions<TAr
     function set(arg: TArg, value: TValue) {
         const key = cacheKey(arg);
         cache.set(key, value);
+    }
+
+    /** Forgets every cached value, so the next `get` computes it again. */
+    function clear() {
+        cache.clear();
     }
 }

@@ -1,7 +1,7 @@
 import path from 'node:path';
 
-import type { CommitSummary } from './GitRepository.js';
-import { GitRepository } from './GitRepository.js';
+import type { CommitSummary } from '@nzyme/project-utils/git/GitRepository.js';
+import { GitRepository } from '@nzyme/project-utils/git/GitRepository.js';
 
 /** Inputs for {@link bumpSubmodule}. */
 export interface BumpSubmoduleOptions {

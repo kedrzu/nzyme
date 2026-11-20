@@ -68,6 +68,7 @@ interface VirtualHistorySession {
  */
 const STEP_TIMEOUT_MS = 1000;
 
+// oxlint-disable-next-line nzyme/no-module-state -- the document has one history, so one session drives it at a time.
 let activeSession: VirtualHistorySession | null = null;
 
 /**

@@ -11,6 +11,8 @@ import type { LinearApiCommandsOptions } from './defineLinearApiCommands.js';
 /**
  * Defines the command that lets an agent discover Linear's GraphQL schema one type at a time instead of loading the 1.36 MB
  * document. Reads the committed schema, so it never touches the network or the token.
+ *
+ * @__NO_SIDE_EFFECTS__
  */
 export function defineLinearSchemaCommand(options: LinearApiCommandsOptions): CommandClass {
     const paths = getCommandPaths(options, 'schema');

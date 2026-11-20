@@ -46,6 +46,8 @@ interface Getter<TFrom, TValue> {
  * obj.value = 100;
  * getValue(obj); // Still returns 42 (cached value)
  * ```
+ *
+ * @__NO_SIDE_EFFECTS__
  */
 export function cachedGetter<TFrom, TValue>(getter: Getter<TFrom, TValue>): Getter<TFrom, TValue> {
     const symbol = Symbol('cachedGetter');

@@ -1,5 +1,6 @@
-import { statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+
+import { isFile } from './isFile.js';
 
 /**
  * Resolves a relative import specifier to the source file on disk it refers to.
@@ -28,8 +29,4 @@ export function resolveImportSpecifier(fromFile: string, specifier: string): str
     candidates.push(target, `${target}.ts`, join(target, 'index.ts'));
 
     return candidates.find(isFile);
-}
-
-function isFile(path: string): boolean {
-    return statSync(path, { throwIfNoEntry: false })?.isFile() ?? false;
 }

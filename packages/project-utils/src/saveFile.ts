@@ -6,9 +6,11 @@ import { outputFile, pathExists } from 'fs-extra';
 import { format } from 'oxfmt';
 import type { FormatConfig } from 'oxfmt';
 
+import { createMemo } from '@nzyme/utils/createMemo.js';
+
 import { getProjectRoot } from './getProjectRoot.js';
 
-let oxfmtConfig: FormatConfig | undefined;
+const oxfmtConfig = createMemo(loadOxfmtConfig);
 
 /**
  * Save a file with oxfmt formatting.
@@ -19,7 +21,7 @@ let oxfmtConfig: FormatConfig | undefined;
  */
 export async function saveFile(path: string, content: string): Promise<void> {
     try {
-        const result = await format(path, content, getOxfmtConfig());
+        const result = await format(path, content, oxfmtConfig());
         content = result.code;
     } catch (error) {
         console.error(`Failed to format ${path}`, error);
@@ -42,19 +44,13 @@ export async function saveFile(path: string, content: string): Promise<void> {
  * The programmatic format() API doesn't auto-discover config files,
  * so we load and cache it manually.
  */
-function getOxfmtConfig(): FormatConfig {
-    if (oxfmtConfig) {
-        return oxfmtConfig;
-    }
-
+function loadOxfmtConfig(): FormatConfig {
     try {
         const configPath = resolve(getProjectRoot(), '.oxfmtrc.json');
         const raw = JSON.parse(readFileSync(configPath, 'utf-8')) as Record<string, unknown>;
         const { ignorePatterns: _, overrides: __, ...config } = raw;
-        oxfmtConfig = config;
+        return config;
     } catch {
-        oxfmtConfig = {};
+        return {};
     }
-
-    return oxfmtConfig;
 }

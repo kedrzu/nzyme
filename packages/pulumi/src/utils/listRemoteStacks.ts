@@ -2,6 +2,8 @@ import { GetObjectCommand, ListObjectsV2Command, S3Client } from '@aws-sdk/clien
 import { defaultProvider } from '@aws-sdk/credential-provider-node';
 import chalk from 'chalk';
 
+import { immutable } from '@nzyme/utils/immutable.js';
+
 import type { PulumiConfig } from '../PulumiConfig.js';
 
 /**
@@ -53,13 +55,13 @@ export interface RemoteStackInfo {
  * resolved but are dead. Kept generic on purpose — this package is a framework submodule and must
  * not know about any app's profile naming or environment conventions.
  */
-const CREDENTIAL_ERROR_NAMES = [
+const CREDENTIAL_ERROR_NAMES = immutable([
     'CredentialsProviderError',
     'TokenProviderError',
     'ExpiredToken',
     'ExpiredTokenException',
     'InvalidClientTokenId',
-];
+]);
 
 /**
  * Recognises the SDK error shapes that mean "credentials failed to resolve or authenticate", as

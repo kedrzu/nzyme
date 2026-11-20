@@ -3,6 +3,7 @@ import chalk from 'chalk';
 
 import { UsageError } from '@nzyme/cli-core';
 import type { GithubConfig } from '@nzyme/github-cli/GithubConfig.js';
+import { buildTaskPrTitle } from '@nzyme/github-cli/utils/buildTaskPrTitle.js';
 import { checkoutExistingBranch } from '@nzyme/github-cli/utils/checkoutExistingBranch.js';
 import { createBranchAndPr } from '@nzyme/github-cli/utils/createBranchAndPr.js';
 import type { GithubClient } from '@nzyme/github-cli/utils/createGithubClient.js';
@@ -11,6 +12,7 @@ import { findTaskPrs } from '@nzyme/github-cli/utils/findMatchingPr.js';
 import { applyStashedChanges, handleBranchSelection } from '@nzyme/github-cli/utils/handleBranchSelection.js';
 import type { BranchSelectionResult } from '@nzyme/github-cli/utils/handleBranchSelection.js';
 import { handleMergedPrReopen } from '@nzyme/github-cli/utils/handleMergedPrReopen.js';
+import { resolveFreshBranchName } from '@nzyme/github-cli/utils/resolveFreshBranchName.js';
 import { resolvePrSubmoduleBase } from '@nzyme/github-cli/utils/resolvePrSubmoduleBase.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
 import type { Logger } from '@nzyme/logging/Logger.js';
@@ -262,7 +264,7 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
             logger,
         });
 
-        const branchName =
+        const plainBranchName =
             issueData.branchName ||
             `${issueId.toLowerCase()}-${issueData.title
                 .toLowerCase()
@@ -270,9 +272,8 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
                 .replace(/-+/g, '-')
                 .slice(0, 50)}`;
 
-        const prTitle = projectName
-            ? `[${issueId}][${projectName}] ${issueData.title}`
-            : `[${issueId}] ${issueData.title}`;
+        const branchName = await resolveFreshBranchName({ branchName: plainBranchName });
+        const prTitle = buildTaskPrTitle({ issueId, issueTitle: issueData.title, projectName, branchName });
 
         logger.info(`🌿 Creating branch: ${chalk.cyan(branchName)}`);
 

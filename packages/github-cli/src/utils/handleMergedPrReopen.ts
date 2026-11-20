@@ -5,10 +5,12 @@ import { UsageError } from '@nzyme/cli-core';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
-import { determineNextVersion, extractBranchVersion } from './branchVersionHelpers.js';
+import { determineNextVersion } from './branchVersionHelpers.js';
+import { buildTaskPrTitle } from './buildTaskPrTitle.js';
 import { createBranchAndPr } from './createBranchAndPr.js';
 import type { GithubClient } from './createGithubClient.js';
 import { findAllMatchingPrs } from './findMatchingPr.js';
+import { listTaskBranches } from './listTaskBranches.js';
 
 /**
  * Parameters for handling merged PR reopen.
@@ -165,22 +167,17 @@ export async function handleMergedPrReopen(params: HandleMergedPrReopenParams): 
         await onReopenTask();
     }
 
-    // Determine the new branch name with incremented version
-    // Use all closed PR branches to determine the next version
-    const allClosedBranches = allClosedPrs.map(pr => pr.head.ref);
+    // Determine the new branch name with incremented version. Branches left in git count too: the
+    // PR list is a window of recent PRs, and a branch whose PR fell out of it (or whose worktree is
+    // still checked out) must not be handed out again.
     const latestBranchName = mostRecentClosedPr.head.ref;
-    const newBranchName = determineNextVersion(latestBranchName, allClosedBranches);
+    const gitBranches = await listTaskBranches({ branchName: latestBranchName });
+    const allClosedBranches = allClosedPrs.map(pr => pr.head.ref);
+    const newBranchName = determineNextVersion(latestBranchName, [...allClosedBranches, ...gitBranches]);
 
     logger.info(`🌿 Creating new versioned branch: ${chalk.cyan(newBranchName)}`);
 
-    // Extract version for PR title
-    const versionNumber = extractBranchVersion(newBranchName);
-    const versionSuffix = versionNumber > 1 ? ` (v${versionNumber})` : '';
-
-    // Create PR title with version number
-    const prTitle = projectName
-        ? `[${issueId}][${projectName}] ${issueTitle}${versionSuffix}`
-        : `[${issueId}] ${issueTitle}${versionSuffix}`;
+    const prTitle = buildTaskPrTitle({ issueId, issueTitle, projectName, branchName: newBranchName });
 
     // Create new branch and PR
     const result = await createBranchAndPr({

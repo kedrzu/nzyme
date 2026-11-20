@@ -3,6 +3,7 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
 import type { GoogleCommandParams } from './GoogleCommandParams.js';
+import { parseGoogleTokens } from './googleTokens.js';
 import { saveGoogleToken } from './saveGoogleToken.js';
 import { signInGoogle } from './signInGoogle.js';
 
@@ -34,6 +35,10 @@ export function defineGoogleAuthCommand(params: GoogleCommandParams): CommandCla
         override async run() {
             const auth = this.container.resolve(params.auth);
             const { endpoints } = auth;
+
+            // Refused up front what can be: the person should not sign in for a write that would fail.
+            auth.storage.assertWritable?.();
+            parseGoogleTokens(await auth.storage.read(), auth.secretName);
 
             const token = await signInGoogle({
                 credentials: await auth.clients.getClient(this.loginHint),

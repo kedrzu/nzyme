@@ -20,8 +20,7 @@ export type GoogleTokens = Map<string, GoogleTokenEntry>;
 /**
  * Parses the value of the token secret `secretName`. No value (or an empty one) holds no account.
  * Anything else that is not the dictionary throws a `UsageError` naming the secret, never quoting
- * the value: it holds refresh tokens.
- * @__NO_SIDE_EFFECTS__
+ * the value: it holds refresh tokens. Not side-effect free: sign-in calls it only for the throw.
  */
 export function parseGoogleTokens(value: string | undefined, secretName: string): GoogleTokens {
     const tokens: GoogleTokens = new Map();

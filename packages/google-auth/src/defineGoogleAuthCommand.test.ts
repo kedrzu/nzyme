@@ -54,7 +54,8 @@ test('auth writes the declared token secret through target and accounts reads it
 
     expect(auth.exitCode).toBe(0);
     expect(auth.stdout).toBe(`me@example.com signed in to GMAIL; its token is in ${KEY}.\n`);
-    expect(targeted).toEqual([KEY]);
+    // Asked once before the browser step and again for the write.
+    expect(targeted).toEqual([KEY, KEY]);
     expect(client.writes).toEqual([]);
     expect(tokens.writes.map(write => write.map(entry => entry.key))).toEqual([[KEY]]);
     expect(stored(tokens.writes)).toEqual({ 'me@example.com': { refreshToken: REFRESH_TOKEN, scopes: SCOPES } });
@@ -123,31 +124,59 @@ test('auth writes the token secret when the provider declares no secrets', async
     expect(Object.keys(stored(store.writes))).toEqual(['me@example.com']);
 });
 
-test.each<[string, Partial<RunGoogleCommandOptions>, Record<string, string>, string]>([
+test.each<[string, Partial<RunGoogleCommandOptions>, Record<string, string>, string, boolean]>([
     [
         'the account is not allowed',
         { accounts: ['*@work.com'] },
         {},
         'me@example.com is not in the accounts this project allows',
+        // The email is known only after the browser step.
+        true,
     ],
     [
         'the token secret is not declared',
         { secrets: [defineSecret('OTHER_SECRET')] },
         {},
         `Refusing to write ${KEY}: it is not declared with defineSecret.`,
+        false,
+    ],
+    [
+        'the token secret is not enabled here',
+        { secrets: [defineSecret(KEY, { enabled: () => false })] },
+        {},
+        `Refusing to write ${KEY}: it is not enabled in this environment.`,
+        false,
+    ],
+    [
+        'target refuses the key',
+        {
+            target: key => {
+                throw new UsageError(`${key} has no store in this repo`);
+            },
+        },
+        {},
+        `${KEY} has no store in this repo`,
+        false,
     ],
     [
         'the stored value is not a token dictionary',
         {},
         { [KEY]: 'garbage-value' },
         `${KEY} does not hold Google tokens`,
+        false,
     ],
-])('auth writes nothing when %s', async (_, options, data, message) => {
+])('auth writes nothing when %s', async (_, options, data, message, reachesBrowser) => {
+    const google = fake('me@example.com');
     const store = createMemoryStore({ id: 'only', data: { ...CLIENT_KEYS, ...data }, persist: true });
+    const consented: URL[] = [];
 
-    const result = await signIn(fake('me@example.com'), {
+    const result = await signIn(google, {
         args: ['gmail', 'auth', '--no-browser'],
         stores: [store.store],
+        browser: async url => {
+            consented.push(url);
+            await grantConsent(url);
+        },
         ...options,
     });
 
@@ -155,23 +184,8 @@ test.each<[string, Partial<RunGoogleCommandOptions>, Record<string, string>, str
     expect(result.errors).toContain(message);
     expect(result.errors).not.toContain('garbage-value');
     expect(store.writes).toEqual([]);
-    expectNoCredential(result);
-});
-
-test('auth writes nothing and reports target’s message when target refuses the key', async () => {
-    const store = createMemoryStore({ id: 'only', data: CLIENT_KEYS, persist: true });
-
-    const result = await signIn(fake('me@example.com'), {
-        args: ['gmail', 'auth', '--no-browser'],
-        stores: [store.store],
-        target: key => {
-            throw new UsageError(`${key} has no store in this repo`);
-        },
-    });
-
-    expect(result.exitCode).toBe(1);
-    expect(result.errors).toContain(`${KEY} has no store in this repo`);
-    expect(store.writes).toEqual([]);
+    expect(consented.length).toBe(reachesBrowser ? 1 : 0);
+    expect(google.grants).toEqual(reachesBrowser ? ['authorization_code'] : []);
     expectNoCredential(result);
 });
 

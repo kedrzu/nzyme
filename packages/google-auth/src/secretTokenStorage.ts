@@ -24,14 +24,17 @@ export interface SecretTokenStorageParams {
  */
 export function secretTokenStorage({ provider, secret, env }: SecretTokenStorageParams): GoogleTokenStorage {
     const { name } = secret;
-    return { read, write };
+    return { read, write, assertWritable };
 
     async function read() {
         return mergeStores(await readStores(provider.stores)).get(name);
     }
 
     async function write(value: string) {
-        const store = resolveSecretTarget({ provider, env, name });
-        await store.write([{ key: name, value }]);
+        await assertWritable().write([{ key: name, value }]);
+    }
+
+    function assertWritable() {
+        return resolveSecretTarget({ provider, env, name });
     }
 }

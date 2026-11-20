@@ -196,6 +196,9 @@ export interface GoogleCommandResult {
     errors: string;
 }
 
+/** The sign-in URL `auth` prints to stderr. */
+const SIGN_IN_URL = /https?:\/\/\S+\/auth\?\S+/;
+
 /** Thrown in place of a real `process.exit`; clipanion reports it to the command's stdout. */
 class ProcessExited extends Error {}
 
@@ -310,7 +313,7 @@ export async function runCommands(options: RunCommandsOptions): Promise<GoogleCo
 
     const stdout = collect();
     const stderr = collect();
-    const browsed = options.browser ? openPrintedUrl(stderr, options.browser) : Promise.resolve();
+    const browsed = options.browser ? openPrintedUrl(stderr, options.browser) : undefined;
     try {
         const code = await cli.run(options.args, {
             container,
@@ -318,7 +321,10 @@ export async function runCommands(options: RunCommandsOptions): Promise<GoogleCo
             stdout: stdout.stream,
             stderr: stderr.stream,
         });
-        await browsed;
+        // A command that failed before printing the sign-in URL never reaches the browser.
+        if (SIGN_IN_URL.test(stderr.text())) {
+            await browsed;
+        }
 
         const exited = exitCodes[0];
         return {
@@ -338,7 +344,7 @@ export async function runCommands(options: RunCommandsOptions): Promise<GoogleCo
 async function openPrintedUrl(stderr: ReturnType<typeof collect>, browser: (url: URL) => Promise<void>) {
     const printed = await new Promise<string>(resolve => {
         stderr.stream.on('data', () => {
-            const match = /https?:\/\/\S+\/auth\?\S+/.exec(stderr.text());
+            const match = SIGN_IN_URL.exec(stderr.text());
             if (match) {
                 resolve(match[0]);
             }

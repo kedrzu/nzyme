@@ -1,3 +1,18 @@
+## 0.17.1 (2026-11-20)
+
+### 🚀 Features
+
+- Gmail and Google Drive CLIs for agents ([#318](https://github.com/kedrzu/nzyme/pull/318))
+- **secrets:** add loadSecretsConfig and resolveOptionalSecret ([#322](https://github.com/kedrzu/nzyme/pull/322))
+
+### 🩹 Fixes
+
+- **config:** load the config document without a log line ([#320](https://github.com/kedrzu/nzyme/pull/320))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.17.0 (2026-11-20)
 
 ### 🚀 Features

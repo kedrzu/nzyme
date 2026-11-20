@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/aws",
-    "version": "0.17.0",
+    "version": "0.17.1",
     "description": "AWS SDK helpers",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

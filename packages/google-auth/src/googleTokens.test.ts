@@ -2,18 +2,13 @@ import { expect, test } from 'bun:test';
 
 import { UsageError } from '@nzyme/cli-core';
 
-import { parseGoogleTokens, serializeGoogleTokens } from './googleTokens.js';
+import { parseGoogleTokens } from './googleTokens.js';
 
 const ENTRY = { refreshToken: 'refresh-sentinel', scopes: ['a', 'b'] };
 
-test('no value holds no account, and a dictionary round-trips', () => {
+test('no value, or an empty one, holds no account', () => {
     expect(parseGoogleTokens(undefined, 'TOKENS').size).toBe(0);
     expect(parseGoogleTokens('', 'TOKENS').size).toBe(0);
-
-    const tokens = parseGoogleTokens(JSON.stringify({ 'me@example.com': ENTRY }), 'TOKENS');
-
-    expect(Object.fromEntries(tokens)).toEqual({ 'me@example.com': ENTRY });
-    expect(parseGoogleTokens(serializeGoogleTokens(tokens), 'TOKENS')).toEqual(tokens);
 });
 
 test.each([

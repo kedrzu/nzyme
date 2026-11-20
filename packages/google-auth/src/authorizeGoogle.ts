@@ -4,6 +4,7 @@ import { UsageError } from '@nzyme/cli-core';
 
 import type { GoogleClientCredentials } from './GoogleClientProvider.js';
 import { createOAuthClient } from './utils/createOAuthClient.js';
+import { errorMessage } from './utils/errorMessage.js';
 
 /** Params of {@link authorizeGoogle}. */
 export interface AuthorizeGoogleParams {
@@ -30,7 +31,7 @@ export async function authorizeGoogle(params: AuthorizeGoogleParams): Promise<OA
     await auth.getAccessToken().catch((error: unknown) => {
         // Only the message is kept, never the cause: the HTTP client's error carries the request, the
         // refresh token in its body among it.
-        const message = error instanceof Error ? error.message : String(error);
+        const message = errorMessage(error);
         if (message.includes('invalid_grant')) {
             throw new UsageError(
                 `Google rejected the refresh token of ${email} (revoked or expired). ` +

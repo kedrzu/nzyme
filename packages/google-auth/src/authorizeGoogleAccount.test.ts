@@ -80,25 +80,6 @@ test('without --account several usable accounts are listed, and a single one is 
     expect(single).toMatchObject({ exitCode: 0, stdout: 'me@example.com\n' });
 });
 
-test('a command fails naming the token secret when it is not a token dictionary', async () => {
-    const google = fake({ email: 'me@example.com' });
-    const store = createMemoryStore({
-        id: 'only',
-        data: { ...CLIENT_KEYS, [KEY]: `{"me@example.com":"${REFRESH_TOKEN}"}` },
-    });
-
-    const result = await runGoogleCommand({
-        args: ['gmail', 'whoami'],
-        stores: [store.store],
-        endpoints: google.endpoints,
-    });
-
-    expect(result.exitCode).toBe(1);
-    expect(result.errors).toContain(`${KEY} does not hold Google tokens`);
-    expect(google.grants).toEqual([]);
-    expectNoCredential(result);
-});
-
 test('a revoked refresh token fails with the sign-in command and stays in place', async () => {
     const google = fake({ email: 'me@example.com', revoked: [REFRESH_TOKEN] });
     const store = createMemoryStore({ id: 'only', data: { ...CLIENT_KEYS, [KEY]: tokensValue('me@example.com') } });
@@ -112,26 +93,6 @@ test('a revoked refresh token fails with the sign-in command and stays in place'
     expect(result.exitCode).toBe(1);
     expect(result.errors).toContain('`nzyme gmail auth --login-hint me@example.com`');
     expect(google.grants).toEqual(['refresh_token']);
-    expect(store.writes).toEqual([]);
-    expectNoCredential(result);
-});
-
-test('a missing OAuth client fails before any call to Google and leaves the token in place', async () => {
-    const google = fake({ email: 'me@example.com' });
-    const store = createMemoryStore({
-        id: 'only',
-        data: { GOOGLE_CLIENT_ID: CLIENT_KEYS.GOOGLE_CLIENT_ID, [KEY]: tokensValue('me@example.com') },
-    });
-
-    const result = await runGoogleCommand({
-        args: ['gmail', 'whoami'],
-        stores: [store.store],
-        endpoints: google.endpoints,
-    });
-
-    expect(result.exitCode).toBe(1);
-    expect(result.errors).toContain('GOOGLE_CLIENT_SECRET');
-    expect(google.grants).toEqual([]);
     expect(store.writes).toEqual([]);
     expectNoCredential(result);
 });

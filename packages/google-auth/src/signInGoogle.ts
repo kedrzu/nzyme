@@ -7,6 +7,7 @@ import type { GoogleClientCredentials } from './GoogleClientProvider.js';
 import type { GoogleToken } from './googleTokens.js';
 import type { GoogleService } from './GoogleService.js';
 import { createOAuthClient } from './utils/createOAuthClient.js';
+import { errorMessage } from './utils/errorMessage.js';
 
 const TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -170,9 +171,4 @@ function page({ status, title, body }: PageParams) {
         `<body style="font-family:system-ui;max-width:32rem;margin:4rem auto"><h1>${title}</h1><p>${body}</p></body>`;
     // `connection: close`, so the browser keeps no connection that would hold the server's graceful stop.
     return new Response(html, { status, headers: { 'content-type': 'text/html', connection: 'close' } });
-}
-
-/** Only the message: an HTTP client's error object carries the request, credentials included. */
-function errorMessage(error: unknown) {
-    return error instanceof Error ? error.message : String(error);
 }

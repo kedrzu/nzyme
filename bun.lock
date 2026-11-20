@@ -508,6 +508,7 @@
       "name": "@nzyme/outline",
       "version": "0.0.0",
       "dependencies": {
+        "@nzyme/cli-core": "workspace:*",
         "@nzyme/secrets": "workspace:*",
         "@nzyme/utils": "workspace:*",
         "yaml": "^2.9.1",
@@ -517,6 +518,7 @@
         "@types/bun": "^1.4.3",
         "@types/node": "26.6.6",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+        "clipanion": "^4.0.0-rc.4",
         "oxfmt": "0.77.0",
       },
     },

@@ -5,7 +5,8 @@ A typed client for the [Outline](https://www.getoutline.com) API, and `fakeOutli
 ## Client
 
 ```ts
-import { OutlineClient } from '@nzyme/outline/OutlineClient.js';
+import { OutlineClient } from '@nzyme/outline/outline/OutlineClient.js';
+import { listAll } from '@nzyme/outline/outline/listAll.js';
 
 const outline = new OutlineClient({
     url: 'https://app.getoutline.com',
@@ -25,8 +26,8 @@ const documents = await listAll(page => outline.documents.list({ ...page }));
 ## Login and tokens
 
 ```ts
-import { login } from '@nzyme/outline/oauth.js';
-import { createTokenProvider, outlineTokenStore } from '@nzyme/outline/tokens.js';
+import { login } from '@nzyme/outline/auth/oauth.js';
+import { createTokenProvider, outlineTokenStore } from '@nzyme/outline/auth/tokens.js';
 
 const store = outlineTokenStore({ url });
 await login({ url, clientId, store, lockPath });
@@ -42,10 +43,32 @@ const outline = new OutlineClient({
 - `createTokenProvider` returns a token with more than 5 minutes left as is, and otherwise refreshes it under the sync lock (`{ kind: 'held' }` when the caller already holds it): the refresh token is read once the lock is held, and the rotated tokens are stored before the new access token is returned.
 - A failed refresh is not retried by any process for a minute. No tokens, or a refresh token Outline refuses, throws `LoginRequiredError`.
 
+## Commands and hooks
+
+```ts
+import { defineOutlineCommands } from '@nzyme/outline/commands/defineOutlineCommands.js';
+
+await execute({
+    name: 'cli',
+    commands: defineOutlineCommands({
+        url: 'https://app.getoutline.com',
+        clientId,
+        privateCollection: user => `${user.name} (private)`,
+        commandHint: 'bun cli outline',
+        userLanguage: 'Polish',
+    }),
+});
+```
+
+- `outline login`, `outline pull` (a full pull that finishes the first download), `outline sync` (pull, push, sharing) and `outline hook <session-start|prompt|stop|session-end>` for Claude Code hooks.
+- The documents (`documents/`, `recovered/`) live in the repo's main checkout and the state in `<git-common-dir>/outline-sync/`, so every worktree shares one sync.
+- Only session start and prompt pull (a prompt at most once a minute, a full pass every 15 minutes); stop and session end push. Both skip quietly while another session syncs.
+- `hook` always exits 0. It prints `additionalContext` for the agent, or a Stop block once for a conflict its push created; a missing login or an unreachable Outline is told once per session, other failures go to `hook.log` in the state directory.
+
 ## fakeOutline
 
 ```ts
-import { fakeOutline } from '@nzyme/outline/fakeOutline.js';
+import { fakeOutline } from '@nzyme/outline/outline/fakeOutline.js';
 
 const outline = fakeOutline();
 const ana = outline.addUser({ name: 'Ana' });

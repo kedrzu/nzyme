@@ -32,8 +32,11 @@ export interface PushOptions {
     /** The state loaded under the sync lock; left untouched, the new one is `PushReport.state` (already saved). */
     state: SyncState;
     documentsDir: string;
-    /** The user's own private collection: a file placed at the root of the documents folder is created in it. */
-    privateCollectionId: string;
+    /**
+     * The user's own private collection: a file placed at the root of the documents folder is created in it.
+     * `null` when it was not found: such a file is skipped, and nothing is created.
+     */
+    privateCollectionId: string | null;
     /** Epoch milliseconds; no document is started after it. */
     deadline: number;
     /** Posts an attachment to its presigned storage URL. Called without the Outline token. Defaults to `fetch`. */
@@ -732,7 +735,9 @@ export async function push(options: PushOptions): Promise<PushReport> {
         const segments = path.split('/');
         const [top = ''] = segments;
         if (segments.length === 1) {
-            return { kind: 'collection', collectionId: privateCollectionId, parentId: null };
+            return privateCollectionId == null
+                ? { kind: 'refused', reason: 'Your private Outline collection was not found.' }
+                : { kind: 'collection', collectionId: privateCollectionId, parentId: null };
         }
         if (top === DRAFTS_FOLDER) {
             return segments.length === 2

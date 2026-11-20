@@ -20,12 +20,12 @@ export interface MergeDocumentResult {
     conflict: boolean;
 }
 
-const OURS_LABEL = 'lokalnie';
-const BASE_LABEL = 'wspólna';
+const OURS_LABEL = 'local';
+const BASE_LABEL = 'base';
 
 /**
  * A 3-way merge of a document by `git merge-file`: changes to different paragraphs combine, changes to the same
- * one leave conflict markers (`<<<<<<< lokalnie` … `>>>>>>> Outline (<name>)`) for the agent to resolve.
+ * one leave conflict markers (`<<<<<<< local` … `>>>>>>> Outline (<name>)`) for the agent to resolve.
  */
 export async function mergeDocument(params: MergeDocumentParams): Promise<MergeDocumentResult> {
     const dir = await mkdtemp(join(tmpdir(), 'outline-merge-'));

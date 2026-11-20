@@ -66,8 +66,8 @@ test('a file with conflict markers is never sent; once resolved it is merged wit
     const bobs = await world.edit(offer, TEXT.replace('Second paragraph.', 'Second, from Bob.'));
     await world.pull();
     const withMarkers = await world.read('wiki/offer.md');
-    expect(withMarkers).toContain('<<<<<<< lokalnie');
-    await world.write('wiki/new.md', '# New\n\n<<<<<<< lokalnie\na\n=======\nb\n>>>>>>> Outline (Bob)\n');
+    expect(withMarkers).toContain('<<<<<<< local');
+    await world.write('wiki/new.md', '# New\n\n<<<<<<< local\na\n=======\nb\n>>>>>>> Outline (Bob)\n');
 
     const report = await world.push();
 
@@ -80,7 +80,7 @@ test('a file with conflict markers is never sent; once resolved it is merged wit
     await world.edit(offer, bobs.text.replace('Third paragraph.', 'Third, later in Outline.'));
     await world.write(
         'wiki/offer.md',
-        withMarkers.replace(/<<<<<<< lokalnie\n[\s\S]*?>>>>>>> Outline \(Bob\)/, 'Second, resolved.'),
+        withMarkers.replace(/<<<<<<< local\n[\s\S]*?>>>>>>> Outline \(Bob\)/, 'Second, resolved.'),
     );
     await rm(join(world.documentsDir, 'wiki/new.md'));
     const resolved = await world.push();
@@ -128,7 +128,7 @@ test('a 409 on the same paragraph leaves markers locally and Outline’s version
     expect(report.conflicts).toEqual(['wiki/offer.md']);
     expect(world.outline.getDocument(offer.id)?.text).toBe(bobs.text);
     expect(await world.read('wiki/offer.md')).toContain(
-        '<<<<<<< lokalnie\nSecond, local.\n=======\nSecond, from Bob.\n>>>>>>> Outline (Bob)',
+        '<<<<<<< local\nSecond, local.\n=======\nSecond, from Bob.\n>>>>>>> Outline (Bob)',
     );
     expect((await world.store.load()).documents[offer.id]?.conflictRevision).toBe(bobs.revision);
 });

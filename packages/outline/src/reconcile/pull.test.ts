@@ -130,9 +130,7 @@ test('a conflict keeps both versions, survives later Outline edits, and once res
     const report = await world.pull('incremental');
 
     const withMarkers = await world.read('wiki/offer.md');
-    expect(withMarkers).toContain(
-        '<<<<<<< lokalnie\nSecond, local.\n=======\nSecond, from Bob.\n>>>>>>> Outline (Bob)',
-    );
+    expect(withMarkers).toContain('<<<<<<< local\nSecond, local.\n=======\nSecond, from Bob.\n>>>>>>> Outline (Bob)');
     expect(report.conflicts).toEqual(['wiki/offer.md']);
     const state = (await world.store.load()).documents[offer.id];
     expect(state?.conflictRevision).toBe(conflicted.revision);
@@ -146,7 +144,7 @@ test('a conflict keeps both versions, survives later Outline edits, and once res
     // The agent resolves the markers; the next merge must not re-conflict and must not drop Bob's later edit.
     await world.write(
         'wiki/offer.md',
-        withMarkers.replace(/<<<<<<< lokalnie\n[\s\S]*?>>>>>>> Outline \(Bob\)/, 'Second, resolved.'),
+        withMarkers.replace(/<<<<<<< local\n[\s\S]*?>>>>>>> Outline \(Bob\)/, 'Second, resolved.'),
     );
     const resolved = await world.pull('incremental');
 

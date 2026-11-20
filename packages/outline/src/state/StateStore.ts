@@ -63,6 +63,8 @@ export interface SyncState {
     /** ISO time of the incremental pull's position. */
     cursor: string | null;
     lastFullPass: string | null;
+    /** ISO time the hook last pulled (or tried to); the prompt hook pulls at most once a minute. */
+    lastPullAt?: string;
     initialPull: InitialPull;
     /** Collection id to its folder name. */
     collections: Record<string, string>;
@@ -166,6 +168,7 @@ function isSyncState(value: unknown): value is SyncState {
         value.events.every(isSyncEvent) &&
         isStringOrNull(value.cursor) &&
         isStringOrNull(value.lastFullPass) &&
+        (value.lastPullAt === undefined || typeof value.lastPullAt === 'string') &&
         isRecord(value.initialPull) &&
         typeof value.initialPull.complete === 'boolean' &&
         isStringOrNull(value.initialPull.position) &&

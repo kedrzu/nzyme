@@ -138,6 +138,9 @@ const TYPE_WRAPPERS: ReadonlySet<string> = new Set([
     'TSSatisfiesExpression',
 ]);
 
+/** Everything `TYPE_WRAPPERS` holds plus the two type assertions, which also change an operand's mutability. */
+const ASSERTION_WRAPPERS: ReadonlySet<string> = new Set([...TYPE_WRAPPERS, 'TSAsExpression', 'TSTypeAssertion']);
+
 /** A specifier is resolved as written first, then as a workspace package's source. */
 function resolveSourceSpecifier(fromFile: string, specifier: string): string | undefined {
     return resolveImportSpecifier(fromFile, specifier) ?? resolvePackageSpecifier(fromFile, specifier);
@@ -526,20 +529,17 @@ export const noModuleState: Immutable<OxlintRule> = {
             }
 
             const node: OxlintAnyNode = iterable;
+            if (ASSERTION_WRAPPERS.has(node.type)) {
+                // The value's declared type, not an assertion on its iterable, decides what its items are.
+                checkItems({ ...params, iterable: unwrapAssertions(node) });
+                return;
+            }
+
             switch (node.type) {
                 case 'Identifier':
                 case 'MemberExpression':
                 case 'Literal':
                 case 'TemplateLiteral':
-                    return;
-                case 'ParenthesizedExpression':
-                case 'TSAsExpression':
-                case 'TSInstantiationExpression':
-                case 'TSNonNullExpression':
-                case 'TSSatisfiesExpression':
-                case 'TSTypeAssertion':
-                    // The value's declared type, not an assertion on its iterable, decides what its items are.
-                    checkItems({ ...params, iterable: unwrapAssertions(node) });
                     return;
                 case 'ArrayExpression':
                     for (const element of node.elements ?? []) {
@@ -899,9 +899,9 @@ function returnedExpression(mapper: OxlintNode): OxlintNode | undefined {
 /** The expression under any type assertions and other wrappers that only speak to the type checker. */
 function unwrapAssertions(node: OxlintNode): OxlintNode {
     const wrapper: OxlintAnyNode = node;
-    const isWrapper =
-        TYPE_WRAPPERS.has(wrapper.type) || wrapper.type === 'TSAsExpression' || wrapper.type === 'TSTypeAssertion';
-    return isWrapper && wrapper.expression != null ? unwrapAssertions(wrapper.expression) : node;
+    return ASSERTION_WRAPPERS.has(wrapper.type) && wrapper.expression != null
+        ? unwrapAssertions(wrapper.expression)
+        : node;
 }
 
 function itemRoleOf(collection: string): ItemRole {

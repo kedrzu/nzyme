@@ -1,3 +1,24 @@
+## 0.17.0 (2026-11-20)
+
+### 🚀 Features
+
+- **aws:** let a parameter store write its SecureStrings with a chosen KMS key ([#307](https://github.com/kedrzu/nzyme/pull/307))
+- **secrets:** add a keychain secret store ([#312](https://github.com/kedrzu/nzyme/pull/312))
+- ⚠️  **secrets:** declare secrets with defineSecret and register commands in a product CLI ([#314](https://github.com/kedrzu/nzyme/pull/314))
+
+### 🩹 Fixes
+
+- **cli-core:** report usage errors on stderr and print the given version ([#317](https://github.com/kedrzu/nzyme/pull/317))
+
+### ⚠️  Breaking Changes
+
+- **secrets:** declare secrets with defineSecret and register commands in a product CLI  ([#314](https://github.com/kedrzu/nzyme/pull/314))
+  the `nzyme` binary no longer loads modules listed under `nzyme.plugins`, `NzymePlugin` is removed from `@nzyme/cli-core`, and `@nzyme/pen/plugin.js` is gone. Define a product CLI on `@nzyme/cli-core` `execute` and register `definePenCommands()` and `defineSecretsCommands({ provider })` there.
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.16.0 (2026-11-18)
 
 ### 🚀 Features

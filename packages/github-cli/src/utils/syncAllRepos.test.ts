@@ -871,3 +871,84 @@ test('a failed bun.lock regenerate stops the sync by name, and the next sync ref
     await main.fetch('origin');
     expect(await main.show(['origin/abc-4-task:bun.lock'])).toBe(LOCK_AFTER);
 });
+
+// Every task PR carries its own regenerated lock now, so another PR landing a newer submodule pin
+// rewrites the same lines of `bun.lock` on the base: the next sync's base merge used to stop on that
+// conflict and hand it over, after the pre-merge lock commit had already been pushed.
+test('a base that landed another submodule pin with its own lock is merged in with a regenerated bun.lock', async () => {
+    const { mainPath, submodulePath } = await setupMovedSubmodule(root, []);
+    await commitLockfile(mainPath);
+    const main = simpleGit({ baseDir: mainPath });
+    await main.checkoutLocalBranch('abc-4-task');
+    await main.push(['-u', 'origin', 'abc-4-task']);
+    const { calls, runCommand } = createPinLockRunner();
+    const { logger } = createTestLogger('syncAllRepos');
+    process.chdir(mainPath);
+    const sync = () =>
+        syncAllRepos({
+            branch: 'abc-4-task',
+            baseBranch: 'main',
+            submoduleBase: FOLLOW_MAIN,
+            unattended: true,
+            githubClient: NO_UPPER_NODES_CLIENT,
+            githubConfig: GITHUB_CONFIG,
+            logger,
+            runCommand,
+        });
+
+    await sync();
+
+    // Another PR lands a newer submodule pin with the lock regenerated for it, and the submodule's
+    // trunk moves on past that pin.
+    const seed = simpleGit({ baseDir: join(root, 'sub-seed') });
+    await seed.checkout('main');
+    await seed.pull('origin', 'main');
+    await seed.commit('sub c2 on main', [], { '--allow-empty': null });
+    const basePin = (await seed.revparse(['HEAD'])).trim();
+    await seed.commit('sub c3 on main', [], { '--allow-empty': null });
+    const subMainTip = (await seed.revparse(['HEAD'])).trim();
+    await seed.push(['origin', 'main']);
+    const other = join(root, 'other');
+    await simpleGit().clone(join(root, 'origin-main.git'), other);
+    const otherGit = simpleGit({ baseDir: other, config: ['user.email=t@t', 'user.name=t', 'commit.gpgsign=false'] });
+    await otherGit.raw(['update-index', '--cacheinfo', `160000,${basePin},nzyme`]);
+    writeFileSync(join(other, 'bun.lock'), lockFor(basePin));
+    await otherGit.add(['bun.lock']);
+    await otherGit.commit('land another submodule pin');
+    await otherGit.push(['origin', 'main']);
+
+    await sync();
+
+    await main.fetch('origin');
+    const head = 'origin/abc-4-task';
+    expect((await main.raw(['rev-parse', `${head}:nzyme`])).trim()).toBe(subMainTip);
+    expect(await main.show([`${head}:bun.lock`])).toBe(lockFor(subMainTip));
+    expect((await main.raw(['merge-base', 'origin/main', head])).trim()).toBe(
+        (await main.revparse(['origin/main'])).trim(),
+    );
+    expect((await main.status()).conflicted).toEqual([]);
+    expect(calls.length).toBeGreaterThanOrEqual(3);
+    expect((await simpleGit({ baseDir: submodulePath }).revparse(['HEAD'])).trim()).toBe(subMainTip);
+});
+
+/**
+ * The `bun.lock` an install would produce for the submodule checked out at `commit`.
+ */
+function lockFor(commit: string): string {
+    return `{ "lockfileVersion": 1, "nzyme": "${commit}" }\n`;
+}
+
+/**
+ * A command runner standing in for `bun install --lockfile-only` that writes {@link lockFor} the
+ * submodule's checked-out commit, so a lock regenerated for one pin differs from another pin's.
+ */
+function createPinLockRunner() {
+    const calls: { command: readonly string[]; cwd: string }[] = [];
+    const runCommand: CommandRunner = async (command, cwd) => {
+        calls.push({ command, cwd });
+        const commit = (await simpleGit({ baseDir: join(cwd, 'nzyme') }).revparse(['HEAD'])).trim();
+        writeFileSync(join(cwd, 'bun.lock'), lockFor(commit));
+    };
+
+    return { calls, runCommand };
+}

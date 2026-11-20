@@ -28,7 +28,7 @@ import { handleMergeConflict } from './handleMergeConflict.js';
 import { pushSubmoduleUpdates } from './pushSubmoduleUpdates.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
 import type { CommandRunner } from './refreshLockfile.js';
-import { execCommand, readGitlinks, refreshLockfile } from './refreshLockfile.js';
+import { concludeLockfileConflict, execCommand, refreshLockfile } from './refreshLockfile.js';
 import type { RefreshedSubmodulePr } from './refreshSubmoduleChain.js';
 import { refreshSubmoduleChain } from './refreshSubmoduleChain.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
@@ -167,7 +167,8 @@ export interface SyncAllReposResult {
  * 6. Refresh each task-branch submodule's chain of pull requests against the trunk + push
  * 7. Commit & push all submodule reference updates (from rebase, pull, or merge), then — when the
  *    gitlinks differ from the trunk's and the main repository has a `bun.lock` — the regenerated lock
- * 8. Merge base branch into main task branch + push
+ * 8. Merge base branch into main task branch + push, regenerating the lock after the merge too — a
+ *    conflict in `bun.lock` alone is concluded with a regenerated one
  */
 export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllReposResult> {
     const {
@@ -218,12 +219,9 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
               },
           };
 
-    // What HEAD pins before anything below commits a gitlink — Phase 2's auto-commit or Phase 7's
-    // "Submodule update". The lock refresh after Phase 7 compares with the trunk's gitlinks, and
-    // with these only when the main repository has no `origin/<trunk>`.
+    // The lock follows the gitlinks only while they follow the trunk: pinned, nothing here moves one.
     const submodulePaths = submoduleInfos.map(submodule => submodule.path);
-    const gitlinksAtStart =
-        followsTrunk && submodulePaths.length > 0 ? await readGitlinks(mainGit, submodulePaths) : null;
+    const lockfileFollowsGitlinks = followsTrunk && submodulePaths.length > 0;
 
     // === Phase 2: Commit pending changes ===
     logger.info('');
@@ -381,17 +379,7 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
             await pushSubmoduleUpdates({ logger, beforePush: mainGuard.beforePush });
         }
 
-        if (gitlinksAtStart != null) {
-            await refreshLockfile({
-                git: mainGit,
-                trunk: submoduleBase.trunk,
-                gitlinksAtStart,
-                submodulePaths,
-                guard: mainGuard,
-                runCommand,
-                logger,
-            });
-        }
+        await refreshLock();
     };
 
     // === Phase 6: Refresh task-branch submodules' chains + push ===
@@ -440,13 +428,14 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     logger.info('');
     logger.info(chalk.bold('🔀 Merging base branch into main repository...'));
 
-    const { wasAhead, commitsAhead, merged } = await mergeBaseIntoCurrent(
-        mainGit,
+    const { wasAhead, commitsAhead, merged } = await mergeBaseIntoCurrent({
+        git: mainGit,
         baseBranch,
         logger,
-        'main repository',
-        mainGuard,
-    );
+        repoDisplayName: 'main repository',
+        guard: mainGuard,
+        lockfile: lockfileFollowsGitlinks ? { runCommand, refresh: refreshLock } : null,
+    });
 
     return {
         submodules: syncedSubmodules,
@@ -455,6 +444,19 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
         baseMergePerformed: merged,
         baseBranchCommitsAhead: commitsAhead,
     };
+
+    async function refreshLock() {
+        if (lockfileFollowsGitlinks) {
+            await refreshLockfile({
+                git: mainGit,
+                trunk: submoduleBase.trunk,
+                submodulePaths,
+                guard: mainGuard,
+                runCommand,
+                logger,
+            });
+        }
+    }
 }
 
 /**
@@ -899,16 +901,66 @@ async function fastForwardBranch(
 }
 
 /**
+ * How {@link mergeBaseIntoCurrent} keeps `bun.lock` in line with the merged gitlinks.
+ */
+interface MergeLockfile {
+    /**
+     * Runs the regenerate command when only `bun.lock` conflicts — see `concludeLockfileConflict`.
+     */
+    runCommand: CommandRunner;
+
+    /**
+     * Regenerates, commits and pushes the lock after the merge — see `refreshLockfile`.
+     */
+    refresh: () => Promise<void>;
+}
+
+/**
+ * Parameters for {@link mergeBaseIntoCurrent}.
+ */
+interface MergeBaseIntoCurrentParams {
+    /**
+     * Git instance of the repository merged into.
+     */
+    git: SimpleGit;
+
+    /**
+     * The branch whose remote-tracking ref is merged.
+     */
+    baseBranch: string;
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+
+    /**
+     * Display name of the repository.
+     */
+    repoDisplayName: string;
+
+    /**
+     * The branch guard, run before the merge and the push.
+     */
+    guard: BranchGuard;
+
+    /**
+     * Set when the lock follows the gitlinks: the base carries its own regenerated lock, so the merged
+     * one is regenerated before the push, and a conflict in it alone is concluded rather than handed
+     * over. `null` leaves `bun.lock` to the plain merge.
+     */
+    lockfile: MergeLockfile | null;
+}
+
+/**
  * Check if base branch is ahead, merge it into current branch, and push.
  */
 async function mergeBaseIntoCurrent(
-    git: SimpleGit,
-    baseBranch: string,
-    logger: Logger,
-    repoDisplayName: string,
-    guard?: BranchGuard,
+    params: MergeBaseIntoCurrentParams,
 ): Promise<{ wasAhead: boolean; commitsAhead: number; merged: boolean }> {
-    await guard?.beforeWrite();
+    const { git, baseBranch, logger, repoDisplayName, guard, lockfile } = params;
+
+    await guard.beforeWrite();
 
     const status = await git.status();
     const currentBranch = status.current;
@@ -939,13 +991,21 @@ async function mergeBaseIntoCurrent(
     try {
         await git.merge([remoteBaseBranch]);
     } catch (error) {
-        await handleMergeConflict({ git, repoDisplayName, operation: 'merge', logger }, error);
+        const concluded =
+            lockfile != null &&
+            (await concludeLockfileConflict({ git, guard, runCommand: lockfile.runCommand, logger }));
+        if (!concluded) {
+            await handleMergeConflict({ git, repoDisplayName, operation: 'merge', logger }, error);
+        }
     }
 
     await assertNoConflicts({ git, repoDisplayName, operation: 'merge', logger });
     logger.info(`   ${chalk.green('✓')} Merged ${chalk.cyan(baseBranch)} into ${repoDisplayName}`);
 
-    await guard?.beforePush();
+    // A text merge that went through can still leave a lock no install produced.
+    await lockfile?.refresh();
+
+    await guard.beforePush();
     await pushWithUpstream(git);
     logger.info(`   ${chalk.green('✓')} Pushed ${repoDisplayName}`);
 

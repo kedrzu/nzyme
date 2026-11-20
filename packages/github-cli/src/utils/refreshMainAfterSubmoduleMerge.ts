@@ -9,10 +9,13 @@ import { findUpperNodeHeads } from './assertPushLeavesUpperNodesOpen.js';
 import type { BranchGuard } from './createBranchGuard.js';
 import { createBranchGuard } from './createBranchGuard.js';
 import type { GithubClient } from './createGithubClient.js';
+import { getSubmoduleInfo } from './getSubmoduleInfo.js';
 import { handleMergeConflict } from './handleMergeConflict.js';
 import { parkSubmoduleOnBase } from './parkSubmoduleOnBase.js';
 import { pushSubmoduleUpdates } from './pushSubmoduleUpdates.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
+import type { CommandRunner } from './refreshLockfile.js';
+import { concludeLockfileConflict, execCommand, refreshLockfile } from './refreshLockfile.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 
 /**
@@ -62,6 +65,12 @@ export interface RefreshMainAfterSubmoduleMergeParams {
      * Logger instance.
      */
     logger: Logger;
+
+    /**
+     * Runs the command that regenerates the main repository's `bun.lock` — see `refreshLockfile`.
+     * @default execCommand from `refreshLockfile`
+     */
+    runCommand?: CommandRunner;
 }
 
 /**
@@ -71,7 +80,8 @@ export interface RefreshMainAfterSubmoduleMergeParams {
  *    on the main PR). Runs even when there are no submodules.
  * 2. Park each merged submodule on its merged trunk tip (the squash commit).
  * 3. Commit and push the resulting submodule gitlink updates (and any base-merge commit) so the main
- *    PR's head reflects the merged submodule references.
+ *    PR's head reflects the merged submodule references, then the `bun.lock` regenerated for them —
+ *    see `refreshLockfile`. A step 1 conflict in `bun.lock` alone is concluded with a regenerated one.
  *
  * Steps 2 and 3 run only while the submodules follow the trunk; a branch that keeps its pin gets
  * step 1 alone, plus the push of its base-merge commit.
@@ -83,8 +93,16 @@ export interface RefreshMainAfterSubmoduleMergeParams {
  * be gated on (see {@link waitForRequiredChecks}'s `expectedHeadSha`).
  */
 export async function refreshMainAfterSubmoduleMerge(params: RefreshMainAfterSubmoduleMergeParams): Promise<string> {
-    const { taskBranch, refreshedSubmodulePaths, baseBranch, submoduleBase, githubClient, githubConfig, logger } =
-        params;
+    const {
+        taskBranch,
+        refreshedSubmodulePaths,
+        baseBranch,
+        submoduleBase,
+        githubClient,
+        githubConfig,
+        logger,
+        runCommand = execCommand,
+    } = params;
 
     // Disable submodule recursion for main-repo history ops (mirrors syncAllRepos) so git does not try
     // to auto-fetch submodule gitlink commits by SHA during the base merge.
@@ -103,13 +121,21 @@ export async function refreshMainAfterSubmoduleMerge(params: RefreshMainAfterSub
     logger.info('');
     logger.info(chalk.bold('🔄 Refreshing main repository before merge...'));
 
-    const merged = await mergeBaseIntoMainIfBehind({ baseBranch, taskBranch, guard, logger, mainGit });
+    const followsTrunk = submoduleBase.kind === 'trunk';
+    const merged = await mergeBaseIntoMainIfBehind({
+        baseBranch,
+        taskBranch,
+        guard,
+        logger,
+        mainGit,
+        runCommand: followsTrunk ? runCommand : null,
+    });
 
     let gitlinksPushed = false;
 
     // Pinned submodules skip steps 2 and 3: nothing was merged into them, and a gitlink that differs
     // from HEAD here was moved by someone else — committing it would re-point the pin.
-    if (submoduleBase.kind === 'trunk') {
+    if (followsTrunk) {
         // === Step 2: park each merged submodule on its merged trunk tip ===
         for (const path of refreshedSubmodulePaths) {
             const subGit = simpleGit({ baseDir: path });
@@ -129,6 +155,16 @@ export async function refreshMainAfterSubmoduleMerge(params: RefreshMainAfterSub
             beforePush: guard.beforePush,
         });
         gitlinksPushed = pushResult.pushed;
+
+        await refreshLockfile({
+            git: mainGit,
+            trunk: submoduleBase.trunk,
+            // Every submodule, not only the merged ones: a branch carries the bumps its syncs made too.
+            submodulePaths: (await getSubmoduleInfo()).map(submodule => submodule.path),
+            guard,
+            runCommand,
+            logger,
+        });
     }
 
     // The base-merge commit from step 1 must reach the remote even when no gitlink changed.
@@ -170,6 +206,12 @@ interface MergeBaseIntoMainIfBehindParams {
      * Git instance of the main repository.
      */
     mainGit: ReturnType<typeof simpleGit>;
+
+    /**
+     * Regenerates `bun.lock` when it is the only conflicted file — see `concludeLockfileConflict`.
+     * `null` hands every conflict over, the lock's included.
+     */
+    runCommand: CommandRunner | null;
 }
 
 /**
@@ -177,7 +219,7 @@ interface MergeBaseIntoMainIfBehindParams {
  * commit was created.
  */
 async function mergeBaseIntoMainIfBehind(params: MergeBaseIntoMainIfBehindParams): Promise<boolean> {
-    const { baseBranch, taskBranch: currentBranch, guard, logger, mainGit } = params;
+    const { baseBranch, taskBranch: currentBranch, guard, logger, mainGit, runCommand } = params;
 
     await mainGit.fetch('origin', baseBranch);
 
@@ -206,10 +248,14 @@ async function mergeBaseIntoMainIfBehind(params: MergeBaseIntoMainIfBehindParams
     try {
         await mainGit.merge([remoteBase]);
     } catch (error) {
-        await handleMergeConflict(
-            { git: mainGit, repoDisplayName: 'main repository', operation: 'merge', logger },
-            error,
-        );
+        const concluded =
+            runCommand != null && (await concludeLockfileConflict({ git: mainGit, guard, runCommand, logger }));
+        if (!concluded) {
+            await handleMergeConflict(
+                { git: mainGit, repoDisplayName: 'main repository', operation: 'merge', logger },
+                error,
+            );
+        }
     }
 
     await assertNoConflicts({ git: mainGit, repoDisplayName: 'main repository', operation: 'merge', logger });

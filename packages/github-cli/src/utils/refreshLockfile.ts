@@ -36,15 +36,10 @@ export interface RefreshLockfileParams {
     /**
      * The trunk the submodules follow. HEAD's gitlinks are compared with those of the main
      * repository's `origin/<trunk>`: a branch that carries a submodule bump gets its lock regenerated
-     * on every sync, so a regenerate that failed or never ran is made up by the next one.
+     * on every sync, so a regenerate that failed or never ran is made up by the next one. Without
+     * that ref there is nothing to compare with, and the lock is left alone.
      */
     trunk: string;
-
-    /**
-     * The gitlinks HEAD recorded when the sync started — see {@link readGitlinks}. Compared with
-     * instead when the main repository has no `origin/<trunk>`.
-     */
-    gitlinksAtStart: string;
 
     /**
      * Paths of the submodules whose gitlinks are compared.
@@ -72,7 +67,7 @@ export interface RefreshLockfileParams {
  * Read the gitlinks a commit records for `submodulePaths`, as one comparable string.
  * @returns `git ls-tree` output for exactly those paths.
  */
-export async function readGitlinks(git: SimpleGit, submodulePaths: string[], commit = 'HEAD'): Promise<string> {
+async function readGitlinks(git: SimpleGit, submodulePaths: string[], commit = 'HEAD'): Promise<string> {
     return await git.raw(['ls-tree', commit, '--', ...submodulePaths]);
 }
 
@@ -85,14 +80,21 @@ export async function readGitlinks(git: SimpleGit, submodulePaths: string[], com
  * matches it fails CI setup. Only `bun.lock` is committed, whatever else the command touched.
  */
 export async function refreshLockfile(params: RefreshLockfileParams): Promise<void> {
-    const { git, trunk, gitlinksAtStart, submodulePaths, guard, runCommand, logger } = params;
+    const { git, trunk, submodulePaths, guard, runCommand, logger } = params;
+
+    // `ls-tree` with no paths would list, and compare, the whole tree.
+    if (submodulePaths.length === 0) {
+        return;
+    }
 
     const trunkRef = `origin/${trunk}`;
     // A missing ref exits non-zero with nothing on stderr, which simple-git may resolve or reject.
     const trunkCommit = await git.raw(['rev-parse', '--verify', '--quiet', `${trunkRef}^{commit}`]).catch(() => '');
-    const hasTrunkRef = trunkCommit.trim() !== '';
-    const baseline = hasTrunkRef ? await readGitlinks(git, submodulePaths, trunkRef) : gitlinksAtStart;
-    if ((await readGitlinks(git, submodulePaths)) === baseline) {
+    if (trunkCommit.trim() === '') {
+        return;
+    }
+
+    if ((await readGitlinks(git, submodulePaths)) === (await readGitlinks(git, submodulePaths, trunkRef))) {
         return;
     }
 
@@ -101,16 +103,7 @@ export async function refreshLockfile(params: RefreshLockfileParams): Promise<vo
         return;
     }
 
-    const command = REGENERATE_COMMAND.join(' ');
-    logger.info(`   Regenerating ${LOCKFILE} for the submodule update (${chalk.cyan(command)})...`);
-
-    await guard.beforeWrite();
-    try {
-        await runCommand(REGENERATE_COMMAND, root);
-    } catch (error) {
-        // Never skipped: a stale lock fails the product's CI install anyway, later and further away.
-        throw new Error(`Regenerating ${LOCKFILE} failed: \`${command}\` in ${root}`, { cause: error });
-    }
+    await regenerateLockfile({ root, guard, runCommand, logger });
 
     if (!(await git.raw(['status', '--porcelain', '--', LOCKFILE])).trim()) {
         logger.info(`   ${LOCKFILE} already matches the submodule update`);
@@ -122,6 +115,107 @@ export async function refreshLockfile(params: RefreshLockfileParams): Promise<vo
     await guard.beforePush();
     await pushWithUpstream(git);
     logger.info(`   ${chalk.green('✓')} Pushed the refreshed ${LOCKFILE}`);
+}
+
+/**
+ * Parameters for {@link concludeLockfileConflict}.
+ */
+export interface ConcludeLockfileConflictParams {
+    /**
+     * Git instance of the main repository, stopped in a merge.
+     */
+    git: SimpleGit;
+
+    /**
+     * The main repository's branch guard: the regenerate writes to the working tree, and the merge
+     * commit to the branch.
+     */
+    guard: BranchGuard;
+
+    /**
+     * Runs the regenerate command.
+     */
+    runCommand: CommandRunner;
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+}
+
+/**
+ * Conclude a merge stopped by a conflict in `bun.lock` alone: take the merged-in side, regenerate it
+ * from the merged workspaces and commit the merge.
+ *
+ * A submodule release rewrites the version line of every one of its packages in the lock, so two
+ * branches that each carry their own bump conflict on it whenever one of them lands — over text
+ * nobody should resolve by hand, since an install regenerates it from the merged `package.json` files.
+ * @returns Whether the merge was concluded; `false` leaves any other conflict for the caller.
+ */
+export async function concludeLockfileConflict(params: ConcludeLockfileConflictParams): Promise<boolean> {
+    const { git, guard, runCommand, logger } = params;
+
+    const { conflicted } = await git.status();
+    if (conflicted.length !== 1 || conflicted[0] !== LOCKFILE) {
+        return false;
+    }
+
+    logger.info(`   Only ${LOCKFILE} conflicts: regenerating it to conclude the merge`);
+
+    const root = (await git.revparse(['--show-toplevel'])).trim();
+    await guard.beforeWrite();
+    await git.raw(['checkout', '--theirs', '--', LOCKFILE]);
+    await regenerateLockfile({ root, guard, runCommand, logger });
+
+    await guard.beforeWrite();
+    await git.raw(['add', '--', LOCKFILE]);
+    await git.raw(['commit', '--no-edit']);
+    logger.info(`   ${chalk.green('✓')} Concluded the merge with a regenerated ${LOCKFILE}`);
+
+    return true;
+}
+
+/**
+ * Parameters for {@link regenerateLockfile}.
+ */
+interface RegenerateLockfileParams {
+    /**
+     * The main repository's working tree root.
+     */
+    root: string;
+
+    /**
+     * The main repository's branch guard.
+     */
+    guard: BranchGuard;
+
+    /**
+     * Runs the regenerate command.
+     */
+    runCommand: CommandRunner;
+
+    /**
+     * Logger instance.
+     */
+    logger: Logger;
+}
+
+/**
+ * Run the regenerate command in `root`, naming it in the error when it fails.
+ */
+async function regenerateLockfile(params: RegenerateLockfileParams): Promise<void> {
+    const { root, guard, runCommand, logger } = params;
+
+    const command = REGENERATE_COMMAND.join(' ');
+    logger.info(`   Regenerating ${LOCKFILE} for the submodule update (${chalk.cyan(command)})...`);
+
+    await guard.beforeWrite();
+    try {
+        await runCommand(REGENERATE_COMMAND, root);
+    } catch (error) {
+        // Never skipped: a stale lock fails the product's CI install anyway, later and further away.
+        throw new Error(`Regenerating ${LOCKFILE} failed: \`${command}\` in ${root}`, { cause: error });
+    }
 }
 
 /**

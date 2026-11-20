@@ -25,11 +25,11 @@ API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-c
 - **Declarations** — every secret is a `defineSecret(name, { description, enabled?, meta? })` export of one
   module (`secrets.ts`); `getSecretDefinitions(module)` collects them.
 - **Commands** — `defineSecretsCommands({ provider })` registered in the product CLI (`references/product-cli.md`),
-  run as `bun <product> secrets …`. The provider is a service built with
+  and the root `package.json` wrapper `"secrets": "<product> secrets"`, so they run as `bun secrets …`. The provider is a service built with
   `secretsProvider({ secrets: getSecretDefinitions(secrets), store })`. Several stores need a composite
   `SecretStore` of the repo's own. Every `@nzyme/*` package is one version installed in the repo.
 - **CI** — a job that needs secrets gets `BWS_ACCESS_TOKEN` (a read-only machine account's token) from a GitHub
-  Actions secret and runs through `secrets run <KEY>... --`, naming the keys it needs. The `Build` job needs none
+  Actions secret and runs through `bun secrets run <KEY>... --`, naming the keys it needs. The `Build` job needs none
   (`references/github.md`).
 - **The repo's skill** `.claude/skills/secrets/SKILL.md` — required, not offered: without it an
   agent does not know how to invoke the commands here or which environment a name belongs to. What it
@@ -49,10 +49,10 @@ API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-c
   `nzyme.plugins` entry in use: a difference.
 - A dotenv file holding credentials (`.env`, `.env.*`, `.dev.vars`): a difference. Migrate it
   once, with no tool for it: pipe its value from the file into
-  `secrets set <NAME>` (`sed -n 's/^NAME=//p' .env | secrets set NAME`, unquoting a quoted value in
+  `bun secrets set <NAME>` (`sed -n 's/^NAME=//p' .env | bun secrets set NAME`, unquoting a quoted value in
   the pipe) so it never reaches the transcript. Move the file aside — Bun loads the cwd `.env` into
-  every process, so `secrets list` would report its names `overridden by environment` — and delete it
-  once `secrets list` shows every name resolving.
+  every process, so `bun secrets list` would report its names `overridden by environment` — and delete it
+  once `bun secrets list` shows every name resolving.
 - `setup.sh` copying env files into worktrees: a difference; the keychain is shared by every
   worktree.
 - No `.claude/skills/secrets/SKILL.md`, or one that disagrees with the provider: a difference.

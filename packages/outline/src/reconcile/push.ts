@@ -16,12 +16,11 @@ import { OutlineApiError, OutlineConflictError } from '../outline/errors.js';
 import type { OutlineClient } from '../outline/OutlineClient.js';
 import type { DocumentsCreateParams, OutlineDocument } from '../outline/OutlineTypes.js';
 import { contentHash } from '../state/contentHash.js';
-import type { DocState, FileStat, StateStore, SyncState } from '../state/StateStore.js';
+import type { DocState, StateStore, SyncState } from '../state/StateStore.js';
 import { isErrorCode } from '../utils/isErrorCode.js';
 import { isInside } from '../utils/isInside.js';
 import { pathExists } from '../utils/pathExists.js';
 import { readFileIfExists } from '../utils/readFileIfExists.js';
-import { toFileStat } from '../utils/toFileStat.js';
 import { writeFileAtomic } from '../utils/writeFileAtomic.js';
 import { localContent } from './localContent.js';
 import { hasConflictMarkers, mergeDocument } from './merge.js';
@@ -97,9 +96,8 @@ const BROKEN_FRONTMATTER_ID = /^outline:\s*["']?([\w-]+)/m;
 /** A `.md` file found in the documents folder. */
 interface LocalFile {
     path: string;
-    stat: FileStat;
-    /** `null` when the stat shows the file as the sync last saw it, so it was not read. */
-    read: FileRead | null;
+    mtimeMs: number;
+    read: FileRead;
     /** The Outline document the file stands for; absent for a file not created yet (or a copy). */
     id?: string;
     /** Set on a copy: the id it carried, which stays with the original. */
@@ -189,9 +187,6 @@ export async function push(options: PushOptions): Promise<PushReport> {
 
         // Parents first, so a child finds its parent created or moved already.
         for (const file of files.toSorted((a, b) => depth(a.path) - depth(b.path) || a.path.localeCompare(b.path))) {
-            if (file.read == null) {
-                continue;
-            }
             if (now() >= deadline) {
                 report.stoppedAtDeadline = true;
                 break;
@@ -219,22 +214,9 @@ export async function push(options: PushOptions): Promise<PushReport> {
 
     async function scanFolder() {
         const files: LocalFile[] = [];
-        const byPath = new Map(Object.values(state.documents).map(document => [document.path, document]));
         for (const path of await listMarkdownFiles(documentsDir)) {
             const absolute = join(documentsDir, path);
-            const fileStat = toFileStat(await stat(absolute));
-            const known = byPath.get(path);
-            const seen = known?.fileStat;
-            if (
-                known != null &&
-                seen != null &&
-                seen.mtimeMs === fileStat.mtimeMs &&
-                seen.size === fileStat.size &&
-                seen.ino === fileStat.ino
-            ) {
-                files.push({ path, stat: fileStat, read: null, id: known.id });
-                continue;
-            }
+            const { mtimeMs } = await stat(absolute);
             const bytes = await readFileIfExists(absolute);
             if (bytes == null) {
                 continue;
@@ -244,7 +226,7 @@ export async function push(options: PushOptions): Promise<PushReport> {
             const invalid = issues.some(issue => issue.kind === 'invalid-frontmatter');
             files.push({
                 path,
-                stat: fileStat,
+                mtimeMs,
                 read: { content, hash: contentHash(bytes), invalid },
                 id: invalid ? BROKEN_FRONTMATTER_ID.exec(content)?.[1] : doc.id,
             });
@@ -270,7 +252,7 @@ export async function push(options: PushOptions): Promise<PushReport> {
             }
             const keeper =
                 group.find(file => file.path === state.documents[id]?.path) ??
-                group.toSorted((a, b) => a.stat.mtimeMs - b.stat.mtimeMs || a.path.localeCompare(b.path))[0];
+                group.toSorted((a, b) => a.mtimeMs - b.mtimeMs || a.path.localeCompare(b.path))[0];
             for (const file of group) {
                 if (file !== keeper) {
                     file.copyOf = id;
@@ -398,7 +380,6 @@ export async function push(options: PushOptions): Promise<PushReport> {
             parentId: remote.parentDocumentId,
             collectionId: remote.collectionId,
             localHash: complete ? writtenHash : contentHash(base),
-            fileStat: complete ? await statIfHash(path, writtenHash) : undefined,
         };
         dropPendingCreate(remote.id);
         if (!complete) {
@@ -419,7 +400,7 @@ export async function push(options: PushOptions): Promise<PushReport> {
             return;
         }
         // The state follows the file even when Outline cannot: the next full pull then moves it back where it belongs.
-        state.documents[known.id] = { ...known, path, fileStat: undefined };
+        state.documents[known.id] = { ...known, path };
         if (dirname(path) === dirname(known.path)) {
             report.moved.push({ from: known.path, to: path });
             return;
@@ -466,7 +447,7 @@ export async function push(options: PushOptions): Promise<PushReport> {
         const known = state.documents[id];
         assert(known != null, `Document ${id} is not tracked`);
         if (read.hash === known.localHash) {
-            const current: DocState = { ...known, fileStat: file.stat };
+            const current: DocState = { ...known };
             // A conflict resolved by keeping Outline's version leaves the file at `localHash`: it is resolved all the same.
             if (!hasConflictMarkers(read.content)) {
                 delete current.conflictRevision;
@@ -580,7 +561,6 @@ export async function push(options: PushOptions): Promise<PushReport> {
             parentId: latest.parentDocumentId,
             localHash: contentHash(theirs),
             conflictRevision: latest.revision,
-            fileStat: undefined,
         };
         report.conflicts.push(path);
     }
@@ -600,12 +580,10 @@ export async function push(options: PushOptions): Promise<PushReport> {
         const absolute = join(documentsDir, path);
         const current = await readFileIfExists(absolute);
         const localHash = contentHash(local);
-        let fileStat: FileStat | undefined;
         if (current != null && contentHash(current) === file.startHash) {
             if (current.toString('utf8') !== local) {
                 await writeFileAtomic(absolute, local);
             }
-            fileStat = await statIfHash(path, localHash);
         } else {
             report.skipped.push({ path, reason: 'The file changed while the push ran; sent next time.' });
         }
@@ -618,7 +596,6 @@ export async function push(options: PushOptions): Promise<PushReport> {
             collectionId: agreed.collectionId,
             parentId: agreed.parentId,
             localHash,
-            fileStat,
         };
     }
 
@@ -817,14 +794,6 @@ export async function push(options: PushOptions): Promise<PushReport> {
         }
         await writeFileAtomic(join(documentsDir, path), content);
         return true;
-    }
-
-    /** The stat to remember, taken before a read that proves the file holds `hash`; nothing when it does not. */
-    async function statIfHash(path: string, hash: string) {
-        const absolute = join(documentsDir, path);
-        const fileStat = toFileStat(await stat(absolute));
-        const bytes = await readFileIfExists(absolute);
-        return bytes != null && contentHash(bytes) === hash ? fileStat : undefined;
     }
 
     function dropPendingCreate(id: string) {

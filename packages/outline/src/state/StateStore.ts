@@ -18,15 +18,6 @@ export interface DocState {
     localHash: string;
     /** The Outline revision an open conflict was merged against. */
     conflictRevision?: number;
-    /** The file's stat when it was last seen to hash to `localHash`; a file still matching it is not read again. */
-    fileStat?: FileStat;
-}
-
-/** What identifies an unchanged file without reading it: an edit changes the mtime, an atomic save the inode too. */
-export interface FileStat {
-    mtimeMs: number;
-    size: number;
-    ino: number;
 }
 
 /** A one-time fact for the agent, removed by whoever reports it. */

@@ -5,11 +5,13 @@
 // are refused on top of that.
 
 import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { detectMimeType } from 'nodemailer/lib/mime-funcs/mime-types';
 
 import type { RawAttachment } from './compose.js';
+import type { GmailFilesOptions } from './GmailCommandsOptions.js';
 
 /** Gmail refuses to send anything bigger; checking up front beats a half-made draft. */
 export const MAX_ATTACHMENTS_BYTES = 25 * 1024 * 1024;
@@ -21,6 +23,24 @@ export interface FileAccess {
     roots: string[];
     /** Files or directories never to attach, on top of the built-in secret-file names. */
     denied?: string[];
+}
+
+/**
+ * The directory `attachment save` writes to: `files.attachmentsDir` with `~` expanded, or
+ * `<tmpdir>/gmail-cli/attachments`.
+ * @__NO_SIDE_EFFECTS__
+ */
+export function attachmentsDir(files: GmailFilesOptions | undefined): string {
+    const configured = files?.attachmentsDir;
+    return configured ? expandHome(configured) : path.join(os.tmpdir(), 'gmail-cli', 'attachments');
+}
+
+/**
+ * Whether a configured directory is absolute or home-relative (`~`), as `files` options must be.
+ * @__NO_SIDE_EFFECTS__
+ */
+export function isConfiguredPath(dir: string): boolean {
+    return path.isAbsolute(dir) || dir === '~' || dir.startsWith('~/');
 }
 
 /**
@@ -88,6 +108,10 @@ export function assertTotalSize(attachments: RawAttachment[]): void {
                 'Share big files via a link instead.',
         );
     }
+}
+
+function expandHome(dir: string): string {
+    return dir === '~' || dir.startsWith('~/') ? path.join(os.homedir(), dir.slice(1)) : dir;
 }
 
 // Secrets living next to the allowed files: .env files, OAuth credentials/tokens.

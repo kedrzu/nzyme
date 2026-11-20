@@ -1,11 +1,11 @@
 /**
- * The harness of the google-auth tests: a fake Google (token endpoint and a `/me` API) on a local
- * port, and the `auth` and `accounts` commands run in-process through clipanion with a real container.
+ * The harness of the Google CLI tests: a fake Google (token endpoint, a `/me` API and a CLI's own fake
+ * API) on a local port, and commands run in-process through clipanion with a real container.
  */
 import { PassThrough, Readable } from 'node:stream';
 
 import { spyOn } from 'bun:test';
-import { Cli } from 'clipanion';
+import { Builtins, Cli } from 'clipanion';
 
 import { Option } from '@nzyme/cli-core';
 import type { CommandClass, CommandContext } from '@nzyme/cli-core/Command.js';
@@ -49,13 +49,20 @@ export const TEST_SERVICE: GoogleService = {
 export interface FakeGoogleOptions {
     /** The address `/me` reports. */
     email: string;
+    /** The scopes a sign-in grants; {@link SCOPES} by default. */
+    scopes?: string[];
+    /**
+     * Answers every other path, after the access token is checked: a CLI's fake API. A request without
+     * the access token gets 401 without reaching it.
+     */
+    api?: (request: Request) => Response | Promise<Response>;
     /** Refresh tokens the token endpoint answers `invalid_grant` for. */
     revoked?: string[];
     /** Whether a refresh returns a new refresh token. */
     rotate?: boolean;
 }
 
-/** A local Google: the token endpoint and `/me`, recording the grant types it was asked for. */
+/** A local Google: the token endpoint, `/me` and the `api`, recording the grant types it was asked for. */
 export function startFakeGoogle(options: FakeGoogleOptions) {
     const grants: string[] = [];
     const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: answer });
@@ -77,7 +84,13 @@ export function startFakeGoogle(options: FakeGoogleOptions) {
         }
 
         if (pathname !== '/token') {
-            return new Response(null, { status: 404 });
+            if (!options.api) {
+                return new Response(null, { status: 404 });
+            }
+
+            return request.headers.get('authorization') === `Bearer ${ACCESS_TOKEN}`
+                ? options.api(request)
+                : Response.json({ error: 'unauthorized' }, { status: 401 });
         }
 
         const form = new URLSearchParams(await request.text());
@@ -91,7 +104,7 @@ export function startFakeGoogle(options: FakeGoogleOptions) {
             return Response.json({
                 access_token: ACCESS_TOKEN,
                 refresh_token: REFRESH_TOKEN,
-                scope: SCOPES.join(' '),
+                scope: (options.scopes ?? SCOPES).join(' '),
                 expires_in: 3600,
                 token_type: 'Bearer',
             });
@@ -147,26 +160,62 @@ class ProcessExited extends Error {}
  * Runs `gmail auth`, `gmail accounts` or `gmail whoami` (a stand-in for a CLI command that authorises
  * an account and calls the API) in-process, under the binary name `nzyme`.
  */
-export async function runGoogleCommand(options: RunGoogleCommandOptions): Promise<GoogleCommandResult> {
-    const { stores } = options;
-    const target =
-        options.target ??
-        (() => {
-            const [first] = stores;
-            if (!first) {
-                throw new Error('The test gave no store');
-            }
-
-            return first;
-        });
-    const provider = defineService<SecretsProvider>({ name: 'TestSecrets', setup: () => ({ stores, target }) });
+export function runGoogleCommand(options: RunGoogleCommandOptions): Promise<GoogleCommandResult> {
+    const provider = createTestProvider(options.stores, options.target);
     const authOptions: GoogleAuthOptions = { provider, accounts: options.accounts };
     const params: GoogleCommandParams = { prefix: 'gmail', service: TEST_SERVICE, options: authOptions };
 
+    return runCommands({
+        commands: [defineGoogleAuthCommand(params), defineGoogleAccountsCommand(params), defineWhoamiCommand(params)],
+        args: options.args,
+        endpoints: options.endpoints,
+        browser: options.browser,
+    });
+}
+
+/**
+ * The project's secrets provider over the test's stores.
+ * @param target The write policy; the first store by default.
+ */
+export function createTestProvider(stores: SecretStore[], target?: SecretsProvider['target']) {
+    return defineService<SecretsProvider>({
+        name: 'TestSecrets',
+        setup: () => ({
+            stores,
+            target:
+                target ??
+                (() => {
+                    const [first] = stores;
+                    if (!first) {
+                        throw new Error('The test gave no store');
+                    }
+
+                    return first;
+                }),
+        }),
+    });
+}
+
+/** Options of {@link runCommands}. */
+export interface RunCommandsOptions {
+    commands: CommandClass[];
+    args: string[];
+    endpoints: GoogleEndpoints;
+    /** Called once with the sign-in URL the command printed, standing in for the browser. */
+    browser?: (url: URL) => Promise<void>;
+}
+
+/**
+ * Runs a command of a Google CLI in-process through clipanion, under the binary name `nzyme`, with a
+ * real container whose `GoogleEndpoints` point at the fake. `--help` lists the commands.
+ */
+export async function runCommands(options: RunCommandsOptions): Promise<GoogleCommandResult> {
     const cli = new Cli<CommandContext>({ binaryName: 'nzyme' });
-    cli.register(defineGoogleAuthCommand(params));
-    cli.register(defineGoogleAccountsCommand(params));
-    cli.register(defineWhoamiCommand(params));
+    for (const command of options.commands) {
+        cli.register(command);
+    }
+
+    cli.register(Builtins.HelpCommand);
 
     const container = createContainer();
     container.set(EnvVariables, {});

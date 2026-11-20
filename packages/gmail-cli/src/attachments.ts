@@ -14,39 +14,22 @@ export interface MessageAttachment {
 }
 
 /**
- * Finds an attachment by part id. A client holding an id from before the switch to part ids (a long
- * Gmail token) still works: the bytes download fine, and the size tells which part it was.
+ * Finds an attachment by its part id, or by the Gmail attachment id of the same fetch.
  * @__NO_SIDE_EFFECTS__
  */
-export function findAttachment(
-    all: MessageAttachment[],
-    ref: string,
-    downloadedSize?: number,
-): MessageAttachment | undefined {
-    const byPart = all.find(a => a.partId === ref || a.gmailId === ref);
-    if (byPart || downloadedSize === undefined) {
-        return byPart;
-    }
-    const bySize = all.filter(a => a.size === downloadedSize);
-    return bySize.length === 1 ? bySize[0] : undefined;
-}
-
-/**
- * Whether a reference is a MIME part id ("2", "1.3") rather than a Gmail attachment token.
- * @__NO_SIDE_EFFECTS__
- */
-export function isPartId(ref: string): boolean {
-    return /^\d+(\.\d+)*$/.test(ref);
+export function findAttachment(all: MessageAttachment[], ref: string): MessageAttachment | undefined {
+    return all.find(a => a.partId === ref || a.gmailId === ref);
 }
 
 /**
  * Replaces the characters that are illegal on disk. Gmail filenames can contain slashes
- * (e.g. "2025-FP/I/27707.pdf").
+ * (e.g. "2025-FP/I/27707.pdf"); a name of dots alone (`..`) would name a directory, not a file.
  * @util
  * @__NO_SIDE_EFFECTS__
  */
 export function safeFileName(name: string): string {
-    return name.replace(/[/\\:*?"<>|]/g, '_') || 'attachment';
+    const safe = name.replace(/[/\\:*?"<>|]/g, '_');
+    return /^\.*$/.test(safe) ? 'attachment' : safe;
 }
 
 /**

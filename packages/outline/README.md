@@ -1,6 +1,93 @@
 # @nzyme/outline
 
-A typed client for the [Outline](https://www.getoutline.com) API, and `fakeOutline`, an in-memory Outline for tests.
+A typed client for the [Outline](https://www.getoutline.com) API, `fakeOutline`, an in-memory Outline for tests, and a two-way sync of an Outline workspace with a local Markdown folder, run from Claude Code hooks. Why hooks and not a daemon: `docs/decisions/outline-sync-through-hooks.md`.
+
+## Setup
+
+1. The workspace admin creates an OAuth app at `<workspace>/settings/applications`: Client type **Public** (the default is Confidential), Callback URL `http://127.0.0.1/callback` without a port (loopback URIs match any port), not Published. Copy the Client ID.
+
+2. Register the commands in the product CLI:
+
+   ```ts
+   import { defineOutlineCommands } from '@nzyme/outline/commands/defineOutlineCommands.js';
+
+   await execute({
+       name: 'cli',
+       commands: defineOutlineCommands({
+           url: 'https://app.getoutline.com',
+           clientId,
+           privateCollection: user => `${user.name} (private)`,
+           commandHint: 'bun cli outline',
+           userLanguage: 'Polish',
+       }),
+   });
+   ```
+
+3. Add the hooks to `.claude/settings.json`, replacing `cli` with the product CLI. Every hook has an explicit timeout; the stop hook keeps its own run within 40 s of its 60 s:
+
+   ```json
+   {
+       "hooks": {
+           "SessionStart": [{ "hooks": [{ "type": "command", "command": "cli outline hook session-start", "timeout": 60 }] }],
+           "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "cli outline hook prompt", "timeout": 30 }] }],
+           "Stop": [{ "hooks": [{ "type": "command", "command": "cli outline hook stop", "timeout": 60 }] }],
+           "SessionEnd": [{ "hooks": [{ "type": "command", "command": "cli outline hook session-end", "timeout": 30 }] }]
+       }
+   }
+   ```
+
+4. Each user runs `cli outline login` (browser, once), then `cli outline pull` to finish the first download.
+
+## How it works for the agent
+
+The documents live in the repo's main checkout, in `documents/`:
+
+- A collection is a folder; a document is `<slug>.md`, and its children are in `<slug>/` next to it.
+- `drafts/` holds the user's unpublished documents; `shared-with-me/` the documents shared with the user whose collection the user cannot see.
+- `_attachments/<id>-<name>` holds the files a document links to; a link to a local file is uploaded on the next push.
+- A file put at the root of `documents/` is created in the user's private collection (`privateCollection`); until that collection exists, the file is not sent.
+- `recovered/` holds files whose document is gone from Outline while they had unsent edits.
+
+A file is a Markdown body under a `# ` title line, with optional frontmatter:
+
+```md
+---
+outline: 3f2c9a4e-…
+shared: [Ana Nowak, ana@example.com]
+---
+
+# Offer for the clinic
+
+Text…
+```
+
+- `outline:` is the document id, written by the sync; a file without it is a new document. Other frontmatter keys are kept as they are but never sent to Outline, which has no frontmatter.
+- Outline normalizes Markdown on write (bullets, tables, escaping), so a file may change in form after a push; the content stays the same.
+- Names and slugs of existing files are never changed by the sync; a renamed title does not rename the file. Moving a file moves the document.
+
+Conflicts:
+
+- Edits to different paragraphs, local and in Outline, merge on their own.
+- Edits to the same one leave `<<<<<<< local` … `>>>>>>> Outline (<name>)` markers in the file. A file with markers is never sent: the agent resolves it with the user and removes the markers.
+
+Deletions:
+
+- Deleting a file archives its document in Outline (never deletes it); a document that still has children with files is not archived.
+- A document deleted or unshared in Outline is removed locally; with unsent edits it moves to `recovered/` instead.
+- Mass-archive guard: archiving is refused for the whole run when the `documents/` folder is missing, when more than half of the tracked files vanish at once (once more than 3), or when every tracked file vanishes (two or more). The agent is told; nothing is archived until the files are back or the deletion is smaller.
+
+Sharing:
+
+- `shared:` lists the people a document is directly shared with, by name or e-mail (group names also resolve). Adding or removing an entry in the file adds or removes the membership; Outline's list is written back on a full pass.
+- Only direct memberships are listed; access through a collection or a parent document is not.
+- An entry matching no user or several users stays in the file and is reported every run. An entry Outline refuses is reported once and the list returns to Outline's.
+
+Cadence:
+
+- Session start: a full pass (pull, push, sharing). Prompt: an incremental pull at most once a minute, a full pass every 15 minutes. Stop and session end: push. A hook skips quietly while another session syncs.
+- The incremental pull asks Outline only for documents changed since the last pull (1 to 2 requests). Only a full pass notices archived or deleted documents, lost access, sharing changes and new collections.
+- Requests are limited to 100 per minute, 25 for creates; a full pass reads the share lists of at most 20 documents it has no local edit for, so a large workspace is covered over several passes.
+- Nothing syncs while Claude Code is closed, and nothing is pulled during a turn.
 
 ## Client
 

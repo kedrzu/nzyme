@@ -16,7 +16,8 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
   - `tsconfig`, `eslint` (also the oxlint preset), `oxlint` (custom rules), `project-utils`,
     `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`
 - **Integrations:** `aws`, `pulumi`, `slack`, `apis`, `bitwarden` (a Secrets Manager store for `secrets`),
-  `discord-cli` (the Discord REST API through `openapi-cli`, as a bot), `stealth-browser` (a stealth Chrome over CDP
+  `discord-cli` (the Discord REST API through `openapi-cli`, as a bot), `outline` (an Outline API client and a two-way sync of a workspace with a local Markdown folder, run from
+  Claude Code hooks), `stealth-browser` (a stealth Chrome over CDP
   for AI agents: launch, proxy, CLI)
 - **Private, never published:** `github-cli`, `linear`, `sentry-cli`, `logging-ui`
 

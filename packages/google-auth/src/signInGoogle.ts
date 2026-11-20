@@ -141,7 +141,8 @@ function openInBrowser(url: string) {
         process.platform === 'darwin'
             ? ['open', [url]]
             : process.platform === 'win32'
-              ? ['cmd', ['/c', 'start', '""', url]]
+              ? // Not `cmd /c start`: cmd splits the URL at each `&` and expands `%` and `^`.
+                ['rundll32', ['url.dll,FileProtocolHandler', url]]
               : ['xdg-open', [url]];
     try {
         spawn(command, args, { stdio: 'ignore', detached: true })

@@ -4,7 +4,7 @@ Development secrets kept in a remote store behind a login, configured as code an
 environment variables an app already reads through `defineEnvVariable`. No plaintext `.env`, nothing
 encrypted in the repo.
 
-Why it works this way: `docs/decisions/secrets-as-code-through-env-variables.md`.
+Why it works this way: `docs/decisions/secrets-declared-and-resolved-through-the-container.md`.
 
 ## Installation
 
@@ -54,8 +54,9 @@ wants: the first source with a key wins.
 
 ## Loading into env variables
 
-A repo without a config document loads the stores into the environment variables its code already
-reads through `defineEnvVariable`:
+The older path, kept for code that still reads `defineEnvVariable`; new code declares its secrets and
+resolves them through the container (see [Declaring secrets](#declaring-secrets)). It loads the stores into
+the environment variables:
 
 ```ts
 import { loadSecrets } from '@nzyme/secrets/loadSecrets.js';
@@ -171,14 +172,17 @@ Code resolves a secret through the container — `container.resolve(STRIPE_KEY)`
 never from `process.env`. A process loads the values into its config document first:
 
 ```ts
-// packages/secrets/src/loadAppConfig.ts
-export async function loadAppConfig(container: Container) {
-    const { stores } = container.resolve(AppSecrets);
-    // In CI the job's environment carries the values; the stores are read only on a developer machine.
-    await loadConfig(container, process.env.CI ? [envSource()] : [envSource(), ...stores.map(secretsSource)]);
-}
+import { loadSecretsConfig } from '@nzyme/secrets/loadSecretsConfig.js';
+
+await loadSecretsConfig(container, container.resolve(AppSecrets).stores);
+const key = container.resolve(STRIPE_KEY);
 ```
 
+- **`loadSecretsConfig(container, stores)`** installs the container's environment variables, then every
+  store: a variable set in the shell wins over a stored secret, an earlier store over a later one. With
+  `CI` set the stores are not read; a CI job carries its secrets as environment variables.
+- **`resolveOptionalSecret(container, SECRET)`** returns `undefined` instead of throwing when the
+  document lacks the secret, for code that runs without it on purpose.
 - A Bun script or CLI command calls the loader at startup and needs no `bun secrets run` wrapper.
 - A runtime with no store access loads what its platform hands it: a Cloudflare Worker its bindings
   (`loadConfig(container, [envSource(env)])`), a Nitro server its runtime config, in a server plugin.

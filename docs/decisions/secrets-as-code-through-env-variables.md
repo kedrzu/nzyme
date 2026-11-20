@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [`secrets-declared-and-resolved-through-the-container.md`](secrets-declared-and-resolved-through-the-container.md).
 
 ## Context
 

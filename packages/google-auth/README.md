@@ -130,7 +130,9 @@ of accounts and projects.
 
    `email` is the account being refreshed, or unset for a sign-in without `--login-hint`; return a
    different client per domain if the repo has several Google Cloud projects. The stored token does not
-   record its client, so a refresh must get the one the account signed in with.
+   record its client, so a refresh must get the one the account signed in with. Resolving
+   `GOOGLE_CLIENT_ID` through `deps` needs the CLI to have loaded its secrets with `loadSecretsConfig`
+   (`@nzyme/secrets`) at startup.
 
 6. Store the two values from the client JSON, with the masked prompt of `secrets`:
 

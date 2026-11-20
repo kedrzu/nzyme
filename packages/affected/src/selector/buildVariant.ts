@@ -129,7 +129,8 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
     }
 
     const walked = new Set(graph.files);
-    const fsReads = options.fsReads && mergeSharedAccesses(options.fsReads, new Set(levels.keys()), walked);
+    const fsReads =
+        options.fsReads && mergeSharedAccesses({ reads: options.fsReads, loaded: new Set(levels.keys()), walked });
     const owners = new Set<string>();
     for (const file of levels.keys()) {
         owners.add(findOwningPackageDir(file, options.packageDirs));
@@ -181,11 +182,20 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
     }
 }
 
+/** Params of {@link mergeSharedAccesses}. */
+export interface MergeSharedAccessesParams {
+    reads: FsReads;
+    /** The files the test loads. */
+    loaded: ReadonlySet<string>;
+    /** Every file of the import graph. */
+    walked: ReadonlySet<string>;
+}
+
 /**
  * The test's own accesses together with those shared by a module it loads (`loaded`), by a `null`
  * reader, and by a reader that is no walked file — which no test's files can show it does not load.
  */
-function mergeSharedAccesses(reads: FsReads, loaded: ReadonlySet<string>, walked: ReadonlySet<string>): FsAccesses {
+function mergeSharedAccesses({ reads, loaded, walked }: MergeSharedAccessesParams): FsAccesses {
     const files = new Set(reads.files);
     const dirs = new Set(reads.dirs);
     const trees = new Set(reads.trees);

@@ -508,6 +508,7 @@
       "name": "@nzyme/outline",
       "version": "0.0.0",
       "dependencies": {
+        "@nzyme/secrets": "workspace:*",
         "@nzyme/utils": "workspace:*",
         "yaml": "^2.9.1",
       },

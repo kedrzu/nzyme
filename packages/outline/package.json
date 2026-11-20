@@ -1,7 +1,7 @@
 {
     "name": "@nzyme/outline",
     "version": "0.0.0",
-    "description": "Typed client for the Outline wiki API, with rate limiting and typed errors, plus an in-memory fake Outline for tests",
+    "description": "Typed client for the Outline wiki API, with rate limiting, typed errors and OAuth login with token refresh, plus an in-memory fake Outline for tests",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {
@@ -29,6 +29,7 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
+        "@nzyme/secrets": "workspace:*",
         "@nzyme/utils": "workspace:*",
         "yaml": "^2.9.1"
     },

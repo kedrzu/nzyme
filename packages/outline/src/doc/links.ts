@@ -70,6 +70,19 @@ export function findLocalAttachments(text: string): LocalAttachmentRef[] {
     return found;
 }
 
+/**
+ * Points the local links whose target is a key of `uploaded` (as written, e.g. `_attachments/foto.png`) at the
+ * Outline attachment id it maps to, in the `_attachments/<id>-<name>` form `toLocalLinks` writes, so the file the
+ * link names is the one a pull would download for it. Other links are left as they are.
+ * @__NO_SIDE_EFFECTS__
+ */
+export function linkUploadedAttachments(text: string, uploaded: ReadonlyMap<string, string>): string {
+    return text.replace(LOCAL_LINK, (match, opener: string, _label: string, target: string, end: string) => {
+        const id = uploaded.get(target);
+        return id == null ? match : toLocalLinks(`${opener}/api/attachments.redirect?id=${id}${end}`);
+    });
+}
+
 /** A link in local Markdown to an Outline attachment, in the form `toLocalLinks` writes. */
 export interface OutlineAttachmentRef {
     /** The Outline attachment id. */

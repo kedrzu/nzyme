@@ -39,7 +39,8 @@ export interface TreeResult {
 /**
  * Maps Outline's structure onto relative paths, keeping every name already assigned: a document keeps its file
  * name and a collection its folder name whatever happens to the title in Outline, and only the folder follows a
- * move. New documents and collections get a free name from their title. A document with children has them in a
+ * move. New documents and collections get a free name from their title; every collection in `input.collections`
+ * gets a folder, empty ones too. A document with children has them in a
  * folder named like its file without `.md`.
  *
  * A name an existing document keeps is never given to another document, even one that has since left the
@@ -128,6 +129,10 @@ export function assignPaths(input: TreeInput): TreeResult {
 
     for (const document of ordered) {
         resolve(document);
+    }
+    // An empty collection has no document to bring its folder; it still needs one (push creates files there).
+    for (const collection of input.collections) {
+        collectionFolder(collection.id);
     }
     return { paths, collections };
 }

@@ -1,19 +1,23 @@
 import { assert } from '@nzyme/utils/assert.js';
-import { mkdir, readdir, rename, rm, rmdir, stat } from 'node:fs/promises';
+import { mkdir, readdir, rename, rm, rmdir } from 'node:fs/promises';
 import { basename, dirname, join, relative } from 'node:path';
 
 import { discoverFull, discoverIncremental } from '../discover/discover.js';
 import { DRAFTS_FOLDER, assignPaths } from '../discover/tree.js';
-import type { TreeDocument } from '../discover/tree.js';
-import { parseDocFile, serializeDocFile } from '../doc/codec.js';
-import { findOutlineAttachments, toLocalLinks } from '../doc/links.js';
+import type { TreeDocument, TreeResult } from '../discover/tree.js';
+import { parseDocFile } from '../doc/codec.js';
+import { findOutlineAttachments } from '../doc/links.js';
 import { pickFreeName } from '../doc/naming.js';
 import type { OutlineClient } from '../outline/OutlineClient.js';
 import type { OutlineDocument } from '../outline/OutlineTypes.js';
 import { contentHash } from '../state/contentHash.js';
 import type { DocState, StateStore, SyncState } from '../state/StateStore.js';
+import { isErrorCode } from '../utils/isErrorCode.js';
+import { isInside } from '../utils/isInside.js';
+import { pathExists } from '../utils/pathExists.js';
 import { readFileIfExists } from '../utils/readFileIfExists.js';
 import { writeFileAtomic } from '../utils/writeFileAtomic.js';
+import { localContent } from './localContent.js';
 import { hasConflictMarkers, mergeDocument } from './merge.js';
 
 export interface PullOptions {
@@ -115,7 +119,11 @@ export async function pull(options: PullOptions): Promise<PullReport> {
             order: fullDiscovery?.order,
             state,
         });
+        const droppedFolders = full ? vanishedCollectionFolders(tree, discovery.collections) : [];
         state.collections = tree.collections;
+        for (const folder of Object.values(state.collections)) {
+            await mkdir(join(documentsDir, folder), { recursive: true });
+        }
 
         const work = remotes
             .map(remote => {
@@ -141,6 +149,9 @@ export async function pull(options: PullOptions): Promise<PullReport> {
         if (!report.stoppedAtDeadline) {
             if (full) {
                 await dropVanished(visible);
+                for (const folder of droppedFolders) {
+                    await removeFolderWithoutFiles(join(documentsDir, folder));
+                }
                 state.lastFullPass = new Date(now()).toISOString();
             }
             state.cursor = discovery.cursor;
@@ -408,6 +419,14 @@ export async function pull(options: PullOptions): Promise<PullReport> {
         }
     }
 
+    /** Removes `folder` with its sub-folders, but only when no file is anywhere inside. */
+    async function removeFolderWithoutFiles(folder: string) {
+        const entries = await readdir(folder, { recursive: true, withFileTypes: true }).catch(() => null);
+        if (entries != null && entries.every(entry => entry.isDirectory())) {
+            await rm(folder, { recursive: true, force: true });
+        }
+    }
+
     /** Removes `folder` and its parents while they are empty, never the documents folder itself. */
     async function removeEmptyFolders(folder: string) {
         for (let current = folder; isInside(documentsDir, current); current = dirname(current)) {
@@ -422,6 +441,23 @@ export async function pull(options: PullOptions): Promise<PullReport> {
     }
 }
 
+/**
+ * Drops the collections the full pass no longer lists from `tree.collections` (the map the state takes) and
+ * returns their folders, minus any a document still sits in.
+ */
+function vanishedCollectionFolders(tree: TreeResult, listed: { id: string }[]) {
+    const visible = new Set(listed.map(collection => collection.id));
+    const used = new Set([...tree.paths.values()].map(path => path.split('/')[0]));
+    const dropped: string[] = [];
+    for (const [id, folder] of Object.entries(tree.collections)) {
+        if (!visible.has(id) && !used.has(folder)) {
+            delete tree.collections[id];
+            dropped.push(folder);
+        }
+    }
+    return dropped;
+}
+
 /** A document needs attention when it is new, has a new revision, or moved. */
 function needsWork(known: DocState | undefined, remote: OutlineDocument, path: string) {
     return (
@@ -431,11 +467,6 @@ function needsWork(known: DocState | undefined, remote: OutlineDocument, path: s
         known.parentId !== remote.parentDocumentId ||
         known.collectionId !== remote.collectionId
     );
-}
-
-/** The local file a document is written as: its `shared` list and local-only frontmatter keys come from the local side. */
-function localContent(remote: OutlineDocument, shared: string[], extra: Record<string, unknown>) {
-    return serializeDocFile({ id: remote.id, shared, title: remote.title, text: toLocalLinks(remote.text), extra });
 }
 
 /** An interrupted initial pull starts after the last document it finished. */
@@ -488,25 +519,4 @@ function stem(path: string) {
 
 function depth(path: string) {
     return path.split('/').length;
-}
-
-function isInside(root: string, path: string) {
-    const rel = relative(root, path);
-    return rel !== '' && !rel.startsWith('..');
-}
-
-async function pathExists(path: string) {
-    try {
-        await stat(path);
-        return true;
-    } catch (error) {
-        if (isErrorCode(error, 'ENOENT')) {
-            return false;
-        }
-        throw error;
-    }
-}
-
-function isErrorCode(error: unknown, code: string) {
-    return error instanceof Error && 'code' in error && error.code === code;
 }

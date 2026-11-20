@@ -45,7 +45,11 @@ export async function selectAffectedSinceBase(options: SelectAffectedSinceBaseOp
         env: options.env,
         baseBranches: config.baseBranches,
     });
-    const changedFiles = await collectChangedFiles({ root, mergeBase: base.mergeBase });
+    const changedFiles = await collectChangedFiles({
+        root,
+        mergeBase: base.mergeBase,
+        fullRunTriggers: config.fullRunTriggers,
+    });
     const graph = await buildImportGraph({
         root,
         packages,

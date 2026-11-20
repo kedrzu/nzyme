@@ -24,6 +24,9 @@ const { parseArray, parseStringArray, parseString, configError } = createConfigP
  * A `bun.lock`, as a trigger or any other input, is compared by what it installs from outside the
  * workspace (`fingerprintBunLock()`): a change confined to its workspace part (a workspace package's
  * version or dependency list) triggers nothing, since that package's own `package.json` carries it.
+ * A package's `package.json` is compared by what decides how its package loads
+ * (`fingerprintPackageJson()`): a change of its version, scripts, dev dependencies or publishing
+ * metadata alone affects nothing. A `package.json` matching a trigger glob counts by its bytes.
  *
  * @example
  * ```json

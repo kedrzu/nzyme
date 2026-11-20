@@ -53,7 +53,8 @@ entry. A file added to or removed from any listed set is a change too.
 - `selector/buildVariant.ts` — what a variant holds: entry files and their imports in full, executed
   files in full, their static imports `top` only — in full when a server ran them anywhere in the run
   (`TestRun.runExecuted`) — assets by bytes, and the `package.json` of every workspace package owning
-  one of its files, in full; plus the file listings (`selector/FileListing.ts`) above. In the variant
+  one of its files, by the part that decides how the package loads (`fingerprintPackageJson()`: no
+  `version`, `scripts`, `devDependencies` or publishing metadata) unless the test reads it too; plus the file listings (`selector/FileListing.ts`) above. In the variant
   graph a rewrite target imports its source (`x.loc.ts` → `x.loc.yaml`).
 - `selector/findStaleBuildFile.ts` — the build-freshness check of a static suite's record.
 - `build/createBuildInfoReader.ts` — the source versions TypeScript build infos record, shared with

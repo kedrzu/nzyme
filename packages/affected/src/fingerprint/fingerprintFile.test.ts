@@ -118,6 +118,16 @@ test('a stylesheet ignores formatting, and any other change changes both hashes'
     expect(changedParts('card.scss', scss, scss.replace('4px', '8px'))).toEqual(['body', 'top']);
 });
 
+test('a package.json keeps how its package loads in `top`, and the whole file in `body`', () => {
+    const manifest = JSON.stringify({ name: '@acme/lib', version: '1.0.0', type: 'module' });
+    expect(changedParts('packages/lib/package.json', manifest, manifest.replace('1.0.0', '1.1.0'))).toEqual(['body']);
+    expect(changedParts('packages/lib/package.json', manifest, manifest.replace('module', 'commonjs'))).toEqual([
+        'body',
+        'top',
+    ]);
+    expect(fingerprintFile('package.json', '{ "name": ')).toBe('whole');
+});
+
 test('a non-script file is whole', () => {
     expect(fingerprintFile('logo.png', 'PNG')).toBe('whole');
     expect(fingerprintFile('config.json', '{}')).toBe('whole');

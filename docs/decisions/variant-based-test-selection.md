@@ -71,14 +71,29 @@ Two hashes per file, in `@nzyme/affected`.
   `configVersion` (bun's install defaults, such as the linker). A list of what to drop rather than of
   what to keep, so an unknown key errs towards a rerun. An install stamp a consumer writes for its
   `node_modules` hashes the same fingerprint, so the two cannot disagree about a workspace-only change.
+- **Manifest.** A `package.json` standing for its package — in a variant as the manifest of the
+  test's files, and in the base diff — is hashed by the part that decides what the package's code
+  loads and how it runs (`fingerprintPackageJson()`): the manifest without `version`, `scripts`,
+  `devDependencies`, `private` and the publishing metadata (`description`, `keywords`, `files`,
+  `publishConfig`, `repository`, `license`, `author`, `contributors`, `homepage`, `bugs`,
+  `funding`). So a release that raises every `@nzyme/*` version reruns nothing. A list of what to
+  drop, so an unknown field errs towards a rerun. The fingerprint stores that part as `top` and the
+  whole file as `body`, and every other holder of the file takes it whole: a test that imports the
+  manifest or reads it through `fs` (a CLI printing its version), a listing of the package's
+  non-code files (an untraced or opaque run), and a full-run trigger, in the suite fingerprint and
+  in the base diff alike — a trigger means any change runs everything. That keeps the root
+  `package.json`, which holds the `nzyme` config, the scripts that launch the suites and the
+  repo-wide dev dependencies, a byte-for-byte trigger. A script that launches a suite from a
+  package's own manifest (a `test` script run through `bun run --cwd`) is not seen by the package's
+  fingerprint: list that manifest among the suite's `fullRunTriggers`.
 - **Variant** = the test's entry files (hashed whole), the executed files (`body` + `top`), their static
   import closure (`top`, except a file a server process ran in the same run, below), the modules with
   no function — constants, a data table, config, JSON — that a loaded file (an executed file, one in
   that closure, or such a module itself) loads through a literal `import('…')`, with their static
   imports (`top`: the trace sees only functions, so all of such a module's code runs unseen), its
   assets, the
-  `package.json` of every workspace package owning one of its files (a manifest edit acts on the whole
-  package, as on the base-diff path), and a suite fingerprint: the suite's `fullRunTriggers` and everything they
+  `package.json` of every workspace package owning one of its files (`top`, the part above; a manifest
+  edit acts on the whole package, as on the base-diff path), and a suite fingerprint: the suite's `fullRunTriggers` and everything they
   import, the files that ran at startup, modules imported for side effects only, and files with a
   computed `import(…)`. A lazily loaded module with functions is not followed: if the test reached
   it, a function in it ran and it is an executed file itself, and following a router's lazy routes

@@ -38,7 +38,7 @@ export class FileStates {
 
         const bytes = await readFile(absolute);
         const raw = getMd5Hash(bytes);
-        // The path picks the parser (by extension, or by name for a `bun.lock`), so it is part of the key.
+        // The path picks the parser (by extension, or by name for a `bun.lock` or a `package.json`), so it is part of the key.
         const key = `${file}:${raw}`;
         let fingerprint = this.fingerprints.get(key);
         if (fingerprint === undefined) {

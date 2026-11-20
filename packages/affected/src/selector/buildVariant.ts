@@ -57,7 +57,8 @@ export type BuildVariantResult = { variant: Variant } | { missing: string };
  * - everything executed files import statically, transitively — `top` only: their load-time code
  *   ran, their function bodies did not (or they would be executed files themselves). Except a file a
  *   server process ran anywhere in the run: in full, since code that ran once and kept state (a lazy
- *   singleton's setup) served this test too;
+ *   singleton's setup) served this test too; and a `package.json`, whose `top` is only the part that
+ *   decides how its package loads, while the importer reads all of it;
  * - every module whose code all runs on load (constants, a data table, config — see
  *   {@link runsOnlyOnLoad}) loaded through a literal `import('…')` by an executed file, by a file one
  *   imports statically or by such a module itself, and what it imports statically, transitively —
@@ -72,10 +73,12 @@ export type BuildVariantResult = { variant: Variant } | { missing: string };
  * - every file under the directory of a file above with a computed `import(…)`, which may load any
  *   of them — in full, and so is what they import when the suite is not traced (a traced run lists
  *   what ran);
- * - the `package.json` of every workspace package owning one of the files above — in full, as the base
- *   diff treats a package's manifest as a change of all its files: its dependencies, `exports` and
- *   `imports` decide what the package's code loads. A file outside every package belongs to the
- *   root, whose manifest is the root `package.json`;
+ * - the `package.json` of every workspace package owning one of the files above — `top` only, the
+ *   part that decides what the package's code loads and how it runs (dependencies, `exports`,
+ *   `imports`, `type`; see `fingerprintPackageJson()`), as the base diff treats a change of it as a
+ *   change of all the package's files; a version bump, a script or a dev dependency changes nothing.
+ *   In full when the test also reads it (it is imported, read through `fs`, or in a listing below). A
+ *   file outside every package belongs to the root, whose manifest is the root `package.json`;
  * - the files of each such package that nothing imports (fixtures, data a test reads through `fs`) —
  *   in full, as the base diff seeds the whole package from a change to one; for the root, the files
  *   outside every package. Not when the run traced the test's file accesses and the test did nothing
@@ -118,7 +121,7 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
         ...collectImportClosure(graph, [...options.executed, ...loadedLazily], { staticOnly: true }),
     ]) {
         if (!levels.has(file)) {
-            levels.set(file, ranInRun.has(file) ? 'full' : 'top');
+            levels.set(file, ranInRun.has(file) || isPackageManifest(file) ? 'full' : 'top');
         }
     }
 
@@ -156,7 +159,10 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
     // An opaque test (a process, a worker, the Bun shell, a recursive copy) may have read anything.
     const listsPackages = fsReads === undefined || fsReads.opaque;
     for (const owner of owners) {
-        levels.set(owner === '' ? 'package.json' : `${owner}/package.json`, 'full');
+        const manifest = owner === '' ? 'package.json' : `${owner}/package.json`;
+        if (!levels.has(manifest)) {
+            levels.set(manifest, 'top');
+        }
         if (listsPackages) {
             addListing({ kind: 'package', dir: owner });
         }
@@ -236,7 +242,8 @@ async function collectLoadOnlyLazyImports({
                 continue;
             }
             const state = await readState(target);
-            if (state !== null && runsOnlyOnLoad(state)) {
+            // A manifest has no function either: its `body` is the whole file, not function bodies.
+            if (state !== null && (isPackageManifest(target) || runsOnlyOnLoad(state))) {
                 found.add(target);
                 queue.push(target, ...collectImportClosure(graph, [target], { staticOnly: true }));
             }
@@ -270,6 +277,10 @@ async function collectLoadOnlyLazyImports({
         }
         return lazy.filter(target => loaded.has(target));
     }
+}
+
+function isPackageManifest(file: string): boolean {
+    return path.posix.basename(file) === 'package.json';
 }
 
 /** Params of {@link mergeSharedAccesses}. */

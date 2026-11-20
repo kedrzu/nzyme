@@ -12,9 +12,12 @@ import { createContainer } from '@nzyme/ioc/Container.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 
+import { createMemoryKeychain } from '../__fixtures__/createMemoryKeychain.js';
 import { createMemoryStore } from '../__fixtures__/createMemoryStore.js';
+import { defineSecret } from '../defineSecret.js';
+import { keychainStore } from '../keychainStore.js';
 import type { SecretStore } from '../SecretStore.js';
-import { SENTINEL as RUN_SENTINEL } from './__fixtures__/secretsCli.js';
+import { KEYCHAIN_VALUE, SENTINEL as RUN_SENTINEL } from './__fixtures__/secretsCli.js';
 import { defineSecretsCommands } from './defineSecretsCommands.js';
 import type { SecretsProvider } from './SecretsCommandsOptions.js';
 
@@ -77,6 +80,20 @@ const PRINT_ENV = `process.stdout.write(JSON.stringify({
 
 const ALL_KEYS = ['API_KEY', 'DB_PASSWORD', 'SMTP_PASSWORD'];
 
+const PRINT_ENV_DECLARED = `process.stdout.write(JSON.stringify({
+    API_KEY: process.env.API_KEY ?? null,
+    DB_PASSWORD: process.env.DB_PASSWORD ?? null,
+    SMTP_PASSWORD: process.env.SMTP_PASSWORD ?? null,
+    KEYCHAIN_KEY: process.env.KEYCHAIN_KEY ?? null,
+}))`;
+
+/** `DISABLED` is enabled only when the environment sets `DISABLED_ON`. */
+const DECLARED = [
+    defineSecret('API_KEY'),
+    defineSecret('DB_PASSWORD'),
+    defineSecret('DISABLED', { enabled: env => !!env.DISABLED_ON }),
+];
+
 test('run puts the named secrets (earlier store wins) into the env, strips every store’s credentials, and keeps stdout the child’s', async () => {
     const result = await runFixtureCli(
         ['secrets', 'run', ...ALL_KEYS, '--', process.execPath, '-e', PRINT_ENV, 'arg'],
@@ -102,6 +119,22 @@ test('run puts the named secrets (earlier store wins) into the env, strips every
     });
     expect(JSON.stringify(child.argv)).not.toContain(RUN_SENTINEL);
     expect(JSON.stringify(child.argv)).toContain('arg');
+});
+
+test('run hands a value held by a keychain store to the child', async () => {
+    const result = await runFixtureCli([
+        'secrets',
+        'run',
+        'KEYCHAIN_KEY',
+        '--',
+        process.execPath,
+        '-e',
+        'process.stdout.write(process.env.KEYCHAIN_KEY ?? "")',
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe(KEYCHAIN_VALUE);
+    expect(result.stderr).not.toContain(KEYCHAIN_VALUE);
 });
 
 test('run lets a variable set in the environment win and reports it on stderr only', async () => {
@@ -182,6 +215,79 @@ test.each([
 
     expect(result.exitCode).not.toBe(0);
     expect(result.stdout + result.stderr).toContain('secrets run <KEY>... -- <command>');
+});
+
+// --- run, with declared secrets ---
+
+test('run with declared secrets and no key hands the child exactly the enabled declared secrets', async () => {
+    const result = await runFixtureCli(['secrets', 'run', '--', process.execPath, '-e', PRINT_ENV_DECLARED], {
+        FIXTURE_DECLARED: '1',
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).not.toContain(RUN_SENTINEL);
+    expect(result.stderr).not.toContain(KEYCHAIN_VALUE);
+    const child = JSON.parse(result.stdout) as Record<string, unknown>;
+    expect(child).toEqual({
+        API_KEY: RUN_SENTINEL,
+        DB_PASSWORD: 'db-pass',
+        // Stored, but declared and not enabled here.
+        SMTP_PASSWORD: null,
+        // Stored, but not declared.
+        KEYCHAIN_KEY: null,
+    });
+});
+
+test('run with declared secrets and no key starts nothing when an enabled one is in no store, and names it', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'secrets-run-'));
+    const marker = path.join(dir, 'started');
+    const script = `require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'x')`;
+
+    const result = await runFixtureCli(['secrets', 'run', '--', process.execPath, '-e', script], {
+        FIXTURE_DECLARED: '1',
+        FIXTURE_WITH_MISSING: '1',
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('MISSING_KEY');
+    expect(result.stdout + result.stderr).not.toContain(RUN_SENTINEL);
+    expect(await Bun.file(marker).exists()).toBe(false);
+});
+
+test.each([
+    ['not declared', 'KEYCHAIN_KEY', 'Refusing to run with KEYCHAIN_KEY: it is not declared with defineSecret.'],
+    ['not enabled', 'SMTP_PASSWORD', 'Refusing to run with SMTP_PASSWORD: it is not enabled in this environment.'],
+])('run with declared secrets refuses a named key %s, starts nothing and prints no value', async (_, key, message) => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'secrets-run-'));
+    const marker = path.join(dir, 'started');
+    const script = `require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'x')`;
+
+    const result = await runFixtureCli(['secrets', 'run', 'API_KEY', key, '--', process.execPath, '-e', script], {
+        FIXTURE_DECLARED: '1',
+    });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stdout + result.stderr).toContain(message);
+    expect(result.stdout + result.stderr).not.toContain(RUN_SENTINEL);
+    expect(result.stdout + result.stderr).not.toContain(KEYCHAIN_VALUE);
+    expect(await Bun.file(marker).exists()).toBe(false);
+});
+
+// --- one product CLI ---
+
+test('a product CLI runs the pen and the secrets commands it registers together', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'secrets-pen-'));
+    const file = path.join(dir, 'design.pen');
+    await fs.writeFile(file, JSON.stringify({ version: '2.22', children: [] }));
+
+    const pen = await runFixtureCli(['pen', 'check', file]);
+    const list = await runFixtureCli(['secrets', 'list']);
+
+    expect(pen.exitCode).toBe(0);
+    expect(pen.stdout).toBe('pen check: 1 file(s) OK\n');
+    expect(list.exitCode).toBe(0);
+    expect(list.stdout).toContain('API_KEY  bw\n');
+    expect(list.stdout).not.toContain(RUN_SENTINEL);
 });
 
 // --- set ---
@@ -353,7 +459,7 @@ test('set --prompt with no dialog tool and no terminal fails naming the command 
     });
 
     expect(result.exitCode).toBe(1);
-    expect(result.errors).toContain('nzyme secrets set API_KEY`');
+    expect(result.errors).toContain('fixture secrets set API_KEY`');
     expect(bw.writes).toEqual([]);
     expectNoLeak(result, SENTINEL);
 });
@@ -376,6 +482,50 @@ test('set --prompt of a refused name fails before opening a dialog', async () =>
     expect(bw.writes).toEqual([]);
 });
 
+// --- set, with declared secrets ---
+
+test.each([
+    ['not declared', 'UNDECLARED', 'Refusing to write UNDECLARED: it is not declared with defineSecret.'],
+    ['not enabled', 'DISABLED', 'Refusing to write DISABLED: it is not enabled in this environment.'],
+])('set of a name %s fails before target, any dialog or write, and prints no value', async (_, name, message) => {
+    for (const prompt of [[], ['--prompt']]) {
+        const bw = createMemoryStore({ id: 'bw' });
+        await standInDialog(SENTINEL);
+        const target = (): SecretStore => {
+            throw new Error('target must not be asked');
+        };
+
+        const result = await runCommand({
+            stores: [bw.store],
+            target,
+            secrets: DECLARED,
+            args: ['secrets', 'set', name, ...prompt],
+            stdin: SENTINEL,
+        });
+
+        expect(result.exitCode).toBe(1);
+        expect(result.errors).toContain(message);
+        expect(await Bun.file(path.join(dialogDir, 'dialog.argv')).exists()).toBe(false);
+        expect(bw.writes).toEqual([]);
+        expectNoLeak(result, SENTINEL);
+    }
+});
+
+test('set of a declared, enabled name writes it', async () => {
+    const bw = createMemoryStore({ id: 'bw' });
+
+    const result = await runCommand({
+        stores: [bw.store],
+        secrets: DECLARED,
+        args: ['secrets', 'set', 'API_KEY'],
+        stdin: SENTINEL,
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(bw.writes).toEqual([[{ key: 'API_KEY', value: SENTINEL }]]);
+    expectNoLeak(result, SENTINEL);
+});
+
 // --- list ---
 
 test('list shows every key of every store with its store id, never a value', async () => {
@@ -394,6 +544,45 @@ test('list shows every key of every store with its store id, never a value', asy
     expectNoLeak(result, 'db-value');
     expectNoLeak(result, 'smtp-value');
     expectNoLeak(result, 'env-value');
+});
+
+test('set then list through a keychain store shows the key under keychain:<scope>, never the value', async () => {
+    const store = keychainStore({ scope: 'app', keychain: createMemoryKeychain() });
+
+    const set = await runCommand({ stores: [store], args: ['secrets', 'set', 'NAME'], stdin: SENTINEL });
+    const list = await runCommand({ stores: [store], args: ['secrets', 'list'] });
+
+    expect(set.exitCode).toBe(0);
+    expectNoLeak(set, SENTINEL);
+    expect(list.exitCode).toBe(0);
+    expect(list.stdout).toBe('NAME  keychain:app\n');
+    expectNoLeak(list, SENTINEL);
+});
+
+test('list with declared secrets shows each enabled one with its store or missing, then the stored keys it does not use, never a value', async () => {
+    const one = createMemoryStore({ id: 'one', data: { API_KEY: SENTINEL, STRAY: 'stray-value' } });
+    const two = createMemoryStore({ id: 'two', data: { API_KEY: 'shadowed-value', DISABLED: 'disabled-value' } });
+
+    const result = await runCommand({
+        stores: [one.store, two.store],
+        secrets: DECLARED,
+        args: ['secrets', 'list'],
+        env: { DB_PASSWORD: 'env-value', DISABLED_ON: '' },
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe(
+        [
+            'API_KEY  one',
+            'DB_PASSWORD  missing  overridden by environment',
+            'STRAY  one  not declared',
+            'DISABLED  two  not enabled here',
+            '',
+        ].join('\n'),
+    );
+    for (const value of [SENTINEL, 'stray-value', 'shadowed-value', 'disabled-value', 'env-value']) {
+        expectNoLeak(result, value);
+    }
 });
 
 // --- login ---
@@ -458,6 +647,8 @@ interface RunCommandOptions {
     stores: SecretStore[];
     /** The write policy; the first store by default. */
     target?: SecretsProvider['target'];
+    /** The provider's declared secrets; none by default. */
+    secrets?: SecretsProvider['secrets'];
     args: string[];
     stdin?: string;
     env?: EnvVariables;
@@ -476,8 +667,11 @@ async function runCommand(options: RunCommandOptions) {
 
             return first;
         });
-    const provider = defineService<SecretsProvider>({ name: 'AppSecrets', setup: () => ({ stores, target }) });
-    const cli = new Cli<CommandContext>({ binaryName: 'nzyme' });
+    const provider = defineService<SecretsProvider>({
+        name: 'AppSecrets',
+        setup: () => ({ stores, target, secrets: options.secrets }),
+    });
+    const cli = new Cli<CommandContext>({ binaryName: 'fixture' });
     for (const command of defineSecretsCommands({ provider })) {
         cli.register(command);
     }

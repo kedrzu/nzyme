@@ -2,6 +2,7 @@ import { afterEach, expect, setSystemTime, spyOn, test } from 'bun:test';
 
 import { cached } from './cached.js';
 import type { Keychain } from './osKeychain.js';
+import { createMemoryKeychain } from './__fixtures__/createMemoryKeychain.js';
 import type { SecretStore, SecretStoreEntry } from './SecretStore.js';
 
 const HOUR = 60 * 60 * 1000;
@@ -244,18 +245,4 @@ function createMemoryStore(id: string, initial: Record<string, string>) {
             return counter.reads;
         },
     };
-}
-
-function createMemoryKeychain() {
-    const values = new Map<string, string>();
-    const keychain: Keychain = {
-        get: name => Promise.resolve(values.get(name) ?? null),
-        set: (name, value) => {
-            values.set(name, value);
-            return Promise.resolve();
-        },
-        delete: name => Promise.resolve(values.delete(name)),
-    };
-
-    return { ...keychain, values };
 }

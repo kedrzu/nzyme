@@ -105,7 +105,7 @@ if ($null -eq $c) { exit 4 }
 export async function promptSecret(params: PromptSecretParams): Promise<PromptSecretResult> {
     const env = params.env ?? process.env;
     const timeout = params.timeout ?? DIALOG_TIMEOUT_SECONDS * 1000;
-    const title = `${params.name} - nzyme secrets`;
+    const title = `${params.name} - secrets`;
     const message = [params.name, params.hint, NOTICE].filter(Boolean).join('\n\n');
 
     const tools = getDialogTools({

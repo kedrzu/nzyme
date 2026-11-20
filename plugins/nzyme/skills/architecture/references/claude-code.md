@@ -71,7 +71,7 @@ clone or a new worktree behaves the same for every agent, with no per-machine se
   `.gitignore`, the second with `worktrees/` in `.claude/.gitignore` (`assets/claude-gitignore.tmpl`),
   and copied into each new worktree by `setup.sh` (`references/setup-scripts.md`).
 - **`.mcp.json`** — none by default; a product adds its own servers and enables them with
-  `enabledMcpjsonServers`. The browser MCP comes from the `playwright` plugin.
+  `enabledMcpjsonServers`. The browser is not an MCP server: it comes from the `browser` plugin.
 
 ## Plugins
 
@@ -87,7 +87,7 @@ adds skills, commands or hooks to every session, so a project enables what it us
 |`guardrails`|`kedrzu-skills`|hooks that refuse dangerous commands and say what to do instead|
 |`skill-improve`|`kedrzu-skills`|revising the repo's own skills from transcript evidence|
 |`web-search`|`kedrzu-skills`|the research protocol every skill that searches relies on|
-|`playwright`|`kedrzu-skills`|the browser MCP: e2e, story debugging, checking a page|
+|`browser`|`kedrzu-skills`|the browser skill (agent-browser CLI): checking a page, story debugging, real websites through flaneur|
 |`handoff`|`kedrzu-skills`|handing work to a fresh Paseo agent with a pointer summary|
 |`retro`|`kedrzu-skills`|retrospectives on how agents worked in this repo|
 |`claude-md-management`|`claude-plugins-official`|auditing and updating `CLAUDE.md`|
@@ -113,7 +113,7 @@ ask a fresh `claude -p` which skills have no description; if any of the repo's o
 **Never in a project** — personal tools belong in the user's own `~/.claude/settings.json`: `gmail-mcp`,
 `gdrive-mcp`, `whatsapp`, `telegram`, `shopping-research`, `wait-what` (`kedrzu-skills`).
 `secrets` (`kedrzu-skills`) is not one of them but stays out too: the repo's `secrets` skill and
-`secrets set --prompt` put every credential in the repo's store.
+`bun secrets set --prompt` put every credential in the repo's store.
 
 **New plugins.** The marketplaces grow. On every run, list `kedrzu-skills` — the local copy at
 `~/.claude/plugins/marketplaces/kedrzu-skills/.claude-plugin/marketplace.json`, or

@@ -11,7 +11,7 @@ every product CLI and the `nzyme` binary with its commands. The binary's depende
 typescript, depcheck and others) came with every package that only wanted to define a command.
 
 The split was first needed to break a cycle: `@nzyme/secrets` defines commands, and the binary would
-have depended on `@nzyme/secrets`. With plugins (`nzyme-cli-plugins.md`) the binary no longer depends
+have depended on `@nzyme/secrets`. With plugins (`nzyme-cli-plugins.md`; later replaced by product CLIs, `product-clis-over-nzyme-plugins.md`) the binary no longer depends
 on `@nzyme/secrets`, so the cycle is gone. The dependency weight remains: a repo's plugin, and
 `@nzyme/secrets` itself, would pull in the whole binary.
 
@@ -27,7 +27,7 @@ The user chose the split without re-exports.
 ## Decision
 
 `@nzyme/cli-core` holds `Command`, `CommandScope`, `execute`, `initialize`, the re-exported clipanion
-`Option` and `UsageError`, and the `NzymePlugin` type. `@nzyme/cli` keeps only the binary and
+`Option` and `UsageError`, and (since removed with the plugins) the `NzymePlugin` type. `@nzyme/cli` keeps only the binary and
 `NzymePackageConfig`. Released as a breaking change (`feat(cli-core)!`).
 
 ## Consequences

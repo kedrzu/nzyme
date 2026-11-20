@@ -34,9 +34,9 @@ export class PenDiffCommand extends Command {
             then the changed variables and the changed components with their instance counts.
         `,
         examples: [
-            ['Uncommitted changes', 'nzyme pen diff'],
-            ['Changes on this branch', 'nzyme pen diff main -- design.pen'],
-            ['Changes between two commits', 'nzyme pen diff HEAD~3 HEAD'],
+            ['Uncommitted changes', 'pen diff'],
+            ['Changes on this branch', 'pen diff main -- design.pen'],
+            ['Changes between two commits', 'pen diff HEAD~3 HEAD'],
         ],
     });
 
@@ -48,14 +48,14 @@ export class PenDiffCommand extends Command {
         const revs = separator === -1 ? this.args : this.args.slice(0, separator);
         const paths = separator === -1 ? [] : this.args.slice(separator + 1);
         if (revs.length > 2 || paths.length > 1) {
-            this.context.stderr.write('pen diff: usage: nzyme pen diff [<rev>] [<rev>] [-- <path>]\n');
+            this.context.stderr.write('pen diff: usage: pen diff [<rev>] [<rev>] [-- <path>]\n');
             return 1;
         }
 
         const file = paths[0] ?? (await findOnlyPenFile());
         if (file === null) {
             this.context.stderr.write(
-                'pen diff: git tracks no single .pen file here; name it: nzyme pen diff [<rev>] [<rev>] -- <path>\n',
+                'pen diff: git tracks no single .pen file here; name it: pen diff [<rev>] [<rev>] -- <path>\n',
             );
             return 1;
         }

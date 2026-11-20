@@ -39,15 +39,14 @@ claude plugin install dev@kedrzu-skills  # likewise design-doc, git, web-search,
 
 ## Release
 
-1. Pull requests go to `main`. Their titles must be [Conventional Commits](https://www.conventionalcommits.org),
-   because they become the squash commit and drive the version and the changelog.
-2. **Promote main to release** (a manual workflow) merges `main` into `release`. Hotfixes are pull
-   requests straight to `release`.
-3. Every push to `release` updates the release PR `chore(release): vX` with the next version and its
-   [CHANGELOG](CHANGELOG.md) entry. Merging it publishes to npm (trusted publishing, with provenance),
-   tags `vX` and creates the GitHub Release. `release` is then merged back into `main`.
+1. Pull requests, hotfixes included, go to `main`. Their titles must be
+   [Conventional Commits](https://www.conventionalcommits.org), because they become the squash commit
+   and drive the version and the changelog.
+2. A maintainer runs the **Release** workflow by hand. It commits the next version and its
+   [CHANGELOG](CHANGELOG.md) entry to `main` as `chore(release): vX`, publishes to npm (trusted
+   publishing, with provenance), tags `vX` and creates the GitHub Release.
 
-The reasoning is in [docs/decisions/release-line-on-nx-release.md](docs/decisions/release-line-on-nx-release.md).
+The reasoning is in [docs/decisions/release-from-main-on-demand.md](docs/decisions/release-from-main-on-demand.md).
 
 ## Agent plugin for consumers
 

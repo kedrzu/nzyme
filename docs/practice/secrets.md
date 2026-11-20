@@ -1,6 +1,7 @@
 # Secrets
 
-The repo keeps its secrets in a remote store (Bitwarden Secrets Manager today) behind a login.
+The repo keeps its secrets in a remote store (Bitwarden Secrets Manager today) behind a login, or, for
+secrets of one developer on one machine, in the local OS keychain (`keychainStore`).
 A store is scoped by a prefix and its secrets are keyed by the variable name. A repo with a config
 document lists `secretsSource(store)` among its sources; otherwise the app calls
 `loadSecrets(container, stores)` at startup, so the code reads secrets through `defineEnvVariable` like any
@@ -8,9 +9,9 @@ other variable ([ioc](ioc.md)). Values are cached in the OS keychain. There is n
 every credential — the app's, a script's, a token a tool needs — is a secret in a store, so it has one
 home and one way in.
 
-What is true only in one repo — how the CLI is invoked (`bun nzyme secrets …` or the product's CLI),
+What is true only in one repo — how the product CLI behind `bun secrets …` is built,
 where the stores are defined, which prefixes and environments exist, which store a name goes to,
-whose machines can write — sits above this document. This document uses `secrets …` for the command.
+whose machines can write — sits above this document. The commands run as `bun secrets …` in every repo, through its `secrets` wrapper script.
 API and options: `@nzyme/secrets` README (`nzyme/packages/secrets/README.md` in a product repo).
 
 ## A value never enters the transcript
@@ -19,10 +20,10 @@ Whatever you read and whatever a command prints stays in the session transcript 
 transcript is stored, synced and re-read. A value that lands there is leaked and has to be rotated.
 The commands never print values; the leaks come from around them:
 
-- **The environment.** `secrets run <KEY>... -- <cmd>` hands the named secrets to `<cmd>`, so its output reaches
+- **The environment.** `bun secrets run <KEY>... -- <cmd>` hands the named secrets to `<cmd>`, so its output reaches
   you: never `env`, `printenv`, `set`, `export -p`, `node -e 'console.log(process.env)'` or a script
   that dumps its config. Run the app or the test you need; to know whether a variable is set, use
-  `secrets list`.
+  `bun secrets list`.
 - **The keychain.** Tokens and cached values sit under the service `nzyme-secrets`, readable by any
   `bun` process of the user without a prompt. Never `security find-generic-password -w`,
   `Bun.secrets.get`, or a script that calls either.
@@ -32,18 +33,19 @@ The commands never print values; the leaks come from around them:
   container with fake values.
 
 To check a value is right without seeing it, run what uses it: the app, an API call through
-`secrets run`, `secrets list` for presence.
+`bun secrets run`, `bun secrets list` for presence.
 
 ## Adding a secret
 
-1. Declare the variable with `defineEnvVariable` (or the config entry) where the code reads it. There
-   is no mapping to edit: the key in the store is the name. The repo's `target` policy decides which
-   store the name goes to and may refuse it; its message says why.
+1. Declare it with `defineSecret` in the repo's secrets module (a name, a `description`, optionally
+   `enabled` and `meta`), and read it where the code needs it. There is no mapping to edit: the key in
+   the store is the name. `bun secrets set` refuses a name that is not declared or not enabled here, and the
+   provider's write policy may refuse it too; the message says why.
 2. Ask the user for the value through a masked dialog. Tell them it is coming — it opens outside
    the terminal — then run:
 
    ```sh
-   secrets set STRIPE_KEY --prompt="Stripe test secret key: dashboard → Developers → API keys"
+   bun secrets set STRIPE_KEY --prompt="Stripe test secret key: dashboard → Developers → API keys"
    ```
 
    The hint is for the person: which site, which page, which scope. It needs the `=`
@@ -54,7 +56,7 @@ To check a value is right without seeing it, run what uses it: the app, an API c
    - **nothing entered** (cancelled, blank, timed out after 5 minutes) — nothing written; ask the
      user whether to retry.
    - **no dialog or terminal** (ssh, a cloud session) — give the user the command from the error to
-     run in their own terminal, then confirm with `secrets list`.
+     run in their own terminal, then confirm with `bun secrets list`.
 
 Writing needs a token that may write; a read-only one is refused, and the error says so.
 
@@ -63,13 +65,12 @@ The OAuth refresh tokens of the Google CLIs (`gmail-cli`, `gdrive-cli`) are secr
 
 ## When a secret is missing or a token is rejected
 
-`secrets list` shows every key of every store with its store id (and `overridden by environment`). It does not
-know which keys the repo expects, so a name absent from it is missing: add it as above, or run the repo's own check if it has one. A missing or rejected token is
-the user's to fix with `secrets login`, because only they hold it; tell them and stop. `overridden by environment` means a variable set in the shell, or in
+`bun secrets list` shows every declared secret that applies here with its store id, `missing` or `overridden by environment`, then stored keys that are `not declared` or `not enabled here`. A `missing` name: add it as above. A missing or rejected token is
+the user's to fix with `bun secrets login`, because only they hold it; tell them and stop. `overridden by environment` means a variable set in the shell, or in
 a leftover `.env` that Bun loads on its own, wins over the store.
 
 ## A value pasted into the chat
 
 It is in the transcript now. Do not store that copy, and do not repeat it. Tell the user plainly
 that it is exposed, that it should be revoked or rotated where it was issued, and collect the new
-value with `secrets set --prompt`.
+value with `bun secrets set --prompt`.

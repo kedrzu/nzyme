@@ -12,7 +12,6 @@ import { LocaliseCommand } from './commands/LocaliseCommand.js';
 import { MonorepoCommand } from './commands/MonorepoCommand.js';
 import { QuietRunCommand } from './commands/QuietRunCommand.js';
 import { SubmoduleBumpCommand } from './commands/SubmoduleBumpCommand.js';
-import { loadPlugins } from './plugins/loadPlugins.js';
 
 const builtinCommands = [
     MonorepoCommand,
@@ -29,20 +28,15 @@ const builtinCommands = [
 // command loads its own `.env` if it wants one) and prints nothing beyond its own summary.
 // `submodule` and `git` (`git affected`, `git base`) need no `.env`, and their stdout is a contract callers
 // parse — so nothing else may be printed there (loading a `.env` logs a line to stdout).
-// `secrets`, a plugin's command, decides for itself which values it reads: nzyme adds no `.env`
-// loading on top of Bun's.
-// `pen`, a plugin's command, runs as git's merge driver: it needs no `.env` and prints nothing extra.
-if (!['quiet-run', 'submodule', 'git', 'secrets', 'pen'].includes(process.argv[2] ?? '')) {
+if (!['quiet-run', 'submodule', 'git'].includes(process.argv[2] ?? '')) {
     loadEnvVariables();
 }
 
 // Initialize the CLI environment
 initialize();
 
-const pluginCommands = await loadPlugins();
-
 // Execute the CLI program
 await execute({
     name: 'nzyme',
-    commands: [...builtinCommands, ...pluginCommands],
+    commands: builtinCommands,
 });

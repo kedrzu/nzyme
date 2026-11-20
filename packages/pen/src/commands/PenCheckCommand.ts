@@ -25,8 +25,8 @@ export class PenCheckCommand extends Command {
             An unknown format version is a warning. Exits 1 when any file has an error.
         `,
         examples: [
-            ['Check every tracked .pen file', 'nzyme pen check'],
-            ['Check one file', 'nzyme pen check design.pen'],
+            ['Check every tracked .pen file', 'pen check'],
+            ['Check one file', 'pen check design.pen'],
         ],
     });
 

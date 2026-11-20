@@ -38,8 +38,8 @@ immutable or made by a factory someone has vouched for.
 The `nzyme/no-module-state` oxlint rule (`packages/oxlint/src/noModuleState.ts`). At a module's top
 level it allows:
 
-- functions, primitives and immutable values: `as const` or `Immutable<…>` (`@nzyme/types`), which are
-  deep, and `Object.freeze`, `Readonly<…>`, `readonly T[]`, `ReadonlyMap` and `ReadonlySet`, which are
+- functions, primitives and immutable values: `immutable(…)` (`@nzyme/utils`, which infers an
+  `Immutable<…>` type), `as const` or `Immutable<…>` (`@nzyme/types`), which are deep, and `Object.freeze`, `Readonly<…>`, `readonly T[]`, `ReadonlyMap` and `ReadonlySet`, which are
   shallow (`ReadonlyMap`/`ReadonlySet` for collections, since `Readonly<Map>` still allows `.set()`).
   A literal nested under a shallow value is reported unless it is immutable on its own;
 - calls to functions whose declaration carries `@__NO_SIDE_EFFECTS__` — the author vouches the function is

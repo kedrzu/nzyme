@@ -19,7 +19,7 @@ const MESSAGES = {
     mutableBinding:
         '`{{kind}}` at module top level is state that outlives a call. Use `const`, or move the state into a declared factory such as `createMemo`/`createCache` from `@nzyme/utils`.',
     mutableValue:
-        'A mutable {{what}} at module top level is state that outlives a call. Make it immutable all the way down (`as const`, or an `Immutable<…>` type from `@nzyme/types/Immutable.js`; `Object.freeze(…)` and the `Readonly*` types cover only the top level), or create it through a function annotated `@__NO_SIDE_EFFECTS__`.',
+        'A mutable {{what}} at module top level is state that outlives a call. Make it immutable all the way down (wrap it in `immutable(…)` from `@nzyme/utils/immutable.js`, or use `as const` or an `Immutable<…>` type from `@nzyme/types/Immutable.js`; `Object.freeze(…)` and the `Readonly*` types cover only the top level), or create it through a function annotated `@__NO_SIDE_EFFECTS__`.',
     undeclaredCall:
         '`{{name}}` is called at module top level but is not declared `@__NO_SIDE_EFFECTS__`. Annotate it if it is idempotent and tested, list its package in `externalPackages`, or call it lazily.',
     loadTimeEffect:
@@ -27,7 +27,7 @@ const MESSAGES = {
     mutableStaticField:
         'A static class field that is not `readonly` is state that outlives a call. Make it `readonly` with an immutable value.',
     uninspectableItems:
-        'The values this {{what}} keeps are built where this rule cannot see them, and its readonly type makes only the top level immutable. Build them from literals or existing constants, type the value `Immutable<…>` from `@nzyme/types/Immutable.js`, or create it through a function annotated `@__NO_SIDE_EFFECTS__`.',
+        'The values this {{what}} keeps are built where this rule cannot see them, and its readonly type makes only the top level immutable. Build them from literals or existing constants, wrap the value in `immutable(…)` from `@nzyme/utils/immutable.js` (or type it `Immutable<…>`), or create it through a function annotated `@__NO_SIDE_EFFECTS__`.',
 } as const;
 
 type MessageId = keyof typeof MESSAGES;
@@ -35,8 +35,9 @@ type MessageId = keyof typeof MESSAGES;
 /**
  * How immutable the value at a position is made by what surrounds it, which decides whether an
  * object or array literal may sit there:
- * - `deep`: a declared `Immutable<…>` (`@nzyme/types`) makes TypeScript refuse writes to the value
- *   and to everything reached through it, whatever built it;
+ * - `deep`: a declared `Immutable<…>` (`@nzyme/types`), or the `immutable(…)` call from
+ *   `@nzyme/utils` that infers one, makes TypeScript refuse writes to the value and to everything
+ *   reached through it, whatever built it — a `Map`, `Set` or array included;
  * - `const`: `as const` makes TypeScript refuse writes to the literal and to every literal nested in
  *   it, but not to what a call returns there, nor to a part asserted to a mutable type
  *   (`{ a: [] as string[] } as const`);
@@ -66,6 +67,9 @@ type ItemRole = 'element' | 'entry';
 
 /** Collections whose `new` is a mutable value unless its readonly interface is declared. */
 const COLLECTION_CONSTRUCTORS: ReadonlySet<string> = new Set(['Array', 'Map', 'Set', 'WeakMap', 'WeakSet']);
+
+/** The collections an `Immutable<…>` type makes immutable together with everything they hold. */
+const DEEP_IMMUTABLE_COLLECTIONS: ReadonlySet<string> = new Set(['Array', 'Map', 'Set']);
 
 /**
  * Global constructors whose instances hold configuration only: nothing a call does to one changes
@@ -129,6 +133,9 @@ const INERT_STATEMENTS: ReadonlySet<string> = new Set([
     'TSNamespaceExportDeclaration',
     'TSTypeAliasDeclaration',
 ]);
+
+/** The specifiers `immutable` from `@nzyme/utils` is imported through. */
+const IMMUTABLE_HELPER_SPECIFIERS: ReadonlySet<string> = new Set(['@nzyme/utils', '@nzyme/utils/immutable.js']);
 
 /** Expressions that only wrap their operand for the type checker. */
 const TYPE_WRAPPERS: ReadonlySet<string> = new Set([
@@ -438,6 +445,11 @@ export const noModuleState: Immutable<OxlintRule> = {
 
             if (isGlobalIdentifier(callee) && COLLECTION_CONSTRUCTORS.has(callee.name)) {
                 const what = `\`${callee.name}\``;
+                // `Immutable<…>` turns an array, `Map` or `Set` into its readonly interface all the way
+                // down; a `WeakMap`/`WeakSet` keeps its `set`/`add`.
+                if (mutability === 'deep' && DEEP_IMMUTABLE_COLLECTIONS.has(callee.name)) {
+                    return;
+                }
                 if (mutability !== callee.name) {
                     report(node, 'mutableValue', { what });
                 } else if (callee.name === 'Array') {
@@ -473,6 +485,12 @@ export const noModuleState: Immutable<OxlintRule> = {
                 for (const argument of node.arguments ?? []) {
                     checkValue(argument, mutability === 'deep' ? 'deep' : 'shallow');
                 }
+                return;
+            }
+
+            // `immutable(value)` types its value `Immutable<…>`, so the value is judged as under one.
+            if (isImmutableHelper(callee)) {
+                checkEach(node.arguments, 'deep');
                 return;
             }
 
@@ -643,6 +661,18 @@ export const noModuleState: Immutable<OxlintRule> = {
             } else if (entry.type !== 'Identifier' && entry.type !== 'MemberExpression') {
                 report(owner, 'uninspectableItems', { what });
             }
+        }
+
+        /** Whether `callee` is `immutable` imported from `@nzyme/utils`. */
+        function isImmutableHelper(callee: OxlintNode): boolean {
+            if (!isNode(callee, 'Identifier')) {
+                return false;
+            }
+
+            const binding = importOf(callee);
+            return (
+                binding != null && binding.name === 'immutable' && IMMUTABLE_HELPER_SPECIFIERS.has(binding.specifier)
+            );
         }
 
         function isAllowedCallee(callee: OxlintNode): boolean {

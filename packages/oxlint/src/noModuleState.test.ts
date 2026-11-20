@@ -99,6 +99,44 @@ export const DEEP_FROM: Immutable<{ list: string[] }[]> = Array.from(SRC, k => (
         expect(await lintCase(source)).toEqual([]);
     });
 
+    it('treats a value passed to `immutable` from `@nzyme/utils` as typed `Immutable<…>`', async () => {
+        const source = `import type { Immutable } from '@nzyme/types/Immutable.js';
+import { immutable } from '@nzyme/utils/immutable.js';
+import { immutable as fromIndex } from '@nzyme/utils';
+
+export const LIST = immutable(['a', 'b']);
+export const DEEP = immutable({ a: 1, nested: { b: [2] } });
+export const NAMES = immutable(new Set(['a']));
+export const GROUPS = immutable(new Map([['a', ['x']]]));
+export const INDEXED = fromIndex({ list: [1] });
+export const TYPED_SET: Immutable<Set<string>> = new Set(['a']);
+export const BY_OBJECT = immutable(new WeakMap<object, number>());
+export const LOADED = immutable(load());
+
+function load() {
+    return { a: 1 };
+}
+`;
+
+        expect(await lintCase(source)).toEqual([
+            lineOf(source, 'export const BY_OBJECT'),
+            lineOf(source, 'export const LOADED'),
+        ]);
+    });
+
+    it('does not take a local function named `immutable` for the one from `@nzyme/utils`', async () => {
+        const source = `import { immutable } from './immutable.js';
+
+export const STATE = immutable({ count: 0 });
+`;
+
+        expect(
+            await lintCase(source, {
+                'immutable.ts': 'export function immutable<T>(value: T): T {\n    return value;\n}\n',
+            }),
+        ).toEqual([lineOf(source, 'export const STATE')]);
+    });
+
     it('rejects `let` and `var`', async () => {
         const source = `export let counter = 0;
 export var legacy = 'x';

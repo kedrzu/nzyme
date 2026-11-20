@@ -16,50 +16,53 @@ bun add @nzyme/gdrive-cli @nzyme/cli-core
 
 ## Register
 
+Spread the commands into the product CLI's `execute` (its `packages/cli`,
+`docs/decisions/product-clis-over-nzyme-plugins.md`):
+
 ```ts
-// tools/drive.ts
+// packages/cli/src/cli.ts
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import type { NzymePlugin } from '@nzyme/cli-core/NzymePlugin.js';
+import { execute } from '@nzyme/cli-core/execute.js';
 import { defineDriveCommands } from '@nzyme/gdrive-cli/defineDriveCommands.js';
 
-import { AppSecrets } from '../packages/app/src/AppSecrets.js';
+import { AppGoogleClients } from '@acme/app/AppGoogleClients.js';
+import { AppSecrets } from '@acme/secrets/AppSecrets.js';
+import { GDRIVE_TOKENS } from '@acme/secrets/secrets.js';
 
-export default {
-    commands: defineDriveCommands({
-        auth: { provider: AppSecrets, accounts: ['*@acme.com'] },
-        permissions: { upload: true },
-        files: {
-            roots: [path.join(os.homedir(), 'Notes')],
-            downloadsDir: path.join(os.homedir(), '.cache', 'acme', 'downloads'),
-        },
-    }),
-} satisfies NzymePlugin;
+await execute({
+    name: 'acme',
+    commands: [
+        // ...the product's other commands
+        ...defineDriveCommands({
+            auth: {
+                provider: AppSecrets,
+                tokens: GDRIVE_TOKENS,
+                client: AppGoogleClients,
+                accounts: ['*@acme.com'],
+            },
+            permissions: { upload: true },
+            files: {
+                roots: [path.join(os.homedir(), 'Notes')],
+                downloadsDir: path.join(os.homedir(), '.cache', 'acme', 'downloads'),
+            },
+        }),
+    ],
+});
 ```
-
-```json
-{
-    "nzyme": {
-        "plugins": ["./tools/drive.ts"]
-    }
-}
-```
-
-A repo with its own CLI passes the same commands to `execute({ name, commands: [...appCommands,
-...defineDriveCommands({ ... })] })`. As with every plugin, `@nzyme/cli` and the other `@nzyme/*`
-packages must be one version, installed in the repo (`docs/decisions/nzyme-cli-plugins.md`).
 
 `defineDriveCommands` throws on a path that is not absolute.
 
 ## Before the first use
 
-1. Create the Google Cloud app, enable the Drive API and store `GOOGLE_CLIENT_ID` and
-   `GOOGLE_CLIENT_SECRET` as secrets ([`@nzyme/google-auth`](../google-auth#the-google-cloud-app)).
-2. The `provider`'s `target` must accept the token keys `<keyPrefix><SERVICE>_TOKEN_<SLUG>`, here
-   `GOOGLE_DRIVE_TOKEN_<SLUG>` by default (`SLUG`: the email upper-cased, every non-alphanumeric character
-   turned into `_`), and `target(key)` must return the same, cached, store instance that is in `stores`,
-   or the keychain cache hides a fresh sign-in until its TTL.
+1. Create the Google Cloud app, enable the Drive API, and declare and store `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+   behind your `GoogleClientProvider` ([`@nzyme/google-auth`](../google-auth#the-google-cloud-app)).
+2. Declare `GDRIVE_TOKENS` in the product's `@<product>/secrets` (`packages/secrets/src/secrets.ts`) with
+   `meta: { store: 'personal' }`. Route it to a per-developer store (the keychain), never the shared team
+   store: anyone who reads the shared store could act as every account signed in
+   ([why](../google-auth#token-storage)). `target` must return a store listed in `stores`, or a cached
+   store hides a fresh sign-in until its TTL.
 3. **The user runs `drive auth`, not the agent.** It opens a browser; `--no-browser` only prints the URL.
    Users sign in again after moving from the former MCP server: tokens are not migrated.
 
@@ -67,7 +70,7 @@ packages must be one version, installed in the repo (`docs/decisions/nzyme-cli-p
 
 |Option|Default|Meaning|
 |-|-|-|
-|`auth`|required|The `GoogleAuthOptions` of [`@nzyme/google-auth`](../google-auth#options): provider, client keys, key prefix, `accounts`|
+|`auth`|required|The `GoogleAuthOptions` of [`@nzyme/google-auth`](../google-auth#options): `provider`, `tokens`, `client`, `accounts`|
 |`prefix`|`drive`|The command path prefix, space-separated|
 |`permissions`|below|Switches overriding the defaults one by one|
 |`files`|none|`roots`: directories, besides the repo root, uploads read from and downloads write to. `downloadsDir`: where `download` writes by default, `~/.cache/gdrive-cli/downloads`. Absolute paths|

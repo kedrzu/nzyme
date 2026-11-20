@@ -22,9 +22,9 @@ and files, and the OAuth sign-in.
 > `googleapis-common`; only a per-call `rootUrl` option reaches them. `OAuth2Client` takes the token
 > endpoint from `endpoints.oauth2TokenUrl`.
 
-**2. Where the credentials live.** The OAuth client id and secret, and one refresh token per account and
-service, are credentials. `docs/decisions/secrets-as-code-through-env-variables.md` makes the project's
-`SecretStore` the one home of every credential.
+**2. Where the credentials live.** The OAuth client id and secret, and the refresh tokens of every
+account and service, are credentials. `docs/decisions/secrets-declared-and-resolved-through-the-container.md`
+makes the project's declared secrets, kept in its stores, the one home of every credential.
 
 ## Options Considered
 
@@ -44,8 +44,16 @@ Where the credentials live:
   the secrets, no shared way to swap the store, and configuration in JSON beside the code.
 - **The OS keychain only.** Trade-off: no sharing between machines, and it bypasses the project's store
   policy (`target`).
-- **The project's `SecretStore`, through its `SecretsProvider`.** Trade-off: sign-in needs a store that
-  accepts the token keys, and users sign in again.
+- **Declared secrets in the project's stores, through its `SecretsProvider`.** Trade-off: sign-in needs a
+  store the project routes the token secret to, and users sign in again.
+
+How to key the tokens:
+
+- **One secret per account**, named from the email (`GOOGLE_GMAIL_TOKEN_ANN_ACME_COM`). Trade-off: the name
+  is not known until sign-in, so it cannot be declared, and `secrets set` and `secrets list` cannot see it.
+- **One static secret per service holding a JSON dictionary by email.** Trade-off: one value holds every
+  account, so a write rewrites it whole; in exchange `GMAIL_TOKENS` is declared like any secret, and its
+  store is the project's routing decision.
 
 ## Decision
 
@@ -54,11 +62,25 @@ Where the credentials live:
    held by tests instead of by the endpoints not existing: a scan of the sources for the forbidden calls,
    and a recording fake API that flags forbidden requests. Tests point the SDK at a local fake through a
    per-call `rootUrl` and `OAuth2Client`'s `endpoints.oauth2TokenUrl`.
-2. Keep the OAuth client (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) and the refresh tokens
-   (`<keyPrefix><SERVICE>_TOKEN_<SLUG>`) as secrets in the project's stores. Reads go through the
-   provider's `stores`, writes by `auth` through its `target`. Configuration, accounts and label rules, is
-   code passed to `defineGmailCommands` and `defineDriveCommands`.
-3. Gmail may move a thread to the Trash and mark it as spam, as `thread label --add TRASH`/`SPAM`;
+2. Keep each service's tokens in one static secret the product declares with `defineSecret`
+   (`GMAIL_TOKENS`, `GDRIVE_TOKENS`). Its value is a JSON dictionary keyed by the lower-cased email, each
+   entry a refresh token and its scopes. Accounts are picked with `--account <email>`; one usable account
+   needs no flag, several fail with the list. The secret belongs in a per-developer store, never the shared
+   team store: a refresh token is its owner's mailbox or Drive, and the shared store would let anyone who
+   reads it act as every account signed in. Configuration (accounts, label rules) is code passed to
+   `defineGmailCommands` and `defineDriveCommands`.
+   - The tokens are read from the provider's `stores`, not from the container's config document: `auth`
+     writes a token and reads it back within one command, and a config document is loaded once.
+   - `resolveSecretTarget` of `@nzyme/secrets` is the single write path: it refuses a name the provider
+     does not declare or enable, then asks `target`. `secrets set` and `auth` both use it, and `auth` calls it,
+     and checks that the stored value parses, before the browser step, so a sign-in that cannot be saved is
+     refused before the user consents.
+3. `google-auth` is plain functions. The OAuth client comes from the product's service implementing
+   `GoogleClientProvider` (`getClient(email)`), so which client serves which account is the product's
+   decision and a repo can use several Google Cloud projects. Each command set gets a unit from
+   `defineGoogleAuth(options)`, which receives the product's services (`provider`, `client`) through `deps`;
+   no command looks them up in a service locator.
+4. Gmail may move a thread to the Trash and mark it as spam, as `thread label --add TRASH`/`SPAM`;
    permanent deletion stays forbidden, and with it emptying the Trash, which Gmail can only do through
    `delete`/`batchDelete`. The user changed this on 2026-11-20, replacing a guarantee that nothing but a
    discarded draft is ever trashed: a prompt injection that trashes the whole mailbox is recoverable from
@@ -74,8 +96,12 @@ Where the credentials live:
 - Users sign in again: tokens of the old servers are not migrated.
 - Access tokens stay in memory, so each command refreshes once. Nothing is written back: a refresh token
   Google no longer accepts fails with `invalid_grant`, and the error names `auth --login-hint <email>`.
-- The repo's `target` must accept the token keys and return the same store instance that is in `stores`;
-  with a `cached` store a different instance leaves a fresh sign-in hidden until the TTL expires.
+- The product declares the token secrets and routes them to a per-developer store, and `target` must return
+  the store listed in `stores`; with a `cached` store a different instance leaves a fresh sign-in hidden
+  until the TTL expires. A product that sends the token secret to its shared store exposes every signed-in
+  account to whoever reads it: the routing is the product's to get right.
+- A write replaces the whole dictionary, so two simultaneous sign-ins to one service can lose one; sign-in is
+  a person at a browser, rarely concurrent.
 - `auth` opens a browser, so a person runs it, never an agent.
 - An agent can trash or mark as spam any thread, steered by text in an email it read. Recovery is manual,
   from the Trash or Spam within Gmail's 30 days.

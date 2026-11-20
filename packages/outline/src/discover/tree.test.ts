@@ -33,16 +33,19 @@ test('new documents get slug names; a document with children has a folder named 
 
 test('same titles in one folder and same-named collections get distinct names, in a stable order', () => {
     const { paths, collections } = assignPaths(
-        input([doc('a', 'Notatki'), doc('b', 'Notatki'), doc('c', 'Notatki', { collectionId: 'c2' })], {
-            collections: [
-                { id: 'c1', name: 'Zespół' },
-                { id: 'c2', name: 'zespol' },
+        input(
+            [
+                doc('a', 'Notatki', { createdAt: '2026-02-01T00:00:00.000Z' }),
+                doc('b', 'Notatki', { createdAt: '2026-01-01T00:00:00.000Z' }),
+                doc('c', 'Notatki', { collectionId: 'c2', createdAt: '2026-03-01T00:00:00.000Z' }),
             ],
-            order: new Map([
-                ['b', 0],
-                ['a', 1],
-            ]),
-        }),
+            {
+                collections: [
+                    { id: 'c1', name: 'Zespół' },
+                    { id: 'c2', name: 'zespol' },
+                ],
+            },
+        ),
     );
 
     expect(paths.get('b')).toBe('zespol/notatki.md');

@@ -35,14 +35,14 @@ test('authorization: another user’s private collection and drafts never appear
     const bobDraft = outline.addDocument({ title: 'Bob draft', createdBy: bob, published: false });
 
     const bobClient = outline.clientAs(bob);
-    const full = await discoverFull(bobClient, null);
+    const full = await discoverFull(bobClient, { cursor: null, knownIds: [] });
     const incremental = await discoverIncremental(bobClient, { cursor: null, knownCollectionIds: [] });
 
     expect(ids(full.documents)).toEqual([visible.id, bobDraft.id].toSorted());
     expect(ids(incremental.documents)).toEqual([visible.id, bobDraft.id].toSorted());
     expect(full.collections.map(collection => collection.name)).toEqual(['Open']);
     expect(incremental.collections.map(collection => collection.name)).toEqual(['Open']);
-    expect((await discoverFull(outline.clientAs(ana), null)).documents).toHaveLength(3);
+    expect((await discoverFull(outline.clientAs(ana), { cursor: null, knownIds: [] })).documents).toHaveLength(3);
 });
 
 test('a document reachable by collection, direct share and group share is listed exactly once', async () => {
@@ -55,7 +55,7 @@ test('a document reachable by collection, direct share and group share is listed
     outline.shareDocument({ document: doc, group: team, permission: 'read' });
     const client = outline.clientAs(bob);
 
-    const full = await discoverFull(client, null);
+    const full = await discoverFull(client, { cursor: null, knownIds: [] });
     const incremental = await discoverIncremental(client, { cursor: null, knownCollectionIds: [open.id] });
 
     expect(ids(full.documents)).toEqual([doc.id, child.id].toSorted());
@@ -75,7 +75,7 @@ test('full pass finds shared roots and their whole subtree in a collection the u
     outline.shareDocument({ document: direct, user: bob, permission: 'read' });
     outline.shareDocument({ document: viaGroup, group: team, permission: 'read' });
 
-    const full = await discoverFull(outline.clientAs(bob), null);
+    const full = await discoverFull(outline.clientAs(bob), { cursor: null, knownIds: [] });
 
     expect(ids(full.documents)).toEqual(
         [direct.id, directChild.id, directGrandchild.id, viaGroup.id, viaGroupChild.id].toSorted(),
@@ -90,12 +90,12 @@ test('full pass covers a collection beyond one page of documents', async () => {
         outline.addDocument({ collection: open, title: `Doc ${index}`, createdBy: ana }),
     );
 
-    const full = await discoverFull(outline.clientAs(ana), null);
+    const full = await discoverFull(outline.clientAs(ana), { cursor: null, knownIds: [] });
 
     expect(ids(full.documents)).toEqual(ids(created));
 });
 
-test('full pass omits archived and deleted documents, so the caller sees a known id missing', async () => {
+test('full pass omits archived and deleted documents, also when they are known and looked up', async () => {
     const { outline, ana } = twoPartners();
     const open = outline.addCollection({ name: 'Open', permission: 'read_write' });
     const kept = outline.addDocument({ collection: open, title: 'Kept', createdBy: ana });
@@ -105,21 +105,9 @@ test('full pass omits archived and deleted documents, so the caller sees a known
     await client.documents.archive({ id: archived.id });
     await client.documents.delete({ id: deleted.id });
 
-    const full = await discoverFull(client, null);
+    const full = await discoverFull(client, { cursor: null, knownIds: [kept.id, archived.id, deleted.id] });
 
     expect(ids(full.documents)).toEqual([kept.id]);
-});
-
-test('full pass reports Outline’s tree order', async () => {
-    const { outline, ana } = twoPartners();
-    const open = outline.addCollection({ name: 'Open', permission: 'read' });
-    const first = outline.addDocument({ collection: open, title: 'First', createdBy: ana });
-    const nested = outline.addDocument({ parent: first, title: 'Nested', createdBy: ana });
-    const second = outline.addDocument({ collection: open, title: 'Second', createdBy: ana });
-
-    const { order } = await discoverFull(outline.clientAs(ana), null);
-
-    expect([first.id, nested.id, second.id].map(id => order.get(id))).toEqual([0, 1, 2]);
 });
 
 test('incremental: returns documents changed after the cursor with text and revision, and advances the cursor', async () => {
@@ -201,19 +189,26 @@ test('incremental: a changed document in an unknown collection brings the collec
     expect(result.collections.map(collection => collection.id)).toEqual([open.id]);
 });
 
-test('request counts: an unchanged workspace costs 2 requests incrementally and a bounded number in a full pass', async () => {
+test('request counts: an unchanged workspace costs 2 requests incrementally and a fixed number in a full pass, whatever the number of collections', async () => {
     const { outline, ana } = twoPartners();
     const open = outline.addCollection({ name: 'Open', permission: 'read' });
+    const other = outline.addCollection({ name: 'Other', permission: 'read' });
     const doc = outline.addDocument({ collection: open, title: 'Doc', createdBy: ana });
+    outline.addDocument({ collection: other, title: 'Other doc', createdBy: ana });
     outline.addDocument({ title: 'Draft', createdBy: ana, published: false });
     const client = outline.clientAs(ana);
 
     const incremental = await requestsMadeBy(outline, ana, () =>
-        discoverIncremental(client, { cursor: minutesAfter(doc.updatedAt, 60), knownCollectionIds: [open.id] }),
+        discoverIncremental(client, {
+            cursor: minutesAfter(doc.updatedAt, 60),
+            knownCollectionIds: [open.id, other.id],
+        }),
     );
-    const full = await requestsMadeBy(outline, ana, () => discoverFull(client, doc.updatedAt));
+    const full = await requestsMadeBy(outline, ana, () =>
+        discoverFull(client, { cursor: doc.updatedAt, knownIds: [doc.id] }),
+    );
 
     expect(incremental).toBe(2);
-    // collections.list, 2 per collection, drafts, userMemberships, groupMemberships.
-    expect(full).toBe(1 + 2 + 1 + 1 + 1);
+    // collections.list, documents.list, drafts, userMemberships, groupMemberships.
+    expect(full).toBe(5);
 });

@@ -75,7 +75,7 @@ test('drafts are listed only when a filter mentions publishedAt, and only for th
     expect((await outline.clientAs(bob).documents.drafts()).data).toEqual([]);
 });
 
-test('a direct share reaches the shared document and its subtree in a private collection, and appears in userMemberships', async () => {
+test('a direct share reaches the shared document and its subtree in a private collection, listed only by parent, and appears in userMemberships', async () => {
     const outline = fakeOutline();
     const ana = outline.addUser({ name: 'Ana' });
     const bob = outline.addUser({ name: 'Bob' });
@@ -86,10 +86,15 @@ test('a direct share reaches the shared document and its subtree in a private co
     await outline.clientAs(ana).documents.addUser({ id: root.id, userId: bob.id, permission: 'read' });
     const client = outline.clientAs(bob);
 
-    const visible = (await client.documents.list()).data.map(document => document.id).toSorted();
+    const listed = await client.documents.list();
+    const children = await client.documents.list({
+        filters: [{ field: 'parentDocumentId', operator: 'eq', value: root.id }],
+    });
     const shared = await client.userMemberships.list();
 
-    expect(visible).toEqual([root.id, child.id].toSorted());
+    expect(listed.data).toEqual([]);
+    expect(children.data.map(document => document.id)).toEqual([child.id]);
+    expect((await client.documents.info({ id: child.id })).title).toBe('Child');
     await expect(client.documents.info({ id: sibling.id })).rejects.toMatchObject({ status: 403 });
     expect(shared.documents.map(document => document.id)).toEqual([root.id]);
     expect(shared.memberships).toMatchObject([{ documentId: root.id, userId: bob.id, permission: 'read' }]);

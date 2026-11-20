@@ -102,13 +102,12 @@ export async function pull(options: PullOptions): Promise<PullReport> {
     const full = options.mode === 'full' || initial;
 
     try {
-        const fullDiscovery = full ? await discoverFull(client, state.cursor) : null;
-        const discovery =
-            fullDiscovery ??
-            (await discoverIncremental(client, {
-                cursor: state.cursor,
-                knownCollectionIds: Object.keys(state.collections),
-            }));
+        const discovery = full
+            ? await discoverFull(client, { cursor: state.cursor, knownIds: Object.keys(state.documents) })
+            : await discoverIncremental(client, {
+                  cursor: state.cursor,
+                  knownCollectionIds: Object.keys(state.collections),
+              });
         const creating = new Set(Object.values(state.pendingCreates));
         const remotes = discovery.documents.filter(document => !creating.has(document.id));
         const visible = new Set(discovery.documents.map(document => document.id));
@@ -116,7 +115,6 @@ export async function pull(options: PullOptions): Promise<PullReport> {
         const tree = assignPaths({
             documents: [...remotes.map(remoteTreeDocument), ...unchanged.map(stateTreeDocument)],
             collections: discovery.collections,
-            order: fullDiscovery?.order,
             state,
         });
         const droppedFolders = full ? vanishedCollectionFolders(tree, discovery.collections) : [];
@@ -322,7 +320,7 @@ export async function pull(options: PullOptions): Promise<PullReport> {
         return true;
     }
 
-    /** Full pass only: documents archived, deleted or no longer shared. Unsent local changes go to `recoveredDir`. */
+    /** Full pass only: documents Outline confirmed archived, deleted or no longer shared. Unsent local changes go to `recoveredDir`. */
     async function dropVanished(visible: Set<string>) {
         for (const document of Object.values(state.documents).toSorted((a, b) => a.path.localeCompare(b.path))) {
             if (visible.has(document.id)) {
@@ -488,6 +486,7 @@ function remoteTreeDocument(remote: OutlineDocument): TreeDocument {
         collectionId: remote.collectionId,
         parentId: remote.parentDocumentId,
         published: remote.publishedAt != null,
+        createdAt: remote.createdAt,
     };
 }
 

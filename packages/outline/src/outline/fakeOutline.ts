@@ -137,7 +137,7 @@ export interface FakeOutline {
     /** A fetch that is always this user, whatever token the caller sends. */
     fetchAs(user: FakeUser): OutlineFetch;
     /** A client authenticated as this user with its token. */
-    clientAs(user: FakeUser, overrides?: Pick<OutlineClientOptions, 'now' | 'sleep'>): OutlineClient;
+    clientAs(user: FakeUser, overrides?: Pick<OutlineClientOptions, 'sleep'>): OutlineClient;
     addUser(params: FakeAddUserParams): FakeUser;
     addGroup(params: FakeAddGroupParams): OutlineGroup;
     addCollection(params: FakeAddCollectionParams): OutlineCollection;
@@ -384,7 +384,7 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         };
     }
 
-    function clientAs(user: FakeUser, overrides: Pick<OutlineClientOptions, 'now' | 'sleep'> = {}) {
+    function clientAs(user: FakeUser, overrides: Pick<OutlineClientOptions, 'sleep'> = {}) {
         return new OutlineClient({
             url,
             getAccessToken: () => Promise.resolve(user.token),
@@ -485,11 +485,27 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         return document;
     }
 
-    /** Which documents `documents.list` returns: readable ones, minus drafts and archived unless a filter asks. */
+    /**
+     * Which documents `documents.list` returns: readable ones in a collection the user can read (or the user's own
+     * outside any collection), minus drafts and archived unless a filter asks. A share alone does not list a
+     * document, except under a `parentDocumentId` filter on a document shared with the user (a share on an
+     * ancestor counts: Outline copies it to the subtree), which lifts the collection scope.
+     */
     function listVisibleDocuments(user: FakeUser, filters: OutlineFilter[]) {
         const mentions = (field: OutlineFilterField) => filters.some(filter => filter.field === field);
+        const parentId = filters.find(filter => filter.field === 'parentDocumentId' && filter.operator === 'eq')?.value;
+        const parent = documents.find(candidate => candidate.id === parentId);
+        const sharedParent =
+            parent != null &&
+            [parent, ...ancestorsOf(parent)].some(candidate => directDocumentAccess(user, candidate) != null);
         return documents
             .filter(document => documentAccess(user, document) != null)
+            .filter(
+                document =>
+                    sharedParent ||
+                    collectionAccess(user, document.collectionId) != null ||
+                    (document.collectionId == null && document.createdById === user.id),
+            )
             .filter(document => document.publishedAt != null || mentions('publishedAt'))
             .filter(document => document.archivedAt == null || mentions('archivedAt'))
             .filter(document => matchesFilters(document, filters))

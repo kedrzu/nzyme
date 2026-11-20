@@ -5,6 +5,7 @@ import { join } from 'node:path';
 
 import { fakeOutline, outlineLikeNormalizer } from '../outline/fakeOutline.js';
 import type { FakeOutline } from '../outline/fakeOutline.js';
+import { OutlineClient } from '../outline/OutlineClient.js';
 import type { OutlineDocument } from '../outline/OutlineTypes.js';
 import { contentHash } from '../state/contentHash.js';
 import { StateStore } from '../state/StateStore.js';
@@ -220,6 +221,37 @@ test('a full pass deletes unedited files of vanished documents and recovers edit
     ];
     expect(state.events.toSorted((a, b) => a.path.localeCompare(b.path))).toEqual(events);
     expect(await world.store.readBase(edited.id)).toBeNull();
+});
+
+test('a full pass keeps a document the paged listing skipped because a partner edited it mid-walk', async () => {
+    const world = await setup();
+    const skipped = world.addDocument('Skipped', TEXT);
+    for (let index = 0; index < 100; index++) {
+        world.addDocument(`Doc ${index}`, TEXT);
+    }
+    await world.pull('full');
+    await world.write('wiki/skipped.md', `${await world.read('wiki/skipped.md')}\n\nUnsent work.`);
+    // Newest first: the oldest document is on the second page until Bob's edit moves it to the first, already read.
+    let lists = 0;
+    const fetchAsAna = world.outline.fetchAs(world.ana);
+    const client = new OutlineClient({
+        url: 'https://outline.test',
+        getAccessToken: () => Promise.resolve(world.ana.token),
+        fetch: async (input, init) => {
+            const response = await fetchAsAna(input, init);
+            if (input.endsWith('/documents.list') && ++lists === 1) {
+                await world.edit(skipped, 'Edited in Outline during the listing.');
+            }
+            return response;
+        },
+    });
+
+    const report = await world.pull('full', { client });
+
+    expect(report.removed).toEqual([]);
+    expect(report.recovered).toEqual([]);
+    expect(await world.read('wiki/skipped.md')).toContain('Unsent work.');
+    expect((await world.store.load()).documents[skipped.id]).toBeDefined();
 });
 
 test('a document the user lost access to disappears from the documents folder', async () => {

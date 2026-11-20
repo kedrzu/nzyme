@@ -16,6 +16,8 @@ export interface TreeDocument {
     parentId: string | null;
     /** A draft (not published) lives in `drafts/` whatever its collection. */
     published: boolean;
+    /** When two new documents want the same name, the older one gets it; a known document keeps its own. */
+    createdAt?: string;
 }
 
 export interface TreeInput {
@@ -23,8 +25,6 @@ export interface TreeInput {
     documents: TreeDocument[];
     /** Collections the user can see, by id; a document in any other one was reached by a share. */
     collections: { id: string; name: string }[];
-    /** Sibling order, document id to position; breaks ties when two new documents want the same name. */
-    order?: ReadonlyMap<string, number>;
     /** The names assigned so far: `documents` and `collections` of the sync state. */
     state: { documents: Record<string, Pick<DocState, 'path'>>; collections: Record<string, string> };
 }
@@ -82,7 +82,7 @@ export function assignPaths(input: TreeInput): TreeResult {
     const ordered = input.documents.toSorted(
         (a, b) =>
             Number(input.state.documents[b.id] != null) - Number(input.state.documents[a.id] != null) ||
-            (input.order?.get(a.id) ?? Infinity) - (input.order?.get(b.id) ?? Infinity) ||
+            (a.createdAt ?? '').localeCompare(b.createdAt ?? '') ||
             a.id.localeCompare(b.id),
     );
 

@@ -1,12 +1,7 @@
-import type { OutlineClient } from '../outline/OutlineClient.js';
+import { OutlineApiError } from '../outline/errors.js';
 import { listAll } from '../outline/listAll.js';
-import type {
-    OutlineCollection,
-    OutlineDocument,
-    OutlineNavigationNode,
-    OutlinePage,
-    OutlinePageParams,
-} from '../outline/OutlineTypes.js';
+import type { OutlineClient } from '../outline/OutlineClient.js';
+import type { OutlineCollection, OutlineDocument, OutlinePage, OutlinePageParams } from '../outline/OutlineTypes.js';
 
 const PAGE_SIZE = 100;
 /** The incremental pass looks this far before the cursor, so a document saved just before it was read is not missed. */
@@ -22,11 +17,9 @@ export interface IncrementalDiscovery {
 }
 
 export interface FullDiscovery {
-    /** Every document the user can see, once each: collections, own drafts, direct and group shares. A known id missing here was archived, deleted, or lost. */
+    /** Every document the user can see, once each: collections, own drafts, direct and group shares. A known id missing here is confirmed archived, deleted, or out of reach. */
     documents: OutlineDocument[];
     collections: OutlineCollection[];
-    /** Document id to its position in Outline's order (collection trees first, then shared subtrees). */
-    order: Map<string, number>;
     cursor: string | null;
 }
 
@@ -40,7 +33,8 @@ export interface IncrementalOptions {
 /**
  * The cheap pass run at every prompt: two requests when nothing changed. `documents.list` filtered by
  * `updatedAt` plus the user's own drafts (which `documents.list` omits), read only as far back as the cursor.
- * It cannot see archiving, deletion or lost access; the full pass does.
+ * It cannot see archiving, deletion or lost access, nor edits to a document shared with the user in a collection
+ * the user cannot read (`documents.list` covers readable collections only); the full pass does.
  */
 export async function discoverIncremental(
     client: OutlineClient,
@@ -65,15 +59,22 @@ export async function discoverIncremental(
     return { documents, collections, cursor: advanceCursor(options.cursor, documents) };
 }
 
+export interface FullOptions {
+    /** The saved cursor. */
+    cursor: string | null;
+    /** Documents already synced; one the listing missed is looked up on its own before it counts as gone. */
+    knownIds: Iterable<string>;
+}
+
 /**
- * Every document the token can see. Reads each visible collection (its documents and its tree), the user's
- * drafts, and the roots shared with the user directly or through a group, walking down the subtree of a root
- * that no visible collection already covers. A just-created collection can be invisible for a minute; the next
- * full pass has it.
+ * Every document the token can see: one listing of the documents in the collections the user can read, the
+ * user's drafts, and the roots shared with the user directly or through a group, walking down the subtree of a
+ * root the listing did not already cover. A known document the listing missed is looked up with
+ * `documents.info`: paged lists can skip a document edited mid-walk, and a just-created collection can be
+ * invisible to the listing for a minute.
  */
-export async function discoverFull(client: OutlineClient, cursor: string | null): Promise<FullDiscovery> {
+export async function discoverFull(client: OutlineClient, options: FullOptions): Promise<FullDiscovery> {
     const found = new Map<string, OutlineDocument>();
-    const order = new Map<string, number>();
     const add = (document: OutlineDocument) => {
         if (document.archivedAt == null && !found.has(document.id)) {
             found.set(document.id, document);
@@ -81,17 +82,7 @@ export async function discoverFull(client: OutlineClient, cursor: string | null)
     };
 
     const collections = await listAll(page => client.collections.list(page));
-    for (const collection of collections) {
-        const inCollection = await listAll(page =>
-            client.documents.list({
-                ...page,
-                filters: [{ field: 'collectionId', operator: 'eq', value: collection.id }],
-            }),
-        );
-        inCollection.forEach(add);
-        recordOrder(await client.collections.documents({ id: collection.id }), order);
-    }
-
+    (await listAll(page => client.documents.list(page))).forEach(add);
     (await listAll(page => client.documents.drafts(page))).forEach(add);
 
     const sharedRoots = [
@@ -105,13 +96,29 @@ export async function discoverFull(client: OutlineClient, cursor: string | null)
         }
     }
 
-    const documents = [...found.values()];
-    for (const document of documents) {
-        if (!order.has(document.id)) {
-            order.set(document.id, order.size);
+    for (const id of options.knownIds) {
+        if (!found.has(id)) {
+            const document = await findDocument(client, id);
+            if (document != null) {
+                add(document);
+            }
         }
     }
-    return { documents, collections, order, cursor: advanceCursor(cursor, documents) };
+
+    const documents = [...found.values()];
+    return { documents, collections, cursor: advanceCursor(options.cursor, documents) };
+}
+
+/** The document, or `null` when Outline says it is deleted or out of the user's reach. */
+async function findDocument(client: OutlineClient, id: string) {
+    try {
+        return await client.documents.info({ id });
+    } catch (error) {
+        if (error instanceof OutlineApiError && (error.status === 403 || error.status === 404)) {
+            return null;
+        }
+        throw error;
+    }
 }
 
 /** Own drafts, newest first, read only until one older than `since` (all of them without it). */
@@ -160,15 +167,6 @@ async function walkSubtree(client: OutlineClient, root: OutlineDocument, add: (d
                 pending.push(child.id);
             }
         }
-    }
-}
-
-function recordOrder(nodes: OutlineNavigationNode[], order: Map<string, number>) {
-    for (const node of nodes) {
-        if (!order.has(node.id)) {
-            order.set(node.id, order.size);
-        }
-        recordOrder(node.children, order);
     }
 }
 

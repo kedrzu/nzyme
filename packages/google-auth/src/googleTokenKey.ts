@@ -6,8 +6,6 @@ export interface GoogleToken {
     refreshToken: string;
     /** The scopes Google granted at sign-in. */
     scopes: string[];
-    /** ISO timestamp of the sign-in. */
-    createdAt: string;
 }
 
 /** What {@link googleTokenKey} builds a key from. */
@@ -57,11 +55,9 @@ export function parseGoogleToken(value: string): GoogleToken | undefined {
     }
 
     const scopes: unknown = 'scopes' in parsed ? parsed.scopes : undefined;
-    const createdAt = 'createdAt' in parsed && typeof parsed.createdAt === 'string' ? parsed.createdAt : '';
     return {
         email,
         refreshToken,
         scopes: Array.isArray(scopes) ? scopes.filter((scope: unknown) => typeof scope === 'string') : [],
-        createdAt,
     };
 }

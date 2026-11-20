@@ -1,4 +1,4 @@
-import { Option, UsageError } from '@nzyme/cli-core';
+import { Option } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
@@ -30,15 +30,9 @@ export function defineGoogleAuthCommand(params: GoogleCommandParams): CommandCla
         });
 
         loginHint = Option.String('--login-hint', { description: 'The account to preselect on Google' });
-        port = Option.String('--port', { description: 'The loopback port of the redirect (a free one by default)' });
         browser = Option.Boolean('--browser', true, { description: 'Open the sign-in URL in the browser' });
 
         override async run() {
-            const port = this.port === undefined ? undefined : Number(this.port);
-            if (port !== undefined && !(Number.isInteger(port) && port > 0 && port < 65_536)) {
-                throw new UsageError(`--port must be a port number, got ${this.port}.`);
-            }
-
             const accounts = this.container.resolve(GoogleAccountsFactory)(params, this.cli.binaryName);
             const endpoints = this.container.resolve(GoogleEndpoints);
 
@@ -47,7 +41,6 @@ export function defineGoogleAuthCommand(params: GoogleCommandParams): CommandCla
                 service,
                 apiRootUrl: endpoints.apiRootUrl,
                 loginHint: this.loginHint,
-                port,
                 openBrowser: this.browser,
                 print: line => this.context.stderr.write(`${line}\n`),
             });

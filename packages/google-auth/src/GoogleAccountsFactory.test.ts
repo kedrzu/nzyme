@@ -1,7 +1,6 @@
 import { afterEach, expect, test } from 'bun:test';
 
 import { createMemoryStore } from '@nzyme/secrets/__fixtures__/createMemoryStore.js';
-import type { SecretStore } from '@nzyme/secrets/SecretStore.js';
 
 import type { FakeGoogleOptions, GoogleCommandResult } from './__fixtures__/googleTestCli.js';
 import {
@@ -9,13 +8,11 @@ import {
     CLIENT_SECRET,
     CREDENTIALS,
     REFRESH_TOKEN,
-    ROTATED_REFRESH_TOKEN,
     runGoogleCommand,
     SCOPES,
     startFakeGoogle,
     tokenValue,
 } from './__fixtures__/googleTestCli.js';
-import type { GoogleToken } from './googleTokenKey.js';
 
 const CLIENT = { GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_CLIENT_SECRET: CLIENT_SECRET };
 const KEY = 'GOOGLE_GMAIL_TOKEN_ME_EXAMPLE_COM';
@@ -94,57 +91,6 @@ test('without --account several usable accounts are listed, and a single one is 
     expect(several.exitCode).toBe(1);
     expect(several.errors).toContain('me@example.com, you@x.com');
     expect(single).toMatchObject({ exitCode: 0, stdout: 'me@example.com\n' });
-});
-
-test('a rotated refresh token is written back through target before the command ends', async () => {
-    const google = fake({ email: 'me@example.com', rotate: true });
-    const client = createMemoryStore({ id: 'client', data: CLIENT });
-    const tokens = createMemoryStore({ id: 'tokens', data: { [KEY]: tokenValue('me@example.com') }, persist: true });
-
-    // A slow write: the command must wait for it, not leave it to finish after the process exits.
-    const slow: SecretStore = {
-        ...tokens.store,
-        write: async entries => {
-            await Bun.sleep(100);
-            await tokens.store.write(entries);
-        },
-    };
-
-    const result = await runGoogleCommand({
-        args: ['gmail', 'whoami'],
-        stores: [client.store, slow],
-        target: () => slow,
-        endpoints: google.endpoints,
-    });
-
-    expect(result).toMatchObject({ exitCode: 0, stdout: 'me@example.com\n' });
-    const stored = JSON.parse((await tokens.store.readAll()).get(KEY) ?? '{}') as GoogleToken;
-    expect(stored).toMatchObject({ email: 'me@example.com', refreshToken: ROTATED_REFRESH_TOKEN });
-    expect(client.writes).toEqual([]);
-    expectNoCredential(result);
-});
-
-test('a failed write-back is reported without the token and the command still succeeds', async () => {
-    const google = fake({ email: 'me@example.com', rotate: true });
-    const store = createMemoryStore({ id: 'only', data: { ...CLIENT, [KEY]: tokenValue('me@example.com') } });
-    // A store whose error echoes what it was given.
-    const leaky: SecretStore = {
-        id: 'leaky',
-        readAll: () => Promise.resolve(new Map()),
-        write: entries => Promise.reject(new Error(`cannot write ${JSON.stringify(entries)}`)),
-    };
-
-    const result = await runGoogleCommand({
-        args: ['gmail', 'whoami'],
-        stores: [store.store],
-        target: () => leaky,
-        endpoints: google.endpoints,
-    });
-
-    expect(result).toMatchObject({ exitCode: 0, stdout: 'me@example.com\n' });
-    expect(result.errors).toContain('could not be written back');
-    expect(result.errors).toContain('[redacted]');
-    expectNoCredential(result);
 });
 
 test('a revoked refresh token fails with the sign-in command and stays in place', async () => {

@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto';
 import type { OAuth2Client } from 'google-auth-library';
 import { CodeChallengeMethod } from 'google-auth-library';
 
-import type { GoogleSignedInToken } from './GoogleAccountsFactory.js';
+import type { GoogleToken } from './googleTokenKey.js';
 import type { GoogleService } from './GoogleService.js';
 
 const TIMEOUT_MS = 5 * 60 * 1000;
@@ -18,8 +18,6 @@ export interface SignInGoogleParams {
     apiRootUrl: string | undefined;
     /** The account to preselect on Google's account chooser. */
     loginHint?: string;
-    /** The loopback port; a free one when unset. */
-    port?: number;
     /** Whether to try opening the sign-in URL in the default browser. */
     openBrowser: boolean;
     /** Shows a line to the person signing in (the sign-in URL among them). */
@@ -31,7 +29,7 @@ export interface SignInGoogleParams {
  * A Desktop-app client accepts any `http://127.0.0.1:<port>` redirect, so nothing stays running.
  * Requires a refresh token and every scope of the service. Errors never carry a credential.
  */
-export async function signInGoogle(params: SignInGoogleParams): Promise<GoogleSignedInToken> {
+export async function signInGoogle(params: SignInGoogleParams): Promise<GoogleToken> {
     const { client, service } = params;
     const state = randomBytes(16).toString('hex');
     const callback = Promise.withResolvers<string>();
@@ -39,7 +37,7 @@ export async function signInGoogle(params: SignInGoogleParams): Promise<GoogleSi
 
     const server = Bun.serve({
         hostname: '127.0.0.1',
-        port: params.port ?? 0,
+        port: 0,
         fetch: request => answerRedirect(new URL(request.url)),
     });
     const redirectUri = `http://127.0.0.1:${server.port}/`;

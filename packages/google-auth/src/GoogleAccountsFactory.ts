@@ -4,7 +4,6 @@ import { UsageError } from '@nzyme/cli-core';
 import { CommandScope } from '@nzyme/cli-core/Command.js';
 import { Container } from '@nzyme/ioc/Container.js';
 import { defineFactory } from '@nzyme/ioc/Factory.js';
-import { Logger } from '@nzyme/logging/Logger.js';
 import { mergeStores, readStores } from '@nzyme/secrets/utils/readStores.js';
 
 import type { GoogleCommandParams } from './GoogleCommandParams.js';
@@ -20,13 +19,6 @@ export interface GoogleAccount {
     scopes: string[];
     /** Whether the `accounts` option lets the project use it. */
     allowed: boolean;
-}
-
-/** A token obtained by sign-in, for {@link GoogleAccountsShape.saveToken}. */
-export interface GoogleSignedInToken {
-    email: string;
-    refreshToken: string;
-    scopes: string[];
 }
 
 /** Where {@link GoogleAccountsShape.saveToken} wrote a token. */
@@ -47,11 +39,7 @@ export interface GoogleAccountsShape {
      * otherwise the only usable account. Throws a `UsageError` listing the usable accounts otherwise.
      */
     resolveAccount(account: string | undefined): Promise<string>;
-    /**
-     * An OAuth client authorised as the account, with a fresh access token. A refresh token Google
-     * rotated on that refresh is written back before this resolves; a failed write-back is logged and
-     * does not fail the call.
-     */
+    /** An OAuth client authorised as the account, with a fresh access token. */
     authorize(email: string): Promise<OAuth2Client>;
     /** An OAuth client of the project's client id and secret, without credentials (for sign-in). */
     createClient(): Promise<OAuth2Client>;
@@ -59,7 +47,7 @@ export interface GoogleAccountsShape {
      * Writes a signed-in token through the provider's `target`. Refuses an account the `accounts`
      * option does not allow, and a key that already holds another email; nothing is written then.
      */
-    saveToken(token: GoogleSignedInToken): Promise<GoogleSavedToken>;
+    saveToken(token: GoogleToken): Promise<GoogleSavedToken>;
 }
 
 /**
@@ -68,10 +56,10 @@ export interface GoogleAccountsShape {
  */
 export const GoogleAccountsFactory = defineFactory({
     name: 'GoogleAccountsFactory',
-    // Per command: the provider and the logger are resolved from the command's container.
+    // Per command: the provider is resolved from the command's container.
     scope: CommandScope,
-    deps: { container: Container, endpoints: GoogleEndpoints, logger: Logger },
-    setup({ container, endpoints, logger }, params: GoogleCommandParams, binaryName: string): GoogleAccountsShape {
+    deps: { container: Container, endpoints: GoogleEndpoints },
+    setup({ container, endpoints }, params: GoogleCommandParams, binaryName: string): GoogleAccountsShape {
         const { service, options } = params;
         const provider = container.resolve(options.provider);
         const keyPrefix = options.keyPrefix ?? 'GOOGLE_';
@@ -115,20 +103,12 @@ export const GoogleAccountsFactory = defineFactory({
             const auth = await createClient();
             auth.setCredentials({ refresh_token: token.refreshToken });
 
-            const writes: Promise<void>[] = [];
-            auth.on('tokens', fresh => {
-                if (fresh.refresh_token && fresh.refresh_token !== token.refreshToken) {
-                    writes.push(writeBack(token, fresh.refresh_token));
-                }
-            });
-
             // Access tokens are never stored: every run refreshes once, here, so a revoked token fails
             // now with the sign-in command rather than inside an API call.
             await auth.getAccessToken().catch((error: unknown) => {
                 throw refreshError(token.email, error);
             });
 
-            await Promise.all(writes);
             return auth;
         }
 
@@ -173,7 +153,7 @@ export const GoogleAccountsFactory = defineFactory({
             });
         }
 
-        async function saveToken(token: GoogleSignedInToken) {
+        async function saveToken(token: GoogleToken) {
             if (!isAllowed(token.email)) {
                 throw new UsageError(
                     `${token.email} is not in the accounts this project allows; its token was not stored.`,
@@ -192,25 +172,8 @@ export const GoogleAccountsFactory = defineFactory({
 
             // The project's write policy; it throws to refuse the key, before anything is written.
             const store = provider.target(key);
-            const value: GoogleToken = { ...token, createdAt: new Date().toISOString() };
-            await store.write([{ key, value: JSON.stringify(value) }]);
+            await store.write([{ key, value: JSON.stringify(token) }]);
             return { key, storeId: store.id };
-        }
-
-        async function writeBack(token: GoogleToken, refreshToken: string) {
-            const key = googleTokenKey({ keyPrefix, service, email: token.email });
-            try {
-                const store = provider.target(key);
-                const value: GoogleToken = { ...token, refreshToken };
-                await store.write([{ key, value: JSON.stringify(value) }]);
-            } catch (error) {
-                const message = error instanceof Error ? error.message : String(error);
-                logger.warn(
-                    `Google rotated the refresh token of ${token.email}, but it could not be written back to ${key}: ` +
-                        `${message.replaceAll(refreshToken, '[redacted]')}. ` +
-                        `If the next run fails, sign in again with \`${signInCommand} --login-hint ${token.email}\`.`,
-                );
-            }
         }
 
         async function findToken(email: string) {

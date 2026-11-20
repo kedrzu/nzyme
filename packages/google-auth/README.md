@@ -45,15 +45,14 @@ are read from its `stores`, and a token is written through its `target(key)`. Tw
   `readAll` in the OS keychain until its TTL expires: a fresh instance returned by `target` writes to the
   same place but leaves the cached copy stale, so the new sign-in stays hidden until the TTL runs out.
 
-Access tokens are never stored: each command refreshes once. A refresh token Google rotates is written
-back through `target`.
+Access tokens are never stored: each command refreshes once.
 
 ## Signing in
 
 `<prefix> auth` (for example `gmail auth`) opens Google's consent page, waits for the redirect on a
 loopback port and writes the token. **The user runs it, not the agent:** it needs a person at a browser.
 `--no-browser` only prints the URL (it goes to stderr either way); `--login-hint <email>` preselects the
-account and `--port <n>` fixes the redirect port. `<prefix> accounts` lists the signed-in accounts and
+account. `<prefix> accounts` lists the signed-in accounts and
 their granted scopes, marking one the project's `accounts` option excludes as `not allowed`.
 
 Users sign in once per service and account; the token serves every project that can reach the same store.

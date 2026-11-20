@@ -27,11 +27,10 @@ import type { GoogleService } from '../GoogleService.js';
 export const CLIENT_ID = 'client-id-test.apps.googleusercontent.com';
 export const CLIENT_SECRET = 'client-secret-sentinel-5d1f';
 export const REFRESH_TOKEN = 'refresh-token-sentinel-a83c';
-export const ROTATED_REFRESH_TOKEN = 'rotated-refresh-token-sentinel-0b7e';
 export const ACCESS_TOKEN = 'access-token-sentinel-e42a';
 export const AUTH_CODE = 'auth-code-sentinel-91cd';
 /** Every credential the tests hand out; none may reach any output. */
-export const CREDENTIALS = [CLIENT_SECRET, REFRESH_TOKEN, ROTATED_REFRESH_TOKEN, ACCESS_TOKEN, AUTH_CODE];
+export const CREDENTIALS = [CLIENT_SECRET, REFRESH_TOKEN, ACCESS_TOKEN, AUTH_CODE];
 
 export const SCOPES = ['https://example.test/scope.read', 'https://example.test/scope.write'];
 
@@ -58,8 +57,6 @@ export interface FakeGoogleOptions {
     api?: (request: Request) => Response | Promise<Response>;
     /** Refresh tokens the token endpoint answers `invalid_grant` for. */
     revoked?: string[];
-    /** Whether a refresh returns a new refresh token. */
-    rotate?: boolean;
 }
 
 /** A local Google: the token endpoint, `/me` and the `api`, recording the grant types it was asked for. */
@@ -122,14 +119,13 @@ export function startFakeGoogle(options: FakeGoogleOptions) {
             access_token: ACCESS_TOKEN,
             expires_in: 3600,
             token_type: 'Bearer',
-            ...(options.rotate ? { refresh_token: ROTATED_REFRESH_TOKEN } : {}),
         });
     }
 }
 
 /** A stored token value, as sign-in writes it. */
 export function tokenValue(email: string, refreshToken = REFRESH_TOKEN) {
-    return JSON.stringify({ email, refreshToken, scopes: SCOPES, createdAt: '2026-11-20T00:00:00.000Z' });
+    return JSON.stringify({ email, refreshToken, scopes: SCOPES });
 }
 
 /** Options of {@link runGoogleCommand}. */

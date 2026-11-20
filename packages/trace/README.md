@@ -33,8 +33,10 @@ through the file's source map. Sources outside the root or in `node_modules` are
 preload = ["@nzyme/trace/fs-preload", "./test/setup.ts"]
 ```
 
-It wraps `node:fs`, `node:fs/promises`, `Bun.file`, `Bun.write` and `Bun.Glob` scans, and marks a test
-file that starts a process, a worker or `Bun.build` as opaque, since what those read is not seen.
+It wraps `node:fs`, `node:fs/promises`, `Bun.file` and `Bun.Glob` scans, and marks a test file that
+starts a process, a worker, the Bun shell (`Bun.$`), `Bun.build` or a recursive `cp` as opaque, since
+what those read is not seen. Each access also names the module that made it — the innermost stack
+frame outside `node_modules` — so a read cached by a module counts for every test file that loads it.
 It reaches the named imports (`import { readFileSync } from 'node:fs'`) only of modules that import
 `node:fs` after it loads; check that in a test of your own with `isFsTraced(readFileSync)`
 (`fs/isFsTraced.js`). With `NZYME_FS_TRACE_DIR` unset the functions stay wrapped but nothing is

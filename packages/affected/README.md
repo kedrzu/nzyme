@@ -33,9 +33,11 @@ No import shows a file a test reads through `fs` or a module it loads through a 
 A computed `import()` ties the variant to every file under its file's directory. For `fs` reads, a
 static suite's run can be traced: `nzyme git affected --junit` sets `NZYME_FS_TRACE_DIR`, and with
 `@nzyme/trace/fs-preload` first among the runner's preloads each test file's reads are recorded
-(`fsTrace/readFsTrace.ts`). The variant then holds the walked files the test read, in full and wherever
+(`fsTrace/readFsTrace.ts`), each credited to the module that made it, a built file mapped to its source
+through its `.js.map`. The variant then holds the walked files the test read — its own reads, what every
+module it loads read anywhere in the run, and its `__snapshots__` file — in full and wherever
 they are (an `ignore` glob does not hide them), and the list of each directory it read the entries
-of. An untraced run, or a test that started a process, a worker or `Bun.build` (whose reads the trace
+of. An untraced run, or a test that started a process, a worker, the Bun shell, `Bun.build` or a recursive `cp` (whose reads the trace
 cannot see), falls back to every file nothing imports of each package owning one of its files (minus
 `ignore`), where a read reaching into another package is not seen and must be a `fullRunTriggers`
 entry. A file added to or removed from any listed set is a change too.

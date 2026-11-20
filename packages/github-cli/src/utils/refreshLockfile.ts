@@ -9,6 +9,7 @@ import type { SimpleGit } from 'simple-git';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { BranchGuard } from './createBranchGuard.js';
+import { handleMergeConflict } from './handleMergeConflict.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
 
 /**
@@ -118,9 +119,9 @@ export async function refreshLockfile(params: RefreshLockfileParams): Promise<vo
 }
 
 /**
- * Parameters for {@link concludeLockfileConflict}.
+ * Parameters for {@link concludeMergeConflict}.
  */
-export interface ConcludeLockfileConflictParams {
+export interface ConcludeMergeConflictParams {
     /**
      * Git instance of the main repository, stopped in a merge.
      */
@@ -133,9 +134,14 @@ export interface ConcludeLockfileConflictParams {
     guard: BranchGuard;
 
     /**
-     * Runs the regenerate command.
+     * Runs the regenerate command; `null` leaves a `bun.lock` conflict to the user like any other.
      */
-    runCommand: CommandRunner;
+    runCommand: CommandRunner | null;
+
+    /**
+     * Name of the repository in the conflict report.
+     */
+    repoDisplayName: string;
 
     /**
      * Logger instance.
@@ -144,20 +150,25 @@ export interface ConcludeLockfileConflictParams {
 }
 
 /**
- * Conclude a merge stopped by a conflict in `bun.lock` alone: take the merged-in side, regenerate it
- * from the merged workspaces and commit the merge.
+ * Handle a merge stopped by `error`. A conflict in `bun.lock` alone is concluded: the merged-in side
+ * is taken, regenerated from the merged workspaces and the merge committed. Any other conflict goes
+ * to {@link handleMergeConflict}.
  *
  * A submodule release rewrites the version line of every one of its packages in the lock, so two
  * branches that each carry their own bump conflict on it whenever one of them lands — over text
  * nobody should resolve by hand, since an install regenerates it from the merged `package.json` files.
- * @returns Whether the merge was concluded; `false` leaves any other conflict for the caller.
  */
-export async function concludeLockfileConflict(params: ConcludeLockfileConflictParams): Promise<boolean> {
-    const { git, guard, runCommand, logger } = params;
+export async function concludeMergeConflict(params: ConcludeMergeConflictParams, error: unknown): Promise<void> {
+    const { git, guard, runCommand, repoDisplayName, logger } = params;
+
+    const leaveToUser = () => handleMergeConflict({ git, repoDisplayName, operation: 'merge', logger }, error);
+    if (runCommand == null) {
+        return leaveToUser();
+    }
 
     const { conflicted } = await git.status();
     if (conflicted.length !== 1 || conflicted[0] !== LOCKFILE) {
-        return false;
+        return leaveToUser();
     }
 
     logger.info(`   Only ${LOCKFILE} conflicts: regenerating it to conclude the merge`);
@@ -171,8 +182,6 @@ export async function concludeLockfileConflict(params: ConcludeLockfileConflictP
     await git.raw(['add', '--', LOCKFILE]);
     await git.raw(['commit', '--no-edit']);
     logger.info(`   ${chalk.green('✓')} Concluded the merge with a regenerated ${LOCKFILE}`);
-
-    return true;
 }
 
 /**

@@ -28,7 +28,7 @@ import { handleMergeConflict } from './handleMergeConflict.js';
 import { pushSubmoduleUpdates } from './pushSubmoduleUpdates.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
 import type { CommandRunner } from './refreshLockfile.js';
-import { concludeLockfileConflict, execCommand, refreshLockfile } from './refreshLockfile.js';
+import { concludeMergeConflict, execCommand, refreshLockfile } from './refreshLockfile.js';
 import type { RefreshedSubmodulePr } from './refreshSubmoduleChain.js';
 import { refreshSubmoduleChain } from './refreshSubmoduleChain.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
@@ -905,7 +905,7 @@ async function fastForwardBranch(
  */
 interface MergeLockfile {
     /**
-     * Runs the regenerate command when only `bun.lock` conflicts — see `concludeLockfileConflict`.
+     * Runs the regenerate command when only `bun.lock` conflicts — see `concludeMergeConflict`.
      */
     runCommand: CommandRunner;
 
@@ -991,12 +991,10 @@ async function mergeBaseIntoCurrent(
     try {
         await git.merge([remoteBaseBranch]);
     } catch (error) {
-        const concluded =
-            lockfile != null &&
-            (await concludeLockfileConflict({ git, guard, runCommand: lockfile.runCommand, logger }));
-        if (!concluded) {
-            await handleMergeConflict({ git, repoDisplayName, operation: 'merge', logger }, error);
-        }
+        await concludeMergeConflict(
+            { git, guard, runCommand: lockfile?.runCommand ?? null, repoDisplayName, logger },
+            error,
+        );
     }
 
     await assertNoConflicts({ git, repoDisplayName, operation: 'merge', logger });

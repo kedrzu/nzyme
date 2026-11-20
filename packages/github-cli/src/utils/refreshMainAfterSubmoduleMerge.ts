@@ -10,12 +10,11 @@ import type { BranchGuard } from './createBranchGuard.js';
 import { createBranchGuard } from './createBranchGuard.js';
 import type { GithubClient } from './createGithubClient.js';
 import { getSubmoduleInfo } from './getSubmoduleInfo.js';
-import { handleMergeConflict } from './handleMergeConflict.js';
 import { parkSubmoduleOnBase } from './parkSubmoduleOnBase.js';
 import { pushSubmoduleUpdates } from './pushSubmoduleUpdates.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
 import type { CommandRunner } from './refreshLockfile.js';
-import { concludeLockfileConflict, execCommand, refreshLockfile } from './refreshLockfile.js';
+import { concludeMergeConflict, execCommand, refreshLockfile } from './refreshLockfile.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 
 /**
@@ -208,7 +207,7 @@ interface MergeBaseIntoMainIfBehindParams {
     mainGit: ReturnType<typeof simpleGit>;
 
     /**
-     * Regenerates `bun.lock` when it is the only conflicted file — see `concludeLockfileConflict`.
+     * Regenerates `bun.lock` when it is the only conflicted file — see `concludeMergeConflict`.
      * `null` hands every conflict over, the lock's included.
      */
     runCommand: CommandRunner | null;
@@ -248,14 +247,10 @@ async function mergeBaseIntoMainIfBehind(params: MergeBaseIntoMainIfBehindParams
     try {
         await mainGit.merge([remoteBase]);
     } catch (error) {
-        const concluded =
-            runCommand != null && (await concludeLockfileConflict({ git: mainGit, guard, runCommand, logger }));
-        if (!concluded) {
-            await handleMergeConflict(
-                { git: mainGit, repoDisplayName: 'main repository', operation: 'merge', logger },
-                error,
-            );
-        }
+        await concludeMergeConflict(
+            { git: mainGit, guard, runCommand, repoDisplayName: 'main repository', logger },
+            error,
+        );
     }
 
     await assertNoConflicts({ git: mainGit, repoDisplayName: 'main repository', operation: 'merge', logger });

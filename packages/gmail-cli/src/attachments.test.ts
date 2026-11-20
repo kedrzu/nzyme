@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { assert } from '@nzyme/utils/assert.js';
 
-import { findAttachment, safeFileName, savedFileName } from './attachments.js';
+import { findAttachment, savedFileName } from './attachments.js';
 import type { MessageAttachment } from './attachments.js';
 
 const msg = [
@@ -28,10 +28,10 @@ test('savedFileName: disambiguates parts sharing a name, so neither overwrites t
     expect(savedFileName(attachmentAt(3), msg)).toBe('image-part5.png');
 });
 
-test('savedFileName: strips path separators and characters illegal on disk', () => {
-    expect(safeFileName('2025-FP/I/27707.pdf')).toBe('2025-FP_I_27707.pdf');
-    expect(safeFileName('../../.bashrc')).toBe('.._.._.bashrc');
-    expect(safeFileName('..')).toBe('attachment');
+test('savedFileName: makes the name safe on disk', () => {
+    expect(savedFileName(att('2', '2025-FP/I/27707.pdf', 1), [])).toBe('2025-FP_I_27707.pdf');
+    expect(savedFileName(att('2', '../../.bashrc', 1), [])).toBe('__.._.bashrc');
+    expect(savedFileName(att('2', '', 1), [])).toBe('attachment');
 });
 
 function attachmentAt(index: number): MessageAttachment {

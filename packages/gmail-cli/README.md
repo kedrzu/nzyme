@@ -17,6 +17,9 @@ bun add @nzyme/gmail-cli @nzyme/cli-core
 
 ```ts
 // tools/gmail.ts
+import * as os from 'node:os';
+import * as path from 'node:path';
+
 import type { NzymePlugin } from '@nzyme/cli-core/NzymePlugin.js';
 import { defineGmailCommands } from '@nzyme/gmail-cli/defineGmailCommands.js';
 
@@ -31,7 +34,10 @@ export default {
             archiveMarkers: ['Outdated', 'Junk'],
             views: { unprocessed: '-label:AI/Done -label:AI/Triage' },
         },
-        files: { roots: ['~/Notes'], attachmentsDir: '~/.cache/acme/attachments' },
+        files: {
+            roots: [path.join(os.homedir(), 'Notes')],
+            attachmentsDir: path.join(os.homedir(), '.cache', 'acme', 'attachments'),
+        },
     }),
 } satisfies NzymePlugin;
 ```
@@ -48,8 +54,7 @@ A repo with its own CLI passes the same commands to `execute({ name, commands: [
 ...defineGmailCommands({ ... })] })`. As with every plugin, `@nzyme/cli` and the other `@nzyme/*`
 packages must be one version, installed in the repo (`docs/decisions/nzyme-cli-plugins.md`).
 
-`defineGmailCommands` throws on malformed label rules or a path that is neither absolute nor starting
-with `~`.
+`defineGmailCommands` throws on malformed label rules or a path that is not absolute.
 
 ## Before the first use
 
@@ -91,9 +96,9 @@ Group labels and markers are also protected from `labels cleanup`.
 
 - `roots`: directories, besides the repo root, that draft attachments may be read from.
 - `attachmentsDir`: where `attachment save` writes, `<dir>/<messageId>/<file>`. Default
-  `<tmpdir>/gmail-cli/attachments`. Always allowed as an attachment source.
+  `~/.cache/gmail-cli/attachments`. Always allowed as an attachment source.
 
-Every path is absolute or starts with `~`.
+Every path is absolute.
 
 ## Commands
 
@@ -125,6 +130,6 @@ several accounts are usable. `gmail auth` and `gmail accounts` are the shared co
 - `draft discard` moves a draft to the Trash, and only after checking it carries the `DRAFT` label.
 - `labels cleanup` deletes only labels that no message carries.
 - Local files are read (attachments) and written (saved attachments) only under the repo root,
-  `files.roots` and the attachments directory. `.env*` files and `*-credentials.json` and `*-tokens.json`
-  files are refused even inside them.
+  `files.roots` and the attachments directory. Secret files (`.env*`, OAuth client files, credentials and
+  token files) are refused even inside them.
 - An account the project's `auth.accounts` excludes is listed as `not allowed` and cannot be used.

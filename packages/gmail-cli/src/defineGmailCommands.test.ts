@@ -191,7 +191,7 @@ test('attachment save writes only under <attachmentsDir>/<messageId>, sanitising
     const dots = await run(gmail, ['gmail', 'attachment', 'save', 'm1', '3'], { files: { attachmentsDir } });
     const traversal = await run(gmail, ['gmail', 'attachment', 'save', '../m1', '2'], { files: { attachmentsDir } });
 
-    const savedPath = path.join(attachmentsDir, 'm1', '.._.._escape.txt');
+    const savedPath = path.join(attachmentsDir, 'm1', '__.._escape.txt');
     expect(saved.exitCode).toBe(0);
     expect(saved.stdout).toBe(`Saved part 2 of m1: ${savedPath} (text/plain, 5 B)\n`);
     expect(dots.exitCode).toBe(0);
@@ -200,8 +200,8 @@ test('attachment save writes only under <attachmentsDir>/<messageId>, sanitising
     expect((await fs.readdir(root, { recursive: true })).toSorted()).toEqual([
         'attachments',
         path.join('attachments', 'm1'),
-        path.join('attachments', 'm1', '.._.._escape.txt'),
-        path.join('attachments', 'm1', 'attachment'),
+        path.join('attachments', 'm1', '_'),
+        path.join('attachments', 'm1', '__.._escape.txt'),
     ]);
     expect(await fs.readFile(savedPath, 'utf8')).toBe('hello');
     expectNoCredential(saved);
@@ -507,11 +507,11 @@ test('malformed options are refused when the commands are defined', () => {
     const provider = createTestProvider([]);
 
     expect(() => defineGmailCommands({ auth: { provider }, files: { attachmentsDir: 'relative/dir' } })).toThrow(
-        "'relative/dir' must be absolute or start with ~",
+        "'relative/dir' must be an absolute path",
     );
     expect(() =>
         defineGmailCommands({ auth: { provider }, labels: { views: {}, require: [{ when: 'X', group: 'nope' }] } }),
-    ).toThrow('Invalid Gmail command options');
+    ).toThrow("unknown group 'nope'");
 });
 
 interface RunOptions {

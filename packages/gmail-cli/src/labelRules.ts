@@ -59,50 +59,36 @@ export class RuleViolation extends Error {}
 const IDENT = /^[A-Za-z][A-Za-z0-9_-]*$/;
 
 /**
- * Lists everything wrong with a set of label rules, empty when they are well-formed.
- * @__NO_SIDE_EFFECTS__
+ * Throws on what the `GmailLabelRules` type cannot rule out: a label in two groups, a `require` rule
+ * naming an unknown group, an archive marker that is also a group label, and a group or view name
+ * that is not an identifier (an `=` in it would break `--set group=label`).
  */
-export function validateLabelRules(r: GmailLabelRules): string[] {
-    const errors: string[] = [];
+export function assertLabelRules(r: GmailLabelRules): void {
     const owner = new Map<string, string>();
     for (const [group, labels] of Object.entries(r.groups ?? {})) {
-        if (!IDENT.test(group)) {
-            errors.push(`groups.${group}: group names must be identifiers`);
-        }
-        if (labels.length === 0 || labels.some(l => !l)) {
-            errors.push(`groups.${group}: expected a non-empty array of label names`);
-            continue;
-        }
+        assertIdentifier(`groups.${group}`, group);
         for (const label of labels) {
             const prev = owner.get(label.toLowerCase());
             if (prev) {
-                errors.push(`groups.${group}: '${label}' is already in group '${prev}'`);
+                throw new Error(`Invalid label rules: groups.${group}: '${label}' is already in group '${prev}'`);
             }
             owner.set(label.toLowerCase(), group);
         }
     }
     for (const [i, rule] of (r.require ?? []).entries()) {
-        if (!rule.when || !rule.group) {
-            errors.push(`require[${i}]: needs 'when' and 'group'`);
-        } else if (!r.groups?.[rule.group]) {
-            errors.push(`require[${i}]: unknown group '${rule.group}'`);
+        if (!r.groups?.[rule.group]) {
+            throw new Error(`Invalid label rules: require[${i}]: unknown group '${rule.group}'`);
         }
     }
     for (const m of r.archiveMarkers ?? []) {
         const group = owner.get(m.toLowerCase());
         if (group) {
-            errors.push(`archiveMarkers: '${m}' is also in group '${group}'`);
+            throw new Error(`Invalid label rules: archiveMarkers: '${m}' is also in group '${group}'`);
         }
     }
-    for (const [view, query] of Object.entries(r.views ?? {})) {
-        if (!IDENT.test(view)) {
-            errors.push(`views.${view}: view names must be identifiers`);
-        }
-        if (!query.trim()) {
-            errors.push(`views.${view}: expected a Gmail query`);
-        }
+    for (const view of Object.keys(r.views ?? {})) {
+        assertIdentifier(`views.${view}`, view);
     }
-    return errors;
 }
 
 /**
@@ -268,6 +254,12 @@ export function viewQuery(rules: GmailLabelRules | undefined, view: string | und
         );
     }
     return q;
+}
+
+function assertIdentifier(where: string, name: string): void {
+    if (!IDENT.test(name)) {
+        throw new Error(`Invalid label rules: ${where}: names must be identifiers`);
+    }
 }
 
 function lower(s: string): string {

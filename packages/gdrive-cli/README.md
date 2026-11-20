@@ -18,6 +18,9 @@ bun add @nzyme/gdrive-cli @nzyme/cli-core
 
 ```ts
 // tools/drive.ts
+import * as os from 'node:os';
+import * as path from 'node:path';
+
 import type { NzymePlugin } from '@nzyme/cli-core/NzymePlugin.js';
 import { defineDriveCommands } from '@nzyme/gdrive-cli/defineDriveCommands.js';
 
@@ -27,7 +30,10 @@ export default {
     commands: defineDriveCommands({
         auth: { provider: AppSecrets, accounts: ['*@acme.com'] },
         permissions: { upload: true },
-        files: { roots: ['~/Notes'], downloadsDir: '~/.cache/acme/downloads' },
+        files: {
+            roots: [path.join(os.homedir(), 'Notes')],
+            downloadsDir: path.join(os.homedir(), '.cache', 'acme', 'downloads'),
+        },
     }),
 } satisfies NzymePlugin;
 ```
@@ -44,8 +50,7 @@ A repo with its own CLI passes the same commands to `execute({ name, commands: [
 ...defineDriveCommands({ ... })] })`. As with every plugin, `@nzyme/cli` and the other `@nzyme/*`
 packages must be one version, installed in the repo (`docs/decisions/nzyme-cli-plugins.md`).
 
-`defineDriveCommands` throws on an unknown permission, a non-boolean value or a path that is neither
-absolute nor starting with `~`.
+`defineDriveCommands` throws on a path that is not absolute.
 
 ## Before the first use
 
@@ -65,7 +70,7 @@ absolute nor starting with `~`.
 |`auth`|required|The `GoogleAuthOptions` of [`@nzyme/google-auth`](../google-auth#options): provider, client keys, key prefix, `accounts`|
 |`prefix`|`drive`|The command path prefix, space-separated|
 |`permissions`|below|Switches overriding the defaults one by one|
-|`files`|none|`roots`: directories, besides the repo root, uploads read from and downloads write to. `downloadsDir`: where `download` writes by default, `<tmpdir>/gdrive-cli/downloads`. Absolute or `~` paths|
+|`files`|none|`roots`: directories, besides the repo root, uploads read from and downloads write to. `downloadsDir`: where `download` writes by default, `~/.cache/gdrive-cli/downloads`. Absolute paths|
 
 ### Permissions
 
@@ -108,5 +113,5 @@ several accounts are usable. A file is given as an id or a Drive URL.
   forbidden calls, and a recording fake API that fails on a forbidden request.
 - A write command exists only when the project turned its permission on.
 - Local files are read (uploads) and written (downloads) only under the repo root, `files.roots` and the
-  downloads directory. Secret files (`.env*`, credentials and token files) are refused even inside them.
+  downloads directory. Secret files (`.env*`, OAuth client files, credentials and token files) are refused even inside them.
 - An account the project's `auth.accounts` excludes is listed as `not allowed` and cannot be used.

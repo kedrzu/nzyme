@@ -347,10 +347,8 @@ test('malformed options are refused when the commands are defined', () => {
     const provider = createTestProvider([]);
 
     expect(() => defineDriveCommands({ auth: { provider }, files: { downloadsDir: 'relative/dir' } })).toThrow(
-        "'relative/dir' must be absolute or start with ~",
+        "'relative/dir' must be an absolute path",
     );
-    const permissions = { browse: true, purge: true };
-    expect(() => defineDriveCommands({ auth: { provider }, permissions })).toThrow("permissions: 'purge' is unknown");
 });
 
 interface RunOptions {

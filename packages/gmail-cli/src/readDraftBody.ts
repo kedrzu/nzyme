@@ -3,7 +3,7 @@ import type { Readable } from 'node:stream';
 import { text } from 'node:stream/consumers';
 
 import type { FileAccess } from '@nzyme/node-utils/FileAccess.js';
-import { resolveReadableFile } from '@nzyme/node-utils/resolveReadableFile.js';
+import { resolveReadableFile } from '@nzyme/node-utils/FileAccess.js';
 
 /** Arguments of {@link readDraftBody}. */
 export interface ReadDraftBodyParams {

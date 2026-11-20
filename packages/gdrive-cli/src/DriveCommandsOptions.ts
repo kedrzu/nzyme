@@ -3,11 +3,11 @@ import type { GoogleCommandParams } from '@nzyme/google-auth/GoogleCommandParams
 
 import type { DrivePermissions } from './permissions.js';
 
-/** Local files the Drive commands read and write. Every path is absolute or starts with `~`. */
+/** Local files the Drive commands read and write. Every path is absolute. */
 export interface DriveFilesOptions {
     /** Directories, besides the project's, that uploads may read from and downloads may write to. */
     roots?: string[];
-    /** Where `download` writes by default. Default `<tmpdir>/gdrive-cli/downloads`. */
+    /** Where `download` writes by default. Default `~/.cache/gdrive-cli/downloads`. */
     downloadsDir?: string;
 }
 

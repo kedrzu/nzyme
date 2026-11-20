@@ -4,11 +4,11 @@ import type { GoogleCommandParams } from '@nzyme/google-auth/GoogleCommandParams
 import type { QuoteAttributionOptions } from './compose.js';
 import type { GmailLabelRules } from './labelRules.js';
 
-/** Local files the Gmail commands read and write. Every path is absolute or starts with `~`. */
+/** Local files the Gmail commands read and write. Every path is absolute. */
 export interface GmailFilesOptions {
     /** Directories, besides the project's, that draft attachments may be read from. */
     roots?: string[];
-    /** Where `attachment save` writes, one directory per message. Default `<tmpdir>/gmail-cli/attachments`. */
+    /** Where `attachment save` writes, one directory per message. Default `~/.cache/gmail-cli/attachments`. */
     attachmentsDir?: string;
 }
 

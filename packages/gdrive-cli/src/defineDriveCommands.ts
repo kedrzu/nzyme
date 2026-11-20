@@ -1,7 +1,8 @@
+import * as path from 'node:path';
+
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { defineGoogleAccountsCommand } from '@nzyme/google-auth/defineGoogleAccountsCommand.js';
 import { defineGoogleAuthCommand } from '@nzyme/google-auth/defineGoogleAuthCommand.js';
-import { isAbsoluteOrHomePath } from '@nzyme/node-utils/isAbsoluteOrHomePath.js';
 
 import { defineDriveDownloadCommand } from './defineDriveDownloadCommand.js';
 import { defineDriveDrivesCommand } from './defineDriveDrivesCommand.js';
@@ -17,29 +18,23 @@ import { defineDriveUploadCommand } from './defineDriveUploadCommand.js';
 import type { DriveCommandParams, DriveCommandsOptions } from './DriveCommandsOptions.js';
 import { driveService } from './driveService.js';
 import type { DrivePermission } from './permissions.js';
-import { effectivePermissions, validatePermissions } from './permissions.js';
+import { effectivePermissions } from './permissions.js';
 
 /**
  * Defines the Drive commands the project's permissions allow: sign-in and accounts always; search,
  * `ls`, `info` and `drives` with `browse`; `read` and `download` with `download`; `upload` and `mkdir`
  * with `upload`; `update` and `meta` with `edit`; `trash` and `restore` with `delete`. A command whose
  * permission is off is not registered at all. None deletes a file permanently, empties the trash or
- * touches sharing. Throws when the options are malformed.
+ * touches sharing. Throws when a `files` path is not absolute.
  * @__NO_SIDE_EFFECTS__
  */
 export function defineDriveCommands(options: DriveCommandsOptions): CommandClass[] {
     const { prefix = 'drive', auth, files } = options;
 
-    const problems = options.permissions === undefined ? [] : validatePermissions(options.permissions);
-    const dirs = [...(files?.roots ?? []), ...(files?.downloadsDir ? [files.downloadsDir] : [])];
-    for (const dir of dirs) {
-        if (!isAbsoluteOrHomePath(dir)) {
-            problems.push(`files: '${dir}' must be absolute or start with ~`);
+    for (const dir of [...(files?.roots ?? []), ...(files?.downloadsDir === undefined ? [] : [files.downloadsDir])]) {
+        if (!path.isAbsolute(dir)) {
+            throw new Error(`Invalid Drive command options: files: '${dir}' must be an absolute path`);
         }
-    }
-
-    if (problems.length > 0) {
-        throw new Error(`Invalid Drive command options:\n- ${problems.join('\n- ')}`);
     }
 
     const params: DriveCommandParams = { prefix, service: driveService, options: auth, files };

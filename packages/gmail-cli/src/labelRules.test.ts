@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { planThreadChange, protectedLabels, RuleViolation, validateLabelRules, viewQuery } from './labelRules.js';
+import { assertLabelRules, planThreadChange, protectedLabels, RuleViolation, viewQuery } from './labelRules.js';
 import type { GmailLabelRules } from './labelRules.js';
 
 const umbra: GmailLabelRules = {
@@ -18,22 +18,18 @@ const plan = (
     rules = umbra,
 ) => planThreadChange({ rules, change: { add: [], remove: [], set: {}, ...change }, current });
 
-test('validateLabelRules: accepts a well-formed config', () => {
-    expect(validateLabelRules(umbra)).toEqual([]);
+test('assertLabelRules: accepts a well-formed config', () => {
+    expect(() => assertLabelRules(umbra)).not.toThrow();
 });
 
-test('validateLabelRules: reports overlapping groups, unknown groups and bad names', () => {
-    const errors = validateLabelRules({
-        groups: { a: ['X', 'Y'], b: ['x'], 'bad name': ['Z'] },
-        require: [{ when: 'X', group: 'nope' }],
-        archiveMarkers: ['Y'],
-        views: { ok: '' },
-    });
-    expect(errors.join('\n')).toMatch(/'x' is already in group 'a'/);
-    expect(errors.join('\n')).toMatch(/unknown group 'nope'/);
-    expect(errors.join('\n')).toMatch(/bad name/);
-    expect(errors.join('\n')).toMatch(/archiveMarkers: 'Y'/);
-    expect(errors.join('\n')).toMatch(/views.ok/);
+test('assertLabelRules: rejects overlapping groups, unknown groups, group markers and bad names', () => {
+    expect(() => assertLabelRules({ groups: { a: ['X', 'Y'], b: ['x'] } })).toThrow(/'x' is already in group 'a'/);
+    expect(() => assertLabelRules({ groups: { a: ['X'] }, require: [{ when: 'X', group: 'nope' }] })).toThrow(
+        /unknown group 'nope'/,
+    );
+    expect(() => assertLabelRules({ groups: { a: ['X', 'Y'] }, archiveMarkers: ['Y'] })).toThrow(/archiveMarkers: 'Y'/);
+    expect(() => assertLabelRules({ groups: { 'bad=name': ['Z'] } })).toThrow(/bad=name/);
+    expect(() => assertLabelRules({ views: { 'bad view': 'in:inbox' } })).toThrow(/bad view/);
 });
 
 test('planThreadChange - groups: sets a label and strips the rest of its group present on the thread', () => {

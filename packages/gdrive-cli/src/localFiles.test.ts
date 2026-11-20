@@ -6,7 +6,7 @@ import { afterAll, beforeAll, expect, test } from 'bun:test';
 
 import type { FileAccess } from '@nzyme/node-utils/FileAccess.js';
 
-import { localFile, mimeTypeOf, resolveWritablePath, safeFileName } from './localFiles.js';
+import { localFile, mimeTypeOf, resolveWritablePath } from './localFiles.js';
 
 let tmp: string;
 let repo: string;
@@ -75,11 +75,4 @@ test('resolveWritablePath refuses targets outside the roots, through symlinks, a
         /not a regular file/,
     );
     await expect(resolveWritablePath({ input: '.env.local', defaultName: 'x', access })).rejects.toThrow(/secrets/);
-});
-
-test('safeFileName strips separators, control characters and leading dots', () => {
-    expect(safeFileName('Q1/Q2: plan?.xlsx')).toBe('Q1_Q2_ plan_.xlsx');
-    expect(safeFileName('a\u0007b')).toBe('a_b');
-    expect(safeFileName('..env')).toBe('_env');
-    expect(safeFileName('  ')).toBe('download');
 });

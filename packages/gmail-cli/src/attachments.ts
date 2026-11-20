@@ -4,6 +4,8 @@
 // out when reading a message never matches a later fetch of the same message. The MIME
 // partId ("1", "2.1") is stable, so that is the id the commands expose.
 
+import { safeFileName } from '@nzyme/node-utils/safeFileName.js';
+
 /** An attachment of a fetched message. */
 export interface MessageAttachment {
     /** The MIME part id ("1", "2.1"): stable across fetches, so it is the id the commands expose. */
@@ -24,24 +26,13 @@ export function findAttachment(all: MessageAttachment[], ref: string): MessageAt
 }
 
 /**
- * Replaces the characters that are illegal on disk. Gmail filenames can contain slashes
- * (e.g. "2025-FP/I/27707.pdf"); a name of dots alone (`..`) would name a directory, not a file.
- * @util
- * @__NO_SIDE_EFFECTS__
- */
-export function safeFileName(name: string): string {
-    const safe = name.replace(/[/\\:*?"<>|]/g, '_');
-    return /^\.*$/.test(safe) ? 'attachment' : safe;
-}
-
-/**
  * On-disk name, unique within the message: two parts called "image.png" must
  * not overwrite each other, while saving the same part twice stays idempotent.
  * @__NO_SIDE_EFFECTS__
  */
 export function savedFileName(target: MessageAttachment, all: MessageAttachment[]): string {
-    const name = safeFileName(target.filename);
-    const clash = all.some(a => a.partId !== target.partId && safeFileName(a.filename) === name);
+    const name = safeFileName(target.filename, 'attachment');
+    const clash = all.some(a => a.partId !== target.partId && safeFileName(a.filename, 'attachment') === name);
     if (!clash) {
         return name;
     }

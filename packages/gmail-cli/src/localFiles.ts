@@ -10,9 +10,8 @@ import * as path from 'node:path';
 
 import { detectMimeType } from 'nodemailer/lib/mime-funcs/mime-types';
 
-import { expandHome } from '@nzyme/node-utils/expandHome.js';
+import { resolveReadableFile } from '@nzyme/node-utils/FileAccess.js';
 import type { FileAccess } from '@nzyme/node-utils/FileAccess.js';
-import { resolveReadableFile } from '@nzyme/node-utils/resolveReadableFile.js';
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
 
 import type { RawAttachment } from './compose.js';
@@ -23,13 +22,12 @@ import { formatFileSize } from './gmailContent.js';
 export const MAX_ATTACHMENTS_BYTES = 25 * 1024 * 1024;
 
 /**
- * The directory `attachment save` writes to: `files.attachmentsDir` with `~` expanded, or
- * `<tmpdir>/gmail-cli/attachments`.
+ * The directory `attachment save` writes to: `files.attachmentsDir`, or `~/.cache/gmail-cli/attachments`
+ * (per user, unlike a fixed name under a shared temp directory another user could create first).
  * @__NO_SIDE_EFFECTS__
  */
 export function attachmentsDir(files: GmailFilesOptions | undefined): string {
-    const configured = files?.attachmentsDir;
-    return configured ? expandHome(configured) : path.join(os.tmpdir(), 'gmail-cli', 'attachments');
+    return files?.attachmentsDir ?? path.join(os.homedir(), '.cache', 'gmail-cli', 'attachments');
 }
 
 /**
@@ -40,7 +38,7 @@ export function attachmentsDir(files: GmailFilesOptions | undefined): string {
 export function draftFileAccess(files: GmailFilesOptions | undefined): FileAccess {
     return {
         baseDir: process.cwd(),
-        roots: [getProjectRoot(), ...(files?.roots ?? []).map(expandHome), attachmentsDir(files)],
+        roots: [getProjectRoot(), ...(files?.roots ?? []), attachmentsDir(files)],
     };
 }
 

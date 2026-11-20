@@ -4,8 +4,19 @@ import * as path from 'node:path';
 
 import { afterAll, beforeAll, expect, test } from 'bun:test';
 
+import { resolveReadableFile } from './FileAccess.js';
 import type { FileAccess } from './FileAccess.js';
-import { resolveReadableFile } from './resolveReadableFile.js';
+
+const SECRET_FILES = [
+    '.env',
+    '.env.production',
+    'work-credentials.json',
+    'work-tokens.json',
+    'client_secret_123-abc.apps.googleusercontent.com.json',
+    'credentials.json',
+    'token.json',
+    'tokens.json',
+];
 
 let tmp: string;
 let repo: string;
@@ -19,7 +30,7 @@ beforeAll(async () => {
     await fs.mkdir(path.join(repo, '.context', 'outbox'), { recursive: true });
     await fs.mkdir(path.join(vault, 'Projekty'), { recursive: true });
     await fs.writeFile(path.join(repo, '.context', 'outbox', 'raport.pdf'), 'pdf');
-    for (const name of ['.env', '.env.production', 'work-credentials.json', 'work-tokens.json']) {
+    for (const name of SECRET_FILES) {
         await fs.writeFile(path.join(repo, name), 'SECRET=1');
     }
     await fs.writeFile(path.join(vault, 'Projekty', 'szafa 1.png'), 'png');
@@ -49,7 +60,7 @@ test('refuses anything outside the roots, a symlink pointing out among it', asyn
 });
 
 test('refuses every secret-file name pattern inside a root', async () => {
-    for (const name of ['.env', '.env.production', 'work-credentials.json', 'work-tokens.json']) {
+    for (const name of SECRET_FILES) {
         await expect(resolveReadableFile(name, access)).rejects.toThrow(/secrets file/);
     }
 });

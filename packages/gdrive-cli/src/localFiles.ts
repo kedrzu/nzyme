@@ -8,11 +8,9 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { assertFileAccess } from '@nzyme/node-utils/assertFileAccess.js';
-import { checkPathInput } from '@nzyme/node-utils/checkPathInput.js';
-import { expandHome } from '@nzyme/node-utils/expandHome.js';
+import { assertFileAccess, resolveReadableFile } from '@nzyme/node-utils/FileAccess.js';
 import type { FileAccess } from '@nzyme/node-utils/FileAccess.js';
-import { resolveReadableFile } from '@nzyme/node-utils/resolveReadableFile.js';
+import { safeFileName } from '@nzyme/node-utils/safeFileName.js';
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
 
 import type { DriveFilesOptions } from './DriveCommandsOptions.js';
@@ -26,13 +24,12 @@ export interface LocalFile {
 }
 
 /**
- * The directory `download` writes to by default: `files.downloadsDir` with `~` expanded, or
- * `<tmpdir>/gdrive-cli/downloads`.
+ * The directory `download` writes to by default: `files.downloadsDir`, or `~/.cache/gdrive-cli/downloads`
+ * (per user, unlike a fixed name under a shared temp directory another user could create first).
  * @__NO_SIDE_EFFECTS__
  */
 export function downloadsDir(files: DriveFilesOptions | undefined): string {
-    const configured = files?.downloadsDir;
-    return configured ? expandHome(configured) : path.join(os.tmpdir(), 'gdrive-cli', 'downloads');
+    return files?.downloadsDir ?? path.join(os.homedir(), '.cache', 'gdrive-cli', 'downloads');
 }
 
 /**
@@ -43,7 +40,7 @@ export function downloadsDir(files: DriveFilesOptions | undefined): string {
 export function driveFileAccess(files: DriveFilesOptions | undefined): FileAccess {
     return {
         baseDir: process.cwd(),
-        roots: [getProjectRoot(), ...(files?.roots ?? []).map(expandHome), downloadsDir(files)],
+        roots: [getProjectRoot(), ...(files?.roots ?? []), downloadsDir(files)],
     };
 }
 
@@ -90,11 +87,12 @@ export async function resolveWritablePath({
     access,
     overwrite = false,
 }: ResolveWritablePathParams): Promise<string> {
-    const p = checkPathInput(input);
+    // assertFileAccess refuses an empty path or one starting with `~` before anything is created.
+    const p = input.trim();
     let target = path.resolve(access.baseDir, p);
     const isDir = /[\\/]$/.test(p) || (await isDirectory(target));
     if (isDir) {
-        target = path.join(target, safeFileName(defaultName));
+        target = path.join(target, safeFileName(defaultName, 'download'));
     }
 
     // The nearest existing ancestor decides where the new directories would end up.
@@ -127,17 +125,6 @@ export async function resolveWritablePath({
     }
 
     return real;
-}
-
-/**
- * A Drive name made safe for the local filesystem: no separators, no control characters, no leading dot.
- * @__NO_SIDE_EFFECTS__
- */
-export function safeFileName(name: string): string {
-    // Control characters sort below the space.
-    const replaced = Array.from(name, char => (char < ' ' || '\\/:*?"<>|'.includes(char) ? '_' : char)).join('');
-    const cleaned = replaced.replace(/^\.+/, '_').trim();
-    return cleaned || 'download';
 }
 
 async function isDirectory(target: string) {

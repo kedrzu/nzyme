@@ -1,7 +1,8 @@
+import * as path from 'node:path';
+
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { defineGoogleAccountsCommand } from '@nzyme/google-auth/defineGoogleAccountsCommand.js';
 import { defineGoogleAuthCommand } from '@nzyme/google-auth/defineGoogleAuthCommand.js';
-import { isAbsoluteOrHomePath } from '@nzyme/node-utils/isAbsoluteOrHomePath.js';
 
 import { defineGmailAttachmentSaveCommand } from './defineGmailAttachmentSaveCommand.js';
 import { defineGmailDraftCreateCommand } from './defineGmailDraftCreateCommand.js';
@@ -18,7 +19,7 @@ import { defineGmailThreadCommand } from './defineGmailThreadCommand.js';
 import { defineGmailThreadLabelCommand } from './defineGmailThreadLabelCommand.js';
 import type { GmailCommandParams, GmailCommandsOptions } from './GmailCommandsOptions.js';
 import { gmailService } from './gmailService.js';
-import { validateLabelRules } from './labelRules.js';
+import { assertLabelRules } from './labelRules.js';
 
 /**
  * Defines the Gmail commands: sign-in and accounts, search, reading threads and messages, thread labels
@@ -31,16 +32,17 @@ import { validateLabelRules } from './labelRules.js';
 export function defineGmailCommands(options: GmailCommandsOptions): CommandClass[] {
     const { prefix = 'gmail', auth, labels, files, reply } = options;
 
-    const problems = labels ? validateLabelRules(labels) : [];
-    const dirs = [...(files?.roots ?? []), ...(files?.attachmentsDir ? [files.attachmentsDir] : [])];
-    for (const dir of dirs) {
-        if (!isAbsoluteOrHomePath(dir)) {
-            problems.push(`files: '${dir}' must be absolute or start with ~`);
-        }
+    if (labels) {
+        assertLabelRules(labels);
     }
 
-    if (problems.length > 0) {
-        throw new Error(`Invalid Gmail command options:\n- ${problems.join('\n- ')}`);
+    for (const dir of [
+        ...(files?.roots ?? []),
+        ...(files?.attachmentsDir === undefined ? [] : [files.attachmentsDir]),
+    ]) {
+        if (!path.isAbsolute(dir)) {
+            throw new Error(`Invalid Gmail command options: files: '${dir}' must be an absolute path`);
+        }
     }
 
     const params: GmailCommandParams = { prefix, service: gmailService, options: auth, labels, files, reply };

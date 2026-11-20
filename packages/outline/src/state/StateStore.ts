@@ -1,5 +1,8 @@
-import { mkdir, open, readFile, rename, rm } from 'node:fs/promises';
+import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
+
+import { readFileIfExists } from '../utils/readFileIfExists.js';
+import { writeFileAtomic } from '../utils/writeFileAtomic.js';
 
 /** What sync remembers about one Outline document. */
 export interface DocState {
@@ -9,7 +12,8 @@ export interface DocState {
     revision: number;
     title: string;
     parentId: string | null;
-    collectionId: string;
+    /** `null` for a draft outside any collection. */
+    collectionId: string | null;
     /** The share list as sync last wrote it into the file's frontmatter. */
     shared: string[];
     /** Hash of the local file as sync last wrote or read it; a different hash means a local edit. */
@@ -71,7 +75,7 @@ export class StateStore {
 
     /** The saved state, or an empty one when none was ever saved. Throws `StateCorruptError` for a broken file. */
     async load(): Promise<SyncState> {
-        const text = await readIfExists(this.statePath);
+        const text = await readText(this.statePath);
         if (text === null) {
             return emptyState();
         }
@@ -88,16 +92,16 @@ export class StateStore {
     }
 
     async save(state: SyncState): Promise<void> {
-        await writeAtomic(this.statePath, JSON.stringify(state, null, 2));
+        await writeFileAtomic(this.statePath, JSON.stringify(state, null, 2));
     }
 
     /** The last canonical content of the document, the base of a 3-way merge; `null` when none is stored. */
     async readBase(id: string): Promise<string | null> {
-        return readIfExists(this.basePath(id));
+        return readText(this.basePath(id));
     }
 
     async writeBase(id: string, content: string): Promise<void> {
-        await writeAtomic(this.basePath(id), content);
+        await writeFileAtomic(this.basePath(id), content);
     }
 
     async deleteBase(id: string): Promise<void> {
@@ -126,29 +130,9 @@ function emptyState(): SyncState {
     };
 }
 
-/** Writes to a temp file in the same folder and renames it over `path`, so a crash leaves the old or the new content, never a half. */
-async function writeAtomic(path: string, content: string): Promise<void> {
-    await mkdir(join(path, '..'), { recursive: true });
-    const temp = `${path}.${process.pid}.tmp`;
-    const file = await open(temp, 'w');
-    try {
-        await file.writeFile(content);
-        await file.sync();
-    } finally {
-        await file.close();
-    }
-    await rename(temp, path);
-}
-
-async function readIfExists(path: string): Promise<string | null> {
-    try {
-        return await readFile(path, 'utf8');
-    } catch (error) {
-        if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-            return null;
-        }
-        throw error;
-    }
+async function readText(path: string): Promise<string | null> {
+    const bytes = await readFileIfExists(path);
+    return bytes == null ? null : bytes.toString('utf8');
 }
 
 function isSyncState(value: unknown): value is SyncState {
@@ -179,7 +163,7 @@ function isDocState(value: unknown): value is DocState {
         typeof value.revision === 'number' &&
         typeof value.title === 'string' &&
         isStringOrNull(value.parentId) &&
-        typeof value.collectionId === 'string' &&
+        isStringOrNull(value.collectionId) &&
         isStringArray(value.shared) &&
         typeof value.localHash === 'string' &&
         (value.conflictRevision === undefined || typeof value.conflictRevision === 'number')

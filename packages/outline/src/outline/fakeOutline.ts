@@ -165,6 +165,7 @@ interface DocumentRecord {
     archivedAt: string | null;
     deletedAt: string | null;
     createdById: string;
+    updatedById: string;
 }
 
 interface CollectionRecord extends OutlineCollection {
@@ -344,6 +345,7 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
             archivedAt: null,
             deletedAt: null,
             createdById: creator.id,
+            updatedById: creator.id,
         };
         documents.push(record);
         return presentDocument(record);
@@ -598,6 +600,7 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
             archivedAt: null,
             deletedAt: null,
             createdById: user.id,
+            updatedById: user.id,
         };
         documents.push(record);
         return ok(presentDocument(record));
@@ -632,6 +635,7 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         document.text = text;
         document.revision += 1;
         document.updatedAt = stamp;
+        document.updatedById = user.id;
         if (publishing) {
             document.publishedAt = stamp;
         }
@@ -918,6 +922,7 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
 
     function presentDocument(record: DocumentRecord): OutlineDocument {
         const creator = requireUser(record.createdById);
+        const updater = requireUser(record.updatedById);
         return {
             id: record.id,
             title: record.title,
@@ -930,6 +935,7 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
             publishedAt: record.publishedAt,
             archivedAt: record.archivedAt,
             createdBy: { id: creator.id, name: creator.name },
+            updatedBy: { id: updater.id, name: updater.name },
         };
     }
 

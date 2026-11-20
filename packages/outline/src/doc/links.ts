@@ -70,6 +70,32 @@ export function findLocalAttachments(text: string): LocalAttachmentRef[] {
     return found;
 }
 
+/** A link in local Markdown to an Outline attachment, in the form `toLocalLinks` writes. */
+export interface OutlineAttachmentRef {
+    /** The Outline attachment id. */
+    id: string;
+    /** `_attachments/<id>…`, relative to the document's folder, without a leading `./`. */
+    path: string;
+}
+
+/**
+ * The Outline attachments a local document links to (`_attachments/<id>…`), each path once: the files the
+ * pull downloads next to the document.
+ * @__NO_SIDE_EFFECTS__
+ */
+export function findOutlineAttachments(text: string): OutlineAttachmentRef[] {
+    const found = new Map<string, OutlineAttachmentRef>();
+    for (const match of text.matchAll(LOCAL_LINK)) {
+        const target = match[3] ?? '';
+        const id = LOCAL_ATTACHMENT_PATH.exec(target)?.[1];
+        const path = target.replace(/^\.\//, '');
+        if (id != null && !found.has(path)) {
+            found.set(path, { id, path });
+        }
+    }
+    return [...found.values()];
+}
+
 function attachmentName(label: string): string {
     const [dotExtension, extension] = /\.([a-z0-9]{2,5})$/i.exec(label.trim()) ?? [];
     if (dotExtension == null || extension == null) {

@@ -42,6 +42,8 @@ export interface OutlineDocument {
     publishedAt: string | null;
     archivedAt: string | null;
     createdBy: OutlineUserRef;
+    /** Who saved the current revision. */
+    updatedBy: OutlineUserRef;
 }
 
 export interface OutlineNavigationNode {

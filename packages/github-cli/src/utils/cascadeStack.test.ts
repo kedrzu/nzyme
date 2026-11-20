@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -8,6 +8,9 @@ import { createTestLogger } from '@nzyme/logging';
 
 import { GitMergeConflictError } from './GitMergeConflictError.js';
 import { cascadeStack } from './cascadeStack.js';
+
+// Every test builds real git repositories, which outgrow the 5 s default under a loaded full run.
+setDefaultTimeout(60_000);
 
 const { logger } = createTestLogger('cascadeStack');
 

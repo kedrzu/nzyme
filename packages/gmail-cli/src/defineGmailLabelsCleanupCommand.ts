@@ -1,4 +1,4 @@
-import { Option, UsageError } from '@nzyme/cli-core';
+import { formatTsvLine, Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { assert } from '@nzyme/utils/assert.js';
@@ -6,7 +6,6 @@ import { assert } from '@nzyme/utils/assert.js';
 import { GmailClientFactory } from './GmailClientFactory.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
 import { protectedLabels } from './labelRules.js';
-import { formatTsvLine } from './utils/formatTsvLine.js';
 
 /**
  * Defines `<prefix> labels cleanup <prefix> [--dry-run]`: deletes the user labels whose name starts

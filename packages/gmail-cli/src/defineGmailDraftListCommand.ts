@@ -1,4 +1,4 @@
-import { Option, UsageError } from '@nzyme/cli-core';
+import { formatTsvLine, Option, parseCount } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { assert } from '@nzyme/utils/assert.js';
@@ -6,7 +6,6 @@ import { assert } from '@nzyme/utils/assert.js';
 import { GmailClientFactory } from './GmailClientFactory.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
 import { getHeader } from './gmailContent.js';
-import { formatTsvLine } from './utils/formatTsvLine.js';
 
 /** Drafts read when filtering by thread, which Gmail cannot do itself. */
 const THREAD_SCAN = 100;
@@ -38,10 +37,7 @@ export function defineGmailDraftListCommand(params: GmailCommandParams): Command
         account = Option.String('--account', { description: 'The account to act as; needed when several are usable' });
 
         override async run() {
-            const limit = Number(this.limit);
-            if (!(Number.isInteger(limit) && limit > 0)) {
-                throw new UsageError(`--limit must be a positive integer, got ${this.limit}.`);
-            }
+            const limit = parseCount({ value: this.limit, option: '--limit' });
 
             const { gmail, call } = await this.container.resolve(GmailClientFactory)(
                 params,

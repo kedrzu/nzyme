@@ -70,7 +70,7 @@ export function defineGmailDraftCreateCommand(params: GmailCommandParams): Comma
                 throw new UsageError('Pass the body with --body-file <path>, or pipe it on stdin.');
             }
 
-            const body = await readDraftBody(bodyFile, this.context.stdin, draftFileAccess(files));
+            const body = await readDraftBody({ bodyFile, stdin: this.context.stdin, access: draftFileAccess(files) });
             if (!body.trim()) {
                 throw new UsageError('The draft body is empty.');
             }

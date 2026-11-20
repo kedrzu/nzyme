@@ -11,13 +11,28 @@ import { assert } from '@nzyme/utils/assert.js';
 
 import type { MessageAttachment } from './attachments.js';
 
+/** An attachment of a read message, with what tells an embedded image from a regular file. */
 export interface AttachmentInfo extends MessageAttachment {
+    /** Whether the HTML body shows it as an image (`cid:` reference) rather than as an attached file. */
     inline: boolean;
+    /** The Content-ID the HTML body refers to it by; null for a regular attachment. */
+    cid: string | null;
 }
 
+/** A message read for an agent: its body as Markdown and its attachments. */
 export interface ProcessedEmail {
+    /** Markdown with quoted replies and signatures stripped, or the unprocessed body in raw mode. */
     body: string;
     attachments: AttachmentInfo[];
+}
+
+/** Arguments of {@link processEmailContent}. */
+export interface ProcessEmailContentParams {
+    payload: gmail_v1.Schema$MessagePart;
+    /** The message's subject, which forward detection compares against. */
+    subject: string;
+    /** Return the original HTML or text, without Markdown conversion or quote stripping. */
+    raw?: boolean;
 }
 
 /** HTML and plain-text bodies of a message; the HTML one is preferred when both exist. */
@@ -85,13 +100,15 @@ export function extractAttachments(payload: gmail_v1.Schema$MessagePart): Attach
     function scanParts(part: gmail_v1.Schema$MessagePart): void {
         // An attachment has a filename and an attachmentId.
         if (part.filename && part.filename.length > 0 && part.body?.attachmentId) {
+            const cid = inlineCid(part, html);
             attachments.push({
                 partId: part.partId || part.body.attachmentId,
                 gmailId: part.body.attachmentId,
                 filename: part.filename,
                 mimeType: part.mimeType || 'application/octet-stream',
                 size: part.body.size || 0,
-                inline: inlineCid(part, html) !== null,
+                inline: cid !== null,
+                cid,
             });
         }
         for (const subPart of part.parts ?? []) {
@@ -134,18 +151,15 @@ export function extractRawBody(payload: gmail_v1.Schema$MessagePart): RawBodyCon
 
 /**
  * A message as Markdown with quoted replies and signatures stripped and forwards laid out, plus its
- * attachments. `rawMode` returns the unprocessed body instead.
+ * attachments. `raw` returns the unprocessed body instead.
  * @__NO_SIDE_EFFECTS__
  */
-export function processEmailContent(
-    payload: gmail_v1.Schema$MessagePart,
-    subject: string,
-    rawMode: boolean = false,
-): ProcessedEmail {
+export function processEmailContent(params: ProcessEmailContentParams): ProcessedEmail {
+    const { payload, subject, raw = false } = params;
     const attachments = extractAttachments(payload);
     const { html, text } = extractRawBody(payload);
 
-    if (rawMode) {
+    if (raw) {
         return { body: html || text || '', attachments };
     }
 

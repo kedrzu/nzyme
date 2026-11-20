@@ -1,9 +1,9 @@
 import type { gmail_v1 } from '@googleapis/gmail';
 
+import { formatHeaderBlock } from '@nzyme/cli-core';
 import { assert } from '@nzyme/utils/assert.js';
 
 import { formatFileSize, getHeader, processEmailContent } from './gmailContent.js';
-import { formatHeaderBlock } from './utils/formatHeaderBlock.js';
 
 /** Options of {@link formatGmailMessage}. */
 export interface FormatGmailMessageOptions {
@@ -25,7 +25,7 @@ export function formatGmailMessage(message: gmail_v1.Schema$Message, options: Fo
 
     const headers = payload.headers;
     const subject = getHeader(headers, 'Subject');
-    const { body, attachments } = processEmailContent(payload, subject, options.raw);
+    const { body, attachments } = processEmailContent({ payload, subject, raw: options.raw });
     const labels = (message.labelIds ?? []).map(id => options.labelNames.get(id) ?? id);
 
     const fields: [string, string][] = [

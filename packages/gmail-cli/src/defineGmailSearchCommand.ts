@@ -1,4 +1,4 @@
-import { Option, UsageError } from '@nzyme/cli-core';
+import { formatTsvLine, Option, parseCount, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
@@ -6,7 +6,6 @@ import { GmailClientFactory } from './GmailClientFactory.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
 import { getHeader } from './gmailContent.js';
 import { RuleViolation, viewQuery } from './labelRules.js';
-import { formatTsvLine } from './utils/formatTsvLine.js';
 
 /** Pages of 100 messages read at most before giving up on filling `--limit` threads. */
 const MAX_PAGES = 5;
@@ -42,10 +41,7 @@ export function defineGmailSearchCommand(params: GmailCommandParams): CommandCla
         account = Option.String('--account', { description: 'The account to act as; needed when several are usable' });
 
         override async run() {
-            const limit = Number(this.limit);
-            if (!(Number.isInteger(limit) && limit > 0)) {
-                throw new UsageError(`--limit must be a positive integer, got ${this.limit}.`);
-            }
+            const limit = parseCount({ value: this.limit, option: '--limit' });
 
             const q = [this.viewQuery(), this.query].filter(Boolean).join(' ');
             if (!q) {

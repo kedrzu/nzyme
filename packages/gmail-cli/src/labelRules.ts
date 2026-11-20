@@ -1,13 +1,9 @@
-// Optional label rules a project declares in code. Four building blocks:
-//
-//   groups          mutually exclusive label sets, changed only through the thread change's `set`
-//   require         "a thread with label X must also carry one label of group G"
-//   archiveMarkers  the only labels that may take a thread out of INBOX
-//   views           named Gmail queries for the search `view`
+// Optional label rules a project declares in code (`GmailLabelRules`).
 //
 // Pure functions only: the Gmail calls live in the commands, so every rule is unit-testable. The
 // rules, their validation and the planning of a thread change are one unit and share this file.
 
+/** "A thread with label `when` must also carry one label of group `group`." */
 export interface GmailLabelRequireRule {
     /** Label name. */
     when: string;
@@ -15,13 +11,19 @@ export interface GmailLabelRequireRule {
     group: string;
 }
 
+/** The label rules and named search views a project declares for its Gmail commands. */
 export interface GmailLabelRules {
+    /** Mutually exclusive label sets by group key, changed only through the thread change's `set`. */
     groups?: Record<string, string[]>;
+    /** Labels that need a label of some group alongside them. */
     require?: GmailLabelRequireRule[];
+    /** The only labels that may take a thread out of INBOX. */
     archiveMarkers?: string[];
+    /** Named Gmail queries for the search `--view`. */
     views?: Record<string, string>;
 }
 
+/** The labels a caller asks to change on a thread. */
 export interface ThreadChange {
     /** Plain label names from addLabels. */
     add: string[];
@@ -31,6 +33,7 @@ export interface ThreadChange {
     set: Record<string, string | null>;
 }
 
+/** What a thread change resolves to once the label rules are applied. */
 export interface PlannedChange {
     /** Label names to add (group labels may not exist yet). */
     add: string[];
@@ -38,7 +41,16 @@ export interface PlannedChange {
     remove: string[];
     /** The subset of `add` that came from `set` (created when missing). */
     setLabels: string[];
+    /** Human-readable lines describing the change, e.g. `status: AI/Done` or `archived (INBOX removed)`. */
     summary: string[];
+}
+
+/** Arguments of {@link planThreadChange}. */
+export interface PlanThreadChangeParams {
+    rules: GmailLabelRules | undefined;
+    change: ThreadChange;
+    /** Label names the thread carries now, summed over its messages. */
+    current: string[];
 }
 
 /** A change the project's label rules forbid; the message tells the caller how to do it right. */
@@ -126,15 +138,12 @@ export function protectedLabels(rules: GmailLabelRules | undefined): string[] {
 }
 
 /**
- * What a thread update should do to a thread that currently carries `current` (label names, summed
- * over its messages). Throws RuleViolation before anything is written.
+ * What a thread update should do to a thread that currently carries `current`. Throws RuleViolation
+ * before anything is written.
  * @__NO_SIDE_EFFECTS__
  */
-export function planThreadChange(
-    rules: GmailLabelRules | undefined,
-    change: ThreadChange,
-    current: string[],
-): PlannedChange {
+export function planThreadChange(params: PlanThreadChangeParams): PlannedChange {
+    const { rules, change, current } = params;
     const r = rules ?? {};
     const groups = r.groups ?? {};
     const add: string[] = [];

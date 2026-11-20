@@ -52,12 +52,14 @@ test('reply helpers: appends message id to references without duplicates', () =>
 });
 
 test('reply helpers: formats the Polish attribution for a pl locale in the given time zone', () => {
-    const line = quoteAttribution('Jan <jan@x.pl>', 'Mon, 28 Sep 2026 08:15:00 +0000', WARSAW_PL);
+    const line = quoteAttribution({ ...WARSAW_PL, from: 'Jan <jan@x.pl>', date: 'Mon, 28 Sep 2026 08:15:00 +0000' });
     expect(line).toBe('W dniu pon., 28 wrz 2026 o 10:15 Jan <jan@x.pl> napisał(a):');
 });
 
 test('reply helpers: formats the English Gmail attribution for any other locale', () => {
-    const line = quoteAttribution('Jan <jan@x.pl>', 'Mon, 28 Sep 2026 08:15:00 +0000', {
+    const line = quoteAttribution({
+        from: 'Jan <jan@x.pl>',
+        date: 'Mon, 28 Sep 2026 08:15:00 +0000',
         locale: 'en-US',
         timeZone: 'America/New_York',
     });
@@ -65,13 +67,21 @@ test('reply helpers: formats the English Gmail attribution for any other locale'
 });
 
 test('reply helpers: drops quotes around the display name', () => {
-    const line = quoteAttribution('"Jan K." <jan@x.pl>', 'Mon, 28 Sep 2026 08:15:00 +0000', WARSAW_PL);
+    const line = quoteAttribution({
+        ...WARSAW_PL,
+        from: '"Jan K." <jan@x.pl>',
+        date: 'Mon, 28 Sep 2026 08:15:00 +0000',
+    });
     expect(line).toContain(' Jan K. <jan@x.pl> napisał(a):');
 });
 
 test('reply helpers: leaves the date out when the Date header is unparseable', () => {
-    expect(quoteAttribution('Jan <jan@x.pl>', 'nonsense', WARSAW_PL)).toBe('Jan <jan@x.pl> napisał(a):');
-    expect(quoteAttribution('Jan <jan@x.pl>', 'nonsense', { locale: 'en-GB' })).toBe('Jan <jan@x.pl> wrote:');
+    expect(quoteAttribution({ ...WARSAW_PL, from: 'Jan <jan@x.pl>', date: 'nonsense' })).toBe(
+        'Jan <jan@x.pl> napisał(a):',
+    );
+    expect(quoteAttribution({ from: 'Jan <jan@x.pl>', date: 'nonsense', locale: 'en-GB' })).toBe(
+        'Jan <jan@x.pl> wrote:',
+    );
 });
 
 test('reply helpers: extracts the body of a full html document', () => {

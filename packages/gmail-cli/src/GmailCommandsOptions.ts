@@ -20,6 +20,7 @@ export interface GmailCommandsOptions {
     auth: GoogleAuthOptions;
     /** The project's label rules and named search views. */
     labels?: GmailLabelRules;
+    /** Where draft attachments may be read from and where `attachment save` writes. */
     files?: GmailFilesOptions;
     /** How the attribution line of a reply quote is written. */
     reply?: QuoteAttributionOptions;
@@ -27,7 +28,10 @@ export interface GmailCommandsOptions {
 
 /** What every Gmail command is defined with: the Google sign-in params plus the Gmail options. */
 export interface GmailCommandParams extends GoogleCommandParams {
+    /** The project's label rules and named search views. */
     labels?: GmailLabelRules;
+    /** Where draft attachments may be read from and where `attachment save` writes. */
     files?: GmailFilesOptions;
+    /** How the attribution line of a reply quote is written. */
     reply?: QuoteAttributionOptions;
 }

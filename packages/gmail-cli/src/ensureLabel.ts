@@ -11,15 +11,21 @@ export interface EnsuredLabel {
     created: boolean;
 }
 
+/** Arguments of {@link ensureLabel}. */
+export interface EnsureLabelParams {
+    client: GmailClient;
+    /** The account's labels, from `labels.list`. */
+    labels: gmail_v1.Schema$Label[];
+    name: string;
+}
+
 /**
- * Finds a label by name, case-insensitively, among `labels` (the account's, from `labels.list`), and
- * creates it when missing. Gmail creates the parents of a nested name (`Clients/Acme`) on its own.
+ * Finds a label by name, case-insensitively, among `labels`, and creates it when missing. Gmail
+ * creates the parents of a nested name (`Clients/Acme`) on its own.
  */
-export async function ensureLabel(
-    { gmail, call }: GmailClient,
-    labels: gmail_v1.Schema$Label[],
-    name: string,
-): Promise<EnsuredLabel> {
+export async function ensureLabel(params: EnsureLabelParams): Promise<EnsuredLabel> {
+    const { client, labels, name } = params;
+    const { gmail, call } = client;
     const existing = labels.find(label => label.name?.toLowerCase() === name.toLowerCase());
     if (existing?.id) {
         return { id: existing.id, name: existing.name ?? name, created: false };

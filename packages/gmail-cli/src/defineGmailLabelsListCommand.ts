@@ -1,10 +1,9 @@
-import { Option } from '@nzyme/cli-core';
+import { formatTsvLine, Option } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
 import { GmailClientFactory } from './GmailClientFactory.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
-import { formatTsvLine } from './utils/formatTsvLine.js';
 
 /**
  * Defines `<prefix> labels list`: one line per label, `id  name  type` (`system` or `user`),

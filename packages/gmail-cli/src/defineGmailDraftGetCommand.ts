@@ -1,11 +1,10 @@
-import { Option } from '@nzyme/cli-core';
+import { formatHeaderBlock, Option } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
 import { GmailClientFactory } from './GmailClientFactory.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
 import { draftBodyToMarkdown, extractAttachments, formatFileSize, getHeader } from './gmailContent.js';
-import { formatHeaderBlock } from './utils/formatHeaderBlock.js';
 
 /**
  * Defines `<prefix> draft get <id>`: the draft under a `key: value` header block, its body as the

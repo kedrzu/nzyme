@@ -77,7 +77,7 @@ export function defineGmailThreadLabelCommand(params: GmailCommandParams): Comma
             const labels = (await gmail.users.labels.list({ userId: 'me' }, call)).data.labels ?? [];
 
             // The rules reason over the thread's resulting state, so read its labels first.
-            const current = rules ? await readThreadLabels(client, this.id, labels) : [];
+            const current = rules ? await readThreadLabels({ client, threadId: this.id, labels }) : [];
             const plan = this.plan(set, current);
 
             // Every name resolves before anything is written: a typo creates no label.
@@ -85,7 +85,7 @@ export function defineGmailThreadLabelCommand(params: GmailCommandParams): Comma
             const plainIds = plan.add.filter(name => !plan.setLabels.includes(name)).map(name => labelId(labels, name));
             const setIds: string[] = [];
             for (const name of plan.setLabels) {
-                setIds.push((await ensureLabel(client, labels, name)).id);
+                setIds.push((await ensureLabel({ client, labels, name })).id);
             }
 
             const addIds = [...plainIds, ...setIds];
@@ -106,7 +106,7 @@ export function defineGmailThreadLabelCommand(params: GmailCommandParams): Comma
 
         private plan(set: Record<string, string | null>, current: string[]): PlannedChange {
             try {
-                return planThreadChange(rules, { add: this.add, remove: this.remove, set }, current);
+                return planThreadChange({ rules, change: { add: this.add, remove: this.remove, set }, current });
             } catch (error) {
                 if (error instanceof RuleViolation) {
                     throw new UsageError(error.message);
@@ -118,8 +118,18 @@ export function defineGmailThreadLabelCommand(params: GmailCommandParams): Comma
     };
 }
 
+/** Arguments of {@link readThreadLabels}. */
+interface ReadThreadLabelsParams {
+    client: GmailClient;
+    threadId: string;
+    /** The account's labels, which name the thread's label ids. */
+    labels: gmail_v1.Schema$Label[];
+}
+
 /** The names of the labels on any message of the thread. */
-async function readThreadLabels({ gmail, call }: GmailClient, threadId: string, labels: gmail_v1.Schema$Label[]) {
+async function readThreadLabels(params: ReadThreadLabelsParams) {
+    const { client, threadId, labels } = params;
+    const { gmail, call } = client;
     const thread = await gmail.users.threads.get({ userId: 'me', id: threadId, format: 'minimal' }, call);
     const names = new Set<string>();
     for (const message of thread.data.messages ?? []) {

@@ -11,7 +11,7 @@ test('a reply renders as Markdown without the quoted history', () => {
             '<blockquote class="gmail_quote"><p>Can we meet this week?</p></blockquote></div>',
     );
 
-    const { body } = processEmailContent(payload, 'Meeting');
+    const { body } = processEmailContent({ payload, subject: 'Meeting' });
 
     expect(body).toBe('Yes, **Tuesday** works.');
 });
@@ -29,7 +29,7 @@ test('a plain-text reply drops the quote and the signature', () => {
         ].join('\n'),
     );
 
-    const { body } = processEmailContent(payload, 'Meeting');
+    const { body } = processEmailContent({ payload, subject: 'Meeting' });
 
     expect(body).toBe('Yes, Tuesday works.');
 });
@@ -54,7 +54,7 @@ test('attachments are listed and flagged inline only when the HTML references th
         ],
     };
 
-    const { attachments } = processEmailContent(payload, 'Files');
+    const { attachments } = processEmailContent({ payload, subject: 'Files' });
 
     expect(attachments.map(a => [a.partId, a.filename, a.inline])).toEqual([
         ['1', 'logo.png', true],

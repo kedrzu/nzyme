@@ -109,6 +109,7 @@ export function localImagePath(src: string): string | null {
     }
 }
 
+/** A local image the body refers to, and the cid it is attached under. */
 export interface InlineImageRef {
     /** As written in the body (resolved against the file roots later). */
     path: string;
@@ -126,7 +127,9 @@ export function imageCid(filePath: string): string {
     return `ii_${createHash('sha1').update(filePath).digest('hex').slice(0, 20)}`;
 }
 
+/** The result of {@link collectLocalImages}. */
 export interface CollectedImages {
+    /** The HTML with local image sources rewritten to `cid:` references. */
     html: string;
     images: InlineImageRef[];
 }
@@ -185,20 +188,32 @@ export function buildReferences(references: string, messageId: string): string {
     return ids.join(' ');
 }
 
+/** The message a reply quotes under its body. */
 export interface QuotedMessage {
     /** Raw From header, e.g. "Jan Kowalski <jan@x.pl>". */
     from: string;
     /** Raw Date header. */
     date: string;
+    /** HTML body; preferred over `text` when present. */
     html: string | null;
+    /** Plain-text body. */
     text: string | null;
 }
 
+/** How the attribution line of a reply quote is written. */
 export interface QuoteAttributionOptions {
     /** BCP 47 tag; defaults to the system locale. `pl` gets the Polish template, any other the English one. */
     locale?: string;
     /** IANA time zone the date is shown in; defaults to the system time zone. */
     timeZone?: string;
+}
+
+/** Arguments of {@link quoteAttribution}. */
+export interface QuoteAttributionParams extends QuoteAttributionOptions {
+    /** Raw From header of the quoted message. */
+    from: string;
+    /** Raw Date header of the quoted message. */
+    date: string;
 }
 
 /**
@@ -207,12 +222,13 @@ export interface QuoteAttributionOptions {
  * locale and time zone, and left out when the Date header cannot be parsed.
  * @__NO_SIDE_EFFECTS__
  */
-export function quoteAttribution(rawFrom: string, date: string, options: QuoteAttributionOptions = {}): string {
+export function quoteAttribution(params: QuoteAttributionParams): string {
+    const { date } = params;
     // '"Jan Kowalski" <jan@x.pl>' -> 'Jan Kowalski <jan@x.pl>', as Gmail shows it.
-    const from = rawFrom.replace(/^"(.*)"(\s*<)/, '$1$2');
+    const from = params.from.replace(/^"(.*)"(\s*<)/, '$1$2');
     const system = Intl.DateTimeFormat().resolvedOptions();
-    const locale = options.locale ?? system.locale;
-    const timeZone = options.timeZone ?? system.timeZone;
+    const locale = params.locale ?? system.locale;
+    const timeZone = params.timeZone ?? system.timeZone;
     const isPolish = new Intl.Locale(locale).language === 'pl';
     const d = new Date(date);
     if (Number.isNaN(d.getTime())) {
@@ -244,7 +260,7 @@ export function buildQuoteHtml(q: QuotedMessage, options?: QuoteAttributionOptio
     const content = q.html ? extractBodyInner(q.html) : escapeHtml(q.text ?? '').replace(/\r?\n/g, '<br>');
     return (
         `<div class="gmail_quote"><div dir="ltr" class="gmail_attr">` +
-        `${escapeHtml(quoteAttribution(q.from, q.date, options))}<br></div>` +
+        `${escapeHtml(quoteAttribution({ ...options, from: q.from, date: q.date }))}<br></div>` +
         `<blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">` +
         `${content}</blockquote></div>`
     );
@@ -261,7 +277,7 @@ export function buildQuoteText(q: QuotedMessage, options?: QuoteAttributionOptio
         .split('\n')
         .map(line => (line ? `> ${line}` : '>'))
         .join('\n');
-    return `${quoteAttribution(q.from, q.date, options)}\n\n${quoted}`;
+    return `${quoteAttribution({ ...options, from: q.from, date: q.date })}\n\n${quoted}`;
 }
 
 // ----------------------------------------------------------------------------
@@ -284,15 +300,21 @@ export function buildSignatureHtml(signatureHtml: string): string {
 // Full draft body
 // ----------------------------------------------------------------------------
 
+/** Input of {@link buildDraftBody}. */
 export interface DraftBodyInput {
+    /** The content the caller wrote, in `bodyFormat`. */
     body: string;
+    /** Default `markdown`. */
     bodyFormat?: BodyFormat;
+    /** The Gmail signature appended under the content; none when empty. */
     signatureHtml?: string | null;
+    /** The message quoted under the signature; none when null. */
     quote?: QuotedMessage | null;
     /** Locale and time zone of the quote's attribution line. */
     attribution?: QuoteAttributionOptions;
 }
 
+/** A rendered draft body: its HTML part, its text/plain alternative and the images to attach. */
 export interface DraftBody {
     html: string;
     text: string;
@@ -333,6 +355,7 @@ export function buildDraftBody(input: DraftBodyInput): DraftBody {
 // MIME
 // ----------------------------------------------------------------------------
 
+/** A file to put into a MIME message, with its bytes. */
 export interface RawAttachment {
     filename: string;
     /** Detected from the extension when omitted. */
@@ -342,6 +365,7 @@ export interface RawAttachment {
     cid?: string;
 }
 
+/** Input of {@link buildMime}: the headers, bodies and files of one message. */
 export interface RawMessageInput {
     from?: string;
     to?: string;
@@ -349,9 +373,11 @@ export interface RawMessageInput {
     bcc?: string;
     subject: string;
     html?: string;
+    /** The text/plain alternative of `html`, or the only body without it. */
     text?: string;
     inReplyTo?: string;
     references?: string;
+    /** Files and inline images; a `cid` makes one inline only when there is an HTML body. */
     attachments?: RawAttachment[];
 }
 

@@ -4,7 +4,9 @@
 // out when reading a message never matches a later fetch of the same message. The MIME
 // partId ("1", "2.1") is stable, so that is the id the commands expose.
 
+/** An attachment of a fetched message. */
 export interface MessageAttachment {
+    /** The MIME part id ("1", "2.1"): stable across fetches, so it is the id the commands expose. */
     partId: string;
     /** body.attachmentId of the fetch it came from, for download only. */
     gmailId: string;

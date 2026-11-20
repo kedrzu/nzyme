@@ -16,7 +16,7 @@ const plan = (
     change: Partial<{ add: string[]; remove: string[]; set: Record<string, string | null> }>,
     current: string[],
     rules = umbra,
-) => planThreadChange(rules, { add: [], remove: [], set: {}, ...change }, current);
+) => planThreadChange({ rules, change: { add: [], remove: [], set: {}, ...change }, current });
 
 test('validateLabelRules: accepts a well-formed config', () => {
     expect(validateLabelRules(umbra)).toEqual([]);
@@ -89,7 +89,9 @@ test('planThreadChange - archive markers: removing INBOX without a marker is rej
 
 test('planThreadChange - archive markers: without markers archiving is free', () => {
     expect(plan({ remove: ['INBOX'] }, ['INBOX'], {}).remove).toEqual(['INBOX']);
-    expect(planThreadChange(undefined, { add: ['A'], remove: ['INBOX'], set: {} }, []).remove).toEqual(['INBOX']);
+    expect(
+        planThreadChange({ rules: undefined, change: { add: ['A'], remove: ['INBOX'], set: {} }, current: [] }).remove,
+    ).toEqual(['INBOX']);
 });
 
 test('views: resolves a view and rejects an unknown one', () => {

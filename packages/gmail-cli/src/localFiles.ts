@@ -17,6 +17,7 @@ import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
 
 import type { RawAttachment } from './compose.js';
 import type { GmailFilesOptions } from './GmailCommandsOptions.js';
+import { formatFileSize } from './gmailContent.js';
 
 /** Gmail refuses to send anything bigger; checking up front beats a half-made draft. */
 export const MAX_ATTACHMENTS_BYTES = 25 * 1024 * 1024;
@@ -66,12 +67,8 @@ export function assertTotalSize(attachments: RawAttachment[]): void {
     }
     if (total > MAX_ATTACHMENTS_BYTES) {
         throw new Error(
-            `Attachments total ${megabytes(total)} MB - over Gmail's ${megabytes(MAX_ATTACHMENTS_BYTES)} MB limit. ` +
+            `Attachments total ${formatFileSize(total)} - over Gmail's ${formatFileSize(MAX_ATTACHMENTS_BYTES)} limit. ` +
                 'Share big files via a link instead.',
         );
     }
-}
-
-function megabytes(bytes: number): string {
-    return (bytes / 1024 / 1024).toFixed(1);
 }

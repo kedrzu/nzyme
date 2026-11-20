@@ -11,7 +11,7 @@ import { formatDraftFiles } from './formatDraftFiles.js';
 import type { GmailClient } from './GmailClientFactory.js';
 import { GmailClientFactory } from './GmailClientFactory.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
-import { extractRawBody, getHeader, inlineCid } from './gmailContent.js';
+import { extractAttachments, extractRawBody, getHeader } from './gmailContent.js';
 import { assertTotalSize, draftFileAccess, loadLocalFile } from './localFiles.js';
 import { readDraftBody } from './readDraftBody.js';
 import { readReplyContext } from './readReplyContext.js';
@@ -67,7 +67,11 @@ export function defineGmailDraftUpdateCommand(params: GmailCommandParams): Comma
             const body =
                 this.bodyFile === undefined
                     ? undefined
-                    : await readDraftBody(this.bodyFile, this.context.stdin, draftFileAccess(files));
+                    : await readDraftBody({
+                          bodyFile: this.bodyFile,
+                          stdin: this.context.stdin,
+                          access: draftFileAccess(files),
+                      });
             const client = await this.container.resolve(GmailClientFactory)(params, this.cli.binaryName, this.account);
             const { gmail, call } = client;
 
@@ -78,7 +82,7 @@ export function defineGmailDraftUpdateCommand(params: GmailCommandParams): Comma
             }
 
             const headers = current.payload.headers;
-            const existing = await readDraftAttachments(client, current.id, current.payload);
+            const existing = await readDraftAttachments({ client, messageId: current.id, payload: current.payload });
             const kept = existing.filter(file => !file.cid);
             const missing = this.removeAttachment.filter(name => !kept.some(file => file.filename === name));
             if (missing.length > 0) {
@@ -175,38 +179,31 @@ export function defineGmailDraftUpdateCommand(params: GmailCommandParams): Comma
     };
 }
 
-/** A part holding a file, with the id its bytes are fetched by. */
-interface FilePart {
-    part: gmail_v1.Schema$MessagePart;
-    attachmentId: string;
+/** Arguments of {@link readDraftAttachments}. */
+interface ReadDraftAttachmentsParams {
+    client: GmailClient;
+    /** The draft's message, which the attachment bytes are fetched from. */
+    messageId: string;
+    payload: gmail_v1.Schema$MessagePart;
 }
 
 /** The draft's attachments re-read as bytes, so rewriting the draft doesn't drop them. */
-async function readDraftAttachments(
-    { gmail, call }: GmailClient,
-    messageId: string,
-    payload: gmail_v1.Schema$MessagePart,
-): Promise<RawAttachment[]> {
-    const { html } = extractRawBody(payload);
+async function readDraftAttachments(params: ReadDraftAttachmentsParams): Promise<RawAttachment[]> {
+    const { client, messageId, payload } = params;
+    const { gmail, call } = client;
 
     return await Promise.all(
-        fileParts(payload).map(async ({ part, attachmentId }) => {
+        extractAttachments(payload).map(async file => {
             const attachment = await gmail.users.messages.attachments.get(
-                { userId: 'me', messageId, id: attachmentId },
+                { userId: 'me', messageId, id: file.gmailId },
                 call,
             );
             return {
-                filename: part.filename ?? '',
-                contentType: part.mimeType || 'application/octet-stream',
+                filename: file.filename,
+                contentType: file.mimeType,
                 content: Buffer.from(attachment.data.data ?? '', 'base64url'),
-                cid: inlineCid(part, html) ?? undefined,
+                cid: file.cid ?? undefined,
             };
         }),
     );
-}
-
-function fileParts(part: gmail_v1.Schema$MessagePart): FilePart[] {
-    const attachmentId = part.body?.attachmentId;
-    const own = part.filename && attachmentId ? [{ part, attachmentId }] : [];
-    return [...own, ...(part.parts ?? []).flatMap(fileParts)];
 }

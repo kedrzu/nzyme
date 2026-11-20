@@ -36,7 +36,7 @@ export function defineGmailLabelsCreateCommand(params: GmailCommandParams): Comm
 
             const client = await this.container.resolve(GmailClientFactory)(params, this.cli.binaryName, this.account);
             const labels = (await client.gmail.users.labels.list({ userId: 'me' }, client.call)).data.labels ?? [];
-            const label = await ensureLabel(client, labels, name);
+            const label = await ensureLabel({ client, labels, name });
 
             this.context.stdout.write(
                 `${label.created ? 'Label created' : 'Label exists'}: ${label.id} ${label.name}\n`,

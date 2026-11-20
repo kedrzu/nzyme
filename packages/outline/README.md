@@ -82,13 +82,11 @@ Sharing:
 - `outline share <file> <name>...` shares a synced document with users (exact full name or e-mail) or groups (exact name), with edit rights; `outline unshare <file> <name>...` removes those direct shares; `outline shares <file>` lists them. Each prints the document's direct shares after.
 - Only direct shares are listed and changed; access through a collection or a parent document is not.
 - A name matching nobody or several changes nothing; a file without an `outline:` id is not in Outline yet and is refused.
-- A `shared:` key left in a file by an earlier version is an ordinary local key: kept, never read as shares.
 
 Cadence:
 
-- Session start: a full pass (pull and push). Prompt: an incremental pull at most once a minute, a full pass every 15 minutes. Stop and session end: push. A hook skips quietly while another session syncs.
+- Session start: a full pass (pull and push). Prompt: an incremental pull at most once a minute, a full pass every 15 minutes. Stop and session end: push. A hook skips the sync while another session syncs; a skipped session start or prompt still reminds the agent of open conflicts and an unfinished first pull.
 - The incremental pull asks Outline only for documents changed since the last pull (1 to 2 requests). Only a full pass notices archived or deleted documents, lost access, documents newly shared with the user and new collections.
-- Requests are limited to 100 per minute, 25 for creates.
 - Nothing syncs while Claude Code is closed, and nothing is pulled during a turn.
 
 ## Client

@@ -3,7 +3,7 @@
 Every credential the repo needs — the app's, a script's, a token a tool uses — lives in a remote
 store behind a login, under a prefix, and reaches the code (the env variable or config entry named by its key) through
 `@nzyme/secrets`. No secrets file exists in the repo or beside it. Practice: `../../../../docs/practice/secrets.md`;
-API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-code-through-env-variables.md`.
+API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-declared-and-resolved-through-the-container.md`.
 
 ## Reference state
 
@@ -23,9 +23,10 @@ API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-c
     whole store). The key is the variable name; there is no mapping. Environments are the repo's: the
     prefix comes from an env variable in the service's `deps` (`GITHQ_ENV`, for example), declared in this
     package too.
-  - A loader, `load<Product>Config(container)`: `loadConfig(container, [envSource(), secretsSource(store)])`,
-    the store left out when `CI` is set (a CI job gets the values as environment variables from GitHub
-    Actions secrets). An environment variable wins over the store.
+  - No loader of its own: a process calls `loadSecretsConfig(container, stores)` from `@nzyme/secrets`, which
+    installs the environment variables, then the stores (none when `CI` is set: a CI job gets the values as
+    environment variables from GitHub Actions secrets), so a variable wins over the store. Code that runs
+    without a secret on purpose reads it with `resolveOptionalSecret`.
 - **Runtime reads go through the container.** Code the repo owns never reads a secret from `process.env`,
   `import.meta.env` or a raw binding: it resolves the `defineSecret` definition (`container.resolve(SECRET)`,
   or the service's `deps`).
@@ -61,6 +62,7 @@ API: `nzyme/packages/secrets/README.md`; why: `nzyme/docs/decisions/secrets-as-c
 - Code the repo owns reading a secret from `process.env`, `import.meta.env`, a raw binding or Nuxt's
   `useRuntimeConfig()` instead of resolving its `defineSecret` through the container: a difference.
 - A Bun script wrapped in `bun secrets run` only to receive secrets it could load itself: a difference.
+- A repo's own copy of `loadSecretsConfig` or `resolveOptionalSecret`: a difference; use `@nzyme/secrets`.
 - No `defineSecret` declarations (a provider with only `stores` and `target`), or `bun nzyme secrets` or an
   `nzyme.plugins` entry in use: a difference.
 - A dotenv file holding credentials (`.env`, `.env.*`, `.dev.vars`): a difference. Migrate it

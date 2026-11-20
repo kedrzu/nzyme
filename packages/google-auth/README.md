@@ -117,10 +117,10 @@ of accounts and projects.
 
    import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from '@acme/secrets/secrets.js';
 
-   export const AppGoogleClients = defineService<GoogleClientProvider>({
+   export const AppGoogleClients = defineService({
        name: 'AppGoogleClients',
        deps: { clientId: GOOGLE_CLIENT_ID, clientSecret: GOOGLE_CLIENT_SECRET },
-       setup: ({ clientId, clientSecret }) => ({
+       setup: ({ clientId, clientSecret }): GoogleClientProvider => ({
            async getClient() {
                return { clientId, clientSecret };
            },

@@ -25,8 +25,12 @@ export interface TreeInput {
     documents: TreeDocument[];
     /** Collections the user can see, by id; a document in any other one was reached by a share. */
     collections: { id: string; name: string }[];
-    /** The names assigned so far: `documents` and `collections` of the sync state. */
-    state: { documents: Record<string, Pick<DocState, 'path'>>; collections: Record<string, string> };
+    /** The names assigned so far: `documents` and `collections` of the sync state, and its private collection. */
+    state: {
+        documents: Record<string, Pick<DocState, 'path'>>;
+        collections: Record<string, string>;
+        privateCollectionId?: string;
+    };
 }
 
 export interface TreeResult {
@@ -42,6 +46,9 @@ export interface TreeResult {
  * move. New documents and collections get a free name from their title; every collection in `input.collections`
  * gets a folder, empty ones too. A document with children has them in a
  * folder named like its file without `.md`.
+ *
+ * A top-level document of the private collection whose file sits at the top of the documents folder (where push
+ * creates such files) stays there; the collection's folder holds its other documents.
  *
  * A name an existing document keeps is never given to another document, even one that has since left the
  * folder or lost access: its file may still be on disk. The one exception to "names never change" is a moved
@@ -65,7 +72,14 @@ export function assignPaths(input: TreeInput): TreeResult {
         claim(folder, fileName, id);
     }
 
-    const collectionFolders = new Set([...RESERVED_ROOT_FOLDERS, ...Object.values(collections)]);
+    // A document at the top keeps its children in a folder named like it, which no collection may take.
+    const collectionFolders = new Set([
+        ...RESERVED_ROOT_FOLDERS,
+        ...Object.values(collections),
+        ...Object.values(input.state.documents).flatMap(({ path }) =>
+            path.includes('/') ? [] : [path.slice(0, -'.md'.length)],
+        ),
+    ]);
     const collectionFolder = (collectionId: string) => {
         const existing = collections[collectionId];
         if (existing != null) {
@@ -117,6 +131,16 @@ export function assignPaths(input: TreeInput): TreeResult {
             const parentPath = resolve(parent);
             active.delete(document.id);
             return parentPath.slice(0, -'.md'.length);
+        }
+        const known = input.state.documents[document.id];
+        if (
+            document.parentId == null &&
+            document.collectionId != null &&
+            document.collectionId === input.state.privateCollectionId &&
+            known != null &&
+            !known.path.includes('/')
+        ) {
+            return '';
         }
         if (
             document.collectionId != null &&

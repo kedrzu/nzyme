@@ -6,7 +6,7 @@ import { assert } from '@nzyme/utils/assert.js';
 import { discoverFull, discoverIncremental } from '../discover/discover.js';
 import { DRAFTS_FOLDER, assignPaths } from '../discover/tree.js';
 import type { TreeDocument, TreeResult } from '../discover/tree.js';
-import { parseDocFile } from '../doc/codec.js';
+import { parseDocFile, serializeDocFile } from '../doc/codec.js';
 import { ATTACHMENTS_FOLDER, findOutlineAttachments } from '../doc/links.js';
 import { pickFreeName } from '../doc/naming.js';
 import type { OutlineClient } from '../outline/OutlineClient.js';
@@ -372,7 +372,10 @@ export async function pull(options: PullOptions): Promise<PullReport> {
         }
     }
 
-    /** Moves the file and its attachments to the same relative path under `recoveredDir`, never over an existing file. */
+    /**
+     * Moves the file and its attachments to the same relative path under `recoveredDir`, never over an existing file,
+     * and takes the `outline:` id out: moved back into the documents folder, the file is a new document.
+     */
     async function recover(path: string, content: string) {
         const target = await freePath(recoveredDir, path);
         const from = join(documentsDir, path);
@@ -380,6 +383,14 @@ export async function pull(options: PullOptions): Promise<PullReport> {
         await mkdir(dirname(to), { recursive: true });
         await rename(from, to);
         await moveAttachments(content, dirname(from), dirname(to));
+        const {
+            doc: { id, ...withoutId },
+            issues,
+        } = parseDocFile(content, basename(path));
+        // A file sync cannot read cleanly keeps its bytes; push then tells the agent to take the id out.
+        if (id != null && issues.length === 0) {
+            await writeFileAtomic(to, serializeDocFile(withoutId));
+        }
         return target;
     }
 

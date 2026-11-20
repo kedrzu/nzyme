@@ -649,6 +649,7 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         return ok(presentDocument(authorizeDocument(user, id, 'read')));
     }
 
+    /** An `id` the caller chose is kept, as Outline does; one already taken is refused. */
     function documentsCreate({ user, body }: Call) {
         const parentId = optionalString(body, 'parentDocumentId');
         const parent = parentId == null ? undefined : authorizeDocument(user, parentId, 'read');
@@ -664,9 +665,13 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
                 'write',
             );
         }
+        const id = optionalString(body, 'id') ?? crypto.randomUUID();
+        if (documents.some(document => document.id === id)) {
+            throw new FakeApiError(400, 'validation_error', 'A document with this id already exists');
+        }
         const stamp = tick();
         const record: DocumentRecord = {
-            id: crypto.randomUUID(),
+            id,
             title: requireString(body, 'title'),
             text: normalizeText(optionalString(body, 'text') ?? ''),
             collectionId,

@@ -168,6 +168,8 @@ export interface DocumentsDraftsParams extends OutlinePageParams {
 }
 
 export interface DocumentsCreateParams {
+    /** A UUID chosen by the caller, so a create whose reply was lost can be looked up (and not sent twice). */
+    id?: string;
     title: string;
     text?: string;
     collectionId?: string;

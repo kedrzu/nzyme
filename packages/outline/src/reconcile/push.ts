@@ -131,10 +131,10 @@ interface Agreed {
 }
 
 /**
- * Sends local work to Outline; the caller holds the sync lock. New files are created (once, even when the process
- * dies before the id reaches the file), edited ones updated against the revision they were based on (a newer
- * Outline version is merged in first), moved ones moved, deleted ones archived (never deleted). A file with
- * conflict markers or broken frontmatter is never sent; an unchanged file sends nothing.
+ * Sends local work to Outline; the caller holds the sync lock. New files are created (once, even when Outline's reply
+ * is lost or the process dies before the id reaches the file), edited ones updated against the revision they were
+ * based on (a newer Outline version is merged in first), moved ones moved, deleted ones archived (never deleted). A
+ * file with conflict markers or broken frontmatter is never sent; an unchanged file sends nothing.
  *
  * After every write the file is rewritten to what Outline stored (its Markdown normalisation, the `outline:` id),
  * but only while it still holds the bytes that were sent: an edit made meanwhile stays, and goes out next time.
@@ -173,6 +173,10 @@ export async function push(options: PushOptions): Promise<PushReport> {
     const uploadedSources = new Set<string>();
 
     try {
+        if (privateCollectionId != null) {
+            // The pull keeps this collection's files at the top of the folder where they are (`assignPaths`).
+            state.privateCollectionId = privateCollectionId;
+        }
         const files = await scanFolder();
         identifyFiles(files);
         dropStalePendingCreates(files);
@@ -301,15 +305,19 @@ export async function push(options: PushOptions): Promise<PushReport> {
         const id = file.id;
         if (id == null) {
             const pending = state.pendingCreates[file.path];
-            await (pending == null ? createDocument(file, read) : adoptCreated(file.path, read, pending));
+            // A create whose reply never came may not have reached Outline: it is sent again under the same id.
+            if (pending == null || !(await adoptCreated(file.path, read, pending))) {
+                await createDocument(file, read, pending);
+            }
             return;
         }
         const known = state.documents[id];
         if (known == null) {
-            if (Object.values(state.pendingCreates).includes(id)) {
-                await adoptCreated(file.path, read, id);
-            } else {
-                report.skipped.push({ path: file.path, reason: `Sync does not know the document ${id}.` });
+            if (!Object.values(state.pendingCreates).includes(id)) {
+                report.skipped.push({ path: file.path, reason: unknownDocument(id) });
+            } else if (!(await adoptCreated(file.path, read, id))) {
+                // The id reaches the file only after Outline created the document: it is gone since.
+                dropGoneCreate(file.path, id);
             }
             return;
         }
@@ -317,7 +325,8 @@ export async function push(options: PushOptions): Promise<PushReport> {
         await syncContent(file, read, id);
     }
 
-    async function createDocument(file: LocalFile, read: FileRead) {
+    /** `id`: the one an earlier, unanswered create of this file was sent with; a new one otherwise. */
+    async function createDocument(file: LocalFile, read: FileRead, id: string = crypto.randomUUID()) {
         const placement = placementOf(file.path);
         if (placement.kind === 'refused') {
             report.skipped.push({ path: file.path, reason: placement.reason });
@@ -330,6 +339,7 @@ export async function push(options: PushOptions): Promise<PushReport> {
         const { doc } = parseDocFile(read.content, basename(file.path));
         // Local attachment links stay out until uploaded, so Outline's text (the base) never holds one the agent added.
         const params: DocumentsCreateParams = {
+            id,
             title: doc.title,
             text: toOutlineLinks(withoutLocalAttachments(doc.text)),
         };
@@ -338,10 +348,11 @@ export async function push(options: PushOptions): Promise<PushReport> {
             params.parentDocumentId = placement.parentId ?? undefined;
             params.publish = true;
         }
-        const remote = await client.documents.create(params);
-        // Saved before the id goes into the file: a run killed in between adopts this id instead of creating again.
-        state.pendingCreates[file.path] = remote.id;
+        // Saved before the call: after a lost reply or a run killed before the id reaches the file, the next push adopts
+        // the document by this id, or creates it under the same id when Outline never got the call.
+        state.pendingCreates[file.path] = id;
         await store.save(state);
+        const remote = await client.documents.create(params);
         idAtPath.set(file.path, remote.id);
         report.created.push(file.path);
         if (file.copyOf != null) {
@@ -350,25 +361,45 @@ export async function push(options: PushOptions): Promise<PushReport> {
         await finishCreate(file.path, read, remote, findLocalAttachments(doc.text).length === 0);
     }
 
-    /** A document created for this file by an earlier run that never finished: take it over instead of creating again. */
+    /**
+     * A document created for this file by an earlier run that never finished: take it over instead of creating again.
+     * `false` when Outline has no document of that id (404), so the create may never have reached it.
+     */
     async function adoptCreated(path: string, read: FileRead, id: string) {
-        let remote: OutlineDocument | null;
+        let remote: OutlineDocument;
         try {
             remote = await client.documents.info({ id });
         } catch (error) {
-            if (!(error instanceof OutlineApiError) || (error.status !== 403 && error.status !== 404)) {
+            if (error instanceof OutlineApiError && error.status === 404) {
+                return false;
+            }
+            if (!(error instanceof OutlineApiError) || error.status !== 403) {
                 throw error;
             }
-            remote = null;
+            dropGoneCreate(path, id);
+            return true;
         }
         // Outline still answers for a trashed document to whoever may restore it.
-        if (remote == null || remote.deletedAt != null) {
-            dropPendingCreate(id);
-            report.skipped.push({ path, reason: 'The document created for this file is gone from Outline.' });
-            return;
+        if (remote.deletedAt != null) {
+            dropGoneCreate(path, id);
+            return true;
         }
         idAtPath.set(path, id);
         await finishCreate(path, read, remote, false);
+        return true;
+    }
+
+    function dropGoneCreate(path: string, id: string) {
+        dropPendingCreate(id);
+        report.skipped.push({ path, reason: 'The document created for this file is gone from Outline.' });
+    }
+
+    /** A file carrying an id sync does not track: its document left Outline or the user's reach, or is not downloaded yet. */
+    function unknownDocument(id: string) {
+        return state.initialPull.complete
+            ? `Sync does not know the document ${id}: it is gone from Outline or no longer shared with the user. ` +
+                  'To send the file as a new document, remove its `outline:` line.'
+            : `Sync does not know the document ${id} yet; it waits for the first download from Outline to finish.`;
     }
 
     /**
@@ -789,18 +820,21 @@ export async function push(options: PushOptions): Promise<PushReport> {
             };
         }
         const collectionId = collectionByFolder.get(top);
-        if (collectionId == null) {
-            return { kind: 'refused', reason: `The folder ${top}/ is not an Outline collection.` };
-        }
-        if (segments.length === 2) {
+        if (collectionId != null && segments.length === 2) {
             return { kind: 'collection', collectionId, parentId: null };
         }
         const parentPath = `${segments.slice(0, -1).join('/')}.md`;
         const parentId = idAtPath.get(parentPath);
+        // A document at the top of the folder has its children in a folder of its own, not a collection's.
+        const parentCollectionId =
+            collectionId ?? (parentId == null ? undefined : state.documents[parentId]?.collectionId);
+        if (parentCollectionId == null) {
+            return { kind: 'refused', reason: `The folder ${top}/ is not an Outline collection.` };
+        }
         if (parentId == null) {
             return { kind: 'refused', reason: `The folder has no document ${parentPath} in Outline to sit under.` };
         }
-        return { kind: 'collection', collectionId, parentId };
+        return { kind: 'collection', collectionId: parentCollectionId, parentId };
     }
 
     /** Writes `content` unless the file was edited meanwhile (it hashes differently from `startHash`); then it waits for the next push. */

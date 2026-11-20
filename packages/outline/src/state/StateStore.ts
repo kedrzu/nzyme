@@ -48,6 +48,8 @@ export interface SyncState {
     fullPassDone?: Record<string, string>;
     /** Collection id to its folder name. */
     collections: Record<string, string>;
+    /** The user's private collection as the last push found it; its documents at the top of the folder stay there. */
+    privateCollectionId?: string;
     /** Per message kind, the `session_id`s already told. */
     toldSessions: Record<string, string[]>;
 }

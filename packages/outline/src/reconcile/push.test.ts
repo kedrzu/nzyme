@@ -256,7 +256,38 @@ test('every tracked file gone in a small workspace archives nothing', async () =
     expect(world.calls('documents.archive')).toBe(0);
 });
 
-test('a run killed between creating a document and writing its id into the file never creates it twice', async () => {
+test('a create whose reply is lost is adopted by the next push, never created twice', async () => {
+    const world = await setup();
+    world.addDocument('Offer', TEXT);
+    await world.pull();
+    await world.write('wiki/new.md', '# New\n\nFresh text.');
+    const losingReply = new OutlineClient({
+        url: world.outline.url,
+        getAccessToken: () => Promise.resolve(world.ana.token),
+        fetch: async (input, init) => {
+            const response = await world.outline.fetch(input, init);
+            if (input.endsWith('/api/documents.create')) {
+                throw new TypeError('connection reset');
+            }
+            return response;
+        },
+    });
+    await expect(world.push({ client: losingReply })).rejects.toThrow('connection reset');
+    expect(await world.read('wiki/new.md')).toBe('# New\n\nFresh text.');
+
+    const report = await world.push();
+
+    expect(world.calls('documents.create')).toBe(1);
+    const state = await world.store.load();
+    const id = Object.values(state.documents).find(document => document.path === 'wiki/new.md')?.id;
+    expect(world.outline.getDocument(id ?? '')?.title).toBe('New');
+    expect(await world.read('wiki/new.md')).toBe(`---\noutline: ${id}\n---\n# New\n\nFresh text.`);
+    expect(state.pendingCreates).toEqual({});
+    expect(report.created).toEqual([]);
+    expect(world.calls('documents.update')).toBe(0);
+});
+
+test('a run killed before its create reached Outline creates the document next time under the same id', async () => {
     const world = await setup();
     world.addDocument('Offer', TEXT);
     await world.pull();
@@ -266,18 +297,16 @@ test('a run killed between creating a document and writing its id into the file 
         afterSave: state => Object.keys(state.pendingCreates).length > 0,
     });
     await expect(world.push({ store: dying })).rejects.toThrow('killed');
-    expect(await world.read('wiki/new.md')).toBe('# New\n\nFresh text.');
+    expect(world.calls('documents.create')).toBe(0);
+    const pending = (await world.store.load()).pendingCreates['wiki/new.md'];
+    expect(pending).toBeDefined();
 
     const report = await world.push();
 
+    expect(report.created).toEqual(['wiki/new.md']);
     expect(world.calls('documents.create')).toBe(1);
-    const state = await world.store.load();
-    const id = Object.values(state.documents).find(document => document.path === 'wiki/new.md')?.id;
-    expect(id).toBeDefined();
-    expect(await world.read('wiki/new.md')).toBe(`---\noutline: ${id}\n---\n# New\n\nFresh text.`);
-    expect(state.pendingCreates).toEqual({});
-    expect(report.created).toEqual([]);
-    expect(world.calls('documents.update')).toBe(0);
+    expect((await world.store.load()).documents[pending ?? '']?.path).toBe('wiki/new.md');
+    expect(await world.read('wiki/new.md')).toBe(`---\noutline: ${pending}\n---\n# New\n\nFresh text.`);
 });
 
 test('a run killed after writing the id but before saving the state adopts the document by that id', async () => {
@@ -380,6 +409,32 @@ test('new files are created where their folder says, once, and unplaceable ones 
     expect(world.calls('documents.update')).toBe(0);
 });
 
+test('a file at the top of the folder stays there after pulls, with its children and a document moved there', async () => {
+    const world = await setup();
+    const offer = world.addDocument('Offer', TEXT);
+    await world.pull();
+    await world.write('mine.md', '# Mine\n\nPrivate.');
+    await world.write('mine/kid.md', '# Kid\n\nUnder mine.');
+    await rename(join(world.documentsDir, 'wiki/offer.md'), join(world.documentsDir, 'offer.md'));
+    const pushed = await world.push();
+    expect(pushed.created.toSorted()).toEqual(['mine.md', 'mine/kid.md']);
+    expect(pushed.skipped).toEqual([]);
+    expect(world.outline.getDocument(offer.id)?.collectionId).toBe(world.mine.id);
+
+    // Without the private collection's folder known, the incremental pull must not put them in shared-with-me/.
+    const state = await world.store.load();
+    const { [world.mine.id]: _privateFolder, ...others } = state.collections;
+    await world.store.save({ ...state, collections: others });
+    await world.outline.clientAs(world.ana).documents.update({ id: offer.id, text: `${TEXT}\n\nFrom Outline.` });
+    const incremental = await world.pull();
+    const full = await world.pull('full');
+
+    expect([...incremental.moved, ...full.moved]).toEqual([]);
+    const paths = Object.values((await world.store.load()).documents).map(document => document.path);
+    expect(paths.toSorted()).toEqual(['mine.md', 'mine/kid.md', 'offer.md']);
+    expect(await world.read('offer.md')).toContain('From Outline.');
+});
+
 test('an empty private collection gets a folder on a full pull, and a file placed there is created in it', async () => {
     const world = await setup();
     world.addDocument('Offer', TEXT);
@@ -439,6 +494,35 @@ test('a file moved to another folder moves its document; a rename in place calls
     const state = await world.store.load();
     expect(state.documents[note.id]?.path).toBe('wiki/offer/note.md');
     expect(state.documents[memo.id]?.path).toBe('wiki/memo-2027.md');
+});
+
+test('a document restored from recovered/ is created anew; an id sync does not know is reported', async () => {
+    const world = await setup();
+    const offer = world.addDocument('Offer', TEXT);
+    await world.pull();
+    await world.write('wiki/offer.md', `${await world.read('wiki/offer.md')}\n\nUnsent work.`);
+    await world.outline.clientAs(world.bob).documents.archive({ id: offer.id });
+    expect((await world.pull('full')).recovered).toEqual(['wiki/offer.md']);
+
+    await mkdir(join(world.documentsDir, 'wiki'), { recursive: true });
+    await rename(join(world.recoveredDir, 'wiki/offer.md'), join(world.documentsDir, 'wiki/offer.md'));
+    await world.write('wiki/stray.md', '---\noutline: not-tracked\n---\n# Stray\n');
+    const report = await world.push();
+
+    expect(report.created).toEqual(['wiki/offer.md']);
+    const restored = Object.values((await world.store.load()).documents).find(
+        document => document.path === 'wiki/offer.md',
+    );
+    expect(restored?.id).not.toBe(offer.id);
+    expect(world.outline.getDocument(restored?.id ?? '')?.text).toContain('Unsent work.');
+    expect(report.skipped).toEqual([
+        {
+            path: 'wiki/stray.md',
+            reason:
+                'Sync does not know the document not-tracked: it is gone from Outline or no longer shared with the user. ' +
+                'To send the file as a new document, remove its `outline:` line.',
+        },
+    ]);
 });
 
 test('a copied file loses the id to the original and becomes a new document', async () => {
@@ -679,6 +763,7 @@ async function setup(options: { normalizeText?: (text: string) => string } = {})
         mine,
         store,
         documentsDir,
+        recoveredDir,
         addDocument: (title: string, text: string) =>
             outline.addDocument({ collection: wiki, title, text, createdBy: ana }),
         edit: (document: OutlineDocument, text: string) =>

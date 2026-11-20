@@ -28,7 +28,7 @@ import type { OutlineCommandsOptions } from './OutlineCommandsOptions.js';
 
 /** How long the commands wait for a hook of another session to finish its run. */
 const LOCK_WAIT_MS = 60 * 1000;
-/** `pull` reports progress after each batch this long. */
+/** `pull` reports progress after each batch this long, counted from when the batch's listing of Outline returns. */
 const PULL_BATCH_MS = 15 * 1000;
 
 /**
@@ -89,7 +89,7 @@ export function defineOutlineCommands(options: OutlineCommandsOptions): CommandC
                         documentsDir: workspace.documentsDir,
                         recoveredDir: workspace.recoveredDir,
                         mode: 'full',
-                        deadline: Date.now() + PULL_BATCH_MS,
+                        deadline: { afterDiscoveryMs: PULL_BATCH_MS },
                     });
                     written += report.written.length;
                     if (!report.stoppedAtDeadline) {

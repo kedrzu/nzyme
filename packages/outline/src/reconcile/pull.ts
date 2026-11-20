@@ -33,8 +33,11 @@ export interface PullOptions {
     recoveredDir: string;
     /** `incremental` never acts on a document's absence; `full` (also forced until the initial pull completes) does. */
     mode: 'incremental' | 'full';
-    /** Epoch milliseconds; no document or attachment is started after it. */
-    deadline: number;
+    /**
+     * Epoch milliseconds, or a span counted from when the listing of Outline returns; no document or attachment
+     * is started after it, except the first document, so a listing slower than the deadline still makes progress.
+     */
+    deadline: number | { afterDiscoveryMs: number };
     /** Downloads an attachment from its signed storage URL. Called without the Outline token. Defaults to `fetch`. */
     fetchFile?: (url: string) => Promise<Response>;
     now?: () => number;
@@ -84,7 +87,7 @@ export interface PullSkip {
  * base and Outline's latest content, so changes made in Outline meanwhile are merged rather than lost.
  */
 export async function pull(options: PullOptions): Promise<PullReport> {
-    const { client, store, documentsDir, recoveredDir, deadline } = options;
+    const { client, store, documentsDir, recoveredDir } = options;
     const now = options.now ?? Date.now;
     const fetchFile = options.fetchFile ?? ((url: string) => fetch(url));
     const state = structuredClone(options.state);
@@ -103,6 +106,7 @@ export async function pull(options: PullOptions): Promise<PullReport> {
     };
     const initial = !state.initialPull.complete;
     const full = options.mode === 'full' || initial;
+    let deadline = Number.POSITIVE_INFINITY;
 
     try {
         const discovery = full
@@ -112,6 +116,7 @@ export async function pull(options: PullOptions): Promise<PullReport> {
                   knownCollectionIds: Object.keys(state.collections),
                   knownDocuments: state.documents,
               });
+        deadline = typeof options.deadline === 'number' ? options.deadline : now() + options.deadline.afterDiscoveryMs;
         const creating = new Set(Object.values(state.pendingCreates));
         const remotes = discovery.documents.filter(document => !creating.has(document.id));
         const visible = new Set(discovery.documents.map(document => document.id));
@@ -137,8 +142,10 @@ export async function pull(options: PullOptions): Promise<PullReport> {
             // Parents first, so a moved parent takes its children's folder along before they are looked at.
             .toSorted((a, b) => pathDepth(a.path) - pathDepth(b.path) || a.remote.id.localeCompare(b.remote.id));
 
+        let started = 0;
         for (const { remote, path } of initial ? resumeAfter(work, state.initialPull.position) : work) {
-            if (now() >= deadline) {
+            // The first document goes regardless, or a listing slower than the deadline would never get past it.
+            if (started++ > 0 && now() >= deadline) {
                 report.stoppedAtDeadline = true;
                 break;
             }

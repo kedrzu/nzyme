@@ -385,7 +385,8 @@ test('the initial pull stops at the deadline and the next one finishes it before
     for (const title of ['One', 'Two', 'Three']) {
         world.addDocument(title, TEXT);
     }
-    const clock = [0, 0, 100];
+    // The first document is not checked against the deadline; the second sees 0, the third 100.
+    const clock = [0, 100];
 
     const first = await world.pull('incremental', { deadline: 50, now: () => clock.shift() ?? 100 });
 
@@ -401,6 +402,48 @@ test('the initial pull stops at the deadline and the next one finishes it before
     const done = await world.store.load();
     expect(done.initialPull).toEqual({ complete: true, position: null });
     expect(done.cursor).not.toBeNull();
+});
+
+test('a deadline already passed when the listing returns still lets each pull write one document, until the passes finish', async () => {
+    const world = await setup();
+    const [one, two, three] = ['One', 'Two', 'Three'].map(title => world.addDocument(title, TEXT));
+    const late = { deadline: 0, now: () => 100 };
+
+    const positions: (string | null)[] = [];
+    for (const expected of [true, true]) {
+        const report = await world.pull('full', late);
+        expect(report.stoppedAtDeadline).toBe(expected);
+        expect(report.written).toHaveLength(1);
+        positions.push((await world.store.load()).initialPull.position);
+    }
+    expect(new Set(positions).size).toBe(2);
+    const last = await world.pull('full', late);
+    expect(last.stoppedAtDeadline).toBe(false);
+    expect(last.written).toHaveLength(1);
+    expect((await world.store.load()).initialPull).toEqual({ complete: true, position: null });
+
+    // A later full pass, with no resume position, finishes too: documents already updated drop out of its work.
+    await world.edit(one!, 'Edited one.');
+    await world.edit(three!, 'Edited three.');
+    await world.outline.clientAs(world.bob).documents.delete({ id: two!.id });
+
+    expect((await world.pull('full', late)).stoppedAtDeadline).toBe(true);
+    const finished = await world.pull('full', late);
+    expect(finished.stoppedAtDeadline).toBe(false);
+    expect(finished.removed).toEqual(['wiki/two.md']);
+    expect((await world.store.load()).lastFullPass).not.toBeNull();
+});
+
+test('a deadline counted from the end of the listing gives the documents the whole span', async () => {
+    const world = await setup();
+    for (const title of ['One', 'Two', 'Three']) {
+        world.addDocument(title, TEXT);
+    }
+
+    const report = await world.pull('full', { deadline: { afterDiscoveryMs: 50 }, now: () => 1000 });
+
+    expect(report.stoppedAtDeadline).toBe(false);
+    expect(report.written).toHaveLength(3);
 });
 
 /** Runs `beforeRead` when the merge base is read: after the pull read the file, before it writes it. */

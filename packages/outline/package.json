@@ -29,7 +29,8 @@
         "format": "oxfmt ./src > /dev/null"
     },
     "dependencies": {
-        "@nzyme/utils": "workspace:*"
+        "@nzyme/utils": "workspace:*",
+        "yaml": "^2.9.1"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

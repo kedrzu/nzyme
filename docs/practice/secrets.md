@@ -58,6 +58,9 @@ To check a value is right without seeing it, run what uses it: the app, an API c
 
 Writing needs a token that may write; a read-only one is refused, and the error says so.
 
+The OAuth refresh tokens of the Google CLIs (`gmail-cli`, `gdrive-cli`) are secrets too, written by
+`<prefix> auth`, which the user runs: it needs a browser, so never run it yourself.
+
 ## When a secret is missing or a token is rejected
 
 `secrets list` shows every key of every store with its store id (and `overridden by environment`). It does not

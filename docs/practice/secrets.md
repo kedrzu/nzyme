@@ -2,10 +2,12 @@
 
 The repo keeps its secrets in a remote store (Bitwarden Secrets Manager today) behind a login, or, for
 secrets of one developer on one machine, in the local OS keychain (`keychainStore`).
-A store is scoped by a prefix and its secrets are keyed by the variable name. A repo with a config
-document lists `secretsSource(store)` among its sources; otherwise the app calls
-`loadSecrets(container, stores)` at startup, so the code reads secrets through `defineEnvVariable` like any
-other variable ([ioc](ioc.md)). Values are cached in the OS keychain. There is no secrets file:
+A store is scoped by a prefix and its secrets are keyed by the variable name. Every secret is declared
+with `defineSecret` in the repo's secrets package (`packages/secrets`), and code reads it only through the
+container: `container.resolve(SECRET)` or a service's `deps` ([ioc](ioc.md)), never `process.env` or a raw
+binding. A process loads the values into its config document at startup — a script or CLI from the store
+(`secretsSource`), a Worker or server from what its platform hands it. Only an external tool gets them as
+environment variables, through `bun secrets run`. Values are cached in the OS keychain. There is no secrets file:
 every credential — the app's, a script's, a token a tool needs — is a secret in a store, so it has one
 home and one way in.
 
@@ -37,8 +39,8 @@ To check a value is right without seeing it, run what uses it: the app, an API c
 
 ## Adding a secret
 
-1. Declare it with `defineSecret` in the repo's secrets module (a name, a `description`, optionally
-   `enabled` and `meta`), and read it where the code needs it. There is no mapping to edit: the key in
+1. Declare it with `defineSecret` in `packages/secrets` (a name, a `description`, optionally `enabled`
+   and `meta`), and resolve it through the container where the code needs it. There is no mapping to edit: the key in
    the store is the name. `bun secrets set` refuses a name that is not declared or not enabled here, and the
    provider's write policy may refuse it too; the message says why.
 2. Ask the user for the value through a masked dialog. Tell them it is coming — it opens outside

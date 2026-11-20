@@ -92,6 +92,19 @@ test('--help lists every Drive command with every permission on', async () => {
 });
 
 test.each([
+    ['upload', ['mkdir', 'upload']],
+    ['edit', ['meta', 'update']],
+    ['delete', ['restore', 'trash']],
+] as const)('--help with only %p on lists its commands and no other write command', async (permission, added) => {
+    const drive = fake({});
+
+    const result = await run(drive, ['--help'], { permissions: { [permission]: true } });
+
+    const readOnly = ['accounts', 'auth', 'download', 'drives', 'info', 'ls', 'read', 'search'];
+    expect(listedCommands(result)).toEqual([...readOnly, ...added].toSorted());
+});
+
+test.each([
     [['upload', '--name', 'a.txt'], {}],
     [['mkdir', 'New'], {}],
     [['update', 'doc1'], {}],

@@ -198,7 +198,7 @@ nzyme's scripts work in place, with dependencies hoisted to the product's worksp
 ## Tests
 
 The product's test command covers its own packages. nzyme's tests are nzyme's: its CI runs them on
-every change, and a bump PR in the product proves the product still works with the new pin. To run
+every change, and the product's task PR that moves the pin proves the product still works with the new pin. To run
 them in place, for example while changing nzyme from inside the product:
 
 ```sh

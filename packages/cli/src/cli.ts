@@ -11,7 +11,6 @@ import { IndexCommand } from './commands/IndexCommand.js';
 import { LocaliseCommand } from './commands/LocaliseCommand.js';
 import { MonorepoCommand } from './commands/MonorepoCommand.js';
 import { QuietRunCommand } from './commands/QuietRunCommand.js';
-import { SubmoduleBumpCommand } from './commands/SubmoduleBumpCommand.js';
 
 const builtinCommands = [
     MonorepoCommand,
@@ -21,14 +20,13 @@ const builtinCommands = [
     QuietRunCommand,
     GitAffectedCommand,
     GitBaseCommand,
-    SubmoduleBumpCommand,
 ];
 
 // `quiet-run` wraps an arbitrary command: it hands that command the environment untouched (the
 // command loads its own `.env` if it wants one) and prints nothing beyond its own summary.
-// `submodule` and `git` (`git affected`, `git base`) need no `.env`, and their stdout is a contract callers
+// `git` (`git affected`, `git base`) needs no `.env`, and their stdout is a contract callers
 // parse — so nothing else may be printed there (loading a `.env` logs a line to stdout).
-if (!['quiet-run', 'submodule', 'git'].includes(process.argv[2] ?? '')) {
+if (!['quiet-run', 'git'].includes(process.argv[2] ?? '')) {
     loadEnvVariables();
 }
 

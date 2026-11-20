@@ -27,6 +27,8 @@ import { GitMergeConflictError } from './GitMergeConflictError.js';
 import { handleMergeConflict } from './handleMergeConflict.js';
 import { pushSubmoduleUpdates } from './pushSubmoduleUpdates.js';
 import { pushWithUpstream } from './pushWithUpstream.js';
+import type { CommandRunner } from './refreshLockfile.js';
+import { execCommand, readGitlinks, refreshLockfile } from './refreshLockfile.js';
 import type { RefreshedSubmodulePr } from './refreshSubmoduleChain.js';
 import { refreshSubmoduleChain } from './refreshSubmoduleChain.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
@@ -89,6 +91,13 @@ export interface SyncAllReposParams {
      * @default 'Work in progress'
      */
     defaultCommitMessage?: string;
+
+    /**
+     * Runs the command that regenerates the main repository's `bun.lock` after a gitlink moved —
+     * see `refreshLockfile`. Tests stub it rather than install a real workspace.
+     * @default execCommand from `refreshLockfile`
+     */
+    runCommand?: CommandRunner;
 }
 
 /**
@@ -156,7 +165,8 @@ export interface SyncAllReposResult {
  * 4. Rebase current branches (task branches: rebase; detached: switch onto base; non-task: pull/ff)
  * 5. Fast-forward base branch in main + task-branch submodules
  * 6. Refresh each task-branch submodule's chain of pull requests against the trunk + push
- * 7. Commit & push all submodule reference updates (from rebase, pull, or merge)
+ * 7. Commit & push all submodule reference updates (from rebase, pull, or merge), then — when the
+ *    gitlinks differ from the trunk's and the main repository has a `bun.lock` — the regenerated lock
  * 8. Merge base branch into main task branch + push
  */
 export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllReposResult> {
@@ -169,6 +179,7 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
         githubConfig,
         logger,
         defaultCommitMessage = 'Work in progress',
+        runCommand = execCommand,
     } = params;
     const followsTrunk = submoduleBase.kind === 'trunk';
     // Disable submodule recursion for main-repo history operations: we manage every submodule's
@@ -207,6 +218,13 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
               },
           };
 
+    // What HEAD pins before anything below commits a gitlink — Phase 2's auto-commit or Phase 7's
+    // "Submodule update". The lock refresh after Phase 7 compares with the trunk's gitlinks, and
+    // with these only when the main repository has no `origin/<trunk>`.
+    const submodulePaths = submoduleInfos.map(submodule => submodule.path);
+    const gitlinksAtStart =
+        followsTrunk && submodulePaths.length > 0 ? await readGitlinks(mainGit, submodulePaths) : null;
+
     // === Phase 2: Commit pending changes ===
     logger.info('');
     logger.info(chalk.bold('💾 Committing pending changes...'));
@@ -221,7 +239,7 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
         git: mainGit,
         repoDisplayName: 'main repository',
         commitMessage: defaultCommitMessage,
-        excludedPaths: followsTrunk ? [] : submoduleInfos.map(submodule => submodule.path),
+        excludedPaths: followsTrunk ? [] : submodulePaths,
     });
     if (mainCommit.committed) {
         anyCommitted = true;
@@ -354,12 +372,25 @@ export async function syncAllRepos(params: SyncAllReposParams): Promise<SyncAllR
     // Submodule refs may change from Phase 4 (rebase/pull) or Phase 6 (merge).
     // Detect and commit any changed gitlinks so the main repo stays clean. Never while pinned: the
     // phases above moved nothing, so a gitlink that differs here was moved by someone else, and
-    // committing it would re-point the pin.
+    // committing it would re-point the pin. A branch whose gitlinks then differ from the trunk's
+    // carries a submodule bump, and takes the regenerated `bun.lock` along in a commit of its own.
     const commitSubmoduleRefs = async () => {
         if (followsTrunk) {
             logger.info('');
             await mainGuard.beforeWrite();
             await pushSubmoduleUpdates({ logger, beforePush: mainGuard.beforePush });
+        }
+
+        if (gitlinksAtStart != null) {
+            await refreshLockfile({
+                git: mainGit,
+                trunk: submoduleBase.trunk,
+                gitlinksAtStart,
+                submodulePaths,
+                guard: mainGuard,
+                runCommand,
+                logger,
+            });
         }
     };
 

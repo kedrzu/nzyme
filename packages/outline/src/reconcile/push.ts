@@ -167,6 +167,8 @@ export async function push(options: PushOptions): Promise<PushReport> {
 
     const collectionByFolder = new Map(Object.entries(state.collections).map(([id, folder]) => [folder, id]));
     const idAtPath = new Map<string, string>();
+    /** Uploaded files from `_attachments/`, removed at the end unless a document still links them. */
+    const uploadedSources = new Set<string>();
 
     try {
         const files = await scanFolder();
@@ -207,6 +209,7 @@ export async function push(options: PushOptions): Promise<PushReport> {
         if (!report.stoppedAtDeadline && refusal == null) {
             await archiveVanished(vanished, present);
         }
+        await removeUploadedSources();
     } finally {
         if (JSON.stringify(state) !== JSON.stringify(options.state)) {
             await store.save(state);
@@ -400,7 +403,14 @@ export async function push(options: PushOptions): Promise<PushReport> {
         };
         dropPendingCreate(remote.id);
         if (!complete) {
-            await sendContent(path, remote.id, written, writtenHash);
+            const linked = await uploadAttachments(path, remote.id, {
+                content: written,
+                hash: writtenHash,
+                invalid: false,
+            });
+            if (linked != null) {
+                await sendContent(path, remote.id, linked.content, linked.hash);
+            }
         }
     }
 
@@ -457,7 +467,12 @@ export async function push(options: PushOptions): Promise<PushReport> {
         const known = state.documents[id];
         assert(known != null, `Document ${id} is not tracked`);
         if (read.hash === known.localHash) {
-            state.documents[id] = { ...known, fileStat: file.stat };
+            const current: DocState = { ...known, fileStat: file.stat };
+            // A conflict resolved by keeping Outline's version leaves the file at `localHash`: it is resolved all the same.
+            if (!hasConflictMarkers(read.content)) {
+                delete current.conflictRevision;
+            }
+            state.documents[id] = current;
             return;
         }
         if (hasConflictMarkers(read.content)) {
@@ -613,7 +628,7 @@ export async function push(options: PushOptions): Promise<PushReport> {
 
     /**
      * Uploads the local files the document links to and points the links at them (`_attachments/<id>-<name>`, the
-     * files renamed or copied to match). `null` when the file changed meanwhile: it is pushed next time.
+     * files copied to match). `null` when the file changed meanwhile or an upload failed: it is pushed next time.
      */
     async function uploadAttachments(path: string, documentId: string, read: FileRead) {
         const refs = findLocalAttachments(read.content);
@@ -623,6 +638,7 @@ export async function push(options: PushOptions): Promise<PushReport> {
         const folder = dirname(join(documentsDir, path));
         const uploaded = new Map<string, string>();
         const sources = new Map<string, string>();
+        let failed = false;
         for (const ref of refs) {
             if (sources.has(ref.path)) {
                 continue;
@@ -660,13 +676,14 @@ export async function push(options: PushOptions): Promise<PushReport> {
             } catch (error) {
                 const reason = error instanceof Error ? error.message : 'unknown error';
                 report.skipped.push({ path, reason: `Uploading ${ref.path} failed (${reason}); retried next time.` });
+                failed = true;
                 continue;
             }
             uploaded.set(ref.path, upload.attachment.id);
             report.attachmentsUploaded.push(relative(documentsDir, source));
         }
         if (uploaded.size === 0) {
-            return read;
+            return failed ? null : read;
         }
 
         const content = linkUploadedAttachments(read.content, uploaded);
@@ -685,15 +702,35 @@ export async function push(options: PushOptions): Promise<PushReport> {
                     await copyFile(source, destination);
                 }
             }
-            // A file in `_attachments/` is sync's own and is renamed; the user's files elsewhere stay where they are.
+            // A file in `_attachments/` is sync's own and goes once nothing links it; the user's files elsewhere stay.
             if (relative(folder, source).startsWith(`${ATTACHMENTS_FOLDER}/`)) {
-                await rm(source, { force: true });
+                uploadedSources.add(source);
             }
         }
-        return { content, hash: contentHash(content) };
+        return failed ? null : { content, hash: contentHash(content) };
     }
 
-    /** Deepest first, so a deleted subtree is archived child by child. A parent whose children still have files stays. */
+    /** Removes the uploaded `_attachments/` files no document links any more (each document got its own copy). */
+    async function removeUploadedSources() {
+        if (uploadedSources.size === 0) {
+            return;
+        }
+        for (const path of await listMarkdownFiles(documentsDir)) {
+            const bytes = await readFileIfExists(join(documentsDir, path));
+            const folder = dirname(join(documentsDir, path));
+            for (const ref of findLocalAttachments(bytes?.toString('utf8') ?? '')) {
+                uploadedSources.delete(resolve(folder, ref.path));
+            }
+        }
+        for (const source of uploadedSources) {
+            await rm(source, { force: true });
+        }
+    }
+
+    /**
+     * Deepest first, so a deleted subtree is archived child by child. A parent with children left (with files, or in
+     * Outline only) stays.
+     */
     async function archiveVanished(vanished: DocState[], present: Set<string>) {
         for (const document of vanished.toSorted(
             (a, b) => depth(b.path) - depth(a.path) || a.path.localeCompare(b.path),
@@ -702,17 +739,27 @@ export async function push(options: PushOptions): Promise<PushReport> {
                 report.stoppedAtDeadline = true;
                 return;
             }
-            const children = Object.values(state.documents).filter(
-                child => child.parentId === document.id && present.has(child.id),
-            );
-            if (children.length > 0) {
-                report.skipped.push({
-                    path: document.path,
-                    reason: `Not archived: archiving it would archive ${children.map(child => child.path).join(', ')} too.`,
-                });
-                continue;
-            }
             try {
+                // Outline's children too: one added there since the last pull is not in the state yet.
+                const remoteChildren = await client.documents.list({
+                    filters: [{ field: 'parentDocumentId', operator: 'eq', value: document.id }],
+                    limit: 100,
+                });
+                const children = new Set([
+                    ...Object.values(state.documents)
+                        .filter(child => child.parentId === document.id && present.has(child.id))
+                        .map(child => child.path),
+                    ...remoteChildren.data.map(
+                        child => state.documents[child.id]?.path ?? `"${child.title}" (only in Outline)`,
+                    ),
+                ]);
+                if (children.size > 0) {
+                    report.skipped.push({
+                        path: document.path,
+                        reason: `Not archived: archiving it would archive ${[...children].join(', ')} too.`,
+                    });
+                    continue;
+                }
                 await client.documents.archive({ id: document.id });
                 report.archived.push(document.path);
             } catch (error) {

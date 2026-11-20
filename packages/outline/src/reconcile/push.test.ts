@@ -93,6 +93,26 @@ test('a file with conflict markers is never sent; once resolved it is merged wit
     expect((await world.store.load()).documents[offer.id]?.conflictRevision).toBeUndefined();
 });
 
+test('a conflict resolved by keeping Outline’s version is cleared without sending anything', async () => {
+    const world = await setup();
+    const offer = world.addDocument('Offer', TEXT);
+    await world.pull();
+    await world.write(
+        'wiki/offer.md',
+        (await world.read('wiki/offer.md')).replace('Second paragraph.', 'Second, local.'),
+    );
+    await world.edit(offer, TEXT.replace('Second paragraph.', 'Second, from Bob.'));
+    await world.pull();
+    expect((await world.store.load()).documents[offer.id]?.conflictRevision).toBeDefined();
+
+    await world.write('wiki/offer.md', (await world.store.readBase(offer.id)) ?? '');
+    const report = await world.push();
+
+    expect(report.conflicts).toEqual([]);
+    expect(world.calls('documents.update')).toBe(0);
+    expect((await world.store.load()).documents[offer.id]?.conflictRevision).toBeUndefined();
+});
+
 test('a 409 merges the newer Outline version in before sending, never over it', async () => {
     const world = await setup();
     const offer = world.addDocument('Offer', TEXT);
@@ -156,6 +176,24 @@ test('a deleted file archives its document and never deletes it; a parent whose 
     expect(state.documents[old.id]).toBeUndefined();
     expect(state.documents[offer.id]).toBeDefined();
     expect(await world.store.readBase(old.id)).toBeNull();
+});
+
+test('a deleted parent stays while it has a child added in Outline since the last pull', async () => {
+    const world = await setup();
+    const offer = world.addDocument('Offer', TEXT);
+    world.addDocument('Keep', TEXT);
+    await world.pull();
+    const child = world.outline.addDocument({ parent: offer, title: 'Prices', text: 'P.', createdBy: world.bob });
+
+    await rm(join(world.documentsDir, 'wiki/offer.md'));
+    const report = await world.push();
+
+    expect(report.archived).toEqual([]);
+    expect(report.skipped).toEqual([
+        { path: 'wiki/offer.md', reason: 'Not archived: archiving it would archive "Prices" (only in Outline) too.' },
+    ]);
+    expect(world.outline.getDocument(offer.id)?.archivedAt).toBeNull();
+    expect(world.outline.getDocument(child.id)?.archivedAt).toBeNull();
 });
 
 test('a missing documents folder or a broken link to it archives nothing and is reported', async () => {
@@ -470,6 +508,62 @@ test('a new local image is uploaded to storage without the Outline token and ren
     expect(world.calls('documents.update')).toBe(1);
 });
 
+test('a new file with a local image is created with the image uploaded', async () => {
+    const world = await setup();
+    world.addDocument('Offer', TEXT);
+    await world.pull();
+    await mkdir(join(world.documentsDir, 'wiki/_attachments'), { recursive: true });
+    await writeFile(join(world.documentsDir, 'wiki/_attachments/chart.png'), new Uint8Array([1, 2, 3]));
+    await world.write('wiki/fresh.md', '# Fresh\n\n![Chart](_attachments/chart.png)');
+
+    const report = await world.push({ uploadFile: () => Promise.resolve(new Response(null, { status: 204 })) });
+
+    expect(report.created).toEqual(['wiki/fresh.md']);
+    expect(report.attachmentsUploaded).toEqual(['wiki/_attachments/chart.png']);
+    const created = Object.values((await world.store.load()).documents).find(
+        document => document.path === 'wiki/fresh.md',
+    );
+    expect(world.outline.getDocument(created?.id ?? '')?.text).toMatch(/!\[Chart\]\(\/api\/attachments\.redirect\?id=/);
+});
+
+test('one image in _attachments/ linked by two documents is uploaded for each and removed after', async () => {
+    const world = await setup();
+    const offer = world.addDocument('Offer', TEXT);
+    const note = world.addDocument('Note', TEXT);
+    await world.pull();
+    await mkdir(join(world.documentsDir, 'wiki/_attachments'), { recursive: true });
+    await writeFile(join(world.documentsDir, 'wiki/_attachments/chart.png'), new Uint8Array([1, 2, 3]));
+    for (const path of ['wiki/offer.md', 'wiki/note.md']) {
+        await world.write(path, `${await world.read(path)}\n\n![Chart](_attachments/chart.png)`);
+    }
+
+    const report = await world.push({ uploadFile: () => Promise.resolve(new Response(null, { status: 204 })) });
+
+    expect(report.skipped).toEqual([]);
+    expect(report.attachmentsUploaded).toHaveLength(2);
+    for (const document of [offer, note]) {
+        expect(world.outline.getDocument(document.id)?.text).toContain('/api/attachments.redirect?id=');
+    }
+    expect(await pathExists(join(world.documentsDir, 'wiki/_attachments/chart.png'))).toBe(false);
+});
+
+test('a failed upload sends nothing and is retried by the next push', async () => {
+    const world = await setup();
+    const offer = world.addDocument('Offer', TEXT);
+    await world.pull();
+    await mkdir(join(world.documentsDir, 'wiki/_attachments'), { recursive: true });
+    await writeFile(join(world.documentsDir, 'wiki/_attachments/chart.png'), new Uint8Array([1, 2, 3]));
+    await world.write('wiki/offer.md', `${await world.read('wiki/offer.md')}\n\n![Chart](_attachments/chart.png)`);
+
+    const failed = await world.push({ uploadFile: () => Promise.resolve(new Response(null, { status: 500 })) });
+    expect(failed.skipped.map(skip => skip.path)).toEqual(['wiki/offer.md']);
+    expect(world.calls('documents.update')).toBe(0);
+
+    const retried = await world.push({ uploadFile: () => Promise.resolve(new Response(null, { status: 204 })) });
+    expect(retried.attachmentsUploaded).toEqual(['wiki/_attachments/chart.png']);
+    expect(world.outline.getDocument(offer.id)?.text).toContain('/api/attachments.redirect?id=');
+});
+
 test('the push stops between documents at the deadline and the next one finishes', async () => {
     const world = await setup();
     world.addDocument('One', TEXT);
@@ -529,6 +623,7 @@ async function setup(options: { normalizeText?: (text: string) => string } = {})
     return {
         outline,
         ana,
+        bob,
         mine,
         store,
         documentsDir,

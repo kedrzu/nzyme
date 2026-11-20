@@ -24,26 +24,18 @@ export interface LoginOptions {
     openBrowser?: (url: string) => Promise<void>;
     /** How long to wait for the browser to come back. Five minutes by default. */
     timeoutMs?: number;
-    /** Texts of the page shown in the browser after the callback; English by default, a product CLI passes its own. */
-    messages?: Partial<LoginMessages>;
     fetch?: OutlineFetch;
     now?: () => number;
 }
 
-export interface LoginMessages {
-    success: string;
-    /** The callback arrived after the login had already ended. */
-    alreadyFinished: string;
-    /** The callback did not belong to this login (wrong `state`). */
-    wrongState: string;
-    /** Denied, no code, or a failed token exchange. */
-    failed: string;
-}
-
-const DEFAULT_MESSAGES: LoginMessages = {
+/** Texts of the page shown in the browser after the callback. */
+const MESSAGES = {
     success: 'Logged in to Outline. You can close this tab.',
+    /** The callback arrived after the login had already ended. */
     alreadyFinished: 'This login has already finished. Go back to the terminal.',
+    /** The callback did not belong to this login (wrong `state`). */
     wrongState: 'Login aborted: the response does not belong to this login. Go back to the terminal.',
+    /** Denied, no code, or a failed token exchange. */
     failed: 'The login failed. Go back to the terminal.',
 };
 
@@ -66,7 +58,6 @@ export async function login(options: LoginOptions): Promise<OutlineAuthInfo> {
     const now = options.now ?? Date.now;
     const verifier = randomBytes(32).toString('base64url');
     const challenge = createHash('sha256').update(verifier).digest('base64url');
-    const messages = { ...DEFAULT_MESSAGES, ...options.messages };
     const state = randomBytes(16).toString('base64url');
 
     const tokens = await authorize();
@@ -136,17 +127,17 @@ export async function login(options: LoginOptions): Promise<OutlineAuthInfo> {
                 return new Response('Not found', { status: 404 });
             }
             if (done) {
-                return page(409, messages.alreadyFinished);
+                return page(409, MESSAGES.alreadyFinished);
             }
             if (params.get('state') !== state) {
                 finish(new LoginFailedError('The OAuth callback carried a wrong state; the login was aborted'));
-                return page(400, messages.wrongState);
+                return page(400, MESSAGES.wrongState);
             }
             const code = params.get('code');
             if (code == null) {
                 const error = params.get('error') ?? 'no code';
                 finish(new LoginFailedError(`Outline did not authorize the login (${error.slice(0, 100)})`));
-                return page(400, messages.failed);
+                return page(400, MESSAGES.failed);
             }
             done = true;
             try {
@@ -163,10 +154,10 @@ export async function login(options: LoginOptions): Promise<OutlineAuthInfo> {
                         },
                     }),
                 );
-                return page(200, messages.success);
+                return page(200, MESSAGES.success);
             } catch (error) {
                 finish(error instanceof Error ? error : new LoginFailedError('The token exchange failed'));
-                return page(500, messages.failed);
+                return page(500, MESSAGES.failed);
             }
         }
 

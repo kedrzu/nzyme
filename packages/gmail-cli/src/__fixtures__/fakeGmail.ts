@@ -77,9 +77,9 @@ const UPLOAD_PREFIX = `/upload${USER_PREFIX}`;
 
 /**
  * Starts the fake. `requests` records every Gmail API call, `uploads` every draft upload, `grants`
- * every token request, and `violations` every call no Gmail command may make: sending, deleting a
- * message, thread or draft, trashing anything but a draft's message, or deleting a label that still
- * has messages.
+ * every token request, and `violations` every call no Gmail command may make: sending, permanently
+ * deleting a message, thread or draft (which is also how the Trash would be emptied), or deleting a
+ * label that still has messages. Trashing and marking as spam are allowed: both are recoverable.
  */
 export function startFakeGmail(options: FakeGmailOptions) {
     const requests: FakeGmailRequest[] = [];
@@ -148,11 +148,6 @@ export function startFakeGmail(options: FakeGmailOptions) {
     }
 
     function forbiddenCall(method: string, path: string) {
-        const trashed = /^\/messages\/([^/]+)\/trash$/.exec(path)?.[1];
-        if (trashed !== undefined && !findMessage(trashed)?.labelIds?.includes('DRAFT')) {
-            return `trash of non-draft message ${trashed}`;
-        }
-
         const label = method === 'DELETE' ? /^\/labels\/([^/]+)$/.exec(path)?.[1] : undefined;
         if (label !== undefined && labels.find(entry => entry.id === label)?.messagesTotal !== 0) {
             return `delete of label ${label}, which has messages`;
@@ -161,7 +156,6 @@ export function startFakeGmail(options: FakeGmailOptions) {
         const forbidden =
             /\/send$/.test(path) ||
             /\/batchDelete$/.test(path) ||
-            /^\/threads\/[^/]+\/trash$/.test(path) ||
             (method === 'DELETE' && /^\/(messages|threads|drafts)\//.test(path));
         return forbidden ? `${method} ${path}` : undefined;
     }

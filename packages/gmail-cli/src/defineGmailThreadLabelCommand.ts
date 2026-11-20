@@ -31,7 +31,8 @@ const SYSTEM_LABELS = [
 /**
  * Defines `<prefix> thread label <id> [--add] [--remove] [--set group=label]`: changes a thread's
  * labels in one atomic call, after checking the change against the project's label rules. A change
- * the rules forbid writes nothing and exits non-zero with the reason.
+ * the rules forbid writes nothing and exits non-zero with the reason. Adding `TRASH` or `SPAM` is how a
+ * thread is moved to the Trash or marked as spam; both are recoverable, and removing the label undoes it.
  * @__NO_SIDE_EFFECTS__
  */
 export function defineGmailThreadLabelCommand(params: GmailCommandParams): CommandClass {
@@ -56,8 +57,17 @@ export function defineGmailThreadLabelCommand(params: GmailCommandParams): Comma
                 }
                 The rules are checked before anything is written; a refused change exits 1 with the
                 reason.
+
+                \`--add TRASH\` moves the thread to the Trash, where Gmail keeps it for 30 days;
+                \`--add SPAM\` marks it as spam. \`--remove TRASH\` or \`--remove SPAM\` undoes either.
+                Nothing deletes a thread for good or empties the Trash.
             `,
-            examples: [['Add a label', `${prefix} thread label 18c2f0a1b2c3d4e5 --add Clients/Acme`]],
+            examples: [
+                ['Add a label', `${prefix} thread label 18c2f0a1b2c3d4e5 --add Clients/Acme`],
+                ['Move a thread to the Trash', `${prefix} thread label 18c2f0a1b2c3d4e5 --add TRASH`],
+                ['Mark a thread as spam', `${prefix} thread label 18c2f0a1b2c3d4e5 --add SPAM`],
+                ['Restore a thread from the Trash', `${prefix} thread label 18c2f0a1b2c3d4e5 --remove TRASH`],
+            ],
         });
 
         id = Option.String({ name: 'id' });

@@ -2,7 +2,8 @@
 
 Gmail commands for agents: search and read threads as Markdown, Markdown drafts with attachments, and
 label rules. An agent calls a CLI command, so no tool schema sits in its context in every session. No
-command sends mail or deletes a message.
+command sends mail or permanently deletes anything; moving to the Trash and marking as spam are allowed,
+because both are recoverable.
 
 Sign-in, token storage and the Google Cloud app are in [`@nzyme/google-auth`](../google-auth). Why the
 package is built this way: `docs/decisions/google-clis-on-official-sdks-with-tokens-in-secret-stores.md`.
@@ -111,7 +112,7 @@ several accounts are usable. `gmail auth` and `gmail accounts` are the shared co
 |`gmail search [query]`|Search threads with Gmail syntax; `--view`, `--limit`|
 |`gmail thread <id>`|Read a thread as Markdown; `--raw` prints the original bodies|
 |`gmail message <id>`|Read one message as Markdown; `--raw`|
-|`gmail thread label <id>`|Change labels under the rules: `--add`, `--remove`, `--set`|
+|`gmail thread label <id>`|Change labels under the rules: `--add`, `--remove`, `--set`; `--add TRASH` moves the thread to the Trash, `--add SPAM` marks it as spam, `--remove` undoes either|
 |`gmail labels list`|List the account's labels|
 |`gmail labels create <name>`|Create a label|
 |`gmail labels cleanup <prefix>`|Delete the empty labels under a prefix; `--dry-run`|
@@ -124,9 +125,12 @@ several accounts are usable. `gmail auth` and `gmail accounts` are the shared co
 
 ## Safety limits
 
-- Nothing sends mail and nothing deletes a message. The Google SDK could call both, so the guarantee is
-  held by tests: a scan of the sources for the forbidden calls, and a recording fake API that fails on a
-  forbidden request.
+- Nothing sends mail and nothing permanently deletes a message, thread or draft, so nothing can empty
+  the Trash. The Google SDK could call both, so the guarantee is held by tests: a scan of the sources for
+  the forbidden calls, and a recording fake API that fails on a forbidden request.
+- Trash and spam are allowed: `thread label <id> --add TRASH` or `--add SPAM`. A thread trashed by
+  mistake, or by a prompt injection, is restored from the Trash (Gmail keeps it 30 days) with
+  `--remove TRASH`.
 - `draft discard` moves a draft to the Trash, and only after checking it carries the `DRAFT` label.
 - `labels cleanup` deletes only labels that no message carries.
 - Local files are read (attachments) and written (saved attachments) only under the repo root,

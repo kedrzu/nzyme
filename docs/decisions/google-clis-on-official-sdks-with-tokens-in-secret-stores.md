@@ -50,7 +50,7 @@ Where the credentials live:
 ## Decision
 
 1. Use the official SDKs. The user chose this on 2026-11-20 for a faithful port of the servers; it is a
-   deliberate departure from `docs/practice/api-clients.md`. The no-send and no-delete guarantee is
+   deliberate departure from `docs/practice/api-clients.md`. The no-send and no-permanent-delete guarantee is
    held by tests instead of by the endpoints not existing: a scan of the sources for the forbidden calls,
    and a recording fake API that flags forbidden requests. Tests point the SDK at a local fake through a
    per-call `rootUrl` and `OAuth2Client`'s `endpoints.oauth2TokenUrl`.
@@ -58,6 +58,12 @@ Where the credentials live:
    (`<keyPrefix><SERVICE>_TOKEN_<SLUG>`) as secrets in the project's stores. Reads go through the
    provider's `stores`, writes by `auth` through its `target`. Configuration, accounts and label rules, is
    code passed to `defineGmailCommands` and `defineDriveCommands`.
+3. Gmail may move a thread to the Trash and mark it as spam, as `thread label --add TRASH`/`SPAM`;
+   permanent deletion stays forbidden, and with it emptying the Trash, which Gmail can only do through
+   `delete`/`batchDelete`. The user changed this on 2026-11-20, replacing a guarantee that nothing but a
+   discarded draft is ever trashed: a prompt injection that trashes the whole mailbox is recoverable from
+   the Trash, a permanent delete is not. The forbidden-call scan and the recording fake cover the
+   permanent-delete endpoints and sending; trashing is not guarded.
 
 ## Consequences
 
@@ -66,8 +72,10 @@ Where the credentials live:
 - A `rootUrl` is passed on every call, not once on the client; forgetting it on a media upload sends the
   request to Google in a test. A newer `googleapis-common` may fix this; recheck before relying on it.
 - Users sign in again: tokens of the old servers are not migrated.
-- Access tokens stay in memory, so each command refreshes once. A refresh token Google rotates is written
-  back through `target`.
+- Access tokens stay in memory, so each command refreshes once. Nothing is written back: a refresh token
+  Google no longer accepts fails with `invalid_grant`, and the error names `auth --login-hint <email>`.
 - The repo's `target` must accept the token keys and return the same store instance that is in `stores`;
   with a `cached` store a different instance leaves a fresh sign-in hidden until the TTL expires.
 - `auth` opens a browser, so a person runs it, never an agent.
+- An agent can trash or mark as spam any thread, steered by text in an email it read. Recovery is manual,
+  from the Trash or Spam within Gmail's 30 days.

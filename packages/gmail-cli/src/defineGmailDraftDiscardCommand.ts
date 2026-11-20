@@ -20,8 +20,9 @@ export function defineGmailDraftDiscardCommand(params: GmailCommandParams): Comm
             category: 'Gmail',
             description: 'Move a draft to the Trash',
             details: `
-                The draft stays in the Trash for 30 days and can be restored from there. Only a
-                message labelled \`DRAFT\` is ever trashed.
+                The draft stays in the Trash for 30 days and can be restored from there. A message
+                not labelled \`DRAFT\` is refused; \`${prefix} thread label <id> --add TRASH\` trashes
+                a thread.
             `,
         });
 

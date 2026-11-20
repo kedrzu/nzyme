@@ -6,6 +6,7 @@ import { afterEach, expect, test } from 'bun:test';
 
 import type { GoogleCommandResult } from '@nzyme/google-auth/__fixtures__/googleTestCli.js';
 import {
+    ACCESS_TOKEN,
     CLIENT_ID,
     CLIENT_SECRET,
     createTestProvider,
@@ -41,7 +42,7 @@ afterEach(async () => {
     const stopped = fakes.splice(0);
     await Promise.all(stopped.map(gmail => gmail.stop()));
     await Promise.all(tmpDirs.splice(0).map(dir => fs.rm(dir, { recursive: true, force: true })));
-    // No command, in any test, may send, delete, or trash anything but a draft.
+    // No command, in any test, may send or permanently delete; trash and spam are allowed.
     expect(stopped.flatMap(gmail => gmail.violations)).toEqual([]);
 });
 
@@ -432,6 +433,37 @@ test.each([
     expect(result.exitCode).toBe(1);
     expect(result.errors).toContain(reason);
     expect(writes(gmail)).toEqual([]);
+});
+
+test.each(['TRASH', 'SPAM'])('thread label --add %s moves the thread there, and --remove undoes it', async label => {
+    const gmail = fake({ messages: [message({ id: 'm1', threadId: 't1', labelIds: ['INBOX'] })] });
+
+    const added = await run(gmail, ['gmail', 'thread', 'label', 't1', '--add', label]);
+    const removed = await run(gmail, ['gmail', 'thread', 'label', 't1', '--remove', label]);
+
+    expect(added.stdout).toBe(`Thread updated: t1 (added: ${label})\n`);
+    expect(removed.exitCode).toBe(0);
+    expect(writes(gmail).map(request => request.body)).toEqual([{ addLabelIds: [label] }, { removeLabelIds: [label] }]);
+});
+
+test.each([
+    ['DELETE', '/messages/m1'],
+    ['DELETE', '/threads/t1'],
+    ['DELETE', '/drafts/d1'],
+    ['POST', '/messages/batchDelete'],
+    ['POST', '/messages/send'],
+    ['POST', '/drafts/send'],
+])('the fake Gmail records %s %s, a permanent delete or a send, as a violation', async (method, route) => {
+    const gmail = fake({ messages: invoiceThread(), drafts: [{ id: 'd1', messageId: 'md' }] });
+
+    const response = await fetch(`${gmail.endpoints.apiRootUrl!}/gmail/v1/users/me${route}`, {
+        method,
+        headers: { authorization: `Bearer ${ACCESS_TOKEN}` },
+    });
+
+    expect(response.status).toBe(403);
+    // Taken, so the check after each test sees none.
+    expect(gmail.violations.splice(0)).toEqual([`${method} ${route}`]);
 });
 
 test('labels create creates a label only when none of that name exists', async () => {

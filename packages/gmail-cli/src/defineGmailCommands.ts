@@ -23,8 +23,10 @@ import { assertLabelRules } from './labelRules.js';
 
 /**
  * Defines the Gmail commands: sign-in and accounts, search, reading threads and messages, thread labels
- * under the label rules, labels, saving attachments, and Markdown drafts. None can send mail or delete a
- * message; a discarded draft goes to the Trash, and only labels no message carries are deleted.
+ * under the label rules, labels, saving attachments, and Markdown drafts. None can send mail or
+ * permanently delete a message, thread or draft, so none can empty the Trash. Moving a thread to the
+ * Trash or Spam (`thread label --add TRASH`/`SPAM`) and discarding a draft are allowed: both are
+ * recoverable. Only labels no message carries are deleted.
  * Export them from a plugin module or spread them into a product CLI's `execute({ commands })`. Throws
  * when the label rules or the file options are malformed.
  * @__NO_SIDE_EFFECTS__

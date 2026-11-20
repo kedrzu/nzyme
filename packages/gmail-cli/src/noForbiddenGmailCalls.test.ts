@@ -3,19 +3,12 @@ import * as path from 'node:path';
 
 import { expect, test } from 'bun:test';
 
-// The Gmail scopes allow sending and deleting; only the code keeps the commands from it. Comments
-// count too: a mention is either a call or an invitation to write one.
-const FORBIDDEN = ['.send(', 'drafts.delete', 'messages.delete', 'batchDelete', 'threads.delete', 'threads.trash'];
+// The Gmail scopes allow sending and permanent deletion; only the code keeps the commands from them.
+// Trashing is allowed: the Trash keeps a message for 30 days, and nothing may empty it, which takes a
+// permanent delete. Comments count too: a mention is either a call or an invitation to write one.
+const FORBIDDEN = ['.send(', 'drafts.delete', 'messages.delete', 'batchDelete', 'threads.delete'];
 
-/** Calls allowed in exactly one place, where they are guarded. */
-const GUARDED: Record<string, string> = {
-    // Only after checking the message carries the DRAFT label.
-    'messages.trash': 'defineGmailDraftDiscardCommand.ts',
-    // Only for a user label with no messages that no label rule protects.
-    'labels.delete': 'defineGmailLabelsCleanupCommand.ts',
-};
-
-test('no Gmail source calls a method that sends mail or deletes a message, thread or draft', async () => {
+test('no Gmail source calls a method that sends mail or permanently deletes a message, thread or draft', async () => {
     const sources = await readSources();
 
     const found = sources.flatMap(({ file, text }) =>
@@ -26,13 +19,12 @@ test('no Gmail source calls a method that sends mail or deletes a message, threa
     expect(found).toEqual([]);
 });
 
-test('messages.trash and labels.delete are called only from the command that guards them', async () => {
+// Only for a user label with no messages that no label rule protects.
+test('labels.delete is called only from the command that guards it', async () => {
     const sources = await readSources();
 
-    for (const [name, owner] of Object.entries(GUARDED)) {
-        const callers = sources.filter(({ text }) => text.includes(name)).map(({ file }) => file);
-        expect(callers).toEqual([owner]);
-    }
+    const callers = sources.filter(({ text }) => text.includes('labels.delete')).map(({ file }) => file);
+    expect(callers).toEqual(['defineGmailLabelsCleanupCommand.ts']);
 });
 
 /** Every `.ts` file of the package but tests and their fixtures (which name the endpoints to catch them), relative to `src`. */

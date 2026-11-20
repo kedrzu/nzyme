@@ -18,7 +18,7 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
 - **Integrations:** `aws`, `pulumi`, `slack`, `apis`, `bitwarden` (a Secrets Manager store for `secrets`),
   `discord-cli` (the Discord REST API through `openapi-cli`, as a bot), `stealth-browser` (a stealth Chrome over CDP
   for AI agents: launch, proxy, CLI), `google-auth` (Google OAuth sign-in with refresh tokens in a `secrets` store),
-  `gmail-cli` (Gmail for agents: search, read, drafts, labels; never sends or deletes), `gdrive-cli` (Google Drive
+  `gmail-cli` (Gmail for agents: search, read, drafts, labels; never sends or permanently deletes), `gdrive-cli` (Google Drive
   for agents behind per-project permissions)
 - **Private, never published:** `github-cli`, `linear`, `sentry-cli`, `logging-ui`
 

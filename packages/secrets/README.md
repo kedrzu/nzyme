@@ -23,7 +23,7 @@ a path such as `/secrets/dev/`, a name prefix such as `FOOBAR_`, or empty for th
 is no mapping from variable names to keys: the key is the name.
 
 ```ts
-// packages/app/src/AppStores.ts
+// packages/secrets/src/AppStores.ts
 import { defineService } from '@nzyme/ioc/Service.js';
 import { bitwarden } from '@nzyme/bitwarden/bitwarden.js';
 import { cached } from '@nzyme/secrets/cached.js';
@@ -99,7 +99,7 @@ call the binary instead (`<product> secrets run -- …`): Bun looks up scripts o
 import { execute } from '@nzyme/cli-core/execute.js';
 import { defineSecretsCommands } from '@nzyme/secrets/commands/defineSecretsCommands.js';
 
-import { AppSecrets } from '../../app/src/AppSecrets.js';
+import { AppSecrets } from '@app/secrets/AppSecrets.js';
 
 await execute({
     name: 'app',
@@ -112,11 +112,12 @@ not a plugin of `nzyme`: `docs/decisions/product-clis-over-nzyme-plugins.md`.
 
 ## Declaring secrets
 
-Declare each secret the repo uses, in one module, with `defineSecret`. The export name is the secret's
-name and the key in the stores:
+Declare each secret the repo uses, in one module of the repo's secrets package (`packages/secrets`), with
+`defineSecret`. The export name is the secret's name and the key in the stores. Code reads a secret only by
+resolving its definition through the container, never from `process.env`:
 
 ```ts
-// packages/app/src/secrets.ts
+// packages/secrets/src/secrets.ts
 import { defineSecret } from '@nzyme/secrets/defineSecret.js';
 
 export const DB_PASSWORD = defineSecret('DB_PASSWORD', { description: 'Staging database password' });
@@ -136,7 +137,7 @@ export const STRIPE_KEY = defineSecret('STRIPE_KEY', {
 `secretsProvider` builds the provider from the declarations and one store, which it reads and writes:
 
 ```ts
-// packages/app/src/AppSecrets.ts
+// packages/secrets/src/AppSecrets.ts
 import { bitwarden } from '@nzyme/bitwarden/bitwarden.js';
 import { defineEnvVariable } from '@nzyme/ioc/defineEnvVariable.js';
 import { defineService } from '@nzyme/ioc/Service.js';
@@ -163,6 +164,26 @@ export const AppSecrets = defineService({
 ```
 
 Environments that differ by prefix are different stores chosen here, by the provider.
+
+### Reading secrets at runtime
+
+Code resolves a secret through the container — `container.resolve(STRIPE_KEY)` or a service's `deps` —
+never from `process.env`. A process loads the values into its config document first:
+
+```ts
+// packages/secrets/src/loadAppConfig.ts
+export async function loadAppConfig(container: Container) {
+    const { stores } = container.resolve(AppSecrets);
+    // In CI the job's environment carries the values; the stores are read only on a developer machine.
+    await loadConfig(container, process.env.CI ? [envSource()] : [envSource(), ...stores.map(secretsSource)]);
+}
+```
+
+- A Bun script or CLI command calls the loader at startup and needs no `bun secrets run` wrapper.
+- A runtime with no store access loads what its platform hands it: a Cloudflare Worker its bindings
+  (`loadConfig(container, [envSource(env)])`), a Nitro server its runtime config, in a server plugin.
+- Only an external tool (wrangler, Tauri, a Python script) gets secrets as environment variables, through
+  `bun secrets run [KEY]... -- <tool>`.
 
 With declarations the commands follow them:
 

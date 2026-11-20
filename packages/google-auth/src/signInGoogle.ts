@@ -1,18 +1,21 @@
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 
-import type { OAuth2Client } from 'google-auth-library';
 import { CodeChallengeMethod } from 'google-auth-library';
 
-import type { GoogleToken } from './googleTokenKey.js';
+import type { GoogleClientCredentials } from './GoogleClientProvider.js';
+import type { GoogleToken } from './googleTokens.js';
 import type { GoogleService } from './GoogleService.js';
+import { createOAuthClient } from './utils/createOAuthClient.js';
 
 const TIMEOUT_MS = 5 * 60 * 1000;
 
 /** Options of {@link signInGoogle}. */
 export interface SignInGoogleParams {
-    /** The project's OAuth client, without credentials. It must be a Desktop-app client. */
-    client: OAuth2Client;
+    /** The OAuth client to sign in with. It must be a Desktop-app client. */
+    credentials: GoogleClientCredentials;
+    /** The token endpoint to use instead of Google's (tests). */
+    tokenUrl: string | undefined;
     service: GoogleService;
     /** Passed to `service.resolveEmail`. */
     apiRootUrl: string | undefined;
@@ -30,7 +33,8 @@ export interface SignInGoogleParams {
  * Requires a refresh token and every scope of the service. Errors never carry a credential.
  */
 export async function signInGoogle(params: SignInGoogleParams): Promise<GoogleToken> {
-    const { client, service } = params;
+    const { service } = params;
+    const client = createOAuthClient(params.credentials, params.tokenUrl);
     const state = randomBytes(16).toString('hex');
     const callback = Promise.withResolvers<string>();
     const { codeVerifier, codeChallenge } = await client.generateCodeVerifierAsync();

@@ -2,7 +2,7 @@ import type { gmail_v1 } from '@googleapis/gmail';
 
 import { assert } from '@nzyme/utils/assert.js';
 
-import type { GmailClient } from './GmailClientFactory.js';
+import type { GmailClient } from './createGmailClient.js';
 
 /** A user label found or created by {@link ensureLabel}. */
 export interface EnsuredLabel {

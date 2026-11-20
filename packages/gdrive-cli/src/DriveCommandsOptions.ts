@@ -15,7 +15,10 @@ export interface DriveFilesOptions {
 export interface DriveCommandsOptions {
     /** The command path prefix, space-separated. Default `drive`. */
     prefix?: string;
-    /** The OAuth client, the secret stores holding the tokens, and the accounts the project may use. */
+    /**
+     * The secrets provider, the declared token secret, the OAuth client provider, and the accounts the
+     * project may use.
+     */
     auth: GoogleAuthOptions;
     /**
      * What the agent may do; a command whose switch is off is not registered. Default: `browse` and

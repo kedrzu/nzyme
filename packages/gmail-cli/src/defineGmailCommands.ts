@@ -2,6 +2,7 @@ import * as path from 'node:path';
 
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { defineGoogleAccountsCommand } from '@nzyme/google-auth/defineGoogleAccountsCommand.js';
+import { defineGoogleAuth } from '@nzyme/google-auth/defineGoogleAuth.js';
 import { defineGoogleAuthCommand } from '@nzyme/google-auth/defineGoogleAuthCommand.js';
 
 import { defineGmailAttachmentSaveCommand } from './defineGmailAttachmentSaveCommand.js';
@@ -47,7 +48,14 @@ export function defineGmailCommands(options: GmailCommandsOptions): CommandClass
         }
     }
 
-    const params: GmailCommandParams = { prefix, service: gmailService, options: auth, labels, files, reply };
+    const params: GmailCommandParams = {
+        prefix,
+        service: gmailService,
+        auth: defineGoogleAuth(auth),
+        labels,
+        files,
+        reply,
+    };
     return [
         defineGoogleAuthCommand(params),
         defineGoogleAccountsCommand(params),

@@ -5,7 +5,7 @@ import { formatTsvLine } from '@nzyme/cli-core/utils/formatTsvLine.js';
 import { parseCount } from '@nzyme/cli-core/utils/parseCount.js';
 import { assert } from '@nzyme/utils/assert.js';
 
-import { GmailClientFactory } from './GmailClientFactory.js';
+import { createGmailClient } from './createGmailClient.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
 import { getHeader } from './utils/getHeader.js';
 
@@ -41,7 +41,8 @@ export function defineGmailDraftListCommand(params: GmailCommandParams): Command
         override async run() {
             const limit = parseCount({ value: this.limit, option: '--limit' });
 
-            const { gmail, call } = await this.container.resolve(GmailClientFactory)({
+            const { gmail, call } = await createGmailClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

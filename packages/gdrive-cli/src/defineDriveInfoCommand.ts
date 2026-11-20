@@ -5,8 +5,8 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { formatHeaderBlock } from '@nzyme/cli-core/utils/formatHeaderBlock.js';
 
-import type { DriveClient } from './DriveClientFactory.js';
-import { DriveClientFactory } from './DriveClientFactory.js';
+import type { DriveClient } from './createDriveClient.js';
+import { createDriveClient } from './createDriveClient.js';
 import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { fileIdFrom, NATIVE, typeLabel } from './formats.js';
 import { FILE_FIELDS, getDriveFile } from './getDriveFile.js';
@@ -44,7 +44,8 @@ export function defineDriveInfoCommand(params: DriveCommandParams): CommandClass
 
         override async run() {
             const fileId = fileIdFrom(this.file);
-            const client = await this.container.resolve(DriveClientFactory)({
+            const client = await createDriveClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

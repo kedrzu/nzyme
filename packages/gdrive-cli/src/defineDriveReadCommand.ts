@@ -8,7 +8,7 @@ import { formatHeaderBlock } from '@nzyme/cli-core/utils/formatHeaderBlock.js';
 import { parseCount } from '@nzyme/cli-core/utils/parseCount.js';
 import { assert } from '@nzyme/utils/assert.js';
 
-import { DriveClientFactory } from './DriveClientFactory.js';
+import { createDriveClient } from './createDriveClient.js';
 import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { fileIdFrom, FOLDER, isNative, isTextMime, textExport, typeLabel } from './formats.js';
 import { getDriveFile } from './getDriveFile.js';
@@ -45,7 +45,8 @@ export function defineDriveReadCommand(params: DriveCommandParams): CommandClass
         override async run() {
             const fileId = fileIdFrom(this.file);
             const max = parseCount({ value: this.maxChars, option: '--max-chars' });
-            const client = await this.container.resolve(DriveClientFactory)({
+            const client = await createDriveClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

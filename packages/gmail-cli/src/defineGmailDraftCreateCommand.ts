@@ -7,7 +7,7 @@ import { Command } from '@nzyme/cli-core/Command.js';
 import { buildDraftBody, buildMime, buildReferences } from './compose.js';
 import { draftMedia } from './draftMedia.js';
 import { formatDraftFiles } from './formatDraftFiles.js';
-import { GmailClientFactory } from './GmailClientFactory.js';
+import { createGmailClient } from './createGmailClient.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
 import { assertTotalSize, draftFileAccess, loadLocalFile } from './localFiles.js';
 import { readDraftBody } from './readDraftBody.js';
@@ -75,7 +75,8 @@ export function defineGmailDraftCreateCommand(params: GmailCommandParams): Comma
                 throw new UsageError('The draft body is empty.');
             }
 
-            const client = await this.container.resolve(GmailClientFactory)({
+            const client = await createGmailClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

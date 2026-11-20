@@ -3,7 +3,7 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
 import { ensureLabel } from './ensureLabel.js';
-import { GmailClientFactory } from './GmailClientFactory.js';
+import { createGmailClient } from './createGmailClient.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
 
 /**
@@ -34,7 +34,8 @@ export function defineGmailLabelsCreateCommand(params: GmailCommandParams): Comm
                 throw new UsageError('The label name is empty.');
             }
 
-            const client = await this.container.resolve(GmailClientFactory)({
+            const client = await createGmailClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

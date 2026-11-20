@@ -5,7 +5,7 @@ import type { OAuth2Client } from 'google-auth-library';
  * client.
  */
 export interface GoogleService {
-    /** Upper-case name in the token keys, `<keyPrefix><name>_TOKEN_<SLUG>`. */
+    /** Upper-case name the messages call the service by. */
     name: 'DRIVE' | 'GMAIL';
     /** The scopes sign-in requests; every one must be granted. */
     scopes: string[];

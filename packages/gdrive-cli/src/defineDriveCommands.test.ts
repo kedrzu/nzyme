@@ -6,14 +6,14 @@ import { afterEach, expect, test } from 'bun:test';
 
 import type { GoogleCommandResult } from '@nzyme/google-auth/__fixtures__/googleTestCli.js';
 import {
-    CLIENT_ID,
-    CLIENT_SECRET,
-    createTestProvider,
+    CLIENT_KEYS,
     CREDENTIALS,
     runCommands,
-    tokenValue,
+    testAuthOptions,
+    tokensValue,
 } from '@nzyme/google-auth/__fixtures__/googleTestCli.js';
 import { createMemoryStore } from '@nzyme/secrets/__fixtures__/createMemoryStore.js';
+import { defineSecret } from '@nzyme/secrets/defineSecret.js';
 
 import type { FakeDriveFile, FakeDriveOptions } from './__fixtures__/fakeDrive.js';
 import { startFakeDrive } from './__fixtures__/fakeDrive.js';
@@ -23,6 +23,7 @@ import { DOCUMENT, FOLDER, SPREADSHEET } from './formats.js';
 import type { DrivePermissions } from './permissions.js';
 
 const EMAIL = 'me@example.com';
+const TOKENS = defineSecret('DRIVE_TOKENS');
 const ALL_ON: DrivePermissions = { browse: true, download: true, upload: true, edit: true, delete: true };
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
@@ -357,9 +358,9 @@ test.each([[['search', 'plan']], [['read', 'doc1']], [['upload', '--name', 'a.tx
 );
 
 test('malformed options are refused when the commands are defined', () => {
-    const provider = createTestProvider([]);
+    const auth = testAuthOptions({ stores: [], tokens: TOKENS });
 
-    expect(() => defineDriveCommands({ auth: { provider }, files: { downloadsDir: 'relative/dir' } })).toThrow(
+    expect(() => defineDriveCommands({ auth, files: { downloadsDir: 'relative/dir' } })).toThrow(
         "'relative/dir' must be an absolute path",
     );
 });
@@ -379,14 +380,15 @@ function fake(options: Omit<FakeDriveOptions, 'email'>) {
 function run(drive: ReturnType<typeof startFakeDrive>, args: string[], options: RunOptions = {}) {
     const store = createMemoryStore({
         id: 'only',
-        data: {
-            GOOGLE_CLIENT_ID: CLIENT_ID,
-            GOOGLE_CLIENT_SECRET: CLIENT_SECRET,
-            GOOGLE_DRIVE_TOKEN_ME_EXAMPLE_COM: tokenValue(EMAIL),
-        },
+        data: { ...CLIENT_KEYS, [TOKENS.name]: tokensValue(EMAIL) },
     });
     const commands = defineDriveCommands({
-        auth: { provider: createTestProvider([store.store]), accounts: ['*@example.com'] },
+        auth: testAuthOptions({
+            stores: [store.store],
+            secrets: [TOKENS],
+            tokens: TOKENS,
+            accounts: ['*@example.com'],
+        }),
         permissions: options.permissions,
         files: options.files,
     });

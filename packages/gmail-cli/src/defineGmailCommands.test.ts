@@ -7,14 +7,14 @@ import { afterEach, expect, test } from 'bun:test';
 import type { GoogleCommandResult } from '@nzyme/google-auth/__fixtures__/googleTestCli.js';
 import {
     ACCESS_TOKEN,
-    CLIENT_ID,
-    CLIENT_SECRET,
-    createTestProvider,
+    CLIENT_KEYS,
     CREDENTIALS,
     runCommands,
-    tokenValue,
+    testAuthOptions,
+    tokensValue,
 } from '@nzyme/google-auth/__fixtures__/googleTestCli.js';
 import { createMemoryStore } from '@nzyme/secrets/__fixtures__/createMemoryStore.js';
+import { defineSecret } from '@nzyme/secrets/defineSecret.js';
 
 import type { FakeGmailMessage, FakeGmailOptions } from './__fixtures__/fakeGmail.js';
 import { startFakeGmail } from './__fixtures__/fakeGmail.js';
@@ -23,6 +23,7 @@ import type { GmailFilesOptions } from './GmailCommandsOptions.js';
 import type { GmailLabelRules } from './labelRules.js';
 
 const EMAIL = 'me@example.com';
+const TOKENS = defineSecret('GMAIL_TOKENS');
 const RULES: GmailLabelRules = {
     views: { inbox: 'in:inbox -label:Done', waiting: 'label:Waiting' },
     groups: { status: ['Todo', 'Waiting'] },
@@ -536,14 +537,14 @@ test('labels list prints one line per label, and a Gmail error carries no creden
 });
 
 test('malformed options are refused when the commands are defined', () => {
-    const provider = createTestProvider([]);
+    const auth = testAuthOptions({ stores: [], tokens: TOKENS });
 
-    expect(() => defineGmailCommands({ auth: { provider }, files: { attachmentsDir: 'relative/dir' } })).toThrow(
+    expect(() => defineGmailCommands({ auth, files: { attachmentsDir: 'relative/dir' } })).toThrow(
         "'relative/dir' must be an absolute path",
     );
-    expect(() =>
-        defineGmailCommands({ auth: { provider }, labels: { views: {}, require: [{ when: 'X', group: 'nope' }] } }),
-    ).toThrow("unknown group 'nope'");
+    expect(() => defineGmailCommands({ auth, labels: { views: {}, require: [{ when: 'X', group: 'nope' }] } })).toThrow(
+        "unknown group 'nope'",
+    );
 });
 
 interface RunOptions {
@@ -560,14 +561,15 @@ function fake(options: Omit<FakeGmailOptions, 'email'>) {
 function run(gmail: ReturnType<typeof startFakeGmail>, args: string[], options: RunOptions = {}) {
     const store = createMemoryStore({
         id: 'only',
-        data: {
-            GOOGLE_CLIENT_ID: CLIENT_ID,
-            GOOGLE_CLIENT_SECRET: CLIENT_SECRET,
-            GOOGLE_GMAIL_TOKEN_ME_EXAMPLE_COM: tokenValue(EMAIL),
-        },
+        data: { ...CLIENT_KEYS, [TOKENS.name]: tokensValue(EMAIL) },
     });
     const commands = defineGmailCommands({
-        auth: { provider: createTestProvider([store.store]), accounts: ['*@example.com'] },
+        auth: testAuthOptions({
+            stores: [store.store],
+            secrets: [TOKENS],
+            tokens: TOKENS,
+            accounts: ['*@example.com'],
+        }),
         labels: RULES,
         files: options.files,
     });

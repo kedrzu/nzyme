@@ -3,7 +3,7 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { parseCount } from '@nzyme/cli-core/utils/parseCount.js';
 
-import { DriveClientFactory } from './DriveClientFactory.js';
+import { createDriveClient } from './createDriveClient.js';
 import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { fileIdFrom, mimeTypeFrom, searchQuery } from './formats.js';
 import { listDriveFiles } from './listDriveFiles.js';
@@ -53,7 +53,8 @@ export function defineDriveSearchCommand(params: DriveCommandParams): CommandCla
                 folderId: this.folder && fileIdFrom(this.folder, '--folder'),
                 mimeType: this.type && mimeTypeFrom(this.type),
             });
-            const client = await this.container.resolve(DriveClientFactory)({
+            const client = await createDriveClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

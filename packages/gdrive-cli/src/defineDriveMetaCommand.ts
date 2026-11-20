@@ -4,7 +4,7 @@ import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
-import { DriveClientFactory } from './DriveClientFactory.js';
+import { createDriveClient } from './createDriveClient.js';
 import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { formatDriveFile } from './formatDriveFile.js';
 import { fileIdFrom } from './formats.js';
@@ -66,7 +66,8 @@ export function defineDriveMetaCommand(params: DriveCommandParams): CommandClass
                 throw new UsageError('Nothing to change: pass --name, --description, --star, --unstar or --move-to.');
             }
 
-            const client = await this.container.resolve(DriveClientFactory)({
+            const client = await createDriveClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

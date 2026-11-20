@@ -3,7 +3,7 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
 import { formatGmailMessage } from './formatGmailMessage.js';
-import { GmailClientFactory } from './GmailClientFactory.js';
+import { createGmailClient } from './createGmailClient.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
 import { readLabelNames } from './readLabelNames.js';
 
@@ -33,7 +33,8 @@ export function defineGmailThreadCommand(params: GmailCommandParams): CommandCla
         account = Option.String('--account', { description: 'The account to act as; needed when several are usable' });
 
         override async run() {
-            const client = await this.container.resolve(GmailClientFactory)({
+            const client = await createGmailClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

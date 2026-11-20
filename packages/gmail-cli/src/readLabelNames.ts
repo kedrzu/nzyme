@@ -1,4 +1,4 @@
-import type { GmailClient } from './GmailClientFactory.js';
+import type { GmailClient } from './createGmailClient.js';
 
 /** The account's label names by id, so commands print names, never ids. */
 export async function readLabelNames({ gmail, call }: GmailClient): Promise<Map<string, string>> {

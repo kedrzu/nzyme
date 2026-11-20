@@ -2,7 +2,7 @@ import { Option } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
-import { GmailClientFactory } from './GmailClientFactory.js';
+import { createGmailClient } from './createGmailClient.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
 import { getHeader } from './utils/getHeader.js';
 
@@ -30,7 +30,8 @@ export function defineGmailDraftDiscardCommand(params: GmailCommandParams): Comm
         account = Option.String('--account', { description: 'The account to act as; needed when several are usable' });
 
         override async run() {
-            const { gmail, call } = await this.container.resolve(GmailClientFactory)({
+            const { gmail, call } = await createGmailClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

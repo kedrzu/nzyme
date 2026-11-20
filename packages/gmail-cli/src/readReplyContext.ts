@@ -1,6 +1,6 @@
 import type { QuotedMessage } from './compose.js';
 import { buildReferences, replySubject } from './compose.js';
-import type { GmailClient } from './GmailClientFactory.js';
+import type { GmailClient } from './createGmailClient.js';
 import { extractRawBody } from './gmailContent.js';
 import { getHeader } from './utils/getHeader.js';
 

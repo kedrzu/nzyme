@@ -5,47 +5,47 @@ import { afterEach, expect, test } from 'bun:test';
 
 import { UsageError } from '@nzyme/cli-core';
 import { createMemoryStore } from '@nzyme/secrets/__fixtures__/createMemoryStore.js';
+import { defineSecret } from '@nzyme/secrets/defineSecret.js';
+import type { SecretStoreEntry } from '@nzyme/secrets/SecretStore.js';
 
-import type { GoogleCommandResult } from './__fixtures__/googleTestCli.js';
+import type { GoogleCommandResult, RunGoogleCommandOptions } from './__fixtures__/googleTestCli.js';
 import {
     CLIENT_ID,
-    CLIENT_SECRET,
+    CLIENT_KEYS,
     CREDENTIALS,
+    GMAIL_TOKENS,
     grantConsent,
     REFRESH_TOKEN,
     runGoogleCommand,
     SCOPES,
     startFakeGoogle,
-    tokenValue,
+    tokensValue,
 } from './__fixtures__/googleTestCli.js';
-import type { GoogleToken } from './googleTokenKey.js';
+import { parseGoogleTokens } from './googleTokens.js';
 
-const KEY = 'GOOGLE_GMAIL_TOKEN_ME_EXAMPLE_COM';
+const KEY = GMAIL_TOKENS.name;
 const fakes: ReturnType<typeof startFakeGoogle>[] = [];
 
 afterEach(async () => {
     await Promise.all(fakes.splice(0).map(google => google.stop()));
 });
 
-test('auth writes the token through target and accounts reads it back, printing no credential', async () => {
+test('auth writes the declared token secret through target and accounts reads it back, printing no credential', async () => {
     const google = fake('me@example.com');
-    const client = createMemoryStore({
-        id: 'client',
-        data: { GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_CLIENT_SECRET: CLIENT_SECRET },
-    });
+    const client = createMemoryStore({ id: 'client', data: CLIENT_KEYS });
     const tokens = createMemoryStore({ id: 'tokens', persist: true });
     const stores = [client.store, tokens.store];
     const targeted: string[] = [];
     let consentUrl: URL | undefined;
 
-    const auth = await runGoogleCommand({
+    const auth = await signIn(google, {
         args: ['gmail', 'auth', '--no-browser', '--login-hint', 'me@example.com'],
         stores,
+        secrets: [GMAIL_TOKENS],
         target: key => {
             targeted.push(key);
             return tokens.store;
         },
-        endpoints: google.endpoints,
         browser: async url => {
             consentUrl = url;
             await grantConsent(url);
@@ -53,12 +53,13 @@ test('auth writes the token through target and accounts reads it back, printing 
     });
 
     expect(auth.exitCode).toBe(0);
+    expect(auth.stdout).toBe(`me@example.com signed in to GMAIL; its token is in ${KEY}.\n`);
     expect(targeted).toEqual([KEY]);
     expect(client.writes).toEqual([]);
-    const [write] = tokens.writes;
-    expect(write?.map(entry => entry.key)).toEqual([KEY]);
-    const stored = JSON.parse(write?.[0]?.value ?? '{}') as GoogleToken;
-    expect(stored).toMatchObject({ email: 'me@example.com', refreshToken: REFRESH_TOKEN, scopes: SCOPES });
+    expect(tokens.writes.map(write => write.map(entry => entry.key))).toEqual([[KEY]]);
+    expect(stored(tokens.writes)).toEqual({ 'me@example.com': { refreshToken: REFRESH_TOKEN, scopes: SCOPES } });
+    expect(consentUrl?.searchParams.get('client_id')).toBe(CLIENT_ID);
+    expect(consentUrl?.searchParams.get('login_hint')).toBe('me@example.com');
     expect(consentUrl?.searchParams.get('scope')).toBe(SCOPES.join(' '));
     expect(consentUrl?.searchParams.get('access_type')).toBe('offline');
     expect(consentUrl?.searchParams.get('code_challenge_method')).toBe('S256');
@@ -71,22 +72,101 @@ test('auth writes the token through target and accounts reads it back, printing 
     expectNoCredential(accounts);
 });
 
-test('auth writes nothing and reports target’s message when target refuses the key', async () => {
-    const google = fake('me@example.com');
-    const store = createMemoryStore({
-        id: 'only',
-        data: { GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_CLIENT_SECRET: CLIENT_SECRET },
-        persist: true,
+test('signing in a second account keeps the first, and commands act as either', async () => {
+    const store = createMemoryStore({ id: 'only', data: CLIENT_KEYS, persist: true });
+    const stores = [store.store];
+
+    const first = await signIn(fake('Ann@Example.com'), { args: ['gmail', 'auth', '--no-browser'], stores });
+    const second = await signIn(fake('bob@example.com'), { args: ['gmail', 'auth', '--no-browser'], stores });
+
+    expect([first.exitCode, second.exitCode]).toEqual([0, 0]);
+    expect(Object.keys(stored(store.writes))).toEqual(['ann@example.com', 'bob@example.com']);
+
+    for (const email of ['ann@example.com', 'bob@example.com']) {
+        const google = fake(email);
+        const whoami = await runGoogleCommand({
+            args: ['gmail', 'whoami', '--account', email],
+            stores,
+            endpoints: google.endpoints,
+        });
+        expect(whoami).toMatchObject({ exitCode: 0, stdout: `${email}\n` });
+    }
+});
+
+test('auth reads the token secret again after the browser step, keeping an account signed in meanwhile', async () => {
+    const store = createMemoryStore({ id: 'only', data: CLIENT_KEYS, persist: true });
+
+    const result = await signIn(fake('me@example.com'), {
+        args: ['gmail', 'auth', '--no-browser'],
+        stores: [store.store],
+        browser: async url => {
+            // Another sign-in finishes while this one waits at the browser.
+            await store.store.write([{ key: KEY, value: tokensValue('other@example.com') }]);
+            await grantConsent(url);
+        },
     });
 
-    const result = await runGoogleCommand({
+    expect(result.exitCode).toBe(0);
+    expect(Object.keys(stored(store.writes))).toEqual(['other@example.com', 'me@example.com']);
+});
+
+test('auth writes the token secret when the provider declares no secrets', async () => {
+    const store = createMemoryStore({ id: 'only', data: CLIENT_KEYS, persist: true });
+
+    const result = await signIn(fake('me@example.com'), {
+        args: ['gmail', 'auth', '--no-browser'],
+        stores: [store.store],
+        secrets: undefined,
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(Object.keys(stored(store.writes))).toEqual(['me@example.com']);
+});
+
+test.each<[string, Partial<RunGoogleCommandOptions>, Record<string, string>, string]>([
+    [
+        'the account is not allowed',
+        { accounts: ['*@work.com'] },
+        {},
+        'me@example.com is not in the accounts this project allows',
+    ],
+    [
+        'the token secret is not declared',
+        { secrets: [defineSecret('OTHER_SECRET')] },
+        {},
+        `Refusing to write ${KEY}: it is not declared with defineSecret.`,
+    ],
+    [
+        'the stored value is not a token dictionary',
+        {},
+        { [KEY]: 'garbage-value' },
+        `${KEY} does not hold Google tokens`,
+    ],
+])('auth writes nothing when %s', async (_, options, data, message) => {
+    const store = createMemoryStore({ id: 'only', data: { ...CLIENT_KEYS, ...data }, persist: true });
+
+    const result = await signIn(fake('me@example.com'), {
+        args: ['gmail', 'auth', '--no-browser'],
+        stores: [store.store],
+        ...options,
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.errors).toContain(message);
+    expect(result.errors).not.toContain('garbage-value');
+    expect(store.writes).toEqual([]);
+    expectNoCredential(result);
+});
+
+test('auth writes nothing and reports target’s message when target refuses the key', async () => {
+    const store = createMemoryStore({ id: 'only', data: CLIENT_KEYS, persist: true });
+
+    const result = await signIn(fake('me@example.com'), {
         args: ['gmail', 'auth', '--no-browser'],
         stores: [store.store],
         target: key => {
             throw new UsageError(`${key} has no store in this repo`);
         },
-        endpoints: google.endpoints,
-        browser: grantConsent,
     });
 
     expect(result.exitCode).toBe(1);
@@ -95,30 +175,7 @@ test('auth writes nothing and reports target’s message when target refuses the
     expectNoCredential(result);
 });
 
-test('auth refuses an account whose key already holds another email', async () => {
-    // `me.example@com` and `me@example.com` both map to GOOGLE_GMAIL_TOKEN_ME_EXAMPLE_COM.
-    const google = fake('me.example@com');
-    const store = createMemoryStore({
-        id: 'only',
-        data: { GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_CLIENT_SECRET: CLIENT_SECRET, [KEY]: tokenValue('me@example.com') },
-        persist: true,
-    });
-
-    const result = await runGoogleCommand({
-        args: ['gmail', 'auth', '--no-browser'],
-        stores: [store.store],
-        endpoints: google.endpoints,
-        browser: grantConsent,
-    });
-
-    expect(result.exitCode).toBe(1);
-    expect(result.errors).toContain('me@example.com');
-    expect(result.errors).toContain('me.example@com');
-    expect(store.writes).toEqual([]);
-    expectNoCredential(result);
-});
-
-test('auth without a client secret fails before sign-in and names the sign-in command', async () => {
+test('auth without a client secret fails before sign-in', async () => {
     const google = fake('me@example.com');
     const store = createMemoryStore({ id: 'only', data: { GOOGLE_CLIENT_ID: CLIENT_ID } });
 
@@ -130,9 +187,9 @@ test('auth without a client secret fails before sign-in and names the sign-in co
 
     expect(result.exitCode).toBe(1);
     expect(result.errors).toContain('GOOGLE_CLIENT_SECRET');
-    expect(result.errors).toContain('`nzyme gmail auth`');
     expect(result.stderr).toBe('');
     expect(google.grants).toEqual([]);
+    expect(store.writes).toEqual([]);
 });
 
 test('no source file of the package touches the filesystem', async () => {
@@ -156,6 +213,22 @@ function fake(email: string) {
     const google = startFakeGoogle({ email });
     fakes.push(google);
     return google;
+}
+
+/** Runs `auth`, the declared token secret in the provider's declarations by default, consenting in the stand-in browser. */
+function signIn(google: ReturnType<typeof startFakeGoogle>, options: Omit<RunGoogleCommandOptions, 'endpoints'>) {
+    return runGoogleCommand({
+        secrets: [GMAIL_TOKENS],
+        browser: grantConsent,
+        ...options,
+        endpoints: google.endpoints,
+    });
+}
+
+/** The token dictionary the last write stored. */
+function stored(writes: SecretStoreEntry[][]) {
+    const value = writes.at(-1)?.find(entry => entry.key === KEY)?.value;
+    return Object.fromEntries(parseGoogleTokens(value, KEY));
 }
 
 function expectNoCredential(result: GoogleCommandResult) {

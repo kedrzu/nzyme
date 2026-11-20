@@ -7,7 +7,7 @@ import { Command } from '@nzyme/cli-core/Command.js';
 import { assert } from '@nzyme/utils/assert.js';
 
 import { findAttachment, savedFileName } from './attachments.js';
-import { GmailClientFactory } from './GmailClientFactory.js';
+import { createGmailClient } from './createGmailClient.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
 import { extractAttachments } from './gmailContent.js';
 import { attachmentsDir } from './localFiles.js';
@@ -45,7 +45,8 @@ export function defineGmailAttachmentSaveCommand(params: GmailCommandParams): Co
                 throw new UsageError(`'${this.messageId}' is not a Gmail message id.`);
             }
 
-            const { gmail, call } = await this.container.resolve(GmailClientFactory)({
+            const { gmail, call } = await createGmailClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

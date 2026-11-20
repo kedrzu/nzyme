@@ -2,7 +2,7 @@ import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
-import { DriveClientFactory } from './DriveClientFactory.js';
+import { createDriveClient } from './createDriveClient.js';
 import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { formatDriveFile } from './formatDriveFile.js';
 import { fileIdFrom, importTarget, quote } from './formats.js';
@@ -74,7 +74,8 @@ export function defineDriveUploadCommand(params: DriveCommandParams): CommandCla
                 name = name.replace(/\.[A-Za-z0-9]+$/, '') || name;
             }
 
-            const { drive, call } = await this.container.resolve(DriveClientFactory)({
+            const { drive, call } = await createDriveClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

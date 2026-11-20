@@ -1,10 +1,8 @@
 import type { gmail_v1 } from '@googleapis/gmail';
 import { gmail } from '@googleapis/gmail';
 
-import { CommandScope } from '@nzyme/cli-core/Command.js';
-import { GoogleAccountsFactory } from '@nzyme/google-auth/GoogleAccountsFactory.js';
-import { GoogleEndpoints } from '@nzyme/google-auth/GoogleEndpoints.js';
-import { defineFactory } from '@nzyme/ioc/Factory.js';
+import { authorizeGoogleAccount } from '@nzyme/google-auth/authorizeGoogleAccount.js';
+import type { GoogleAuthShape } from '@nzyme/google-auth/defineGoogleAuth.js';
 
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
 
@@ -25,8 +23,10 @@ export interface GmailClient {
     call: GmailCallOptions;
 }
 
-/** Arguments of the function {@link GmailClientFactory} returns. */
-export interface GmailClientFactoryParams {
+/** Params of {@link createGmailClient}. */
+export interface CreateGmailClientParams {
+    /** The set's auth, resolved from `params.auth`. */
+    auth: GoogleAuthShape;
     /** The params the Gmail commands are defined with. */
     params: GmailCommandParams;
     /** The CLI binary, so the sign-in command in errors can be run as is. */
@@ -39,18 +39,18 @@ export interface GmailClientFactoryParams {
  * Authorises the account a command acts on (`--account`, or the only usable one) and returns the API
  * client with the call options every request needs.
  */
-export const GmailClientFactory = defineFactory({
-    name: 'GmailClientFactory',
-    scope: CommandScope,
-    deps: { googleAccounts: GoogleAccountsFactory, endpoints: GoogleEndpoints },
-    async setup(
-        { googleAccounts, endpoints },
-        { params, binaryName, account }: GmailClientFactoryParams,
-    ): Promise<GmailClient> {
-        const accounts = googleAccounts(params, binaryName);
-        const email = await accounts.resolveAccount(account);
-        const auth = await accounts.authorize(email);
+export async function createGmailClient({
+    auth,
+    params,
+    binaryName,
+    account,
+}: CreateGmailClientParams): Promise<GmailClient> {
+    const { email, client } = await authorizeGoogleAccount({
+        auth,
+        service: params.service,
+        account,
+        signInCommand: `${binaryName} ${params.prefix} auth`,
+    });
 
-        return { email, gmail: gmail({ version: 'v1', auth }), call: { rootUrl: endpoints.apiRootUrl } };
-    },
-});
+    return { email, gmail: gmail({ version: 'v1', auth: client }), call: { rootUrl: auth.endpoints.apiRootUrl } };
+}

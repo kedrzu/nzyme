@@ -2,7 +2,7 @@ import { Option } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
-import { DriveClientFactory } from './DriveClientFactory.js';
+import { createDriveClient } from './createDriveClient.js';
 import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { formatDriveFile } from './formatDriveFile.js';
 import { fileIdFrom, FOLDER } from './formats.js';
@@ -35,7 +35,8 @@ export function defineDriveMkdirCommand(params: DriveCommandParams): CommandClas
 
         override async run() {
             const parent = this.parent ? fileIdFrom(this.parent, '--parent') : undefined;
-            const { drive, call } = await this.container.resolve(DriveClientFactory)({
+            const { drive, call } = await createDriveClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

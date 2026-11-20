@@ -3,7 +3,7 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { formatTsvLine } from '@nzyme/cli-core/utils/formatTsvLine.js';
 
-import { DriveClientFactory } from './DriveClientFactory.js';
+import { createDriveClient } from './createDriveClient.js';
 import type { DriveCommandParams } from './DriveCommandsOptions.js';
 
 /** Shared drives listed at most; past this the list says it stopped. */
@@ -30,7 +30,8 @@ export function defineDriveDrivesCommand(params: DriveCommandParams): CommandCla
         account = Option.String('--account', { description: 'The account to act as; needed when several are usable' });
 
         override async run() {
-            const { drive, call } = await this.container.resolve(DriveClientFactory)({
+            const { drive, call } = await createDriveClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

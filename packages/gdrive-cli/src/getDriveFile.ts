@@ -1,6 +1,6 @@
 import type { drive_v3 } from '@googleapis/drive';
 
-import type { DriveClient } from './DriveClientFactory.js';
+import type { DriveClient } from './createDriveClient.js';
 import { SHORTCUT } from './formats.js';
 
 /** The fields every command reads of a file. */

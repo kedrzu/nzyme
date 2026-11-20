@@ -1,29 +1,27 @@
 import type { Injectable } from '@nzyme/ioc/Injectable.js';
 import type { SecretsProvider } from '@nzyme/secrets/commands/SecretsCommandsOptions.js';
+import type { SecretDefinition } from '@nzyme/secrets/defineSecret.js';
 
-/**
- * How a Google command set finds its OAuth client and its accounts. One set uses one OAuth client; a
- * repo needing two registers two sets with different `keyPrefix`es.
- */
+import type { GoogleClientProvider } from './GoogleClientProvider.js';
+
+/** How a Google command set finds its OAuth clients and its accounts. */
 export interface GoogleAuthOptions {
     /**
-     * The project's service resolving to its `SecretsProvider`: the client id and secret are read from
-     * its stores and refresh tokens are written through its `target`. `target(key)` must return the
-     * same store instance that is listed in `stores`, so a token written there is read back.
+     * The project's service resolving to its `SecretsProvider`: the token secret is read from its
+     * stores and written through its `target`, which must return a store listed in `stores` so a
+     * written token is read back.
      */
     provider: Injectable<SecretsProvider>;
-    /** Key of the OAuth client id. Default `GOOGLE_CLIENT_ID`. */
-    clientIdKey?: string;
-    /** Key of the OAuth client secret. Default `GOOGLE_CLIENT_SECRET`. */
-    clientSecretKey?: string;
     /**
-     * Prefix of the token keys, `<keyPrefix><service>_TOKEN_<SLUG>`. Default `GOOGLE_`. Two command
-     * sets keep their tokens apart by setting different prefixes.
+     * The declared secret (`defineSecret`) holding every signed-in account of the service, a JSON
+     * dictionary by email. When the provider declares its secrets, it must be among them.
      */
-    keyPrefix?: string;
+    tokens: SecretDefinition;
+    /** The project's service giving the OAuth client of an account. */
+    client: Injectable<GoogleClientProvider>;
     /**
-     * The accounts the project may use: emails or `*` globs, case-insensitive. Unset, every account
-     * with a token under the prefix is usable; an empty list allows none.
+     * The accounts the project may use: emails or `*` globs, case-insensitive. Unset, every signed-in
+     * account is usable; an empty list allows none.
      */
     accounts?: string[];
 }

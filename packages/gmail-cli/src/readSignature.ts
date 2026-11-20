@@ -1,6 +1,6 @@
 import type { Writable } from 'node:stream';
 
-import type { GmailClient } from './GmailClientFactory.js';
+import type { GmailClient } from './createGmailClient.js';
 
 /**
  * The Gmail signature (HTML) of the account's default send-as address, empty when it has none. A

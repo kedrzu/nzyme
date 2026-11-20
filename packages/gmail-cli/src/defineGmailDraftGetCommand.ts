@@ -3,7 +3,7 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { formatHeaderBlock } from '@nzyme/cli-core/utils/formatHeaderBlock.js';
 
-import { GmailClientFactory } from './GmailClientFactory.js';
+import { createGmailClient } from './createGmailClient.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
 import { draftBodyToMarkdown, extractAttachments } from './gmailContent.js';
 import { formatFileSize } from './utils/formatFileSize.js';
@@ -34,7 +34,8 @@ export function defineGmailDraftGetCommand(params: GmailCommandParams): CommandC
         account = Option.String('--account', { description: 'The account to act as; needed when several are usable' });
 
         override async run() {
-            const { gmail, call } = await this.container.resolve(GmailClientFactory)({
+            const { gmail, call } = await createGmailClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

@@ -1,8 +1,9 @@
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
-import { GoogleAccountsFactory } from './GoogleAccountsFactory.js';
 import type { GoogleCommandParams } from './GoogleCommandParams.js';
+import { parseGoogleTokens } from './googleTokens.js';
+import { isAccountAllowed } from './utils/isAccountAllowed.js';
 
 /**
  * Defines `<prefix> accounts`: one tab-separated line per signed-in account of the service, the email
@@ -25,10 +26,11 @@ export function defineGoogleAccountsCommand(params: GoogleCommandParams): Comman
         });
 
         override async run() {
-            const accounts = this.container.resolve(GoogleAccountsFactory)(params, this.cli.binaryName);
-            for (const account of await accounts.list()) {
-                const status = account.allowed ? account.scopes.join(' ') : 'not allowed';
-                this.context.stdout.write(`${account.email}\t${status}\n`);
+            const auth = this.container.resolve(params.auth);
+            const tokens = parseGoogleTokens(await auth.storage.read(), auth.secretName);
+            for (const [email, { scopes }] of [...tokens].toSorted(([a], [b]) => a.localeCompare(b))) {
+                const status = isAccountAllowed(email, auth.allowed) ? scopes.join(' ') : 'not allowed';
+                this.context.stdout.write(`${email}\t${status}\n`);
             }
         }
     };

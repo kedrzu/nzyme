@@ -2,6 +2,7 @@ import * as path from 'node:path';
 
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { defineGoogleAccountsCommand } from '@nzyme/google-auth/defineGoogleAccountsCommand.js';
+import { defineGoogleAuth } from '@nzyme/google-auth/defineGoogleAuth.js';
 import { defineGoogleAuthCommand } from '@nzyme/google-auth/defineGoogleAuthCommand.js';
 
 import { defineDriveDownloadCommand } from './defineDriveDownloadCommand.js';
@@ -38,7 +39,7 @@ export function defineDriveCommands(options: DriveCommandsOptions): CommandClass
         }
     }
 
-    const params: DriveCommandParams = { prefix, service: driveService, options: auth, files };
+    const params: DriveCommandParams = { prefix, service: driveService, auth: defineGoogleAuth(auth), files };
     const permissions = effectivePermissions(options.permissions);
     const commands: [DrivePermission, CommandClass][] = [
         ['browse', defineDriveSearchCommand(params)],

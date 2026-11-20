@@ -7,19 +7,24 @@ import { PassThrough, Readable } from 'node:stream';
 import { spyOn } from 'bun:test';
 import { Builtins, Cli } from 'clipanion';
 
-import { Option } from '@nzyme/cli-core';
+import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass, CommandContext } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { createContainer } from '@nzyme/ioc/Container.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 import type { SecretsProvider } from '@nzyme/secrets/commands/SecretsCommandsOptions.js';
+import type { SecretDefinition } from '@nzyme/secrets/defineSecret.js';
+import { defineSecret } from '@nzyme/secrets/defineSecret.js';
 import type { SecretStore } from '@nzyme/secrets/SecretStore.js';
+import { mergeStores, readStores } from '@nzyme/secrets/utils/readStores.js';
 
+import { authorizeGoogleAccount } from '../authorizeGoogleAccount.js';
 import { defineGoogleAccountsCommand } from '../defineGoogleAccountsCommand.js';
+import { defineGoogleAuth } from '../defineGoogleAuth.js';
 import { defineGoogleAuthCommand } from '../defineGoogleAuthCommand.js';
-import { GoogleAccountsFactory } from '../GoogleAccountsFactory.js';
 import type { GoogleAuthOptions } from '../GoogleAuthOptions.js';
+import type { GoogleClientCredentials, GoogleClientProvider } from '../GoogleClientProvider.js';
 import type { GoogleCommandParams } from '../GoogleCommandParams.js';
 import { GoogleEndpoints } from '../GoogleEndpoints.js';
 import type { GoogleService } from '../GoogleService.js';
@@ -29,8 +34,20 @@ export const CLIENT_SECRET = 'client-secret-sentinel-5d1f';
 export const REFRESH_TOKEN = 'refresh-token-sentinel-a83c';
 export const ACCESS_TOKEN = 'access-token-sentinel-e42a';
 export const AUTH_CODE = 'auth-code-sentinel-91cd';
+/** The client id and secret, as the stores hold them for the test client provider. */
+export const CLIENT_KEYS = { GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_CLIENT_SECRET: CLIENT_SECRET };
+/** The project's OAuth client the fake accepts by default. */
+export const CLIENT: GoogleClientCredentials = { clientId: CLIENT_ID, clientSecret: CLIENT_SECRET };
+/** A second OAuth client, for a fake that serves two. */
+export const OTHER_CLIENT: GoogleClientCredentials = {
+    clientId: 'other-client-test.apps.googleusercontent.com',
+    clientSecret: 'other-client-secret-sentinel-7b20',
+};
 /** Every credential the tests hand out; none may reach any output. */
-export const CREDENTIALS = [CLIENT_SECRET, REFRESH_TOKEN, ACCESS_TOKEN, AUTH_CODE];
+export const CREDENTIALS = [CLIENT_SECRET, OTHER_CLIENT.clientSecret, REFRESH_TOKEN, ACCESS_TOKEN, AUTH_CODE];
+
+/** The token secret of the test service, as a product declares it. */
+export const GMAIL_TOKENS = defineSecret('GMAIL_TOKENS');
 
 export const SCOPES = ['https://example.test/scope.read', 'https://example.test/scope.write'];
 
@@ -57,11 +74,24 @@ export interface FakeGoogleOptions {
     api?: (request: Request) => Response | Promise<Response>;
     /** Refresh tokens the token endpoint answers `invalid_grant` for. */
     revoked?: string[];
+    /** The OAuth clients the token endpoint accepts; {@link CLIENT} by default. */
+    clients?: GoogleClientCredentials[];
 }
 
-/** A local Google: the token endpoint, `/me` and the `api`, recording the grant types it was asked for. */
+/** A refresh the fake token endpoint granted. */
+export interface FakeGoogleRefresh {
+    clientId: string;
+    refreshToken: string;
+}
+
+/**
+ * A local Google: the token endpoint, `/me` and the `api`, recording the grant types it was asked for
+ * and the refreshes it granted.
+ */
 export function startFakeGoogle(options: FakeGoogleOptions) {
     const grants: string[] = [];
+    const refreshes: FakeGoogleRefresh[] = [];
+    const clients = options.clients ?? [CLIENT];
     const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: answer });
     const url = `http://127.0.0.1:${server.port}`;
     const endpoints: GoogleEndpoints = {
@@ -69,7 +99,7 @@ export function startFakeGoogle(options: FakeGoogleOptions) {
         apiRootUrl: url,
     };
 
-    return { endpoints, grants, stop: () => server.stop(true) };
+    return { endpoints, grants, refreshes, stop: () => server.stop(true) };
 
     async function answer(request: Request) {
         const { pathname } = new URL(request.url);
@@ -92,7 +122,8 @@ export function startFakeGoogle(options: FakeGoogleOptions) {
         const form = new URLSearchParams(await request.text());
         const grant = form.get('grant_type') ?? '';
         grants.push(grant);
-        if (form.get('client_id') !== CLIENT_ID || form.get('client_secret') !== CLIENT_SECRET) {
+        const clientId = form.get('client_id') ?? '';
+        if (!clients.some(client => client.clientId === clientId && client.clientSecret === form.get('client_secret'))) {
             return Response.json({ error: 'invalid_client' }, { status: 401 });
         }
 
@@ -114,6 +145,7 @@ export function startFakeGoogle(options: FakeGoogleOptions) {
             );
         }
 
+        refreshes.push({ clientId, refreshToken });
         return Response.json({
             access_token: ACCESS_TOKEN,
             expires_in: 3600,
@@ -122,17 +154,33 @@ export function startFakeGoogle(options: FakeGoogleOptions) {
     }
 }
 
-/** A stored token value, as sign-in writes it. */
-export function tokenValue(email: string, refreshToken = REFRESH_TOKEN) {
-    return JSON.stringify({ email, refreshToken, scopes: SCOPES });
+/** The value of a token secret holding these accounts, each with {@link REFRESH_TOKEN} and {@link SCOPES}. */
+export function tokensValue(...emails: string[]) {
+    return JSON.stringify(Object.fromEntries(emails.map(email => [email, { refreshToken: REFRESH_TOKEN, scopes: SCOPES }])));
+}
+
+/** Options of {@link testAuthOptions}. */
+export interface TestAuthOptions extends TestProviderOptions {
+    tokens: SecretDefinition;
+    accounts?: string[];
+}
+
+/**
+ * The options a product passes a Google command set: a provider over the test's stores, the token
+ * secret, and a client provider reading {@link CLIENT_KEYS} from the same stores.
+ */
+export function testAuthOptions(options: TestAuthOptions): GoogleAuthOptions {
+    return {
+        provider: createTestProvider(options),
+        tokens: options.tokens,
+        client: createTestClientProvider(options.stores),
+        accounts: options.accounts,
+    };
 }
 
 /** Options of {@link runGoogleCommand}. */
-export interface RunGoogleCommandOptions {
+export interface RunGoogleCommandOptions extends TestProviderOptions {
     args: string[];
-    stores: SecretStore[];
-    /** The write policy; the first store by default. */
-    target?: SecretsProvider['target'];
     endpoints: GoogleEndpoints;
     accounts?: string[];
     /** Called once with the sign-in URL the command printed, standing in for the browser. */
@@ -156,9 +204,8 @@ class ProcessExited extends Error {}
  * an account and calls the API) in-process, under the binary name `nzyme`.
  */
 export function runGoogleCommand(options: RunGoogleCommandOptions): Promise<GoogleCommandResult> {
-    const provider = createTestProvider(options.stores, options.target);
-    const authOptions: GoogleAuthOptions = { provider, accounts: options.accounts };
-    const params: GoogleCommandParams = { prefix: 'gmail', service: TEST_SERVICE, options: authOptions };
+    const auth = defineGoogleAuth(testAuthOptions({ ...options, tokens: GMAIL_TOKENS }));
+    const params: GoogleCommandParams = { prefix: 'gmail', service: TEST_SERVICE, auth };
 
     return runCommands({
         commands: [defineGoogleAuthCommand(params), defineGoogleAccountsCommand(params), defineWhoamiCommand(params)],
@@ -168,15 +215,22 @@ export function runGoogleCommand(options: RunGoogleCommandOptions): Promise<Goog
     });
 }
 
-/**
- * The project's secrets provider over the test's stores.
- * @param target The write policy; the first store by default.
- */
-export function createTestProvider(stores: SecretStore[], target?: SecretsProvider['target']) {
+/** Options of {@link createTestProvider}. */
+export interface TestProviderOptions {
+    stores: SecretStore[];
+    /** The write policy; the first store by default. */
+    target?: SecretsProvider['target'];
+    /** The declared secrets; unset, the provider declares none. */
+    secrets?: SecretDefinition[];
+}
+
+/** The project's secrets provider over the test's stores. */
+export function createTestProvider({ stores, target, secrets }: TestProviderOptions) {
     return defineService<SecretsProvider>({
         name: 'TestSecrets',
         setup: () => ({
             stores,
+            secrets,
             target:
                 target ??
                 (() => {
@@ -187,6 +241,29 @@ export function createTestProvider(stores: SecretStore[], target?: SecretsProvid
 
                     return first;
                 }),
+        }),
+    });
+}
+
+/**
+ * The product's client provider of the tests: one OAuth client for every account, read from
+ * {@link CLIENT_KEYS} in the stores.
+ */
+export function createTestClientProvider(stores: SecretStore[]) {
+    return defineService<GoogleClientProvider>({
+        name: 'TestGoogleClients',
+        setup: () => ({
+            async getClient() {
+                const all = mergeStores(await readStores(stores));
+                const clientId = all.get('GOOGLE_CLIENT_ID');
+                const clientSecret = all.get('GOOGLE_CLIENT_SECRET');
+                if (!clientId || !clientSecret) {
+                    const missing = clientId ? 'GOOGLE_CLIENT_SECRET' : 'GOOGLE_CLIENT_ID';
+                    throw new UsageError(`The Google OAuth client is not configured: ${missing} is missing.`);
+                }
+
+                return { clientId, clientSecret };
+            },
         }),
     });
 }
@@ -287,10 +364,14 @@ function defineWhoamiCommand(params: GoogleCommandParams): CommandClass {
         account = Option.String('--account');
 
         override async run() {
-            const accounts = this.container.resolve(GoogleAccountsFactory)(params, this.cli.binaryName);
-            const { apiRootUrl } = this.container.resolve(GoogleEndpoints);
-            const auth = await accounts.authorize(await accounts.resolveAccount(this.account));
-            this.context.stdout.write(`${await params.service.resolveEmail(auth, apiRootUrl)}\n`);
+            const auth = this.container.resolve(params.auth);
+            const { client } = await authorizeGoogleAccount({
+                auth,
+                service: params.service,
+                account: this.account,
+                signInCommand: `${this.cli.binaryName} ${params.prefix} auth`,
+            });
+            this.context.stdout.write(`${await params.service.resolveEmail(client, auth.endpoints.apiRootUrl)}\n`);
         }
     };
 }

@@ -5,8 +5,8 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
 import { ensureLabel } from './ensureLabel.js';
-import type { GmailClient } from './GmailClientFactory.js';
-import { GmailClientFactory } from './GmailClientFactory.js';
+import type { GmailClient } from './createGmailClient.js';
+import { createGmailClient } from './createGmailClient.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
 import type { PlannedChange } from './labelRules.js';
 import { planThreadChange, RuleViolation } from './labelRules.js';
@@ -82,7 +82,8 @@ export function defineGmailThreadLabelCommand(params: GmailCommandParams): Comma
                 throw new UsageError('Pass --add, --remove or --set.');
             }
 
-            const client = await this.container.resolve(GmailClientFactory)({
+            const client = await createGmailClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

@@ -3,7 +3,7 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { assert } from '@nzyme/utils/assert.js';
 
-import { DriveClientFactory } from './DriveClientFactory.js';
+import { createDriveClient } from './createDriveClient.js';
 import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { formatDriveFile } from './formatDriveFile.js';
 import { DOCUMENT, fileIdFrom, FOLDER, importTargetOf, isNative, SPREADSHEET, typeLabel } from './formats.js';
@@ -45,7 +45,8 @@ export function defineDriveUpdateCommand(params: DriveCommandParams): CommandCla
 
         override async run() {
             const fileId = fileIdFrom(this.target);
-            const client = await this.container.resolve(DriveClientFactory)({
+            const client = await createDriveClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

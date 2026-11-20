@@ -8,8 +8,8 @@ import type { RawAttachment } from './compose.js';
 import { buildDraftBody, buildMime } from './compose.js';
 import { draftMedia } from './draftMedia.js';
 import { formatDraftFiles } from './formatDraftFiles.js';
-import type { GmailClient } from './GmailClientFactory.js';
-import { GmailClientFactory } from './GmailClientFactory.js';
+import type { GmailClient } from './createGmailClient.js';
+import { createGmailClient } from './createGmailClient.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
 import { extractAttachments, extractRawBody } from './gmailContent.js';
 import { assertTotalSize, draftFileAccess, loadLocalFile } from './localFiles.js';
@@ -73,7 +73,8 @@ export function defineGmailDraftUpdateCommand(params: GmailCommandParams): Comma
                           stdin: this.context.stdin,
                           access: draftFileAccess(files),
                       });
-            const client = await this.container.resolve(GmailClientFactory)({
+            const client = await createGmailClient({
+                auth: this.container.resolve(params.auth),
                 params,
                 binaryName: this.cli.binaryName,
                 account: this.account,

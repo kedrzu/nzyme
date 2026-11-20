@@ -25,8 +25,6 @@ export type SyncEvent = { kind: 'recovered'; path: string };
 
 export interface InitialPull {
     complete: boolean;
-    /** Where an interrupted first pull resumes; `null` before it started. */
-    position: string | null;
 }
 
 export interface SyncState {
@@ -42,6 +40,12 @@ export interface SyncState {
     /** ISO time the hook last pulled (or tried to); the prompt hook pulls at most once a minute. */
     lastPullAt?: string;
     initialPull: InitialPull;
+    /**
+     * While a full pass (the initial pull included) is unfinished: per document it already worked on, what it saw
+     * (`fullPassMark`). Its next call skips those still the same, so the pass finishes even when every call gets
+     * through one document and some documents are skipped each time.
+     */
+    fullPassDone?: Record<string, string>;
     /** Collection id to its folder name. */
     collections: Record<string, string>;
     /** Per message kind, the `session_id`s already told. */
@@ -122,7 +126,7 @@ function emptyState(): SyncState {
         events: [],
         cursor: null,
         lastFullPass: null,
-        initialPull: { complete: false, position: null },
+        initialPull: { complete: false },
         collections: {},
         toldSessions: {},
     };

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { mkdir, mkdtemp, readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -400,7 +400,8 @@ test('the initial pull stops at the deadline and the next one finishes it before
     expect(second.written).toHaveLength(1);
     expect((await readdir(join(world.documentsDir, 'wiki'))).toSorted()).toEqual(['one.md', 'three.md', 'two.md']);
     const done = await world.store.load();
-    expect(done.initialPull).toEqual({ complete: true, position: null });
+    expect(done.initialPull).toEqual({ complete: true });
+    expect(done.fullPassDone).toBeUndefined();
     expect(done.cursor).not.toBeNull();
 });
 
@@ -409,20 +410,18 @@ test('a deadline already passed when the listing returns still lets each pull wr
     const [one, two, three] = ['One', 'Two', 'Three'].map(title => world.addDocument(title, TEXT));
     const late = { deadline: 0, now: () => 100 };
 
-    const positions: (string | null)[] = [];
-    for (const expected of [true, true]) {
+    for (const done of [1, 2]) {
         const report = await world.pull('full', late);
-        expect(report.stoppedAtDeadline).toBe(expected);
+        expect(report.stoppedAtDeadline).toBe(true);
         expect(report.written).toHaveLength(1);
-        positions.push((await world.store.load()).initialPull.position);
+        expect(Object.keys((await world.store.load()).fullPassDone ?? {})).toHaveLength(done);
     }
-    expect(new Set(positions).size).toBe(2);
     const last = await world.pull('full', late);
     expect(last.stoppedAtDeadline).toBe(false);
     expect(last.written).toHaveLength(1);
-    expect((await world.store.load()).initialPull).toEqual({ complete: true, position: null });
+    expect((await world.store.load()).initialPull).toEqual({ complete: true });
 
-    // A later full pass, with no resume position, finishes too: documents already updated drop out of its work.
+    // A later full pass finishes too.
     await world.edit(one!, 'Edited one.');
     await world.edit(three!, 'Edited three.');
     await world.outline.clientAs(world.bob).documents.delete({ id: two!.id });
@@ -432,6 +431,46 @@ test('a deadline already passed when the listing returns still lets each pull wr
     expect(finished.stoppedAtDeadline).toBe(false);
     expect(finished.removed).toEqual(['wiki/two.md']);
     expect((await world.store.load()).lastFullPass).not.toBeNull();
+});
+
+test('a full pass whose listing always overruns finishes even when two documents are skipped on every call', async () => {
+    const world = await setup();
+    const [one, two, three] = ['One', 'Two', 'Three'].map(title => world.addDocument(title, TEXT));
+    await world.pull('full');
+    // Both files are gone locally and changed in Outline, so every pull skips them and they keep needing work.
+    await rm(join(world.documentsDir, 'wiki/one.md'));
+    await rm(join(world.documentsDir, 'wiki/two.md'));
+    await world.edit(one!, 'Edited one.');
+    await world.edit(two!, 'Edited two.');
+    await world.outline.clientAs(world.bob).documents.delete({ id: three!.id });
+    const late = { deadline: 0, now: () => 100 };
+
+    expect((await world.pull('full', late)).stoppedAtDeadline).toBe(true);
+    const finished = await world.pull('full', late);
+
+    expect(finished.stoppedAtDeadline).toBe(false);
+    expect(finished.skipped.map(skip => skip.reason)).toEqual(['The file is missing locally.']);
+    expect(finished.removed).toEqual(['wiki/three.md']);
+    const state = await world.store.load();
+    expect(state.lastFullPass).not.toBeNull();
+    expect(state.fullPassDone).toBeUndefined();
+});
+
+test('an unfinished full pass redoes a document that changed again after it was worked on', async () => {
+    const world = await setup();
+    const documents = ['One', 'Two'].map(title => world.addDocument(title, TEXT));
+    const late = { deadline: 0, now: () => 100 };
+
+    const [firstPath] = (await world.pull('full', late)).written;
+    const first = documents.find(document => `wiki/${document.title.toLowerCase()}.md` === firstPath)!;
+    const other = documents.find(document => document !== first)!;
+    await world.edit(first, 'Edited again.');
+    const second = await world.pull('full', late);
+
+    expect(second.stoppedAtDeadline).toBe(true);
+    expect(await readFile(join(world.documentsDir, firstPath!), 'utf8')).toContain('Edited again.');
+    expect((await world.pull('full', late)).stoppedAtDeadline).toBe(false);
+    expect(await pathExists(join(world.documentsDir, `wiki/${other.title.toLowerCase()}.md`))).toBe(true);
 });
 
 test('a deadline counted from the end of the listing gives the documents the whole span', async () => {

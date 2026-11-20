@@ -142,16 +142,18 @@ export async function pull(options: PullOptions): Promise<PullReport> {
             // Parents first, so a moved parent takes its children's folder along before they are looked at.
             .toSorted((a, b) => pathDepth(a.path) - pathDepth(b.path) || a.remote.id.localeCompare(b.remote.id));
 
+        const pending = full ? work.filter(item => state.fullPassDone?.[item.remote.id] !== fullPassMark(item)) : work;
         let started = 0;
-        for (const { remote, path } of initial ? resumeAfter(work, state.initialPull.position) : work) {
+        for (const item of pending) {
+            const { remote, path } = item;
             // The first document goes regardless, or a listing slower than the deadline would never get past it.
             if (started++ > 0 && now() >= deadline) {
                 report.stoppedAtDeadline = true;
                 break;
             }
             await syncDocument(remote, path);
-            if (initial) {
-                state.initialPull.position = remote.id;
+            if (full) {
+                (state.fullPassDone ??= {})[remote.id] = fullPassMark(item);
             }
         }
 
@@ -162,10 +164,11 @@ export async function pull(options: PullOptions): Promise<PullReport> {
                     await removeFolderWithoutFiles(join(documentsDir, folder));
                 }
                 state.lastFullPass = new Date(now()).toISOString();
+                delete state.fullPassDone;
             }
             state.cursor = discovery.cursor;
             if (initial) {
-                state.initialPull = { complete: true, position: null };
+                state.initialPull = { complete: true };
             }
             await downloadMissingAttachments();
         }
@@ -475,10 +478,9 @@ function needsWork(known: DocState | undefined, remote: OutlineDocument, path: s
     );
 }
 
-/** An interrupted initial pull starts after the last document it finished. */
-function resumeAfter<T extends { remote: OutlineDocument }>(work: T[], position: string | null) {
-    const index = work.findIndex(item => item.remote.id === position);
-    return index === -1 ? work : [...work.slice(index + 1), ...work.slice(0, index + 1)];
+/** What `needsWork` compares, so a document that changed again after an unfinished full pass worked on it is redone. */
+function fullPassMark({ remote, path }: { remote: OutlineDocument; path: string }) {
+    return JSON.stringify([remote.revision, path, remote.parentDocumentId, remote.collectionId]);
 }
 
 function withoutConflict(document: DocState): DocState {

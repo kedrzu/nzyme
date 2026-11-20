@@ -15,7 +15,7 @@ test('a missing state.json loads as an empty state', async () => {
 
     expect(state.version).toBe(1);
     expect(state.documents).toEqual({});
-    expect(state.initialPull).toEqual({ complete: false, position: null });
+    expect(state.initialPull).toEqual({ complete: false });
 });
 
 test('state and bases round-trip, and a deleted base reads as null', async () => {

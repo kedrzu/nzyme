@@ -1,4 +1,4 @@
-import type { OutlinePage, OutlinePageParams } from './OutlineTypes.js';
+import type { OutlinePageParams } from './OutlineTypes.js';
 
 const PAGE_SIZE = 100;
 
@@ -7,7 +7,7 @@ const PAGE_SIZE = 100;
  * until one comes back short.
  * @util
  */
-export async function listAll<T>(fetchPage: (page: Required<OutlinePageParams>) => Promise<OutlinePage<T>>) {
+export async function listAll<T>(fetchPage: (page: Required<OutlinePageParams>) => Promise<{ data: T[] }>) {
     const items: T[] = [];
     for (let offset = 0; ; offset += PAGE_SIZE) {
         const page = await fetchPage({ limit: PAGE_SIZE, offset });

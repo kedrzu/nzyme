@@ -1,15 +1,8 @@
 import { OutlineApiError } from '../outline/errors.js';
 import { listAll } from '../outline/listAll.js';
 import type { OutlineClient } from '../outline/OutlineClient.js';
-import type {
-    OutlineCollection,
-    OutlineDocument,
-    OutlineFilter,
-    OutlinePage,
-    OutlinePageParams,
-} from '../outline/OutlineTypes.js';
+import type { OutlineCollection, OutlineDocument, OutlineFilter, OutlinePage } from '../outline/OutlineTypes.js';
 
-const PAGE_SIZE = 100;
 /** The incremental pass looks this far before the cursor, so a document saved just before it was read is not missed. */
 const CURSOR_OVERLAP_MS = 2 * 60 * 1000;
 
@@ -107,8 +100,8 @@ export async function discoverFull(client: OutlineClient, options: FullOptions):
     }
 
     const sharedRoots = [
-        ...(await listSharedRoots(page => client.userMemberships.list(page))),
-        ...(await listSharedRoots(page => client.groupMemberships.list(page))),
+        ...(await listAll(page => client.userMemberships.list(page).then(({ documents }) => ({ data: documents })))),
+        ...(await listAll(page => client.groupMemberships.list(page).then(({ documents }) => ({ data: documents })))),
     ];
     for (const root of sharedRoots) {
         if (!found.has(root.id)) {
@@ -139,20 +132,6 @@ async function findDocument(client: OutlineClient, id: string) {
             return null;
         }
         throw error;
-    }
-}
-
-/** Roots from a membership endpoint, which pages like the rest but answers without the paging block. */
-async function listSharedRoots(
-    fetchPage: (page: Required<OutlinePageParams>) => Promise<{ documents: OutlineDocument[] }>,
-) {
-    const roots: OutlineDocument[] = [];
-    for (let offset = 0; ; offset += PAGE_SIZE) {
-        const { documents } = await fetchPage({ limit: PAGE_SIZE, offset });
-        roots.push(...documents);
-        if (documents.length < PAGE_SIZE) {
-            return roots;
-        }
     }
 }
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [release-from-main-on-demand.md](release-from-main-on-demand.md).
 
 ## Context
 

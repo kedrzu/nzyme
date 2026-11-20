@@ -8,6 +8,8 @@ export interface MemoryStoreOptions {
     credentialEnv?: string[];
     login?: boolean;
     refresh?: boolean;
+    /** Applies written entries to the data `readAll` returns, as a real store does; off by default. */
+    persist?: boolean;
 }
 
 /** An in-memory store that records what is asked of it. */
@@ -26,6 +28,12 @@ export function createMemoryStore(options: MemoryStoreOptions) {
         },
         write(entries) {
             writes.push(entries);
+            if (options.persist) {
+                for (const { key, value } of entries) {
+                    data.set(key, value);
+                }
+            }
+
             return Promise.resolve();
         },
     };

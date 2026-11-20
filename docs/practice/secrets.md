@@ -62,6 +62,12 @@ To check a value is right without seeing it, run what uses it: the app, an API c
 
 Writing needs a token that may write; a read-only one is refused, and the error says so.
 
+The OAuth refresh tokens of the Google CLIs (`gmail-cli`, `gdrive-cli`) are secrets too. Each service
+keeps all its accounts in one secret (`GMAIL_TOKENS`, `GDRIVE_TOKENS`) declared like any other, a JSON
+dictionary by email, and it belongs in a per-developer store (`meta.store: 'personal'`), never the shared
+team store: a refresh token acts as its owner's mailbox or Drive. `<prefix> auth` writes it, and the user
+runs it: it needs a browser, so never run it yourself.
+
 ## When a secret is missing or a token is rejected
 
 `bun secrets list` shows every declared secret that applies here with its store id, `missing` or `overridden by environment`, then stored keys that are `not declared` or `not enabled here`. A `missing` name: add it as above. A missing or rejected token is

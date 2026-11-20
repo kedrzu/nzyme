@@ -3,8 +3,8 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 
+import { resolveSecretTarget } from '../resolveSecretTarget.js';
 import { promptSecret } from './promptSecret.js';
-import { getSecretDeclarations, getUndeclaredReason } from './utils/getSecretDeclarations.js';
 import { readHiddenInput } from './utils/readHiddenInput.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
 
@@ -53,16 +53,11 @@ export function defineSecretsSetCommand(options: SecretsCommandsOptions): Comman
 
         override async run() {
             // Checked first: a refused name throws here, before any prompt or write.
-            const provider = this.container.resolve(options.provider);
-            if (provider.secrets) {
-                const declarations = getSecretDeclarations(provider.secrets, this.container.resolve(EnvVariables));
-                const reason = getUndeclaredReason(declarations, this.name);
-                if (reason) {
-                    throw new UsageError(`Refusing to write ${this.name}: ${reason}.`);
-                }
-            }
-
-            const store = provider.target(this.name);
+            const store = resolveSecretTarget({
+                provider: this.container.resolve(options.provider),
+                env: this.container.resolve(EnvVariables),
+                name: this.name,
+            });
 
             const prompted = this.prompt !== undefined && this.prompt !== false;
             const value = prompted

@@ -14,6 +14,7 @@ import type {
     DocumentsListParams,
     DocumentsMoveParams,
     DocumentsMoveResult,
+    DocumentsSearchParams,
     DocumentsRemoveGroupParams,
     DocumentsRemoveUserParams,
     DocumentsUpdateParams,
@@ -27,6 +28,7 @@ import type {
     OutlinePage,
     OutlinePageParams,
     OutlinePagination,
+    OutlineSearchResult,
     OutlineUser,
     UserMembershipsResult,
     UsersListParams,
@@ -72,6 +74,12 @@ export class OutlineClient {
 
     readonly documents = {
         list: (params: DocumentsListParams = {}) => this.callPage<OutlineDocument>('documents.list', params),
+        /**
+         * Documents the user can see, newest first by default. Without a query it also covers what an unfiltered
+         * `documents.list` misses: the user's drafts and documents shared with the user in a collection the user
+         * cannot read.
+         */
+        search: (params: DocumentsSearchParams = {}) => this.callPage<OutlineSearchResult>('documents.search', params),
         info: (params: { id: string }) => this.callData<OutlineDocument>('documents.info', params),
         create: (params: DocumentsCreateParams) => this.callData<OutlineDocument>('documents.create', params),
         update: (params: DocumentsUpdateParams) => this.callData<OutlineDocument>('documents.update', params),

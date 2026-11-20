@@ -1,7 +1,13 @@
 import { OutlineApiError } from '../outline/errors.js';
 import { listAll } from '../outline/listAll.js';
 import type { OutlineClient } from '../outline/OutlineClient.js';
-import type { OutlineCollection, OutlineDocument, OutlinePage, OutlinePageParams } from '../outline/OutlineTypes.js';
+import type {
+    OutlineCollection,
+    OutlineDocument,
+    OutlineFilter,
+    OutlinePage,
+    OutlinePageParams,
+} from '../outline/OutlineTypes.js';
 
 const PAGE_SIZE = 100;
 /** The incremental pass looks this far before the cursor, so a document saved just before it was read is not missed. */
@@ -10,7 +16,7 @@ const CURSOR_OVERLAP_MS = 2 * 60 * 1000;
 export interface IncrementalDiscovery {
     /** Documents the user can see that changed since the cursor (minus the overlap), drafts included; may repeat ones already pulled. */
     documents: OutlineDocument[];
-    /** Collections of the changed documents, fetched only when one of them was not in `knownCollectionIds`; otherwise empty. */
+    /** Every collection the user can read, fetched only when a changed document needs one placed (see `discoverIncremental`); otherwise empty. */
     collections: OutlineCollection[];
     /** The latest `updatedAt` seen; never earlier than the cursor passed in. */
     cursor: string | null;
@@ -26,15 +32,22 @@ export interface FullDiscovery {
 export interface IncrementalOptions {
     /** The saved cursor; `null` lists everything. */
     cursor: string | null;
-    /** Collections whose folders are already assigned; an unlisted one triggers a `collections.list`. */
+    /** Collections whose folders are already assigned. */
     knownCollectionIds: Iterable<string>;
+    /** The collection of each document already synced, by id. */
+    knownDocuments: Readonly<Record<string, { collectionId: string | null }>>;
 }
 
 /**
- * The cheap pass run at every prompt: two requests when nothing changed. `documents.list` filtered by
- * `updatedAt` plus the user's own drafts (which `documents.list` omits), read only as far back as the cursor.
- * It cannot see archiving, deletion or lost access, nor edits to a document shared with the user in a collection
- * the user cannot read (`documents.list` covers readable collections only); the full pass does.
+ * The cheap pass run at a prompt: one request when nothing changed. A query-less `documents.search` for what
+ * changed since the cursor, newest first, read only as far back as the cursor; unlike `documents.list` it also
+ * covers the user's drafts and documents shared with the user (directly, through a group, or under a shared
+ * parent) in a collection the user cannot read. It cannot see archiving, deletion, lost access or a new share
+ * (none moves `updatedAt`); the full pass does.
+ *
+ * A `collections.list` follows only when a published document is new or moved into a collection without a
+ * folder, not for a synced one from a collection the user cannot read, which would otherwise bring it at every
+ * edit.
  */
 export async function discoverIncremental(
     client: OutlineClient,
@@ -42,18 +55,22 @@ export async function discoverIncremental(
 ): Promise<IncrementalDiscovery> {
     const since =
         options.cursor == null ? null : new Date(Date.parse(options.cursor) - CURSOR_OVERLAP_MS).toISOString();
-    const published = await listAll(page =>
-        client.documents.list({
-            ...page,
-            filters: since == null ? [] : [{ field: 'updatedAt', operator: 'gt', value: since }],
-        }),
+    const filters: OutlineFilter[] = [{ field: 'archivedAt', operator: 'isNull' }];
+    if (since != null) {
+        filters.push({ field: 'updatedAt', operator: 'gt', value: since });
+    }
+    const results = await listAll(page =>
+        client.documents.search({ ...page, sort: 'updatedAt', direction: 'DESC', filters }),
     );
-    const drafts = await listDraftsSince(client, since);
-    const documents = dedupe([...published, ...drafts]);
+    const documents = dedupe(results.map(result => result.document));
 
     const known = new Set(options.knownCollectionIds);
     const needsCollections = documents.some(
-        document => document.publishedAt != null && document.collectionId != null && !known.has(document.collectionId),
+        document =>
+            document.publishedAt != null &&
+            document.collectionId != null &&
+            !known.has(document.collectionId) &&
+            options.knownDocuments[document.id]?.collectionId !== document.collectionId,
     );
     const collections = needsCollections ? await listAll(page => client.collections.list(page)) : [];
     return { documents, collections, cursor: advanceCursor(options.cursor, documents) };
@@ -118,19 +135,6 @@ async function findDocument(client: OutlineClient, id: string) {
             return null;
         }
         throw error;
-    }
-}
-
-/** Own drafts, newest first, read only until one older than `since` (all of them without it). */
-async function listDraftsSince(client: OutlineClient, since: string | null) {
-    const drafts: OutlineDocument[] = [];
-    for (let offset = 0; ; offset += PAGE_SIZE) {
-        const page = await client.documents.drafts({ limit: PAGE_SIZE, offset });
-        const recent = page.data.filter(draft => since == null || draft.updatedAt > since);
-        drafts.push(...recent);
-        if (page.data.length < PAGE_SIZE || recent.length < page.data.length) {
-            return drafts;
-        }
     }
 }
 

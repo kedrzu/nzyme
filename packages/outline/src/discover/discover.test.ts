@@ -36,7 +36,11 @@ test('authorization: another user’s private collection and drafts never appear
 
     const bobClient = outline.clientAs(bob);
     const full = await discoverFull(bobClient, { cursor: null, knownIds: [] });
-    const incremental = await discoverIncremental(bobClient, { cursor: null, knownCollectionIds: [] });
+    const incremental = await discoverIncremental(bobClient, {
+        cursor: null,
+        knownCollectionIds: [],
+        knownDocuments: {},
+    });
 
     expect(ids(full.documents)).toEqual([visible.id, bobDraft.id].toSorted());
     expect(ids(incremental.documents)).toEqual([visible.id, bobDraft.id].toSorted());
@@ -56,7 +60,11 @@ test('a document reachable by collection, direct share and group share is listed
     const client = outline.clientAs(bob);
 
     const full = await discoverFull(client, { cursor: null, knownIds: [] });
-    const incremental = await discoverIncremental(client, { cursor: null, knownCollectionIds: [open.id] });
+    const incremental = await discoverIncremental(client, {
+        cursor: null,
+        knownCollectionIds: [open.id],
+        knownDocuments: {},
+    });
 
     expect(ids(full.documents)).toEqual([doc.id, child.id].toSorted());
     expect(ids(incremental.documents)).toEqual([doc.id, child.id].toSorted());
@@ -115,7 +123,11 @@ test('incremental: returns documents changed after the cursor with text and revi
     const open = outline.addCollection({ name: 'Open', permission: 'read_write' });
     const old = outline.addDocument({ collection: open, title: 'Old', createdBy: ana });
     const client = outline.clientAs(ana);
-    const first = await discoverIncremental(client, { cursor: null, knownCollectionIds: [open.id] });
+    const first = await discoverIncremental(client, {
+        cursor: null,
+        knownCollectionIds: [open.id],
+        knownDocuments: {},
+    });
     expect(first.cursor).toBe(old.updatedAt);
 
     const changed = await client.documents.update({ id: old.id, text: 'new text' });
@@ -123,12 +135,14 @@ test('incremental: returns documents changed after the cursor with text and revi
     const next = await discoverIncremental(client, {
         cursor: minutesAfter(changed.updatedAt, 10),
         knownCollectionIds: [open.id],
+        knownDocuments: {},
     });
     expect(next.documents).toEqual([]);
 
     const later = await discoverIncremental(client, {
         cursor: minutesAfter(old.updatedAt, -10),
         knownCollectionIds: [open.id],
+        knownDocuments: {},
     });
     expect(later.documents.find(document => document.id === old.id)).toMatchObject({ text: 'new text', revision: 2 });
     expect(ids(later.documents)).toEqual([old.id, fresh.id].toSorted());
@@ -139,7 +153,7 @@ test('incremental: the 2 minute overlap re-reads a document updated just before 
     const { outline, ana } = twoPartners();
     const open = outline.addCollection({ name: 'Open', permission: 'read' });
     const doc = outline.addDocument({ collection: open, title: 'Doc', createdBy: ana });
-    const options = (cursor: string) => ({ cursor, knownCollectionIds: [open.id] });
+    const options = (cursor: string) => ({ cursor, knownCollectionIds: [open.id], knownDocuments: {} });
     const client = outline.clientAs(ana);
 
     const within = await discoverIncremental(client, options(minutesAfter(doc.updatedAt, 1.5)));
@@ -155,13 +169,18 @@ test('incremental: the cursor never moves backwards and stays when nothing comes
     const doc = outline.addDocument({ collection: open, title: 'Doc', createdBy: ana });
     const ahead = minutesAfter(doc.updatedAt, 1);
 
-    const result = await discoverIncremental(outline.clientAs(ana), { cursor: ahead, knownCollectionIds: [open.id] });
+    const result = await discoverIncremental(outline.clientAs(ana), {
+        cursor: ahead,
+        knownCollectionIds: [open.id],
+        knownDocuments: {},
+    });
 
     expect(result.documents).toHaveLength(1);
     expect(result.cursor).toBe(ahead);
-    expect((await discoverIncremental(outline.clientAs(ana), { cursor: null, knownCollectionIds: [] })).cursor).toBe(
-        doc.updatedAt,
-    );
+    expect(
+        (await discoverIncremental(outline.clientAs(ana), { cursor: null, knownCollectionIds: [], knownDocuments: {} }))
+            .cursor,
+    ).toBe(doc.updatedAt);
 });
 
 test('incremental: own drafts changed after the cursor are returned, older ones are not', async () => {
@@ -172,11 +191,63 @@ test('incremental: own drafts changed after the cursor are returned, older ones 
     const result = await discoverIncremental(outline.clientAs(ana), {
         cursor: minutesAfter(stale.updatedAt, 10),
         knownCollectionIds: [],
+        knownDocuments: {},
     });
-    const all = await discoverIncremental(outline.clientAs(ana), { cursor: null, knownCollectionIds: [] });
+    const all = await discoverIncremental(outline.clientAs(ana), {
+        cursor: null,
+        knownCollectionIds: [],
+        knownDocuments: {},
+    });
 
     expect(result.documents).toEqual([]);
     expect(ids(all.documents)).toEqual([stale.id, recent.id].toSorted());
+});
+
+test('incremental: edits to documents shared with the user in a collection the user cannot read, a child included, are returned', async () => {
+    const { outline, ana, bob } = twoPartners();
+    const team = outline.addGroup({ name: 'Team', members: [bob] });
+    const secret = outline.addCollection({ name: 'Secret', members: [{ user: ana, permission: 'admin' }] });
+    const direct = outline.addDocument({ collection: secret, title: 'Direct', createdBy: ana });
+    const child = outline.addDocument({ parent: direct, title: 'Child', createdBy: ana });
+    const viaGroup = outline.addDocument({ collection: secret, title: 'Via group', createdBy: ana });
+    const notShared = outline.addDocument({ collection: secret, title: 'Not shared', createdBy: ana });
+    outline.shareDocument({ document: direct, user: bob, permission: 'read' });
+    outline.shareDocument({ document: viaGroup, group: team, permission: 'read' });
+    const anaClient = outline.clientAs(ana);
+    await anaClient.documents.update({ id: child.id, text: 'Edited child' });
+    await anaClient.documents.update({ id: viaGroup.id, text: 'Edited via group' });
+    await anaClient.documents.update({ id: notShared.id, text: 'Edited, not shared' });
+
+    // Minus the 2 minute overlap, the pass reads what changed after the last document was created.
+    const result = await discoverIncremental(outline.clientAs(bob), {
+        cursor: minutesAfter(notShared.updatedAt, 2),
+        knownCollectionIds: [],
+        knownDocuments: {},
+    });
+
+    expect(ids(result.documents)).toEqual([child.id, viaGroup.id].toSorted());
+    expect(result.documents.find(document => document.id === child.id)?.text).toBe('Edited child');
+});
+
+test('incremental: an already synced shared document in a collection the user cannot read does not bring the collection list', async () => {
+    const { outline, ana, bob } = twoPartners();
+    const secret = outline.addCollection({ name: 'Secret', members: [{ user: ana, permission: 'admin' }] });
+    const shared = outline.addDocument({ collection: secret, title: 'Shared', createdBy: ana });
+    outline.shareDocument({ document: shared, user: bob, permission: 'read' });
+    const client = outline.clientAs(bob);
+
+    const unknown = await discoverIncremental(client, { cursor: null, knownCollectionIds: [], knownDocuments: {} });
+    const requests = await requestsMadeBy(outline, bob, () =>
+        discoverIncremental(client, {
+            cursor: null,
+            knownCollectionIds: [],
+            knownDocuments: { [shared.id]: { collectionId: secret.id } },
+        }),
+    );
+
+    expect(ids(unknown.documents)).toEqual([shared.id]);
+    expect(unknown.collections).toEqual([]);
+    expect(requests).toBe(1);
 });
 
 test('incremental: a changed document in an unknown collection brings the collection list', async () => {
@@ -184,12 +255,16 @@ test('incremental: a changed document in an unknown collection brings the collec
     const open = outline.addCollection({ name: 'Open', permission: 'read' });
     outline.addDocument({ collection: open, title: 'Doc', createdBy: ana });
 
-    const result = await discoverIncremental(outline.clientAs(ana), { cursor: null, knownCollectionIds: [] });
+    const result = await discoverIncremental(outline.clientAs(ana), {
+        cursor: null,
+        knownCollectionIds: [],
+        knownDocuments: {},
+    });
 
     expect(result.collections.map(collection => collection.id)).toEqual([open.id]);
 });
 
-test('request counts: an unchanged workspace costs 2 requests incrementally and a fixed number in a full pass, whatever the number of collections', async () => {
+test('request counts: an unchanged workspace costs 1 request incrementally and a fixed number in a full pass, whatever the number of collections', async () => {
     const { outline, ana } = twoPartners();
     const open = outline.addCollection({ name: 'Open', permission: 'read' });
     const other = outline.addCollection({ name: 'Other', permission: 'read' });
@@ -202,13 +277,14 @@ test('request counts: an unchanged workspace costs 2 requests incrementally and 
         discoverIncremental(client, {
             cursor: minutesAfter(doc.updatedAt, 60),
             knownCollectionIds: [open.id, other.id],
+            knownDocuments: {},
         }),
     );
     const full = await requestsMadeBy(outline, ana, () =>
         discoverFull(client, { cursor: doc.updatedAt, knownIds: [doc.id] }),
     );
 
-    expect(incremental).toBe(2);
+    expect(incremental).toBe(1);
     // collections.list, documents.list, drafts, userMemberships, groupMemberships.
     expect(full).toBe(5);
 });

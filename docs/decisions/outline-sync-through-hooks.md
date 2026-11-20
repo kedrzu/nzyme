@@ -51,7 +51,7 @@ Discovery:
 
 - **Full listing every time.** Trade-off: simple and detects everything, but a workspace of hundreds of
   documents costs several of the 100 requests per minute on every prompt.
-- **Incremental `documents.list` with `updatedAt gt`, plus a periodic full pass.** Trade-off: an
+- **Incremental listing with `updatedAt gt`, plus a periodic full pass.** Trade-off: an
   incremental pull does not see archive, deletion, lost access, membership changes or a new
   collection (a membership change does not move `updatedAt`).
 
@@ -73,10 +73,12 @@ State and merge:
   each hook with an explicit timeout; Stop has 60 s and the hook keeps its own run within 40 s. Nobody
   reads the folder while Claude Code is closed, and the push at Stop meets "in Outline by the end of
   the turn".
-- **Discovery.** An incremental pull (`documents.list` with `updatedAt gt` the last pull, 1 to 2
-  requests) at most once a minute on a prompt, and a full pass at session start and every 15
-  minutes; only the full pass detects archive, deletion, lost access, documents newly shared with
-  the user and new collections. Content never unchanged is sent, because a complex document gains a revision on
+- **Discovery.** An incremental pull (a query-less `documents.search` with `updatedAt gt` the last
+  pull, 1 request when nothing changed) at most once a minute on a prompt, and a full pass at
+  session start and every 15 minutes. Unlike `documents.list`, the search also returns the user's
+  drafts and documents shared with the user in a collection the user cannot read, so their edits
+  arrive with the incremental pull; only the full pass detects archive, deletion, lost access,
+  documents newly shared with the user and new collections. Content never unchanged is sent, because a complex document gains a revision on
   every identical write.
 - **Auth.** OAuth 2 authorization code with PKCE, a public admin-created client with the redirect
   `http://127.0.0.1/callback` (loopback URIs match any port). Tokens are written to the keychain

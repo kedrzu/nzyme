@@ -270,6 +270,38 @@ test('a document the user lost access to disappears from the documents folder', 
     expect((await world.store.load()).documents[shared.id]).toBeUndefined();
 });
 
+test('a partner’s edit to a document shared from a collection the user cannot read, and to its child, arrives with the next quick pass in one request', async () => {
+    const world = await setup();
+    const secret = world.outline.addCollection({ name: 'Secret', members: [{ user: world.bob, permission: 'admin' }] });
+    const shared = world.outline.addDocument({ collection: secret, title: 'Shared', text: TEXT, createdBy: world.bob });
+    const child = world.outline.addDocument({ parent: shared, title: 'Child', text: TEXT, createdBy: world.bob });
+    world.outline.shareDocument({ document: shared, user: world.ana, permission: 'read' });
+    await world.pull('full');
+    expect(await world.read('shared-with-me/shared/child.md')).toContain('# Child');
+
+    await world.edit(shared, 'Shared, edited by Bob.');
+    await world.edit(child, 'Child, edited by Bob.');
+    const requests = async (action: () => Promise<unknown>) => {
+        const before = world.outline.requests.length;
+        await action();
+        return world.outline.requests
+            .slice(before)
+            .filter(request => request.userId === world.ana.id)
+            .map(request => request.method);
+    };
+    const quick = await requests(() => world.pull('incremental'));
+    const nothingChanged = await requests(() => world.pull('incremental'));
+
+    expect(await world.read('shared-with-me/shared.md')).toBe(
+        `---\noutline: ${shared.id}\n---\n# Shared\n\nShared, edited by Bob.`,
+    );
+    expect(await world.read('shared-with-me/shared/child.md')).toBe(
+        `---\noutline: ${child.id}\n---\n# Child\n\nChild, edited by Bob.`,
+    );
+    expect(quick).toEqual(['documents.search']);
+    expect(nothingChanged).toEqual(['documents.search']);
+});
+
 test('a move in Outline moves the file under its old name with its children folder; a new title changes only the heading', async () => {
     const world = await setup();
     const offer = world.addDocument('Offer', TEXT);

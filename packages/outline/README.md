@@ -86,7 +86,7 @@ Sharing:
 Cadence:
 
 - Session start: a full pass (pull and push). Prompt: an incremental pull at most once a minute, a full pass every 15 minutes. Stop and session end: push. A hook skips the sync while another session syncs; a skipped session start or prompt still reminds the agent of open conflicts and an unfinished first pull.
-- The incremental pull asks Outline only for documents changed since the last pull (1 to 2 requests). Only a full pass notices archived or deleted documents, lost access, documents newly shared with the user and new collections.
+- The incremental pull asks Outline only for documents changed since the last pull, in one query-less `documents.search` (1 request when nothing changed, plus a `collections.list` when a new document sits in a collection without a folder). It sees edits to documents in the user's collections, the user's drafts, and documents shared with the user, also in a collection the user cannot read. Only a full pass notices archived or deleted documents, lost access, a document newly shared with the user before anyone edits it, and new empty collections.
 - Nothing syncs while Claude Code is closed, and nothing is pulled during a turn.
 
 ## Client

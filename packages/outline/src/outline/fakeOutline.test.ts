@@ -345,3 +345,50 @@ test('groupMemberships.list returns only the roots shared with the user’s grou
     expect(bobs.groups.map(group => group.id)).toEqual([team.id]);
     expect(carols.documents).toEqual([]);
 });
+
+test('documents.search without a query reaches shares in an unreadable collection with their subtree, own drafts, and archived documents unless filtered', async () => {
+    const outline = fakeOutline();
+    const ana = outline.addUser({ name: 'Ana' });
+    const bob = outline.addUser({ name: 'Bob' });
+    const team = outline.addGroup({ name: 'Team', members: [bob] });
+    const secret = outline.addCollection({ name: 'Secret', members: [{ user: ana, permission: 'admin' }] });
+    const open = outline.addCollection({ name: 'Open', permission: 'read_write' });
+    const shared = outline.addDocument({ collection: secret, title: 'Shared', createdBy: ana });
+    const sharedChild = outline.addDocument({ parent: shared, title: 'Shared child', createdBy: ana });
+    const viaGroup = outline.addDocument({ collection: secret, title: 'Via group', createdBy: ana });
+    outline.addDocument({ collection: secret, title: 'Not shared', createdBy: ana });
+    outline.addDocument({ collection: open, title: 'Ana draft', createdBy: ana, published: false });
+    const bobDraft = outline.addDocument({ title: 'Bob draft', createdBy: bob, published: false });
+    const published = outline.addDocument({ collection: open, title: 'Published', createdBy: ana });
+    const archived = outline.addDocument({ collection: open, title: 'Archived', createdBy: ana });
+    outline.shareDocument({ document: shared, user: bob, permission: 'read' });
+    outline.shareDocument({ document: viaGroup, group: team, permission: 'read' });
+    const client = outline.clientAs(bob);
+    await client.documents.archive({ id: archived.id });
+
+    const search = async (filters: OutlineFilter[]) =>
+        (await client.documents.search({ filters })).data.map(result => result.document.id).toSorted();
+
+    const reachable = [shared.id, sharedChild.id, viaGroup.id, bobDraft.id, published.id];
+    expect(await search([])).toEqual([...reachable, archived.id].toSorted());
+    expect(await search([{ field: 'archivedAt', operator: 'isNull' }])).toEqual(reachable.toSorted());
+});
+
+test('documents.search sorts by updatedAt newest first, filters and pages; a text query is not modelled', async () => {
+    const outline = fakeOutline();
+    const ana = outline.addUser({ name: 'Ana' });
+    const open = outline.addCollection({ name: 'Open', permission: 'read' });
+    const first = outline.addDocument({ collection: open, title: 'First', createdBy: ana });
+    const second = outline.addDocument({ collection: open, title: 'Second', createdBy: ana });
+    const third = outline.addDocument({ collection: open, title: 'Third', createdBy: ana });
+    const client = outline.clientAs(ana);
+
+    const page = await client.documents.search({ sort: 'updatedAt', direction: 'DESC', limit: 2 });
+    const since = await client.documents.search({
+        filters: [{ field: 'updatedAt', operator: 'gt', value: first.updatedAt }],
+    });
+
+    expect(page.data.map(result => result.document.id)).toEqual([third.id, second.id]);
+    expect(since.data.map(result => result.document.id)).toEqual([third.id, second.id]);
+    await expect(client.documents.search({ query: 'Third' })).rejects.toMatchObject({ status: 400 });
+});

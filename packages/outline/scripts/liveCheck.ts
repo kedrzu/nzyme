@@ -1,6 +1,6 @@
 /**
- * Live check of the real Outline API: confirms the assumptions the sync is built on (listing filters, drafts,
- * revision and 409, Markdown normalization, OAuth with a loopback redirect, scope, refresh rotation,
+ * Live check of the real Outline API: confirms the assumptions the sync is built on (listing filters, query-less
+ * search, drafts, revision and 409, Markdown normalization, OAuth with a loopback redirect, scope, refresh rotation,
  * attachments) before discovery, pull and push are written. Not part of `bun run test`.
  *
  * Opens the browser for the login (click Allow) unless the keychain already holds a login for the workspace.
@@ -461,6 +461,50 @@ try {
             'INFO',
             'updatedAt gt <exactly the last updatedAt> returns it',
             (await ids(latest)).includes(created.id),
+        );
+    });
+
+    // 8b. Query-less documents.search, the quick pass's one request.
+    await step('documents.search', async () => {
+        const latest = (await client.documents.info({ id: created.id })).updatedAt;
+        const search = (value: string) =>
+            listAll(page =>
+                client.documents.search({
+                    ...page,
+                    sort: 'updatedAt',
+                    direction: 'DESC',
+                    filters: [
+                        { field: 'archivedAt', operator: 'isNull' },
+                        { field: 'updatedAt', operator: 'gt', value },
+                    ],
+                }),
+            );
+        const results = await search(beforeUpdates);
+        const hit = results.find(result => result.document.id === created.id);
+        record('INFO', 'documents.search results', results.length, { keys: results[0] && Object.keys(results[0]) });
+        expectThat(
+            hit != null,
+            'documents.search without a query, updatedAt gt <before the updates> returns the document',
+            beforeUpdates,
+        );
+        if (hit) {
+            expectThat(
+                hit.document.text === current.text && hit.document.revision === current.revision,
+                'documents.search document has the current text and revision',
+                hit.document.revision,
+            );
+        }
+        const dates = results.map(result => result.document.updatedAt);
+        expectThat(
+            dates.every((date, index) => index === 0 || Date.parse(dates[index - 1]!) >= Date.parse(date)),
+            'documents.search sorts by updatedAt, newest first',
+            dates.slice(0, 5),
+        );
+        const afterLast = new Date(Date.parse(latest) + 1000).toISOString();
+        expectThat(
+            !(await search(afterLast)).some(result => result.document.id === created.id),
+            'documents.search updatedAt gt <after the last update> does not return it',
+            afterLast,
         );
     });
 

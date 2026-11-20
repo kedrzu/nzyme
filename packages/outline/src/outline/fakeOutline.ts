@@ -221,8 +221,8 @@ const MAX_PAGE_SIZE = 100;
  * it through `clientAs(user)` or `fetchAs(user)`.
  *
  * The Outline rules it models are in clearly named functions below (`collectionAccess`, `documentAccess`,
- * `matchesFilters`, `listVisibleDocuments`, the `documents.update` handler for revisions and conflicts), so a
- * behaviour found different on real Outline is corrected in one place.
+ * `matchesFilters`, `listVisibleDocuments`, `searchableDocuments`, the `documents.update` handler for revisions and
+ * conflicts), so a behaviour found different on real Outline is corrected in one place.
  */
 export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
     const url = (options.url ?? 'https://outline.test').replace(/\/+$/, '');
@@ -249,6 +249,7 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         'collections.documents': collectionsDocuments,
         'documents.list': documentsList,
         'documents.drafts': documentsDrafts,
+        'documents.search': documentsSearch,
         'documents.info': documentsInfo,
         'documents.create': documentsCreate,
         'documents.update': documentsUpdate,
@@ -512,6 +513,30 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
             .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     }
 
+    /**
+     * Which documents `documents.search` reaches for a user: any the user holds a share on, the share on an ancestor
+     * included (Outline copies it to the subtree; a draft only by its own share, as in `documentAccess`), the user's
+     * own outside a collection, published ones in a collection the user can read, and the user's own in one.
+     * Archived documents are not excluded.
+     */
+    function searchableDocuments(user: FakeUser) {
+        return documents
+            .filter(document => document.deletedAt == null)
+            .filter(document => {
+                const shared =
+                    directDocumentAccess(user, document) != null ||
+                    (document.publishedAt != null &&
+                        ancestorsOf(document).some(ancestor => directDocumentAccess(user, ancestor) != null));
+                const own = document.createdById === user.id;
+                const readableCollection = collectionAccess(user, document.collectionId) != null;
+                return (
+                    shared ||
+                    (own && document.collectionId == null) ||
+                    (readableCollection && (document.publishedAt != null || own))
+                );
+            });
+    }
+
     // --- handlers ---
 
     function authInfo({ user }: Call) {
@@ -582,6 +607,29 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
             .filter(document => collectionId == null || document.collectionId === collectionId)
             .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
         return okPage(body, drafts.map(presentDocument));
+    }
+
+    /** Only the query-less search the sync uses; a text query answers 400 rather than a made-up ranking. */
+    function documentsSearch({ user, body }: Call) {
+        if ((optionalString(body, 'query') ?? '') !== '') {
+            throw new FakeApiError(400, 'validation_error', 'The fake Outline does not search by text');
+        }
+        const sort = optionalString(body, 'sort') ?? 'updatedAt';
+        if (sort !== 'updatedAt' && sort !== 'createdAt') {
+            invalid('sort', 'updatedAt | createdAt');
+        }
+        const direction = optionalString(body, 'direction') ?? 'DESC';
+        if (direction !== 'ASC' && direction !== 'DESC') {
+            invalid('direction', 'ASC | DESC');
+        }
+        const filters = readFilters(body);
+        const matching = searchableDocuments(user)
+            .filter(document => matchesFilters(document, filters))
+            .toSorted((a, b) => (direction === 'DESC' ? -1 : 1) * a[sort].localeCompare(b[sort]));
+        return okPage(
+            body,
+            matching.map(document => ({ ranking: 0, context: '', document: presentDocument(document) })),
+        );
     }
 
     function documentsInfo({ user, body }: Call) {

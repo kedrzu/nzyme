@@ -107,6 +107,7 @@ export async function pull(options: PullOptions): Promise<PullReport> {
             : await discoverIncremental(client, {
                   cursor: state.cursor,
                   knownCollectionIds: Object.keys(state.collections),
+                  knownDocuments: state.documents,
               });
         const creating = new Set(Object.values(state.pendingCreates));
         const remotes = discovery.documents.filter(document => !creating.has(document.id));

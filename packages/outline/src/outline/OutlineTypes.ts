@@ -129,6 +129,22 @@ export interface DocumentsListParams extends OutlinePageParams {
     filters?: OutlineFilter[];
 }
 
+export interface DocumentsSearchParams extends OutlinePageParams {
+    /** Without one, every document the user can see matches, archived ones included. */
+    query?: string;
+    sort?: 'updatedAt' | 'createdAt';
+    direction?: 'ASC' | 'DESC';
+    /** The `documents.list` filter fields; unlike there, drafts are never hidden and archived ones only by an `archivedAt isNull` filter. */
+    filters?: OutlineFilter[];
+}
+
+/** One `documents.search` hit; `context` and `ranking` matter only with a query. */
+export interface OutlineSearchResult {
+    document: OutlineDocument;
+    context?: string;
+    ranking?: number;
+}
+
 export interface DocumentsDraftsParams extends OutlinePageParams {
     collectionId?: string;
 }

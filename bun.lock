@@ -257,6 +257,27 @@
         "oxfmt": "0.77.0",
       },
     },
+    "packages/gdrive-cli": {
+      "name": "@nzyme/gdrive-cli",
+      "version": "0.16.0",
+      "dependencies": {
+        "@googleapis/drive": "^27.1.0",
+        "@nzyme/cli-core": "workspace:*",
+        "@nzyme/google-auth": "workspace:*",
+        "@nzyme/ioc": "workspace:*",
+        "@nzyme/project-utils": "workspace:*",
+        "@nzyme/utils": "workspace:*",
+      },
+      "devDependencies": {
+        "@nzyme/secrets": "workspace:*",
+        "@nzyme/tsconfig": "workspace:*",
+        "@types/bun": "^1.4.3",
+        "@types/node": "26.6.6",
+        "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+        "clipanion": "^4.0.0-rc.4",
+        "oxfmt": "0.77.0",
+      },
+    },
     "packages/github-cli": {
       "name": "@nzyme/github-cli",
       "version": "0.16.0",
@@ -1429,6 +1450,8 @@
 
     "@gar/promise-retry": ["@gar/promise-retry@1.0.3", "", {}, "sha512-GmzA9ckNokPypTg10pgpeHNQe7ph+iIKKmhKu3Ob9ANkswreCx7R3cKmY781K8QK3AqVL3xVh9A42JvIAbkkSA=="],
 
+    "@googleapis/drive": ["@googleapis/drive@27.1.0", "", { "dependencies": { "googleapis-common": "^9.0.0" } }, "sha512-z+CMvbc9vBE/M3C2GtYI4JVUre/BWkr5UM1z/Qtun+NTVWmd8KKM+ZGAOj5Jv8XWjPEwmV438HlX8Kc3pz8qiw=="],
+
     "@googleapis/gmail": ["@googleapis/gmail@22.1.0", "", { "dependencies": { "googleapis-common": "^9.0.0" } }, "sha512-UAvJaEFxWTHaGPZCAnsObwJ717ZgjJRKUpzqQPtxkL1gPV4SyoWgXJp3EjD0oyEYaAJDS+KdvHt/rRiFYHz4bw=="],
 
     "@graphql-typed-document-node/core": ["@graphql-typed-document-node/core@3.2.0", "", { "peerDependencies": { "graphql": "^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0" } }, "sha512-mB9oAsNCm9aM3/SOv4YtBMqZbYj10R7dkq8byBqxGY/ncFwhf2oQzMV+LCRlWoDSEBJ3COiR1yeDvMtsoOsuFQ=="],
@@ -1630,6 +1653,8 @@
     "@nzyme/esm": ["@nzyme/esm@workspace:packages/esm"],
 
     "@nzyme/fetch-utils": ["@nzyme/fetch-utils@workspace:packages/fetch-utils"],
+
+    "@nzyme/gdrive-cli": ["@nzyme/gdrive-cli@workspace:packages/gdrive-cli"],
 
     "@nzyme/github-cli": ["@nzyme/github-cli@workspace:packages/github-cli"],
 

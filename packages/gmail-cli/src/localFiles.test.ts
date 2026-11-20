@@ -59,12 +59,6 @@ test('resolveLocalFile: refuses directories, missing files and ~', async () => {
     await expect(resolveLocalFile('~/a.png', access)).rejects.toThrow(/absolute/);
 });
 
-test('resolveLocalFile: refuses denied files and everything under a denied directory', async () => {
-    const guarded = { ...access, denied: [path.join(vault, 'Projekty'), path.join(repo, 'leak.txt')] };
-    await expect(resolveLocalFile('obsidian/Projekty/szafa 1.png', guarded)).rejects.toThrow(/secrets/);
-    await expect(resolveLocalFile('.context/outbox/raport.pdf', guarded)).resolves.toBeTruthy();
-});
-
 test('loadLocalFile: reads the file with a type from its extension', async () => {
     const a = await loadLocalFile('obsidian/Projekty/szafa 1.png', access);
     expect(a).toMatchObject({ filename: 'szafa 1.png', contentType: 'image/png' });

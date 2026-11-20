@@ -23,8 +23,6 @@ export interface FileAccess {
     baseDir: string;
     /** Files must live under one of these. */
     roots: string[];
-    /** Files or directories never to attach, on top of the built-in secret-file names. */
-    denied?: string[];
 }
 
 /**
@@ -84,8 +82,7 @@ export async function resolveLocalFile(input: string, access: FileAccess): Promi
                 `(${access.roots.join(', ')}). Copy the file into the project directory first.`,
         );
     }
-    const denied = await realRoots(access.denied ?? []);
-    if (isSecretFile(real) || denied.some(d => isInside(real, d))) {
+    if (isSecretFile(real)) {
         throw new Error(`'${p}' looks like a secrets file - refusing to attach it`);
     }
     const stat = await fs.stat(real);

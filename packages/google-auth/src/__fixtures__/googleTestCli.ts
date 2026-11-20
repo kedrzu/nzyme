@@ -287,7 +287,9 @@ export interface RunCommandsOptions {
  * real container whose `GoogleEndpoints` point at the fake. `--help` lists the commands.
  */
 export async function runCommands(options: RunCommandsOptions): Promise<GoogleCommandResult> {
-    const cli = new Cli<CommandContext>({ binaryName: 'nzyme' });
+    // Plain help whatever the environment says: CI sets FORCE_COLOR, and the help text the tests read
+    // would carry ANSI codes.
+    const cli = new Cli<CommandContext>({ binaryName: 'nzyme', enableColors: false });
     for (const command of options.commands) {
         cli.register(command);
     }

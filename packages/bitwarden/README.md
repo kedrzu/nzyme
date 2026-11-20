@@ -36,7 +36,7 @@ A `readAll` costs at most three requests (login, project listing, one fetch), ho
 5. **Log in** on each machine:
 
    ```bash
-   bun <product> secrets login
+   bun secrets login
    ```
 
    The token is read from a hidden prompt

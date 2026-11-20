@@ -113,7 +113,7 @@ ask a fresh `claude -p` which skills have no description; if any of the repo's o
 **Never in a project** — personal tools belong in the user's own `~/.claude/settings.json`: `gmail-mcp`,
 `gdrive-mcp`, `whatsapp`, `telegram`, `shopping-research`, `wait-what` (`kedrzu-skills`).
 `secrets` (`kedrzu-skills`) is not one of them but stays out too: the repo's `secrets` skill and
-`secrets set --prompt` put every credential in the repo's store.
+`bun secrets set --prompt` put every credential in the repo's store.
 
 **New plugins.** The marketplaces grow. On every run, list `kedrzu-skills` — the local copy at
 `~/.claude/plugins/marketplaces/kedrzu-skills/.claude-plugin/marketplace.json`, or

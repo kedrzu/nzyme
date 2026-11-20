@@ -1,4 +1,5 @@
 import { Builtins, Cli } from 'clipanion';
+import type { Command } from 'clipanion';
 
 import type { Container } from '@nzyme/ioc/Container.js';
 import { createContainer } from '@nzyme/ioc/Container.js';
@@ -14,6 +15,8 @@ export interface ExecuteOptions {
     name: string;
     /** Optional title for the CLI program */
     title?: string;
+    /** What `--version` prints, usually the version of the package shipping the binary */
+    version?: string;
     /** List of commands to register */
     commands: readonly CommandClass[];
     /** Container to use for the CLI program */
@@ -26,13 +29,16 @@ export interface ExecuteOptions {
 }
 
 /**
- * Execute a CLI program
+ * Execute a CLI program. A command line that does not parse (an unknown option, a missing value) is reported on
+ * stderr with exit code 1: stdout is the commands' output, which callers pipe and parse, so a usage error there would
+ * be read as a result.
  * @param options - Program configuration options
  */
 export async function execute(options: ExecuteOptions): Promise<void> {
     const cli = new Cli<CommandContext>({
         binaryName: options.name,
         binaryLabel: options.title,
+        binaryVersion: options.version,
     });
 
     const container = options.container ?? createContainer();
@@ -46,5 +52,18 @@ export async function execute(options: ExecuteOptions): Promise<void> {
     cli.register(Builtins.HelpCommand);
     cli.register(Builtins.VersionCommand);
 
-    await cli.runExit(process.argv.slice(2), { container, onError: options.onError });
+    const context = { container, onError: options.onError };
+    let command: Command<CommandContext>;
+    try {
+        command = cli.process(process.argv.slice(2), context);
+    } catch (error) {
+        if (!(error instanceof Error)) {
+            throw error;
+        }
+        process.stderr.write(cli.error(error));
+        process.exitCode = 1;
+        return;
+    }
+
+    process.exitCode = await cli.run(command, context);
 }

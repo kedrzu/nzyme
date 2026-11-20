@@ -1,6 +1,9 @@
 import { waitFor } from '@nzyme/utils/waitFor.js';
 import { randomUUID } from 'node:crypto';
-import { link, open, readFile, rename, rm, stat } from 'node:fs/promises';
+import { link, open, rename, rm, stat } from 'node:fs/promises';
+
+import { isErrorCode } from '../utils/isErrorCode.js';
+import { readTextIfExists } from '../utils/readTextIfExists.js';
 
 /** A lock older than this belongs to a process that was killed without releasing it. */
 const STALE_AFTER_MS = 10 * 60 * 1000;
@@ -67,14 +70,14 @@ async function createLock(path: string): Promise<LockHandle | null> {
             await file.close();
         }
     } catch (error) {
-        if (isErrno(error, 'EEXIST')) {
+        if (isErrorCode(error, 'EEXIST')) {
             return null;
         }
         throw error;
     }
     return {
         async release() {
-            if ((await readText(path)) === content) {
+            if ((await readTextIfExists(path)) === content) {
                 await rm(path, { force: true });
             }
         },
@@ -83,7 +86,7 @@ async function createLock(path: string): Promise<LockHandle | null> {
 
 /** True when the lock file is gone (removed now or by someone else) and creating it may be retried. */
 async function removeIfStale(path: string): Promise<boolean> {
-    const seen = await readText(path);
+    const seen = await readTextIfExists(path);
     if (seen === null) {
         return true;
     }
@@ -96,12 +99,12 @@ async function removeIfStale(path: string): Promise<boolean> {
     try {
         await rename(path, aside);
     } catch (error) {
-        if (isErrno(error, 'ENOENT')) {
+        if (isErrorCode(error, 'ENOENT')) {
             return true;
         }
         throw error;
     }
-    if ((await readText(aside)) !== seen) {
+    if ((await readTextIfExists(aside)) !== seen) {
         // Took a live lock by mistake: put it back unless someone has created a new one already.
         await restore(aside, path);
         return false;
@@ -114,7 +117,7 @@ async function restore(aside: string, path: string): Promise<void> {
     try {
         await link(aside, path);
     } catch (error) {
-        if (!isErrno(error, 'EEXIST')) {
+        if (!isErrorCode(error, 'EEXIST')) {
             throw error;
         }
     }
@@ -130,7 +133,7 @@ async function isStale(path: string, text: string): Promise<boolean> {
     try {
         return Date.now() - (await stat(path)).mtimeMs > STALE_AFTER_MS;
     } catch (error) {
-        if (isErrno(error, 'ENOENT')) {
+        if (isErrorCode(error, 'ENOENT')) {
             return false;
         }
         throw error;
@@ -151,21 +154,6 @@ function isAlive(pid: number): boolean {
         return true;
     } catch (error) {
         // EPERM: the process exists but belongs to someone else.
-        return !isErrno(error, 'ESRCH');
+        return !isErrorCode(error, 'ESRCH');
     }
-}
-
-async function readText(path: string): Promise<string | null> {
-    try {
-        return await readFile(path, 'utf8');
-    } catch (error) {
-        if (isErrno(error, 'ENOENT')) {
-            return null;
-        }
-        throw error;
-    }
-}
-
-function isErrno(error: unknown, code: string): boolean {
-    return error instanceof Error && 'code' in error && error.code === code;
 }

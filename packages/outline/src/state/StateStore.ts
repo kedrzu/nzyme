@@ -1,7 +1,7 @@
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { readFileIfExists } from '../utils/readFileIfExists.js';
+import { readTextIfExists } from '../utils/readTextIfExists.js';
 import { writeFileAtomic } from '../utils/writeFileAtomic.js';
 
 /** What sync remembers about one Outline document. */
@@ -97,7 +97,7 @@ export class StateStore {
 
     /** The saved state, or an empty one when none was ever saved. Throws `StateCorruptError` for a broken file. */
     async load(): Promise<SyncState> {
-        const text = await readText(this.statePath);
+        const text = await readTextIfExists(this.statePath);
         if (text === null) {
             return emptyState();
         }
@@ -119,7 +119,7 @@ export class StateStore {
 
     /** The last canonical content of the document, the base of a 3-way merge; `null` when none is stored. */
     async readBase(id: string): Promise<string | null> {
-        return readText(this.basePath(id));
+        return readTextIfExists(this.basePath(id));
     }
 
     async writeBase(id: string, content: string): Promise<void> {
@@ -150,11 +150,6 @@ function emptyState(): SyncState {
         collections: {},
         toldSessions: {},
     };
-}
-
-async function readText(path: string): Promise<string | null> {
-    const bytes = await readFileIfExists(path);
-    return bytes == null ? null : bytes.toString('utf8');
 }
 
 function isSyncState(value: unknown): value is SyncState {

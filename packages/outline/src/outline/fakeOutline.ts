@@ -260,6 +260,7 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         'documents.add_group': documentsAddGroup,
         'documents.remove_group': documentsRemoveGroup,
         'userMemberships.list': userMembershipsList,
+        'groupMemberships.list': groupMembershipsList,
         'attachments.create': attachmentsCreate,
         'attachments.redirect': attachmentsRedirect,
     };
@@ -743,6 +744,30 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         const { items, pagination } = paginate(body, own);
         const shared = items.map(membership => requireDocumentRecord(membership.documentId));
         return ok({ memberships: items, documents: shared.map(presentDocument) }, pagination);
+    }
+
+    /** Like Outline: the roots shared with the user's groups (not their subtrees), skipping archived and deleted ones. */
+    function groupMembershipsList({ user, body }: Call) {
+        const own = documentGroupMemberships
+            .filter(membership => userIsInGroup(user, membership.groupId))
+            .filter(membership =>
+                documents.some(
+                    document =>
+                        document.id === membership.documentId &&
+                        document.deletedAt == null &&
+                        document.archivedAt == null,
+                ),
+            );
+        const { items, pagination } = paginate(body, own);
+        const sharedGroups = groups.filter(group => items.some(membership => membership.groupId === group.id));
+        return ok(
+            {
+                groups: sharedGroups.map(presentGroup),
+                groupMemberships: items,
+                documents: items.map(membership => presentDocument(requireDocumentRecord(membership.documentId))),
+            },
+            pagination,
+        );
     }
 
     function attachmentsCreate({ user, body }: Call) {

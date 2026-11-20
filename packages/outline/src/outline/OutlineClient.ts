@@ -18,6 +18,7 @@ import type {
     DocumentsRemoveGroupParams,
     DocumentsRemoveUserParams,
     DocumentsUpdateParams,
+    GroupMembershipsResult,
     OutlineAttachmentUpload,
     OutlineAuthInfo,
     OutlineCollection,
@@ -109,6 +110,11 @@ export class OutlineClient {
 
     readonly userMemberships = {
         list: (params: OutlinePageParams = {}) => this.callData<UserMembershipsResult>('userMemberships.list', params),
+    };
+
+    readonly groupMemberships = {
+        list: (params: OutlinePageParams = {}) =>
+            this.callData<GroupMembershipsResult>('groupMemberships.list', params),
     };
 
     readonly users = {

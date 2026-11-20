@@ -192,6 +192,13 @@ export interface UserMembershipsResult {
     documents: OutlineDocument[];
 }
 
+/** Documents shared with the user's groups: only the shared roots, with the groups and memberships behind them. */
+export interface GroupMembershipsResult {
+    groups: OutlineGroup[];
+    groupMemberships: OutlineDocumentGroupMembership[];
+    documents: OutlineDocument[];
+}
+
 export interface UsersListParams extends OutlinePageParams {
     /** Matches name or email. */
     query?: string;

@@ -297,3 +297,22 @@ test('outlineLikeNormalizer applies each observed rule and is idempotent', () =>
         expect(outlineLikeNormalizer(once)).toBe(once);
     }
 });
+
+test('groupMemberships.list returns only the roots shared with the user’s groups', async () => {
+    const outline = fakeOutline();
+    const ana = outline.addUser({ name: 'Ana' });
+    const bob = outline.addUser({ name: 'Bob' });
+    const carol = outline.addUser({ name: 'Carol' });
+    const team = outline.addGroup({ name: 'Team', members: [bob] });
+    const secret = outline.addCollection({ name: 'Secret', members: [{ user: ana, permission: 'admin' }] });
+    const root = outline.addDocument({ collection: secret, title: 'Root', createdBy: ana });
+    outline.addDocument({ parent: root, title: 'Child', createdBy: ana });
+    outline.shareDocument({ document: root, group: team, permission: 'read' });
+
+    const bobs = await outline.clientAs(bob).groupMemberships.list();
+    const carols = await outline.clientAs(carol).groupMemberships.list();
+
+    expect(bobs.documents.map(document => document.id)).toEqual([root.id]);
+    expect(bobs.groups.map(group => group.id)).toEqual([team.id]);
+    expect(carols.documents).toEqual([]);
+});

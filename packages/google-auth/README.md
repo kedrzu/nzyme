@@ -76,7 +76,16 @@ of accounts and projects.
      says "Google hasn't verified this app": *Advanced > Go to the app*).
 4. In *Clients*, create a client of type **Desktop app** and download its JSON. A Desktop client needs no
    redirect URI.
-5. Store the two values from it as secrets, with the masked prompt of `secrets`:
+5. Declare the two keys with `defineSecret` (see the `secrets` README), or `secrets set` refuses them in a
+   project that declares its secrets. Use the names set as `clientIdKey` / `clientSecretKey`:
+
+   ```ts
+   export const GOOGLE_CLIENT_ID = defineSecret('GOOGLE_CLIENT_ID', { description: 'Google OAuth client id' });
+   export const GOOGLE_CLIENT_SECRET = defineSecret('GOOGLE_CLIENT_SECRET', { description: 'Google OAuth client secret' });
+   ```
+
+   The refresh tokens need no declaration: `auth` writes them to the store itself, not through `secrets set`.
+6. Store the two values from the client JSON, with the masked prompt of `secrets`:
 
    ```bash
    bun nzyme secrets set GOOGLE_CLIENT_ID --prompt="Google OAuth client id: Cloud console > Google Auth Platform > Clients"

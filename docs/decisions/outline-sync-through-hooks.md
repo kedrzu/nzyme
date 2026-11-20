@@ -75,8 +75,8 @@ State and merge:
   the turn".
 - **Discovery.** An incremental pull (`documents.list` with `updatedAt gt` the last pull, 1 to 2
   requests) at most once a minute on a prompt, and a full pass at session start and every 15
-  minutes; only the full pass detects archive, deletion, lost access, sharing changes and new
-  collections. Content never unchanged is sent, because a complex document gains a revision on
+  minutes; only the full pass detects archive, deletion, lost access, documents newly shared with
+  the user and new collections. Content never unchanged is sent, because a complex document gains a revision on
   every identical write.
 - **Auth.** OAuth 2 authorization code with PKCE, a public admin-created client with the redirect
   `http://127.0.0.1/callback` (loopback URIs match any port). Tokens are written to the keychain
@@ -86,16 +86,16 @@ State and merge:
   shares one sync and git never tracks it. Local edits merge with Outline's through `git merge-file`
   against a base that is Outline's returned text after each write, not the text sent, because
   Outline normalizes what it receives; the base then matches what the next read returns.
+- **Sharing.** `outline share|unshare|shares <file>` call Outline's membership endpoints and print the
+  document's direct shares. Files hold no share list, so nothing polls memberships to keep one equal.
 
 ## Consequences
 
 - Nothing syncs while Claude Code is closed, and nothing is pulled in the middle of a turn; a
   partner's edit made during a turn arrives at the next prompt.
-- A new collection, or an archive or sharing change made in Outline, shows up locally after the next
-  full pass, up to 15 minutes later.
+- A new collection, an archive in Outline or a document newly shared with the user shows up locally
+  after the next full pass, up to 15 minutes later.
 - Setup needs one admin step (the OAuth app) and one login per user; no API key handling.
 - A file's form may change after a push (normalization), which the base text absorbs.
-- Rate limits bound the work: a full pass reads the share lists of a limited number of documents and
-  covers a large workspace over several passes.
 - Revisit if partners need sync with Claude Code closed (design B) or Outline offers members a change
   feed.

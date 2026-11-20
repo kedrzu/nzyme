@@ -387,7 +387,7 @@ export async function push(options: PushOptions): Promise<PushReport> {
         if (written !== read.content && !(await writeIfUnchanged(path, read.hash, written))) {
             return;
         }
-        const base = localContent(remote, [], doc.extra);
+        const base = localContent(remote, doc.extra);
         await store.writeBase(remote.id, base);
         const writtenHash = contentHash(written);
         state.documents[remote.id] = {
@@ -397,7 +397,6 @@ export async function push(options: PushOptions): Promise<PushReport> {
             title: remote.title,
             parentId: remote.parentDocumentId,
             collectionId: remote.collectionId,
-            shared: [],
             localHash: complete ? writtenHash : contentHash(base),
             fileStat: complete ? await statIfHash(path, writtenHash) : undefined,
         };
@@ -537,7 +536,7 @@ export async function push(options: PushOptions): Promise<PushReport> {
 
             const latest = await client.documents.info({ id });
             const extra = parseDocFile(base ?? content, basename(path)).doc.extra;
-            const theirs = localContent(latest, known.shared, extra);
+            const theirs = localContent(latest, extra);
             const merged = await mergeDocument({
                 ours: content,
                 base: base ?? '',
@@ -587,7 +586,7 @@ export async function push(options: PushOptions): Promise<PushReport> {
     }
 
     /**
-     * Makes `agreed` the base and the file's content (keeping the file's `shared` and other frontmatter keys), the
+     * Makes `agreed` the base and the file's content (keeping the file's other frontmatter keys), the
      * file only while it still hashes to `startHash`. `localHash` is the agreed content's hash either way, so an
      * edit made meanwhile reads as a change and is sent next time.
      */
@@ -596,10 +595,7 @@ export async function push(options: PushOptions): Promise<PushReport> {
         assert(known != null, `Document ${id} is not tracked`);
         const { doc } = parseDocFile(file.content, basename(path));
         const local = serializeDocFile({ ...doc, id, title: agreed.title, text: agreed.text });
-        await store.writeBase(
-            id,
-            serializeDocFile({ ...doc, id, shared: known.shared, title: agreed.title, text: agreed.text }),
-        );
+        await store.writeBase(id, local);
 
         const absolute = join(documentsDir, path);
         const current = await readFileIfExists(absolute);

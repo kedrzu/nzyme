@@ -5,8 +5,6 @@ import { pull } from '../reconcile/pull.js';
 import type { PullReport } from '../reconcile/pull.js';
 import { push } from '../reconcile/push.js';
 import type { PushReport } from '../reconcile/push.js';
-import { syncSharing } from '../sharing/sharing.js';
-import type { SharingReport } from '../sharing/sharing.js';
 import { pathExists } from '../utils/pathExists.js';
 import type { Workspace } from './resolveWorkspace.js';
 
@@ -14,13 +12,12 @@ import type { Workspace } from './resolveWorkspace.js';
 export interface SyncDeadlines {
     pull?: number;
     push?: number;
-    sharing?: number;
 }
 
 export interface SyncOnceOptions {
     client: OutlineClient;
     workspace: Workspace;
-    /** `full` makes the pull a full pass and has the sharing step compare Outline's lists too. */
+    /** `full` makes the pull a full pass. */
     mode: 'incremental' | 'full';
     deadlines: SyncDeadlines;
     /** Gives the name of the user's private collection. */
@@ -34,7 +31,6 @@ export interface SyncOnceOptions {
 export interface SyncRun {
     pull?: PullReport;
     push?: PushReport;
-    sharing?: SharingReport;
     /** Looked up before the push. */
     privateCollection?: PrivateCollectionLookup;
 }
@@ -47,8 +43,8 @@ export interface PrivateCollectionLookup {
 }
 
 /**
- * Runs the steps of one sync in their required order, the pull, the push and then the sharing (which must see
- * what both wrote), each on the state the previous one saved. The caller holds the sync lock. With the documents
+ * Runs the steps of one sync in their required order, the pull and then the push, each on the state the previous
+ * one saved. The caller holds the sync lock. With the documents
  * folder gone while documents are tracked, nothing is pulled: the push reports the missing folder instead.
  */
 export async function syncOnce(options: SyncOnceOptions): Promise<void> {
@@ -77,17 +73,6 @@ export async function syncOnce(options: SyncOnceOptions): Promise<void> {
             documentsDir,
             privateCollectionId: run.privateCollection.id,
             deadline: deadlines.push,
-            now: options.now,
-        });
-    }
-    if (deadlines.sharing != null) {
-        run.sharing = await syncSharing({
-            client,
-            store,
-            state: await store.load(),
-            documentsDir,
-            mode: options.mode,
-            deadline: deadlines.sharing,
             now: options.now,
         });
     }

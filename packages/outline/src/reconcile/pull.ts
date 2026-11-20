@@ -185,7 +185,7 @@ export async function pull(options: PullOptions): Promise<PullReport> {
 
     async function createDocument(remote: OutlineDocument, path: string) {
         const target = await freePath(documentsDir, path);
-        const content = localContent(remote, [], {});
+        const content = localContent(remote, {});
         await writeFileAtomic(join(documentsDir, target), content);
         await store.writeBase(remote.id, content);
         state.documents[remote.id] = {
@@ -195,7 +195,6 @@ export async function pull(options: PullOptions): Promise<PullReport> {
             title: remote.title,
             parentId: remote.parentDocumentId,
             collectionId: remote.collectionId,
-            shared: [],
             localHash: contentHash(content),
         };
         report.written.push(target);
@@ -244,9 +243,9 @@ export async function pull(options: PullOptions): Promise<PullReport> {
         const startHash = contentHash(bytes);
         const local = bytes.toString('utf8');
         const base = await store.readBase(remote.id);
-        // Frontmatter keys other than `outline` and `shared` are local only; Outline's side keeps the agreed ones.
+        // Frontmatter keys other than `outline` are local only; Outline's side keeps the agreed ones.
         const extra = parseDocFile(base ?? local, basename(path)).doc.extra;
-        const theirs = localContent(remote, known.shared, extra);
+        const theirs = localContent(remote, extra);
         const accepted: DocState = {
             ...known,
             revision: remote.revision,

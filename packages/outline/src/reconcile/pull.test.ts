@@ -53,26 +53,26 @@ test('a remote edit replaces an unedited file and becomes the new base, without 
     expect(report.toPush).toEqual([]);
 });
 
-test('a remote edit keeps the share list and local frontmatter keys of the file', async () => {
+test('a remote edit keeps the local frontmatter keys of the file', async () => {
     const world = await setup();
     const offer = world.addDocument('Offer', TEXT);
     await world.pull('incremental');
-    // As the sharing sync would leave it: the list in the file, in the base and in the state.
-    const withShares = `---\noutline: ${offer.id}\nshared: [Ania Kowalska]\nstatus: draft\n---\n# Offer\n\n${TEXT}`;
-    await world.write('wiki/offer.md', withShares);
-    await world.store.writeBase(offer.id, withShares);
+    // As a push would leave it: the key in the file, in the base and in the state's hash.
+    const withKeys = `---\noutline: ${offer.id}\nstatus: draft\n---\n# Offer\n\n${TEXT}`;
+    await world.write('wiki/offer.md', withKeys);
+    await world.store.writeBase(offer.id, withKeys);
     const state = await world.store.load();
     const known = state.documents[offer.id]!;
     await world.store.save({
         ...state,
-        documents: { [offer.id]: { ...known, shared: ['Ania Kowalska'], localHash: contentHash(withShares) } },
+        documents: { [offer.id]: { ...known, localHash: contentHash(withKeys) } },
     });
 
     await world.edit(offer, 'Rewritten in Outline.');
     await world.pull('incremental');
 
     expect(await world.read('wiki/offer.md')).toBe(
-        `---\noutline: ${offer.id}\nshared: [Ania Kowalska]\nstatus: draft\n---\n# Offer\n\nRewritten in Outline.`,
+        `---\noutline: ${offer.id}\nstatus: draft\n---\n# Offer\n\nRewritten in Outline.`,
     );
 });
 

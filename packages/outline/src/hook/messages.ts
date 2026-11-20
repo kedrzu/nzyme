@@ -24,8 +24,8 @@ export interface RenderReportParams {
 
 /**
  * The agent's context after a sync run: what this run did, then the states that last until someone acts (open
- * conflicts, unresolved share names, an unfinished first pull, refused archives, recovered files), then the
- * one-time events. Empty when there is nothing to say.
+ * conflicts, an unfinished first pull, refused archives, recovered files), then the one-time events. Empty when
+ * there is nothing to say.
  */
 export function renderReport(params: RenderReportParams): string {
     const { run, state, documents, recovered } = params;
@@ -45,16 +45,12 @@ export function renderReport(params: RenderReportParams): string {
     const conflicted = new Set(conflicts);
 
     const cameIn = arrayRemoveDuplicates(
-        [
-            ...(run.pull?.written ?? []),
-            ...(run.pull?.moved.map(move => move.to) ?? []),
-            ...(run.sharing?.written.map(change => change.path) ?? []),
-        ],
+        [...(run.pull?.written ?? []), ...(run.pull?.moved.map(move => move.to) ?? [])],
         path => path,
     ).filter(path => !conflicted.has(path));
     if (cameIn.length > 0) {
         paragraphs.push(
-            `Outline sync: these files changed from Outline (other people's edits, moves or sharing): ${docs(cameIn)}. ` +
+            `Outline sync: these files changed from Outline (other people's edits or moves): ${docs(cameIn)}. ` +
                 `Re-read a file before editing it. Tell the user ${plain} only what matters to their work.`,
         );
     }
@@ -112,16 +108,6 @@ export function renderReport(params: RenderReportParams): string {
         paragraphs.push(conflictInstructions(docs(conflicts), plain));
     }
 
-    const unresolved = Object.values(state.documents).flatMap(document =>
-        (document.sharing?.unresolved ?? []).map(entry => `"${entry}" in \`${documents}${document.path}\``),
-    );
-    if (unresolved.length > 0) {
-        paragraphs.push(
-            `Outline sync: these \`shared:\` entries match no Outline user or group (or several): ${limited(unresolved)}. ` +
-                'Ask the user who they meant, then write the full name or e-mail as Outline has it.',
-        );
-    }
-
     if (!state.initialPull.complete) {
         paragraphs.push(
             `Outline sync: the first download from Outline is not finished, so ${documents} is incomplete; ` +
@@ -141,15 +127,6 @@ export function renderReport(params: RenderReportParams): string {
             `Outline sync: ${recovered} holds files rescued from documents gone from Outline, waiting for the user's decision ` +
                 `(restore into a collection folder, or delete): ${listed(params.recoveredFiles.map(path => `${recovered}${path}`))}.`,
         );
-    }
-
-    for (const event of state.events) {
-        if (event.kind === 'share-rejected') {
-            paragraphs.push(
-                `Outline sync: Outline refused to share ${documents}${event.path} with ${event.email} (${event.reason}); ` +
-                    `its \`shared:\` list was set back to what Outline has. Tell the user ${plain}.`,
-            );
-        }
     }
 
     return paragraphs.join('\n\n');

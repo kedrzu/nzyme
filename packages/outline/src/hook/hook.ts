@@ -59,7 +59,6 @@ type FailureKind = 'login' | 'offline' | 'failure';
 /** Steps start no new document after these offsets from the hook's start, keeping a run under 40 s of the 60 s timeout every hook has. */
 const PULL_BUDGET_MS = 20 * 1000;
 const PUSH_BUDGET_MS = 32 * 1000;
-const SHARING_BUDGET_MS = 38 * 1000;
 const STOP_LOCK_WAIT_MS = 15 * 1000;
 const SESSION_END_LOCK_WAIT_MS = 5 * 1000;
 const PROMPT_INTERVAL_MS = 60 * 1000;
@@ -73,12 +72,12 @@ const LOG_LIMIT_BYTES = 1024 * 1024;
  * and prompt, a Stop block for a conflict the push just created, otherwise nothing. Never throws: a sync must
  * never break the session.
  *
- * - session-start: a full pass (pull, push, sharing), skipped while another session syncs.
+ * - session-start: a full pass (pull and push), skipped while another session syncs.
  * - prompt: at most once a minute, an incremental pass (a full one every 15 minutes), skipped while another
  *   session syncs. Only these two pull: a file never changes under the agent in the middle of its turn. A
  *   skipped run still reminds the agent of open conflicts and the other states that last until someone acts.
- * - stop: waits up to 15 s for the lock, then push and sharing; blocks once for a conflict it created.
- * - session-end: push and sharing; what it would say stays in the state for the next session.
+ * - stop: waits up to 15 s for the lock, then the push; blocks once for a conflict it created.
+ * - session-end: the push; what it would say stays in the state for the next session.
  */
 export async function runHook(options: RunHookOptions): Promise<string> {
     try {
@@ -154,7 +153,6 @@ async function runLocked({ options, input, workspace, started, now }: RunLockedP
         const deadlines: SyncDeadlines = {
             pull: pulls ? started + PULL_BUDGET_MS : undefined,
             push: started + PUSH_BUDGET_MS,
-            sharing: started + SHARING_BUDGET_MS,
         };
         await syncOnce({
             client,

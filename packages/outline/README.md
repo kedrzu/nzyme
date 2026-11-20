@@ -55,7 +55,6 @@ A file is a Markdown body under a `# ` title line, with optional frontmatter:
 ```md
 ---
 outline: 3f2c9a4e-…
-shared: [Ana Nowak, ana@example.com]
 ---
 
 # Offer for the clinic
@@ -80,15 +79,16 @@ Deletions:
 
 Sharing:
 
-- `shared:` lists the people a document is directly shared with, by name or e-mail (group names also resolve). Adding or removing an entry in the file adds or removes the membership; Outline's list is written back on a full pass.
-- Only direct memberships are listed; access through a collection or a parent document is not.
-- An entry matching no user or several users stays in the file and is reported every run. An entry Outline refuses is reported once and the list returns to Outline's.
+- `outline share <file> <name>...` shares a synced document with users (exact full name or e-mail) or groups (exact name), with edit rights; `outline unshare <file> <name>...` removes those direct shares; `outline shares <file>` lists them. Each prints the document's direct shares after.
+- Only direct shares are listed and changed; access through a collection or a parent document is not.
+- A name matching nobody or several changes nothing; a file without an `outline:` id is not in Outline yet and is refused.
+- A `shared:` key left in a file by an earlier version is an ordinary local key: kept, never read as shares.
 
 Cadence:
 
-- Session start: a full pass (pull, push, sharing). Prompt: an incremental pull at most once a minute, a full pass every 15 minutes. Stop and session end: push. A hook skips quietly while another session syncs.
-- The incremental pull asks Outline only for documents changed since the last pull (1 to 2 requests). Only a full pass notices archived or deleted documents, lost access, sharing changes and new collections.
-- Requests are limited to 100 per minute, 25 for creates; a full pass reads the share lists of at most 20 documents it has no local edit for, so a large workspace is covered over several passes.
+- Session start: a full pass (pull and push). Prompt: an incremental pull at most once a minute, a full pass every 15 minutes. Stop and session end: push. A hook skips quietly while another session syncs.
+- The incremental pull asks Outline only for documents changed since the last pull (1 to 2 requests). Only a full pass notices archived or deleted documents, lost access, documents newly shared with the user and new collections.
+- Requests are limited to 100 per minute, 25 for creates.
 - Nothing syncs while Claude Code is closed, and nothing is pulled during a turn.
 
 ## Client
@@ -148,7 +148,7 @@ await execute({
 });
 ```
 
-- `outline login`, `outline pull` (a full pull that finishes the first download), `outline sync` (pull, push, sharing) and `outline hook <session-start|prompt|stop|session-end>` for Claude Code hooks.
+- `outline login`, `outline pull` (a full pull that finishes the first download), `outline sync` (pull and push), `outline share|unshare|shares <file>` and `outline hook <session-start|prompt|stop|session-end>` for Claude Code hooks.
 - The documents (`documents/`, `recovered/`) live in the repo's main checkout and the state in `<git-common-dir>/outline-sync/`, so every worktree shares one sync.
 - Only session start and prompt pull (a prompt at most once a minute, a full pass every 15 minutes); stop and session end push. Both skip quietly while another session syncs.
 - `hook` always exits 0. It prints `additionalContext` for the agent, or a Stop block once for a conflict its push created; a missing login or an unreachable Outline is told once per session, other failures go to `hook.log` in the state directory.

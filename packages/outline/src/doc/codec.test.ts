@@ -5,7 +5,7 @@ import type { DocFile } from './codec.js';
 
 const FILE = `---
 outline: 7f3c1b2e-0000-4000-8000-000000000001
-shared: [Franek Nowak, zespol, ania@healed.pl]
+status: draft
 ---
 # Zażółć gęślą jaźń
 
@@ -23,22 +23,26 @@ test('frontmatter never appears in the text sent to Outline: the body starts aft
     expect(doc.text).not.toContain('outline:');
     expect(doc.text).not.toContain('---');
     expect(doc.id).toBe('7f3c1b2e-0000-4000-8000-000000000001');
-    expect(doc.shared).toEqual(['Franek Nowak', 'zespol', 'ania@healed.pl']);
+    expect(doc.extra).toEqual({ status: 'draft' });
 });
 
 test('a file the sync wrote reads back to the same document and serialises to the same bytes', () => {
     const docs: DocFile[] = [
         {
             id: 'abc',
-            shared: ['Ania, Kowalska', 'true', 'x: y'],
             title: 'Tytuł: "z" # znakami',
             text: 'a\n\n\nb',
             extra: {},
         },
-        { id: 'abc', shared: [], title: 'T', text: '', extra: { tags: ['a', 'b'], owner: { name: 'Ola' }, n: 3 } },
-        { shared: [], title: 'Nowy', text: '\n\nzaczyna się pustą linią\n', extra: {} },
-        { id: '12345', shared: [], title: '  spacje  ', text: 'x', extra: {} },
-        { id: 'abc', shared: ['a'], title: 'Z kodem', text: '```\n---\n# nie tytuł\n```\n', extra: {} },
+        { id: 'abc', title: 'T', text: '', extra: { tags: ['a', 'b'], owner: { name: 'Ola' }, n: 3 } },
+        { title: 'Nowy', text: '\n\nzaczyna się pustą linią\n', extra: {} },
+        { id: '12345', title: '  spacje  ', text: 'x', extra: {} },
+        {
+            id: 'abc',
+            title: 'Z kodem',
+            text: '```\n---\n# nie tytuł\n```\n',
+            extra: { shared: ['Ania, Kowalska', 'true', 'x: y'] },
+        },
     ];
 
     for (const doc of docs) {
@@ -55,11 +59,11 @@ test('the documented file format is what gets written', () => {
     expect(serializeDocFile(doc)).toBe(FILE);
 });
 
-test('a brand-new file without frontmatter has no id and nothing shared, and none is written for it', () => {
+test('a brand-new file without frontmatter has no id and no other keys, and none is written for it', () => {
     const { doc, issues } = parseDocFile('# Nowa notatka\n\ntreść\n', 'nowa.md');
 
     expect(issues).toEqual([]);
-    expect(doc).toEqual({ id: undefined, shared: [], title: 'Nowa notatka', text: 'treść\n', extra: {} });
+    expect(doc).toEqual({ id: undefined, title: 'Nowa notatka', text: 'treść\n', extra: {} });
     expect(serializeDocFile(doc)).toBe('# Nowa notatka\n\ntreść\n');
 });
 
@@ -74,8 +78,7 @@ test('a missing # line is reported and the title comes from the file name, with 
 test('invalid frontmatter is reported and the body still comes back intact, never dropped with it', () => {
     const cases = [
         '---\noutline: [unclosed\n---\n# T\n\nbody\n',
-        '---\nshared: Ania\n---\n# T\n\nbody\n',
-        '---\nshared: [1, 2]\n---\n# T\n\nbody\n',
+        '---\noutline: [1, 2]\n---\n# T\n\nbody\n',
         '---\n- a\n- b\n---\n# T\n\nbody\n',
         '---\noutline: abc\n# T\n\nbody\n',
     ];
@@ -83,7 +86,7 @@ test('invalid frontmatter is reported and the body still comes back intact, neve
     for (const file of cases) {
         const { doc, issues } = parseDocFile(file, 'x.md');
         expect(issues.map(issue => issue.kind)).toContain('invalid-frontmatter');
-        expect(doc.shared).toEqual([]);
+        expect(doc.extra).toEqual({});
         if (file.includes('---\n# T')) {
             expect(doc.title).toBe('T');
             expect(doc.text).toBe('body\n');
@@ -91,4 +94,13 @@ test('invalid frontmatter is reported and the body still comes back intact, neve
             expect(doc.text).toContain('body');
         }
     }
+});
+
+test('a `shared:` list left by an older version is an ordinary local key: kept in the file, never read as shares', () => {
+    const file = '---\noutline: abc\nshared: [Ania Kowalska]\n---\n# T\n\nbody\n';
+    const { doc, issues } = parseDocFile(file, 'x.md');
+
+    expect(issues).toEqual([]);
+    expect(doc.extra).toEqual({ shared: ['Ania Kowalska'] });
+    expect(parseDocFile(serializeDocFile(doc), 'x.md').doc).toEqual(doc);
 });

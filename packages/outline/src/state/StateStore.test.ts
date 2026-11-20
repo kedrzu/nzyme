@@ -34,7 +34,6 @@ test('state and bases round-trip, and a deleted base reads as null', async () =>
                 title: 'B',
                 parentId: null,
                 collectionId: 'c1',
-                shared: ['ania@example.com'],
                 localHash: 'h',
                 conflictRevision: 4,
             },
@@ -74,7 +73,7 @@ test('a process killed while saving never leaves a half-written state.json', asy
         for (let i = 0; i < 4000; i++) {
             state.documents['id-' + i] = {
                 id: 'id-' + i, path: 'folder/doc-' + i + '.md', revision: i, title: 'Document ' + i,
-                parentId: null, collectionId: 'c', shared: ['ania@example.com'], localHash: 'x'.repeat(32),
+                parentId: null, collectionId: 'c', localHash: 'x'.repeat(32),
             };
         }
         console.log('ready');

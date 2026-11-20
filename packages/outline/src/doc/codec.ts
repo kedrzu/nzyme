@@ -1,22 +1,20 @@
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
-import { isSeq, parseDocument, stringify, Document } from 'yaml';
+import { parseDocument, stringify, Document } from 'yaml';
 
 /** A local document file as the sync sees it. */
 export interface DocFile {
     /** The Outline document id; absent for a file not pushed yet. */
     id?: string;
-    /** Who the document is shared with: names, group names, e-mails. */
-    shared: string[];
     title: string;
     /** The Markdown body exactly as sent to Outline: no title, no frontmatter. */
     text: string;
-    /** Frontmatter keys other than `outline` and `shared`, carried through untouched. */
+    /** Frontmatter keys other than `outline`, carried through untouched (a `shared:` key from older versions too). */
     extra: Record<string, unknown>;
 }
 
 export interface DocIssue {
     /**
-     * `invalid-frontmatter`: the caller must not push sharing changes from this file.
+     * `invalid-frontmatter`: the frontmatter could not be read, so it holds neither the id nor the other keys.
      * `missing-title`: the title was derived from the file name.
      */
     kind: 'invalid-frontmatter' | 'missing-title';
@@ -30,7 +28,6 @@ export interface ParsedDocFile {
 
 interface Frontmatter {
     id?: string;
-    shared: string[];
     extra: Record<string, unknown>;
 }
 
@@ -52,7 +49,7 @@ export function parseDocFile(content: string, fileName: string): ParsedDocFile {
     const frontmatter = split.yaml == null ? emptyFrontmatter() : parseFrontmatter(split.yaml, issues);
     const { title, text } = splitTitle(split.body, fileName, issues);
     return {
-        doc: { id: frontmatter.id, shared: frontmatter.shared, title, text, extra: frontmatter.extra },
+        doc: { id: frontmatter.id, title, text, extra: frontmatter.extra },
         issues,
     };
 }
@@ -70,7 +67,7 @@ export function serializeDocFile(doc: DocFile): string {
 }
 
 function emptyFrontmatter(): Frontmatter {
-    return { shared: [], extra: {} };
+    return { extra: {} };
 }
 
 function splitFrontmatter(content: string): SplitFile {
@@ -116,18 +113,11 @@ function parseFrontmatter(source: string, issues: DocIssue[]): Frontmatter {
     if (!isPlainObject(data)) {
         return invalid('The frontmatter must be a list of `key: value` lines.');
     }
-    const { outline, shared, ...extra } = data;
+    const { outline, ...extra } = data;
     if (outline != null && typeof outline !== 'string') {
         return invalid('`outline` must be a document id.');
     }
-    if (shared != null && !isStringList(shared)) {
-        return invalid('`shared` must be a list of names, e.g. [Ania Kowalska, zespol].');
-    }
-    return { id: outline ?? undefined, shared: shared ?? [], extra };
-}
-
-function isStringList(value: unknown): value is string[] {
-    return Array.isArray(value) && value.every(item => typeof item === 'string');
+    return { id: outline ?? undefined, extra };
 }
 
 function splitTitle(body: string, fileName: string, issues: DocIssue[]): { title: string; text: string } {
@@ -155,19 +145,11 @@ function serializeFrontmatter(doc: DocFile): string {
     if (doc.id != null) {
         ordered['outline'] = doc.id;
     }
-    if (doc.shared.length > 0) {
-        ordered['shared'] = doc.shared;
-    }
     Object.assign(ordered, doc.extra);
     if (Object.keys(ordered).length === 0) {
         return '';
     }
 
-    const document = new Document(ordered);
-    const shared = document.get('shared', true);
-    if (isSeq(shared)) {
-        shared.flow = true;
-    }
-    const yaml = stringify(document, { lineWidth: 0, flowCollectionPadding: false });
+    const yaml = stringify(new Document(ordered), { lineWidth: 0, flowCollectionPadding: false });
     return `---\n${yaml}---\n`;
 }

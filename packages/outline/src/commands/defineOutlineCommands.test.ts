@@ -1,6 +1,6 @@
-import { expect, test } from 'bun:test';
+import { expect, spyOn, test } from 'bun:test';
 import { Cli } from 'clipanion';
-import { mkdtemp, realpath } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough, Readable } from 'node:stream';
@@ -9,6 +9,8 @@ import type { CommandContext } from '@nzyme/cli-core/Command.js';
 import { createContainer } from '@nzyme/ioc/Container.js';
 import type { Keychain } from '@nzyme/secrets/osKeychain.js';
 
+import { outlineTokenStore } from '../auth/tokens.js';
+import { fakeOutline } from '../outline/fakeOutline.js';
 import { defineOutlineCommands } from './defineOutlineCommands.js';
 
 const ACCESS_TOKEN = 'ol_at_SECRET-access';
@@ -52,6 +54,88 @@ test('login never prints a token, the authorization code or the PKCE verifier', 
     }
 });
 
+test('share, shares and unshare change and print the direct shares of the document a file is synced with', async () => {
+    const world = await sharingWorld();
+    try {
+        const shared = await world.run(['outline', 'share', 'documents/offer.md', 'BOB@example.test', 'team']);
+        expect(shared.exitCode).toBe(0);
+        expect(shared.output).toBe(
+            'Shared directly with:\n- Bob <bob@example.test> (read_write)\n- group Team (read_write)\n',
+        );
+
+        const unshared = await world.run(['outline', 'unshare', 'documents/offer.md', 'Bob']);
+        expect(unshared.output).toBe('Shared directly with:\n- group Team (read_write)\n');
+        expect((await world.run(['outline', 'shares', 'documents/offer.md'])).output).toBe(
+            'Shared directly with:\n- group Team (read_write)\n',
+        );
+    } finally {
+        await world.close();
+    }
+});
+
+test('a name matching nobody, or several, changes nothing; a file not in Outline yet fails before any call', async () => {
+    const world = await sharingWorld();
+    world.outline.addUser({ name: 'Bob', email: 'bob2@example.test' });
+    try {
+        const unknown = await world.run(['outline', 'share', 'documents/offer.md', 'team', 'Nobody']);
+        expect(unknown.exitCode).toBe(1);
+        expect(unknown.output).toContain('No Outline user or group has the name or e-mail "Nobody"');
+        const ambiguous = await world.run(['outline', 'share', 'documents/offer.md', 'Bob']);
+        expect(ambiguous.output).toContain('More than one Outline user or group is named "Bob"; use an e-mail.');
+        expect(world.outline.requests.map(request => request.method)).not.toContain('documents.add_group');
+
+        await writeFile(join(world.repo, 'documents', 'new.md'), '# New\n\nNot sent yet.\n');
+        const requests = world.outline.requests.length;
+        const unsynced = await world.run(['outline', 'shares', 'documents/new.md']);
+        expect(unsynced.exitCode).toBe(1);
+        expect(unsynced.output).toContain('documents/new.md is not in Outline yet');
+        expect(world.outline.requests.length).toBe(requests);
+    } finally {
+        await world.close();
+    }
+});
+
+/** A git repo with `documents/offer.md` synced with a document of the fake Outline, served on loopback and logged in as Ana. */
+async function sharingWorld() {
+    const outline = fakeOutline();
+    const ana = outline.addUser({ name: 'Ana', email: 'ana@example.test' });
+    const bob = outline.addUser({ name: 'Bob', email: 'bob@example.test' });
+    outline.addGroup({ name: 'Team', members: [bob] });
+    const wiki = outline.addCollection({ name: 'Wiki', permission: 'read_write' });
+    const offer = outline.addDocument({ collection: wiki, title: 'Offer', createdBy: ana });
+    const server = Bun.serve({
+        hostname: '127.0.0.1',
+        port: 0,
+        async fetch(request) {
+            return outline.fetch(request.url, { headers: request.headers, body: await request.text() });
+        },
+    });
+    const url = `http://127.0.0.1:${server.port}`;
+    const keychain = memoryKeychain();
+    await outlineTokenStore({ url, keychain }).write({
+        accessToken: ana.token,
+        accessTokenExpiresAt: Date.now() + 60 * 60 * 1000,
+        refreshToken: REFRESH_TOKEN,
+    });
+
+    const repo = await mkdtemp(join(await realpath(tmpdir()), 'outline-share-cmd-'));
+    expect((await Bun.$`git init --quiet ${repo}`.nothrow()).exitCode).toBe(0);
+    await mkdir(join(repo, 'documents'));
+    await writeFile(join(repo, 'documents', 'offer.md'), `---\noutline: ${offer.id}\n---\n# Offer\n`);
+    const originalCwd = process.cwd();
+    process.chdir(repo);
+    return {
+        outline,
+        repo,
+        run: (args: string[]) => run(args, { url, clientId: 'client-1', keychain }),
+        close: () => {
+            process.chdir(originalCwd);
+            void server.stop(true);
+            return Promise.resolve();
+        },
+    };
+}
+
 async function run(args: string[], options: { url: string; clientId: string } & Partial<StubOptions>) {
     const stdoutStream = new PassThrough();
     const stderrStream = new PassThrough();
@@ -66,13 +150,26 @@ async function run(args: string[], options: { url: string; clientId: string } & 
     for (const command of defineOutlineCommands({ ...options, privateCollection: user => user.name })) {
         cli.register(command);
     }
-    const exitCode = await cli.run(args, {
-        container: createContainer(),
-        stdin: Readable.from(['']),
-        stdout: stdoutStream,
-        stderr: stderrStream,
+    // A failing command reports through `onError` and exits the process; the exit throws instead, and clipanion
+    // turns that into exit code 1.
+    const exit = spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit');
     });
-    return { exitCode, output };
+    try {
+        const exitCode = await cli.run(args, {
+            container: createContainer(),
+            stdin: Readable.from(['']),
+            stdout: stdoutStream,
+            stderr: stderrStream,
+            onError: failure => {
+                collect(failure instanceof Error ? failure.message : failure);
+                return null;
+            },
+        });
+        return { exitCode, output };
+    } finally {
+        exit.mockRestore();
+    }
 }
 
 type StubOptions = Pick<Parameters<typeof defineOutlineCommands>[0], 'keychain' | 'openBrowser'>;

@@ -14,25 +14,12 @@ export interface DocState {
     parentId: string | null;
     /** `null` for a draft outside any collection. */
     collectionId: string | null;
-    /** The share list as sync last wrote it into the file's frontmatter. */
-    shared: string[];
     /** Hash of the local file as sync last wrote or read it; a different hash means a local edit. */
     localHash: string;
-    /** What the sharing sync remembers about the document's share list. */
-    sharing?: SharingState;
     /** The Outline revision an open conflict was merged against. */
     conflictRevision?: number;
     /** The file's stat when it was last seen to hash to `localHash`; a file still matching it is not read again. */
     fileStat?: FileStat;
-}
-
-export interface SharingState {
-    /** Entries of the file's `shared:` list that match no user or group (or several); they stay in the file. */
-    unresolved: string[];
-    /** ISO time Outline's list was last compared with `DocState.shared`. */
-    checkedAt?: string;
-    /** The file's stat when its list was last seen to be settled; a file still matching it is not read again. */
-    stat?: FileStat;
 }
 
 /** What identifies an unchanged file without reading it: an edit changes the mtime, an atomic save the inode too. */
@@ -43,9 +30,7 @@ export interface FileStat {
 }
 
 /** A one-time fact for the agent, removed by whoever reports it. */
-export type SyncEvent =
-    | { kind: 'recovered'; path: string }
-    | { kind: 'share-rejected'; path: string; email: string; reason: string };
+export type SyncEvent = { kind: 'recovered'; path: string };
 
 export interface InitialPull {
     complete: boolean;

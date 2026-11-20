@@ -69,7 +69,7 @@ export function defineDriveMetaCommand(params: DriveCommandParams): CommandClass
             const client = await this.container.resolve(DriveClientFactory)(params, this.cli.binaryName, this.account);
             let removeParents: string | undefined;
             if (addParents) {
-                const current = await getDriveFile(client, fileId, { fields: 'parents' });
+                const current = await getDriveFile({ client, fileId, fields: 'parents' });
                 removeParents = (current.parents ?? []).filter(parent => parent !== addParents).join(',') || undefined;
             }
 

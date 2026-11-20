@@ -7,8 +7,10 @@ import { SHORTCUT } from './formats.js';
 export const FILE_FIELDS =
     'id, name, mimeType, size, modifiedTime, parents, driveId, webViewLink, trashed, starred, shortcutDetails(targetId, targetMimeType)';
 
-/** Options of {@link getDriveFile}. */
-export interface GetDriveFileOptions {
+/** Params of {@link getDriveFile}. */
+export interface GetDriveFileParams {
+    client: DriveClient;
+    fileId: string;
     /** Default {@link FILE_FIELDS}. */
     fields?: string;
     /** Read the target of a shortcut instead of the shortcut. */
@@ -18,15 +20,15 @@ export interface GetDriveFileOptions {
 /**
  * A file's metadata, in any drive the account can reach.
  */
-export async function getDriveFile(
-    { drive, call }: DriveClient,
-    fileId: string,
-    options: GetDriveFileOptions = {},
-): Promise<drive_v3.Schema$File> {
-    const fields = options.fields ?? FILE_FIELDS;
+export async function getDriveFile({
+    client: { drive, call },
+    fileId,
+    fields = FILE_FIELDS,
+    followShortcut,
+}: GetDriveFileParams): Promise<drive_v3.Schema$File> {
     const file = await drive.files.get({ fileId, fields, supportsAllDrives: true }, call);
     const target = file.data.shortcutDetails?.targetId;
-    if (options.followShortcut && file.data.mimeType === SHORTCUT && target) {
+    if (followShortcut && file.data.mimeType === SHORTCUT && target) {
         const followed = await drive.files.get({ fileId: target, fields, supportsAllDrives: true }, call);
         return followed.data;
     }

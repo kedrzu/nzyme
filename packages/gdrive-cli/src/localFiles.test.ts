@@ -45,28 +45,36 @@ test('mimeTypeOf knows Markdown and falls back to octet-stream', () => {
 });
 
 test('resolveWritablePath writes into a directory under the Drive name, creating missing ones', async () => {
-    expect(await resolveWritablePath('downloads/2026/', 'Umowa.pdf', access)).toBe(
+    expect(await resolveWritablePath({ input: 'downloads/2026/', defaultName: 'Umowa.pdf', access })).toBe(
         path.join(repo, 'downloads', '2026', 'Umowa.pdf'),
     );
-    expect(await resolveWritablePath('obsidian/Projekty', 'a/b.docx', access)).toBe(
+    expect(await resolveWritablePath({ input: 'obsidian/Projekty', defaultName: 'a/b.docx', access })).toBe(
         path.join(vault, 'Projekty', 'a_b.docx'),
     );
-    expect(await resolveWritablePath('out/x.txt', 'ignored', access)).toBe(path.join(repo, 'out', 'x.txt'));
+    expect(await resolveWritablePath({ input: 'out/x.txt', defaultName: 'ignored', access })).toBe(
+        path.join(repo, 'out', 'x.txt'),
+    );
 });
 
 test('resolveWritablePath does not replace a file unless asked', async () => {
-    await expect(resolveWritablePath('.context/outbox/raport.pdf', 'x', access)).rejects.toThrow(/already exists/);
-    expect(await resolveWritablePath('.context/outbox/raport.pdf', 'x', access, true)).toBe(
-        path.join(repo, '.context', 'outbox', 'raport.pdf'),
-    );
+    await expect(
+        resolveWritablePath({ input: '.context/outbox/raport.pdf', defaultName: 'x', access }),
+    ).rejects.toThrow(/already exists/);
+    expect(
+        await resolveWritablePath({ input: '.context/outbox/raport.pdf', defaultName: 'x', access, overwrite: true }),
+    ).toBe(path.join(repo, '.context', 'outbox', 'raport.pdf'));
 });
 
 test('resolveWritablePath refuses targets outside the roots, through symlinks, and secrets', async () => {
-    await expect(resolveWritablePath('../x.txt', 'x', access)).rejects.toThrow(/outside/);
-    await expect(resolveWritablePath('escape/new/x.txt', 'x', access)).rejects.toThrow(/outside/);
+    await expect(resolveWritablePath({ input: '../x.txt', defaultName: 'x', access })).rejects.toThrow(/outside/);
+    await expect(resolveWritablePath({ input: 'escape/new/x.txt', defaultName: 'x', access })).rejects.toThrow(
+        /outside/,
+    );
     await expect(fs.stat(path.join(tmp, 'new'))).rejects.toThrow();
-    await expect(resolveWritablePath('leak.txt', 'x', access, true)).rejects.toThrow(/not a regular file/);
-    await expect(resolveWritablePath('.env.local', 'x', access)).rejects.toThrow(/secrets/);
+    await expect(resolveWritablePath({ input: 'leak.txt', defaultName: 'x', access, overwrite: true })).rejects.toThrow(
+        /not a regular file/,
+    );
+    await expect(resolveWritablePath({ input: '.env.local', defaultName: 'x', access })).rejects.toThrow(/secrets/);
 });
 
 test('safeFileName strips separators, control characters and leading dots', () => {

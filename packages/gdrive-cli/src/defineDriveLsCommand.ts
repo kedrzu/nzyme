@@ -1,4 +1,4 @@
-import { Option } from '@nzyme/cli-core';
+import { Option, parseCount } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
@@ -6,7 +6,6 @@ import { DriveClientFactory } from './DriveClientFactory.js';
 import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { fileIdFrom, quote } from './formats.js';
 import { listDriveFiles } from './listDriveFiles.js';
-import { parseCount } from './utils/parseCount.js';
 
 /**
  * Defines `<prefix> ls [folder] [--limit] [--page-token]`: a folder's direct children, folders first,
@@ -36,7 +35,7 @@ export function defineDriveLsCommand(params: DriveCommandParams): CommandClass {
         account = Option.String('--account', { description: 'The account to act as; needed when several are usable' });
 
         override async run() {
-            const pageSize = parseCount(this.limit, '--limit', 1000);
+            const pageSize = parseCount({ value: this.limit, option: '--limit', max: 1000 });
             const folder = this.folder ? fileIdFrom(this.folder, 'folder') : 'root';
             const client = await this.container.resolve(DriveClientFactory)(params, this.cli.binaryName, this.account);
 

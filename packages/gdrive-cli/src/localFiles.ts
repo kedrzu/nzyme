@@ -70,17 +70,26 @@ export function mimeTypeOf(filename: string): string {
     return Bun.file(filename).type.split(';')[0] || 'application/octet-stream';
 }
 
+/** Params of {@link resolveWritablePath}. */
+export interface ResolveWritablePathParams {
+    /** A file path, or a directory (an existing one, or a path ending in `/`) to put `defaultName` in. */
+    input: string;
+    defaultName: string;
+    access: FileAccess;
+    /** Replace an existing file; refused by default. */
+    overwrite?: boolean;
+}
+
 /**
- * Where a download may be written. `input` is a file path, or a directory (an existing one, or a path
- * ending in `/`) to put `defaultName` in. Missing parent directories are created; an existing file is
+ * Where a download may be written. Missing parent directories are created; an existing file is
  * replaced only with `overwrite`.
  */
-export async function resolveWritablePath(
-    input: string,
-    defaultName: string,
-    access: FileAccess,
+export async function resolveWritablePath({
+    input,
+    defaultName,
+    access,
     overwrite = false,
-): Promise<string> {
+}: ResolveWritablePathParams): Promise<string> {
     const p = checkPathInput(input);
     let target = path.resolve(access.baseDir, p);
     const isDir = /[\\/]$/.test(p) || (await isDirectory(target));

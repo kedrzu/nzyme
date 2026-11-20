@@ -76,10 +76,12 @@ test('refuses any other file reference', () => {
 });
 
 test('search turns plain words into a full-text search and leaves syntax alone', () => {
-    expect(searchQuery('faktura maj')).toBe("fullText contains 'faktura maj' and trashed = false");
-    expect(searchQuery("name contains 'x'")).toBe("(name contains 'x') and trashed = false");
-    expect(searchQuery('trashed = true')).toBe('(trashed = true)');
-    expect(searchQuery(undefined, 'F1', FOLDER)).toBe(`'F1' in parents and mimeType = '${FOLDER}' and trashed = false`);
+    expect(searchQuery({ query: 'faktura maj' })).toBe("fullText contains 'faktura maj' and trashed = false");
+    expect(searchQuery({ query: "name contains 'x'" })).toBe("(name contains 'x') and trashed = false");
+    expect(searchQuery({ query: 'trashed = true' })).toBe('(trashed = true)');
+    expect(searchQuery({ folderId: 'F1', mimeType: FOLDER })).toBe(
+        `'F1' in parents and mimeType = '${FOLDER}' and trashed = false`,
+    );
 });
 
 test('quotes escape quotes and backslashes', () => {

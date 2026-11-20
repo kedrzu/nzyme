@@ -1,7 +1,8 @@
+import { formatTsvLine } from '@nzyme/cli-core';
+
 import type { DriveClient } from './DriveClientFactory.js';
 import { typeLabel } from './formats.js';
 import { FILE_FIELDS } from './getDriveFile.js';
-import { formatTsvLine } from './utils/formatTsvLine.js';
 
 /** Options of {@link listDriveFiles}. */
 export interface ListDriveFilesOptions {

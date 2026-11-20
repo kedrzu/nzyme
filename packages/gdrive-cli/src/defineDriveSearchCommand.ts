@@ -1,4 +1,4 @@
-import { Option, UsageError } from '@nzyme/cli-core';
+import { Option, parseCount, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
@@ -6,7 +6,6 @@ import { DriveClientFactory } from './DriveClientFactory.js';
 import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { fileIdFrom, mimeTypeFrom, searchQuery } from './formats.js';
 import { listDriveFiles } from './listDriveFiles.js';
-import { parseCount } from './utils/parseCount.js';
 
 /**
  * Defines `<prefix> search [query] [--folder] [--type] [--limit] [--page-token]`: one tab-separated
@@ -43,16 +42,16 @@ export function defineDriveSearchCommand(params: DriveCommandParams): CommandCla
         account = Option.String('--account', { description: 'The account to act as; needed when several are usable' });
 
         override async run() {
-            const pageSize = parseCount(this.limit, '--limit', 100);
+            const pageSize = parseCount({ value: this.limit, option: '--limit', max: 100 });
             if (!this.query && !this.folder && !this.type) {
                 throw new UsageError('Pass a query, --folder or --type.');
             }
 
-            const q = searchQuery(
-                this.query,
-                this.folder && fileIdFrom(this.folder, '--folder'),
-                this.type && mimeTypeFrom(this.type),
-            );
+            const q = searchQuery({
+                query: this.query,
+                folderId: this.folder && fileIdFrom(this.folder, '--folder'),
+                mimeType: this.type && mimeTypeFrom(this.type),
+            });
             const client = await this.container.resolve(DriveClientFactory)(params, this.cli.binaryName, this.account);
             // Drive refuses an order together with a full-text search.
             const orderBy = q.includes('fullText contains') ? undefined : 'modifiedTime desc';

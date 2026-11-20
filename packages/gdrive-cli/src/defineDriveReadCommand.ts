@@ -1,7 +1,7 @@
 import type { Readable } from 'node:stream';
 import { buffer } from 'node:stream/consumers';
 
-import { Option, UsageError } from '@nzyme/cli-core';
+import { formatHeaderBlock, Option, parseCount, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { assert } from '@nzyme/utils/assert.js';
@@ -10,8 +10,6 @@ import { DriveClientFactory } from './DriveClientFactory.js';
 import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { fileIdFrom, FOLDER, isNative, isTextMime, textExport, typeLabel } from './formats.js';
 import { getDriveFile } from './getDriveFile.js';
-import { formatHeaderBlock } from './utils/formatHeaderBlock.js';
-import { parseCount } from './utils/parseCount.js';
 
 /** Drive caps exports at about 10 MB; a regular text file over this is a download, not a read. */
 const MAX_TEXT_BYTES = 10 * 1024 * 1024;
@@ -44,10 +42,10 @@ export function defineDriveReadCommand(params: DriveCommandParams): CommandClass
 
         override async run() {
             const fileId = fileIdFrom(this.file);
-            const max = parseCount(this.maxChars, '--max-chars');
+            const max = parseCount({ value: this.maxChars, option: '--max-chars' });
             const client = await this.container.resolve(DriveClientFactory)(params, this.cli.binaryName, this.account);
             const { drive, call } = client;
-            const file = await getDriveFile(client, fileId, { followShortcut: true });
+            const file = await getDriveFile({ client, fileId, followShortcut: true });
             const id = file.id;
             const mimeType = file.mimeType ?? '';
             assert(id, `Drive returned ${fileId} without its id`);

@@ -55,7 +55,7 @@ export function defineDriveDownloadCommand(params: DriveCommandParams): CommandC
             const fileId = fileIdFrom(this.file);
             const client = await this.container.resolve(DriveClientFactory)(params, this.cli.binaryName, this.account);
             const { drive, call } = client;
-            const file = await getDriveFile(client, fileId, { followShortcut: true });
+            const file = await getDriveFile({ client, fileId, followShortcut: true });
             const id = file.id;
             const mimeType = file.mimeType ?? '';
             assert(id, `Drive returned ${fileId} without its id`);
@@ -78,12 +78,12 @@ export function defineDriveDownloadCommand(params: DriveCommandParams): CommandC
             // An allowed root counts only once it exists.
             const defaultDir = downloadsDir(files);
             await fs.mkdir(defaultDir, { recursive: true });
-            const target = await resolveWritablePath(
-                this.to ?? defaultDir + path.sep,
-                filename,
-                driveFileAccess(files),
-                this.overwrite,
-            );
+            const target = await resolveWritablePath({
+                input: this.to ?? defaultDir + path.sep,
+                defaultName: filename,
+                access: driveFileAccess(files),
+                overwrite: this.overwrite,
+            });
 
             let body: Readable;
             if (exportType) {

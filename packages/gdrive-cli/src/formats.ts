@@ -229,12 +229,21 @@ export function quote(value: string): string {
     return `'${value.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`;
 }
 
+/** Params of {@link searchQuery}. */
+export interface SearchQueryParams {
+    /** Drive query syntax, or a full-text phrase. */
+    query?: string;
+    /** Only the direct children of this folder. */
+    folderId?: string;
+    mimeType?: string;
+}
+
 /**
  * The Drive query of `search`: Drive query syntax passes through, anything else is a full-text phrase.
  * Trashed files are left out unless the query names `trashed`.
  * @__NO_SIDE_EFFECTS__
  */
-export function searchQuery(query: string | undefined, folderId?: string, mimeType?: string): string {
+export function searchQuery({ query, folderId, mimeType }: SearchQueryParams): string {
     const parts: string[] = [];
     const q = query?.trim();
     if (q) {

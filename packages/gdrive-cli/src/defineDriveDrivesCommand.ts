@@ -1,10 +1,9 @@
-import { Option } from '@nzyme/cli-core';
+import { formatTsvLine, Option } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
 import { DriveClientFactory } from './DriveClientFactory.js';
 import type { DriveCommandParams } from './DriveCommandsOptions.js';
-import { formatTsvLine } from './utils/formatTsvLine.js';
 
 /** Shared drives listed at most; past this the list says it stopped. */
 const MAX_DRIVES = 1000;

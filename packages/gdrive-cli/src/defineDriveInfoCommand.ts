@@ -1,6 +1,6 @@
 import type { drive_v3 } from '@googleapis/drive';
 
-import { Option } from '@nzyme/cli-core';
+import { formatHeaderBlock, Option } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 
@@ -9,7 +9,6 @@ import { DriveClientFactory } from './DriveClientFactory.js';
 import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { fileIdFrom, NATIVE, typeLabel } from './formats.js';
 import { FILE_FIELDS, getDriveFile } from './getDriveFile.js';
-import { formatHeaderBlock } from './utils/formatHeaderBlock.js';
 
 const INFO_FIELDS =
     `${FILE_FIELDS}, description, createdTime, owners(displayName, emailAddress), ` +
@@ -45,7 +44,7 @@ export function defineDriveInfoCommand(params: DriveCommandParams): CommandClass
         override async run() {
             const fileId = fileIdFrom(this.file);
             const client = await this.container.resolve(DriveClientFactory)(params, this.cli.binaryName, this.account);
-            const file = await getDriveFile(client, fileId, { fields: INFO_FIELDS });
+            const file = await getDriveFile({ client, fileId, fields: INFO_FIELDS });
             const capabilities = Object.entries(file.capabilities ?? {})
                 .filter(([, allowed]) => allowed)
                 .map(([name]) => name.replace(/^can/, '').toLowerCase());

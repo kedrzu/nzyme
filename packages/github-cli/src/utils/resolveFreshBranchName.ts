@@ -1,7 +1,5 @@
-import { simpleGit } from 'simple-git';
-
 import { determineNextVersion } from './branchVersionHelpers.js';
-import { listTaskBranches } from './listTaskBranches.js';
+import { findReusableTaskBranch, listTaskBranches } from './listTaskBranches.js';
 
 /**
  * Parameters for resolving the name of a task's fresh branch.
@@ -19,24 +17,24 @@ export interface ResolveFreshBranchNameParams {
 }
 
 /**
- * Pick the name for a task's new branch when it has no open pull request.
+ * Pick the name for a task's new branch when it has no pull request, open or closed.
  *
- * The plain name is used while nothing in git carries it - the first run of a task - and when HEAD
- * already is that branch, so re-running after a push whose PR creation failed reuses it. Otherwise
- * an earlier run left it behind (possibly checked out in another worktree, possibly only on the
- * remote) and the next free `--vN` is returned, so the new branch can be cut from the base and
- * pushed without colliding.
+ * When HEAD already is one of the task's branches, it is reused, so re-running after a push whose
+ * PR creation failed carries on with that branch. Otherwise the plain name is used while nothing in
+ * git carries it - the first run of a task. Failing both, an earlier run left it behind (possibly
+ * checked out in another worktree, possibly only on the remote) and the next free `--vN` is
+ * returned, so the new branch can be cut from the base and pushed without colliding.
  */
 export async function resolveFreshBranchName(params: ResolveFreshBranchNameParams): Promise<string> {
     const { branchName, baseDir } = params;
 
     const taskBranches = await listTaskBranches({ branchName, baseDir });
-    if (!taskBranches.includes(branchName)) {
-        return branchName;
+    const reusable = await findReusableTaskBranch({ taskBranches, prBranches: [], baseDir });
+    if (reusable) {
+        return reusable;
     }
 
-    const status = await simpleGit(baseDir).status();
-    if (status.current === branchName) {
+    if (!taskBranches.includes(branchName)) {
         return branchName;
     }
 

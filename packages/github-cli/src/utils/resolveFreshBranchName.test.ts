@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, setDefaultTimeout, test } from 'bun:test
 import { simpleGit } from 'simple-git';
 import type { SimpleGit } from 'simple-git';
 
+import { resolveReopenBranchName } from './handleMergedPrReopen.js';
 import { listTaskBranches } from './listTaskBranches.js';
 import { resolveFreshBranchName } from './resolveFreshBranchName.js';
 
@@ -68,6 +69,48 @@ test('re-running on the task branch itself reuses it', async () => {
     await git.push(['-u', 'origin', TASK]);
 
     expect(await resolveFreshBranchName({ branchName: TASK, baseDir: clonePath })).toBe(TASK);
+});
+
+test('re-running on a pushed versioned branch with no pull request reuses it', async () => {
+    await git.branch([TASK, 'origin/main']);
+    await git.checkout(['-b', `${TASK}--v2`, 'origin/main']);
+    await git.push(['-u', 'origin', `${TASK}--v2`]);
+
+    expect(await resolveFreshBranchName({ branchName: TASK, baseDir: clonePath })).toBe(`${TASK}--v2`);
+});
+
+test('a stack node checked out is not reused as the task branch', async () => {
+    await git.branch([TASK, 'origin/main']);
+    await git.checkout(['-b', `${TASK}--s2`, 'origin/main']);
+
+    expect(await resolveFreshBranchName({ branchName: TASK, baseDir: clonePath })).toBe(`${TASK}--v2`);
+});
+
+test('reopening after a push whose PR creation failed reuses the pushed branch', async () => {
+    await git.branch([TASK, 'origin/main']);
+    await git.checkout(['-b', `${TASK}--v2`, 'origin/main']);
+    await git.push(['-u', 'origin', `${TASK}--v2`]);
+
+    const name = await resolveReopenBranchName({ latestBranchName: TASK, prBranches: [TASK], baseDir: clonePath });
+
+    expect(name).toBe(`${TASK}--v2`);
+});
+
+test('reopening while on the branch of a closed pull request cuts the next version', async () => {
+    await git.checkout(['-b', TASK, 'origin/main']);
+    await git.push(['-u', 'origin', TASK]);
+
+    const name = await resolveReopenBranchName({ latestBranchName: TASK, prBranches: [TASK], baseDir: clonePath });
+
+    expect(name).toBe(`${TASK}--v2`);
+});
+
+test('reopening counts task branches left in git, not only pull request branches', async () => {
+    await git.branch([`${TASK}--v3`, 'origin/main']);
+
+    const name = await resolveReopenBranchName({ latestBranchName: TASK, prBranches: [TASK], baseDir: clonePath });
+
+    expect(name).toBe(`${TASK}--v4`);
 });
 
 test('takes the next version after the highest existing one, and stack nodes are not versions', async () => {

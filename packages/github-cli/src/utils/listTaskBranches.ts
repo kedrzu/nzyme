@@ -1,6 +1,6 @@
 import { simpleGit } from 'simple-git';
 
-import { getBaseBranchName } from './branchVersionHelpers.js';
+import { getBaseBranchName, stripNodeSuffix } from './branchVersionHelpers.js';
 
 const LOCAL_PREFIX = 'refs/heads/';
 const ORIGIN_PREFIX = 'refs/remotes/origin/';
@@ -48,4 +48,46 @@ export async function listTaskBranches(params: ListTaskBranchesParams): Promise<
         }
     }
     return [...names];
+}
+
+/**
+ * Parameters for finding a task branch a run can reuse.
+ */
+export interface FindReusableTaskBranchParams {
+    /**
+     * Every branch of the task, as returned by {@link listTaskBranches}.
+     */
+    taskBranches: string[];
+
+    /**
+     * Head branches of the task's pull requests, open and closed.
+     */
+    prBranches: string[];
+
+    /**
+     * Repository to inspect. Defaults to the current directory.
+     */
+    baseDir?: string;
+}
+
+/**
+ * Return the branch HEAD is on when a run should carry on with it instead of cutting a new one: it
+ * belongs to the task, it is a task branch rather than a stack node, and no pull request has it as
+ * head. That is the state a run leaves when it pushed the branch and then failed to open the PR, so
+ * re-running reuses the branch instead of orphaning it and moving on to the next `--vN`.
+ */
+export async function findReusableTaskBranch(params: FindReusableTaskBranchParams): Promise<string | undefined> {
+    const { taskBranches, prBranches, baseDir } = params;
+
+    const current = (await simpleGit(baseDir).status()).current;
+    if (
+        !current ||
+        !taskBranches.includes(current) ||
+        stripNodeSuffix(current) !== current ||
+        prBranches.includes(current)
+    ) {
+        return undefined;
+    }
+
+    return current;
 }

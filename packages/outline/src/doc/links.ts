@@ -61,13 +61,27 @@ export function findLocalAttachments(text: string): LocalAttachmentRef[] {
     const found: LocalAttachmentRef[] = [];
     for (const match of text.matchAll(LOCAL_LINK)) {
         const [, opener = '', label = '', path = ''] = match;
-        const image = opener.startsWith('!');
-        const isLocal = !URL_SCHEME.test(path) && !LOCAL_ATTACHMENT_PATH.test(path);
-        if (isLocal && (image || ATTACHMENTS_DIR.test(path))) {
-            found.push({ path, text: label, image });
+        if (isLocalAttachment(opener, path)) {
+            found.push({ path, text: label, image: opener.startsWith('!') });
         }
     }
     return found;
+}
+
+/**
+ * `text` without the links `findLocalAttachments` lists, so a new document reaches Outline without them and they
+ * stay the local agent's own, uploaded once their files are.
+ * @__NO_SIDE_EFFECTS__
+ */
+export function withoutLocalAttachments(text: string): string {
+    return text.replace(LOCAL_LINK, (match, opener: string, _label: string, target: string) =>
+        isLocalAttachment(opener, target) ? '' : match,
+    );
+}
+
+function isLocalAttachment(opener: string, path: string): boolean {
+    const isLocal = !URL_SCHEME.test(path) && !LOCAL_ATTACHMENT_PATH.test(path);
+    return isLocal && (opener.startsWith('!') || ATTACHMENTS_DIR.test(path));
 }
 
 /**

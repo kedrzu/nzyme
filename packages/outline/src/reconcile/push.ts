@@ -12,6 +12,7 @@ import {
     linkUploadedAttachments,
     toLocalLinks,
     toOutlineLinks,
+    withoutLocalAttachments,
 } from '../doc/links.js';
 import { OutlineApiError, OutlineConflictError } from '../outline/errors.js';
 import type { OutlineClient } from '../outline/OutlineClient.js';
@@ -325,7 +326,11 @@ export async function push(options: PushOptions): Promise<PushReport> {
             return;
         }
         const { doc } = parseDocFile(read.content, basename(file.path));
-        const params: DocumentsCreateParams = { title: doc.title, text: toOutlineLinks(doc.text) };
+        // Local attachment links stay out until uploaded, so Outline's text (the base) never holds one the agent added.
+        const params: DocumentsCreateParams = {
+            title: doc.title,
+            text: toOutlineLinks(withoutLocalAttachments(doc.text)),
+        };
         if (placement.kind === 'collection') {
             params.collectionId = placement.collectionId;
             params.parentDocumentId = placement.parentId ?? undefined;
@@ -386,11 +391,12 @@ export async function push(options: PushOptions): Promise<PushReport> {
         };
         dropPendingCreate(remote.id);
         if (!complete) {
-            const linked = await uploadAttachments(path, remote.id, {
-                content: written,
-                hash: writtenHash,
-                invalid: false,
-            });
+            const linked = await uploadAttachments(
+                path,
+                remote.id,
+                { content: written, hash: writtenHash, invalid: false },
+                base,
+            );
             if (linked != null) {
                 await sendContent(path, remote.id, linked.content, linked.hash);
             }
@@ -462,7 +468,7 @@ export async function push(options: PushOptions): Promise<PushReport> {
             report.conflicts.push(file.path);
             return;
         }
-        const linked = await uploadAttachments(file.path, id, read);
+        const linked = await uploadAttachments(file.path, id, read, (await store.readBase(id)) ?? '');
         if (linked != null) {
             await sendContent(file.path, id, linked.content, linked.hash);
         }
@@ -605,9 +611,12 @@ export async function push(options: PushOptions): Promise<PushReport> {
     /**
      * Uploads the local files the document links to and points the links at them (`_attachments/<id>-<name>`, the
      * files copied to match). `null` when the file changed meanwhile or an upload failed: it is pushed next time.
+     * Only links the local side added are uploaded: a link already in `base` (Outline's version, which every pull,
+     * merge and conflict writes) came from Outline, where anyone with access may have pointed it at any local file.
      */
-    async function uploadAttachments(path: string, documentId: string, read: FileRead) {
-        const refs = findLocalAttachments(read.content);
+    async function uploadAttachments(path: string, documentId: string, read: FileRead, base: string) {
+        const fromOutline = new Set(findLocalAttachments(base).map(ref => ref.path));
+        const refs = findLocalAttachments(read.content).filter(ref => !fromOutline.has(ref.path));
         if (refs.length === 0) {
             return read;
         }

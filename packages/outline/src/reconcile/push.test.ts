@@ -564,6 +564,58 @@ test('a failed upload sends nothing and is retried by the next push', async () =
     expect(world.outline.getDocument(offer.id)?.text).toContain('/api/attachments.redirect?id=');
 });
 
+test('a link to a local file written in Outline is never uploaded; one the agent adds is', async () => {
+    const world = await setup();
+    const leaked = '![Scan](../private/contract.png)';
+    const offer = world.addDocument('Offer', `${TEXT}\n\n${leaked}`);
+    await world.write('private/contract.png', 'secret');
+    await world.write('private/contract.pdf', 'secret');
+    await world.pull();
+    // Added in Outline after the pull: reaches the file only through the push's own merge.
+    const later = '[Contract](_attachments/../../private/contract.pdf)';
+    await world.edit(offer, `${TEXT}\n\n${leaked}\n\n${later}`);
+    await mkdir(join(world.documentsDir, 'wiki/_attachments'), { recursive: true });
+    await writeFile(join(world.documentsDir, 'wiki/_attachments/chart.png'), new Uint8Array([1, 2, 3]));
+    await world.write(
+        'wiki/offer.md',
+        (await world.read('wiki/offer.md')).replace('First paragraph.', '![Chart](_attachments/chart.png)'),
+    );
+
+    const uploadFile = () => Promise.resolve(new Response(null, { status: 204 }));
+    const report = await world.push({ uploadFile });
+    expect(report.attachmentsUploaded).toEqual(['wiki/_attachments/chart.png']);
+    expect(report.updated).toEqual(['wiki/offer.md']);
+    const text = world.outline.getDocument(offer.id)?.text ?? '';
+    expect(text).toContain(leaked);
+    expect(text).toContain(later);
+
+    await world.write('wiki/offer.md', (await world.read('wiki/offer.md')).replace('Second paragraph.', 'Edited.'));
+    const again = await world.push({ uploadFile });
+    expect(again.updated).toEqual(['wiki/offer.md']);
+    expect(again.attachmentsUploaded).toEqual([]);
+    expect(world.calls('attachments.create')).toBe(1);
+});
+
+test('a new file’s local image stays out of Outline until uploaded, and a failed upload is retried', async () => {
+    const world = await setup();
+    world.addDocument('Offer', TEXT);
+    await world.pull();
+    await mkdir(join(world.documentsDir, 'wiki/_attachments'), { recursive: true });
+    await writeFile(join(world.documentsDir, 'wiki/_attachments/chart.png'), new Uint8Array([1, 2, 3]));
+    await world.write('wiki/fresh.md', '# Fresh\n\nText.\n\n![Chart](_attachments/chart.png)');
+
+    const failed = await world.push({ uploadFile: () => Promise.resolve(new Response(null, { status: 500 })) });
+    expect(failed.created).toEqual(['wiki/fresh.md']);
+    const created = Object.values((await world.store.load()).documents).find(
+        document => document.path === 'wiki/fresh.md',
+    );
+    expect(world.outline.getDocument(created?.id ?? '')?.text).not.toContain('chart.png');
+
+    const retried = await world.push({ uploadFile: () => Promise.resolve(new Response(null, { status: 204 })) });
+    expect(retried.attachmentsUploaded).toEqual(['wiki/_attachments/chart.png']);
+    expect(world.outline.getDocument(created?.id ?? '')?.text).toMatch(/!\[Chart\]\(\/api\/attachments\.redirect\?id=/);
+});
+
 test('the push stops between documents at the deadline and the next one finishes', async () => {
     const world = await setup();
     world.addDocument('One', TEXT);

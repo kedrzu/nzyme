@@ -10,6 +10,7 @@ import type { OutlineDocument } from '../outline/OutlineTypes.js';
 import { contentHash } from '../state/contentHash.js';
 import { StateStore } from '../state/StateStore.js';
 import type { SyncState } from '../state/StateStore.js';
+import { pathExists } from '../utils/pathExists.js';
 import { pull } from './pull.js';
 import { push } from './push.js';
 import type { PushOptions } from './push.js';
@@ -564,11 +565,4 @@ async function setup(options: { normalizeText?: (text: string) => string } = {})
                 ...overrides,
             }),
     };
-}
-
-async function pathExists(path: string) {
-    return stat(path).then(
-        () => true,
-        () => false,
-    );
 }

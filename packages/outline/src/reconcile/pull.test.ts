@@ -9,6 +9,7 @@ import type { OutlineDocument } from '../outline/OutlineTypes.js';
 import { contentHash } from '../state/contentHash.js';
 import { StateStore } from '../state/StateStore.js';
 import type { SyncEvent } from '../state/StateStore.js';
+import { pathExists } from '../utils/pathExists.js';
 import { pull } from './pull.js';
 import type { PullOptions } from './pull.js';
 
@@ -399,12 +400,5 @@ async function snapshot(world: { documentsDir: string }, paths: string[]) {
             const file = join(world.documentsDir, path);
             return { path, mtime: (await stat(file)).mtimeMs, content: await readFile(file, 'utf8') };
         }),
-    );
-}
-
-async function pathExists(path: string) {
-    return stat(path).then(
-        () => true,
-        () => false,
     );
 }

@@ -53,7 +53,18 @@ beforeAll(async () => {
         ['add', '.'],
         ['commit', '-qm', 'init'],
     ]) {
-        execFileSync('git', args, { cwd: root, stdio: 'ignore' });
+        // CI has no git identity configured; the commit needs one.
+        execFileSync('git', args, {
+            cwd: root,
+            stdio: 'ignore',
+            env: {
+                ...process.env,
+                GIT_AUTHOR_NAME: 'nzyme test',
+                GIT_AUTHOR_EMAIL: 'test@nzyme.invalid',
+                GIT_COMMITTER_NAME: 'nzyme test',
+                GIT_COMMITTER_EMAIL: 'test@nzyme.invalid',
+            },
+        });
     }
 
     // A free port for the web server each run starts.

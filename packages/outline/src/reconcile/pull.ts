@@ -18,6 +18,7 @@ import { isInside } from '../utils/isInside.js';
 import { pathDepth } from '../utils/pathDepth.js';
 import { pathExists } from '../utils/pathExists.js';
 import { readFileIfExists } from '../utils/readFileIfExists.js';
+import { readTextIfExists } from '../utils/readTextIfExists.js';
 import { writeFileAtomic } from '../utils/writeFileAtomic.js';
 import { writeFileIfUnchanged } from '../utils/writeFileIfUnchanged.js';
 import { localContent } from './localContent.js';
@@ -333,8 +334,7 @@ export async function pull(options: PullOptions): Promise<PullReport> {
         if (Object.values(state.documents).some(document => document.path === path)) {
             return null;
         }
-        const bytes = await readFileIfExists(join(documentsDir, path));
-        return bytes == null ? null : bytes.toString('utf8');
+        return await readTextIfExists(join(documentsDir, path));
     }
 
     /** Writes `content` unless the file was edited meanwhile (it hashes differently from `startHash`); then it waits for the next pull. */
@@ -410,12 +410,12 @@ export async function pull(options: PullOptions): Promise<PullReport> {
     /** Every tracked file's Outline attachments that are not on disk yet; a failed download is retried next pull. */
     async function downloadMissingAttachments() {
         for (const document of Object.values(state.documents).toSorted((a, b) => a.path.localeCompare(b.path))) {
-            const bytes = await readFileIfExists(join(documentsDir, document.path));
-            if (bytes == null) {
+            const content = await readTextIfExists(join(documentsDir, document.path));
+            if (content == null) {
                 continue;
             }
             const folder = dirname(join(documentsDir, document.path));
-            for (const attachment of findOutlineAttachments(bytes.toString('utf8'))) {
+            for (const attachment of findOutlineAttachments(content)) {
                 const target = join(folder, attachment.path);
                 if (await pathExists(target)) {
                     continue;

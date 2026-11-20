@@ -25,6 +25,7 @@ import { isInside } from '../utils/isInside.js';
 import { pathDepth } from '../utils/pathDepth.js';
 import { pathExists } from '../utils/pathExists.js';
 import { readFileIfExists } from '../utils/readFileIfExists.js';
+import { readTextIfExists } from '../utils/readTextIfExists.js';
 import { writeFileAtomic } from '../utils/writeFileAtomic.js';
 import { writeFileIfUnchanged } from '../utils/writeFileIfUnchanged.js';
 import { localContent } from './localContent.js';
@@ -706,9 +707,9 @@ export async function push(options: PushOptions): Promise<PushReport> {
             return;
         }
         for (const path of await listMarkdownFiles(documentsDir)) {
-            const bytes = await readFileIfExists(join(documentsDir, path));
+            const content = await readTextIfExists(join(documentsDir, path));
             const folder = dirname(join(documentsDir, path));
-            for (const ref of findLocalAttachments(bytes?.toString('utf8') ?? '')) {
+            for (const ref of findLocalAttachments(content ?? '')) {
                 uploadedSources.delete(resolve(folder, ref.path));
             }
         }

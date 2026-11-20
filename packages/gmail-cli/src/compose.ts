@@ -14,6 +14,8 @@ import TurndownService from 'turndown';
 
 import { assert } from '@nzyme/utils/assert.js';
 
+import { escapeHtml } from './utils/escapeHtml.js';
+
 export type BodyFormat = 'markdown' | 'html';
 
 // Inline styles only where Gmail's defaults look broken; no font-family, so the
@@ -42,15 +44,6 @@ const plainTurndown = createPlainTurndown();
 export function renderMarkdown(md: string): string {
     const html = marked.parse(md, { async: false });
     return addInlineStyles(html.trim());
-}
-
-/**
- * Escapes the characters that are special in HTML text and attribute values.
- * @util
- * @__NO_SIDE_EFFECTS__
- */
-export function escapeHtml(text: string): string {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /**

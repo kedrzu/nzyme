@@ -1,11 +1,13 @@
-import { formatTsvLine, Option, parseCount, UsageError } from '@nzyme/cli-core';
+import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
+import { formatTsvLine } from '@nzyme/cli-core/utils/formatTsvLine.js';
+import { parseCount } from '@nzyme/cli-core/utils/parseCount.js';
 
 import { GmailClientFactory } from './GmailClientFactory.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
-import { getHeader } from './gmailContent.js';
 import { RuleViolation, viewQuery } from './labelRules.js';
+import { getHeader } from './utils/getHeader.js';
 
 /** Pages of 100 messages read at most before giving up on filling `--limit` threads. */
 const MAX_PAGES = 5;
@@ -48,7 +50,11 @@ export function defineGmailSearchCommand(params: GmailCommandParams): CommandCla
                 throw new UsageError(`Pass a query${views.length ? ' or --view' : ''}.`);
             }
 
-            const client = await this.container.resolve(GmailClientFactory)(params, this.cli.binaryName, this.account);
+            const client = await this.container.resolve(GmailClientFactory)({
+                params,
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const { gmail, call } = client;
 
             // Filter per message: Gmail's thread-level label negation drops a whole conversation once

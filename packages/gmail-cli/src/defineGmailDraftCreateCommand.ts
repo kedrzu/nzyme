@@ -75,7 +75,11 @@ export function defineGmailDraftCreateCommand(params: GmailCommandParams): Comma
                 throw new UsageError('The draft body is empty.');
             }
 
-            const client = await this.container.resolve(GmailClientFactory)(params, this.cli.binaryName, this.account);
+            const client = await this.container.resolve(GmailClientFactory)({
+                params,
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const { gmail, call } = client;
             const reply = this.thread ? await readReplyContext(client, this.thread) : null;
 

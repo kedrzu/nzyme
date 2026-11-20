@@ -10,6 +10,8 @@ import TurndownService from 'turndown';
 import { assert } from '@nzyme/utils/assert.js';
 
 import type { MessageAttachment } from './attachments.js';
+import { decodeBase64Url } from './utils/decodeBase64Url.js';
+import { getHeader } from './utils/getHeader.js';
 
 /** An attachment of a read message, with what tells an embedded image from a regular file. */
 export interface AttachmentInfo extends MessageAttachment {
@@ -43,40 +45,6 @@ export interface RawBodyContent {
 
 const mailTurndown = createTurndownService();
 const draftTurndown = createDraftTurndownService();
-
-/**
- * Decodes the base64url data Gmail puts in message bodies.
- * @util
- * @__NO_SIDE_EFFECTS__
- */
-export function decodeBase64Url(data: string): string {
-    const base64 = data.replace(/-/g, '+').replace(/_/g, '/');
-    return Buffer.from(base64, 'base64').toString('utf-8');
-}
-
-/**
- * Value of a header by case-insensitive name, empty when absent.
- * @util
- * @__NO_SIDE_EFFECTS__
- */
-export function getHeader(headers: gmail_v1.Schema$MessagePartHeader[] | undefined, name: string): string {
-    return headers?.find(h => h.name?.toLowerCase() === name.toLowerCase())?.value || '';
-}
-
-/**
- * File size for display, e.g. "1.5 KB".
- * @util
- * @__NO_SIDE_EFFECTS__
- */
-export function formatFileSize(bytes: number): string {
-    if (bytes < 1024) {
-        return `${bytes} B`;
-    }
-    if (bytes < 1024 * 1024) {
-        return `${(bytes / 1024).toFixed(1)} KB`;
-    }
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 /**
  * Content-ID of an image embedded in the HTML, null for a regular attachment.

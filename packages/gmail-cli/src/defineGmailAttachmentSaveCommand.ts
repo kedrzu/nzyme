@@ -9,8 +9,9 @@ import { assert } from '@nzyme/utils/assert.js';
 import { findAttachment, savedFileName } from './attachments.js';
 import { GmailClientFactory } from './GmailClientFactory.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
-import { extractAttachments, formatFileSize } from './gmailContent.js';
+import { extractAttachments } from './gmailContent.js';
 import { attachmentsDir } from './localFiles.js';
+import { formatFileSize } from './utils/formatFileSize.js';
 
 /**
  * Defines `<prefix> attachment save <messageId> <partId>`: writes the attachment to
@@ -44,11 +45,11 @@ export function defineGmailAttachmentSaveCommand(params: GmailCommandParams): Co
                 throw new UsageError(`'${this.messageId}' is not a Gmail message id.`);
             }
 
-            const { gmail, call } = await this.container.resolve(GmailClientFactory)(
+            const { gmail, call } = await this.container.resolve(GmailClientFactory)({
                 params,
-                this.cli.binaryName,
-                this.account,
-            );
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const message = await gmail.users.messages.get({ userId: 'me', id: this.messageId, format: 'full' }, call);
             const { payload } = message.data;
             assert(payload, `Gmail returned message ${this.messageId} without its content`);

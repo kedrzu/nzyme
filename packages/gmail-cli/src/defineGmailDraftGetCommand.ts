@@ -1,10 +1,13 @@
-import { formatHeaderBlock, Option } from '@nzyme/cli-core';
+import { Option } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
+import { formatHeaderBlock } from '@nzyme/cli-core/utils/formatHeaderBlock.js';
 
 import { GmailClientFactory } from './GmailClientFactory.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
-import { draftBodyToMarkdown, extractAttachments, formatFileSize, getHeader } from './gmailContent.js';
+import { draftBodyToMarkdown, extractAttachments } from './gmailContent.js';
+import { formatFileSize } from './utils/formatFileSize.js';
+import { getHeader } from './utils/getHeader.js';
 
 /**
  * Defines `<prefix> draft get <id>`: the draft under a `key: value` header block, its body as the
@@ -31,11 +34,11 @@ export function defineGmailDraftGetCommand(params: GmailCommandParams): CommandC
         account = Option.String('--account', { description: 'The account to act as; needed when several are usable' });
 
         override async run() {
-            const { gmail, call } = await this.container.resolve(GmailClientFactory)(
+            const { gmail, call } = await this.container.resolve(GmailClientFactory)({
                 params,
-                this.cli.binaryName,
-                this.account,
-            );
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const draft = await gmail.users.drafts.get({ userId: 'me', id: this.id, format: 'full' }, call);
             const message = draft.data.message;
             if (!message?.payload) {

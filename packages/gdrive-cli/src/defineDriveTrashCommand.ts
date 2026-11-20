@@ -37,11 +37,11 @@ export function defineDriveTrashCommand(params: DriveCommandParams, trashed: boo
 
         override async run() {
             const fileId = fileIdFrom(this.file);
-            const { drive, call } = await this.container.resolve(DriveClientFactory)(
+            const { drive, call } = await this.container.resolve(DriveClientFactory)({
                 params,
-                this.cli.binaryName,
-                this.account,
-            );
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const updated = await drive.files.update(
                 { fileId, requestBody: { trashed }, fields: FILE_FIELDS, supportsAllDrives: true },
                 call,

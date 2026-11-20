@@ -25,10 +25,19 @@ export interface GmailClient {
     call: GmailCallOptions;
 }
 
+/** Arguments of the function {@link GmailClientFactory} returns. */
+export interface GmailClientFactoryParams {
+    /** The params the Gmail commands are defined with. */
+    params: GmailCommandParams;
+    /** The CLI binary, so the sign-in command in errors can be run as is. */
+    binaryName: string;
+    /** The account to act as (`--account`); unset picks the only usable one. */
+    account: string | undefined;
+}
+
 /**
  * Authorises the account a command acts on (`--account`, or the only usable one) and returns the API
  * client with the call options every request needs.
- * @param binaryName The CLI binary, so the sign-in command in errors can be run as is.
  */
 export const GmailClientFactory = defineFactory({
     name: 'GmailClientFactory',
@@ -36,9 +45,7 @@ export const GmailClientFactory = defineFactory({
     deps: { googleAccounts: GoogleAccountsFactory, endpoints: GoogleEndpoints },
     async setup(
         { googleAccounts, endpoints },
-        params: GmailCommandParams,
-        binaryName: string,
-        account: string | undefined,
+        { params, binaryName, account }: GmailClientFactoryParams,
     ): Promise<GmailClient> {
         const accounts = googleAccounts(params, binaryName);
         const email = await accounts.resolveAccount(account);

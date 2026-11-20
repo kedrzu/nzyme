@@ -66,7 +66,11 @@ export function defineDriveMetaCommand(params: DriveCommandParams): CommandClass
                 throw new UsageError('Nothing to change: pass --name, --description, --star, --unstar or --move-to.');
             }
 
-            const client = await this.container.resolve(DriveClientFactory)(params, this.cli.binaryName, this.account);
+            const client = await this.container.resolve(DriveClientFactory)({
+                params,
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             let removeParents: string | undefined;
             if (addParents) {
                 const current = await getDriveFile({ client, fileId, fields: 'parents' });

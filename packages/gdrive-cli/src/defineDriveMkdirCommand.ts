@@ -35,11 +35,11 @@ export function defineDriveMkdirCommand(params: DriveCommandParams): CommandClas
 
         override async run() {
             const parent = this.parent ? fileIdFrom(this.parent, '--parent') : undefined;
-            const { drive, call } = await this.container.resolve(DriveClientFactory)(
+            const { drive, call } = await this.container.resolve(DriveClientFactory)({
                 params,
-                this.cli.binaryName,
-                this.account,
-            );
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const created = await drive.files.create(
                 {
                     requestBody: { name: this.name, mimeType: FOLDER, parents: parent ? [parent] : undefined },

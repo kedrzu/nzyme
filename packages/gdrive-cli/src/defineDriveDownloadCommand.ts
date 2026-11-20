@@ -53,7 +53,11 @@ export function defineDriveDownloadCommand(params: DriveCommandParams): CommandC
 
         override async run() {
             const fileId = fileIdFrom(this.file);
-            const client = await this.container.resolve(DriveClientFactory)(params, this.cli.binaryName, this.account);
+            const client = await this.container.resolve(DriveClientFactory)({
+                params,
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const { drive, call } = client;
             const file = await getDriveFile({ client, fileId, followShortcut: true });
             const id = file.id;

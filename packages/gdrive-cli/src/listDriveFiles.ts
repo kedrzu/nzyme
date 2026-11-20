@@ -1,4 +1,4 @@
-import { formatTsvLine } from '@nzyme/cli-core';
+import { formatTsvLine } from '@nzyme/cli-core/utils/formatTsvLine.js';
 
 import type { DriveClient } from './DriveClientFactory.js';
 import { typeLabel } from './formats.js';

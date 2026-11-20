@@ -45,7 +45,11 @@ export function defineDriveUpdateCommand(params: DriveCommandParams): CommandCla
 
         override async run() {
             const fileId = fileIdFrom(this.target);
-            const client = await this.container.resolve(DriveClientFactory)(params, this.cli.binaryName, this.account);
+            const client = await this.container.resolve(DriveClientFactory)({
+                params,
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const file = await getDriveFile({ client, fileId, followShortcut: true });
             const id = file.id;
             const mimeType = file.mimeType ?? '';

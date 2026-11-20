@@ -1,6 +1,7 @@
-import { formatTsvLine, Option } from '@nzyme/cli-core';
+import { Option } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
+import { formatTsvLine } from '@nzyme/cli-core/utils/formatTsvLine.js';
 
 import { DriveClientFactory } from './DriveClientFactory.js';
 import type { DriveCommandParams } from './DriveCommandsOptions.js';
@@ -29,11 +30,11 @@ export function defineDriveDrivesCommand(params: DriveCommandParams): CommandCla
         account = Option.String('--account', { description: 'The account to act as; needed when several are usable' });
 
         override async run() {
-            const { drive, call } = await this.container.resolve(DriveClientFactory)(
+            const { drive, call } = await this.container.resolve(DriveClientFactory)({
                 params,
-                this.cli.binaryName,
-                this.account,
-            );
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
 
             let listed = 0;
             let pageToken: string | undefined;

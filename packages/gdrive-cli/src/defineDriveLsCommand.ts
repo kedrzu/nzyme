@@ -1,6 +1,7 @@
-import { Option, parseCount } from '@nzyme/cli-core';
+import { Option } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
+import { parseCount } from '@nzyme/cli-core/utils/parseCount.js';
 
 import { DriveClientFactory } from './DriveClientFactory.js';
 import type { DriveCommandParams } from './DriveCommandsOptions.js';
@@ -37,7 +38,11 @@ export function defineDriveLsCommand(params: DriveCommandParams): CommandClass {
         override async run() {
             const pageSize = parseCount({ value: this.limit, option: '--limit', max: 1000 });
             const folder = this.folder ? fileIdFrom(this.folder, 'folder') : 'root';
-            const client = await this.container.resolve(DriveClientFactory)(params, this.cli.binaryName, this.account);
+            const client = await this.container.resolve(DriveClientFactory)({
+                params,
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
 
             this.context.stdout.write(
                 await listDriveFiles(client, {

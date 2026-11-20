@@ -11,11 +11,12 @@ import { formatDraftFiles } from './formatDraftFiles.js';
 import type { GmailClient } from './GmailClientFactory.js';
 import { GmailClientFactory } from './GmailClientFactory.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
-import { extractAttachments, extractRawBody, getHeader } from './gmailContent.js';
+import { extractAttachments, extractRawBody } from './gmailContent.js';
 import { assertTotalSize, draftFileAccess, loadLocalFile } from './localFiles.js';
 import { readDraftBody } from './readDraftBody.js';
 import { readReplyContext } from './readReplyContext.js';
 import { readSignature } from './readSignature.js';
+import { getHeader } from './utils/getHeader.js';
 
 /**
  * Defines `<prefix> draft update <id>`: rewrites a draft, keeping every field and attachment the call
@@ -72,7 +73,11 @@ export function defineGmailDraftUpdateCommand(params: GmailCommandParams): Comma
                           stdin: this.context.stdin,
                           access: draftFileAccess(files),
                       });
-            const client = await this.container.resolve(GmailClientFactory)(params, this.cli.binaryName, this.account);
+            const client = await this.container.resolve(GmailClientFactory)({
+                params,
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const { gmail, call } = client;
 
             const draft = await gmail.users.drafts.get({ userId: 'me', id: this.id, format: 'full' }, call);

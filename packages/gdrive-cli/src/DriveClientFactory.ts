@@ -25,10 +25,19 @@ export interface DriveClient {
     call: DriveCallOptions;
 }
 
+/** Arguments of the function {@link DriveClientFactory} returns. */
+export interface DriveClientFactoryParams {
+    /** The params the Drive commands are defined with. */
+    params: DriveCommandParams;
+    /** The CLI binary, so the sign-in command in errors can be run as is. */
+    binaryName: string;
+    /** The account to act as (`--account`); unset picks the only usable one. */
+    account: string | undefined;
+}
+
 /**
  * Authorises the account a command acts on (`--account`, or the only usable one) and returns the API
  * client with the call options every request needs.
- * @param binaryName The CLI binary, so the sign-in command in errors can be run as is.
  */
 export const DriveClientFactory = defineFactory({
     name: 'DriveClientFactory',
@@ -36,9 +45,7 @@ export const DriveClientFactory = defineFactory({
     deps: { googleAccounts: GoogleAccountsFactory, endpoints: GoogleEndpoints },
     async setup(
         { googleAccounts, endpoints },
-        params: DriveCommandParams,
-        binaryName: string,
-        account: string | undefined,
+        { params, binaryName, account }: DriveClientFactoryParams,
     ): Promise<DriveClient> {
         const accounts = googleAccounts(params, binaryName);
         const email = await accounts.resolveAccount(account);

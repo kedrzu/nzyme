@@ -1,5 +1,5 @@
 import type { RawAttachment } from './compose.js';
-import { formatFileSize } from './gmailContent.js';
+import { formatFileSize } from './utils/formatFileSize.js';
 
 /**
  * The files of a draft for its status line: `, attachments: a.pdf (application/pdf, 2.0 KB)`, and the

@@ -1,9 +1,11 @@
 import type { gmail_v1 } from '@googleapis/gmail';
 
-import { formatHeaderBlock } from '@nzyme/cli-core';
+import { formatHeaderBlock } from '@nzyme/cli-core/utils/formatHeaderBlock.js';
 import { assert } from '@nzyme/utils/assert.js';
 
-import { formatFileSize, getHeader, processEmailContent } from './gmailContent.js';
+import { processEmailContent } from './gmailContent.js';
+import { formatFileSize } from './utils/formatFileSize.js';
+import { getHeader } from './utils/getHeader.js';
 
 /** Options of {@link formatGmailMessage}. */
 export interface FormatGmailMessageOptions {

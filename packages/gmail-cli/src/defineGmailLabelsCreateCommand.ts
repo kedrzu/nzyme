@@ -34,7 +34,11 @@ export function defineGmailLabelsCreateCommand(params: GmailCommandParams): Comm
                 throw new UsageError('The label name is empty.');
             }
 
-            const client = await this.container.resolve(GmailClientFactory)(params, this.cli.binaryName, this.account);
+            const client = await this.container.resolve(GmailClientFactory)({
+                params,
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const labels = (await client.gmail.users.labels.list({ userId: 'me' }, client.call)).data.labels ?? [];
             const label = await ensureLabel({ client, labels, name });
 

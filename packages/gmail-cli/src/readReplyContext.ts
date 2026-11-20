@@ -1,7 +1,8 @@
 import type { QuotedMessage } from './compose.js';
 import { buildReferences, replySubject } from './compose.js';
 import type { GmailClient } from './GmailClientFactory.js';
-import { extractRawBody, getHeader } from './gmailContent.js';
+import { extractRawBody } from './gmailContent.js';
+import { getHeader } from './utils/getHeader.js';
 
 /** What a reply in a thread defaults to, from the thread's last real (non-draft) message. */
 export interface ReplyContext {

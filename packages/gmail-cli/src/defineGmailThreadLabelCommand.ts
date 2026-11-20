@@ -82,7 +82,11 @@ export function defineGmailThreadLabelCommand(params: GmailCommandParams): Comma
                 throw new UsageError('Pass --add, --remove or --set.');
             }
 
-            const client = await this.container.resolve(GmailClientFactory)(params, this.cli.binaryName, this.account);
+            const client = await this.container.resolve(GmailClientFactory)({
+                params,
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const { gmail, call } = client;
             const labels = (await gmail.users.labels.list({ userId: 'me' }, call)).data.labels ?? [];
 

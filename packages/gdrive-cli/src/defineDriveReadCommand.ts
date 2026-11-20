@@ -1,9 +1,11 @@
 import type { Readable } from 'node:stream';
 import { buffer } from 'node:stream/consumers';
 
-import { formatHeaderBlock, Option, parseCount, UsageError } from '@nzyme/cli-core';
+import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
+import { formatHeaderBlock } from '@nzyme/cli-core/utils/formatHeaderBlock.js';
+import { parseCount } from '@nzyme/cli-core/utils/parseCount.js';
 import { assert } from '@nzyme/utils/assert.js';
 
 import { DriveClientFactory } from './DriveClientFactory.js';
@@ -43,7 +45,11 @@ export function defineDriveReadCommand(params: DriveCommandParams): CommandClass
         override async run() {
             const fileId = fileIdFrom(this.file);
             const max = parseCount({ value: this.maxChars, option: '--max-chars' });
-            const client = await this.container.resolve(DriveClientFactory)(params, this.cli.binaryName, this.account);
+            const client = await this.container.resolve(DriveClientFactory)({
+                params,
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const { drive, call } = client;
             const file = await getDriveFile({ client, fileId, followShortcut: true });
             const id = file.id;

@@ -1,8 +1,9 @@
 import type { drive_v3 } from '@googleapis/drive';
 
-import { formatHeaderBlock, Option } from '@nzyme/cli-core';
+import { Option } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
+import { formatHeaderBlock } from '@nzyme/cli-core/utils/formatHeaderBlock.js';
 
 import type { DriveClient } from './DriveClientFactory.js';
 import { DriveClientFactory } from './DriveClientFactory.js';
@@ -43,7 +44,11 @@ export function defineDriveInfoCommand(params: DriveCommandParams): CommandClass
 
         override async run() {
             const fileId = fileIdFrom(this.file);
-            const client = await this.container.resolve(DriveClientFactory)(params, this.cli.binaryName, this.account);
+            const client = await this.container.resolve(DriveClientFactory)({
+                params,
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const file = await getDriveFile({ client, fileId, fields: INFO_FIELDS });
             const capabilities = Object.entries(file.capabilities ?? {})
                 .filter(([, allowed]) => allowed)

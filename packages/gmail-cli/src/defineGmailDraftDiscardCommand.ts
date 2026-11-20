@@ -4,7 +4,7 @@ import { Command } from '@nzyme/cli-core/Command.js';
 
 import { GmailClientFactory } from './GmailClientFactory.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
-import { getHeader } from './gmailContent.js';
+import { getHeader } from './utils/getHeader.js';
 
 /**
  * Defines `<prefix> draft discard <id>`: moves the draft's message to the Trash. It refuses any
@@ -30,11 +30,11 @@ export function defineGmailDraftDiscardCommand(params: GmailCommandParams): Comm
         account = Option.String('--account', { description: 'The account to act as; needed when several are usable' });
 
         override async run() {
-            const { gmail, call } = await this.container.resolve(GmailClientFactory)(
+            const { gmail, call } = await this.container.resolve(GmailClientFactory)({
                 params,
-                this.cli.binaryName,
-                this.account,
-            );
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const draft = await gmail.users.drafts.get({ userId: 'me', id: this.id, format: 'metadata' }, call);
             const message = draft.data.message;
             if (!message?.id || !message.labelIds?.includes('DRAFT')) {

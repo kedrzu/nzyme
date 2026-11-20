@@ -16,7 +16,7 @@ import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
 
 import type { RawAttachment } from './compose.js';
 import type { GmailFilesOptions } from './GmailCommandsOptions.js';
-import { formatFileSize } from './gmailContent.js';
+import { formatFileSize } from './utils/formatFileSize.js';
 
 /** Gmail refuses to send anything bigger; checking up front beats a half-made draft. */
 export const MAX_ATTACHMENTS_BYTES = 25 * 1024 * 1024;

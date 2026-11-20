@@ -74,11 +74,11 @@ export function defineDriveUploadCommand(params: DriveCommandParams): CommandCla
                 name = name.replace(/\.[A-Za-z0-9]+$/, '') || name;
             }
 
-            const { drive, call } = await this.container.resolve(DriveClientFactory)(
+            const { drive, call } = await this.container.resolve(DriveClientFactory)({
                 params,
-                this.cli.binaryName,
-                this.account,
-            );
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const created = await drive.files.create(
                 {
                     requestBody: {

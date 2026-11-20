@@ -1,11 +1,13 @@
-import { formatTsvLine, Option, parseCount } from '@nzyme/cli-core';
+import { Option } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
+import { formatTsvLine } from '@nzyme/cli-core/utils/formatTsvLine.js';
+import { parseCount } from '@nzyme/cli-core/utils/parseCount.js';
 import { assert } from '@nzyme/utils/assert.js';
 
 import { GmailClientFactory } from './GmailClientFactory.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
-import { getHeader } from './gmailContent.js';
+import { getHeader } from './utils/getHeader.js';
 
 /** Drafts read when filtering by thread, which Gmail cannot do itself. */
 const THREAD_SCAN = 100;
@@ -39,11 +41,11 @@ export function defineGmailDraftListCommand(params: GmailCommandParams): Command
         override async run() {
             const limit = parseCount({ value: this.limit, option: '--limit' });
 
-            const { gmail, call } = await this.container.resolve(GmailClientFactory)(
+            const { gmail, call } = await this.container.resolve(GmailClientFactory)({
                 params,
-                this.cli.binaryName,
-                this.account,
-            );
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const response = await gmail.users.drafts.list(
                 { userId: 'me', q: this.query, maxResults: this.thread ? THREAD_SCAN : limit },
                 call,

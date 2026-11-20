@@ -1,6 +1,7 @@
-import { formatTsvLine, Option, UsageError } from '@nzyme/cli-core';
+import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
+import { formatTsvLine } from '@nzyme/cli-core/utils/formatTsvLine.js';
 import { assert } from '@nzyme/utils/assert.js';
 
 import { GmailClientFactory } from './GmailClientFactory.js';
@@ -43,11 +44,11 @@ export function defineGmailLabelsCleanupCommand(params: GmailCommandParams): Com
                 throw new UsageError('The prefix is empty; it scopes which labels may be deleted.');
             }
 
-            const { gmail, call } = await this.container.resolve(GmailClientFactory)(
+            const { gmail, call } = await this.container.resolve(GmailClientFactory)({
                 params,
-                this.cli.binaryName,
-                this.account,
-            );
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const labels = (await gmail.users.labels.list({ userId: 'me' }, call)).data.labels ?? [];
             const matching = labels.filter(
                 label => label.type === 'user' && label.name?.toLowerCase().startsWith(labelPrefix),

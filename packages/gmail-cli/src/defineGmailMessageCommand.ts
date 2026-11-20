@@ -31,7 +31,11 @@ export function defineGmailMessageCommand(params: GmailCommandParams): CommandCl
         account = Option.String('--account', { description: 'The account to act as; needed when several are usable' });
 
         override async run() {
-            const client = await this.container.resolve(GmailClientFactory)(params, this.cli.binaryName, this.account);
+            const client = await this.container.resolve(GmailClientFactory)({
+                params,
+                binaryName: this.cli.binaryName,
+                account: this.account,
+            });
             const [message, labelNames] = await Promise.all([
                 client.gmail.users.messages.get({ userId: 'me', id: this.id, format: 'full' }, client.call),
                 readLabelNames(client),

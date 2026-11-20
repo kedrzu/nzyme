@@ -8,9 +8,8 @@ import { defineSecretsSetCommand } from './defineSecretsSetCommand.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
 
 /**
- * Defines the `secrets` commands for a project's secrets provider. Export them from a plugin module
- * (`export default { commands: defineSecretsCommands({ provider }) } satisfies NzymePlugin`) or
- * spread them into a product CLI's `execute({ commands })`.
+ * Defines the `secrets` commands for a project's secrets provider. A product CLI spreads them into
+ * `execute({ commands })`.
  * @__NO_SIDE_EFFECTS__
  */
 export function defineSecretsCommands(options: SecretsCommandsOptions): CommandClass[] {

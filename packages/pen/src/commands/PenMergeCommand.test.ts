@@ -8,8 +8,7 @@ import { checkPen } from '../checkPen.js';
 import type { PenDocument, PenNode, PenOverride } from '../PenDocument.js';
 import { indexPen, parsePen, serializePen } from '../PenDocument.js';
 
-const NZYME_CLI = new URL('../../../cli/src/cli.ts', import.meta.url).pathname;
-const PEN_PLUGIN = new URL('../plugin.ts', import.meta.url).pathname;
+const PEN_CLI = new URL('./__fixtures__/penCli.ts', import.meta.url).pathname;
 const FIXTURE_PEN = await fs.readFile(new URL('../__fixtures__/document.pen', import.meta.url), 'utf8');
 
 /** Nested, so the report's name shows how a path is flattened. */
@@ -133,10 +132,8 @@ interface CreateRepoOptions {
  */
 async function createRepo(options: CreateRepoOptions) {
     const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'pen-merge-'));
-    const driver = `${process.execPath} --conditions=source ${NZYME_CLI} pen merge %O %A %B %P`;
+    const driver = `${process.execPath} --conditions=source ${PEN_CLI} pen merge %O %A %B %P`;
 
-    await fs.writeFile(path.join(repo, 'package.json'), JSON.stringify({ nzyme: { plugins: ['./pen.ts'] } }));
-    await fs.writeFile(path.join(repo, 'pen.ts'), `export { default } from '${PEN_PLUGIN}';\n`);
     await fs.writeFile(path.join(repo, '.gitattributes'), '*.pen merge=pen -diff\n');
     await fs.mkdir(path.join(repo, 'design'));
     await fs.writeFile(path.join(repo, FILE), FIXTURE_PEN);

@@ -30,7 +30,7 @@ export class PenMergeCommand extends Command {
             in the report. On an unreadable input, \`ours\` is left untouched and the exit code is 1.
         `,
         examples: [
-            ['Register as the merge driver for *.pen', 'git config merge.pen.driver "bun nzyme pen merge %O %A %B %P"'],
+            ['Register as the merge driver for *.pen', 'git config merge.pen.driver "bun app pen merge %O %A %B %P"'],
         ],
     });
 

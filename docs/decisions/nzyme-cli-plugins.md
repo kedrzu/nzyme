@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [product-clis-over-nzyme-plugins.md](product-clis-over-nzyme-plugins.md)
 
 ## Context
 

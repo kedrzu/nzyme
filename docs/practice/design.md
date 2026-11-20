@@ -5,13 +5,13 @@ that file, so the design changes the way code does: on a branch, in the PR that 
 
 What is true only in one repo — the file's path and layout, screen codes, the visual direction, where design logs
 live — sits above this document in the repo's `design` skill, and wins where it differs. The commands:
-`nzyme/packages/pen/README.md`.
+`nzyme/packages/pen/README.md`. This document writes `pen …`; the prefix is the repo's CLI (`bun <product> pen …`).
 
 ## Design on your own branch
 
 - **Each branch changes its own copy of the `.pen` file** and builds from it in the same PR. There is no design
   branch to wait for.
-- **The file merges node by node.** git runs `bun nzyme pen merge` as the merge driver for `*.pen`, so branches
+- **The file merges node by node.** git runs `pen merge` as the merge driver for `*.pen`, so branches
   that changed different nodes, properties or variables merge on their own. Parallel design work is normal.
 - **Only Pen changes the file:** the `pen` CLI, the Pen app or the Pen MCP. Never edit its JSON by hand.
 - **Close the file in the Pen app, or don't save there, while a `pen` run or a merge rewrites it.** The app would
@@ -45,9 +45,9 @@ it, and designs noticeably worse, so rounds go through the CLI.
    ```
 
    It saves once, at the end: a failed run leaves the file untouched.
-3. **Read the reply and look at the PNG.** `bun nzyme pen render <file> <id…>` renders single nodes. When the
+3. **Read the reply and look at the PNG.** `pen render <file> <id…>` renders single nodes. When the
    result misses, write a follow-up brief rather than patching it yourself through the MCP.
-4. **Record the round** in the design log and run `bun nzyme pen check`.
+4. **Record the round** in the design log and run `pen check`.
 
 **Credentials: only `bunx pen login`, once per machine.** Its session serves every later `pen` command, and the agent
 inside runs on the user's own Claude login. There are no keys and no API keys: nothing in the secret store, the repo
@@ -57,7 +57,7 @@ or the environment. When `pen` answers "Authentication required", the login is t
 
 The owner opens the worktree's `.pen` file in the Pen app and steers the app's agent. That agent loads the repo's
 skills, so it follows the same `design` skill and records its rounds in the log. The owner's own edits on the canvas
-reach the log only when they say so; then record them as an owner round. `bun nzyme pen diff` shows them either way.
+reach the log only when they say so; then record them as an owner round. `pen diff` shows them either way.
 
 ## The design log
 
@@ -103,7 +103,7 @@ Forced by: the empty state's hint failed the contrast test (3.9:1).
 
 ## What changed
 
-`bun nzyme pen diff <base>`, with the log's base revision, lists everything since: added, removed, changed and moved
+`pen diff <base>`, with the log's base revision, lists everything since: added, removed, changed and moved
 nodes per top-level frame, changed variables, changed components with how many instances use each. It includes the
 owner's edits in the app that no log mentions. Read it before continuing someone else's design, before building from
 a log, and before resolving a conflict.
@@ -122,7 +122,7 @@ builds from it next.
 - **Big: ask the owner first.** A new screen, flow or interaction; a layout or hierarchy change; a new component or
   pattern; a change to a shared component or token that visibly alters many screens; anything against a recorded
   design decision; any choice between options. Draw the proposal into a copy (`pen --out .context/<feature>.pen`),
-  show before and after renders (`bun nzyme pen render`) with your recommendation, and change nothing until the
+  show before and after renders (`pen render`) with your recommendation, and change nothing until the
   owner answers.
 - **Either way, a log round** marked as made during implementation, with what forced it (the failing test, the
   missing state).
@@ -139,15 +139,15 @@ node id, name, screen and both values, is at `$(git rev-parse --git-path pen-con
 2. **Render the screens involved** on each side:
 
    ```sh
-   bun nzyme pen render "$(git rev-parse HEAD):<path>" <ids…> --out .context/merge/ours
-   bun nzyme pen render "$(git rev-parse MERGE_HEAD):<path>" <ids…> --out .context/merge/theirs
-   bun nzyme pen render "$(git merge-base HEAD MERGE_HEAD):<path>" <ids…> --out .context/merge/base
+   pen render "$(git rev-parse HEAD):<path>" <ids…> --out .context/merge/ours
+   pen render "$(git rev-parse MERGE_HEAD):<path>" <ids…> --out .context/merge/theirs
+   pen render "$(git merge-base HEAD MERGE_HEAD):<path>" <ids…> --out .context/merge/base
    ```
 
 3. **Apply the other side's intent on the merged file** through a `pen` run (the brief carries the report, both
    intents and the renders) or the Pen MCP.
 
-4. **Render again** and compare, then `bun nzyme pen check`.
+4. **Render again** and compare, then `pen check`.
 
 5. **Record the resolution** as a round in the log, `git add` the file and continue the merge.
 
@@ -198,6 +198,6 @@ name says which screen it is, and whether a decision waits on it.
 
 ## Checks
 
-`bun nzyme pen check` runs in `lint` and `lint:check`, so in CI. It fails, naming the node, on conflict markers,
+`pen check` runs in `lint` and `lint:check`, so in CI. It fails, naming the node, on conflict markers,
 invalid JSON, a duplicate id or one containing `/`, an instance of a missing or non-reusable node, and an undefined
 `$variable`. Run it after every round and every conflict resolution.

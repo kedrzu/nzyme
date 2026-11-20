@@ -12,8 +12,8 @@ Why it works this way: `docs/decisions/secrets-as-code-through-env-variables.md`
 bun add @nzyme/secrets @nzyme/bitwarden
 ```
 
-Every `@nzyme/*` package in a repo, `@nzyme/cli` included, must be one version, installed in the repo
-(see [Commands from a plugin](#commands-from-a-plugin)).
+Every `@nzyme/*` package in a repo must be one version: the commands must extend the `Command` of the
+same `@nzyme/cli-core` the product CLI runs (see [Commands in the product CLI](#commands-in-the-product-cli)).
 
 ## Stores and prefixes
 
@@ -83,41 +83,119 @@ write deletes the item. `ttl` is in milliseconds and required. A keychain failur
 the read falls through to the store. `secrets refresh` re-reads before the TTL runs out. A store larger than
 Windows Credential Manager's 2560-byte item cap will not cache on Windows (it only warns).
 
-Values are kept only in the keychain, never in a file. Any `bun` process of the same user can read them without a prompt: on macOS (Bun 1.4.4, checked 2026-11-02) a separate `bun` script read the tokens that `nzyme secrets login` had stored. The keychain protects them from other users and from a stolen disk, not from code you run. Linux is not checked yet.
+Values are kept only in the keychain, never in a file. Any `bun` process of the same user can read them without a prompt: on macOS (Bun 1.4.4, checked 2026-11-02) a separate `bun` script read the tokens that `secrets login` had stored. The keychain protects them from other users and from a stolen disk, not from code you run. Linux is not checked yet.
 
-## Commands from a plugin
+## Commands in the product CLI
 
-A repo without its own CLI gets the commands from the `nzyme` binary through a plugin module:
+The `nzyme` binary loads no project code. A repo registers the commands in its own CLI (a
+`packages/cli` workspace package with a `bin`, run as `bun <product> …`):
 
 ```ts
-// tools/secrets.ts
-import type { NzymePlugin } from '@nzyme/cli-core/NzymePlugin.js';
+// packages/cli/src/cli.ts
+#!/usr/bin/env -S bun --conditions=source
+import { execute } from '@nzyme/cli-core/execute.js';
 import { defineSecretsCommands } from '@nzyme/secrets/commands/defineSecretsCommands.js';
 
-import { AppSecrets } from '../packages/app/src/AppSecrets.js';
+import { AppSecrets } from '../../app/src/AppSecrets.js';
 
-export default { commands: defineSecretsCommands({ provider: AppSecrets }) } satisfies NzymePlugin;
-```
-
-```json
-{
-    "nzyme": {
-        "plugins": ["./tools/secrets.ts"]
-    }
-}
-```
-
-`@nzyme/cli` and every other `@nzyme/*` package must be one version, installed in the repo: the
-plugin's commands must extend the `Command` of the same `@nzyme/cli-core` the binary runs. Why:
-`docs/decisions/nzyme-cli-plugins.md`.
-
-A product CLI registers the same commands itself:
-
-```ts
 await execute({
     name: 'app',
     commands: [...appCommands, ...defineSecretsCommands({ provider: AppSecrets })],
 });
+```
+
+The commands below are written as `secrets …`; run them as `bun app secrets …`. Why a product CLI and
+not a plugin of `nzyme`: `docs/decisions/product-clis-over-nzyme-plugins.md`.
+
+## Declaring secrets
+
+Declare each secret the repo uses, in one module, with `defineSecret`. The export name is the secret's
+name and the key in the stores:
+
+```ts
+// packages/app/src/secrets.ts
+import { defineSecret } from '@nzyme/secrets/defineSecret.js';
+
+export const DB_PASSWORD = defineSecret('DB_PASSWORD', { description: 'Staging database password' });
+export const STRIPE_KEY = defineSecret('STRIPE_KEY', {
+    description: 'Stripe test key',
+    enabled: env => env.APP_ENV !== 'prod',
+});
+```
+
+- **`defineSecret(name, options)`** is also a `defineConfig` key of type string: resolving a secret
+  that no store holds throws, naming `secrets set`.
+- **`description`** documents the secret. **`enabled(env)`** receives the command's environment
+  variables and says whether the secret applies in this environment (default: always).
+- **`meta`** holds project data (a flat object), for example which store a secret belongs to. The keys
+  `secret`, `description` and `enabled` are reserved and a type error there.
+
+`secretsProvider` builds the provider from the declarations and one store, which it reads and writes:
+
+```ts
+// packages/app/src/AppSecrets.ts
+import { bitwarden } from '@nzyme/bitwarden/bitwarden.js';
+import { defineEnvVariable } from '@nzyme/ioc/defineEnvVariable.js';
+import { defineService } from '@nzyme/ioc/Service.js';
+import { cached } from '@nzyme/secrets/cached.js';
+import { getSecretDefinitions } from '@nzyme/secrets/getSecretDefinitions.js';
+import { secretsProvider } from '@nzyme/secrets/commands/secretsProvider.js';
+
+import * as secrets from './secrets.js';
+
+/** `dev` or `prod`: picks the prefix, so `prod` secrets are out of reach in `dev`. */
+const APP_ENV = defineEnvVariable('APP_ENV', { default: 'dev' });
+
+export const AppSecrets = defineService({
+    name: 'AppSecrets',
+    deps: { env: APP_ENV },
+    setup: ({ env }) =>
+        secretsProvider({
+            secrets: getSecretDefinitions(secrets),
+            store: cached(bitwarden({ project: '1f0c…', prefix: `APP_${env.toUpperCase()}_` }), {
+                ttl: 8 * 60 * 60 * 1000,
+            }),
+        }),
+});
+```
+
+Environments that differ by prefix are different stores chosen here, by the provider.
+
+With declarations the commands follow them:
+
+- **`set`** refuses a name that is not declared or not enabled, before any prompt or write.
+- **`run -- <command>`** with no keys runs with every declared, enabled secret; named keys must be
+  declared and enabled.
+- **`list`** prints the declared, enabled secrets with the store id, `missing`, or
+  `overridden by environment`, then the stored keys that are `not declared` or `not enabled here`.
+  The exit code is 0.
+
+Without declarations (a provider with only `stores` and `target`) the commands behave as described
+below.
+
+**Several stores.** nzyme does not route between stores. A project writes its own composite
+`SecretStore` that picks a store per key from the secret's `meta`, for example personal tokens in
+`keychainStore` beside shared ones in Bitwarden:
+
+```ts
+// secrets.ts: export const GITHUB_TOKEN = defineSecret('GITHUB_TOKEN', { meta: { store: 'personal' } });
+const personalKeys = new Set(
+    getSecretDefinitions(secrets)
+        .filter(secret => 'store' in secret.meta && secret.meta.store === 'personal')
+        .map(secret => secret.name),
+);
+
+const store: SecretStore = {
+    id: `${shared.id}+${personal.id}`,
+    async readAll() {
+        const [fromShared, fromPersonal] = await Promise.all([shared.readAll(), personal.readAll()]);
+        return new Map([...fromShared, ...[...fromPersonal].filter(([key]) => personalKeys.has(key))]);
+    },
+    async write(entries) {
+        await personal.write(entries.filter(({ key }) => personalKeys.has(key)));
+        await shared.write(entries.filter(({ key }) => !personalKeys.has(key)));
+    },
+};
 ```
 
 ## Commands
@@ -148,7 +226,7 @@ export const AppSecrets = defineService<SecretsProvider>({
   a hidden prompt, or from stdin.
 - **`secrets set <NAME>`** — writes one secret to the store `target(NAME)` returns, under the key
   `NAME`; `target` throws a `UsageError` to refuse the name, and then nothing is written. The value
-  comes from a hidden prompt, or from stdin: `nzyme secrets set DB_PASSWORD < password.txt`.
+  comes from a hidden prompt, or from stdin: `secrets set DB_PASSWORD < password.txt`.
 - **`secrets set <NAME> --prompt[=<hint>]`** — how an agent asks the user for a secret: the user
   types it into a native masked dialog (osascript on macOS, Get-Credential on Windows, zenity or
   kdialog on Linux; a hidden terminal prompt when none opens), so the value never reaches the
@@ -157,7 +235,7 @@ export const AppSecrets = defineService<SecretsProvider>({
   On success it prints only the name, store and character count. It exits 1, writing nothing,
   when nothing was entered (cancelled, blank or timed out after 5 minutes), when the value spans
   several lines, or when no dialog or terminal is available — then ask the user to run
-  `nzyme secrets set <NAME>` in their own terminal and confirm with `nzyme secrets list`.
+  `secrets set <NAME>` in their own terminal and confirm with `secrets list`.
 - **`secrets list`** — every key of every store with its store id, and `overridden by environment`
   when the variable is set. It does not know which keys a project expects, so it reports no missing
   ones; a project can add its own check command.

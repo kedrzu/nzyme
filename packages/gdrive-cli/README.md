@@ -108,9 +108,10 @@ several accounts are usable. A file is given as an id or a Drive URL.
 
 ## Safety limits
 
-- No command deletes a file permanently, empties the trash or shares a file or changes its access. The
+- No command deletes a file permanently, empties the trash or edits a file's sharing settings. The
   Google SDK could do all three, so the guarantee is held by tests: a scan of the sources for the
   forbidden calls, and a recording fake API that fails on a forbidden request.
+- A file inherits the sharing of the folder or shared drive it sits in, so `meta --move-to`, `upload --folder` and `mkdir --parent` into a shared one expose the file to everyone it is shared with.
 - A write command exists only when the project turned its permission on.
 - Local files are read (uploads) and written (downloads) only under the repo root, `files.roots` and the
   downloads directory. Secret files (`.env*`, OAuth client files, credentials and token files) are refused even inside them.

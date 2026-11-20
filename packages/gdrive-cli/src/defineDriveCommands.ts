@@ -25,7 +25,8 @@ import { effectivePermissions } from './permissions.js';
  * `ls`, `info` and `drives` with `browse`; `read` and `download` with `download`; `upload` and `mkdir`
  * with `upload`; `update` and `meta` with `edit`; `trash` and `restore` with `delete`. A command whose
  * permission is off is not registered at all. None deletes a file permanently, empties the trash or
- * touches sharing. Throws when a `files` path is not absolute.
+ * edits sharing settings, but moving or uploading into a shared folder or shared drive inherits its
+ * sharing. Throws when a `files` path is not absolute.
  * @__NO_SIDE_EFFECTS__
  */
 export function defineDriveCommands(options: DriveCommandsOptions): CommandClass[] {

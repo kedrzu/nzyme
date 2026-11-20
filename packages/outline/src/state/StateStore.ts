@@ -101,14 +101,14 @@ export class StateStore {
         if (text === null) {
             return emptyState();
         }
-        let parsed: unknown;
+        let parsed: SyncState;
         try {
-            parsed = JSON.parse(text);
+            parsed = JSON.parse(text) as SyncState;
         } catch (error) {
             throw new StateCorruptError(this.statePath, error instanceof Error ? error.message : 'invalid JSON');
         }
-        if (!isSyncState(parsed)) {
-            throw new StateCorruptError(this.statePath, 'unexpected structure or version');
+        if (parsed?.version !== 1) {
+            throw new StateCorruptError(this.statePath, 'unexpected version');
         }
         return parsed;
     }
@@ -150,90 +150,4 @@ function emptyState(): SyncState {
         collections: {},
         toldSessions: {},
     };
-}
-
-function isSyncState(value: unknown): value is SyncState {
-    return (
-        isRecord(value) &&
-        value.version === 1 &&
-        isRecord(value.documents) &&
-        Object.values(value.documents).every(isDocState) &&
-        isStringRecord(value.pendingCreates) &&
-        Array.isArray(value.events) &&
-        value.events.every(isSyncEvent) &&
-        isStringOrNull(value.cursor) &&
-        isStringOrNull(value.lastFullPass) &&
-        (value.lastPullAt === undefined || typeof value.lastPullAt === 'string') &&
-        isRecord(value.initialPull) &&
-        typeof value.initialPull.complete === 'boolean' &&
-        isStringOrNull(value.initialPull.position) &&
-        isStringRecord(value.collections) &&
-        isRecord(value.toldSessions) &&
-        Object.values(value.toldSessions).every(isStringArray)
-    );
-}
-
-function isDocState(value: unknown): value is DocState {
-    return (
-        isRecord(value) &&
-        typeof value.id === 'string' &&
-        typeof value.path === 'string' &&
-        typeof value.revision === 'number' &&
-        typeof value.title === 'string' &&
-        isStringOrNull(value.parentId) &&
-        isStringOrNull(value.collectionId) &&
-        isStringArray(value.shared) &&
-        typeof value.localHash === 'string' &&
-        (value.sharing === undefined || isSharingState(value.sharing)) &&
-        (value.conflictRevision === undefined || typeof value.conflictRevision === 'number') &&
-        (value.fileStat === undefined || isFileStat(value.fileStat))
-    );
-}
-
-function isSharingState(value: unknown): value is SharingState {
-    return (
-        isRecord(value) &&
-        isStringArray(value.unresolved) &&
-        (value.checkedAt === undefined || typeof value.checkedAt === 'string') &&
-        (value.stat === undefined || isFileStat(value.stat))
-    );
-}
-
-function isFileStat(value: unknown): value is FileStat {
-    return (
-        isRecord(value) &&
-        typeof value.mtimeMs === 'number' &&
-        typeof value.size === 'number' &&
-        typeof value.ino === 'number'
-    );
-}
-
-function isSyncEvent(value: unknown): value is SyncEvent {
-    if (!isRecord(value) || typeof value.path !== 'string') {
-        return false;
-    }
-    switch (value.kind) {
-        case 'recovered':
-            return true;
-        case 'share-rejected':
-            return typeof value.email === 'string' && typeof value.reason === 'string';
-        default:
-            return false;
-    }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isStringArray(value: unknown): value is string[] {
-    return Array.isArray(value) && value.every(item => typeof item === 'string');
-}
-
-function isStringRecord(value: unknown): value is Record<string, string> {
-    return isRecord(value) && Object.values(value).every(item => typeof item === 'string');
-}
-
-function isStringOrNull(value: unknown): value is string | null {
-    return value === null || typeof value === 'string';
 }

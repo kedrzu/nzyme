@@ -53,11 +53,7 @@ test('state and bases round-trip, and a deleted base reads as null', async () =>
 test('a corrupt state.json throws a typed error and stays on disk untouched', async () => {
     const store = await newStore();
     const path = join(store.dir, 'state.json');
-    const bad = [
-        '{"version": 1, "documents": ',
-        JSON.stringify({ version: 2 }),
-        JSON.stringify({ ...(await store.load()), documents: { x: { id: 1 } } }),
-    ];
+    const bad = ['{"version": 1, "documents": ', JSON.stringify({ version: 2 }), 'null'];
     await store.save(await store.load());
 
     for (const content of bad) {

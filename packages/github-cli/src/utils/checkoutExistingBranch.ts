@@ -5,13 +5,9 @@ import { simpleGit } from 'simple-git';
 import { UsageError } from '@nzyme/cli-core';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
-import type { GithubConfig } from '../GithubConfig.js';
 import { checkoutBranch } from './checkoutBranch.js';
-import { checkoutSubmodules } from './checkoutSubmodules.js';
-import type { GithubClient } from './createGithubClient.js';
 import { decideDirtyCheckout } from './decideDirtyCheckout.js';
 import { applyNamedStash, pushNamedStash } from './namedStash.js';
-import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 
 /**
  * Parameters for checking out an existing branch.
@@ -33,36 +29,16 @@ export interface CheckoutExistingBranchParams {
     logger: Logger;
 
     /**
-     * GitHub client instance. Together with {@link githubConfig} and {@link submoduleBase} it turns
-     * on the submodule step - see `checkoutSubmodules`. Omit all three to check out the main
-     * repository alone, when the caller runs that step itself.
-     */
-    githubClient?: GithubClient;
-
-    /**
-     * GitHub configuration - see {@link githubClient}.
-     */
-    githubConfig?: GithubConfig;
-
-    /**
-     * What the submodules follow - see `CheckoutSubmodulesParams.submoduleBase` and
-     * {@link githubClient}.
-     */
-    submoduleBase?: SubmoduleBase;
-
-    /**
      * Whether nobody is available to answer a question.
      * Uncommitted changes are then kept in place when the working tree is already on
      * {@link branchName}, and the checkout is refused otherwise - see {@link decideDirtyCheckout}.
-     * A submodule that is not safe to move is likewise refused with a `UsageError` rather than
-     * moved - see `checkoutSubmodules`.
      */
     unattended?: boolean;
 }
 
 /**
- * Checkout an existing branch, handling uncommitted changes by prompting the user.
- * Also handles checking out matching branches in submodules if GitHub client is provided.
+ * Checkout an existing branch of the main repository, handling uncommitted changes by prompting the
+ * user. Submodules are left where they are - `syncTaskBranch` checks them out.
  */
 export async function checkoutExistingBranch(params: CheckoutExistingBranchParams): Promise<void> {
     const { branchName, logger: paramLogger, unattended } = params;
@@ -76,7 +52,6 @@ export async function checkoutExistingBranch(params: CheckoutExistingBranchParam
         if (!hasChanges) {
             // No uncommitted changes, checkout normally
             await checkoutBranch(branchName, paramLogger, unattended);
-            await checkoutBranchSubmodules(params);
             return;
         }
 
@@ -122,7 +97,6 @@ export async function checkoutExistingBranch(params: CheckoutExistingBranchParam
         if (decision === 'proceed') {
             paramLogger.info(`✅ Already on ${chalk.cyan(branchName)} - keeping the uncommitted changes in place`);
             await checkoutBranch(branchName, paramLogger, unattended);
-            await checkoutBranchSubmodules(params);
             return;
         }
 
@@ -156,7 +130,6 @@ export async function checkoutExistingBranch(params: CheckoutExistingBranchParam
                 paramLogger.info(`🔄 Attempting to checkout ${chalk.cyan(branchName)} with uncommitted changes...`);
                 await checkoutBranch(branchName, paramLogger, unattended);
                 paramLogger.info(`✅ Successfully checked out ${chalk.cyan(branchName)} with uncommitted changes`);
-                await checkoutBranchSubmodules(params);
                 break;
             }
 
@@ -166,9 +139,6 @@ export async function checkoutExistingBranch(params: CheckoutExistingBranchParam
 
                 // Checkout the branch
                 await checkoutBranch(branchName, paramLogger, unattended);
-
-                // Checkout submodules before reapplying stash
-                await checkoutBranchSubmodules(params);
 
                 // Absent when the entry could not be re-identified after the push - then it stays on
                 // the shared stack, because applying something we cannot name unambiguously is the
@@ -199,17 +169,4 @@ export async function checkoutExistingBranch(params: CheckoutExistingBranchParam
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         throw new UsageError(`Failed to checkout branch ${branchName}: ${errorMessage}`);
     }
-}
-
-/**
- * Run the submodule step when the caller asked for it - see `CheckoutExistingBranchParams.githubClient`.
- */
-async function checkoutBranchSubmodules(params: CheckoutExistingBranchParams): Promise<void> {
-    const { githubClient, githubConfig, submoduleBase, logger, unattended } = params;
-
-    if (!githubClient || !githubConfig || !submoduleBase) {
-        return;
-    }
-
-    await checkoutSubmodules({ githubClient, githubConfig, submoduleBase, logger, unattended });
 }

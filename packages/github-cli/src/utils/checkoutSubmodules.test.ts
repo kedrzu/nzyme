@@ -9,7 +9,7 @@ import { UsageError } from '@nzyme/cli-core';
 import { createTestLogger } from '@nzyme/logging';
 
 import type { GithubConfig } from '../GithubConfig.js';
-import { checkoutExistingBranch } from './checkoutExistingBranch.js';
+import { checkoutSubmodules } from './checkoutSubmodules.js';
 import type { GithubClient } from './createGithubClient.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
 
@@ -81,7 +81,7 @@ async function setupSuperproject(root: string): Promise<{
 
     await simpleGit().clone(mainRemote, mainPath);
     const main = simpleGit({ baseDir: mainPath });
-    // Committing runs through `checkoutExistingBranch`'s own git instances, which carry no identity
+    // Committing runs through `checkoutSubmodules`' own git instances, which carry no identity
     // of their own, so the identity has to live in the repository itself.
     await main.addConfig('user.email', 't@t');
     await main.addConfig('user.name', 't');
@@ -107,7 +107,7 @@ async function setupSuperproject(root: string): Promise<{
     // A `task-branch` in the main repo whose gitlink records the submodule's task-branch tip,
     // without ever checking that commit out in the submodule working tree itself - a gitlink is
     // just a tree entry, and every test below decides independently what the submodule's own
-    // checkout looks like when `checkoutExistingBranch` runs against it.
+    // checkout looks like when `checkoutSubmodules` runs against it.
     await main.checkoutBranch('task-branch', 'main');
     await sub.checkout([subTaskTip]);
     await main.add(['nzyme']);
@@ -125,7 +125,7 @@ let originalCwd: string;
 
 beforeEach(() => {
     originalCwd = process.cwd();
-    root = mkdtempSync(join(tmpdir(), 'checkout-existing-branch-'));
+    root = mkdtempSync(join(tmpdir(), 'checkout-submodules-'));
 });
 
 afterEach(() => {
@@ -140,11 +140,9 @@ test('a dirty submodule on its base branch is refused unattended, and nothing is
     writeFileSync(join(submodulePath, 'dirty.txt'), 'work in progress\n');
 
     process.chdir(mainPath);
-    const { logger } = createTestLogger('checkoutExistingBranch');
+    const { logger } = createTestLogger('checkoutSubmodules');
 
-    const failure = checkoutExistingBranch({
-        branchName: 'main',
-        taskId: 'ABC-123',
+    const failure = checkoutSubmodules({
         logger,
         githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,
@@ -169,11 +167,9 @@ test('a dirty submodule on its base branch is left in place with a warning when 
     writeFileSync(join(submodulePath, 'dirty.txt'), 'work in progress\n');
 
     process.chdir(mainPath);
-    const { logger, logs } = createTestLogger('checkoutExistingBranch');
+    const { logger, logs } = createTestLogger('checkoutSubmodules');
 
-    await checkoutExistingBranch({
-        branchName: 'main',
-        taskId: 'ABC-123',
+    await checkoutSubmodules({
         logger,
         githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,
@@ -205,11 +201,9 @@ test('a submodule already on its base branch is fast-forwarded onto the fresh ti
     await pusher.push(['origin', 'main']);
 
     process.chdir(mainPath);
-    const { logger } = createTestLogger('checkoutExistingBranch');
+    const { logger } = createTestLogger('checkoutSubmodules');
 
-    await checkoutExistingBranch({
-        branchName: 'main',
-        taskId: 'ABC-123',
+    await checkoutSubmodules({
         logger,
         githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,
@@ -228,16 +222,15 @@ test('a submodule already on its base branch is fast-forwarded onto the fresh ti
 
 test('a task branch is resolved straight from the gitlink SHA, with no PR lookup by task ID', async () => {
     const { mainPath, submodulePath, subTaskTip } = await setupSuperproject(root);
+    await simpleGit({ baseDir: mainPath }).checkout(['task-branch']);
 
     process.chdir(mainPath);
-    const { logger } = createTestLogger('checkoutExistingBranch');
+    const { logger } = createTestLogger('checkoutSubmodules');
 
     // `THROWING_CLIENT`: the submodule starts clean on its base branch, which `assertSubmoduleReady`
     // judges without any GitHub call, and resolving the target branch from the gitlink SHA is pure
     // git - reaching GitHub anywhere in this path would itself be the regression.
-    await checkoutExistingBranch({
-        branchName: 'task-branch',
-        taskId: 'ABC-123',
+    await checkoutSubmodules({
         logger,
         githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,
@@ -277,14 +270,11 @@ test('a branch that does not land on the trunk checks the submodule out at its p
     await main.commit('pin submodule as release has it');
     await main.push(['-u', 'origin', 'hotfix']);
     await sub.checkout(['main']);
-    await main.checkout(['main']);
 
     process.chdir(mainPath);
-    const { logger } = createTestLogger('checkoutExistingBranch');
+    const { logger } = createTestLogger('checkoutSubmodules');
 
-    await checkoutExistingBranch({
-        branchName: 'hotfix',
-        taskId: 'ABC-123',
+    await checkoutSubmodules({
         logger,
         githubClient: THROWING_CLIENT,
         githubConfig: GITHUB_CONFIG,

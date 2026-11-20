@@ -177,12 +177,11 @@ function plainIn(userLanguage: string | undefined): string {
 }
 
 function listed(paths: string[]): string {
-    return limited(paths.map(path => `\`${path}\``));
-}
-
-function limited(items: string[]): string {
-    const shown = items.slice(0, LISTED).join(', ');
-    return items.length > LISTED ? `${shown} and ${items.length - LISTED} more` : shown;
+    const shown = paths
+        .slice(0, LISTED)
+        .map(path => `\`${path}\``)
+        .join(', ');
+    return paths.length > LISTED ? `${shown} and ${paths.length - LISTED} more` : shown;
 }
 
 function more(total: number): string[] {

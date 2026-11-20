@@ -24,6 +24,12 @@ const transpilers: Readonly<Record<ScriptLoader, Bun.Transpiler>> = {
 };
 
 /**
+ * The `body` of a module with no function, all of whose code runs when it loads: the MD5 of no
+ * bodies, `''`.
+ */
+export const NO_FUNCTION_BODIES = 'd41d8cd98f00b204e9800998ecf8427e';
+
+/**
  * Fingerprints a script module. The script is transpiled to JS, which strips types and comments and
  * reprints the code, so formatting is normalised too. `body` hashes the bodies of the outermost
  * functions (declarations, expressions, arrows, class and object methods); `top` hashes the rest of

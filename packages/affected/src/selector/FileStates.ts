@@ -5,6 +5,7 @@ import { getMd5Hash } from '@nzyme/crypto';
 
 import type { FileFingerprintResult } from '../fingerprint/FileFingerprint.js';
 import { fingerprintFile } from '../fingerprint/fingerprintFile.js';
+import { NO_FUNCTION_BODIES } from '../fingerprint/fingerprintScript.js';
 import type { FileHash } from '../store/VariantStore.js';
 
 /** A file's content as hashed now: the MD5 of its bytes and its fingerprint. */
@@ -60,6 +61,15 @@ export function toFileHash(state: FileState, level: FileHashLevel): FileHash {
     return level === 'full'
         ? { body: state.fingerprint.body, top: state.fingerprint.top }
         : { top: state.fingerprint.top };
+}
+
+/**
+ * Whether all of a file's code runs when it loads: a module with no function (constants, a data
+ * table, config) or a file with no structure to split (JSON).
+ * @__NO_SIDE_EFFECTS__
+ */
+export function runsOnlyOnLoad(state: FileState): boolean {
+    return state.fingerprint === 'whole' || state.fingerprint.body === NO_FUNCTION_BODIES;
 }
 
 /**

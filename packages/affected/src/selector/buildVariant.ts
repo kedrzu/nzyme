@@ -10,7 +10,7 @@ import { collectImportClosure } from './collectImportClosure.js';
 import { getFileListingKey, hashFileList, listFiles } from './FileListing.js';
 import type { FileListing } from './FileListing.js';
 import type { FileHashLevel } from './FileStates.js';
-import { toFileHash } from './FileStates.js';
+import { runsOnlyOnLoad, toFileHash } from './FileStates.js';
 import { buildSuiteFingerprint } from './suiteFingerprint.js';
 import type { ReadFileState } from './suiteFingerprint.js';
 
@@ -55,10 +55,16 @@ export type BuildVariantResult = { variant: Variant } | { missing: string };
  *   so any runtime change to it counts;
  * - executed files — in full;
  * - everything executed files import statically, transitively — `top` only: their load-time code
- *   ran, their function bodies did not (or they would be executed files themselves). A dynamic
- *   `import('…')` is not followed: a lazily loaded module the test reached ran, so it is an executed
- *   file itself. Except a file a server process ran anywhere in the run: in full, since code that
- *   ran once and kept state (a lazy singleton's setup) served this test too;
+ *   ran, their function bodies did not (or they would be executed files themselves). Except a file a
+ *   server process ran anywhere in the run: in full, since code that ran once and kept state (a lazy
+ *   singleton's setup) served this test too;
+ * - every module an executed file loads through a literal `import('…')` whose code all runs on load
+ *   (constants, a data table, config — see {@link runsOnlyOnLoad}), and what it imports statically
+ *   — `top` only, by the same rule: the trace sees only functions, so such a module is never an
+ *   executed file. A lazily loaded module with functions is not followed: if the test reached it, its
+ *   functions ran and it is an executed file itself, and following a router's lazy routes would tie
+ *   every test to every page. The trace says which files ran, not which functions, so the module is
+ *   followed even when the function holding the `import()` did not run;
  * - assets — in full; most have no structure to split, so they are hashed by bytes;
  * - every file under the directory of a file above with a computed `import(…)`, which may load any
  *   of them — in full, and so is what they import when the suite is not traced (a traced run lists
@@ -98,7 +104,11 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
         levels.set(file, 'full');
     }
     const ranInRun = new Set(options.runExecuted);
-    for (const file of collectImportClosure(graph, options.executed, { staticOnly: true })) {
+    const loadedLazily = await collectLoadOnlyLazyImports(graph, options.executed, options.readState);
+    for (const file of [
+        ...loadedLazily,
+        ...collectImportClosure(graph, [...options.executed, ...loadedLazily], { staticOnly: true }),
+    ]) {
         if (!levels.has(file)) {
             levels.set(file, ranInRun.has(file) ? 'full' : 'top');
         }
@@ -180,6 +190,32 @@ export async function buildVariant(options: BuildVariantOptions): Promise<BuildV
         }
         return listed;
     }
+}
+
+/**
+ * The modules `executed` files load through a literal `import('…')` whose code all runs on load,
+ * transitively: such a module has no function, so whatever it imports dynamically it imports on load.
+ */
+async function collectLoadOnlyLazyImports(
+    graph: ImportGraph,
+    executed: readonly string[],
+    readState: ReadFileState,
+): Promise<Set<string>> {
+    const found = new Set<string>();
+    const queue = [...executed];
+    for (let file = queue.shift(); file !== undefined; file = queue.shift()) {
+        for (const edge of graph.importsOf(file)) {
+            if (!edge.dynamic || found.has(edge.to)) {
+                continue;
+            }
+            const state = await readState(edge.to);
+            if (state !== null && runsOnlyOnLoad(state)) {
+                found.add(edge.to);
+                queue.push(edge.to);
+            }
+        }
+    }
+    return found;
 }
 
 /** Params of {@link mergeSharedAccesses}. */

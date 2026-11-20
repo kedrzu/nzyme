@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 
 import { fingerprintFile } from './fingerprintFile.js';
+import { NO_FUNCTION_BODIES } from './fingerprintScript.js';
 
 const base = `
 import { formatName } from './formatName.js';
@@ -56,6 +57,14 @@ test('a change inside a function body changes only body', () => {
 
 test('a change inside a nested function changes only body', () => {
     expect(changedParts('handler.ts', base, base.replace('greet(user)', 'greet(user) + 1'))).toEqual(['body']);
+});
+
+test('a module with no function has the body of no bodies', () => {
+    expect(fingerprintFile('table.ts', 'export const ROWS = [1, () => 2];\n')).not.toHaveProperty(
+        'body',
+        NO_FUNCTION_BODIES,
+    );
+    expect(fingerprintFile('table.ts', 'export const ROWS = [1, 2];\n')).toHaveProperty('body', NO_FUNCTION_BODIES);
 });
 
 test('a change to top-level code changes only top', () => {

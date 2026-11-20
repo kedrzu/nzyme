@@ -60,13 +60,18 @@ Two hashes per file, in `@nzyme/affected`.
   load and are top; a plain `<script>` is split like a module. Stylesheets are hashed by text with
   whitespace normalised. Non-code dependencies (images, fonts) are hashed whole.
 - **Variant** = the test's entry files (hashed whole), the executed files (`body` + `top`), their static
-  import closure (`top`, except a file a server process ran in the same run, below; a literal
-  `import('…')` is not followed — a lazily loaded module the test reached is an executed file itself,
-  and following a router's lazy routes would tie every test to every page), its assets, the
+  import closure (`top`, except a file a server process ran in the same run, below), the modules an
+  executed file loads through a literal `import('…')` that have no function — constants, a data
+  table, config, JSON — with their static imports (`top`: the trace sees only functions, so all of
+  such a module's code runs unseen), its assets, the
   `package.json` of every workspace package owning one of its files (a manifest edit acts on the whole
   package, as on the base-diff path), and a suite fingerprint: the suite's `fullRunTriggers` and everything they
   import, the files that ran at startup, modules imported for side effects only, and files with a
-  computed `import(…)`. A suite fingerprint that no longer matches reruns the whole suite; its config
+  computed `import(…)`. A lazily loaded module with functions is not followed: if the test reached
+  it, a function in it ran and it is an executed file itself, and following a router's lazy routes
+  would tie every test to every page. The trace records files, not functions, so a module with no
+  function is followed even when the function holding its `import()` did not run for the test: a
+  dependency too many, the safe direction. A suite fingerprint that no longer matches reruns the whole suite; its config
   hash covers the triggers, tracing, aliases and `rewrites`. A trigger with no glob character names one
   file that counts while it exists even when git ignores it, so an install or build stamp can be one.
   The variant graph links each rewrite target to its source (`x.loc.ts` imports `x.loc.yaml`), so a

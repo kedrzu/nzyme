@@ -3,8 +3,7 @@ import type { ImportGraph } from '@nzyme/project-utils/importGraph/buildImportGr
 /** Options of {@link collectImportClosure}. */
 export interface CollectImportClosureOptions {
     /**
-     * Skip dynamic `import('…')` edges: loading a file does not load what it imports lazily. Use it
-     * where execution is traced — a lazily loaded module the run reached is an executed file itself.
+     * Skip dynamic `import('…')` edges: loading a file does not load what it imports lazily.
      */
     staticOnly?: boolean;
 }

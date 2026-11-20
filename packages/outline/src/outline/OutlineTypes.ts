@@ -59,6 +59,8 @@ export interface OutlineDocumentMembership {
     documentId: string;
     userId: string;
     permission: OutlinePermission;
+    /** Set when the access is inherited from a share on a parent document; absent or `null` for a direct share. */
+    sourceId?: string | null;
 }
 
 export interface OutlineDocumentGroupMembership {
@@ -66,6 +68,8 @@ export interface OutlineDocumentGroupMembership {
     documentId: string;
     groupId: string;
     permission: OutlinePermission;
+    /** Set when the access is inherited from a share on a parent document; absent or `null` for a direct share. */
+    sourceId?: string | null;
 }
 
 export interface OutlineAttachment {
@@ -188,6 +192,9 @@ export interface DocumentsAddGroupResult {
     groups: OutlineGroup[];
     groupMemberships: OutlineDocumentGroupMembership[];
 }
+
+/** The groups a document is shared with, as `documents.group_memberships` returns them. */
+export type DocumentGroupMembershipsResult = DocumentsAddGroupResult;
 
 export interface UserMembershipsResult {
     memberships: OutlineDocumentMembership[];

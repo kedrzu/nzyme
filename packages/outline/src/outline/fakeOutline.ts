@@ -256,6 +256,7 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         'documents.archive': documentsArchive,
         'documents.delete': documentsDelete,
         'documents.memberships': documentsMemberships,
+        'documents.group_memberships': documentsGroupMemberships,
         'documents.add_user': documentsAddUser,
         'documents.remove_user': documentsRemoveUser,
         'documents.add_group': documentsAddGroup,
@@ -697,16 +698,28 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         return ok({ success: true });
     }
 
+    /** Like Outline, listing who a document is shared with needs the right to edit it, not just to read it. */
     function documentsMemberships({ user, body }: Call) {
-        const document = authorizeDocument(user, requireString(body, 'id'), 'read');
+        const document = authorizeDocument(user, requireString(body, 'id'), 'write');
         const memberships = documentMemberships.filter(membership => membership.documentId === document.id);
         const { items, pagination } = paginate(body, memberships);
         return ok(userMembershipsResult(items), pagination);
     }
 
+    function documentsGroupMemberships({ user, body }: Call) {
+        const document = authorizeDocument(user, requireString(body, 'id'), 'write');
+        const memberships = documentGroupMemberships.filter(membership => membership.documentId === document.id);
+        const { items, pagination } = paginate(body, memberships);
+        const shared = groups.filter(group => items.some(membership => membership.groupId === group.id));
+        return ok({ groups: shared.map(presentGroup), groupMemberships: items }, pagination);
+    }
+
     function documentsAddUser({ user, body }: Call) {
         const document = authorizeDocument(user, requireString(body, 'id'), 'write');
         const target = requireUser(requireString(body, 'userId'));
+        if (target.id === user.id) {
+            throw new FakeApiError(400, 'validation_error', 'You cannot invite yourself');
+        }
         const membership = upsertUserMembership(document.id, target.id, requirePermission(body));
         return ok(userMembershipsResult([membership]));
     }

@@ -130,6 +130,30 @@ test('documents.memberships lists direct user shares and remove_user deletes one
     expect(after.memberships).toEqual([]);
 });
 
+test('documents.group_memberships lists direct group shares; listing and sharing need the right to edit', async () => {
+    const outline = fakeOutline();
+    const ana = outline.addUser({ name: 'Ana' });
+    const bob = outline.addUser({ name: 'Bob' });
+    const team = outline.addGroup({ name: 'Team', members: [bob] });
+    const reference = outline.addCollection({
+        name: 'Reference',
+        permission: 'read',
+        members: [{ user: ana, permission: 'admin' }],
+    });
+    const doc = outline.addDocument({ collection: reference, title: 'Doc', createdBy: ana });
+    outline.shareDocument({ document: doc, group: team, permission: 'read' });
+
+    const listed = await outline.clientAs(ana).documents.groupMemberships({ id: doc.id });
+    expect(listed.groups.map(group => group.name)).toEqual(['Team']);
+    expect(listed.groupMemberships).toMatchObject([{ documentId: doc.id, groupId: team.id }]);
+
+    // Bob only reads the document: he may neither list its shares nor add one.
+    await expect(outline.clientAs(bob).documents.groupMemberships({ id: doc.id })).rejects.toMatchObject({
+        status: 403,
+    });
+    await expect(outline.clientAs(bob).documents.memberships({ id: doc.id })).rejects.toMatchObject({ status: 403 });
+});
+
 test('revision rises on every accepted update, and the text goes through the normalizer', async () => {
     const outline = fakeOutline({ normalizeText: text => text.replaceAll(/\s+$/gm, '') });
     const ana = outline.addUser({ name: 'Ana' });

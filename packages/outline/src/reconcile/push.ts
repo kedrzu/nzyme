@@ -1,6 +1,5 @@
 import { assert } from '@nzyme/utils/assert.js';
 import { copyFile, mkdir, readdir, rm, stat } from 'node:fs/promises';
-import type { Stats } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 
 import { DRAFTS_FOLDER, SHARED_FOLDER } from '../discover/tree.js';
@@ -22,6 +21,7 @@ import { isErrorCode } from '../utils/isErrorCode.js';
 import { isInside } from '../utils/isInside.js';
 import { pathExists } from '../utils/pathExists.js';
 import { readFileIfExists } from '../utils/readFileIfExists.js';
+import { toFileStat } from '../utils/toFileStat.js';
 import { writeFileAtomic } from '../utils/writeFileAtomic.js';
 import { localContent } from './localContent.js';
 import { hasConflictMarkers, mergeDocument } from './merge.js';
@@ -843,10 +843,6 @@ function agreedFrom(remote: OutlineDocument): Agreed {
         collectionId: remote.collectionId,
         parentId: remote.parentDocumentId,
     };
-}
-
-function toFileStat(stats: Stats): FileStat {
-    return { mtimeMs: stats.mtimeMs, size: stats.size, ino: stats.ino };
 }
 
 function depth(path: string) {

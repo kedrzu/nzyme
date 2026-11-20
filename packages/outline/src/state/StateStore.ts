@@ -18,10 +18,21 @@ export interface DocState {
     shared: string[];
     /** Hash of the local file as sync last wrote or read it; a different hash means a local edit. */
     localHash: string;
+    /** What the sharing sync remembers about the document's share list. */
+    sharing?: SharingState;
     /** The Outline revision an open conflict was merged against. */
     conflictRevision?: number;
     /** The file's stat when it was last seen to hash to `localHash`; a file still matching it is not read again. */
     fileStat?: FileStat;
+}
+
+export interface SharingState {
+    /** Entries of the file's `shared:` list that match no user or group (or several); they stay in the file. */
+    unresolved: string[];
+    /** ISO time Outline's list was last compared with `DocState.shared`. */
+    checkedAt?: string;
+    /** The file's stat when its list was last seen to be settled; a file still matching it is not read again. */
+    stat?: FileStat;
 }
 
 /** What identifies an unchanged file without reading it: an edit changes the mtime, an atomic save the inode too. */
@@ -175,8 +186,18 @@ function isDocState(value: unknown): value is DocState {
         isStringOrNull(value.collectionId) &&
         isStringArray(value.shared) &&
         typeof value.localHash === 'string' &&
+        (value.sharing === undefined || isSharingState(value.sharing)) &&
         (value.conflictRevision === undefined || typeof value.conflictRevision === 'number') &&
         (value.fileStat === undefined || isFileStat(value.fileStat))
+    );
+}
+
+function isSharingState(value: unknown): value is SharingState {
+    return (
+        isRecord(value) &&
+        isStringArray(value.unresolved) &&
+        (value.checkedAt === undefined || typeof value.checkedAt === 'string') &&
+        (value.stat === undefined || isFileStat(value.stat))
     );
 }
 

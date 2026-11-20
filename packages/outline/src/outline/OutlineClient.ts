@@ -6,6 +6,7 @@ import type { OutlineRateLimitKind, RateLimiter } from './rateLimiter.js';
 import type {
     AttachmentsCreateParams,
     CollectionsCreateParams,
+    DocumentGroupMembershipsResult,
     DocumentMembershipsResult,
     DocumentsAddGroupParams,
     DocumentsAddGroupResult,
@@ -89,6 +90,9 @@ export class OutlineClient {
         /** Direct user shares of a document, up to 100 (a page, so a longer list is cut off). */
         memberships: (params: { id: string }) =>
             this.callData<DocumentMembershipsResult>('documents.memberships', { ...params, limit: 100 }),
+        /** Direct group shares of a document, up to 100. Like `memberships`, it needs the right to edit the document. */
+        groupMemberships: (params: { id: string }) =>
+            this.callData<DocumentGroupMembershipsResult>('documents.group_memberships', { ...params, limit: 100 }),
         addUser: (params: DocumentsAddUserParams) =>
             this.callData<DocumentMembershipsResult>('documents.add_user', params),
         removeUser: async (params: DocumentsRemoveUserParams) => {

@@ -59,6 +59,8 @@ type FailureKind = 'login' | 'offline' | 'failure';
 /** Steps start no new document after these offsets from the hook's start, keeping a run under 40 s of the 60 s timeout every hook has. */
 const PULL_BUDGET_MS = 20 * 1000;
 const PUSH_BUDGET_MS = 32 * 1000;
+/** No 429 is waited out past this offset from the hook's start, keeping a run under 40 s of the 60 s timeout. */
+const RUN_LIMIT_MS = 40 * 1000;
 const STOP_LOCK_WAIT_MS = 15 * 1000;
 const SESSION_END_LOCK_WAIT_MS = 5 * 1000;
 const PROMPT_INTERVAL_MS = 60 * 1000;
@@ -130,6 +132,8 @@ async function runLocked({ options, input, workspace, started, now }: RunLockedP
     const client = new OutlineClient({
         url: options.url,
         fetch: options.fetch,
+        deadline: started + RUN_LIMIT_MS,
+        now,
         // The hook holds the sync lock for the whole run, so a refresh must not take it again.
         getAccessToken: createTokenProvider({
             url: options.url,

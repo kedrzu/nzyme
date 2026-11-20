@@ -330,6 +330,41 @@ test('a move in Outline moves the file under its old name with its children fold
     expect(state.documents[offer.id]?.parentId).toBe(archive.id);
 });
 
+test('a file a killed run wrote but never recorded is taken over when unchanged, and kept beside a new copy when edited', async () => {
+    const world = await setup();
+    const offer = world.addDocument('Offer', TEXT);
+    const plan = world.addDocument('Plan', TEXT);
+    // As a run killed before its state was saved leaves them: written, untracked, one edited since.
+    await world.write('wiki/offer.md', `---\noutline: ${offer.id}\n---\n# Offer\n\n${TEXT}`);
+    await world.write('wiki/plan.md', `---\noutline: ${plan.id}\n---\n# Plan\n\nEdited after the kill.`);
+
+    const report = await world.pull('incremental');
+
+    expect(report.written.toSorted()).toEqual(['wiki/offer.md', 'wiki/plan-2.md']);
+    expect((await readdir(join(world.documentsDir, 'wiki'))).toSorted()).toEqual(['offer.md', 'plan-2.md', 'plan.md']);
+    expect(await world.read('wiki/plan.md')).toContain('Edited after the kill.');
+    expect((await world.store.load()).documents[offer.id]?.path).toBe('wiki/offer.md');
+});
+
+test('a move a killed run made but never recorded is finished, not given a numbered name', async () => {
+    const world = await setup();
+    const offer = world.addDocument('Offer', TEXT);
+    const archive = world.addDocument('Archive', '');
+    world.outline.addDocument({ parent: offer, title: 'Price list', text: 'Prices.', createdBy: world.ana });
+    await world.pull('incremental');
+
+    await world.outline.clientAs(world.bob).documents.move({ id: offer.id, parentDocumentId: archive.id });
+    // The killed run renamed the file, then died before moving the children's folder and saving the state.
+    await world.write('wiki/archive/offer.md', await world.read('wiki/offer.md'));
+    await rm(join(world.documentsDir, 'wiki/offer.md'));
+    const report = await world.pull('incremental');
+
+    expect(report.moved).toEqual([{ from: 'wiki/offer.md', to: 'wiki/archive/offer.md' }]);
+    expect((await readdir(join(world.documentsDir, 'wiki/archive'))).toSorted()).toEqual(['offer', 'offer.md']);
+    expect(await world.read('wiki/archive/offer/price-list.md')).toContain('Prices.');
+    expect((await world.store.load()).documents[offer.id]?.path).toBe('wiki/archive/offer.md');
+});
+
 test('attachments download without the Outline token, a failed one is retried by the next pull, and an unlinked one is removed', async () => {
     const world = await setup();
     const offer = world.addDocument('Offer', TEXT);

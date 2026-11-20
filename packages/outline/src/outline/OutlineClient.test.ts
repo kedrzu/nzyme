@@ -87,6 +87,40 @@ test('a 429 that never clears ends in OutlineRateLimitError, not a silent drop',
     await expect(client.groups.list()).rejects.toBeInstanceOf(OutlineRateLimitError);
 });
 
+test('a 429 whose Retry-After would pass the deadline throws at once; one within it is waited out', async () => {
+    const fetch: OutlineFetch = () =>
+        Promise.resolve(
+            Response.json(
+                { ok: false, error: 'rate_limit_exceeded', message: 'slow' },
+                { status: 429, headers: { 'Retry-After': '30' } },
+            ),
+        );
+    const slept: number[] = [];
+    const late = new OutlineClient({
+        url: 'https://wiki.test',
+        getAccessToken: () => Promise.resolve(TOKEN),
+        fetch,
+        sleep: recordSleep(slept),
+        deadline: 1000 + 29_999,
+        now: () => 1000,
+    });
+
+    await expect(late.groups.list()).rejects.toBeInstanceOf(OutlineRateLimitError);
+    expect(slept).toEqual([]);
+
+    let calls = 0;
+    const clearing = new OutlineClient({
+        url: 'https://wiki.test',
+        getAccessToken: () => Promise.resolve(TOKEN),
+        fetch: input => (++calls === 1 ? fetch(input) : Promise.resolve(Response.json({ data: [] }))),
+        sleep: recordSleep(slept),
+        deadline: 1000 + 30_000,
+        now: () => 1000,
+    });
+    await clearing.groups.list();
+    expect(slept).toEqual([30_000]);
+});
+
 test('a stale lastRevision surfaces as OutlineConflictError, and the document is left untouched', async () => {
     const outline = fakeOutline();
     const ana = outline.addUser({ name: 'Ana' });

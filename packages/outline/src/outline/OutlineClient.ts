@@ -45,6 +45,13 @@ export interface OutlineClientOptions {
     fetch?: OutlineFetch;
     /** Waits out a 429's `Retry-After`; tests replace it. */
     sleep?: (ms: number) => Promise<void>;
+    /**
+     * Epoch milliseconds no 429 wait may pass: a `Retry-After` reaching beyond it throws `OutlineRateLimitError`
+     * at once, so a caller killed at a fixed timeout ends its run in time. Without it a 429 is always waited out.
+     */
+    deadline?: number;
+    /** The clock the deadline is checked against. */
+    now?: () => number;
 }
 
 interface Envelope<T> {
@@ -56,7 +63,7 @@ const MAX_RATE_LIMIT_RETRIES = 10;
 const DEFAULT_RETRY_AFTER_SECONDS = 1;
 
 /**
- * Typed client over the Outline endpoints the sync needs. A 429 waits `Retry-After` and retries, a 409
+ * Typed client over the Outline endpoints the sync needs. A 429 waits `Retry-After` (never past the deadline) and retries, a 409
  * throws `OutlineConflictError`, other failures `OutlineApiError`.
  */
 export class OutlineClient {
@@ -64,12 +71,16 @@ export class OutlineClient {
     private readonly getAccessToken: () => Promise<string>;
     private readonly fetchImpl: OutlineFetch;
     private readonly sleep: (ms: number) => Promise<void>;
+    private readonly deadline: number | undefined;
+    private readonly now: () => number;
 
     constructor(options: OutlineClientOptions) {
         this.baseUrl = options.url.replace(/\/+$/, '');
         this.getAccessToken = options.getAccessToken;
         this.fetchImpl = options.fetch ?? fetch;
         this.sleep = options.sleep ?? waitFor;
+        this.deadline = options.deadline;
+        this.now = options.now ?? Date.now;
     }
 
     readonly documents = {
@@ -185,10 +196,14 @@ export class OutlineClient {
             }
             const failure = await readFailure(response, token);
             if (response.status === 429) {
-                if (attempt >= MAX_RATE_LIMIT_RETRIES) {
+                const waitMs = readRetryAfterMs(response);
+                if (
+                    attempt >= MAX_RATE_LIMIT_RETRIES ||
+                    (this.deadline != null && this.now() + waitMs > this.deadline)
+                ) {
                     throw new OutlineRateLimitError(method, failure.message, failure.code);
                 }
-                await this.sleep(readRetryAfterMs(response));
+                await this.sleep(waitMs);
                 continue;
             }
             if (response.status === 409) {

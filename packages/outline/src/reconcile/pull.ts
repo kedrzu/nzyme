@@ -198,8 +198,9 @@ export async function pull(options: PullOptions): Promise<PullReport> {
     }
 
     async function createDocument(remote: OutlineDocument, path: string) {
-        const target = await freePath(documentsDir, path);
         const content = localContent(remote, {});
+        // The same file left untracked at `path` was written by a run killed before it saved the state: take it over.
+        const target = (await untrackedContent(path)) === content ? path : await freePath(documentsDir, path);
         await writeFileAtomic(join(documentsDir, target), content);
         await store.writeBase(remote.id, content);
         state.documents[remote.id] = {
@@ -216,14 +217,19 @@ export async function pull(options: PullOptions): Promise<PullReport> {
 
     /** Moves the file, its attachments and its children's folder; never renames the file unless the target name is taken on disk. */
     async function moveDocument(known: DocState, path: string): Promise<DocState> {
-        const target = await freePath(documentsDir, path);
         const from = join(documentsDir, known.path);
-        const to = join(documentsDir, target);
         const bytes = await readFileIfExists(from);
+        // A run killed after the rename, before it saved the state, left this document's file untracked at `path`: finish that move.
+        const leftBehind = bytes == null ? await untrackedContent(path) : null;
+        const resumed = leftBehind != null && parseDocFile(leftBehind, basename(path)).doc.id === known.id;
+        const target = resumed ? path : await freePath(documentsDir, path);
+        const to = join(documentsDir, target);
         if (bytes != null) {
             await mkdir(dirname(to), { recursive: true });
             await rename(from, to);
             await moveAttachments(bytes.toString('utf8'), dirname(from), dirname(to));
+        } else if (resumed) {
+            await moveAttachments(leftBehind, dirname(from), dirname(to));
         }
 
         const fromFolder = stem(known.path);
@@ -320,6 +326,15 @@ export async function pull(options: PullOptions): Promise<PullReport> {
             report.written.push(path);
             await removeDroppedAttachments(path, local, merged.content);
         }
+    }
+
+    /** The file at `path` when no tracked document claims it, as a run killed before saving the state leaves its writes; `null` otherwise. */
+    async function untrackedContent(path: string) {
+        if (Object.values(state.documents).some(document => document.path === path)) {
+            return null;
+        }
+        const bytes = await readFileIfExists(join(documentsDir, path));
+        return bytes == null ? null : bytes.toString('utf8');
     }
 
     /** Writes `content` unless the file was edited meanwhile (it hashes differently from `startHash`); then it waits for the next pull. */

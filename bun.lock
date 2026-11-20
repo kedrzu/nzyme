@@ -699,6 +699,7 @@
       },
       "devDependencies": {
         "@nzyme/ioc-testing": "workspace:*",
+        "@nzyme/pen": "workspace:*",
         "@nzyme/tsconfig": "workspace:*",
         "@types/bun": "^1.4.3",
         "@types/node": "26.6.6",

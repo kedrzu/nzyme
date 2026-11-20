@@ -29,8 +29,8 @@ export class PenRenderCommand extends Command {
             temporary directory; their absolute paths are printed one per line.
         `,
         examples: [
-            ['Render two screens of the working file', 'nzyme pen render design.pen a1B2c d3E4f'],
-            ['Render a screen as main has it', 'nzyme pen render main:design.pen a1B2c --out renders/main'],
+            ['Render two screens of the working file', 'pen render design.pen a1B2c d3E4f'],
+            ['Render a screen as main has it', 'pen render main:design.pen a1B2c --out renders/main'],
         ],
     });
 

@@ -21,21 +21,16 @@ its own copy, the file merges node by node through a git merge driver, and a che
 All of it works before the first `.pen` file exists.
 
 - **`.gitattributes`:** `*.pen merge=pen -diff linguist-generated`. The merge driver merges the file; a text diff
-  of a large JSON file is noise (`bun nzyme pen diff` replaces it).
+  of a large JSON file is noise (`pen diff` replaces it).
 
 - **The driver registered in `setup.sh`**, before its first `git merge` (`references/setup-scripts.md`): the
   `# {{if pen}}` block of `assets/setup.sh.tmpl`. Local git config is shared by every worktree of the clone, and
   setting it again is harmless. Without it git falls back to a whole-file conflict keeping ours.
 
-- **The commands:** `@nzyme/pen` as a `workspace:*` dev dependency, and a plugin file listed under
-  `nzyme.plugins` in the root `package.json`:
+- **The commands:** `@nzyme/pen` as a `workspace:*` dependency of the product CLI (`references/product-cli.md`),
+  which registers `...definePenCommands()` from `@nzyme/pen/definePenCommands.js`, run as `bun <product> pen …`.
 
-  ```ts
-  // scripts/pen.ts
-  export { default } from '@nzyme/pen/plugin.js';
-  ```
-
-- **The check in lint:** `&& bun nzyme pen check` appended to the `lint` and `lint:check` scripts. It checks every
+- **The check in lint:** `&& bun <product> pen check` appended to the `lint` and `lint:check` scripts. It checks every
   `*.pen` file git tracks; none means pass.
 
 - **`@pen.dev/cli`** as an exact-pinned dev dependency: design rounds and `pen render` run the repo's own `pen`, and
@@ -69,7 +64,7 @@ All of it works before the first `.pen` file exists.
 - `*.pen` marked `binary`, or with no `merge=pen`: a difference. A `binary` file conflicts as a whole on any two
   branches that touched it.
 - `setup.sh` without the registration, or with it after the catch-up merge: a difference.
-- No `nzyme.plugins` entry for the pen plugin, or no `pen check` in `lint` and `lint:check`: a difference.
+- `definePenCommands()` not registered in the product CLI, or no `pen check` in `lint` and `lint:check`: a difference.
 - `@pen.dev/cli` missing, or as a range: a difference.
 - A pen.dev or Anthropic key in the secret store, `.env` or CI for design work: a difference. Remove it; `bunx pen login`
   is the only credential.

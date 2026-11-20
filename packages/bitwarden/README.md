@@ -36,7 +36,7 @@ A `readAll` costs at most three requests (login, project listing, one fetch), ho
 5. **Log in** on each machine:
 
    ```bash
-   nzyme secrets login
+   bun <product> secrets login
    ```
 
    The token is read from a hidden prompt
@@ -75,4 +75,4 @@ leaked token exposes the Secrets Manager projects its machine account can access
 Tokens, and values cached by `cached()`, are stored with `Bun.secrets` under the service
 `nzyme-secrets`.
 
-Any `bun` process of the same user can read them without a prompt: on macOS (Bun 1.4.4, checked 2026-11-02) a separate `bun` script read the tokens that `nzyme secrets login` had stored. The keychain protects them from other users and from a stolen disk, not from code you run. Linux is not checked yet.
+Any `bun` process of the same user can read them without a prompt: on macOS (Bun 1.4.4, checked 2026-11-02) a separate `bun` script read the tokens that `secrets login` had stored. The keychain protects them from other users and from a stolen disk, not from code you run. Linux is not checked yet.

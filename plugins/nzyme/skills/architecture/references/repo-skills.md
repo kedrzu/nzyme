@@ -54,7 +54,7 @@ repo's own and not compared.
   allows it). The document's references and package READMEs are
   linked by path, never inlined.
 
-For `secrets` the facts are the whole point: the exact prefix (`bun nzyme secrets` or the product
+For `secrets` the facts are the whole point: the exact prefix (`bun <product> secrets`, the product
 CLI's), the provider file, each store and its environments, the variable that selects the environment
 and how to run a command against another one, whose machines can write, and any secrets command the
 repo adds. Its description also keeps the trigger "before running anything that could print the

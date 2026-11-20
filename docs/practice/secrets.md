@@ -9,7 +9,7 @@ other variable ([ioc](ioc.md)). Values are cached in the OS keychain. There is n
 every credential — the app's, a script's, a token a tool needs — is a secret in a store, so it has one
 home and one way in.
 
-What is true only in one repo — how the CLI is invoked (`bun nzyme secrets …` or the product's CLI),
+What is true only in one repo — how the CLI is invoked (the product CLI, `bun <product> secrets …`),
 where the stores are defined, which prefixes and environments exist, which store a name goes to,
 whose machines can write — sits above this document. This document uses `secrets …` for the command.
 API and options: `@nzyme/secrets` README (`nzyme/packages/secrets/README.md` in a product repo).
@@ -37,9 +37,10 @@ To check a value is right without seeing it, run what uses it: the app, an API c
 
 ## Adding a secret
 
-1. Declare the variable with `defineEnvVariable` (or the config entry) where the code reads it. There
-   is no mapping to edit: the key in the store is the name. The repo's `target` policy decides which
-   store the name goes to and may refuse it; its message says why.
+1. Declare it with `defineSecret` in the repo's secrets module (a name, a `description`, optionally
+   `enabled` and `meta`), and read it where the code needs it. There is no mapping to edit: the key in
+   the store is the name. `secrets set` refuses a name that is not declared or not enabled here, and the
+   provider's write policy may refuse it too; the message says why.
 2. Ask the user for the value through a masked dialog. Tell them it is coming — it opens outside
    the terminal — then run:
 
@@ -61,8 +62,7 @@ Writing needs a token that may write; a read-only one is refused, and the error 
 
 ## When a secret is missing or a token is rejected
 
-`secrets list` shows every key of every store with its store id (and `overridden by environment`). It does not
-know which keys the repo expects, so a name absent from it is missing: add it as above, or run the repo's own check if it has one. A missing or rejected token is
+`secrets list` shows every declared secret that applies here with its store id, `missing` or `overridden by environment`, then stored keys that are `not declared` or `not enabled here`. A `missing` name: add it as above. A missing or rejected token is
 the user's to fix with `secrets login`, because only they hold it; tell them and stop. `overridden by environment` means a variable set in the shell, or in
 a leftover `.env` that Bun loads on its own, wins over the store.
 

@@ -1,5 +1,6 @@
 import type { Injectable } from '@nzyme/ioc/Injectable.js';
 
+import type { SecretDefinition } from '../defineSecret.js';
 import type { SecretStore } from '../SecretStore.js';
 
 /**
@@ -15,6 +16,12 @@ export interface SecretsProvider {
      * when it throws.
      */
     target(name: string): SecretStore;
+    /**
+     * The project's declared secrets (`getSecretDefinitions`). When given, `set` and `run` refuse a
+     * name that is not declared or not enabled in this environment, `run` with no names takes every
+     * enabled one, and `list` reports against them. Without it, the commands trust the names they get.
+     */
+    secrets?: readonly SecretDefinition[];
 }
 
 /**

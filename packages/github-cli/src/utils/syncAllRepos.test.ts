@@ -900,7 +900,10 @@ test('a base that landed another submodule pin with its own lock is merged in wi
 
     // Another PR lands a newer submodule pin with the lock regenerated for it, and the submodule's
     // trunk moves on past that pin.
-    const seed = simpleGit({ baseDir: join(root, 'sub-seed') });
+    const seed = simpleGit({
+        baseDir: join(root, 'sub-seed'),
+        config: ['user.email=t@t', 'user.name=t', 'commit.gpgsign=false'],
+    });
     await seed.checkout('main');
     await seed.pull('origin', 'main');
     await seed.commit('sub c2 on main', [], { '--allow-empty': null });
@@ -954,7 +957,10 @@ test('a failed bun.lock regenerate while concluding a base merge aborts the merg
         });
     await sync(createPinLockRunner().runCommand);
 
-    const seed = simpleGit({ baseDir: join(root, 'sub-seed') });
+    const seed = simpleGit({
+        baseDir: join(root, 'sub-seed'),
+        config: ['user.email=t@t', 'user.name=t', 'commit.gpgsign=false'],
+    });
     await seed.checkout('main');
     await seed.pull('origin', 'main');
     await seed.commit('sub c2 on main', [], { '--allow-empty': null });

@@ -157,6 +157,9 @@ export interface ConcludeMergeConflictParams {
  * A submodule release rewrites the version line of every one of its packages in the lock, so two
  * branches that each carry their own bump conflict on it whenever one of them lands — over text
  * nobody should resolve by hand, since an install regenerates it from the merged `package.json` files.
+ *
+ * When the regenerate fails the merge is aborted and the error rethrown, leaving the branch as it was
+ * before the merge so the next sync retries both.
  */
 export async function concludeMergeConflict(params: ConcludeMergeConflictParams, error: unknown): Promise<void> {
     const { git, guard, runCommand, repoDisplayName, logger } = params;
@@ -174,9 +177,16 @@ export async function concludeMergeConflict(params: ConcludeMergeConflictParams,
     logger.info(`   Only ${LOCKFILE} conflicts: regenerating it to conclude the merge`);
 
     const root = (await git.revparse(['--show-toplevel'])).trim();
-    await guard.beforeWrite();
-    await git.raw(['checkout', '--theirs', '--', LOCKFILE]);
-    await regenerateLockfile({ root, guard, runCommand, logger });
+    try {
+        await guard.beforeWrite();
+        await git.raw(['checkout', '--theirs', '--', LOCKFILE]);
+        await regenerateLockfile({ root, guard, runCommand, logger });
+    } catch (regenerateError) {
+        logger.warn(`   Regenerating ${LOCKFILE} failed: aborting the merge so the next sync retries it`);
+        await guard.beforeWrite();
+        await git.raw(['merge', '--abort']);
+        throw regenerateError;
+    }
 
     await guard.beforeWrite();
     await git.raw(['add', '--', LOCKFILE]);

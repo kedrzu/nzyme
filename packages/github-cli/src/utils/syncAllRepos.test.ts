@@ -931,6 +931,65 @@ test('a base that landed another submodule pin with its own lock is merged in wi
     expect((await simpleGit({ baseDir: submodulePath }).revparse(['HEAD'])).trim()).toBe(subMainTip);
 });
 
+// A regenerate that fails mid-conclusion must not leave the branch mid-merge: the next sync would stop
+// on the unresolved `bun.lock` before the automatic conclusion could run again.
+test('a failed bun.lock regenerate while concluding a base merge aborts the merge and rethrows', async () => {
+    const { mainPath } = await setupMovedSubmodule(root, []);
+    await commitLockfile(mainPath);
+    const main = simpleGit({ baseDir: mainPath });
+    await main.checkoutLocalBranch('abc-4-task');
+    await main.push(['-u', 'origin', 'abc-4-task']);
+    const { logger } = createTestLogger('syncAllRepos');
+    process.chdir(mainPath);
+    const sync = (runCommand: CommandRunner) =>
+        syncAllRepos({
+            branch: 'abc-4-task',
+            baseBranch: 'main',
+            submoduleBase: FOLLOW_MAIN,
+            unattended: true,
+            githubClient: NO_UPPER_NODES_CLIENT,
+            githubConfig: GITHUB_CONFIG,
+            logger,
+            runCommand,
+        });
+    await sync(createPinLockRunner().runCommand);
+
+    const seed = simpleGit({ baseDir: join(root, 'sub-seed') });
+    await seed.checkout('main');
+    await seed.pull('origin', 'main');
+    await seed.commit('sub c2 on main', [], { '--allow-empty': null });
+    const basePin = (await seed.revparse(['HEAD'])).trim();
+    await seed.push(['origin', 'main']);
+    const other = join(root, 'other');
+    await simpleGit().clone(join(root, 'origin-main.git'), other);
+    const otherGit = simpleGit({ baseDir: other, config: ['user.email=t@t', 'user.name=t', 'commit.gpgsign=false'] });
+    await otherGit.raw(['update-index', '--cacheinfo', `160000,${basePin},nzyme`]);
+    writeFileSync(join(other, 'bun.lock'), lockFor(basePin));
+    await otherGit.add(['bun.lock']);
+    await otherGit.commit('land another submodule pin');
+    await otherGit.push(['origin', 'main']);
+
+    // Fails only inside the merge, so the sync reaches the lock conflict first.
+    const { runCommand: regenerate } = createPinLockRunner();
+    const failInMerge: CommandRunner = async (command, cwd) => {
+        const merging = (
+            await simpleGit({ baseDir: cwd })
+                .raw(['rev-parse', '-q', '--verify', 'MERGE_HEAD'])
+                .catch(() => '')
+        ).trim();
+        if (merging !== '') {
+            throw new Error('registry unreachable');
+        }
+        await regenerate(command, cwd);
+    };
+
+    await expect(sync(failInMerge)).rejects.toThrow('Regenerating bun.lock failed');
+
+    const mergeHead = (await main.raw(['rev-parse', '-q', '--verify', 'MERGE_HEAD']).catch(() => '')).trim();
+    expect(mergeHead).toBe('');
+    expect((await main.status()).conflicted).toEqual([]);
+});
+
 /**
  * The `bun.lock` an install would produce for the submodule checked out at `commit`.
  */

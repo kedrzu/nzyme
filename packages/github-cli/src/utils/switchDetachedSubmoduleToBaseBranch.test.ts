@@ -2,13 +2,16 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, expect, test } from 'bun:test';
+import { afterEach, beforeEach, expect, setDefaultTimeout, test } from 'bun:test';
 import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
 import { createTestLogger } from '@nzyme/logging';
 
 import { switchDetachedSubmoduleToBaseBranch } from './switchDetachedSubmoduleToBaseBranch.js';
+
+// Every test builds real git repositories, which outgrow the 5 s default under a loaded full run.
+setDefaultTimeout(60_000);
 
 /**
  * Build a tiny git repo with a bare origin holding a `main` base branch with two commits,

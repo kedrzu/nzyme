@@ -57,7 +57,8 @@ used by healed's architecture check, so one parser serves both.
 - **Generated sources come in through `rewrites`, not from disk.** The walk skips gitignored files
   and the graph never reads one. A `rewrites` rule (`.loc.yaml` → `.loc.ts`) maps a changed source
   onto its generated file, and that target joins the resolvable paths for the one scan, so its
-  importers are found. Parsing generated files would add no edge worth having: a `.loc.ts` imports
+  importers are found. The variant graph applies the same rules in reverse: a target imports its
+  source. Parsing generated files would add no edge worth having: a `.loc.ts` imports
   only a type from `@nzyme/i18n`. Rewrites are suffix → suffix — the smallest syntax covering the known cases (`.handler.ts` →
   `.ts`, `.loc.yaml` → `.loc.ts`). A file that matched a rewrite skips the package fallback: the rule
   names its dependents.
@@ -81,7 +82,7 @@ used by healed's architecture check, so one parser serves both.
   script that scopes other checks to the change (formatting, a typecheck) takes the base from there
   and hands it back as `--base`, so every check measures the same change.
 - **E2E is out of scope.** A spec reaches the code through a browser and HTTP, which the graph
-  cannot see; e2e keeps running in full.
+  cannot see. E2E is selected from recorded execution instead (`variant-based-test-selection.md`).
 
 ## Consequences
 
@@ -95,3 +96,36 @@ used by healed's architecture check, so one parser serves both.
 - A consumer configures its trunks, aliases, rewrites, triggers and ignored paths under
   `nzyme.affected` in its root `package.json`; without it the defaults (`baseBranches: ["main"]`,
   nothing else) apply.
+
+## Addendum: suites selected from recorded variants
+
+Added 2026-11-17. `nzyme git affected --suite <name>` selects the tests of a suite of
+`nzyme.affected.suites` from recorded **variants** (`openTestSelector` in `@nzyme/affected`) instead of
+the base diff alone. A variant is a test's dependencies with their hashes, recorded from a passing
+run; a test is skipped while one of its variants matches the current code. The base diff above stays
+as the fallback: a test of a static suite with no variant is selected by it, as before. Why variants
+and what they hash: `variant-based-test-selection.md`.
+
+- **The unit of a static suite is the file.** bun test and vitest report per testcase, but the
+  command runs files, so `--junit <file>` records per file: a file whose testcases all passed gets a
+  variant whose entry is the file (its imports are followed, as above). A file with any failure, or a
+  testsuite counting a failure, records nothing, and so does a file the report does not show passing —
+  failed to load, any testcase skipped (a name-filtered or partial run), absent. Nothing is
+  invalidated: the command runs only files no variant matches, so a failed file has no matching
+  variant to remove and simply runs again. An unreadable report records nothing and leaves the exit
+  code to the command.
+- **The unit of a traced suite (e2e) is the single test**, selected and recorded by two commands of
+  their own, each with only its own options. `nzyme git affected-test-list --units <file> --out <file>`
+  reads the tests from `playwright test --list --reporter=json` and writes the selection in
+  Playwright's `--test-list` format. Playwright trims each `›`-separated token and matches the title
+  path as a prefix, so a title it could not read back cuts the line there: it selects more tests,
+  never fewer. `nzyme git affected-record --results <file> --snapshot <file>` records what the trace
+  reporter wrote; a failed test there invalidates its matching variants, because a traced run may
+  execute a test a variant matches (a full or explicitly named run).
+- **A static suite has no self-check.** Only a run that executes tests the selection skipped can
+  find one that fails while a variant claims nothing changed, and a static suite's full run goes around
+  the selection (the consumer runs every file directly). The traced suite keeps one:
+  `nzyme git affected-record --full`.
+- **stdout stays the contract.** Without `--suite` nothing changed; with it the output, the command
+  and the empty-selection rule are the same, and the summary with reasons
+  (`2 run (changed: a.ts) · 40 skipped (variant match)`) goes to stderr.

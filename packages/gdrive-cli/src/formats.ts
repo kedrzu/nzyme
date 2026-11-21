@@ -2,6 +2,8 @@
 // a regular format on the way out and converted from one on the way in. This module holds those
 // mappings and the parsing of file references.
 
+import { immutable } from '@nzyme/utils/immutable.js';
+
 export const FOLDER = 'application/vnd.google-apps.folder';
 export const SHORTCUT = 'application/vnd.google-apps.shortcut';
 export const DOCUMENT = 'application/vnd.google-apps.document';
@@ -11,7 +13,7 @@ export const DRAWING = 'application/vnd.google-apps.drawing';
 export const SCRIPT = 'application/vnd.google-apps.script';
 
 /** Export formats by file extension. */
-const FORMATS = {
+const FORMATS = immutable({
     md: 'text/markdown',
     txt: 'text/plain',
     html: 'text/html',
@@ -30,7 +32,7 @@ const FORMATS = {
     jpg: 'image/jpeg',
     svg: 'image/svg+xml',
     json: 'application/vnd.google-apps.script+json',
-} satisfies Record<string, string>;
+} satisfies Record<string, string>);
 
 /** What a Google-native type exports to. */
 export interface NativeType {
@@ -44,7 +46,7 @@ export interface NativeType {
 }
 
 /** The Google-native types that can be exported, by MIME type. */
-export const NATIVE: Record<string, NativeType> = {
+export const NATIVE = immutable<Record<string, NativeType>>({
     [DOCUMENT]: {
         label: 'Google Doc',
         download: ['docx', 'pdf', 'md', 'txt', 'html', 'odt', 'rtf', 'epub'],
@@ -59,7 +61,7 @@ export const NATIVE: Record<string, NativeType> = {
     [PRESENTATION]: { label: 'Google Slides', download: ['pptx', 'pdf', 'txt', 'odp'], text: 'txt' },
     [DRAWING]: { label: 'Google Drawing', download: ['png', 'pdf', 'svg', 'jpg'] },
     [SCRIPT]: { label: 'Apps Script', download: ['json'], text: 'json' },
-};
+});
 
 /**
  * Whether the MIME type is a Google-native one, which has no bytes to download.
@@ -157,7 +159,7 @@ export function isTextMime(mimeType: string | null | undefined): boolean {
 }
 
 /** Which Google type an upload becomes when converted. */
-const IMPORTS: Record<string, string> = {
+const IMPORTS = immutable<Record<string, string>>({
     'text/markdown': DOCUMENT,
     'text/plain': DOCUMENT,
     'text/html': DOCUMENT,
@@ -173,7 +175,7 @@ const IMPORTS: Record<string, string> = {
     'application/vnd.ms-powerpoint': PRESENTATION,
     [FORMATS.pptx]: PRESENTATION,
     [FORMATS.odp]: PRESENTATION,
-};
+});
 
 /**
  * The Google type content of this MIME type converts to, or undefined when it cannot be converted.
@@ -281,7 +283,7 @@ export function searchQuery({ query, folderId, mimeType }: SearchQueryParams): s
     return parts.join(' and ');
 }
 
-const ALIASES: Record<string, string> = {
+const ALIASES = immutable<Record<string, string>>({
     folder: FOLDER,
     doc: DOCUMENT,
     document: DOCUMENT,
@@ -291,7 +293,7 @@ const ALIASES: Record<string, string> = {
     presentation: PRESENTATION,
     drawing: DRAWING,
     pdf: 'application/pdf',
-};
+});
 
 /**
  * A MIME type, or one of the short names (`folder`, `doc`, `sheet`, `slides`, `drawing`, `pdf`).

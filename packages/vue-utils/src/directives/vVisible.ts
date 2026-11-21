@@ -38,7 +38,7 @@ interface VVisibleElement extends HTMLElement {
  * </script>
  * ```
  */
-export const vVisible: ObjectDirective<VVisibleElement> = {
+export const vVisible: Readonly<ObjectDirective<VVisibleElement>> = {
     beforeMount(el, { value }, { transition }) {
         el._vov = el.style.visibility === 'hidden' ? '' : el.style.visibility;
         if (transition && value) {

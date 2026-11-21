@@ -1,3 +1,5 @@
+import { createCache } from '@nzyme/utils/createCache.js';
+
 import { getEnabledLoggerLevels } from './getEnabledLoggerLevels.js';
 import type { EnabledLoggerLevels, LoggerThreshold } from './getEnabledLoggerLevels.js';
 import type { LoggerLevel } from './LoggerLevel.js';
@@ -9,7 +11,10 @@ export interface ProcessLoggerLevelsOptions {
     fallback: LoggerThreshold;
 }
 
-const cache = new Map<LoggerThreshold, EnabledLoggerLevels>();
+const cache = createCache({
+    getValue: (fallback: LoggerThreshold): EnabledLoggerLevels =>
+        getEnabledLoggerLevels(parseLoggerLevel(readLogLevel()) ?? fallback),
+});
 
 /**
  * Resolves the levels enabled by `LOG_LEVEL` for code that runs where no container exists (the
@@ -18,14 +23,7 @@ const cache = new Map<LoggerThreshold, EnabledLoggerLevels>();
  * per fallback on first call, so later calls cost a lookup.
  */
 export function getProcessLoggerLevels({ fallback }: ProcessLoggerLevelsOptions): EnabledLoggerLevels {
-    let enabled = cache.get(fallback);
-
-    if (!enabled) {
-        enabled = getEnabledLoggerLevels(parseLoggerLevel(readLogLevel()) ?? fallback);
-        cache.set(fallback, enabled);
-    }
-
-    return enabled;
+    return cache.get(fallback);
 }
 
 /**

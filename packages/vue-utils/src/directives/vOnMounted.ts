@@ -14,7 +14,7 @@ import type { ElementOrVue } from '../types.js';
  * </template>
  * ```
  */
-export const vOnMounted: ObjectDirective<ElementOrVue, (el: ElementOrVue) => void> = {
+export const vOnMounted: Readonly<ObjectDirective<ElementOrVue, (el: ElementOrVue) => void>> = {
     mounted(el, binding) {
         binding.value(el);
     },

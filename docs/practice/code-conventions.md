@@ -114,6 +114,20 @@ merely throws on invalid input may.
 call to an annotated function whose result nothing consumes — either dead code or proof the annotation
 is wrong. It has no autofix on purpose: use the result, delete the call, or drop the annotation.
 
+`nzyme/no-module-state` rejects module-level state nobody declared: test selection by recorded
+execution assumes a cache one test fills is never what serves the next. At module top level it allows
+functions, primitives, immutable values and calls to annotated functions. Make a constant immutable
+with `immutable(…)` from `@nzyme/utils/immutable.js`: it infers a deeply immutable type, so
+`const ROLES = immutable({ admin: ['read', 'write'] })` needs no hand-written `Immutable<…>`
+annotation — type-only, no freezing, and gone from a minified Rollup or Vite bundle. Use `as const` where the
+literal types are the point (`['GET', 'POST'] as const`), and an `Immutable<…>` type from
+`@nzyme/types/Immutable.js` when the value must be checked against a declared type; `Object.freeze` and a `Readonly*`/`readonly T[]` type make only the top
+level immutable, so a literal nested in them must be immutable on its own. The annotation on a called
+function also vouches that it is idempotent and tested. Calls into the external packages listed in the rule's `externalPackages` option
+are allowed too.
+Put a memo or cache in `createMemo`/`createCache` from `@nzyme/utils`; state a module genuinely holds
+(a lock count on the one document body) gets a disable comment saying why.
+
 ### Point at code by symbol, never by line number
 
 Write `resolveDeps()` in `packages/ioc/src/utils/resolveDeps.ts`, never `resolveDeps.ts:12`. Nobody

@@ -4,6 +4,8 @@
 // account. The switches are enforced by `defineDriveCommands` instead: a command whose permission is
 // off is never registered.
 
+import { immutable } from '@nzyme/utils/immutable.js';
+
 /** One Drive permission switch. */
 export type DrivePermission = 'browse' | 'download' | 'upload' | 'edit' | 'delete';
 
@@ -11,13 +13,13 @@ export type DrivePermission = 'browse' | 'download' | 'upload' | 'edit' | 'delet
 export type DrivePermissions = Record<DrivePermission, boolean>;
 
 /** Reading is on unless a project turns it off; anything that writes is opt-in. */
-export const DEFAULT_DRIVE_PERMISSIONS: DrivePermissions = {
+export const DEFAULT_DRIVE_PERMISSIONS = immutable<DrivePermissions>({
     browse: true,
     download: true,
     upload: false,
     edit: false,
     delete: false,
-};
+});
 
 /**
  * The switches a project's option leaves in effect: the defaults overridden one by one.

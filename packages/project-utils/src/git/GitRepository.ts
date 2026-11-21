@@ -18,12 +18,11 @@ export interface GitResult {
 }
 
 /**
- * The small set of git plumbing the submodule commands are built from, bound to one working
- * directory (the product repository or the submodule's clone inside it).
+ * The small set of git plumbing the `nzyme` submodule and affected-selection commands are built
+ * from, bound to one working directory (a repository or a submodule's clone inside it).
  *
  * Plain `git` through `execa` rather than a git library: every operation here is one command whose
- * exit code is the answer (`merge-base --is-ancestor`, `rev-parse --verify`), and `@nzyme/cli`
- * already depends on `execa`.
+ * exit code is the answer (`merge-base --is-ancestor`, `rev-parse --verify`).
  */
 export class GitRepository {
     constructor(readonly dir: string) {}

@@ -59,6 +59,7 @@ export interface EndpointHandlerService<TInput = any, TOutput = any, TDeps exten
 
 /**
  * Define an endpoint handler service
+ * @__NO_SIDE_EFFECTS__
  */
 export function defineEndpointHandler<TInput, TOutput, TDeps extends Dependencies = SomeObject>(
     options: EndpointHandlerOptions<TInput, TOutput, TDeps>,

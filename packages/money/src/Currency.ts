@@ -228,15 +228,19 @@ export const USD = defineCurrency({
 /**
  * Currencies map
  */
-export const CURRENCIES = {
+export const CURRENCIES = Object.freeze({
     /** Polish zloty */
     PLN,
     /** Euro */
     EUR,
     /** United States dollar */
     USD,
-};
+});
 
+/**
+ * Types a currency config literal, keeping its code as a literal type.
+ * @__NO_SIDE_EFFECTS__
+ */
 function defineCurrency<C extends string>(currency: CurrencyConfig<C>) {
     return currency;
 }

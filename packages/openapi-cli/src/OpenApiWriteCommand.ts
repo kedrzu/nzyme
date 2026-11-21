@@ -7,7 +7,7 @@ import { readStream } from './utils/readStream.js';
 import { runOpenApiRequest } from './utils/runOpenApiRequest.js';
 import type { OpenApiMethod } from './utils/runOpenApiRequest.js';
 
-const WRITE_METHODS: OpenApiMethod[] = ['POST', 'PUT', 'PATCH', 'DELETE'];
+const WRITE_METHODS: readonly OpenApiMethod[] = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
 /**
  * Defines the command that sends a POST, PUT, PATCH or DELETE to the service with the configured

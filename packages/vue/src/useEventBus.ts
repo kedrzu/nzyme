@@ -3,7 +3,7 @@ import { getCurrentInstance, onActivated, onBeforeUnmount, onDeactivated } from 
 
 type EventCallback<T = void> = (arg: T) => Promise<void> | void;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, nzyme/no-module-state -- the page-wide event bus; components unregister on unmount.
 const eventHandlers = new Map<string, EventCallback<any>[]>();
 
 interface EventBus {

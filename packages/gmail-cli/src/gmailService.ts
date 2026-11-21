@@ -2,9 +2,10 @@ import { gmail } from '@googleapis/gmail';
 
 import type { GoogleService } from '@nzyme/google-auth/GoogleService.js';
 import { assert } from '@nzyme/utils/assert.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 
 /** Gmail as a Google service: its scopes, and the account's address from its profile. */
-export const gmailService: GoogleService = {
+export const gmailService: GoogleService = immutable<GoogleService>({
     name: 'GMAIL',
     scopes: ['https://www.googleapis.com/auth/gmail.modify'],
     async resolveEmail(auth, rootUrl) {
@@ -13,4 +14,4 @@ export const gmailService: GoogleService = {
         assert(email, 'The Gmail profile has no email address');
         return email;
     },
-};
+});

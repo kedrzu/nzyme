@@ -11,7 +11,7 @@ const COMMAND_NOT_FOUND = 127;
  * second copy makes many tools force-quit and skip their cleanup — so it is only kept from ending this
  * process before the child, as a shell does.
  */
-const FORWARDED_SIGNALS: NodeJS.Signals[] = ['SIGTERM', 'SIGHUP'];
+const FORWARDED_SIGNALS: readonly NodeJS.Signals[] = ['SIGTERM', 'SIGHUP'];
 
 /** Options of {@link spawnForExitCode}. */
 export interface SpawnForExitCodeOptions {

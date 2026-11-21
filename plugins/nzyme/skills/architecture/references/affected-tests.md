@@ -47,7 +47,12 @@ gate checks everything.
   `**/.storybook/**`, plus the test preload when `bunfig.toml` has one. A package's own
   `tsconfig.json` is not a trigger: `nzyme monorepo` generates it from the package's dependencies, so
   it changes on every new dependency. A package's `package.json` needs no entry either, because the
-  graph treats it as a change to every file of that package.
+  graph treats it as a change to every file of that package — compared without `version`, `scripts`,
+  `devDependencies` and publishing metadata (`fingerprintPackageJson()`), so a version bump changes
+  nothing. List one only when a suite is launched through its scripts (`bun run --cwd packages/e2e
+  test`): a trigger counts by its bytes. `bun.lock` triggers only when what it
+  installs from outside the workspace changes (`fingerprintBunLock()` in `@nzyme/affected`), so a
+  bump of workspace versions or workspace dependency lists alone does not.
 - **`ignore`** — root-relative globs whose change selects nothing: `**/*.md`, `docs/**`,
   `.claude/**`.
 

@@ -1,7 +1,9 @@
 import chalk from 'chalk';
+import type { ChalkInstance } from 'chalk';
 
-let i = 0;
-const colors = [
+import { assert } from '@nzyme/utils/assert.js';
+
+const COLORS: readonly ChalkInstance[] = [
     chalk.yellow,
     chalk.green,
     chalk.blue,
@@ -13,7 +15,7 @@ const colors = [
 ];
 
 // To make sure that for the same name, the same color is used
-const prefixCache = new Map<string, string>();
+const prefixFor = createPrefixRegistry();
 
 /**
  * Gets a colored prefix for a logger name. Assigns colors cyclically and caches results.
@@ -28,12 +30,27 @@ export function getPrettyPrefix(name: string | undefined): string {
         return '';
     }
 
-    if (prefixCache.has(name)) {
-        return prefixCache.get(name)!;
-    }
+    return prefixFor(name);
+}
 
-    const color = colors[i++ % colors.length]!;
-    const prefix = color(`[${name}] `);
-    prefixCache.set(name, prefix);
-    return prefix;
+/**
+ * Creates the registry that gives each new name the next color in `COLORS`, and the same prefix
+ * on every later call with that name.
+ *
+ * @__NO_SIDE_EFFECTS__
+ */
+function createPrefixRegistry(): (name: string) => string {
+    const prefixes = new Map<string, string>();
+
+    return name => {
+        let prefix = prefixes.get(name);
+        if (prefix === undefined) {
+            const color = COLORS[prefixes.size % COLORS.length];
+            assert(color);
+            prefix = color(`[${name}] `);
+            prefixes.set(name, prefix);
+        }
+
+        return prefix;
+    };
 }

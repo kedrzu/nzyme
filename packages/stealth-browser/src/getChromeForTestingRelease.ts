@@ -24,7 +24,7 @@ export type ChromeForTestingPlatform = 'mac-arm64' | 'mac-x64' | 'win64' | 'linu
 const PINNED_VERSION = '157.0.8103.78';
 
 /** The SHA-256 of each platform's archive of `PINNED_VERSION`. */
-const PINNED_SHA256: Record<ChromeForTestingPlatform, string> = {
+const PINNED_SHA256: Readonly<Record<ChromeForTestingPlatform, string>> = {
     'mac-arm64': 'bf3b49d0fe62a62397e98641aa736ef813c46014f03ec13d4913442e6966c7fc',
     'mac-x64': '8f9590a4e011ba4ea135f50c711f8bf2c7f32b1fac20de68d1b85f010f095ab3',
     win64: '5f6ec40206407112702e163bf694d07f9fdc8ccbd346c70ce61fa62f716493f9',

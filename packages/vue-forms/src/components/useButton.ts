@@ -30,10 +30,10 @@ const BUTTON_PROPS = defineProps({
     noWait: Boolean,
 });
 
-const BUTTON_EMITS = {
+const BUTTON_EMITS = Object.freeze({
     click: (event: Event) => !!event,
     'update:busy': (_busy: boolean) => true,
-};
+});
 
 /**
  * Button props

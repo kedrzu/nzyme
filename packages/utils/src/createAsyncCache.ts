@@ -44,6 +44,8 @@ export interface AsyncCacheOptions<TArg, TValue, TKey = TArg> {
  * const sameItem = await cache.get('123'); // Returns cached value
  * cache.set('123', newData); // Overwrites cached value
  * ```
+ *
+ * @__NO_SIDE_EFFECTS__
  */
 export function createAsyncCache<TArg, TValue, TKey = TArg>(options: AsyncCacheOptions<TArg, TValue, TKey>) {
     const cache = options.cache ?? new Map<TKey, TValue>();

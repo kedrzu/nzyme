@@ -15,6 +15,8 @@ import type { LinearApiCommandsOptions } from './defineLinearApiCommands.js';
  * it needs. stdout carries only the response's `data` as one compact JSON line; anything else
  * (GraphQL errors, an HTTP failure, bad arguments) goes to stderr with a non-zero exit code, so a
  * failure is never mistaken for an answer.
+ *
+ * @__NO_SIDE_EFFECTS__
  */
 export function defineLinearQueryCommand(options: LinearApiCommandsOptions): CommandClass {
     const paths = getCommandPaths(options, 'query');

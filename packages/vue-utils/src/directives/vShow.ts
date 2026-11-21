@@ -31,7 +31,7 @@ interface VShowElement extends HTMLElement {
  * </script>
  * ```
  */
-export const vShow: ObjectDirective<VShowElement> = {
+export const vShow: Readonly<ObjectDirective<VShowElement>> = {
     beforeMount(el, { value }, { transition }) {
         el._vod = el.style.display === 'none' ? '' : el.style.display;
         if (transition && value) {

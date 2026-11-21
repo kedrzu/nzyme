@@ -13,6 +13,7 @@ import MimeNode from 'nodemailer/lib/mime-node';
 import TurndownService from 'turndown';
 
 import { assert } from '@nzyme/utils/assert.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 
 import { escapeHtml } from './utils/escapeHtml.js';
 
@@ -20,7 +21,7 @@ export type BodyFormat = 'markdown' | 'html';
 
 // Inline styles only where Gmail's defaults look broken; no font-family, so the
 // draft keeps the account's default compose font and reads like a hand-written mail.
-const TAG_STYLES: Record<string, string> = {
+const TAG_STYLES = immutable<Record<string, string>>({
     p: 'margin:0 0 1em 0',
     table: 'border-collapse:collapse;margin:0 0 1em 0',
     th: 'border:1px solid #ccc;padding:4px 8px',
@@ -32,17 +33,14 @@ const TAG_STYLES: Record<string, string> = {
     ol: 'margin:0 0 1em 0',
     hr: 'border:none;border-top:1px solid #ccc',
     img: 'max-width:100%',
-};
-
-const marked = new Marked({ gfm: true, breaks: true });
-const plainTurndown = createPlainTurndown();
+});
 
 /**
  * Renders Markdown to HTML with the inline styles Gmail needs to look right.
  * @__NO_SIDE_EFFECTS__
  */
 export function renderMarkdown(md: string): string {
-    const html = marked.parse(md, { async: false });
+    const html = new Marked({ gfm: true, breaks: true }).parse(md, { async: false });
     return addInlineStyles(html.trim());
 }
 
@@ -51,7 +49,7 @@ export function renderMarkdown(md: string): string {
  * @__NO_SIDE_EFFECTS__
  */
 export function htmlToPlain(html: string): string {
-    return plainTurndown
+    return createPlainTurndown()
         .turndown(html)
         .replace(/\n{3,}/g, '\n\n')
         .trim();

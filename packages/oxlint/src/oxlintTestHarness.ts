@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -62,10 +62,15 @@ export function useOxlintHarness({ config, ruleCode }: OxlintTestHarnessOptions)
         await rm(root, { recursive: true, force: true });
     });
 
-    /** Writes the fixture files and returns only the diagnostics `ruleCode` raised. */
+    /**
+     * Writes the fixture files — a name may contain directories — and returns only the diagnostics
+     * `ruleCode` raised.
+     */
     async function lint(files: Record<string, string>): Promise<OxlintJsonDiagnostic[]> {
         for (const [name, content] of Object.entries(files)) {
-            await writeFile(join(root, name), content, 'utf8');
+            const path = join(root, name);
+            await mkdir(dirname(path), { recursive: true });
+            await writeFile(path, content, 'utf8');
         }
 
         // oxlint exits 1 whenever it reported anything at all, so the exit code carries no signal here.

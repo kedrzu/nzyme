@@ -3,6 +3,7 @@ import { basename, join, relative } from 'node:path';
 
 import type { Package } from '@nzyme/project-utils/getPackages.js';
 import { forEachParalell } from '@nzyme/utils/array/forEachParalell.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 import * as ts from 'typescript';
 
 import { collectIndexSourceFiles } from './collectIndexSourceFiles.js';
@@ -27,7 +28,7 @@ export interface CollectSymbolsOptions {
 }
 
 /** Candidate Nuxt config file names; any one present marks a package as a Nuxt app. */
-const NUXT_CONFIG_FILES = ['nuxt.config.ts', 'nuxt.config.js', 'nuxt.config.mjs', 'nuxt.config.cjs'];
+const NUXT_CONFIG_FILES = immutable(['nuxt.config.ts', 'nuxt.config.js', 'nuxt.config.mjs', 'nuxt.config.cjs']);
 
 /** Options for the per-file extractor. */
 interface ExtractFromFileOptions {

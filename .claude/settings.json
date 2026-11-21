@@ -97,7 +97,6 @@
     },
     "enabledPlugins": {
         "dev@kedrzu-skills": true,
-        "design-doc@kedrzu-skills": true,
         "git@kedrzu-skills": true,
         "web-search@kedrzu-skills": true,
         "browser@kedrzu-skills": true,

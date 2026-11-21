@@ -84,6 +84,8 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
   hotfix bases and landing.
 - Both are the contracts of the `dev` plugin (`/dev:fix`, `/dev:task`, `/dev:feature`, `/dev:build`,
   `/dev:deliver`), which is installed from the `kedrzu-skills` marketplace in `.claude/settings.json`.
+  The `git` plugin from the same marketplace guards stashes and force-pushes; its hooks read
+  `.claude/git.json`, which keeps agents from pushing to `main` and syncs a branch with its PR base.
 - **Every implementation task reads `docs/practice/code-conventions.md`**, plus the practice document
   for its area, `docs/practice/<area>.md`: `ioc`, `logging`, `testing`, `ui`, `composables`, `forms`,
   `translations`, `drizzle`, `api-clients`, `secrets`, `design`. Consumer repos inline the same documents into

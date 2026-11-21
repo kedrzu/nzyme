@@ -30,7 +30,8 @@
     },
     "dependencies": {
         "@nzyme/ioc": "workspace:*",
-        "@nzyme/types": "workspace:*"
+        "@nzyme/types": "workspace:*",
+        "@nzyme/utils": "workspace:*"
     },
     "devDependencies": {
         "@nzyme/ioc-testing": "workspace:*",

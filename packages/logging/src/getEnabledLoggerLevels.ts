@@ -27,6 +27,10 @@ export function getEnabledLoggerLevels(threshold: LoggerThreshold): EnabledLogge
     return ENABLED_LEVELS[threshold];
 }
 
+/**
+ * The frozen map of levels at or above `thresholdIndex` in `LOGGER_LEVELS`.
+ * @__NO_SIDE_EFFECTS__
+ */
 function createEnabledLevels(thresholdIndex: number): EnabledLoggerLevels {
     return Object.freeze({
         trace: LOGGER_LEVELS.indexOf('trace') >= thresholdIndex,

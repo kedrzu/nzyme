@@ -1,15 +1,13 @@
-let isMobile: boolean | undefined;
+import { createMemo } from '@nzyme/utils/createMemo.js';
+
+const isMobile = createMemo(isProbablyMobileCore);
 
 /**
  * Used to check if the device is probably a mobile device.
  * @util
  */
 export function isProbablyMobile() {
-    if (isMobile !== undefined) {
-        return isMobile;
-    }
-
-    return (isMobile = isProbablyMobileCore());
+    return isMobile();
 }
 
 function isProbablyMobileCore() {

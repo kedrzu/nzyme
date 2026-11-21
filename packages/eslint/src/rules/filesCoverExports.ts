@@ -11,6 +11,7 @@ import { propertyName, publishedPackageRoot } from './jsonPackage.js';
  * Targets of the `source` condition are exempt (they point at `src`, which is deliberately not
  * published), and so are private packages and packages without `files` (npm then ships everything).
  */
+// oxlint-disable-next-line nzyme/no-module-state -- ESLint types its rule and plugin objects with mutable arrays (`meta.schema`, `docs.dialects`), so this one cannot be typed `Immutable`; nothing writes it.
 export const filesCoverExports: Rule.RuleModule = {
     meta: {
         type: 'problem',

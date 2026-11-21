@@ -13,7 +13,7 @@ export interface GmailLabelRequireRule {
 
 /** The label rules and named search views a project declares for its Gmail commands. */
 export interface GmailLabelRules {
-    /** Mutually exclusive label sets by group key, changed only through the thread change's `set`. */
+    /** Mutually exclusive label sets by group key, changed only through `--set group=label`. */
     groups?: Record<string, string[]>;
     /** Labels that need a label of some group alongside them. */
     require?: GmailLabelRequireRule[];
@@ -25,11 +25,11 @@ export interface GmailLabelRules {
 
 /** The labels a caller asks to change on a thread. */
 export interface ThreadChange {
-    /** Plain label names from addLabels. */
+    /** Plain label names from `--add`. */
     add: string[];
-    /** Plain label names from removeLabels. */
+    /** Plain label names from `--remove`. */
     remove: string[];
-    /** Group -> label; null clears the group. */
+    /** Group -> label from `--set`; null (`--set group=`) clears the group. */
     set: Record<string, string | null>;
 }
 
@@ -139,9 +139,9 @@ export function planThreadChange(params: PlanThreadChangeParams): PlannedChange 
 
     const managed = [...change.add, ...change.remove].filter(l => groupOf(r, l));
     if (managed.length) {
-        const hints = managed.map(l => `${l} -> set.${groupOf(r, l)}`).join(', ');
+        const hints = managed.map(l => `--set ${groupOf(r, l)}=${l}`).join(', ');
         throw new RuleViolation(
-            `Labels ${managed.join(', ')} belong to an exclusive group and can only be changed through 'set' (${hints}). ` +
+            `Labels ${managed.join(', ')} belong to an exclusive group and can only be changed through --set (${hints}). ` +
                 `Setting one label of a group removes the others.`,
         );
     }
@@ -151,7 +151,7 @@ export function planThreadChange(params: PlanThreadChangeParams): PlannedChange 
         if (!members) {
             const known = Object.keys(groups);
             throw new RuleViolation(
-                `Unknown group '${group}' in 'set'. ` +
+                `Unknown group '${group}' in --set. ` +
                     (known.length ? `Groups: ${known.join(', ')}` : 'This project defines no label groups.'),
             );
         }
@@ -160,7 +160,7 @@ export function planThreadChange(params: PlanThreadChangeParams): PlannedChange 
             canonical = members.find(m => lower(m) === lower(value)) ?? null;
             if (!canonical) {
                 throw new RuleViolation(
-                    `'${value}' is not in group '${group}' (${members.join(', ')}); use null to clear the group`,
+                    `'${value}' is not in group '${group}' (${members.join(', ')}); --set ${group}= clears the group.`,
                 );
             }
             pushUnique(add, canonical);
@@ -203,7 +203,7 @@ export function planThreadChange(params: PlanThreadChangeParams): PlannedChange 
         const markerAfter = resulting.some(l => isMarker(r, l));
         if (removingInbox && !markerAfter) {
             throw new RuleViolation(
-                `Removing INBOX (archiving) requires an archive marker: add ${markers.map(m => `'${m}'`).join(' or ')} in addLabels ` +
+                `Removing INBOX (archiving) requires an archive marker: pass ${markers.map(m => `--add '${m}'`).join(' or ')} ` +
                     `and INBOX is removed for you. Other labels only tag the thread and leave it in INBOX.`,
             );
         }
@@ -226,7 +226,7 @@ export function planThreadChange(params: PlanThreadChangeParams): PlannedChange 
         if (has(resulting, rule.when) && !members.some(m => has(resulting, m))) {
             throw new RuleViolation(
                 `A thread labelled '${rule.when}' must also carry one of group '${rule.group}' (${members.join(', ')}). ` +
-                    `Pass set.${rule.group} in this call.`,
+                    `Pass --set ${rule.group}=<label> in this call.`,
             );
         }
     }
@@ -250,7 +250,7 @@ export function viewQuery(rules: GmailLabelRules | undefined, view: string | und
         throw new RuleViolation(
             `Unknown view '${view}'. ` +
                 (known.length ? `Views: ${known.join(', ')}.` : 'This project defines no views.') +
-                " Omit 'view' to run the query across all mail.",
+                ' Omit --view to run the query across all mail.',
         );
     }
     return q;

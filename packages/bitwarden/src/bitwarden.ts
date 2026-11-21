@@ -1,6 +1,7 @@
 import type { SecretPrompt, SecretStore, SecretStoreEntry } from '@nzyme/secrets/SecretStore.js';
 import type { Keychain } from '@nzyme/secrets/osKeychain.js';
 import { osKeychain } from '@nzyme/secrets/osKeychain.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 
 import type { BitwardenSecret, BitwardenSecretCreateRequest, BitwardenSecretUpdateRequest } from './bitwardenApi.js';
 import type { BitwardenClient, BitwardenServerUrls } from './BitwardenClient.js';
@@ -40,9 +41,9 @@ export interface BitwardenOptions {
 
 const ACCESS_TOKEN_ENV = 'BWS_ACCESS_TOKEN';
 const DEFAULT_SERVER = 'https://vault.bitwarden.com';
-const CLOUD_VAULT_HOSTS = new Set(['vault.bitwarden.com', 'vault.bitwarden.eu']);
+const CLOUD_VAULT_HOSTS = immutable(new Set(['vault.bitwarden.com', 'vault.bitwarden.eu']));
 /** Hosts a plain `http:` server may have: the token sent to them never crosses the network. */
-const LOOPBACK_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]']);
+const LOOPBACK_HOSTNAMES = immutable(new Set(['localhost', '127.0.0.1', '[::1]']));
 
 /** The server's limits on EncString lengths (`EncryptedStringLength` on its request models). */
 const MAX_ENCRYPTED_KEY_LENGTH = 1000;

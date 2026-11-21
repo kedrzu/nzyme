@@ -74,7 +74,7 @@ export interface EndpointDefineFunction {
 
 /**
  * Define the endpoint
- * @_NO_SIDE_EFFECTS_
+ * @__NO_SIDE_EFFECTS__
  */
 export const defineEndpoint: EndpointDefineFunction = assignProps(defineEndpointBase, {
     output: endpointOutput,

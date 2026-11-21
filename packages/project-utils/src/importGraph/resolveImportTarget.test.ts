@@ -16,7 +16,7 @@ function archResolveRelativeImport(fromFile: string, specifier: string, fileSet:
 }
 
 function spec(specifier: string, kind: ImportSpecifierKind = 'module'): ImportSpecifier {
-    return { specifier, typeOnly: false, kind };
+    return { specifier, typeOnly: false, dynamic: false, kind };
 }
 
 describe('resolveRelativeSpecifier', () => {

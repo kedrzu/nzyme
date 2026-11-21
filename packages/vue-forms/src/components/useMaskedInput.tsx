@@ -37,7 +37,10 @@ export interface MaskedInputOptions<T = unknown> {
 /** Default string-typed masked input composable. */
 export const useMaskedInput = defineMaskedInput();
 
-/** Creates a typed masked input composable with IMask integration. */
+/**
+ * Creates a typed masked input composable with IMask integration.
+ * @__NO_SIDE_EFFECTS__
+ */
 export function defineMaskedInput<T = string>() {
     const fieldDef = defineFormField<T>();
     const propsDef = defineProps({

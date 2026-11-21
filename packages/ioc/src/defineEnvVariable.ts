@@ -3,9 +3,9 @@ import { EnvVariables } from './helpers/EnvVariables.js';
 import { defineInjectable } from './Injectable.js';
 import type { Injectable } from './Injectable.js';
 
-const DEPS = {
+const DEPS = Object.freeze({
     env: EnvVariables,
-};
+});
 
 /** Resolves to TValue when required, or TValue | undefined when optional. */
 export type EnvVariableValue<TRequired extends boolean = false, TValue = string> = TRequired extends true

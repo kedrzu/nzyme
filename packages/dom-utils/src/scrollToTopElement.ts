@@ -2,12 +2,14 @@ import debounce from 'lodash.debounce';
 
 import { mapNotNull } from '@nzyme/utils/array/mapNotNull.js';
 
+// oxlint-disable-next-line nzyme/no-module-state -- collects the scroll requests of one debounce window on the one page; emptied when it fires.
 const queue: { el: Element; options?: ScrollIntoViewOptions }[] = [];
 
 /**
  * Debounced function that finds the topmost element in the queue and scrolls to it.
  * Elements are sorted by their vertical position, and the highest (smallest top value) is selected.
  */
+// oxlint-disable-next-line nzyme/no-module-state -- the debounce timer that drains the queue above.
 const scrollToElement = debounce(() => {
     const top = mapNotNull(queue, ({ el, options }) => {
         if (el.getBoundingClientRect) {

@@ -15,7 +15,7 @@ export interface Keychain {
  * The OS keychain (via `Bun.secrets`), under the `nzyme-secrets` service. Stores and the session
  * cache take it as an optional `keychain` option, so tests pass an in-memory one instead.
  */
-export const osKeychain: Keychain = {
+export const osKeychain: Readonly<Keychain> = {
     get: name => Bun.secrets.get({ service: SERVICE, name }),
     set: (name, value) => Bun.secrets.set({ service: SERVICE, name, value }),
     delete: name => Bun.secrets.delete({ service: SERVICE, name }),

@@ -3,6 +3,7 @@ import type { gmail_v1 } from '@googleapis/gmail';
 import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 
 import { ensureLabel } from './ensureLabel.js';
 import type { GmailClient } from './createGmailClient.js';
@@ -12,7 +13,7 @@ import type { PlannedChange } from './labelRules.js';
 import { planThreadChange, RuleViolation } from './labelRules.js';
 
 /** Gmail's own labels: addressed by name, never created. */
-const SYSTEM_LABELS = [
+const SYSTEM_LABELS = immutable([
     'INBOX',
     'UNREAD',
     'STARRED',
@@ -26,7 +27,7 @@ const SYSTEM_LABELS = [
     'CATEGORY_PROMOTIONS',
     'CATEGORY_UPDATES',
     'CATEGORY_FORUMS',
-];
+]);
 
 /**
  * Defines `<prefix> thread label <id> [--add] [--remove] [--set group=label]`: changes a thread's

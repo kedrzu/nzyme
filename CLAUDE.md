@@ -13,6 +13,7 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
     `depcheck`, `git affected`, `git base`)
   - `pen` (Pen design files in git: the document model and the `pen` commands)
   - `openapi-cli` (agent-facing `schema`/`get`/`write` commands over any OpenAPI REST service)
+  - `affected` (test selection behind `git affected`), `trace` (execution tracing for it)
   - `tsconfig`, `eslint` (also the oxlint preset), `oxlint` (custom rules), `project-utils`,
     `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`
 - **Integrations:** `aws`, `pulumi`, `slack`, `apis`, `bitwarden` (a Secrets Manager store for `secrets`),

@@ -14,6 +14,7 @@ import { formatMarkdown } from './formatMarkdown.js';
  * Gitignored files are skipped: ESLint does not read `.gitignore`, and generated Markdown (code
  * indexes, local notes) is not ours to format.
  */
+// oxlint-disable-next-line nzyme/no-module-state -- ESLint types its rule and plugin objects with mutable arrays (`meta.schema`, `docs.dialects`), so this one cannot be typed `Immutable`; nothing writes it.
 export const markdownFormat: MarkdownRuleDefinition = {
     meta: {
         type: 'layout',

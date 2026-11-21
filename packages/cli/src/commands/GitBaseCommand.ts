@@ -1,9 +1,8 @@
+import { readAffectedConfig } from '@nzyme/affected/base/AffectedConfig.js';
 import { Option } from '@nzyme/cli-core';
 import { Command } from '@nzyme/cli-core/Command.js';
+import { GitRepository } from '@nzyme/project-utils/git/GitRepository.js';
 import { resolveAffectedBase } from '@nzyme/project-utils/resolveAffectedBase.js';
-
-import { readAffectedConfig } from '../affected/AffectedConfig.js';
-import { GitRepository } from '../submodule/GitRepository.js';
 
 /**
  * Prints the base `nzyme git affected` measures the change against, so a script that scopes other

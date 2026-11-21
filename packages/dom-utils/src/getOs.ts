@@ -1,19 +1,16 @@
 import type { StringNonLiteral } from '@nzyme/types/Common.js';
+import { createMemo } from '@nzyme/utils/createMemo.js';
 
 type OS = 'Android' | 'iOS' | 'Linux' | 'macOS' | 'Unknown' | 'Windows';
 
-let os: OS | StringNonLiteral | undefined;
+const os = createMemo((): OS | StringNonLiteral => getOSCore());
 
 /**
  * Returns the operating system of the browser.
  * @util
  */
 export function getOS() {
-    if (os !== undefined) {
-        return os;
-    }
-
-    return (os = getOSCore());
+    return os();
 }
 
 function getOSCore() {

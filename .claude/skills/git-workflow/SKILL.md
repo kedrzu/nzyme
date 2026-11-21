@@ -65,7 +65,7 @@ The bottom node's base is `main`.
 - **GitHub rewrites the upper branches itself** after a partial merge or its "Rebase stack" button.
   Keep every node pushed, so after `git fetch` a rewritten node is simply taken from the remote:
   `git switch -C <node> origin/<node>`.
-- **Bottom node only:** nothing — nzyme has no submodules.
+- **Bottom node only:** nothing — nzyme has no submodules. (Products consuming nzyme move their pin inside their own task PRs.)
 - **Land** (only on the user's request): `gh pr merge` cannot merge a stacked PR. Submit
   `echo '{"merge_method":"squash"}' | gh api -X PUT repos/kedrzu/nzyme/pulls/<top>/merge-async --input -`
   — it lands that PR and every one below it atomically, one squash commit each. The method must be

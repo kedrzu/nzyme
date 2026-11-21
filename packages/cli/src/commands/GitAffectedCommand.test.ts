@@ -171,9 +171,55 @@ test('a missing base fails instead of selecting nothing', async () => {
     expect(result.stderr).toContain('origin/nope');
 });
 
-async function runAffected(args: string[], onSpawn?: (child: Bun.Subprocess) => void) {
+test('a bump that only moves a submodule gitlink selects the tests importing the changed submodule file', async () => {
+    const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'nzyme-affected-bump-')));
+    try {
+        const upstream = path.join(root, 'upstream');
+        const product = path.join(root, 'product');
+        await fs.mkdir(path.join(upstream, 'src'), { recursive: true });
+        await fs.mkdir(path.join(product, 'packages/app/src'), { recursive: true });
+        await fs.writeFile(path.join(upstream, 'src/value.ts'), 'export const value = 1;\n');
+        gitIn(upstream, 'init', '-q', '-b', 'main');
+        gitIn(upstream, 'add', '-A');
+        gitIn(upstream, 'commit', '-q', '-m', 'upstream base');
+
+        await fs.writeFile(path.join(product, 'bun.lock'), '');
+        await fs.writeFile(path.join(product, 'package.json'), JSON.stringify({ name: 'bump', private: true }));
+        await fs.writeFile(
+            path.join(product, 'packages/app/src/uses.test.ts'),
+            "import { value } from '../../../vendor/lib/src/value.js';\n",
+        );
+        await fs.writeFile(path.join(product, 'packages/app/src/other.ts'), 'export const other = 2;\n');
+        await fs.writeFile(
+            path.join(product, 'packages/app/src/unrelated.test.ts'),
+            "import { other } from './other.js';\n",
+        );
+        gitIn(product, 'init', '-q', '-b', 'main');
+        gitIn(product, 'submodule', 'add', '-q', upstream, 'vendor/lib');
+        gitIn(product, 'add', '-A');
+        gitIn(product, 'commit', '-q', '-m', 'base');
+        gitIn(product, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
+
+        // The bump: a new submodule commit, and the only change committed in the product is the moved gitlink.
+        const sub = path.join(product, 'vendor/lib');
+        await fs.writeFile(path.join(sub, 'src/value.ts'), 'export const value = 2;\n');
+        gitIn(sub, 'commit', '-q', '-am', 'bump');
+        gitIn(product, 'add', 'vendor/lib');
+        gitIn(product, 'commit', '-q', '-m', 'bump submodule');
+        expect(gitIn(product, 'diff', '--name-only', 'origin/main', 'HEAD')).toBe('vendor/lib');
+
+        const result = await runAffected(['*.test.ts'], undefined, product);
+
+        expect(result.exitCode).toBe(0);
+        expect(result.stdout).toBe('packages/app/src/uses.test.ts\n');
+    } finally {
+        await fs.rm(root, { recursive: true, force: true });
+    }
+});
+
+async function runAffected(args: string[], onSpawn?: (child: Bun.Subprocess) => void, cwd = repo) {
     const child = Bun.spawn([process.execPath, '--conditions=source', CLI_PATH, 'git', 'affected', ...args], {
-        cwd: repo,
+        cwd,
         env: { ...HERMETIC_GIT_ENV, OUT: outDir, GITHUB_ACTIONS: '' },
         stdout: 'pipe',
         stderr: 'pipe',
@@ -195,8 +241,12 @@ async function waitForFile(file: string): Promise<void> {
 }
 
 function git(...args: string[]): string {
-    return execFileSync('git', ['-c', 'commit.gpgsign=false', ...args], {
-        cwd: repo,
+    return gitIn(repo, ...args);
+}
+
+function gitIn(cwd: string, ...args: string[]): string {
+    return execFileSync('git', ['-c', 'commit.gpgsign=false', '-c', 'protocol.file.allow=always', ...args], {
+        cwd,
         env: HERMETIC_GIT_ENV,
         encoding: 'utf8',
     }).trim();

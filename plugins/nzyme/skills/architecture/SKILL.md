@@ -79,7 +79,7 @@ and where each placeholder value comes from.
 |Lint and format|lint, format, oxlint, oxfmt, ESLint|`.oxlintrc.json`, `.oxfmtrc.json`, `eslint.config.mjs`|`references/lint-format.md`|
 |VS Code|editor, VS Code, format on save|`.vscode/`|`references/vscode.md`|
 |Claude Code|Claude, agents, skills, permissions, `CLAUDE.md`|`.claude/settings.json`, `.claude/.gitignore`, `.claude/git.json`, `.claude/skills/nzyme`, `CLAUDE.md`, `docs/decisions/`|`references/claude-code.md`|
-|GitHub|PR, CI, GitHub Actions, submodule bump|`.github/`|`references/github.md`|
+|GitHub|PR, CI, GitHub Actions, submodule pin|`.github/`|`references/github.md`|
 |Architecture document|architecture, document the repo|`ARCHITECTURE.md`, `docs/architecture/`|`references/architecture-doc.md`|
 
 **App elements** — in play when the request asks for them or the repo has them.

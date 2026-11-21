@@ -12,10 +12,11 @@ moves it. nzyme holds no product state and products hold no credentials to nzyme
    commit being built: `actions/checkout` with `submodules: recursive`, or
    `git submodule update --init`. Never `--remote`, never `git submodule foreach … pull`, never a
    `branch =` in `.gitmodules` that a script follows. Assert it before building (see below).
-2. **Only `main` is bumped automatically.** A bump is a PR the product's CI must pass; on `main` it
-   may merge itself. Branches that deploy to production (`release`, hotfix branches) receive a new
-   pin only through the product's promotion — a merge from `main` brings a pin `main` has run. No
-   automation writes to them.
+2. **Pins move in the product's PRs, never by automation.** The product moves the pin to the latest
+   nzyme `main` inside its own task PRs, where its tests run (see below); nothing bumps it on a
+   schedule or merges a bump by itself. Branches that deploy to production (`release`, hotfix
+   branches) receive a new pin only through the product's promotion — a merge from `main` brings a
+   pin `main` has run.
 3. **Production runs only pins `main` has run.** A pin reaches a production branch only after it was
    the pin of the product's `main` at some point, so the product's CI and its non-production
    environments have run it. Pins on nzyme `main` also stay reachable; a commit reachable only from a
@@ -42,81 +43,34 @@ moves it. nzyme holds no product state and products hold no credentials to nzyme
   on. The check also lists the nzyme commits between the old and the new pin, which a PR diff shows
   only as `Subproject commit a → b`.
 
-- **Required status checks** on the bumped branch, so an auto-merging bump PR cannot merge before CI.
+## Moving the pin
 
-## Bumping `main`
+The product's task workflow moves the pin in every PR that lands on its trunk: it sets each
+submodule resting on the trunk to the tip of nzyme's `origin/main` and commits the gitlink with the
+PR's other changes. A submodule on its own task branch gets nzyme `main` merged into that branch
+instead; a PR that does not land on the trunk (a hotfix into `release`) leaves the pin alone. The
+product's tooling decides when (task start, switching to a PR, push, ready); in nzyme's own
+`bun task` CLI (`@nzyme/linear`, `@nzyme/github-cli`) that is task start, a switch to an existing PR,
+and `push`, `ready` and `refresh`.
 
-`consumer-bump.yml` (a reusable workflow here) moves the submodule on a product branch to an nzyme
-ref, pushes `nzyme-bump/<base-branch>` and opens or refreshes a PR listing the incoming nzyme
-commits. It writes only to the product, with the product's credential. When the branch already pins the
-source it closes a stale bump PR and stops. A daily (and manual) bump of `main`, merging itself when
-green:
-
-```yaml
-name: Bump nzyme
-
-on:
-  schedule:
-    - cron: '0 6 * * 1-5'
-  workflow_dispatch:
-
-jobs:
-  bump:
-    uses: kedrzu/nzyme/.github/workflows/consumer-bump.yml@main
-    with:
-      source-ref: main
-      base-branch: main
-      cli-version: <version>
-      auto-merge: true
-      refresh-lockfile: true
-      app-client-id: ${{ vars.BUMP_APP_CLIENT_ID }}
-      environment: submodule-bump
-    secrets:
-      app-private-key: ${{ secrets.BUMP_APP_PRIVATE_KEY }}
-```
-
-The credential needs contents and pull-requests write on the **product** repository. Not
-`GITHUB_TOKEN`: a PR it opens triggers no workflows, so the product's CI would never run on the bump.
-Pass exactly one of:
-
-- **A GitHub App** — `app-client-id` (an input, so a repository variable, not an environment one)
-  and the `app-private-key` secret. The job mints a one-hour token narrowed to contents and
-  pull-requests write on the product repository, after the lockfile refresh, so no token exists
-  while `bun` runs. Commits and the PR are by `<app-slug>[bot]`. Give the App no ruleset bypass: a
-  bypass actor's PR could merge without the checks that gate the bump.
-- **A `token` secret** — e.g. a fine-grained PAT. It expires and belongs to a person, which is why
-  an App is preferred.
-
-`environment` puts the job that holds the credential in one of the product's GitHub Environments.
-Store the key as that environment's secret with a branch policy admitting only the bumped branch,
-and a workflow on any other branch cannot read it. The caller still passes the secret by name; the
-CLI's job never gets the environment.
-
-The workflow runs `@nzyme/cli` from npm at `cli-version`, a required exact version (no dist-tag or
-range): it runs over a checkout of the product, so a moving tag would hand that to whatever is
-published next. It runs in a job without the token; the job that pushes runs no package code,
-re-derives the bump with git and takes only the PR description from the CLI's job, so a compromised
-CLI cannot reach the token or choose the pinned commit. `submodule bump` exists from the first
-release that contains it. The same command runs locally:
-`bunx @nzyme/cli submodule bump --source origin/main` stages the move and prints the summary.
-
-Set `refresh-lockfile` when the product's workspaces include `nzyme/packages/*`. `bun.lock` records
-each workspace package's version and dependencies, so a bump that moves only the gitlink leaves it
-stale, and `bun install --frozen-lockfile` does not catch it when only workspace versions moved. The
-next developer's install then rewrites the lock inside an unrelated PR, and a bump that adds an
-external dependency fails the product's frozen install outright. With the input set, the bump
-runs `bun install --lockfile-only --ignore-scripts` (no package code runs) and commits the
-regenerated `bun.lock` with the gitlink; a failing install fails the job and opens no PR.
+Why in the PR and not on a schedule: the product's tests select by the diff against the base branch
+(`nzyme git affected`), on the premise that everything already on the base was tested in its own PR.
+A pin that reaches the trunk through a PR whose CI runs no tests puts untested nzyme on the base and
+breaks that premise. In a task PR the gitlink change is expanded into the changed nzyme files, so the
+PR's tests cover the new nzyme code. `bun.lock` records each workspace package's version and
+dependencies, so a moved gitlink needs a regenerated lock: when a `bun task` sync moves a gitlink in
+a product with a `bun.lock`, it runs `bun install --lockfile-only` and commits and pushes the lock
+on its own, before the PR's CI installs with `--frozen-lockfile`.
 
 Working on nzyme from inside the product does not change this: the nzyme change is a PR to nzyme,
-and the product's PR pins the merged commit (or the bump picks it up).
+and the product's PR pins the merged commit (or the next task PR moves the pin).
 
 ## Hotfix for a product's production
 
 An nzyme fix reaches production the way every pin does — through the product's `main`:
 
 1. Fix it in nzyme with an ordinary PR into nzyme `main`.
-2. Bump the product's `main` to it (the bump PR, or the scheduled bump).
+2. Land it in the product's `main`: the next task PR moves the pin to nzyme `main`.
 3. Promote that pin to the production branch with the product's release, or with a product hotfix
    PR that sets the pin to the one `main` now runs. It brings every nzyme change between the old and
    the new pin — the required check lists them.

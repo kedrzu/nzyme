@@ -28,7 +28,7 @@ export interface ResolveSubmoduleCurrentBranchParams {
  * `docs/decisions/submodule-branch-resolved-from-gitlink-sha.md`): an attached HEAD already names
  * its branch; a detached HEAD — the ordinary state for a gitlink-pinned submodule — is resolved
  * from its own commit via {@link resolveSubmoduleBranch}, fetching first so the commit's remote
- * branches are visible (mirrors `checkoutExistingBranch.ts`'s `checkoutSubmoduleBranch`, which
+ * branches are visible (mirrors `checkoutSubmodules.ts`' `checkoutSubmoduleBranch`, which
  * fetches for the same reason).
  *
  * Never treats a detached HEAD as "nothing to look up" — a submodule resting on a task branch this

@@ -9,7 +9,7 @@ Accepted
 `nzyme-cli-plugins.md` let a repo list modules under `nzyme.plugins`, and the `nzyme` binary imported
 them on every run to add the repo's commands (`secrets`, `pen`).
 
-- The loader imported product code in every `nzyme` invocation, including `nzyme submodule bump` in
+- The loader imported product code in every `nzyme` invocation, including the built-in submodule command in
   consumer checkouts, where the product's dependencies are not installed. Loading had to be made
   non-fatal, so a broken plugin showed up as an unknown command next to a warning.
 - A plugin's commands must extend the `Command` of the one `@nzyme/cli-core` the binary runs, which
@@ -45,5 +45,5 @@ and registers `definePenCommands()` and `defineSecretsCommands({ provider })` in
 > and `bun secrets run -- echo hi` handed it `["secrets","run","--","echo","hi"]`; Bun's `$ …` echo went to
 > stderr. From a sub-package directory `bun secrets` failed with `Script not found "secrets"`.
 
-- `nzyme submodule bump` and every other built-in run touch no product code.
+- Every built-in command runs without touching product code.
 - Commands are no longer available in a repo with no CLI of its own: it needs the small package above.

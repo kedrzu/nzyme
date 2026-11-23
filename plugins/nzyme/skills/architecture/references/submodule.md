@@ -20,9 +20,8 @@ What the docs leave to the product, and the repo-side state this skill checks:
 - **Checkout** is `git submodule update --init --recursive --checkout`, in `setup.sh`
   (`assets/setup.sh.tmpl`) and nowhere else locally; CI checks out with `submodules: recursive`
   (`references/github.md`). Why `--checkout`: `docs/submodule-setup.md#setup-script-and-worktrees`.
-- **Bumps** are commits that move the gitlink, made by the bump workflow (`references/github.md`) or
-  by hand with `bunx @nzyme/cli submodule bump --source origin/main`, which stages the move and prints
-  the summary for the commit.
+- **Pin moves** are commits that set the gitlink, made inside the product's task PRs (the product's
+  task tooling, or by hand), never by a scheduled workflow (`docs/consumers.md`).
 - **Tests:** the product's `tests` script runs `./packages` and `./scripts`, never `nzyme/`
   (`assets/package.json.tmpl`).
 

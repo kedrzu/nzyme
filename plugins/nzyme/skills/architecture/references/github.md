@@ -16,14 +16,9 @@ this element's: it belongs to the repo's `git-workflow` skill, written by follow
 - **Repository settings** — a ruleset on `main` requiring `Build` (and `Verify Submodules` when that
   workflow is in), squash merges only, auto-merge allowed.
 
-Optional, for a repo that wants its nzyme pin moved and guarded by automation (the rules they
+Optional, for a repo that wants its nzyme pin guarded by automation (the rules they
 enforce: `docs/consumers.md` in nzyme, `../../../../docs/consumers.md` from this skill):
 
-- **`bump-nzyme.yml`** — `assets/workflows/bump-nzyme.yml.tmpl`. Calls nzyme's reusable
-  `consumer-bump.yml` every weekday: moves the submodule to nzyme `main`, refreshes `bun.lock`, opens
-  a PR that merges itself once green. Needs a GitHub App with contents and pull-requests write and no
-  ruleset bypass, its client ID as the repository variable `BUMP_APP_CLIENT_ID`, its key as the
-  secret `BUMP_APP_PRIVATE_KEY` of a `submodule-bump` environment admitting only `main`.
 - **`verify-submodules.yml`** — `assets/workflows/verify-submodules.yml.tmpl`. Required check
   `Verify Submodules` on PRs into `main`: every pin is on its submodule's `main` and none moves back
   from the base's.
@@ -41,11 +36,6 @@ would never report its required check.
 
 - `{{ref:<action>}}` — the ref the same action has in nzyme's own workflows
   (`../../../../.github/workflows/`), so the product moves with nzyme.
-- `{{nzymeSha}}` — the full SHA of the nzyme commit the repo pins (`git rev-parse HEAD:nzyme`); it is
-  on nzyme `main` and has `consumer-bump.yml`. A SHA, not `@main` or a tag: the workflow runs with the
-  App's key, and a moved ref would change that code without a change in the repo.
-- `{{cliVersion}}` — the exact `@nzyme/cli` release: `version` in `nzyme/packages/cli/package.json`,
-  confirmed with `npm view @nzyme/cli@<version> version`. Never a range or dist-tag.
 - `{{productionBranch}}` — the production branch, e.g. `release`.
 
 ## Compare
@@ -59,4 +49,3 @@ would never report its required check.
 - Workflows the reference has no opinion on (deploys, scheduled jobs, e2e against a deployed
   environment, Dependabot) stay.
 - No `.github/` at all: propose `build.yml`; offer the optional workflows and record the answer.
-- A bump workflow calling `consumer-bump.yml@main` or a tag: a difference (pin by SHA).

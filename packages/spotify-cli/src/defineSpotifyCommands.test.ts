@@ -345,6 +345,188 @@ test('an unexpected status becomes a SpotifyError naming the operation and the s
     expect(output).not.toContain('secret-body-detail');
 });
 
+const ID = '4iV5W9uYEdYUVa79Axb7Rh';
+const writes = (spotify: FakeSpotify) => spotify.requests.filter(({ method }) => method !== 'GET');
+
+test('playlist create posts the name, the description and a private default, and prints the list line', async () => {
+    const spotify = fake({
+        api: (request, path) =>
+            request.method === 'POST' && path === '/me/playlists'
+                ? Response.json(
+                      {
+                          uri: 'spotify:playlist:n1',
+                          name: 'Evening',
+                          owner: { id: 'owner' },
+                          public: false,
+                          items: { total: 0 },
+                      },
+                      { status: 201 },
+                  )
+                : undefined,
+    });
+
+    const result = await run(spotify, ['playlist', 'create', 'Evening', '--description', 'Slow songs']);
+
+    expect(result).toMatchObject({ exitCode: 0, stdout: 'spotify:playlist:n1\tEvening\towner\t0\tprivate\n' });
+    expect(writes(spotify)).toEqual([
+        {
+            method: 'POST',
+            path: '/me/playlists',
+            query: new URLSearchParams(),
+            body: { name: 'Evening', description: 'Slow songs', public: false },
+        },
+    ]);
+});
+
+test('playlist create --public posts public: true', async () => {
+    const spotify = fake({
+        api: (request, path) =>
+            request.method === 'POST' && path === '/me/playlists'
+                ? Response.json(
+                      { uri: 'spotify:playlist:n1', name: 'Mix', owner: { id: 'owner' }, public: true },
+                      { status: 201 },
+                  )
+                : undefined,
+    });
+
+    const result = await run(spotify, ['playlist', 'create', 'Mix', '--public']);
+
+    expect(result.stdout).toBe('spotify:playlist:n1\tMix\towner\t\tpublic\n');
+    expect(writes(spotify)[0]?.body).toEqual({ name: 'Mix', public: true });
+});
+
+test('playlist add posts the normalised URIs and prints the count', async () => {
+    const spotify = fake({
+        api: (request, path) =>
+            request.method === 'POST' && path === '/playlists/p1/items'
+                ? Response.json({ snapshot_id: 's' }, { status: 201 })
+                : undefined,
+    });
+
+    const result = await run(spotify, [
+        'playlist',
+        'add',
+        'spotify:playlist:p1',
+        `spotify:track:${ID}`,
+        `https://open.spotify.com/episode/${ID}?si=x`,
+    ]);
+
+    expect(result).toMatchObject({ exitCode: 0, stdout: 'Added 2 items to spotify:playlist:p1.\n' });
+    expect(writes(spotify)).toEqual([
+        {
+            method: 'POST',
+            path: '/playlists/p1/items',
+            query: new URLSearchParams(),
+            body: { uris: [`spotify:track:${ID}`, `spotify:episode:${ID}`] },
+        },
+    ]);
+});
+
+test.each([
+    ['more than 100 URIs', ['playlist', 'add', 'p1', ...Array.from({ length: 101 }, () => `spotify:track:${ID}`)]],
+    ['an album URI', ['playlist', 'add', 'p1', `spotify:album:${ID}`]],
+    ['a bare id', ['playlist', 'add', 'p1', ID]],
+    ['one bad URI among good ones', ['playlist', 'add', 'p1', `spotify:track:${ID}`, 'nope']],
+    ['no URI', ['playlist', 'add', 'p1']],
+    ['a queued album', ['queue', 'add', `spotify:album:${ID}`]],
+    ['a queued bare id', ['queue', 'add', ID]],
+])('%s is refused before any request', async (_name, args) => {
+    const spotify = fake();
+
+    const result = await run(spotify, args);
+
+    expect(result.exitCode).not.toBe(0);
+    expect(spotify.requests).toEqual([]);
+    expect(spotify.refreshes).toEqual([]);
+});
+
+test('playlist add of 100 URIs is sent', async () => {
+    const spotify = fake({
+        api: (request, path) =>
+            request.method === 'POST' && path === '/playlists/p1/items'
+                ? Response.json({ snapshot_id: 's' }, { status: 201 })
+                : undefined,
+    });
+
+    const result = await run(spotify, [
+        'playlist',
+        'add',
+        'p1',
+        ...Array.from({ length: 100 }, () => `spotify:track:${ID}`),
+    ]);
+
+    expect(result.stdout).toBe('Added 100 items to spotify:playlist:p1.\n');
+});
+
+test.each([[403], [404]])(
+    'playlist add to a playlist the account cannot change (%d) is a plain usage error',
+    async status => {
+        const spotify = fake({
+            api: (_request, path) => (path === '/playlists/p9/items' ? apiError(status, 'Forbidden') : undefined),
+        });
+
+        const result = await run(spotify, ['playlist', 'add', 'p9', `spotify:track:${ID}`]);
+
+        expect(result.exitCode).not.toBe(0);
+        expect(result.errors).toContain('your own and collaborative playlists');
+        expect(result.errors).not.toContain('HTTP');
+    },
+);
+
+test('queue add posts the URI as a query and prints it', async () => {
+    const spotify = fake({
+        api: (request, path) =>
+            request.method === 'POST' && path === '/me/player/queue' ? new Response(null, { status: 204 }) : undefined,
+    });
+
+    const result = await run(spotify, ['queue', 'add', `https://open.spotify.com/track/${ID}`]);
+
+    expect(result).toMatchObject({ exitCode: 0, stdout: `Queued spotify:track:${ID}.\n` });
+    expect(writes(spotify)).toEqual([
+        {
+            method: 'POST',
+            path: '/me/player/queue',
+            query: new URLSearchParams({ uri: `spotify:track:${ID}` }),
+            body: undefined,
+        },
+    ]);
+});
+
+test('queue add accepts an episode', async () => {
+    const spotify = fake({
+        api: (request, path) =>
+            request.method === 'POST' && path === '/me/player/queue' ? new Response(null, { status: 204 }) : undefined,
+    });
+
+    const result = await run(spotify, ['queue', 'add', `spotify:episode:${ID}`]);
+
+    expect(result.stdout).toBe(`Queued spotify:episode:${ID}.\n`);
+});
+
+test('queue add with no active device (404) asks to start playback first', async () => {
+    const spotify = fake({
+        api: (_request, path) =>
+            path === '/me/player/queue'
+                ? Response.json(
+                      {
+                          error: {
+                              status: 404,
+                              message: 'Player command failed: No active device found',
+                              reason: 'NO_ACTIVE_DEVICE',
+                          },
+                      },
+                      { status: 404 },
+                  )
+                : undefined,
+    });
+
+    const result = await run(spotify, ['queue', 'add', `spotify:track:${ID}`]);
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.errors).toContain('start playback');
+    expect(result.errors).not.toContain('HTTP');
+});
+
 function fake(options?: FakeSpotifyOptions) {
     const spotify = startFakeSpotify(options);
     fakes.push(spotify);

@@ -7,8 +7,11 @@ import { defineSpotifyAuthCommand } from './defineSpotifyAuthCommand.js';
 import { defineSpotifyFollowingCommand } from './defineSpotifyFollowingCommand.js';
 import { defineSpotifyMeCommand } from './defineSpotifyMeCommand.js';
 import { defineSpotifyNowPlayingCommand } from './defineSpotifyNowPlayingCommand.js';
+import { defineSpotifyPlaylistAddCommand } from './defineSpotifyPlaylistAddCommand.js';
+import { defineSpotifyPlaylistCreateCommand } from './defineSpotifyPlaylistCreateCommand.js';
 import { defineSpotifyPlaylistItemsCommand } from './defineSpotifyPlaylistItemsCommand.js';
 import { defineSpotifyPlaylistListCommand } from './defineSpotifyPlaylistListCommand.js';
+import { defineSpotifyQueueAddCommand } from './defineSpotifyQueueAddCommand.js';
 import { defineSpotifyRecentCommand } from './defineSpotifyRecentCommand.js';
 import { defineSpotifySavedCommand } from './defineSpotifySavedCommand.js';
 import { defineSpotifySearchCommand } from './defineSpotifySearchCommand.js';
@@ -36,8 +39,11 @@ export function defineSpotifyCommands(options: SpotifyCommandsOptions): CommandC
         defineSpotifyFollowingCommand(params),
         defineSpotifyMeCommand(params),
         defineSpotifyNowPlayingCommand(params),
+        defineSpotifyPlaylistAddCommand(params),
+        defineSpotifyPlaylistCreateCommand(params),
         defineSpotifyPlaylistItemsCommand(params),
         defineSpotifyPlaylistListCommand(params),
+        defineSpotifyQueueAddCommand(params),
         defineSpotifyRecentCommand(params),
         defineSpotifySavedCommand(params),
         defineSpotifySearchCommand(params),

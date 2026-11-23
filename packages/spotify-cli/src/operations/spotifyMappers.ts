@@ -36,7 +36,9 @@ export function mapSpotifyAlbum(raw: Schemas['SimplifiedAlbumObject']): SpotifyA
 }
 
 /** Maps a playlist. The item count is `items.total` since Spotify renamed `tracks` in February 2026; either is read. */
-export function mapSpotifyPlaylist(raw: Schemas['SimplifiedPlaylistObject']): SpotifyPlaylist {
+export function mapSpotifyPlaylist(
+    raw: Pick<Schemas['SimplifiedPlaylistObject'], 'uri' | 'name' | 'owner' | 'items' | 'tracks' | 'public'>,
+): SpotifyPlaylist {
     return {
         uri: raw.uri ?? '',
         name: raw.name ?? '',

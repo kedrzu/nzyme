@@ -19,7 +19,7 @@ export function parseSpotifyId(value: string, type: SpotifyIdType): string {
         return text;
     }
 
-    const named = parseUri(text) ?? parseLink(text);
+    const named = parseSpotifyReference(text);
     if (!named) {
         throw new UsageError(`Not a Spotify ${type} id, URI or link: ${value}`);
     }
@@ -29,6 +29,17 @@ export function parseSpotifyId(value: string, type: SpotifyIdType): string {
     }
 
     return named.id;
+}
+
+/**
+ * The type and id a `spotify:<type>:<id>` URI or an `open.spotify.com` link names, or `undefined` for
+ * anything else (a bare id names no type).
+ * @util
+ * @__NO_SIDE_EFFECTS__
+ */
+export function parseSpotifyReference(value: string): { type: string; id: string } | undefined {
+    const text = value.trim();
+    return parseUri(text) ?? parseLink(text);
 }
 
 function parseUri(text: string) {

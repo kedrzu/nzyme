@@ -83,7 +83,7 @@ export async function signInGoogle(params: SignInGoogleParams): Promise<GoogleTo
             access_type: 'offline',
             // Always returns a refresh token, also on a repeated sign-in.
             prompt: 'consent',
-            scope: service.scopes,
+            scope: [...service.scopes],
             state,
             login_hint: params.loginHint,
             redirect_uri: redirectUri,

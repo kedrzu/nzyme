@@ -43,9 +43,6 @@ export interface RawBodyContent {
     text: string | null;
 }
 
-const mailTurndown = createTurndownService();
-const draftTurndown = createDraftTurndownService();
-
 /**
  * Content-ID of an image embedded in the HTML, null for a regular attachment.
  * Neither header decides: Gmail gives every attachment a Content-ID and writes
@@ -148,7 +145,7 @@ export function processEmailContent(params: ProcessEmailContentParams): Processe
 export function draftBodyToMarkdown(payload: gmail_v1.Schema$MessagePart): string {
     const { html, text } = extractRawBody(payload);
     if (html) {
-        return draftTurndown
+        return createDraftTurndownService()
             .turndown(html)
             .replace(/\n{3,}/g, '\n\n')
             .trim();
@@ -238,7 +235,7 @@ function convertHtmlToMarkdown(html: string): string {
     }
 
     try {
-        return mailTurndown
+        return createTurndownService()
             .turndown(html)
             .replace(/\n{3,}/g, '\n\n') // Max 2 consecutive newlines
             .replace(/^\s+|\s+$/g, ''); // Trim

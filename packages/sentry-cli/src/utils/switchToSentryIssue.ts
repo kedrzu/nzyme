@@ -10,7 +10,7 @@ import { applyStashedChanges, handleBranchSelection } from '@nzyme/github-cli/ut
 import type { BranchSelectionResult } from '@nzyme/github-cli/utils/handleBranchSelection.js';
 import { handleMergedPrReopen } from '@nzyme/github-cli/utils/handleMergedPrReopen.js';
 import { resolvePrSubmoduleBase } from '@nzyme/github-cli/utils/resolvePrSubmoduleBase.js';
-import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
+import { syncTaskBranch } from '@nzyme/github-cli/utils/syncTaskBranch.js';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { SentryApiClient } from './createSentryClient.js';
@@ -125,23 +125,19 @@ export async function switchToSentryIssue(params: SwitchToSentryIssueParams): Pr
 
         const submoduleBase = await resolvePrSubmoduleBase({ githubClient, githubConfig, pr: existingPr, trunk });
 
+        // The main repository alone: its submodules are checked out by `syncTaskBranch` below.
         await checkoutExistingBranch({
             branchName: existingPr.head.ref,
             taskId: issueData.shortId,
             logger,
-            githubClient,
-            githubConfig,
-            submoduleBase,
             unattended,
         });
 
-        // Sync all repos with the PR's base branch after checkout. Uses the same pipeline as
-        // "task refresh" so conflicts are detected and reported identically in both commands.
-        const prBaseBranch = existingPr.base.ref;
-        logger.info(`🔄 Synchronizing with PR base branch ${chalk.cyan(prBaseBranch)}`);
-        await syncAllRepos({
+        // Uses the same pipeline as "task refresh" so conflicts are detected and reported
+        // identically in both commands.
+        await syncTaskBranch({
             branch: existingPr.head.ref,
-            baseBranch: prBaseBranch,
+            baseBranch: existingPr.base.ref,
             submoduleBase,
             unattended,
             githubClient,

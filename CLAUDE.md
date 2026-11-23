@@ -10,9 +10,10 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
 - **Vue:** `vue`, `vue-utils`, `vue-ioc`, `vue-forms`, `vue-i18n`, `vue-transitions`, `dom-utils`
 - **Tooling:**
   - `cli-core` (the clipanion-based `Command` framework behind every CLI), `cli` (the `nzyme` binary: `monorepo`, `localise`, `index`, `quiet-run`,
-    `submodule`, `depcheck`, `git affected`, `git base`)
+    `depcheck`, `git affected`, `git base`)
   - `pen` (Pen design files in git: the document model and the `pen` commands)
   - `openapi-cli` (agent-facing `schema`/`get`/`write` commands over any OpenAPI REST service)
+  - `affected` (test selection behind `git affected`), `trace` (execution tracing for it)
   - `tsconfig`, `eslint` (also the oxlint preset), `oxlint` (custom rules), `project-utils`,
     `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`
 - **Integrations:** `aws`, `pulumi`, `slack`, `apis`, `bitwarden` (a Secrets Manager store for `secrets`),
@@ -83,6 +84,8 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
   hotfix bases and landing.
 - Both are the contracts of the `dev` plugin (`/dev:fix`, `/dev:task`, `/dev:feature`, `/dev:build`,
   `/dev:deliver`), which is installed from the `kedrzu-skills` marketplace in `.claude/settings.json`.
+  The `git` plugin from the same marketplace guards stashes and force-pushes; its hooks read
+  `.claude/git.json`, which keeps agents from pushing to `main` and syncs a branch with its PR base.
 - **Every implementation task reads `docs/practice/code-conventions.md`**, plus the practice document
   for its area, `docs/practice/<area>.md`: `ioc`, `logging`, `testing`, `ui`, `composables`, `forms`,
   `translations`, `drizzle`, `api-clients`, `secrets`, `design`. Consumer repos inline the same documents into

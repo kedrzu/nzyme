@@ -4,9 +4,12 @@
 import { getScrollBarWidth } from './getScrollBarWidth.js';
 
 // Otherwise one component releasing the lock would release it for all.
+/* oxlint-disable nzyme/no-module-state -- The lock mirrors the one document body: its count and the styles saved
+   from the body are that global's state, and every lock a test takes it releases again. */
 let lockCount = 0;
 let currentPaddingRight = '';
 let currentOverflow = '';
+/* oxlint-enable nzyme/no-module-state */
 
 /**
  * Locks the body scroll to prevent page scrolling, typically used for modals and overlays.

@@ -9,6 +9,7 @@
  * @param key - Function that extracts the key from each element
  * @param value - Optional function that transforms each element into a value
  * @returns An object with keys and values derived from the input iterable
+ * @__NO_SIDE_EFFECTS__
  */
 export function mapToObject<T, K extends string>(arr: Iterable<T>, key: (item: T) => K): Record<K, T>;
 export function mapToObject<T, K extends string, R>(

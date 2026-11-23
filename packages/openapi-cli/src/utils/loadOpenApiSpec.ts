@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 
+import { createCache } from '@nzyme/utils/createCache.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 
 /** One operation of the spec, flattened from `paths`. */
 export interface OpenApiOperation {
@@ -31,22 +33,18 @@ export interface OpenApiSpec {
     schemas: Record<string, unknown>;
 }
 
-const METHODS = ['get', 'post', 'put', 'patch', 'delete'];
+const METHODS = immutable(['get', 'post', 'put', 'patch', 'delete']);
 
-const specs = new Map<string, OpenApiSpec>();
+const specs = createCache({
+    getValue: (specPath: string) => parseOpenApiSpec(specPath, JSON.parse(readFileSync(specPath, 'utf8'))),
+});
 
 /**
  * Loads a committed OpenAPI JSON document without any network call, parsed once per process and path,
  * so one process can define commands for several services.
  */
 export function loadOpenApiSpec(specPath: string): OpenApiSpec {
-    let spec = specs.get(specPath);
-    if (!spec) {
-        spec = parseOpenApiSpec(specPath, JSON.parse(readFileSync(specPath, 'utf8')));
-        specs.set(specPath, spec);
-    }
-
-    return spec;
+    return specs.get(specPath);
 }
 
 function parseOpenApiSpec(specPath: string, document: unknown): OpenApiSpec {

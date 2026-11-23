@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs';
 
+import { isErrorCode } from '@nzyme/utils/isErrorCode.js';
+
 import type { RuntimeConfig } from './RuntimeConfig.js';
 
 /** Options of {@link readConfigFile}. */
@@ -31,5 +33,5 @@ export function readConfigFile(options: ReadConfigFileOptions): RuntimeConfig | 
 }
 
 function isFileNotFound(error: unknown) {
-    return (error as NodeJS.ErrnoException | null)?.code === 'ENOENT';
+    return isErrorCode(error, 'ENOENT');
 }

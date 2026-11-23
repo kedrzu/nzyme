@@ -49,15 +49,19 @@ test('planThreadChange - groups: clears a group with null', () => {
     expect(p.remove).toEqual(['AI/Triage']);
 });
 
-test('planThreadChange - groups: rejects group labels in addLabels/removeLabels, unknown groups and foreign values', () => {
-    expect(() => plan({ add: ['AI/Done'] }, [])).toThrow(/set\.status/);
+test('planThreadChange - groups: rejects group labels in --add/--remove, unknown groups and foreign values', () => {
+    expect(() => plan({ add: ['AI/Done'] }, [])).toThrow('--set status=AI/Done');
     expect(() => plan({ remove: ['p/3'] }, [])).toThrow(RuleViolation);
     expect(() => plan({ set: { colour: 'red' } }, [])).toThrow(/Unknown group 'colour'/);
-    expect(() => plan({ set: { priority: 'P/9' } }, [])).toThrow(/not in group 'priority'/);
+    expect(() => plan({ set: { priority: 'P/9' } }, [])).toThrow(
+        "'P/9' is not in group 'priority' (P/0, P/1, P/2, P/3); --set priority= clears the group.",
+    );
 });
 
 test('planThreadChange - require: rejects a Done thread without a priority', () => {
-    expect(() => plan({ set: { status: 'AI/Done' } }, ['INBOX'])).toThrow(/must also carry one of group 'priority'/);
+    expect(() => plan({ set: { status: 'AI/Done' } }, ['INBOX'])).toThrow(
+        "must also carry one of group 'priority' (P/0, P/1, P/2, P/3). Pass --set priority=<label> in this call.",
+    );
 });
 
 test('planThreadChange - require: accepts it when the thread already has a priority', () => {
@@ -79,7 +83,9 @@ test('planThreadChange - archive markers: adding a marker removes INBOX', () => 
 });
 
 test('planThreadChange - archive markers: removing INBOX without a marker is rejected, with one it passes', () => {
-    expect(() => plan({ remove: ['INBOX'] }, ['INBOX', 'Finance'])).toThrow(/archive marker/);
+    expect(() => plan({ remove: ['INBOX'] }, ['INBOX', 'Finance'])).toThrow(
+        "pass --add 'Nieaktualne' or --add 'Śmieci'",
+    );
     expect(plan({ remove: ['INBOX'] }, ['INBOX', 'Śmieci']).remove).toEqual(['INBOX']);
 });
 

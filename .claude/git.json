@@ -1,0 +1,6 @@
+{
+    "protectedBranches": ["main"],
+    "sync": {
+        "afterUpdate": [{ "run": "bun install", "when": ["bun.lock", "package.json"] }]
+    }
+}

@@ -1,8 +1,9 @@
 import { createEventEmitter } from '@nzyme/utils/createEventEmitter.js';
+import { createMemo } from '@nzyme/utils/createMemo.js';
 
 type HistoryState = Record<string, unknown>;
 
-let history: ReturnType<typeof initializeHistory> | null = null;
+const history = createMemo(initializeHistory);
 
 /**
  * Composable that provides enhanced browser history management with event listeners.
@@ -35,11 +36,7 @@ let history: ReturnType<typeof initializeHistory> | null = null;
  * ```
  */
 export function useHistory() {
-    if (!history) {
-        history = initializeHistory();
-    }
-
-    return history;
+    return history();
 }
 
 function initializeHistory() {

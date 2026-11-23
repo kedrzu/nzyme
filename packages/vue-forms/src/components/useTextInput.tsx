@@ -17,11 +17,11 @@ const TEXT_INPUT_PROPS = defineProps({
     tabindex: Number,
 });
 
-const TEXT_INPUT_EMITS = {
+const TEXT_INPUT_EMITS = Object.freeze({
     ...TEXT_INPUT_FIELD.emits,
     input: undefined as unknown as (event: Event) => boolean,
     keydown: undefined as unknown as (event: KeyboardEvent) => boolean,
-};
+});
 
 /** Text input composable providing a form field and its render component. */
 export const useTextInput = assignProps(setupTextInput, {

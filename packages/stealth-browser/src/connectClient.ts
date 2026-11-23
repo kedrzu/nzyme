@@ -1,5 +1,6 @@
 import type { Logger } from '@nzyme/logging/Logger.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 
 import { attachTargetSession } from './attachTargetSession.js';
 import { CdpError } from './CdpTypes.js';
@@ -53,12 +54,9 @@ const SERVER_ERROR = -32_000;
 const PARSE_ERROR = -32_700;
 
 /** The target lifecycle events a client gets for the targets it sees once it discovers targets. */
-const TARGET_EVENTS = new Set([
-    'Target.targetCreated',
-    'Target.targetInfoChanged',
-    'Target.targetDestroyed',
-    'Target.targetCrashed',
-]);
+const TARGET_EVENTS = immutable(
+    new Set(['Target.targetCreated', 'Target.targetInfoChanged', 'Target.targetDestroyed', 'Target.targetCrashed']),
+);
 
 /**
  * Connects one client to the shared browser and judges each of its messages, in this order: the message shape; the

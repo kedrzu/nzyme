@@ -59,7 +59,7 @@ type TransitionDefProps<TProps extends ComponentObjectPropsOptions = SomeObject>
     props?: TProps;
 };
 
-const TRANSITION_PROPS = {
+const TRANSITION_PROPS = Object.freeze({
     appear: Boolean,
     duration: Number,
     delay: Number,
@@ -69,7 +69,7 @@ const TRANSITION_PROPS = {
     onAfterEnter: defineProp<TransitionHook | TransitionHook[]>(),
     onBeforeLeave: defineProp<TransitionHook | TransitionHook[]>(),
     onAfterLeave: defineProp<TransitionHook | TransitionHook[]>(),
-};
+});
 
 /**
  * @__NO_SIDE_EFFECTS__

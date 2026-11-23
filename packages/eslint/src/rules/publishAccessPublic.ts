@@ -9,6 +9,7 @@ import { propertyName, publishedPackageRoot } from './jsonPackage.js';
  *
  * Private packages are skipped.
  */
+// oxlint-disable-next-line nzyme/no-module-state -- ESLint types its rule and plugin objects with mutable arrays (`meta.schema`, `docs.dialects`), so this one cannot be typed `Immutable`; nothing writes it.
 export const publishAccessPublic: Rule.RuleModule = {
     meta: {
         type: 'problem',

@@ -14,7 +14,8 @@ import type { BranchSelectionResult } from '@nzyme/github-cli/utils/handleBranch
 import { handleMergedPrReopen } from '@nzyme/github-cli/utils/handleMergedPrReopen.js';
 import { resolveFreshBranchName } from '@nzyme/github-cli/utils/resolveFreshBranchName.js';
 import { resolvePrSubmoduleBase } from '@nzyme/github-cli/utils/resolvePrSubmoduleBase.js';
-import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
+import { resolveSubmoduleBase } from '@nzyme/github-cli/utils/resolveSubmoduleBase.js';
+import { syncTaskBranch } from '@nzyme/github-cli/utils/syncTaskBranch.js';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { TaskSwitchedHook } from '../cli/TaskSwitchedHook.js';
@@ -170,40 +171,31 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
     // continues, or an explicit position when hopping down the stack to amend a lower node.
     const existingPr = selectNode(openPrs, node, issueId, logger);
 
+    // The PR's base is what the main repository syncs with, but the submodules follow only the
+    // trunk, and only when the PR (or its whole stack) lands there — see `resolveSubmoduleBase`.
+    const trunk = baseBranches[0];
+    if (!trunk) {
+        throw new UsageError('No base branches configured');
+    }
+
     if (existingPr) {
         // Checkout existing PR branch
         logger.info(`✅ Found existing PR: ${chalk.blue(existingPr.title)} (#${existingPr.number})`);
         logger.info(`🔄 Checking out branch: ${chalk.cyan(existingPr.head.ref)}`);
 
-        // The PR's base is what the main repository syncs with, but the submodules follow only the
-        // trunk, and only when the PR (or its whole stack) lands there — see `resolveSubmoduleBase`.
-        const trunk = baseBranches[0];
-        if (!trunk) {
-            throw new UsageError('No base branches configured');
-        }
-
         const submoduleBase = await resolvePrSubmoduleBase({ githubClient, githubConfig, pr: existingPr, trunk });
 
-        await checkoutExistingBranch({
-            branchName: existingPr.head.ref,
-            taskId: issueId,
-            logger,
-            githubClient,
-            githubConfig,
-            submoduleBase,
-            unattended,
-        });
+        // The main repository alone: its submodules are checked out by `syncTaskBranch` below.
+        await checkoutExistingBranch({ branchName: existingPr.head.ref, taskId: issueId, logger, unattended });
 
         // The branch is checked out - we are on the task now, even if the sync below conflicts.
         await markTaskStarted();
 
-        // Sync all repos with the PR's base branch after checkout. Uses the same pipeline as
-        // "task refresh" so conflicts are detected and reported identically in both commands.
-        const prBaseBranch = existingPr.base.ref;
-        logger.info(`🔄 Synchronizing with PR base branch ${chalk.cyan(prBaseBranch)}`);
-        await syncAllRepos({
+        // Uses the same pipeline as "task refresh" so conflicts are detected and reported
+        // identically in both commands.
+        await syncTaskBranch({
             branch: existingPr.head.ref,
-            baseBranch: prBaseBranch,
+            baseBranch: existingPr.base.ref,
             submoduleBase,
             unattended,
             githubClient,
@@ -217,92 +209,121 @@ export async function switchToTask(params: SwitchToTaskParams): Promise<void> {
         logger.info(`📝 No open PR found. Checking for merged PRs...`);
 
         // Branch from the explicitly requested branch, otherwise the default base (e.g. main).
-        const selectedBaseBranch = branch ?? baseBranches[0];
-        if (!selectedBaseBranch) {
-            throw new UsageError('No base branches configured');
-        }
+        const selectedBaseBranch = branch ?? trunk;
 
         // Get project information for PR title
         const project = await issueData.project;
         const projectName = project?.name || '';
 
-        // Check for merged PRs and handle reopen flow
-        const reopenResult = await handleMergedPrReopen({
-            githubClient,
-            githubConfig,
-            issueId,
-            logger,
-            issueTitle: issueData.title,
-            issueDescription: issueData.description || '',
-            issueUrl: issueData.url,
-            baseBranch: selectedBaseBranch,
-            projectName,
-            unattended,
-            // Not gated on `unattended`: delegation answers the questions that would block the run,
-            // it does not give the command a second contract. Reopening moves the issue to
-            // "In Progress" exactly as the ordinary start does, for whoever runs it.
-            onReopenTask: async () => {
-                await reopenLinearTask(linearClient, issueId, logger);
-            },
-        });
+        // A brand-new pull request is in no stack, so it lands on the base it is opened against.
+        const submoduleBase = resolveSubmoduleBase({ landingTrunk: selectedBaseBranch, trunk });
 
-        if (reopenResult.reopened) {
-            // Task was reopened with new version - we're done
-            logger.info(`🔗 Linear task: ${chalk.underline(issueData.url)}`);
-            // Reopening already put the task into a working state, so only notify the host project.
-            await runTaskSwitchedHook(onTaskSwitched, { issueId, title: issueData.title, logger });
-            return;
-        }
-
-        // No merged PR found - create new branch and PR
-        logger.info(`📝 Creating new branch and draft PR...`);
-
-        // Handle branch selection and stashing if needed
+        // Stash uncommitted changes and fetch the base before either branch below is cut from it.
+        // Done ahead of the reopen check too: a reopened task's new branch is synced as well, and
+        // the sync commits every pending change of the main repository.
         const branchResult: BranchSelectionResult = await handleBranchSelection({
             branch: selectedBaseBranch,
             taskId: issueId,
             logger,
         });
 
-        const plainBranchName =
-            issueData.branchName ||
-            `${issueId.toLowerCase()}-${issueData.title
-                .toLowerCase()
-                .replace(/[^a-z0-9]/g, '-')
-                .replace(/-+/g, '-')
-                .slice(0, 50)}`;
+        try {
+            // Check for merged PRs and handle reopen flow
+            const reopenResult = await handleMergedPrReopen({
+                githubClient,
+                githubConfig,
+                issueId,
+                logger,
+                issueTitle: issueData.title,
+                issueDescription: issueData.description || '',
+                issueUrl: issueData.url,
+                baseBranch: selectedBaseBranch,
+                projectName,
+                unattended,
+                // Not gated on `unattended`: delegation answers the questions that would block the
+                // run, it does not give the command a second contract. Reopening moves the issue to
+                // "In Progress" exactly as the ordinary start does, for whoever runs it.
+                onReopenTask: async () => {
+                    await reopenLinearTask(linearClient, issueId, logger);
+                },
+            });
 
-        const branchName = await resolveFreshBranchName({ branchName: plainBranchName });
-        const prTitle = buildTaskPrTitle({ issueId, issueTitle: issueData.title, projectName, branchName });
+            if (reopenResult.newBranchName) {
+                // Reopening already put the task into a working state, so only notify the host project.
+                await runTaskSwitchedHook(onTaskSwitched, { issueId, title: issueData.title, logger });
 
-        logger.info(`🌿 Creating branch: ${chalk.cyan(branchName)}`);
+                await syncTaskBranch({
+                    branch: reopenResult.newBranchName,
+                    baseBranch: selectedBaseBranch,
+                    submoduleBase,
+                    unattended,
+                    githubClient,
+                    githubConfig,
+                    logger,
+                });
 
-        const result = await createBranchAndPr({
-            client: githubClient,
-            config: githubConfig,
-            branchName,
-            prTitle,
-            description: issueData.description || '',
-            issueId,
-            taskUrl: issueData.url,
-            issueTitle: issueData.title,
-            baseBranch: branchResult.selectedBaseBranch,
-            startPoint: branchResult.startPoint,
-        });
+                logger.info(`🔗 Linear task: ${chalk.underline(issueData.url)}`);
+                return;
+            }
 
-        // Absent when nothing was stashed, and when the entry could not be re-identified - then it
-        // stays on the shared stack and handleBranchSelection has already said how to recover it.
-        if (branchResult.stash) {
-            await applyStashedChanges(branchResult.stash, logger);
+            // No merged PR found - create new branch and PR
+            logger.info(`📝 Creating new branch and draft PR...`);
+
+            const plainBranchName =
+                issueData.branchName ||
+                `${issueId.toLowerCase()}-${issueData.title
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]/g, '-')
+                    .replace(/-+/g, '-')
+                    .slice(0, 50)}`;
+
+            const branchName = await resolveFreshBranchName({ branchName: plainBranchName });
+            const prTitle = buildTaskPrTitle({ issueId, issueTitle: issueData.title, projectName, branchName });
+
+            logger.info(`🌿 Creating branch: ${chalk.cyan(branchName)}`);
+
+            const result = await createBranchAndPr({
+                client: githubClient,
+                config: githubConfig,
+                branchName,
+                prTitle,
+                description: issueData.description || '',
+                issueId,
+                taskUrl: issueData.url,
+                issueTitle: issueData.title,
+                baseBranch: branchResult.selectedBaseBranch,
+                startPoint: branchResult.startPoint,
+            });
+
+            logger.info(`✅ Created draft PR: ${chalk.blue(result.pr.title)} (#${result.pr.number})`);
+            logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(result.pr.html_url))}`);
+
+            // Deferred until the branch and PR have been created so we don't transition the Linear
+            // state when the user cancels or an earlier step throws - but not past the sync below:
+            // the branch exists now, so we are on the task even if the sync fails.
+            await markTaskStarted();
+
+            // Puts the new pull request on the latest submodules, so its checks run against them.
+            await syncTaskBranch({
+                branch: branchName,
+                baseBranch: selectedBaseBranch,
+                submoduleBase,
+                unattended,
+                githubClient,
+                githubConfig,
+                logger,
+            });
+
+            logger.info(`🎉 Successfully created and checked out new branch for ${chalk.bold(issueId)}`);
+        } finally {
+            // Only after the sync, which would otherwise commit the user's changes into the branch -
+            // and also when anything above threw, so they are never left behind on the stash.
+            // Absent when nothing was stashed, and when the entry could not be re-identified - then
+            // it stays on the shared stack and handleBranchSelection has already said how to recover it.
+            if (branchResult.stash) {
+                await applyStashedChanges(branchResult.stash, logger);
+            }
         }
-
-        logger.info(`✅ Created draft PR: ${chalk.blue(result.pr.title)} (#${result.pr.number})`);
-        logger.info(`🔗 PR URL: ${chalk.blueBright(chalk.underline(result.pr.html_url))}`);
-        logger.info(`🎉 Successfully created and checked out new branch for ${chalk.bold(issueId)}`);
-
-        // Deferred until the branch and PR have been created so we don't transition the Linear
-        // state when the user cancels or an earlier step throws.
-        await markTaskStarted();
     }
 
     // Show task URL for reference

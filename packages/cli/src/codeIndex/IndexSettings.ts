@@ -1,3 +1,5 @@
+import { immutable } from '@nzyme/utils/immutable.js';
+
 import type { NzymeIndexConfig } from './NzymeIndexConfig.js';
 
 /**
@@ -42,7 +44,7 @@ export const BUILTIN_DEFINE_KINDS: readonly DefineSymbolKind[] = [
     { kind: 'command', section: 'Commands', callee: 'defineCommand', nameKey: 'name', order: 20 },
     { kind: 'factory', section: 'Factories', callee: 'defineFactory', nameKey: 'name', order: 30 },
     { kind: 'endpoint', section: 'Endpoints', callee: 'defineEndpoint', nameKey: 'name', order: 50 },
-];
+] as const;
 
 /** Section title + render order for the kinds that aren't `defineX` DSL calls. */
 export const EXTRA_SECTIONS = {
@@ -55,7 +57,9 @@ export const EXTRA_SECTIONS = {
 const DEFAULT_DEFINE_KIND_ORDER = 55;
 
 /** Kinds a configured `defineX` kind may not reuse — they already mean something else. */
-const RESERVED_KINDS = new Set([...BUILTIN_DEFINE_KINDS.map(kind => kind.kind), ...Object.keys(EXTRA_SECTIONS)]);
+const RESERVED_KINDS = immutable(
+    new Set([...BUILTIN_DEFINE_KINDS.map(kind => kind.kind), ...Object.keys(EXTRA_SECTIONS)] as const),
+);
 
 /**
  * Resolves a repo's {@link NzymeIndexConfig} into the settings the indexer runs on: defaults

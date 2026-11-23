@@ -1,7 +1,5 @@
-import { basename } from 'node:path';
-
 import { optimize } from 'svgo';
-import type { Config, CustomPlugin, XastChild, XastElement, XastParent, XastRoot } from 'svgo';
+import type { Config, CustomPlugin, XastCdata, XastChild, XastElement, XastParent, XastRoot } from 'svgo';
 
 /**
  * svgo configuration applied to every SVG component. `path` is always the compiled file and
@@ -11,7 +9,7 @@ export type SvgComponentSvgoConfig = Omit<Config, 'path' | 'datauri'>;
 
 /** Options of {@link compileSvgComponent}. */
 export interface CompileSvgComponentOptions {
-    /** Path of the SVG file: named in errors, passed to svgo plugins (`prefixIds`) and source of the display name. */
+    /** Path of the SVG file: named in errors and passed to svgo plugins (`prefixIds`). */
     path: string;
     /** svgo config; `preset-default` when omitted. `removeScripts` is always appended to its plugins. */
     svgo?: SvgComponentSvgoConfig;
@@ -27,8 +25,9 @@ interface SvgParts {
  * rendering one `<svg>` vnode: the root attributes as props, everything inside as static
  * `innerHTML`. Attributes the caller passes win over the file's, `class` and `style` merge.
  *
- * Scripts, `on*` event attributes and `javascript:`/`vbscript:` URLs are removed whatever svgo
- * config is passed, because the markup reaches the DOM through `innerHTML`.
+ * Scripts, `on*` event attributes, `javascript:`/`vbscript:` URLs, comments and processing
+ * instructions are removed and CDATA becomes escaped text whatever svgo config is passed, because
+ * the markup reaches the DOM through `innerHTML`.
  *
  * @throws Error naming the path when the source is not parsable or its root is not a single `<svg>`.
  * @__NO_SIDE_EFFECTS__
@@ -55,7 +54,6 @@ export function compileSvgComponent(source: string, options: CompileSvgComponent
         `const innerHTML = ${JSON.stringify(parts.innerHTML)};`,
         `const SvgComponent = (_props, { attrs: callerAttrs }) => h('svg', mergeProps(attrs, callerAttrs, { innerHTML }));`,
         `SvgComponent.inheritAttrs = false;`,
-        `SvgComponent.displayName = ${JSON.stringify(toDisplayName(path))};`,
         `export default SvgComponent;`,
         '',
     ].join('\n');
@@ -83,6 +81,19 @@ function splitSvgRoot(svg: string): SvgParts {
             },
             element: {
                 enter: sanitizeElement,
+            },
+            // svgo prints comments, processing instructions and CDATA verbatim, but the HTML parser
+            // behind `innerHTML` ends `<!-->`, `<?…>` and, under an HTML element, `<![CDATA[…` at the
+            // first `>`, so markup hidden inside them would come alive. CDATA becomes a text node,
+            // which svgo prints escaped.
+            comment: {
+                enter: removeNode,
+            },
+            instruction: {
+                enter: removeNode,
+            },
+            cdata: {
+                enter: cdataToText,
             },
         }),
     };
@@ -135,7 +146,7 @@ function isElement(node: XastChild): node is XastElement {
  */
 function sanitizeElement(node: XastElement, parent: XastParent) {
     if (getLocalName(node.name) === 'script') {
-        parent.children = parent.children.filter(child => child !== node);
+        removeNode(node, parent);
         return;
     }
 
@@ -159,13 +170,10 @@ function getLocalName(name: string) {
     return name.slice(name.lastIndexOf(':') + 1).toLowerCase();
 }
 
-/** `arrow-left.svg` → `ArrowLeft`. */
-function toDisplayName(path: string) {
-    const words = basename(path, '.svg').split(/[^a-zA-Z0-9]+/);
-    let displayName = '';
-    for (const word of words) {
-        displayName += word.charAt(0).toUpperCase() + word.slice(1);
-    }
+function removeNode(node: XastChild, parent: XastParent) {
+    parent.children = parent.children.filter(child => child !== node);
+}
 
-    return displayName;
+function cdataToText(node: XastCdata, parent: XastParent) {
+    parent.children = parent.children.map(child => (child === node ? { type: 'text', value: node.value } : child));
 }

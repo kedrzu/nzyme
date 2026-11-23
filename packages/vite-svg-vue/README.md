@@ -29,8 +29,9 @@ merge, and listeners attach. There is no component instance and no reactivity in
 
 `svgo` is the svgo config applied to every file (`preset-default` when omitted). Whatever it says,
 `removeScripts` runs last, and a final pass strips every `<script>`, every `on*` attribute, `srcdoc`,
-and any attribute value carrying a `javascript:` or `vbscript:` URL, because the markup reaches the
-DOM through `innerHTML`.
+any attribute value carrying a `javascript:` or `vbscript:` URL, every comment and processing
+instruction, and turns CDATA into escaped text, because the markup reaches the DOM through
+`innerHTML`.
 
 A file that cannot be read or parsed, or whose root is not a single `<svg>`, fails the build with
 its path in the message.

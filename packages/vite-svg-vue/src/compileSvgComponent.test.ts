@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, test } from 'bun:test';
 
 import { compileSvgComponent } from './compileSvgComponent.js';
+import type { SvgComponentSvgoConfig } from './compileSvgComponent.js';
 
 const fixtures = join(import.meta.dir, 'fixtures');
 
@@ -19,7 +20,6 @@ describe('compileSvgComponent', () => {
                 `const innerHTML = "<path stroke=\\"currentColor\\" stroke-width=\\"2\\" d=\\"M19 12H5m7 7-7-7 7-7\\"/>";`,
                 `const SvgComponent = (_props, { attrs: callerAttrs }) => h('svg', mergeProps(attrs, callerAttrs, { innerHTML }));`,
                 `SvgComponent.inheritAttrs = false;`,
-                `SvgComponent.displayName = "ArrowLeft";`,
                 `export default SvgComponent;`,
                 '',
             ].join('\n'),
@@ -42,16 +42,15 @@ describe('compileSvgComponent', () => {
         expect(parts).toEqual({
             attrs: { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 1 1' },
             innerHTML: '',
-            displayName: 'Empty',
         });
     });
 
-    test('doctype, XML instruction and comments around the root never reach the component', async () => {
+    test('doctype, XML instruction and comments, around the root or inside it, never reach the component', async () => {
         const path = join(fixtures, 'prolog.svg');
         const parts = parseModule(compileSvgComponent(await readFile(path, 'utf8'), { path, svgo: { plugins: [] } }));
 
         expect(parts.attrs).toEqual({ xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 10 10' });
-        expect(parts.innerHTML).toBe('<!--inner comment--><rect width="10" height="10"/>');
+        expect(parts.innerHTML).toBe('<rect width="10" height="10"/>');
     });
 
     test('pretty-printed svgo output splits without stray whitespace', async () => {
@@ -63,21 +62,27 @@ describe('compileSvgComponent', () => {
             }),
         );
 
-        expect(parts.innerHTML).toBe('<!--inner comment--><rect width="10" height="10"/>');
+        expect(parts.innerHTML).toBe('<rect width="10" height="10"/>');
     });
 
-    describe.each([
+    describe.each<[string, SvgComponentSvgoConfig]>([
         ['preset-default', {}],
         ['no plugins', { plugins: [] }],
         ['no plugins, multipass', { plugins: [], multipass: true }],
+        ['only cleanupIds', { plugins: ['cleanupIds'] }],
     ])('with %s, the malicious fixture', (_name, svgo) => {
-        test('loses scripts, event handlers and executable URLs', async () => {
+        test('loses scripts, event handlers, executable URLs, comments and instructions; CDATA becomes text', async () => {
             const path = join(fixtures, 'malicious.svg');
             const code = compileSvgComponent(await readFile(path, 'utf8'), { path, svgo });
             const parts = parseModule(code);
-            const markup = `${JSON.stringify(parts.attrs)}${parts.innerHTML}`.toLowerCase();
+            // Text is printed escaped, so every `<` left in the markup opens real markup: check only that.
+            const tags = parts.innerHTML.match(/<[^>]*>/g)?.join('') ?? '';
+            const markup = `${JSON.stringify(parts.attrs)}${tags}`.toLowerCase();
 
             expect(markup).not.toContain('<script');
+            expect(markup).not.toContain('<img');
+            expect(markup).not.toContain('<!');
+            expect(markup).not.toContain('<?');
             expect(markup).not.toMatch(/\son[a-z]+=/);
             expect(Object.keys(parts.attrs).filter(name => name.toLowerCase().startsWith('on'))).toEqual([]);
             expect(markup.replace(/\s/g, '')).not.toContain('javascript:');
@@ -86,6 +91,7 @@ describe('compileSvgComponent', () => {
             // Harmless content survives.
             expect(markup).toContain('<path');
             expect(markup).toContain('<foreignobject');
+            expect(parts.innerHTML).toContain('&gt;&lt;img src=x onerror=');
         });
     });
 
@@ -117,24 +123,17 @@ describe('compileSvgComponent', () => {
 interface ModuleParts {
     attrs: Record<string, unknown>;
     innerHTML: string;
-    displayName: string;
 }
 
 /** Reads back the JSON literals the generated module embeds. */
 function parseModule(code: string): ModuleParts {
     const attrs = parseLiteral(code, 'const attrs = ');
     const innerHTML = parseLiteral(code, 'const innerHTML = ');
-    const displayName = parseLiteral(code, 'SvgComponent.displayName = ');
-    if (
-        typeof attrs !== 'object' ||
-        attrs === null ||
-        typeof innerHTML !== 'string' ||
-        typeof displayName !== 'string'
-    ) {
+    if (typeof attrs !== 'object' || attrs === null || typeof innerHTML !== 'string') {
         throw new Error(`Unexpected module shape:\n${code}`);
     }
 
-    return { attrs: Object.fromEntries(Object.entries(attrs)), innerHTML, displayName };
+    return { attrs: Object.fromEntries(Object.entries(attrs)), innerHTML };
 }
 
 function parseLiteral(code: string, prefix: string): unknown {

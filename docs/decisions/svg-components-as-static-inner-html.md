@@ -23,6 +23,10 @@ though an icon's content never changes after build.
 > a fixed list. It keeps `onClick`, `onpointerdown`, `<SCRIPT>` and `<set to="javascript:…">`, and a
 > browser runs all of these when they arrive through `innerHTML`.
 
+> **Checked 2026-11-23:** svgo 4 prints comments, processing instructions and CDATA verbatim. The HTML
+> parser behind `innerHTML` ends `<!-->` and `<?…>` at the first `>`, and `<![CDATA[` too under an HTML
+> element (inside `<foreignObject>`), so an `<img onerror>` hidden in any of them becomes live.
+
 ## Options Considered
 
 - **Vue template compilation (`vite-svg-loader`'s approach).** One vnode per element; Vue's static
@@ -36,8 +40,9 @@ though an icon's content never changes after build.
 
 `@nzyme/vite-svg-vue` emits one `<svg>` vnode with the content as static `innerHTML`. It runs two svgo
 passes. The first uses the consumer's config plus `removeScripts`. The second splits the root from the
-content. It also removes every script element, `on*` attribute and `javascript:`/`vbscript:` URL, and
-it does so whatever config the consumer passes, because `innerHTML` makes sanitizing the plugin's job.
+content. It also removes every script element, `on*` attribute, `javascript:`/`vbscript:` URL, comment
+and processing instruction, and turns CDATA into escaped text, whatever config the consumer passes,
+because `innerHTML` makes sanitizing the plugin's job.
 svgo, vue and vite are peer dependencies, so the consumer chooses the svgo version.
 
 ## Consequences

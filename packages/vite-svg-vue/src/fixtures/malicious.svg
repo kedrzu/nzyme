@@ -6,6 +6,12 @@
     <a xlink:href="java&#x09;script:alert('xlink')"><rect width="2" height="2"/></a>
     <a href="#safe"><set attributeName="href" to="javascript:alert('set')"/><rect width="3" height="3"/></a>
     <foreignObject width="10" height="10">
+        <p xmlns="http://www.w3.org/1999/xhtml"><![CDATA[><img src=x onerror=alert('cdata')>]]></p>
+    </foreignObject>
+    <g><!--><img src=x onerror=alert('comment')>--></g>
+    <g><?pi ><img src=x onerror=alert('instruction')>?></g>
+    <!-- Last: an HTML `<iframe/>` is not closed under innerHTML and swallows what follows as text. -->
+    <foreignObject width="10" height="10">
         <iframe xmlns="http://www.w3.org/1999/xhtml" srcdoc="&lt;script&gt;alert('srcdoc')&lt;/script&gt;" src="javascript:alert('iframe')"/>
     </foreignObject>
 </svg>

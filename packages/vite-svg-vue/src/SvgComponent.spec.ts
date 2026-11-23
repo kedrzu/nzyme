@@ -6,6 +6,7 @@ import { renderToString } from 'vue/server-renderer';
 
 import ArrowLeft from './fixtures/arrow-left.svg?component';
 import Loader from './fixtures/loader.svg?component';
+import Malicious from './fixtures/malicious.svg?component';
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 
@@ -80,6 +81,23 @@ test('hydrates its server-rendered markup without a mismatch and keeps the child
     expect(svg.getAttribute('class')).toBe('spinner');
     expect(svg.querySelectorAll('circle')).toHaveLength(2);
     expect(svg.querySelectorAll('animate')).toHaveLength(2);
+});
+
+test('renders the malicious fixture with no script, event handler, comment or markup smuggled through CDATA', async () => {
+    const { container } = await render(Malicious);
+
+    const svg = getSvgRoot(container);
+    const elements = [svg, ...svg.querySelectorAll('*')];
+    expect(svg.querySelectorAll('script, img, iframe[srcdoc]')).toHaveLength(0);
+    for (const element of elements) {
+        expect(element.getAttributeNames().filter(name => name.toLowerCase().startsWith('on'))).toEqual([]);
+    }
+
+    // The HTML parser turns `<?…>` into a comment too.
+    expect(document.createTreeWalker(svg, NodeFilter.SHOW_COMMENT).nextNode()).toBeNull();
+
+    // The CDATA payload is inert text.
+    expect(svg.querySelector('foreignObject p')?.textContent).toContain('<img src=x onerror=');
 });
 
 function getSvgRoot(container: Element) {

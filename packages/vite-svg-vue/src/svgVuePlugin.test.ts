@@ -15,7 +15,6 @@ describe('svgVuePlugin', () => {
 
         expect(loaded).toEqual([]);
         expect(code).toContain(`h('svg', mergeProps(attrs, callerAttrs, { innerHTML }))`);
-        expect(code).toContain(`SvgComponent.displayName = "ArrowLeft"`);
     });
 
     test.each(['arrow-left.svg', 'arrow-left.svg?url', 'arrow-left.svg?raw', 'arrow-left.svg?component&inline'])(

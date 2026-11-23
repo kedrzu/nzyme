@@ -37,7 +37,7 @@
         "schema": "bun run scripts/fetchSchema.ts"
     },
     "dependencies": {
-        "@linear/sdk": "101.1.0",
+        "@linear/sdk": "103.0.0",
         "@nzyme/cli-core": "workspace:*",
         "@nzyme/github-cli": "workspace:*",
         "@nzyme/logging": "workspace:*",

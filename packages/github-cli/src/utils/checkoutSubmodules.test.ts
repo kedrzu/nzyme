@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, expect, test } from 'bun:test';
+import { afterEach, beforeEach, expect, setDefaultTimeout, test } from 'bun:test';
 import { simpleGit } from 'simple-git';
 
 import { UsageError } from '@nzyme/cli-core';
@@ -12,6 +12,9 @@ import type { GithubConfig } from '../GithubConfig.js';
 import { checkoutSubmodules } from './checkoutSubmodules.js';
 import type { GithubClient } from './createGithubClient.js';
 import type { SubmoduleBase } from './resolveSubmoduleBase.js';
+
+// Every test builds real git repositories, which outgrow the 5 s default under a loaded full run.
+setDefaultTimeout(60_000);
 
 const GITHUB_CONFIG: GithubConfig = { owner: 'acme', repo: 'main', token: 'ghp_test' };
 const FOLLOW_MAIN: SubmoduleBase = { kind: 'trunk', trunk: 'main' };

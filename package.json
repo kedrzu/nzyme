@@ -36,7 +36,7 @@
         "tslib": "2.9.1"
     },
     "devDependencies": {
-        "@nx/js": "^24.0.5",
+        "@nx/js": "^24.0.6",
         "@nzyme/cli": "workspace:*",
         "@nzyme/eslint": "workspace:*",
         "@nzyme/tsconfig": "workspace:*",
@@ -48,7 +48,7 @@
         "del-cli": "8.0.1",
         "eslint": "10.15.0",
         "eslint-plugin-package-json": "1.14.0",
-        "nx": "^24.0.5",
+        "nx": "^24.0.6",
         "oxfmt": "0.79.0",
         "oxlint": "1.94.0",
         "oxlint-tsgolint": "7.0.2008"

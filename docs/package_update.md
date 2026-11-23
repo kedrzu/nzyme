@@ -313,14 +313,6 @@ superseded on schedule by this path.
   graphs on, so its AST shape is the thing to check, not its version. Grouped in one entry because the
   reason is identical; split it when one of them gets attempted.
 
-### nx 24.0.6 (not attempted from a consumer, 2026-11-23)
-
-- **Status**: skip — needs a standalone checkout of this repository.
-- **Notes**: the root declares `nx: ^24.0.5`, and the sanctioned path is `nx migrate` (General Rules →
-  `nx`). A consumer-driven run cannot complete it: without a terminal `nx migrate` stops at the Nx
-  Cloud prompt, and the `nx release … --dry-run` hand-off needs `@nx/js`, which a consumer never
-  installs. Bump it here, standalone.
-
 ### @lucide/vue, @linear/sdk, graphql and vue — exact pins a consumer shares
 
 - **Problem**: four packages are pinned **exactly** rather than as ranges, in the private packages

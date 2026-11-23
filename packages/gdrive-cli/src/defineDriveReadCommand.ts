@@ -7,9 +7,9 @@ import { Command } from '@nzyme/cli-core/Command.js';
 import { formatHeaderBlock } from '@nzyme/cli-core/utils/formatHeaderBlock.js';
 import { parseCount } from '@nzyme/cli-core/utils/parseCount.js';
 import { assert } from '@nzyme/utils/assert.js';
+import type { GoogleCommandParams } from '@nzyme/google-auth/GoogleCommandParams.js';
 
 import { createDriveClient } from './createDriveClient.js';
-import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { fileIdFrom, FOLDER, isNative, isTextMime, textExport, typeLabel } from './formats.js';
 import { getDriveFile } from './getDriveFile.js';
 
@@ -20,7 +20,7 @@ const MAX_TEXT_BYTES = 10 * 1024 * 1024;
  * Defines `<prefix> read <file> [--max-chars]`: a file's contents as text under a short header block.
  * @__NO_SIDE_EFFECTS__
  */
-export function defineDriveReadCommand(params: DriveCommandParams): CommandClass {
+export function defineDriveReadCommand(params: GoogleCommandParams): CommandClass {
     const { prefix } = params;
 
     return class DriveReadCommand extends Command {

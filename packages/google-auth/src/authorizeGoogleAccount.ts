@@ -29,7 +29,7 @@ export interface GoogleAuthorizedAccount {
  */
 export async function authorizeGoogleAccount(params: AuthorizeGoogleAccountParams): Promise<GoogleAuthorizedAccount> {
     const { auth, signInCommand } = params;
-    const tokens = parseGoogleTokens(await auth.storage.read(), auth.secretName);
+    const tokens = parseGoogleTokens(await auth.readTokens(), auth.secretName);
     const { email, refreshToken } = resolveGoogleAccount({
         tokens,
         allowed: auth.allowed,

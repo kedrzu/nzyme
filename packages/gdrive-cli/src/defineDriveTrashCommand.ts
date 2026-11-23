@@ -1,9 +1,9 @@
 import { Option } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
+import type { GoogleCommandParams } from '@nzyme/google-auth/GoogleCommandParams.js';
 
 import { createDriveClient } from './createDriveClient.js';
-import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { formatDriveFile } from './formatDriveFile.js';
 import { fileIdFrom } from './formats.js';
 import { FILE_FIELDS } from './getDriveFile.js';
@@ -14,7 +14,7 @@ import { FILE_FIELDS } from './getDriveFile.js';
  * @param trashed Whether the command trashes (`trash`) or restores (`restore`).
  * @__NO_SIDE_EFFECTS__
  */
-export function defineDriveTrashCommand(params: DriveCommandParams, trashed: boolean): CommandClass {
+export function defineDriveTrashCommand(params: GoogleCommandParams, trashed: boolean): CommandClass {
     const { prefix } = params;
     const name = trashed ? 'trash' : 'restore';
 

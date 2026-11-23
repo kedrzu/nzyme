@@ -1,4 +1,5 @@
 import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { Option, UsageError } from '@nzyme/cli-core';
@@ -10,17 +11,16 @@ import { findAttachment, savedFileName } from './attachments.js';
 import { createGmailClient } from './createGmailClient.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
 import { extractAttachments } from './gmailContent.js';
-import { attachmentsDir } from './localFiles.js';
 import { formatFileSize } from './utils/formatFileSize.js';
 
 /**
  * Defines `<prefix> attachment save <messageId> <partId>`: writes the attachment to
- * `<attachmentsDir>/<messageId>/<safe file name>` and prints its path. The bytes never reach the
+ * `~/.cache/gmail-cli/attachments/<messageId>/<safe file name>` and prints its path. The bytes never reach the
  * output, and nothing is written outside the attachments directory.
  * @__NO_SIDE_EFFECTS__
  */
 export function defineGmailAttachmentSaveCommand(params: GmailCommandParams): CommandClass {
-    const { prefix, files } = params;
+    const { prefix } = params;
 
     return class GmailAttachmentSaveCommand extends Command {
         static override paths = [[...prefix.split(' '), 'attachment', 'save']];
@@ -64,7 +64,8 @@ export function defineGmailAttachmentSaveCommand(params: GmailCommandParams): Co
                 );
             }
 
-            const dir = path.join(path.resolve(attachmentsDir(files)), this.messageId);
+            // Per user, unlike a fixed name under a shared temp directory another user could create first.
+            const dir = path.join(os.homedir(), '.cache', 'gmail-cli', 'attachments', this.messageId);
             const dest = path.join(dir, savedFileName(target, attachments));
             if (path.dirname(dest) !== dir) {
                 throw new Error(`Refusing to write ${dest}: it is outside ${dir}`);

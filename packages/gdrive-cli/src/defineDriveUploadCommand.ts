@@ -1,22 +1,22 @@
 import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
+import type { GoogleCommandParams } from '@nzyme/google-auth/GoogleCommandParams.js';
 
 import { createDriveClient } from './createDriveClient.js';
-import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { formatDriveFile } from './formatDriveFile.js';
 import { fileIdFrom, importTarget, quote } from './formats.js';
 import { FILE_FIELDS } from './getDriveFile.js';
-import { driveFileAccess, mimeTypeOf } from './localFiles.js';
+import { mimeTypeOf } from './localFiles.js';
 import { readUploadContent } from './readUploadContent.js';
 
 /**
  * Defines `<prefix> upload [--file] [--name] [--folder] [--convert] [--description]`: creates a new
- * file from an allowed local file or stdin, optionally converted to a Google file.
+ * file from a local file or stdin, optionally converted to a Google file.
  * @__NO_SIDE_EFFECTS__
  */
-export function defineDriveUploadCommand(params: DriveCommandParams): CommandClass {
-    const { prefix, files } = params;
+export function defineDriveUploadCommand(params: GoogleCommandParams): CommandClass {
+    const { prefix } = params;
 
     return class DriveUploadCommand extends Command {
         static override paths = [[...prefix.split(' '), 'upload']];
@@ -30,9 +30,7 @@ export function defineDriveUploadCommand(params: DriveCommandParams): CommandCla
                 extension is dropped from the name. Drive allows duplicate names: to change an existing
                 file use \`${prefix} update\`.
 
-                The local file must lie in the project directory, a configured root or the downloads
-                directory; .env files, OAuth credentials and tokens are refused. Prints the new file's
-                id, name and type.
+                Prints the new file's id, name and type.
             `,
             examples: [
                 ['A PDF into a folder', `${prefix} upload --file report.pdf --folder 1AbC_d-EfGh`],
@@ -59,7 +57,6 @@ export function defineDriveUploadCommand(params: DriveCommandParams): CommandCla
             const content = await readUploadContent({
                 file: this.file,
                 stdin: this.context.stdin,
-                access: driveFileAccess(files),
                 // Text without an extension is uploaded as plain text.
                 stdinType: hasExtension ? mimeTypeOf(this.name ?? '') : 'text/plain',
             });

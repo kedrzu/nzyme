@@ -2,22 +2,21 @@ import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { assert } from '@nzyme/utils/assert.js';
+import type { GoogleCommandParams } from '@nzyme/google-auth/GoogleCommandParams.js';
 
 import { createDriveClient } from './createDriveClient.js';
-import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { formatDriveFile } from './formatDriveFile.js';
 import { DOCUMENT, fileIdFrom, FOLDER, importTargetOf, isNative, SPREADSHEET, typeLabel } from './formats.js';
 import { FILE_FIELDS, getDriveFile } from './getDriveFile.js';
-import { driveFileAccess } from './localFiles.js';
 import { readUploadContent } from './readUploadContent.js';
 
 /**
  * Defines `<prefix> update <file> [--file] [--content-type]`: replaces a file's contents from an
- * allowed local file or stdin, keeping its id, link, sharing and history.
+ * local file or stdin, keeping its id, link, sharing and history.
  * @__NO_SIDE_EFFECTS__
  */
-export function defineDriveUpdateCommand(params: DriveCommandParams): CommandClass {
-    const { prefix, files } = params;
+export function defineDriveUpdateCommand(params: GoogleCommandParams): CommandClass {
+    const { prefix } = params;
 
     return class DriveUpdateCommand extends Command {
         static override paths = [[...prefix.split(' '), 'update']];
@@ -31,9 +30,7 @@ export function defineDriveUpdateCommand(params: DriveCommandParams): CommandCla
                 text/markdown for a Doc, text/csv for a Sheet and the file's own type otherwise. A
                 shortcut updates its target.
 
-                The local file must lie in the project directory, a configured root or the downloads
-                directory; .env files, OAuth credentials and tokens are refused. Prints the file's id
-                and new version.
+                Prints the file's id and new version.
             `,
             examples: [['A Doc from Markdown', `${prefix} update 1AbC_d-EfGh < notes.md`]],
         });
@@ -68,7 +65,6 @@ export function defineDriveUpdateCommand(params: DriveCommandParams): CommandCla
             const content = await readUploadContent({
                 file: this.file,
                 stdin: this.context.stdin,
-                access: driveFileAccess(files),
                 stdinType: stdinType ?? '',
             });
             if (native && importTargetOf(content.mimeType) !== mimeType) {

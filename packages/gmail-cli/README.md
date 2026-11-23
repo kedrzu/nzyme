@@ -21,9 +21,6 @@ Spread the commands into the product CLI's `execute` (its `packages/cli`,
 
 ```ts
 // packages/cli/src/cli.ts
-import * as os from 'node:os';
-import * as path from 'node:path';
-
 import { execute } from '@nzyme/cli-core/execute.js';
 import { defineGmailCommands } from '@nzyme/gmail-cli/defineGmailCommands.js';
 
@@ -48,16 +45,12 @@ await execute({
                 archiveMarkers: ['Outdated', 'Junk'],
                 views: { unprocessed: '-label:AI/Done -label:AI/Triage' },
             },
-            files: {
-                roots: [path.join(os.homedir(), 'Notes')],
-                attachmentsDir: path.join(os.homedir(), '.cache', 'acme', 'attachments'),
-            },
         }),
     ],
 });
 ```
 
-`defineGmailCommands` throws on malformed label rules or a path that is not absolute.
+`defineGmailCommands` throws on malformed label rules.
 
 ## Before the first use
 
@@ -78,7 +71,6 @@ await execute({
 |`auth`|required|The `GoogleAuthOptions` of [`@nzyme/google-auth`](../google-auth#options): `provider`, `tokens`, `client`, `accounts`|
 |`prefix`|`gmail`|The command path prefix, space-separated|
 |`labels`|none|Label rules and views, below. Without them labels are free-form|
-|`files`|none|Local files the commands may touch, below|
 |`reply`|system|`locale` and `timeZone` of the attribution line of a reply quote (`On Mon, Sep 28, 2026 … wrote:`); `pl` gets the Polish template, any other locale the English one|
 
 ### Label rules
@@ -96,14 +88,6 @@ Four building blocks, enforced by `thread label` and offered by `search`:
 
 Group labels and markers are also protected from `labels cleanup`.
 
-### Files
-
-- `roots`: directories, besides the repo root, that draft attachments may be read from.
-- `attachmentsDir`: where `attachment save` writes, `<dir>/<messageId>/<file>`. Default
-  `~/.cache/gmail-cli/attachments`. Always allowed as an attachment source.
-
-Every path is absolute.
-
 ## Commands
 
 `--account <email>` selects the account on every command below the first two; it is needed only when
@@ -119,7 +103,7 @@ several accounts are usable. `gmail auth` and `gmail accounts` are the shared co
 |`gmail labels list`|List the account's labels|
 |`gmail labels create <name>`|Create a label|
 |`gmail labels cleanup <prefix>`|Delete the empty labels under a prefix; `--dry-run`|
-|`gmail attachment save <messageId> <partId>`|Save an attachment to the attachments directory|
+|`gmail attachment save <messageId> <partId>`|Save an attachment to `~/.cache/gmail-cli/attachments/<messageId>/`|
 |`gmail draft create`|Create a draft from Markdown (`--body-file`, `-` for stdin; `--html`); `--to`, `--cc`, `--bcc`, `--subject`, `--thread`, `--in-reply-to`, `--attach`, `--signature`, `--quote`|
 |`gmail draft update <id>`|Change a draft; also `--remove-attachment`|
 |`gmail draft list`|List drafts; `--query`, `--thread`, `--limit`|
@@ -136,7 +120,8 @@ several accounts are usable. `gmail auth` and `gmail accounts` are the shared co
   `--remove TRASH`.
 - `draft discard` moves a draft to the Trash, and only after checking it carries the `DRAFT` label.
 - `labels cleanup` deletes only labels that no message carries.
-- Local files are read (attachments) and written (saved attachments) only under the repo root,
-  `files.roots` and the attachments directory. Secret files (`.env*`, OAuth client files, credentials and
-  token files) are refused even inside them.
+- Local paths are not sandboxed: the commands run in the agent's own shell, which can read any file it
+  could pipe to `--body-file -`. What the CLI does guard is the name Gmail chooses: `attachment save`
+  writes under the attachments directory with the file name sanitised, so a name like `../../x` cannot
+  escape it.
 - An account the project's `auth.accounts` excludes is listed as `not allowed` and cannot be used.

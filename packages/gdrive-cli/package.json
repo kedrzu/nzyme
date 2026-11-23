@@ -33,7 +33,6 @@
         "@nzyme/cli-core": "workspace:*",
         "@nzyme/google-auth": "workspace:*",
         "@nzyme/node-utils": "workspace:*",
-        "@nzyme/project-utils": "workspace:*",
         "@nzyme/utils": "workspace:*"
     },
     "devDependencies": {

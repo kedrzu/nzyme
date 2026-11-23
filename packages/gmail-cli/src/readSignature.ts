@@ -1,5 +1,7 @@
 import type { Writable } from 'node:stream';
 
+import { errorMessage } from '@nzyme/google-auth/utils/errorMessage.js';
+
 import type { GmailClient } from './createGmailClient.js';
 
 /**
@@ -15,8 +17,7 @@ export async function readSignature({ email, gmail, call }: GmailClient, stderr:
             sendAs.find(address => address.sendAsEmail?.toLowerCase() === email.toLowerCase());
         return entry?.signature ?? '';
     } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        stderr.write(`Warning: no signature, its lookup failed: ${reason}\n`);
+        stderr.write(`Warning: no signature, its lookup failed: ${errorMessage(error)}\n`);
         return '';
     }
 }

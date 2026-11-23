@@ -1,21 +1,12 @@
-// Local files for uploads and downloads.
-//
-// Every path is checked against an explicit allowlist after resolving symlinks, so an upload can never
-// carry a file from outside the project directory and the configured roots, and a download can never
-// land outside them. Secrets inside those roots are refused on top of that.
+// Local files for uploads and downloads. A relative path resolves against the working directory, as in
+// any shell command.
 
 import * as fs from 'node:fs/promises';
-import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { assertFileAccess, resolveReadableFile } from '@nzyme/node-utils/FileAccess.js';
-import type { FileAccess } from '@nzyme/node-utils/FileAccess.js';
 import { safeFileName } from '@nzyme/node-utils/safeFileName.js';
-import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
 
-import type { DriveFilesOptions } from './DriveCommandsOptions.js';
-
-/** An allowed local file to upload. */
+/** A local file to upload. */
 export interface LocalFile {
     path: string;
     filename: string;
@@ -24,34 +15,16 @@ export interface LocalFile {
 }
 
 /**
- * The directory `download` writes to by default: `files.downloadsDir`, or `~/.cache/gdrive-cli/downloads`
- * (per user, unlike a fixed name under a shared temp directory another user could create first).
- * @__NO_SIDE_EFFECTS__
+ * A local regular file, typed by its extension.
  */
-export function downloadsDir(files: DriveFilesOptions | undefined): string {
-    return files?.downloadsDir ?? path.join(os.homedir(), '.cache', 'gdrive-cli', 'downloads');
-}
+export async function localFile(input: string): Promise<LocalFile> {
+    const stat = await fs.stat(input);
+    if (!stat.isFile()) {
+        throw new Error(`'${input}' is not a regular file`);
+    }
 
-/**
- * Where uploads may read and downloads may write: the project directory (the repo root), `files.roots`
- * and the downloads directory. Relative paths resolve against the working directory, as in any shell
- * command.
- */
-export function driveFileAccess(files: DriveFilesOptions | undefined): FileAccess {
-    return {
-        baseDir: process.cwd(),
-        roots: [getProjectRoot(), ...(files?.roots ?? []), downloadsDir(files)],
-    };
-}
-
-/**
- * An allowed local file, typed by its extension.
- */
-export async function localFile(input: string, access: FileAccess): Promise<LocalFile> {
-    const real = await resolveReadableFile(input, access);
-    const filename = path.basename(real);
-    const stat = await fs.stat(real);
-    return { path: real, filename, mimeType: mimeTypeOf(filename), size: stat.size };
+    const filename = path.basename(input);
+    return { path: path.resolve(input), filename, mimeType: mimeTypeOf(filename), size: stat.size };
 }
 
 /**
@@ -71,8 +44,8 @@ export function mimeTypeOf(filename: string): string {
 export interface ResolveWritablePathParams {
     /** A file path, or a directory (an existing one, or a path ending in `/`) to put `defaultName` in. */
     input: string;
+    /** The name Drive gave the file, sanitised before use: Drive chooses it, not the caller. */
     defaultName: string;
-    access: FileAccess;
     /** Replace an existing file; refused by default. */
     overwrite?: boolean;
 }
@@ -84,55 +57,33 @@ export interface ResolveWritablePathParams {
 export async function resolveWritablePath({
     input,
     defaultName,
-    access,
     overwrite = false,
 }: ResolveWritablePathParams): Promise<string> {
-    // assertFileAccess refuses an empty path or one starting with `~` before anything is created.
-    const p = input.trim();
-    let target = path.resolve(access.baseDir, p);
-    const isDir = /[\\/]$/.test(p) || (await isDirectory(target));
+    let target = path.resolve(input);
+    const isDir = /[\\/]$/.test(input) || (await isDirectory(target));
     if (isDir) {
         target = path.join(target, safeFileName(defaultName, 'download'));
     }
 
-    // The nearest existing ancestor decides where the new directories would end up.
-    let existing = path.dirname(target);
-    while (!(await exists(existing))) {
-        existing = path.dirname(existing);
-    }
-
-    const rest = path.relative(existing, path.dirname(target));
-    const real = path.join(await fs.realpath(existing), rest, path.basename(target));
-    await assertFileAccess({ real, shown: p, access, verb: 'write' });
-
     await fs.mkdir(path.dirname(target), { recursive: true });
 
-    const stat = await fs.lstat(real).catch(() => null);
+    const stat = await fs.lstat(target).catch(() => null);
     if (stat) {
         if (!stat.isFile()) {
-            throw new Error(`'${p}' exists and is not a regular file`);
+            throw new Error(`'${input}' exists and is not a regular file`);
         }
 
         if (!overwrite) {
-            throw new Error(`'${p}' already exists - pass --overwrite to replace it, or choose another path`);
+            throw new Error(`'${input}' already exists - pass --overwrite to replace it, or choose another path`);
         }
     }
 
-    return real;
+    return target;
 }
 
 async function isDirectory(target: string) {
     try {
         return (await fs.stat(target)).isDirectory();
-    } catch {
-        return false;
-    }
-}
-
-async function exists(target: string) {
-    try {
-        await fs.stat(target);
-        return true;
     } catch {
         return false;
     }

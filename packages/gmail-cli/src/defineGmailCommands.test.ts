@@ -1,8 +1,8 @@
 import fs from 'node:fs/promises';
-import os from 'node:os';
+import * as os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, expect, test } from 'bun:test';
+import { afterEach, expect, spyOn, test } from 'bun:test';
 
 import type { GoogleCommandResult } from '@nzyme/google-auth/__fixtures__/googleTestCli.js';
 import {
@@ -19,7 +19,6 @@ import { defineSecret } from '@nzyme/secrets/defineSecret.js';
 import type { FakeGmailMessage, FakeGmailOptions } from './__fixtures__/fakeGmail.js';
 import { startFakeGmail } from './__fixtures__/fakeGmail.js';
 import { defineGmailCommands } from './defineGmailCommands.js';
-import type { GmailFilesOptions } from './GmailCommandsOptions.js';
 import type { GmailLabelRules } from './labelRules.js';
 
 const EMAIL = 'me@example.com';
@@ -172,9 +171,9 @@ test('thread prints every message as Markdown under its headers, quotes and sign
     expectNoCredential(result);
 });
 
-test('attachment save writes only under <attachmentsDir>/<messageId>, sanitising the file name', async () => {
+test('attachment save writes only under the attachments directory, one folder per message, sanitising the file name', async () => {
     const root = await tempDir();
-    const attachmentsDir = path.join(root, 'attachments');
+    const attachmentsDir = path.join(root, '.cache', 'gmail-cli', 'attachments');
     const gmail = fake({
         messages: [
             message({
@@ -189,9 +188,11 @@ test('attachment save writes only under <attachmentsDir>/<messageId>, sanitising
         ],
     });
 
-    const saved = await run(gmail, ['gmail', 'attachment', 'save', 'm1', '2'], { files: { attachmentsDir } });
-    const dots = await run(gmail, ['gmail', 'attachment', 'save', 'm1', '3'], { files: { attachmentsDir } });
-    const traversal = await run(gmail, ['gmail', 'attachment', 'save', '../m1', '2'], { files: { attachmentsDir } });
+    const homedir = spyOn(os, 'homedir').mockReturnValue(root);
+    const saved = await run(gmail, ['gmail', 'attachment', 'save', 'm1', '2']);
+    const dots = await run(gmail, ['gmail', 'attachment', 'save', 'm1', '3']);
+    const traversal = await run(gmail, ['gmail', 'attachment', 'save', '../m1', '2']);
+    homedir.mockRestore();
 
     const savedPath = path.join(attachmentsDir, 'm1', '__.._escape.txt');
     expect(saved.exitCode).toBe(0);
@@ -199,11 +200,10 @@ test('attachment save writes only under <attachmentsDir>/<messageId>, sanitising
     expect(dots.exitCode).toBe(0);
     expect(traversal.exitCode).toBe(1);
     expect(traversal.errors).toContain("'../m1' is not a Gmail message id");
-    expect((await fs.readdir(root, { recursive: true })).toSorted()).toEqual([
-        'attachments',
-        path.join('attachments', 'm1'),
-        path.join('attachments', 'm1', '_'),
-        path.join('attachments', 'm1', '__.._escape.txt'),
+    expect((await fs.readdir(attachmentsDir, { recursive: true })).toSorted()).toEqual([
+        'm1',
+        path.join('m1', '_'),
+        path.join('m1', '__.._escape.txt'),
     ]);
     expect(await fs.readFile(savedPath, 'utf8')).toBe('hello');
     expectNoCredential(saved);
@@ -218,7 +218,7 @@ test('draft create replies in a thread with the signature, the quote, an attachm
     const result = await run(
         gmail,
         ['gmail', 'draft', 'create', '--thread', 't1', '--attach', path.join(root, 'report.pdf')],
-        { files: { roots: [root] }, stdin: `Here is the **report**.\n\n![chart](${path.join(root, 'chart.png')})\n` },
+        { stdin: `Here is the **report**.\n\n![chart](${path.join(root, 'chart.png')})\n` },
     );
 
     expect(result.errors).toBe('');
@@ -242,51 +242,6 @@ test('draft create replies in a thread with the signature, the quote, an attachm
     expectNoCredential(result);
 });
 
-test.each([
-    ['a file outside the allowed directories', 'outside', 'is outside the directories this command may read'],
-    ['a secrets file', '.env', 'looks like a secrets file'],
-])('draft create refuses %s and writes no draft', async (_name, file, reason) => {
-    const root = await tempDir();
-    const outside = await tempDir();
-    await fs.writeFile(path.join(root, '.env'), 'TOKEN=x');
-    await fs.writeFile(path.join(outside, 'outside'), 'x');
-    const gmail = fake({});
-
-    const result = await run(
-        gmail,
-        [
-            'gmail',
-            'draft',
-            'create',
-            '--to',
-            'jan@example.com',
-            '--attach',
-            path.join(file === '.env' ? root : outside, file),
-        ],
-        { files: { roots: [root] }, stdin: 'Hi' },
-    );
-
-    expect(result.exitCode).toBe(1);
-    expect(result.errors).toContain(reason);
-    expect(writes(gmail)).toEqual([]);
-});
-
-test('draft create refuses a secrets file as the body and writes no draft', async () => {
-    const root = await tempDir();
-    await fs.writeFile(path.join(root, '.env'), 'TOKEN=x');
-    const gmail = fake({});
-
-    const result = await run(
-        gmail,
-        ['gmail', 'draft', 'create', '--to', 'jan@example.com', '--body-file', path.join(root, '.env')],
-        { files: { roots: [root] } },
-    );
-
-    expect(result.exitCode).toBe(1);
-    expect(result.errors).toContain('looks like a secrets file');
-    expect(writes(gmail)).toEqual([]);
-});
-
 test('draft update keeps what it is not told to change and re-renders a new body', async () => {
     const root = await tempDir();
     await fs.writeFile(path.join(root, 'body.md'), 'New text');
@@ -295,11 +250,13 @@ test('draft update keeps what it is not told to change and re-renders a new body
 
     const missing = await run(gmail, [...update, '--remove-attachment', 'nope.pdf']);
     const missingCalls = takeCalls(gmail);
-    const updated = await run(
-        gmail,
-        [...update, '--body-file', path.join(root, 'body.md'), '--remove-attachment', 'old.pdf'],
-        { files: { roots: [root] } },
-    );
+    const updated = await run(gmail, [
+        ...update,
+        '--body-file',
+        path.join(root, 'body.md'),
+        '--remove-attachment',
+        'old.pdf',
+    ]);
 
     expect(missing.exitCode).toBe(1);
     expect(missing.errors).toContain("No attachment named 'nope.pdf' (the draft has: keep.pdf, old.pdf)");
@@ -539,16 +496,12 @@ test('labels list prints one line per label, and a Gmail error carries no creden
 test('malformed options are refused when the commands are defined', () => {
     const auth = testAuthOptions({ stores: [], tokens: TOKENS });
 
-    expect(() => defineGmailCommands({ auth, files: { attachmentsDir: 'relative/dir' } })).toThrow(
-        "'relative/dir' must be an absolute path",
-    );
     expect(() => defineGmailCommands({ auth, labels: { views: {}, require: [{ when: 'X', group: 'nope' }] } })).toThrow(
         "unknown group 'nope'",
     );
 });
 
 interface RunOptions {
-    files?: GmailFilesOptions;
     stdin?: string;
 }
 
@@ -571,7 +524,6 @@ function run(gmail: ReturnType<typeof startFakeGmail>, args: string[], options: 
             accounts: ['*@example.com'],
         }),
         labels: RULES,
-        files: options.files,
     });
 
     return runCommands({ commands, args, endpoints: gmail.endpoints, stdin: options.stdin });

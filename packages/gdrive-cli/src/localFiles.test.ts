@@ -47,4 +47,11 @@ test('resolveWritablePath does not replace a file unless asked', async () => {
     const input = path.join(tmp, 'raport.pdf');
     await expect(resolveWritablePath({ input, defaultName: 'x' })).rejects.toThrow(/already exists/);
     expect(await resolveWritablePath({ input, defaultName: 'x', overwrite: true })).toBe(input);
+
+    const link = path.join(tmp, 'link.pdf');
+    await fs.symlink(input, link);
+    await expect(resolveWritablePath({ input: link, defaultName: 'x', overwrite: true })).rejects.toThrow(
+        /not a regular file/,
+    );
+    expect(await fs.readFile(input, 'utf8')).toBe('pdf');
 });

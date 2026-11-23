@@ -820,7 +820,6 @@
         "@nzyme/openapi-cli": "workspace:*",
         "@nzyme/secrets": "workspace:*",
         "@nzyme/types": "workspace:*",
-        "@nzyme/utils": "workspace:*",
       },
       "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

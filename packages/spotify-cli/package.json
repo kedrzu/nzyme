@@ -39,8 +39,7 @@
         "@nzyme/openapi": "workspace:*",
         "@nzyme/openapi-cli": "workspace:*",
         "@nzyme/secrets": "workspace:*",
-        "@nzyme/types": "workspace:*",
-        "@nzyme/utils": "workspace:*"
+        "@nzyme/types": "workspace:*"
     },
     "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

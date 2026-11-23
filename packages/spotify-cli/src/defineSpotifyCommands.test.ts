@@ -1,9 +1,9 @@
-import { afterEach, expect, test } from 'bun:test';
+import { afterEach, expect, spyOn, test } from 'bun:test';
 
 import { createMemoryStore } from '@nzyme/secrets/__fixtures__/createMemoryStore.js';
 
 import type { FakeSpotify, FakeSpotifyOptions } from './__fixtures__/fakeSpotify.js';
-import { apiError, startFakeSpotify } from './__fixtures__/fakeSpotify.js';
+import { ACCESS_TOKEN, apiError, CREDENTIALS, startFakeSpotify } from './__fixtures__/fakeSpotify.js';
 import { runSpotifyCommand, SPOTIFY_TOKEN, testTokenValue } from './__fixtures__/spotifyTestCli.js';
 
 const fakes: FakeSpotify[] = [];
@@ -525,6 +525,85 @@ test('queue add with no active device (404) asks to start playback first', async
     expect(result.exitCode).not.toBe(0);
     expect(result.errors).toContain('start playback');
     expect(result.errors).not.toContain('HTTP');
+});
+
+test('the registered commands are exactly the curated commands, the read-only get and schema, and no write', async () => {
+    const spotify = fake();
+
+    const result = await run(spotify, []);
+
+    // `spotify whoami` is the harness's own stand-in command, not part of the set.
+    const listed = [...result.stdout.matchAll(/^\s+\d+\. nzyme spotify ([a-z -]+?)(?: [<[]|$)/gm)]
+        .map(match => match[1])
+        .filter(command => command !== 'whoami');
+    expect(listed.toSorted()).toEqual(
+        [
+            'auth',
+            'me',
+            'top',
+            'recent',
+            'saved',
+            'following',
+            'search',
+            'artist',
+            'album',
+            'playlist list',
+            'playlist items',
+            'playlist create',
+            'playlist add',
+            'queue add',
+            'now-playing',
+            'schema',
+            'get',
+        ].toSorted(),
+    );
+});
+
+test('get signs in through the same unit and sends the refreshed access token as a Bearer, never printing it', async () => {
+    const authorizations: (string | null)[] = [];
+    const spotify = fake({
+        api: request => {
+            authorizations.push(request.headers.get('authorization'));
+            return undefined;
+        },
+    });
+    const original = globalThis.fetch;
+    const forward = async (input: string | URL | Request, init?: RequestInit) => {
+        const request = input instanceof Request ? input : new Request(String(input), init);
+        const prefix = 'https://api.spotify.com/v1';
+        return request.url.startsWith(prefix)
+            ? original(new Request(spotify.endpoints.apiUrl + request.url.slice(prefix.length), request))
+            : original(request);
+    };
+    const spy = spyOn(globalThis, 'fetch').mockImplementation(
+        Object.assign(forward, { preconnect: original.preconnect }),
+    );
+
+    let result;
+    try {
+        result = await run(spotify, ['get', '/me']);
+    } finally {
+        spy.mockRestore();
+    }
+
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({ id: 'owner' });
+    expect(authorizations).toEqual([`Bearer ${ACCESS_TOKEN}`]);
+    expect(spotify.grants.length).toBeGreaterThan(0);
+    for (const credential of CREDENTIALS) {
+        expect(result.stdout + result.stderr + result.errors).not.toContain(credential);
+    }
+});
+
+test('schema browses the committed spec offline, with no request and no credential', async () => {
+    const spotify = fake();
+
+    const result = await run(spotify, ['schema', '--search', 'top']);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('/me/top/tracks');
+    expect(spotify.requests).toEqual([]);
+    expect(spotify.grants).toEqual([]);
 });
 
 function fake(options?: FakeSpotifyOptions) {

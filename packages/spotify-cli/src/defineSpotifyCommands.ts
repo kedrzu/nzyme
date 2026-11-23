@@ -1,4 +1,9 @@
+import { fileURLToPath } from 'node:url';
+
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
+import type { OpenApiCommandsOptions } from '@nzyme/openapi-cli/defineOpenApiCommands.js';
+import { defineOpenApiGetCommand } from '@nzyme/openapi-cli/OpenApiGetCommand.js';
+import { defineOpenApiSchemaCommand } from '@nzyme/openapi-cli/OpenApiSchemaCommand.js';
 
 import { defineSpotify } from './defineSpotify.js';
 import { defineSpotifyAlbumCommand } from './defineSpotifyAlbumCommand.js';
@@ -32,6 +37,17 @@ export interface SpotifyCommandsOptions extends SpotifyOptions {
  */
 export function defineSpotifyCommands(options: SpotifyCommandsOptions): CommandClass[] {
     const params: SpotifyCommandParams = { prefix: options.prefix ?? 'spotify', spotify: defineSpotify(options) };
+    // The read-only escape hatch: `schema` and `get`, never the openapi-cli `write`. `get` signs in
+    // through the same unit as the curated commands.
+    const openApi: OpenApiCommandsOptions = {
+        prefix: params.prefix,
+        service: 'Spotify',
+        baseUrl: 'https://api.spotify.com/v1',
+        specPath: fileURLToPath(new URL('../openapi.json', import.meta.url)),
+        authScheme: 'Bearer',
+        securityScheme: 'oauth_2_0',
+        credential: ({ container }) => container.resolve(params.spotify).getAccessToken(),
+    };
     return [
         defineSpotifyAuthCommand(params),
         defineSpotifyAlbumCommand(params),
@@ -48,5 +64,7 @@ export function defineSpotifyCommands(options: SpotifyCommandsOptions): CommandC
         defineSpotifySavedCommand(params),
         defineSpotifySearchCommand(params),
         defineSpotifyTopCommand(params),
+        defineOpenApiSchemaCommand(openApi),
+        defineOpenApiGetCommand(openApi),
     ];
 }

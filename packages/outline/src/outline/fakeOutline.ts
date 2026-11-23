@@ -1,5 +1,6 @@
 import { arrayRemoveWhere } from '@nzyme/utils/array/arrayRemoveWhere.js';
 import { assertNever } from '@nzyme/utils/assertNever.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 
 import { OutlineClient } from './OutlineClient.js';
 import type { OutlineClientOptions, OutlineFetch } from './OutlineClient.js';
@@ -201,17 +202,17 @@ type Handler = (call: Call) => Response;
 
 type AccessNeed = 'read' | 'write';
 
-const PERMISSIONS: OutlinePermission[] = ['read', 'read_write', 'admin'];
-const FILTER_FIELDS: OutlineFilterField[] = [
+const PERMISSIONS = immutable<OutlinePermission[]>(['read', 'read_write', 'admin']);
+const FILTER_FIELDS = immutable<OutlineFilterField[]>([
     'createdAt',
     'updatedAt',
     'publishedAt',
     'archivedAt',
     'collectionId',
     'parentDocumentId',
-];
-const DATE_FIELDS: OutlineFilterField[] = ['createdAt', 'updatedAt', 'publishedAt', 'archivedAt'];
-const FILTER_OPERATORS: OutlineFilterOperator[] = ['eq', 'neq', 'lt', 'lte', 'gt', 'gte', 'in', 'isNull'];
+]);
+const DATE_FIELDS = immutable<OutlineFilterField[]>(['createdAt', 'updatedAt', 'publishedAt', 'archivedAt']);
+const FILTER_OPERATORS = immutable<OutlineFilterOperator[]>(['eq', 'neq', 'lt', 'lte', 'gt', 'gte', 'in', 'isNull']);
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
 

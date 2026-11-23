@@ -6,7 +6,7 @@ export const DRAFTS_FOLDER = 'drafts';
 /** Folder for documents shared with the user whose collection or parent the user cannot see. */
 export const SHARED_FOLDER = 'shared-with-me';
 
-const RESERVED_ROOT_FOLDERS = [DRAFTS_FOLDER, SHARED_FOLDER];
+const RESERVED_ROOT_FOLDERS = [DRAFTS_FOLDER, SHARED_FOLDER] as const;
 
 /** What path assignment needs to know about a document, from Outline or from the sync state. */
 export interface TreeDocument {

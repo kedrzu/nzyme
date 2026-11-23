@@ -37,7 +37,7 @@ const MESSAGES = {
     wrongState: 'Login aborted: the response does not belong to this login. Go back to the terminal.',
     /** Denied, no code, or a failed token exchange. */
     failed: 'The login failed. Go back to the terminal.',
-};
+} as const;
 
 /** The browser flow ended without a login: denied, timed out, a forged callback, or a failed token exchange. */
 export class LoginFailedError extends Error {

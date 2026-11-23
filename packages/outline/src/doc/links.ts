@@ -11,19 +11,15 @@ export interface LocalAttachmentRef {
 
 /** Folder next to a document that holds its attachments; sync's own, so never read as documents. */
 export const ATTACHMENTS_FOLDER = '_attachments';
-const ID = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
-/** `![text](` or `[text](`: group 1 is the whole opener, group 2 the text. */
-const OPENER = String.raw`(!?\[([^\]\n]*)\]\()`;
-/** What may follow the target: Outline's optional `"title"` (carries image sizes), then `)`. */
-const LINK_END = String.raw`((?:\s+"[^"\n]*")?\))`;
-
-const OUTLINE_LINK = new RegExp(
-    `${OPENER}(?:https?://[^/\\s)]+)?/api/attachments\\.redirect\\?id=(${ID})${LINK_END}`,
-    'g',
-);
-const LOCAL_LINK = new RegExp(`${OPENER}([^)\\s]+)${LINK_END}`, 'g');
-const LOCAL_ATTACHMENT_PATH = new RegExp(`^(?:\\./)?${ATTACHMENTS_FOLDER}/(${ID})(?:-[^/]*)?$`);
-const ATTACHMENTS_DIR = new RegExp(`^(?:\\./)?${ATTACHMENTS_FOLDER}/`);
+/** `![text](` or `[text](`: group 1 is the whole opener, group 2 the text. The id is a UUID; the optional `"title"` after the target carries image sizes. */
+const OUTLINE_LINK =
+    /(!?\[([^\]\n]*)\]\()(?:https?:\/\/[^/\s)]+)?\/api\/attachments\.redirect\?id=([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})((?:\s+"[^"\n]*")?\))/g;
+/** Any link: group 1 the opener, 2 the text, 3 the target, 4 the end. */
+const LOCAL_LINK = /(!?\[([^\]\n]*)\]\()([^)\s]+)((?:\s+"[^"\n]*")?\))/g;
+/** A path into the attachments folder (`_attachments`, see `ATTACHMENTS_FOLDER`) named by id: group 1 is the id. */
+const LOCAL_ATTACHMENT_PATH =
+    /^(?:\.\/)?_attachments\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:-[^/]*)?$/;
+const ATTACHMENTS_DIR = /^(?:\.\/)?_attachments\//;
 const URL_SCHEME = /^(?:[a-z][a-z0-9+.-]*:|\/|#)/i;
 
 /**

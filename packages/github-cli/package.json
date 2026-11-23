@@ -32,6 +32,9 @@
     "publishConfig": {
         "access": "public"
     },
+    "scripts": {
+        "build": "tsgo --build tsconfig.esm.json"
+    },
     "dependencies": {
         "@nzyme/cli-core": "workspace:*",
         "@nzyme/logging": "workspace:*",

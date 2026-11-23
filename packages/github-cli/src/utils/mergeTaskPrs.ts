@@ -823,7 +823,7 @@ export async function assertSubmodulesReady(params: AssertSubmodulesReadyParams)
 
         // `assertSubmoduleReady`'s detached-HEAD resolution reads remote-tracking refs directly and
         // runs no fetch of its own (see its doc) — the submodule's gitlink commit may sit on a
-        // branch this checkout has never fetched before (mirrors `checkoutExistingBranch.ts`'s
+        // branch this checkout has never fetched before (mirrors `checkoutSubmodules.ts`'
         // `checkoutSubmoduleBranch`, which fetches for the same reason).
         if (submodule.detached) {
             await simpleGit({ baseDir: submodule.path }).fetch('origin');

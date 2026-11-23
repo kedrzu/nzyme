@@ -16,7 +16,8 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
   - `affected` (test selection behind `git affected`), `trace` (execution tracing for it)
   - `tsconfig`, `eslint` (also the oxlint preset), `oxlint` (custom rules), `project-utils`,
     `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`
-- **Integrations:** `aws`, `pulumi`, `slack`, `apis`, `bitwarden` (a Secrets Manager store for `secrets`),
+- **Integrations:** `aws`, `pulumi`, `slack`, `slack-cli` (Slack for agents, acting as the developer: read,
+  search, send and wait for replies), `apis`, `bitwarden` (a Secrets Manager store for `secrets`),
   `discord-cli` (the Discord REST API through `openapi-cli`, as a bot), `stealth-browser` (a stealth Chrome over CDP
   for AI agents: launch, proxy, CLI), `google-auth` (Google OAuth sign-in with refresh tokens in a `secrets` store),
   `gmail-cli` (Gmail for agents: search, read, drafts, labels; never sends or permanently deletes), `gdrive-cli` (Google Drive

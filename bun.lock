@@ -830,6 +830,27 @@
         "oxfmt": "0.79.0",
       },
     },
+    "packages/slack-cli": {
+      "name": "@nzyme/slack-cli",
+      "version": "0.0.0",
+      "dependencies": {
+        "@nzyme/cli-core": "workspace:*",
+        "@nzyme/ioc": "workspace:*",
+        "@nzyme/logging": "workspace:*",
+        "@nzyme/secrets": "workspace:*",
+        "@nzyme/slack": "workspace:*",
+        "@nzyme/utils": "workspace:*",
+        "@slack/web-api": "^8.2.0",
+      },
+      "devDependencies": {
+        "@nzyme/tsconfig": "workspace:*",
+        "@types/bun": "^1.4.5",
+        "@types/node": "26.6.6",
+        "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+        "clipanion": "^4.0.0-rc.4",
+        "oxfmt": "0.79.0",
+      },
+    },
     "packages/spotify-cli": {
       "name": "@nzyme/spotify-cli",
       "version": "0.18.0",
@@ -1830,6 +1851,8 @@
     "@nzyme/sentry-cli": ["@nzyme/sentry-cli@workspace:packages/sentry-cli"],
 
     "@nzyme/slack": ["@nzyme/slack@workspace:packages/slack"],
+
+    "@nzyme/slack-cli": ["@nzyme/slack-cli@workspace:packages/slack-cli"],
 
     "@nzyme/spotify-cli": ["@nzyme/spotify-cli@workspace:packages/spotify-cli"],
 

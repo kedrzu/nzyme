@@ -14,8 +14,14 @@ export * from './components/slackPhone.js';
 export * from './components/slackSection.js';
 
 export * from './types.js';
-
+export * from './utils/assertNoBroadcastMention.js';
 export * from './utils/blocksToMarkdown.js';
+export * from './utils/compareSlackTimestamps.js';
+export * from './utils/extractSlackMessageBody.js';
+export * from './utils/fetchSlackDirectory.js';
 export * from './utils/joinLines.js';
 export * from './utils/messageToMarkdown.js';
 export * from './utils/normalizeLines.js';
+export * from './utils/parseSlackPermalink.js';
+export * from './utils/parseSlackTarget.js';
+export * from './utils/resolveSlackTarget.js';

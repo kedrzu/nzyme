@@ -494,7 +494,7 @@ test('labels list prints one line per label, and a Gmail error carries no creden
 });
 
 test('malformed options are refused when the commands are defined', () => {
-    const auth = testAuthOptions({ stores: [], tokens: TOKENS });
+    const auth = testAuthOptions({ store: createMemoryStore({ id: 'only' }).store, tokens: TOKENS });
 
     expect(() => defineGmailCommands({ auth, labels: { views: {}, require: [{ when: 'X', group: 'nope' }] } })).toThrow(
         "unknown group 'nope'",
@@ -518,8 +518,7 @@ function run(gmail: ReturnType<typeof startFakeGmail>, args: string[], options: 
     });
     const commands = defineGmailCommands({
         auth: testAuthOptions({
-            stores: [store.store],
-            secrets: [TOKENS],
+            store: store.store,
             tokens: TOKENS,
             accounts: ['*@example.com'],
         }),

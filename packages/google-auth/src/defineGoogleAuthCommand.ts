@@ -36,8 +36,8 @@ export function defineGoogleAuthCommand(params: GoogleCommandParams): CommandCla
             const auth = this.container.resolve(params.auth);
             const { endpoints } = auth;
 
-            // Refused up front what can be: the person should not sign in for a write that would fail.
-            auth.assertTokensWritable();
+            // A stored value that is not a token dictionary is refused before the browser: the person
+            // should not sign in for a save that would fail.
             parseGoogleTokens(await auth.readTokens(), auth.secretName);
 
             const token = await signInGoogle({

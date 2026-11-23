@@ -1,4 +1,6 @@
 import { UsageError } from '@nzyme/cli-core';
+import { createPkcePair } from '@nzyme/node-utils/createPkcePair.js';
+import { listenForOAuthCallback } from '@nzyme/node-utils/listenForOAuthCallback.js';
 import { openInBrowser } from '@nzyme/node-utils/openInBrowser.js';
 
 import { createSpotifyApi } from './createSpotifyApi.js';
@@ -38,31 +40,44 @@ export interface SpotifySignIn {
  * credential.
  */
 export async function signInSpotify(params: SignInSpotifyParams): Promise<SpotifySignIn> {
-    const redirect = parseRedirectUri(params.redirectUri);
-    const state = base64Url(crypto.getRandomValues(new Uint8Array(16)));
-    // 64 bytes: an 86-character verifier, within PKCE's 43 to 128.
-    const codeVerifier = base64Url(crypto.getRandomValues(new Uint8Array(64)));
-    const codeChallenge = base64Url(
-        new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(codeVerifier))),
-    );
-    const callback = Promise.withResolvers<string>();
+    const state = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString('base64url');
+    const pkce = createPkcePair();
+    const callback = listenForOAuthCallback({ redirectUri: params.redirectUri, state, timeoutMs: TIMEOUT_MS });
 
-    const server = listen();
-    let code: string;
-    try {
-        code = await waitForCode();
-    } finally {
-        await server.stop();
+    const url = new URL(`${params.accountsUrl}/authorize`);
+    url.search = new URLSearchParams({
+        client_id: params.clientId,
+        response_type: 'code',
+        redirect_uri: params.redirectUri,
+        code_challenge_method: 'S256',
+        code_challenge: pkce.challenge,
+        scope: SPOTIFY_SCOPES.join(' '),
+        state,
+    }).toString();
+
+    params.print(`Sign in with Spotify in the browser. If it did not open, visit:\n${url.href}`);
+    if (params.openBrowser) {
+        openInBrowser(url.href);
+    }
+
+    const consent = await callback.result;
+    switch (consent.kind) {
+        case 'timeout':
+            throw new Error('Timed out after 5 minutes waiting for the Spotify sign-in.');
+        case 'denied':
+            throw new Error(`Spotify sign-in failed: ${consent.error}`);
+        case 'code':
+            break;
     }
 
     const granted = await requestSpotifyToken({
         accountsUrl: params.accountsUrl,
         form: {
             grant_type: 'authorization_code',
-            code,
+            code: consent.code,
             redirect_uri: params.redirectUri,
             client_id: params.clientId,
-            code_verifier: codeVerifier,
+            code_verifier: pkce.verifier,
         },
     });
     if (!granted.ok) {
@@ -89,78 +104,6 @@ export async function signInSpotify(params: SignInSpotifyParams): Promise<Spotif
         displayName: profile.displayName,
     };
 
-    function listen() {
-        const port = Number(redirect.port || 80);
-        try {
-            return Bun.serve({
-                hostname: redirect.hostname,
-                port,
-                fetch: request => answerRedirect(new URL(request.url)),
-            });
-        } catch (error) {
-            if (error instanceof Error && 'code' in error && error.code === 'EADDRINUSE') {
-                throw new UsageError(
-                    `Port ${port} of the redirect URI ${params.redirectUri} is in use: another sign-in or app ` +
-                        'listens on it. Stop it and run the sign-in again.',
-                );
-            }
-
-            throw error;
-        }
-    }
-
-    async function waitForCode() {
-        const url = new URL(`${params.accountsUrl}/authorize`);
-        url.search = new URLSearchParams({
-            client_id: params.clientId,
-            response_type: 'code',
-            redirect_uri: params.redirectUri,
-            code_challenge_method: 'S256',
-            code_challenge: codeChallenge,
-            scope: SPOTIFY_SCOPES.join(' '),
-            state,
-        }).toString();
-
-        params.print(`Sign in with Spotify in the browser. If it did not open, visit:\n${url.href}`);
-        if (params.openBrowser) {
-            openInBrowser(url.href);
-        }
-
-        const timer = setTimeout(
-            () => callback.reject(new Error('Timed out after 5 minutes waiting for the Spotify sign-in.')),
-            TIMEOUT_MS,
-        );
-        try {
-            return await callback.promise;
-        } finally {
-            clearTimeout(timer);
-        }
-    }
-
-    function answerRedirect(requestUrl: URL) {
-        if (requestUrl.pathname !== redirect.pathname) {
-            return new Response(null, { status: 404, headers: { connection: 'close' } });
-        }
-
-        const error = requestUrl.searchParams.get('error');
-        const received = requestUrl.searchParams.get('code');
-        if (requestUrl.searchParams.get('state') !== state || (!received && !error)) {
-            return page({ status: 400, title: 'Unexpected request', body: 'This is not the sign-in that is waiting.' });
-        }
-
-        if (!received) {
-            callback.reject(new Error(`Spotify sign-in failed: ${error}`));
-            return page({
-                status: 200,
-                title: 'Sign-in cancelled',
-                body: `Spotify answered: ${error}. You can close this tab.`,
-            });
-        }
-
-        callback.resolve(received);
-        return page({ status: 200, title: 'Signed in', body: 'Access is granted. You can close this tab.' });
-    }
-
     async function readProfile(token: string) {
         const api = createSpotifyApi({ apiUrl: params.apiUrl, accessToken: token, signInCommand: undefined });
         const result = await api({ method: 'GET', path: '/me' });
@@ -182,34 +125,4 @@ export async function signInSpotify(params: SignInSpotifyParams): Promise<Spotif
                 throw new SpotifyError({ operation: 'profile read', status: result.status });
         }
     }
-}
-
-function parseRedirectUri(redirectUri: string) {
-    const url = URL.parse(redirectUri);
-    if (url?.protocol !== 'http:') {
-        throw new UsageError(
-            `The Spotify redirect URI must be a loopback http:// URL, like http://127.0.0.1:8888/callback; got ${redirectUri}.`,
-        );
-    }
-
-    return url;
-}
-
-function base64Url(bytes: Uint8Array) {
-    return Buffer.from(bytes).toString('base64url');
-}
-
-/** The browser page answering the sign-in redirect. */
-interface PageParams {
-    status: number;
-    title: string;
-    body: string;
-}
-
-function page({ status, title, body }: PageParams) {
-    const html =
-        `<!doctype html><meta charset="utf-8"><title>${title}</title>` +
-        `<body style="font-family:system-ui;max-width:32rem;margin:4rem auto"><h1>${title}</h1><p>${body}</p></body>`;
-    // `connection: close`, so the browser keeps no connection that would hold the server's graceful stop.
-    return new Response(html, { status, headers: { 'content-type': 'text/html', connection: 'close' } });
 }

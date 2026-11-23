@@ -44,7 +44,7 @@ test.each([
 
     const result = await runGoogleCommand({
         args: ['gmail', 'whoami', '--account', account],
-        stores: [store.store],
+        store: store.store,
         endpoints: google.endpoints,
         accounts: ['*@work.com'],
     });
@@ -68,13 +68,13 @@ test('without --account several usable accounts are listed, and a single one is 
 
     const several = await runGoogleCommand({
         args: ['gmail', 'whoami'],
-        stores: [two.store],
+        store: two.store,
         endpoints: google.endpoints,
         accounts,
     });
     const single = await runGoogleCommand({
         args: ['gmail', 'whoami'],
-        stores: [one.store],
+        store: one.store,
         endpoints: google.endpoints,
         accounts,
     });
@@ -90,7 +90,7 @@ test('a revoked refresh token fails with the sign-in command and stays in place'
 
     const result = await runGoogleCommand({
         args: ['gmail', 'whoami'],
-        stores: [store.store],
+        store: store.store,
         endpoints: google.endpoints,
     });
 
@@ -107,7 +107,7 @@ test('two accounts sign in and refresh each with its own OAuth client', async ()
     container.set(EnvVariables, {});
     const auth = container
         .createChild(CommandScope)
-        .resolve(defineGoogleAuth(testAuthOptions({ stores: [store.store], tokens: GMAIL_TOKENS })));
+        .resolve(defineGoogleAuth(testAuthOptions({ store: store.store, tokens: GMAIL_TOKENS })));
     const accounts = [
         { email: 'ann@example.com', credentials: CLIENT },
         { email: 'bob@example.com', credentials: OTHER_CLIENT },

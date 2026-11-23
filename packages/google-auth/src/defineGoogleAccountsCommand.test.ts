@@ -30,7 +30,7 @@ test('accounts lists the accounts in the token secret, marking those not allowed
 
     const result = await runGoogleCommand({
         args: ['gmail', 'accounts'],
-        stores: [store.store],
+        store: store.store,
         endpoints: google.endpoints,
         accounts: ['*@WORK.com'],
     });

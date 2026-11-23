@@ -3,9 +3,7 @@ import path from 'node:path';
 
 import { afterEach, expect, test } from 'bun:test';
 
-import { UsageError } from '@nzyme/cli-core';
 import { createMemoryStore } from '@nzyme/secrets/__fixtures__/createMemoryStore.js';
-import { defineSecret } from '@nzyme/secrets/defineSecret.js';
 import type { SecretStoreEntry } from '@nzyme/secrets/SecretStore.js';
 
 import type { GoogleCommandResult, RunGoogleCommandOptions } from './__fixtures__/googleTestCli.js';
@@ -30,22 +28,14 @@ afterEach(async () => {
     await Promise.all(fakes.splice(0).map(google => google.stop()));
 });
 
-test('auth writes the declared token secret through target and accounts reads it back, printing no credential', async () => {
+test('auth writes the token secret to the store and accounts reads it back, printing no credential', async () => {
     const google = fake('me@example.com');
-    const client = createMemoryStore({ id: 'client', data: CLIENT_KEYS });
-    const tokens = createMemoryStore({ id: 'tokens', persist: true });
-    const stores = [client.store, tokens.store];
-    const targeted: string[] = [];
+    const store = createMemoryStore({ id: 'only', data: CLIENT_KEYS, persist: true });
     let consentUrl: URL | undefined;
 
     const auth = await signIn(google, {
         args: ['gmail', 'auth', '--no-browser', '--login-hint', 'me@example.com'],
-        stores,
-        secrets: [GMAIL_TOKENS],
-        target: key => {
-            targeted.push(key);
-            return tokens.store;
-        },
+        store: store.store,
         browser: async url => {
             consentUrl = url;
             await grantConsent(url);
@@ -54,18 +44,19 @@ test('auth writes the declared token secret through target and accounts reads it
 
     expect(auth.exitCode).toBe(0);
     expect(auth.stdout).toBe(`me@example.com signed in to GMAIL; its token is in ${KEY}.\n`);
-    // Asked once before the browser step and again for the write.
-    expect(targeted).toEqual([KEY, KEY]);
-    expect(client.writes).toEqual([]);
-    expect(tokens.writes.map(write => write.map(entry => entry.key))).toEqual([[KEY]]);
-    expect(stored(tokens.writes)).toEqual({ 'me@example.com': { refreshToken: REFRESH_TOKEN, scopes: SCOPES } });
+    expect(store.writes.map(write => write.map(entry => entry.key))).toEqual([[KEY]]);
+    expect(stored(store.writes)).toEqual({ 'me@example.com': { refreshToken: REFRESH_TOKEN, scopes: SCOPES } });
     expect(consentUrl?.searchParams.get('client_id')).toBe(CLIENT_ID);
     expect(consentUrl?.searchParams.get('login_hint')).toBe('me@example.com');
     expect(consentUrl?.searchParams.get('scope')).toBe(SCOPES.join(' '));
     expect(consentUrl?.searchParams.get('access_type')).toBe('offline');
     expect(consentUrl?.searchParams.get('code_challenge_method')).toBe('S256');
 
-    const accounts = await runGoogleCommand({ args: ['gmail', 'accounts'], stores, endpoints: google.endpoints });
+    const accounts = await runGoogleCommand({
+        args: ['gmail', 'accounts'],
+        store: store.store,
+        endpoints: google.endpoints,
+    });
 
     expect(accounts.exitCode).toBe(0);
     expect(accounts.stdout).toBe(`me@example.com\t${SCOPES.join(' ')}\n`);
@@ -75,10 +66,15 @@ test('auth writes the declared token secret through target and accounts reads it
 
 test('signing in a second account keeps the first, and commands act as either', async () => {
     const store = createMemoryStore({ id: 'only', data: CLIENT_KEYS, persist: true });
-    const stores = [store.store];
 
-    const first = await signIn(fake('Ann@Example.com'), { args: ['gmail', 'auth', '--no-browser'], stores });
-    const second = await signIn(fake('bob@example.com'), { args: ['gmail', 'auth', '--no-browser'], stores });
+    const first = await signIn(fake('Ann@Example.com'), {
+        args: ['gmail', 'auth', '--no-browser'],
+        store: store.store,
+    });
+    const second = await signIn(fake('bob@example.com'), {
+        args: ['gmail', 'auth', '--no-browser'],
+        store: store.store,
+    });
 
     expect([first.exitCode, second.exitCode]).toEqual([0, 0]);
     expect(Object.keys(stored(store.writes))).toEqual(['ann@example.com', 'bob@example.com']);
@@ -87,7 +83,7 @@ test('signing in a second account keeps the first, and commands act as either', 
         const google = fake(email);
         const whoami = await runGoogleCommand({
             args: ['gmail', 'whoami', '--account', email],
-            stores,
+            store: store.store,
             endpoints: google.endpoints,
         });
         expect(whoami).toMatchObject({ exitCode: 0, stdout: `${email}\n` });
@@ -99,7 +95,7 @@ test('auth reads the token secret again after the browser step, keeping an accou
 
     const result = await signIn(fake('me@example.com'), {
         args: ['gmail', 'auth', '--no-browser'],
-        stores: [store.store],
+        store: store.store,
         browser: async url => {
             // Another sign-in finishes while this one waits at the browser.
             await store.store.write([{ key: KEY, value: tokensValue('other@example.com') }]);
@@ -111,19 +107,6 @@ test('auth reads the token secret again after the browser step, keeping an accou
     expect(Object.keys(stored(store.writes))).toEqual(['other@example.com', 'me@example.com']);
 });
 
-test('auth writes the token secret when the provider declares no secrets', async () => {
-    const store = createMemoryStore({ id: 'only', data: CLIENT_KEYS, persist: true });
-
-    const result = await signIn(fake('me@example.com'), {
-        args: ['gmail', 'auth', '--no-browser'],
-        stores: [store.store],
-        secrets: undefined,
-    });
-
-    expect(result.exitCode).toBe(0);
-    expect(Object.keys(stored(store.writes))).toEqual(['me@example.com']);
-});
-
 test.each<[string, Partial<RunGoogleCommandOptions>, Record<string, string>, string, boolean]>([
     [
         'the account is not allowed',
@@ -132,31 +115,6 @@ test.each<[string, Partial<RunGoogleCommandOptions>, Record<string, string>, str
         'me@example.com is not in the accounts this project allows',
         // The email is known only after the browser step.
         true,
-    ],
-    [
-        'the token secret is not declared',
-        { secrets: [defineSecret('OTHER_SECRET')] },
-        {},
-        `Refusing to write ${KEY}: it is not declared with defineSecret.`,
-        false,
-    ],
-    [
-        'the token secret is not enabled here',
-        { secrets: [defineSecret(KEY, { enabled: () => false })] },
-        {},
-        `Refusing to write ${KEY}: it is not enabled in this environment.`,
-        false,
-    ],
-    [
-        'target refuses the key',
-        {
-            target: key => {
-                throw new UsageError(`${key} has no store in this repo`);
-            },
-        },
-        {},
-        `${KEY} has no store in this repo`,
-        false,
     ],
     [
         'the stored value is not a token dictionary',
@@ -172,7 +130,7 @@ test.each<[string, Partial<RunGoogleCommandOptions>, Record<string, string>, str
 
     const result = await signIn(google, {
         args: ['gmail', 'auth', '--no-browser'],
-        stores: [store.store],
+        store: store.store,
         browser: async url => {
             consented.push(url);
             await grantConsent(url);
@@ -195,7 +153,7 @@ test('auth without a client secret fails before sign-in', async () => {
 
     const result = await runGoogleCommand({
         args: ['gmail', 'auth', '--no-browser'],
-        stores: [store.store],
+        store: store.store,
         endpoints: google.endpoints,
     });
 
@@ -207,7 +165,7 @@ test('auth without a client secret fails before sign-in', async () => {
 });
 
 test('no source file of the package touches the filesystem', async () => {
-    // Tokens live only in the stores: nothing here may write a file.
+    // Tokens live only in the store: nothing here may write a file.
     const dir = import.meta.dirname;
     const sources = (await fs.readdir(dir, { recursive: true })).filter(
         file => file.endsWith('.ts') && !file.endsWith('.test.ts') && !file.includes('__fixtures__'),
@@ -229,10 +187,9 @@ function fake(email: string) {
     return google;
 }
 
-/** Runs `auth`, the declared token secret in the provider's declarations by default, consenting in the stand-in browser. */
+/** Runs `auth`, consenting in the stand-in browser. */
 function signIn(google: ReturnType<typeof startFakeGoogle>, options: Omit<RunGoogleCommandOptions, 'endpoints'>) {
     return runGoogleCommand({
-        secrets: [GMAIL_TOKENS],
         browser: grantConsent,
         ...options,
         endpoints: google.endpoints,

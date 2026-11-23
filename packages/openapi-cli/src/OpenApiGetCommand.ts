@@ -36,6 +36,7 @@ export function defineOpenApiGetCommand(options: OpenApiCommandsOptions): Comman
                 method: 'GET',
                 path: this.requestPath,
                 query: this.query,
+                container: this.container,
             });
         }
     };

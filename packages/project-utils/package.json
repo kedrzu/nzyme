@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/project-utils",
-    "version": "0.16.0",
+    "version": "0.19.0",
     "description": "Monorepo project utilities (getPackages, getProjectRoot)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

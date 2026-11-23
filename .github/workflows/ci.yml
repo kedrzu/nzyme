@@ -1,7 +1,6 @@
 name: CI
 
-# The merge gate: every pull request (to main, release, or a stacked node) and every push to main and
-# release runs the same build local setup does, then lint, format and tests.
+# The merge gate: every pull request (to main or a stacked node) and every push to main runs the same build local setup does, then lint, format and tests.
 #
 # A pull request whose bun.lock no longer matches its package.json files gets the regenerated lockfile
 # committed to its branch instead of a failed install — reviewing that lockfile change is still the
@@ -11,7 +10,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   push:
-    branches: [main, release]
+    branches: [main]
   # Dispatched by the `lockfile` job below for the commit it pushes.
   workflow_dispatch:
 
@@ -23,7 +22,7 @@ jobs:
   lockfile:
     name: Refresh lockfile
     # Only same-repo pull requests: a fork's branch cannot be pushed to, so a fork stays strict and
-    # fails in `check`. main and release stay strict too — their lockfile only arrives through a PR.
+    # fails in `check`. main stays strict too — its lockfile only arrives through a PR.
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:

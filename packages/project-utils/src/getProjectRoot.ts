@@ -1,6 +1,17 @@
 import { findRootSync } from '@manypkg/find-root';
 
-const projectRootCache = new Map<string, string>();
+import { createCache } from '@nzyme/utils/createCache.js';
+
+const projectRoots = createCache({
+    getValue: (cwd: string) => {
+        const result = findRootSync(cwd);
+        if (!result) {
+            throw new Error(`No project root found from ${cwd}`);
+        }
+
+        return result.rootDir;
+    },
+});
 
 /**
  * Get the root directory of the project (monorepo or package).
@@ -12,15 +23,5 @@ const projectRootCache = new Map<string, string>();
  * @__NO_SIDE_EFFECTS__
  */
 export function getProjectRoot(cwd?: string): string {
-    const key = cwd ?? process.cwd();
-    const cached = projectRootCache.get(key);
-    if (cached) {
-        return cached;
-    }
-    const result = findRootSync(key);
-    if (!result) {
-        throw new Error(`No project root found from ${cwd}`);
-    }
-    projectRootCache.set(key, result.rootDir);
-    return result.rootDir;
+    return projectRoots.get(cwd ?? process.cwd());
 }

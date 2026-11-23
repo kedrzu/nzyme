@@ -15,6 +15,8 @@ export interface ImportSpecifier {
     specifier: string;
     /** `import type …` / `export type …` — erased at compile time. */
     typeOnly: boolean;
+    /** A literal dynamic `import('x')` — loaded when the code calling it runs, not with the importer. */
+    dynamic: boolean;
     kind: ImportSpecifierKind;
 }
 
@@ -54,17 +56,17 @@ export function extractEsmSpecifiers(rawContent: string): ImportSpecifier[] {
     const content = stripComments(rawContent);
     const specifiers: ImportSpecifier[] = [];
     const patterns = [
-        /\b(?:import|export)\s+(type\s)?[^'";]*?\bfrom\s*['"]([^'"]+)['"]/g, // import ... from 'x'  /  export ... from 'x'
-        /\bimport\s*()['"]([^'"]+)['"]/g, // import 'x' (side-effect)
-        /\bimport\s*\(\s*()['"]([^'"]+)['"]\s*\)/g, // import('x') (dynamic)
+        { regex: /\b(?:import|export)\s+(type\s)?[^'";]*?\bfrom\s*['"]([^'"]+)['"]/g, dynamic: false }, // import ... from 'x'  /  export ... from 'x'
+        { regex: /\bimport\s*()['"]([^'"]+)['"]/g, dynamic: false }, // import 'x' (side-effect)
+        { regex: /\bimport\s*\(\s*()['"]([^'"]+)['"]\s*\)/g, dynamic: true }, // import('x') (dynamic)
     ];
 
-    for (const pattern of patterns) {
+    for (const { regex, dynamic } of patterns) {
         let match: RegExpExecArray | null;
-        while ((match = pattern.exec(content))) {
+        while ((match = regex.exec(content))) {
             const specifier = match[2];
             if (specifier) {
-                specifiers.push({ specifier, typeOnly: Boolean(match[1]), kind: 'module' });
+                specifiers.push({ specifier, typeOnly: Boolean(match[1]), dynamic, kind: 'module' });
             }
         }
     }
@@ -76,8 +78,13 @@ export function extractEsmSpecifiers(rawContent: string): ImportSpecifier[] {
  * Extracts the import forms that are not plain ESM statements:
  * - `script`: `new URL('literal', import.meta.url)`;
  * - `vue`: ESM imports and `new URL` inside `<script>` blocks, `src="…"` on
- *   `<script|template|style>`, and `@use`/`@import`/`@forward` inside `<style lang="scss">`;
- * - `scss`: `@use`/`@import`/`@forward`.
+ *   `<script|template|style>`, `url(…)` inside every `<style>`, and `@use`/`@import`/`@forward`
+ *   inside `<style lang="scss">`;
+ * - `scss`: `@use`/`@import`/`@forward` and `url(…)`.
+ *
+ * A `url(…)` in a style is a `module` specifier, resolved like the bundler resolves it: relative to
+ * the file or through an alias. A root-absolute URL (`/img.png`, served from `public/`), a data URI,
+ * an `#id` fragment reference and an interpolated URL resolve to nothing.
  *
  * For a `.vue` file this is the whole extraction — never run {@link extractEsmSpecifiers} on the raw
  * SFC, its template text is not code.
@@ -87,8 +94,10 @@ export function extractImplicitSpecifiers(content: string, sourceKind: ImportSou
     switch (sourceKind) {
         case 'script':
             return extractUrlSpecifiers(stripComments(content));
-        case 'scss':
-            return extractSassSpecifiers(stripComments(content));
+        case 'scss': {
+            const code = stripComments(content);
+            return [...extractSassSpecifiers(code), ...extractStyleUrlSpecifiers(code)];
+        }
         case 'vue':
             return extractVueSpecifiers(content);
         default:
@@ -108,14 +117,16 @@ function extractVueSpecifiers(rawContent: string): ImportSpecifier[] {
     for (const match of content.matchAll(/<(?:script|template|style)\b[^>]*?\ssrc\s*=\s*["']([^"']+)["'][^>]*>/gi)) {
         const specifier = match[1];
         if (specifier) {
-            specifiers.push({ specifier, typeOnly: false, kind: 'module' });
+            specifiers.push({ specifier, typeOnly: false, dynamic: false, kind: 'module' });
         }
     }
 
     for (const match of content.matchAll(/<style\b([^>]*)>([\s\S]*?)<\/style>/gi)) {
+        const style = stripComments(match[2] ?? '');
         if (/\blang\s*=\s*["']scss["']/i.test(match[1] ?? '')) {
-            specifiers.push(...extractSassSpecifiers(stripComments(match[2] ?? '')));
+            specifiers.push(...extractSassSpecifiers(style));
         }
+        specifiers.push(...extractStyleUrlSpecifiers(style));
     }
 
     return specifiers;
@@ -126,7 +137,7 @@ function extractUrlSpecifiers(content: string): ImportSpecifier[] {
     for (const match of content.matchAll(/\bnew\s+URL\s*\(\s*(['"`])([^'"`$]+)\1\s*,\s*import\.meta\.url\s*\)/g)) {
         const specifier = match[2];
         if (specifier) {
-            specifiers.push({ specifier, typeOnly: false, kind: 'url' });
+            specifiers.push({ specifier, typeOnly: false, dynamic: false, kind: 'url' });
         }
     }
     return specifiers;
@@ -142,8 +153,24 @@ function extractSassSpecifiers(content: string): ImportSpecifier[] {
         for (const quoted of strings) {
             const specifier = quoted?.[2];
             if (specifier) {
-                specifiers.push({ specifier, typeOnly: false, kind: 'sass' });
+                specifiers.push({ specifier, typeOnly: false, dynamic: false, kind: 'sass' });
             }
+        }
+    }
+    return specifiers;
+}
+
+/**
+ * `url(x)`, `url('x')`, `url("x")` in a stylesheet. The fragment (`font.svg#name`) and query
+ * (`font.eot?#iefix`) do not change the file; an interpolated URL (`#{$x}`, `$x`, `var(…)`) cannot be
+ * resolved statically and is skipped.
+ */
+function extractStyleUrlSpecifiers(content: string): ImportSpecifier[] {
+    const specifiers: ImportSpecifier[] = [];
+    for (const match of content.matchAll(/\burl\(\s*(?:(['"])(.*?)\1|([^'")\s]*))\s*\)/g)) {
+        const specifier = (match[2] ?? match[3] ?? '').replace(/[?#].*$/, '');
+        if (specifier && !/[$(]/.test(specifier)) {
+            specifiers.push({ specifier, typeOnly: false, dynamic: false, kind: 'module' });
         }
     }
     return specifiers;

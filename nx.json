@@ -45,6 +45,12 @@
         "watch": {
             "cache": false,
             "continuous": true
+        },
+        "schema": {
+            "cache": false
+        },
+        "codegen": {
+            "cache": false
         }
     },
     "release": {

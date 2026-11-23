@@ -7,7 +7,7 @@ import type { ObjectDirective } from 'vue';
  * <input v-autofocus />
  * <textarea v-autofocus />
  */
-export const vAutofocus: ObjectDirective<Element, boolean | null | undefined> = {
+export const vAutofocus: Readonly<ObjectDirective<Element, boolean | null | undefined>> = {
     mounted(el, binding) {
         const disabled = binding.value === false;
         if (disabled) {

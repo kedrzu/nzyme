@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/cli-core",
-    "version": "0.16.0",
+    "version": "0.19.0",
     "description": "CLI framework (clipanion-based Command base)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
@@ -46,7 +46,7 @@
         "@types/node": "26.6.6",
         "@types/source-map-support": "0.5.10",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-        "oxfmt": "0.77.0"
+        "oxfmt": "0.79.0"
     },
     "engines": {
         "node": ">=20"

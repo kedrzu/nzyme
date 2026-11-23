@@ -37,8 +37,10 @@ const BASE_URL = 'https://storage.googleapis.com/chrome-for-testing-public';
 const TEMP_PREFIX = '.install-';
 
 /** The install running for each install folder, which calls made meanwhile join. */
+// oxlint-disable-next-line nzyme/no-module-state -- installs into a shared folder are coordinated per process: a second call joins the running one.
 const running = new Map<string, Promise<InstalledChromeForTesting>>();
 /** The temporary folders of installs in progress in this process, which the leftover cleanup keeps. */
+// oxlint-disable-next-line nzyme/no-module-state -- the leftover cleanup must spare the folders of installs this process is running.
 const working = new Set<string>();
 
 /**

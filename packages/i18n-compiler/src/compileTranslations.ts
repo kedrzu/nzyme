@@ -5,6 +5,7 @@ import type { Pluralization } from '@nzyme/i18n-core/pluralization.js';
 import * as pluralization from '@nzyme/i18n-core/pluralizationRules.js';
 import { fixOrphans } from '@nzyme/typography/fixOrphans.js';
 import { capitalizeFirstLetter } from '@nzyme/utils/string/caseUtils.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 
 import type { TranslationError } from './types.js';
 
@@ -15,60 +16,62 @@ const LANG_TAG_REGEX = /^([a-zA-Z_][a-zA-Z0-9_-]*)\[([^\]]+)\]$/;
 const INDENT = '  ';
 
 // JavaScript reserved words that cannot be used as variable names
-const RESERVED_WORDS = new Set([
-    // Keywords
-    'break',
-    'case',
-    'catch',
-    'continue',
-    'debugger',
-    'default',
-    'delete',
-    'do',
-    'else',
-    'finally',
-    'for',
-    'function',
-    'if',
-    'in',
-    'instanceof',
-    'new',
-    'return',
-    'switch',
-    'this',
-    'throw',
-    'try',
-    'typeof',
-    'var',
-    'void',
-    'while',
-    'with',
-    // Future reserved words
-    'class',
-    'const',
-    'enum',
-    'export',
-    'extends',
-    'import',
-    'super',
-    // Strict mode reserved words
-    'implements',
-    'interface',
-    'let',
-    'package',
-    'private',
-    'protected',
-    'public',
-    'static',
-    'yield',
-    // Literals
-    'null',
-    'true',
-    'false',
-    // Additional reserved identifiers
-    'await',
-    'async',
-]);
+const RESERVED_WORDS = immutable(
+    new Set([
+        // Keywords
+        'break',
+        'case',
+        'catch',
+        'continue',
+        'debugger',
+        'default',
+        'delete',
+        'do',
+        'else',
+        'finally',
+        'for',
+        'function',
+        'if',
+        'in',
+        'instanceof',
+        'new',
+        'return',
+        'switch',
+        'this',
+        'throw',
+        'try',
+        'typeof',
+        'var',
+        'void',
+        'while',
+        'with',
+        // Future reserved words
+        'class',
+        'const',
+        'enum',
+        'export',
+        'extends',
+        'import',
+        'super',
+        // Strict mode reserved words
+        'implements',
+        'interface',
+        'let',
+        'package',
+        'private',
+        'protected',
+        'public',
+        'static',
+        'yield',
+        // Literals
+        'null',
+        'true',
+        'false',
+        // Additional reserved identifiers
+        'await',
+        'async',
+    ]),
+);
 
 /**
  * Result of translation compilation
@@ -100,7 +103,7 @@ export type TranslationResult = {
 
 /**
  * Compiles YAML translation files into TypeScript code
- * @_NO_SIDE_EFFECTS_
+ * @__NO_SIDE_EFFECTS__
  */
 export function compileTranslations(yaml: string): TranslationResult {
     const document = parseDocument(yaml);

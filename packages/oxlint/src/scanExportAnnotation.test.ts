@@ -88,6 +88,38 @@ export function plain(value: number): number {
         expect(scanExportAnnotation(source, 'pure')).toEqual({ kind: 'absent' });
     });
 
+    it('finds the annotation on the implementation of an overloaded function', () => {
+        const source = `/** Takes a string. */
+export function pick(value: string): string;
+/** Takes a number. */
+export function pick(value: number): number;
+/**
+ * The implementation.
+ * @__NO_SIDE_EFFECTS__
+ */
+export function pick(value: string | number) {
+    return value;
+}
+`;
+
+        expect(scanExportAnnotation(source, 'pick')).toEqual({ kind: 'annotated' });
+    });
+
+    it('follows a local export clause to the declaration under its own name', () => {
+        const source = `/**
+ * Resolves a directory.
+ * @__NO_SIDE_EFFECTS__
+ */
+export function dirname(url: string): string {
+    return url;
+}
+
+export { dirname as getDirname };
+`;
+
+        expect(scanExportAnnotation(source, 'getDirname')).toEqual({ kind: 'annotated' });
+    });
+
     it('hands back the aliased origin of a named re-export', () => {
         const source = `export { pure as reexported } from './helpers.js';\n`;
 

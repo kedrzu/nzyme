@@ -1,8 +1,10 @@
 import { PassThrough, Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 
+import { CommandScope } from '@nzyme/cli-core/Command.js';
 import type { CommandContext } from '@nzyme/cli-core/Command.js';
 import { createContainer } from '@nzyme/ioc/Container.js';
+import { defineService } from '@nzyme/ioc/Service.js';
 import { afterEach, expect, test } from 'bun:test';
 import { Cli } from 'clipanion';
 
@@ -24,7 +26,7 @@ interface RecordedRequest {
 
 interface RunOptions {
     stdin?: string;
-    credential?: () => string;
+    credential?: OpenApiCommandsOptions['credential'];
     /** Overrides the base URL of the `discord` commands. */
     discordBaseUrl?: string;
 }
@@ -140,6 +142,18 @@ test('a network failure exits 1 with the reason and no credential, even when the
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toBe('');
     expect(result.stderr).toBe('Request to Drata failed: connect ECONNREFUSED while sending [redacted]\n');
+});
+
+test('the credential receives the command-scoped container, so a CommandScope service resolves through it', async () => {
+    const requests = stubFetch(() => Response.json({}));
+    const TokenService = defineService({ scope: CommandScope, setup: () => 'scoped-token' });
+
+    const result = await run(['discord', 'get', '/channels/1'], {
+        credential: ({ container }) => container.resolve(TokenService),
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(requests[0]?.headers.authorization).toBe('Bot scoped-token');
 });
 
 test('a timeout exits 1 with its own message and no credential', async () => {

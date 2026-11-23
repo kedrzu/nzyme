@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/openapi-cli",
-    "version": "0.16.0",
+    "version": "0.19.0",
     "description": "Agent-facing CLI commands over an OpenAPI REST service: browse the spec, GET, and write",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
@@ -30,15 +30,15 @@
     },
     "dependencies": {
         "@nzyme/cli-core": "workspace:*",
+        "@nzyme/ioc": "workspace:*",
         "@nzyme/utils": "workspace:*"
     },
     "devDependencies": {
-        "@nzyme/ioc": "workspace:*",
         "@nzyme/tsconfig": "workspace:*",
-        "@types/bun": "^1.4.3",
+        "@types/bun": "^1.4.5",
         "@types/node": "26.6.6",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "clipanion": "^4.0.0-rc.4",
-        "oxfmt": "0.77.0"
+        "oxfmt": "0.79.0"
     }
 }

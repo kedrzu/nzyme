@@ -17,6 +17,7 @@ const DECISION = 'docs/decisions/workspace-code-generators-run-from-source.md in
  * runtime condition comes before it. Reordering an existing `source` is autofixed; a missing one is
  * only reported, because its `src` path cannot be guessed safely.
  */
+// oxlint-disable-next-line nzyme/no-module-state -- ESLint types its rule and plugin objects with mutable arrays (`meta.schema`, `docs.dialects`), so this one cannot be typed `Immutable`; nothing writes it.
 export const exportsSourceFirst: Rule.RuleModule = {
     meta: {
         type: 'problem',

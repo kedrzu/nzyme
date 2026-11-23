@@ -30,6 +30,11 @@ describe('extractEsmSpecifiers', () => {
             '@acme/ns',
         ]);
         expect(extractEsmSpecifiers(content).every(s => s.kind === 'module' && !s.typeOnly)).toBe(true);
+        expect(
+            extractEsmSpecifiers(content)
+                .filter(s => s.dynamic)
+                .map(s => s.specifier),
+        ).toEqual(['./lazy.js']);
     });
 
     it('marks `import type` and `export type` as type-only', () => {
@@ -113,7 +118,7 @@ describe('extractImplicitSpecifiers', () => {
         ]);
     });
 
-    it('scss: finds @use, @forward and every @import target, skipping url() and comments', () => {
+    it('scss: finds @use, @forward and every @import target, skipping comments', () => {
         const content = [
             `@use 'sass:math';`,
             `@use "colors" as c with ($primary: 'red');`,
@@ -125,7 +130,28 @@ describe('extractImplicitSpecifiers', () => {
         ].join('\n');
 
         const specifiers = extractImplicitSpecifiers(content, 'scss');
-        expect(names(specifiers)).toEqual(['../shared/typography', 'colors', 'reset', 'sass:math', 'spacing']);
-        expect(specifiers.every(s => s.kind === 'sass')).toBe(true);
+        expect(
+            specifiers
+                .filter(s => s.kind === 'sass')
+                .map(s => s.specifier)
+                .toSorted(),
+        ).toEqual(['../shared/typography', 'colors', 'reset', 'sass:math', 'spacing']);
+    });
+
+    it('scss and vue <style>: finds url() targets, without query or fragment, skipping what cannot resolve statically', () => {
+        const styles = [
+            `.a { background: url('./img/a.png'); }`,
+            `.b { background: url("@/assets/b.svg#icon"); }`,
+            `@font-face { src: url(../fonts/c.woff2) format('woff2'), url('../fonts/c.eot?#iefix'); }`,
+            `.d { background: url(#{$base}/d.png); mask: url($mask); fill: url(var(--x)); }`,
+            `/* .e { background: url('./commented.png'); } */`,
+        ].join('\n');
+        const expected = ['./img/a.png', '@/assets/b.svg', '../fonts/c.woff2', '../fonts/c.eot'];
+
+        const scss = extractImplicitSpecifiers(styles, 'scss').filter(s => s.kind === 'module');
+        expect(scss.map(s => s.specifier)).toEqual(expected);
+
+        const vue = extractImplicitSpecifiers(`<template><p /></template>\n<style scoped>\n${styles}\n</style>`, 'vue');
+        expect(vue.map(s => [s.specifier, s.kind])).toEqual(expected.map(specifier => [specifier, 'module']));
     });
 });

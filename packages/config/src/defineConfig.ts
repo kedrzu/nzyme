@@ -30,9 +30,9 @@ export interface DefineConfigOptions<TMeta extends object, TRequired extends boo
     meta?: TMeta;
 }
 
-const DEPS = {
+const DEPS = Object.freeze({
     runtimeConfig: RuntimeConfig,
-};
+});
 
 /**
  * Defines a typed injectable key from the runtime config document.

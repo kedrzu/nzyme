@@ -1,3 +1,79 @@
+## 0.19.0 (2026-11-23)
+
+### 🚀 Features
+
+- ⚠️  add the slack agent commands and take one secret store in google-auth ([#337](https://github.com/kedrzu/nzyme/pull/337))
+- **logging:** print cli log data as indented, highlighted yaml ([#338](https://github.com/kedrzu/nzyme/pull/338))
+- **vite-svg-vue:** add a Vite plugin compiling SVG files to static Vue components ([#335](https://github.com/kedrzu/nzyme/pull/335))
+
+### ⚠️  Breaking Changes
+
+- add the slack agent commands and take one secret store in google-auth  ([#337](https://github.com/kedrzu/nzyme/pull/337))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
+## 0.18.0 (2026-11-23)
+
+### 🚀 Features
+
+- ⚠️  select tests by recorded execution — affected suites, a trace probe and no-module-state ([#304](https://github.com/kedrzu/nzyme/pull/304))
+- ⚠️  **cli:** remove the scheduled submodule bump and bump submodules in every task pr ([#324](https://github.com/kedrzu/nzyme/pull/324))
+- **lastfm-cli:** add a typed Last.fm client and music-discovery commands ([#334](https://github.com/kedrzu/nzyme/pull/334))
+- **spotify-cli:** Spotify Web API client, PKCE sign-in and agent commands ([#336](https://github.com/kedrzu/nzyme/pull/336))
+- **ticketmaster-cli:** add a Ticketmaster Discovery API client and concert-finding commands ([#333](https://github.com/kedrzu/nzyme/pull/333))
+
+### 🩹 Fixes
+
+- cut a versioned task branch when the plain one already exists in git ([#323](https://github.com/kedrzu/nzyme/pull/323))
+- **gmail-cli:** name the CLI flags in label rule errors ([#327](https://github.com/kedrzu/nzyme/pull/327))
+
+### ⚠️  Breaking Changes
+
+- **cli:** remove the scheduled submodule bump and bump submodules in every task pr  ([#324](https://github.com/kedrzu/nzyme/pull/324))
+- select tests by recorded execution — affected suites, a trace probe and no-module-state  ([#304](https://github.com/kedrzu/nzyme/pull/304))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
+## 0.17.1 (2026-11-20)
+
+### 🚀 Features
+
+- Gmail and Google Drive CLIs for agents ([#318](https://github.com/kedrzu/nzyme/pull/318))
+- **secrets:** add loadSecretsConfig and resolveOptionalSecret ([#322](https://github.com/kedrzu/nzyme/pull/322))
+
+### 🩹 Fixes
+
+- **config:** load the config document without a log line ([#320](https://github.com/kedrzu/nzyme/pull/320))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
+## 0.17.0 (2026-11-20)
+
+### 🚀 Features
+
+- **aws:** let a parameter store write its SecureStrings with a chosen KMS key ([#307](https://github.com/kedrzu/nzyme/pull/307))
+- **secrets:** add a keychain secret store ([#312](https://github.com/kedrzu/nzyme/pull/312))
+- ⚠️  **secrets:** declare secrets with defineSecret and register commands in a product CLI ([#314](https://github.com/kedrzu/nzyme/pull/314))
+
+### 🩹 Fixes
+
+- **cli-core:** report usage errors on stderr and print the given version ([#317](https://github.com/kedrzu/nzyme/pull/317))
+
+### ⚠️  Breaking Changes
+
+- **secrets:** declare secrets with defineSecret and register commands in a product CLI  ([#314](https://github.com/kedrzu/nzyme/pull/314))
+  the `nzyme` binary no longer loads modules listed under `nzyme.plugins`, `NzymePlugin` is removed from `@nzyme/cli-core`, and `@nzyme/pen/plugin.js` is gone. Define a product CLI on `@nzyme/cli-core` `execute` and register `definePenCommands()` and `defineSecretsCommands({ provider })` there.
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.16.0 (2026-11-18)
 
 ### 🚀 Features

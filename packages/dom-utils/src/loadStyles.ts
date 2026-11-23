@@ -1,5 +1,3 @@
-const styles: { [key: string]: Promise<void> | undefined } = {};
-
 /**
  * Options for {@link loadStyles}.
  */
@@ -12,7 +10,6 @@ export interface LoadStylesOptions {
 
 /**
  * Loads a CSS stylesheet from a URL into the document head.
- * If the stylesheet has already been loaded, returns the existing Promise.
  * Provides cross-browser compatibility for stylesheet loading events.
  * @util
  *
@@ -21,10 +18,6 @@ export interface LoadStylesOptions {
  * @returns A Promise that resolves when the stylesheet has been loaded, or rejects on error
  */
 export function loadStyles(url: string, options?: LoadStylesOptions) {
-    if (styles[url]) {
-        return styles[url];
-    }
-
     const doc = options?.document ?? document;
     const css = doc.createElement('link');
 

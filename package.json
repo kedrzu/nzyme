@@ -12,6 +12,7 @@
     "type": "module",
     "scripts": {
         "build": "nx run-many -t build",
+        "codegen": "nx run-many -t codegen",
         "clean": "del \"**/dist\" \"**/dist-cjs\" \"**/.nx\" \"**/.nzyme\" \"**/.tsbuildinfo\" \"**/*.tsbuildinfo\" \"**/.rollup.cache\" \"!**/node_modules/**\"",
         "clean:npm": "del \"**/node_modules\"",
         "coverage": "bun test --coverage ./packages/*/src",
@@ -36,27 +37,27 @@
         "tslib": "2.9.1"
     },
     "devDependencies": {
-        "@nx/js": "^24.0.5",
+        "@nx/js": "^24.0.6",
         "@nzyme/cli": "workspace:*",
         "@nzyme/eslint": "workspace:*",
         "@nzyme/tsconfig": "workspace:*",
         "@swc-node/register": "1.12.1",
         "@swc/core": "1.16.22",
-        "@types/bun": "1.4.4",
+        "@types/bun": "1.4.5",
         "@types/node": "^26.6.6",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "del-cli": "8.0.1",
-        "eslint": "10.14.0",
+        "eslint": "10.15.0",
         "eslint-plugin-package-json": "1.14.0",
-        "nx": "^24.0.5",
-        "oxfmt": "0.77.0",
-        "oxlint": "1.92.0",
-        "oxlint-tsgolint": "7.0.2006"
+        "nx": "^24.0.6",
+        "oxfmt": "0.79.0",
+        "oxlint": "1.94.0",
+        "oxlint-tsgolint": "7.0.2008"
     },
     "overrides": {
-        "@types/bun": "1.4.4"
+        "@types/bun": "1.4.5"
     },
-    "packageManager": "bun@1.4.4",
+    "packageManager": "bun@1.4.5",
     "depcheck": {
         "ignoreDeps": [
             "*"
@@ -78,6 +79,6 @@
         }
     },
     "patchedDependencies": {
-        "bun-types@1.4.4": "patches/bun-types@1.4.4.patch"
+        "bun-types@1.4.5": "patches/bun-types@1.4.5.patch"
     }
 }

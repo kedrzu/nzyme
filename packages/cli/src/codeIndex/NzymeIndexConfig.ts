@@ -1,7 +1,6 @@
+import { createConfigParsers } from '@nzyme/project-utils/createConfigParsers.js';
+import { readNzymeConfig } from '@nzyme/project-utils/readNzymeConfig.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
-
-import { createConfigParsers } from '../utils/createConfigParsers.js';
-import { readNzymeConfig } from '../utils/readNzymeConfig.js';
 
 const { parseArray, parseStringArray, parseString, configError } = createConfigParsers('code index');
 

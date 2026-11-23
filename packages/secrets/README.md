@@ -4,7 +4,7 @@ Development secrets kept in a remote store behind a login, configured as code an
 environment variables an app already reads through `defineEnvVariable`. No plaintext `.env`, nothing
 encrypted in the repo.
 
-Why it works this way: `docs/decisions/secrets-as-code-through-env-variables.md`.
+Why it works this way: `docs/decisions/secrets-declared-and-resolved-through-the-container.md`.
 
 ## Installation
 
@@ -23,7 +23,7 @@ a path such as `/secrets/dev/`, a name prefix such as `FOOBAR_`, or empty for th
 is no mapping from variable names to keys: the key is the name.
 
 ```ts
-// packages/app/src/AppStores.ts
+// packages/secrets/src/AppStores.ts
 import { defineService } from '@nzyme/ioc/Service.js';
 import { bitwarden } from '@nzyme/bitwarden/bitwarden.js';
 import { cached } from '@nzyme/secrets/cached.js';
@@ -48,14 +48,15 @@ import { secretsSource } from '@nzyme/secrets/secretsSource.js';
 sources: [envSource(), secretsSource(store)];
 ```
 
-`secretsSource(store)` loads every secret under the store's prefix as config entries by key, and
-the `Config loaded` log names the source `secrets:<store id>`. Order the sources as the document's precedence
+`secretsSource(store)` loads every secret under the store's prefix as config entries by key, under the
+source name `secrets:<store id>`. Order the sources as the document's precedence
 wants: the first source with a key wins.
 
 ## Loading into env variables
 
-A repo without a config document loads the stores into the environment variables its code already
-reads through `defineEnvVariable`:
+The older path, kept for code that still reads `defineEnvVariable`; new code declares its secrets and
+resolves them through the container (see [Declaring secrets](#declaring-secrets)). It loads the stores into
+the environment variables:
 
 ```ts
 import { loadSecrets } from '@nzyme/secrets/loadSecrets.js';
@@ -88,7 +89,10 @@ Values are kept only in the keychain, never in a file. Any `bun` process of the 
 ## Commands in the product CLI
 
 The `nzyme` binary loads no project code. A repo registers the commands in its own CLI (a
-`packages/cli` workspace package with a `bin`, run as `bun <product> …`):
+`packages/cli` workspace package with a `bin`), and adds the wrapper `"secrets": "<product> secrets"` to
+the root `package.json`, so they run as `bun secrets …` in every repo. A sub-package's own scripts
+call the binary instead (`<product> secrets run -- …`): Bun looks up scripts only in the nearest
+`package.json`.
 
 ```ts
 // packages/cli/src/cli.ts
@@ -96,7 +100,7 @@ The `nzyme` binary loads no project code. A repo registers the commands in its o
 import { execute } from '@nzyme/cli-core/execute.js';
 import { defineSecretsCommands } from '@nzyme/secrets/commands/defineSecretsCommands.js';
 
-import { AppSecrets } from '../../app/src/AppSecrets.js';
+import { AppSecrets } from '@app/secrets/AppSecrets.js';
 
 await execute({
     name: 'app',
@@ -109,11 +113,12 @@ not a plugin of `nzyme`: `docs/decisions/product-clis-over-nzyme-plugins.md`.
 
 ## Declaring secrets
 
-Declare each secret the repo uses, in one module, with `defineSecret`. The export name is the secret's
-name and the key in the stores:
+Declare each secret the repo uses, in one module of the repo's secrets package (`packages/secrets`), with
+`defineSecret`. The export name is the secret's name and the key in the stores. Code reads a secret only by
+resolving its definition through the container, never from `process.env`:
 
 ```ts
-// packages/app/src/secrets.ts
+// packages/secrets/src/secrets.ts
 import { defineSecret } from '@nzyme/secrets/defineSecret.js';
 
 export const DB_PASSWORD = defineSecret('DB_PASSWORD', { description: 'Staging database password' });
@@ -133,7 +138,7 @@ export const STRIPE_KEY = defineSecret('STRIPE_KEY', {
 `secretsProvider` builds the provider from the declarations and one store, which it reads and writes:
 
 ```ts
-// packages/app/src/AppSecrets.ts
+// packages/secrets/src/AppSecrets.ts
 import { bitwarden } from '@nzyme/bitwarden/bitwarden.js';
 import { defineEnvVariable } from '@nzyme/ioc/defineEnvVariable.js';
 import { defineService } from '@nzyme/ioc/Service.js';
@@ -161,9 +166,33 @@ export const AppSecrets = defineService({
 
 Environments that differ by prefix are different stores chosen here, by the provider.
 
+### Reading secrets at runtime
+
+Code resolves a secret through the container — `container.resolve(STRIPE_KEY)` or a service's `deps` —
+never from `process.env`. A process loads the values into its config document first:
+
+```ts
+import { loadSecretsConfig } from '@nzyme/secrets/loadSecretsConfig.js';
+
+await loadSecretsConfig(container, container.resolve(AppSecrets).stores);
+const key = container.resolve(STRIPE_KEY);
+```
+
+- **`loadSecretsConfig(container, stores)`** installs the container's environment variables, then every
+  store: a variable set in the shell wins over a stored secret, an earlier store over a later one. With
+  `CI` set the stores are not read; a CI job carries its secrets as environment variables.
+- **`resolveOptionalSecret(container, SECRET)`** returns `undefined` instead of throwing when the
+  document lacks the secret, for code that runs without it on purpose.
+- A Bun script or CLI command calls the loader at startup and needs no `bun secrets run` wrapper.
+- A runtime with no store access loads what its platform hands it: a Cloudflare Worker its bindings
+  (`loadConfig(container, [envSource(env)])`), a Nitro server its runtime config, in a server plugin.
+- Only an external tool (wrangler, Tauri, a Python script) gets secrets as environment variables, through
+  `bun secrets run [KEY]... -- <tool>`.
+
 With declarations the commands follow them:
 
-- **`set`** refuses a name that is not declared or not enabled, before any prompt or write.
+- **`set`** refuses a name that is not declared or not enabled, before any prompt or write. Code that writes a secret itself calls `resolveSecretTarget({ provider, env, name })`
+  (`@nzyme/secrets/resolveSecretTarget.js`) for the same check and the store.
 - **`run -- <command>`** with no keys runs with every declared, enabled secret; named keys must be
   declared and enabled.
 - **`list`** prints the declared, enabled secrets with the store id, `missing`, or

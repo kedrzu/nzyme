@@ -49,6 +49,8 @@ type MemoAsyncInner<T> = {
  * expensive.clear();
  * console.log(expensive()); // Logs "Computing..." and returns 42
  * ```
+ *
+ * @__NO_SIDE_EFFECTS__
  */
 export function createMemo<T>(factory: () => T) {
     let valueSet: boolean = false;
@@ -95,6 +97,8 @@ export function createMemo<T>(factory: () => T) {
  * expensive.clear();
  * await expensive(); // Logs "Computing..." and returns 42 after 1s
  * ```
+ *
+ * @__NO_SIDE_EFFECTS__
  */
 export function createMemoAsync<T>(factory: () => Promise<T>) {
     let promise: Promise<T> | undefined;

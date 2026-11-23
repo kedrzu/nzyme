@@ -1,3 +1,5 @@
+import type { Immutable } from '@nzyme/types/Immutable.js';
+
 import { isNode } from './isNode.js';
 import type { OxlintNode, OxlintRule } from './oxlintTypes.js';
 
@@ -17,7 +19,7 @@ const MESSAGE_ID = 'ariaOnComponent';
  * `overrides` entry. Deliberately out of scope: spread attributes
  * (`{...{ 'aria-label': 'x' }}`) and `h(Button, { 'aria-label': … })`.
  */
-export const noAriaOnComponentInStory: OxlintRule = {
+export const noAriaOnComponentInStory: Immutable<OxlintRule> = {
     meta: {
         type: 'problem',
         docs: {

@@ -48,6 +48,5 @@ await loadConfig(container, [
 ]);
 ```
 
-`loadConfig` installs the merged document as `RuntimeConfig` and logs one `Config loaded` debug line (the CLI logger shows it with `LOG_LEVEL=debug`) with
-the source names, the key count and the overridden key names. No value ever reaches a log line or
+`loadConfig` installs the merged document as `RuntimeConfig` and logs nothing. No value ever reaches
 an error message. It is a plain async function, not a command, so it works on any container.

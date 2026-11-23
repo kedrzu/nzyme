@@ -113,7 +113,7 @@ export async function handleSubmoduleReadyPreparation(params: HandleSubmoduleRea
         // no fetch of their own (`assertSubmoduleReady`'s detached-HEAD resolution, and
         // `isOnAnyRemoteBranch` in the interactive ladder) — the submodule's commit may sit
         // on a branch this checkout has never fetched, and only a full fetch makes it visible
-        // (mirrors `mergeTaskPrs.ts` and `checkoutExistingBranch.ts`, which fetch for the same
+        // (mirrors `mergeTaskPrs.ts` and `checkoutSubmodules.ts`, which fetch for the same
         // reason).
         if (submodule.detached) {
             await simpleGit({ baseDir: submodule.path }).fetch('origin');

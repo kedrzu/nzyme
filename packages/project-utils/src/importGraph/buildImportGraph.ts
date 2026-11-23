@@ -27,6 +27,8 @@ export interface BuildImportGraphOptions {
 export interface ImportEdge {
     from: string;
     to: string;
+    /** Every import of `to` in `from` is a dynamic `import('…')`: loading `from` does not load `to`. */
+    dynamic: boolean;
 }
 
 /** The project's file-level import graph. Cycles are kept as they are: a traversal needs a visited set. */
@@ -35,6 +37,8 @@ export interface ImportGraph {
     files: string[];
     /** Direct importers of a root-relative path, one edge per importing file; `[]` for a path nothing imports. */
     importersOf(path: string): ImportEdge[];
+    /** Direct imports of a root-relative path, one edge per target, in source order; `[]` for a file not parsed. */
+    importsOf(path: string): ImportEdge[];
 }
 
 /**
@@ -54,9 +58,11 @@ export async function buildImportGraph(options: BuildImportGraphOptions): Promis
 
     const resolver = createImportResolver({ root, packages: options.packages, aliases: options.aliases, paths });
     const importers = new Map<string, ImportEdge[]>();
+    const imports = new Map<string, ImportEdge[]>();
 
-    const parsed = await Promise.all(files.map(file => parseFile(file)));
-    for (const edges of parsed) {
+    const parsed = await Promise.all(files.map(async file => ({ file, edges: await parseFile(file) })));
+    for (const { file, edges } of parsed) {
+        imports.set(file, edges);
         for (const edge of edges) {
             addImporter(edge);
         }
@@ -65,6 +71,7 @@ export async function buildImportGraph(options: BuildImportGraphOptions): Promis
     return {
         files,
         importersOf: target => importers.get(target) ?? [],
+        importsOf: source => imports.get(source) ?? [],
     };
 
     async function parseFile(file: string): Promise<ImportEdge[]> {
@@ -86,13 +93,13 @@ export async function buildImportGraph(options: BuildImportGraphOptions): Promis
     }
 
     function resolveEdges(file: string, specifiers: ImportSpecifier[]): ImportEdge[] {
-        const targets = new Set<string>();
+        const targets = new Map<string, boolean>();
         for (const specifier of specifiers) {
             for (const target of resolver.resolve(file, specifier)) {
-                targets.add(target);
+                targets.set(target, (targets.get(target) ?? true) && specifier.dynamic);
             }
         }
-        return [...targets].map(to => ({ from: file, to }));
+        return [...targets].map(([to, dynamic]) => ({ from: file, to, dynamic }));
     }
 }
 

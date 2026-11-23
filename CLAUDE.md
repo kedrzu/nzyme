@@ -10,15 +10,22 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
 - **Vue:** `vue`, `vue-utils`, `vue-ioc`, `vue-forms`, `vue-i18n`, `vue-transitions`, `dom-utils`
 - **Tooling:**
   - `cli-core` (the clipanion-based `Command` framework behind every CLI), `cli` (the `nzyme` binary: `monorepo`, `localise`, `index`, `quiet-run`,
-    `submodule`, `depcheck`, `git affected`, `git base`)
+    `depcheck`, `git affected`, `git base`)
   - `pen` (Pen design files in git: the document model and the `pen` commands)
   - `openapi-cli` (agent-facing `schema`/`get`/`write` commands over any OpenAPI REST service)
+  - `affected` (test selection behind `git affected`), `trace` (execution tracing for it)
   - `tsconfig`, `eslint` (also the oxlint preset), `oxlint` (custom rules), `project-utils`,
     `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`
-- **Integrations:** `aws`, `pulumi`, `slack`, `apis`, `bitwarden` (a Secrets Manager store for `secrets`),
-  `discord-cli` (the Discord REST API through `openapi-cli`, as a bot), `outline` (an Outline API client and a two-way sync of a workspace with a local Markdown folder, run from
-  Claude Code hooks), `stealth-browser` (a stealth Chrome over CDP
-  for AI agents: launch, proxy, CLI)
+- **Integrations:** `aws`, `pulumi`, `slack`, `slack-cli` (Slack for agents, acting as the developer: read,
+  search, send and wait for replies), `apis`, `bitwarden` (a Secrets Manager store for `secrets`),
+  `discord-cli` (the Discord REST API through `openapi-cli`, as a bot), `outline` (an Outline API client and a two-way sync of a
+  workspace with a local Markdown folder, run from Claude Code hooks), `stealth-browser` (a stealth Chrome over CDP
+  for AI agents: launch, proxy, CLI), `google-auth` (Google OAuth sign-in with refresh tokens in a `secrets` store),
+  `gmail-cli` (Gmail for agents: search, read, drafts, labels; never sends or permanently deletes), `gdrive-cli` (Google Drive
+  for agents behind per-project permissions), `ticketmaster-cli` (the Ticketmaster Discovery API: a typed client and
+  commands to find events, attractions and venues), `lastfm-cli` (a typed read-only Last.fm client and music-discovery
+  commands), `spotify-cli` (Spotify for agents: taste profile, search, playlists and the queue; never removes
+  anything)
 - **Private, never published:** `github-cli`, `linear`, `sentry-cli`, `logging-ui`
 
 `bun run index` (also run by setup) generates a gitignored code map:
@@ -46,8 +53,8 @@ This is a published library with several consumers.
 
 Run from the repo root:
 
-- `zsh setup.sh` — full setup. In a worktree it also catches up with the branch's base (`origin/main` or
-  `origin/release`) and copies `.env`. `bash setup.build.sh` is the build half, shared with CI:
+- `zsh setup.sh` — full setup. In a worktree it also catches up with the branch's base (`origin/main`) and
+  copies `.env`. `bash setup.build.sh` is the build half, shared with CI:
   install, `nzyme` CLI, generated files, all package builds.
 - `bun run build --exclude=@nzyme/logging-ui` — Nx build of all packages, as CI runs it (the bare
   script includes `logging-ui`); `bun watch` rebuilds on change.
@@ -82,6 +89,8 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
   hotfix bases and landing.
 - Both are the contracts of the `dev` plugin (`/dev:fix`, `/dev:task`, `/dev:feature`, `/dev:build`,
   `/dev:deliver`), which is installed from the `kedrzu-skills` marketplace in `.claude/settings.json`.
+  The `git` plugin from the same marketplace guards stashes and force-pushes; its hooks read
+  `.claude/git.json`, which keeps agents from pushing to `main` and syncs a branch with its PR base.
 - **Every implementation task reads `docs/practice/code-conventions.md`**, plus the practice document
   for its area, `docs/practice/<area>.md`: `ioc`, `logging`, `testing`, `ui`, `composables`, `forms`,
   `translations`, `drizzle`, `api-clients`, `secrets`, `design`. Consumer repos inline the same documents into
@@ -103,7 +112,7 @@ These always apply. Everything else — organization, naming, casting, JSDoc, de
 
 # Publishing
 
-Releases come from the `release` branch through a release PR (`docs/decisions/release-line-on-nx-release.md`).
+Releases are cut from `main` by the manual **Release** workflow (`docs/decisions/release-from-main-on-demand.md`).
 The `git-workflow` skill covers what a contributor does.
 
 `bun run lint:check` enforces, on every non-private `package.json`: `license`, `description`,

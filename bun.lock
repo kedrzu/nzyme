@@ -495,6 +495,7 @@
         "@nzyme/utils": "workspace:*",
         "chalk": "^6.0.1",
         "cli-highlight": "^2.1.11",
+        "yaml": "^2.9.1",
       },
       "devDependencies": {
         "@nzyme/tsconfig": "workspace:*",

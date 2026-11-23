@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/trace",
-    "version": "0.15.1",
+    "version": "0.18.0",
     "description": "Execution tracing for test selection: a Bun preload recording which source files run under which test label, and the Playwright fixture and reporter attributing them to tests",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/vue-utils",
-    "version": "0.17.1",
+    "version": "0.18.0",
     "description": "Vue composition utilities (classProp, navigateToUrl, …)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

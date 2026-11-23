@@ -1,3 +1,27 @@
+## 0.18.0 (2026-11-23)
+
+### 🚀 Features
+
+- ⚠️  select tests by recorded execution — affected suites, a trace probe and no-module-state ([#304](https://github.com/kedrzu/nzyme/pull/304))
+- ⚠️  **cli:** remove the scheduled submodule bump and bump submodules in every task pr ([#324](https://github.com/kedrzu/nzyme/pull/324))
+- **lastfm-cli:** add a typed Last.fm client and music-discovery commands ([#334](https://github.com/kedrzu/nzyme/pull/334))
+- **spotify-cli:** Spotify Web API client, PKCE sign-in and agent commands ([#336](https://github.com/kedrzu/nzyme/pull/336))
+- **ticketmaster-cli:** add a Ticketmaster Discovery API client and concert-finding commands ([#333](https://github.com/kedrzu/nzyme/pull/333))
+
+### 🩹 Fixes
+
+- cut a versioned task branch when the plain one already exists in git ([#323](https://github.com/kedrzu/nzyme/pull/323))
+- **gmail-cli:** name the CLI flags in label rule errors ([#327](https://github.com/kedrzu/nzyme/pull/327))
+
+### ⚠️  Breaking Changes
+
+- **cli:** remove the scheduled submodule bump and bump submodules in every task pr  ([#324](https://github.com/kedrzu/nzyme/pull/324))
+- select tests by recorded execution — affected suites, a trace probe and no-module-state  ([#304](https://github.com/kedrzu/nzyme/pull/304))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.17.1 (2026-11-20)
 
 ### 🚀 Features

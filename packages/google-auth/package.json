@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/google-auth",
-    "version": "0.17.1",
+    "version": "0.18.0",
     "description": "Google sign-in for nzyme CLIs: an OAuth client and refresh tokens kept in the secret stores, and the shared auth and accounts commands",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
@@ -31,6 +31,7 @@
     "dependencies": {
         "@nzyme/cli-core": "workspace:*",
         "@nzyme/ioc": "workspace:*",
+        "@nzyme/node-utils": "workspace:*",
         "@nzyme/secrets": "workspace:*",
         "google-auth-library": "^11.3.4"
     },

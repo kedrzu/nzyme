@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/affected",
-    "version": "0.15.1",
+    "version": "0.18.0",
     "description": "Test selection from recorded execution traces: file fingerprints, variants and the affected-test query",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

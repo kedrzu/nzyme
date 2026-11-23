@@ -1,7 +1,8 @@
-import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 
 import { CodeChallengeMethod } from 'google-auth-library';
+
+import { openInBrowser } from '@nzyme/node-utils/openInBrowser.js';
 
 import type { GoogleClientCredentials } from './GoogleClientProvider.js';
 import type { GoogleToken } from './googleTokens.js';
@@ -138,23 +139,6 @@ export async function signInGoogle(params: SignInGoogleParams): Promise<GoogleTo
                 throw new Error(`Google refused the sign-in code: ${errorMessage(error)}`);
             });
         return response.tokens;
-    }
-}
-
-function openInBrowser(url: string) {
-    const [command, args]: [string, string[]] =
-        process.platform === 'darwin'
-            ? ['open', [url]]
-            : process.platform === 'win32'
-              ? // Not `cmd /c start`: cmd splits the URL at each `&` and expands `%` and `^`.
-                ['rundll32', ['url.dll,FileProtocolHandler', url]]
-              : ['xdg-open', [url]];
-    try {
-        spawn(command, args, { stdio: 'ignore', detached: true })
-            .on('error', () => {})
-            .unref();
-    } catch {
-        // No browser here: the URL is printed anyway.
     }
 }
 

@@ -39,6 +39,7 @@ Register the returned command classes with the CLI. They give:
 
 ## Guarantees
 
+- `credential` receives `{ container }`, the running command's scoped container, to resolve a `CommandScope` service; a callback that ignores it works too.
 - The credential is resolved only right before a request: never by `schema` or by a usage error.
 - It is scrubbed (`[redacted]`) from everything written, including echoed bodies and network errors.
 - Redirects are refused; a request times out after 30 s.

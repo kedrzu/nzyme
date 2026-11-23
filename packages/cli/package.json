@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/cli",
-    "version": "0.18.0",
+    "version": "0.19.0",
     "description": "The nzyme binary: monorepo, localise, index, quiet-run and other repo commands",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

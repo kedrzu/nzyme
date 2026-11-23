@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/gmail-cli",
-    "version": "0.18.0",
+    "version": "0.19.0",
     "description": "Agent-facing Gmail commands: search and read threads as Markdown, Markdown drafts with attachments, label rules, no sending or permanent deletion",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

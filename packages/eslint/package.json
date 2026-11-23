@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/eslint",
-    "version": "0.18.0",
+    "version": "0.19.0",
     "description": "Shared ESLint configs (Vue, package.json, Markdown) and oxlint rule preset (framework)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/lastfm-cli",
-    "version": "0.18.0",
+    "version": "0.19.0",
     "description": "Last.fm for agents: a typed read-only client (similar artists and tracks, tags, charts, listening history) and discovery CLI commands",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

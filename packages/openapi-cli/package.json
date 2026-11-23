@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/openapi-cli",
-    "version": "0.18.0",
+    "version": "0.19.0",
     "description": "Agent-facing CLI commands over an OpenAPI REST service: browse the spec, GET, and write",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

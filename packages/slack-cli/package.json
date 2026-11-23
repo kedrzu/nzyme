@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/slack-cli",
-    "version": "0.0.0",
+    "version": "0.19.0",
     "description": "Agent-facing Slack commands acting as the developer: a PKCE sign-in with the user token kept fresh in a secrets store",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

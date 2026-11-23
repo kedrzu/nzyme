@@ -1,7 +1,7 @@
 {
     "name": "nzyme",
     "description": "The user-invoked /nzyme:architecture skill: sets up a product repo built on the @nzyme framework packages, or brings it up to date with nzyme's reference architecture, and keeps the repo's own skills in line with the practice documents in docs/practice",
-    "version": "0.18.0",
+    "version": "0.19.0",
     "author": {
         "name": "Michał Kędrzyński"
     },

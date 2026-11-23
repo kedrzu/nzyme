@@ -1,3 +1,19 @@
+## 0.19.0 (2026-11-23)
+
+### 🚀 Features
+
+- ⚠️  add the slack agent commands and take one secret store in google-auth ([#337](https://github.com/kedrzu/nzyme/pull/337))
+- **logging:** print cli log data as indented, highlighted yaml ([#338](https://github.com/kedrzu/nzyme/pull/338))
+- **vite-svg-vue:** add a Vite plugin compiling SVG files to static Vue components ([#335](https://github.com/kedrzu/nzyme/pull/335))
+
+### ⚠️  Breaking Changes
+
+- add the slack agent commands and take one secret store in google-auth  ([#337](https://github.com/kedrzu/nzyme/pull/337))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.18.0 (2026-11-23)
 
 ### 🚀 Features

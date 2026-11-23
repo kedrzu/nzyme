@@ -27,7 +27,7 @@ const POLL_CALL_TIMEOUT_MS = 45_000;
 /**
  * Slack error codes that mean the token itself is no longer usable — nothing later in the wait can
  * succeed either, so continuing only burns the caller's deadline for no chance of an answer.
- * `token_expired` belongs here because every poll already asks `SlackUserTokenService` for a fresh
+ * `token_expired` belongs here because every poll already asks the auth (`defineSlackAuth`) for a fresh
  * token: an expired one reaching Slack means the refresh itself could not renew it. Every
  * other failure (a dropped connection, a laptop asleep, a momentarily slow Slack, rate limiting) is
  * transient: the wait must survive it and simply poll again, never report it as "nobody answered".
@@ -71,7 +71,7 @@ export function parseWaitSecondsToMs(value: string): number | undefined {
  *
  * A transport failure (dropped connection, DNS hiccup, a slow Slack) is swallowed and retried on the
  * next iteration — it must never be mistaken for "no reply arrived". Only a fatal auth failure
- * (revoked/invalid/expired token, or a sign-in `SlackUserTokenService` says is needed) aborts the
+ * (revoked/invalid/expired token, or a sign-in the auth (`defineSlackAuth`) says is needed) aborts the
  * wait, by rethrowing so the caller's own `resolveSlackFailure` handling reports it.
  */
 export async function watchSlackThread(params: WatchSlackThreadParams): Promise<WatchSlackThreadResult> {

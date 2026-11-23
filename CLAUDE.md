@@ -18,7 +18,8 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
     `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`
 - **Integrations:** `aws`, `pulumi`, `slack`, `slack-cli` (Slack for agents, acting as the developer: read,
   search, send and wait for replies), `apis`, `bitwarden` (a Secrets Manager store for `secrets`),
-  `discord-cli` (the Discord REST API through `openapi-cli`, as a bot), `stealth-browser` (a stealth Chrome over CDP
+  `discord-cli` (the Discord REST API through `openapi-cli`, as a bot), `outline` (an Outline API client and a two-way sync of a
+  workspace with a local Markdown folder, run from Claude Code hooks), `stealth-browser` (a stealth Chrome over CDP
   for AI agents: launch, proxy, CLI), `google-auth` (Google OAuth sign-in with refresh tokens in a `secrets` store),
   `gmail-cli` (Gmail for agents: search, read, drafts, labels; never sends or permanently deletes), `gdrive-cli` (Google Drive
   for agents behind per-project permissions), `ticketmaster-cli` (the Ticketmaster Discovery API: a typed client and

@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/pen",
-    "version": "0.17.1",
+    "version": "0.18.0",
     "description": "Tooling for Pen (pen.dev) design files kept in git: a document model and the pen commands",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

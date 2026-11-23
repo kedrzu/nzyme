@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/spotify-cli",
-    "version": "0.0.0",
+    "version": "0.18.0",
     "description": "Spotify for agents and programs: a typed Web API client, PKCE sign-in with the token in a secret store, and curated commands that never remove anything",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

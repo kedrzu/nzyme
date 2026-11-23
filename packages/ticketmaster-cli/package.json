@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/ticketmaster-cli",
-    "version": "0.17.1",
+    "version": "0.18.0",
     "description": "Agent-facing Ticketmaster Discovery API: a typed client and commands to search events, attractions and venues",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

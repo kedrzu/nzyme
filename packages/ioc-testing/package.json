@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/ioc-testing",
-    "version": "0.17.1",
+    "version": "0.18.0",
     "description": "Test IoC container helpers (createTestContainer)",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

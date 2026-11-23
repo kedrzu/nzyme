@@ -1,6 +1,6 @@
 {
     "name": "@nzyme/types",
-    "version": "0.17.1",
+    "version": "0.18.0",
     "description": "Shared TypeScript utility types",
     "license": "MIT",
     "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",

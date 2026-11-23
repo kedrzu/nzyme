@@ -1,8 +1,8 @@
 import fs from 'node:fs/promises';
-import os from 'node:os';
+import * as os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, expect, test } from 'bun:test';
+import { afterEach, expect, spyOn, test } from 'bun:test';
 
 import type { GoogleCommandResult } from '@nzyme/google-auth/__fixtures__/googleTestCli.js';
 import {
@@ -18,7 +18,6 @@ import { defineSecret } from '@nzyme/secrets/defineSecret.js';
 import type { FakeDriveFile, FakeDriveOptions } from './__fixtures__/fakeDrive.js';
 import { startFakeDrive } from './__fixtures__/fakeDrive.js';
 import { defineDriveCommands } from './defineDriveCommands.js';
-import type { DriveFilesOptions } from './DriveCommandsOptions.js';
 import { DOCUMENT, FOLDER, SPREADSHEET } from './formats.js';
 import type { DrivePermissions } from './permissions.js';
 
@@ -192,38 +191,33 @@ test('read refuses a binary file and points at download', async () => {
     expect(drive.requests.filter(request => request.query.get('alt') === 'media')).toEqual([]);
 });
 
-test('download saves an export under the downloads directory and refuses a path outside the allowed ones', async () => {
-    const downloadsDir = path.join(await tempDir(), 'downloads');
+test('download saves an export under the downloads directory or --to, and never replaces a file unasked', async () => {
+    const home = await tempDir();
     const elsewhere = await tempDir();
     const drive = fake({ files: [DOC, PDF] });
-    const files = { downloadsDir };
 
-    const saved = await run(drive, ['drive', 'download', 'doc1'], { files });
-    const pdf = await run(drive, ['drive', 'download', 'pdf1', '--to', `${downloadsDir}/invoices/`], { files });
-    const outside = await run(drive, ['drive', 'download', 'doc1', '--to', path.join(elsewhere, 'Plan.docx')], {
-        files,
-    });
-    const again = await run(drive, ['drive', 'download', 'doc1'], { files });
+    const homedir = spyOn(os, 'homedir').mockReturnValue(home);
+    const saved = await run(drive, ['drive', 'download', 'doc1']);
+    const pdf = await run(drive, ['drive', 'download', 'pdf1', '--to', `${elsewhere}/invoices/`]);
+    const again = await run(drive, ['drive', 'download', 'doc1']);
+    homedir.mockRestore();
 
-    const docPath = path.join(downloadsDir, 'Plan.docx');
+    const docPath = path.join(home, '.cache', 'gdrive-cli', 'downloads', 'Plan.docx');
     expect(saved.exitCode).toBe(0);
     expect(saved.stdout).toBe(`Downloaded doc1: ${docPath} (${DOCX}, 10 B)\n`);
     expect(await fs.readFile(docPath, 'utf8')).toBe('docx-bytes');
     expect(pdf.exitCode).toBe(0);
-    expect(await fs.readFile(path.join(downloadsDir, 'invoices', 'Invoice.pdf'), 'utf8')).toBe('%PDF');
-    expect(outside.exitCode).toBe(1);
-    expect(outside.errors).toContain('is outside the directories this command may write');
-    expect(await fs.readdir(elsewhere)).toEqual([]);
+    expect(await fs.readFile(path.join(elsewhere, 'invoices', 'Invoice.pdf'), 'utf8')).toBe('%PDF');
     expect(again.exitCode).toBe(1);
     expect(again.errors).toContain('already exists - pass --overwrite');
     expectNoCredential(saved);
 });
 
-test('upload sends an allowed local file and converts stdin Markdown into a Doc', async () => {
+test('upload sends a local file and converts stdin Markdown into a Doc', async () => {
     const root = await tempDir();
     await fs.writeFile(path.join(root, 'report.csv'), 'a,b\n1,2\n');
     const drive = fake({ files: [FOLDER_FILE, { ...DOC, name: 'Notes', parents: ['folder1'] }] });
-    const options = { permissions: ALL_ON, files: { roots: [root] } };
+    const options = { permissions: ALL_ON };
 
     const file = await run(drive, ['drive', 'upload', '--file', path.join(root, 'report.csv')], options);
     const converted = await run(
@@ -249,28 +243,6 @@ test('upload sends an allowed local file and converts stdin Markdown into a Doc'
         },
     ]);
     expectNoCredential(converted);
-});
-
-test('upload and update refuse a secrets file and make no call', async () => {
-    const root = await tempDir();
-    await fs.writeFile(path.join(root, '.env'), 'SECRET=1');
-    await fs.writeFile(path.join(root, 'google-tokens.json'), '{}');
-    const drive = fake({ files: [PDF] });
-    const options = { permissions: ALL_ON, files: { roots: [root] } };
-
-    const env = await run(drive, ['drive', 'upload', '--file', path.join(root, '.env')], options);
-    const tokens = await run(drive, ['drive', 'upload', '--file', path.join(root, 'google-tokens.json')], options);
-    const outside = await run(drive, ['drive', 'upload', '--file', '/etc/hosts'], options);
-    const update = await run(drive, ['drive', 'update', 'pdf1', '--file', path.join(root, '.env')], options);
-
-    for (const result of [env, tokens, update]) {
-        expect(result.exitCode).toBe(1);
-        expect(result.errors).toContain('looks like a secrets file - refusing to read it');
-    }
-
-    expect(outside.exitCode).toBe(1);
-    expect(outside.errors).toContain('is outside the directories this command may read');
-    expect(drive.requests.filter(request => request.method !== 'GET')).toEqual([]);
 });
 
 test('update replaces a Doc from stdin Markdown and refuses contents the type cannot take', async () => {
@@ -357,17 +329,8 @@ test.each([[['search', 'plan']], [['read', 'doc1']], [['upload', '--name', 'a.tx
     },
 );
 
-test('malformed options are refused when the commands are defined', () => {
-    const auth = testAuthOptions({ stores: [], tokens: TOKENS });
-
-    expect(() => defineDriveCommands({ auth, files: { downloadsDir: 'relative/dir' } })).toThrow(
-        "'relative/dir' must be an absolute path",
-    );
-});
-
 interface RunOptions {
     permissions?: Partial<DrivePermissions>;
-    files?: DriveFilesOptions;
     stdin?: string;
 }
 
@@ -390,7 +353,6 @@ function run(drive: ReturnType<typeof startFakeDrive>, args: string[], options: 
             accounts: ['*@example.com'],
         }),
         permissions: options.permissions,
-        files: options.files,
     });
 
     return runCommands({ commands, args, endpoints: drive.endpoints, stdin: options.stdin });

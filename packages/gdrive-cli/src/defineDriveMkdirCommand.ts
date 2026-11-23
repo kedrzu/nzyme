@@ -1,9 +1,9 @@
 import { Option } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
+import type { GoogleCommandParams } from '@nzyme/google-auth/GoogleCommandParams.js';
 
 import { createDriveClient } from './createDriveClient.js';
-import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { formatDriveFile } from './formatDriveFile.js';
 import { fileIdFrom, FOLDER } from './formats.js';
 import { FILE_FIELDS } from './getDriveFile.js';
@@ -12,7 +12,7 @@ import { FILE_FIELDS } from './getDriveFile.js';
  * Defines `<prefix> mkdir <name> [--parent]`: creates a folder and prints its id.
  * @__NO_SIDE_EFFECTS__
  */
-export function defineDriveMkdirCommand(params: DriveCommandParams): CommandClass {
+export function defineDriveMkdirCommand(params: GoogleCommandParams): CommandClass {
     const { prefix } = params;
 
     return class DriveMkdirCommand extends Command {

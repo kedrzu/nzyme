@@ -9,7 +9,7 @@ import { draftMedia } from './draftMedia.js';
 import { formatDraftFiles } from './formatDraftFiles.js';
 import { createGmailClient } from './createGmailClient.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
-import { assertTotalSize, draftFileAccess, loadLocalFile } from './localFiles.js';
+import { assertTotalSize, loadLocalFile } from './localFiles.js';
 import { readDraftBody } from './readDraftBody.js';
 import { readReplyContext } from './readReplyContext.js';
 import { readSignature } from './readSignature.js';
@@ -20,7 +20,7 @@ import { readSignature } from './readSignature.js';
  * @__NO_SIDE_EFFECTS__
  */
 export function defineGmailDraftCreateCommand(params: GmailCommandParams): CommandClass {
-    const { prefix, files, reply: attribution } = params;
+    const { prefix, reply: attribution } = params;
 
     return class GmailDraftCreateCommand extends Command {
         static override paths = [[...prefix.split(' '), 'draft', 'create']];
@@ -37,9 +37,8 @@ export function defineGmailDraftCreateCommand(params: GmailCommandParams): Comma
                 headers default to its last message (to its recipients when that message is the
                 account's own), which is quoted below the signature unless \`--no-quote\`.
 
-                Attachments and inline images are read from the project directory, the configured
-                roots or the attachments directory; secret files are refused. Every file is read
-                before anything is written, so a bad path makes no draft. Prints the draft id; review
+                Every attachment and inline image is read before anything is written, so a bad path
+                makes no draft. Prints the draft id; review
                 and send it in Gmail.
             `,
             examples: [
@@ -70,7 +69,7 @@ export function defineGmailDraftCreateCommand(params: GmailCommandParams): Comma
                 throw new UsageError('Pass the body with --body-file <path>, or pipe it on stdin.');
             }
 
-            const body = await readDraftBody({ bodyFile, stdin: this.context.stdin, access: draftFileAccess(files) });
+            const body = await readDraftBody({ bodyFile, stdin: this.context.stdin });
             if (!body.trim()) {
                 throw new UsageError('The draft body is empty.');
             }
@@ -101,11 +100,10 @@ export function defineGmailDraftCreateCommand(params: GmailCommandParams): Comma
             });
 
             // Every file is read before the draft is written: a bad path means no draft at all.
-            const access = draftFileAccess(files);
             const inline = await Promise.all(
-                images.map(async image => ({ ...(await loadLocalFile(image.path, access)), cid: image.cid })),
+                images.map(async image => ({ ...(await loadLocalFile(image.path)), cid: image.cid })),
             );
-            const attached = await Promise.all(this.attach.map(file => loadLocalFile(file, access)));
+            const attached = await Promise.all(this.attach.map(file => loadLocalFile(file)));
             assertTotalSize([...inline, ...attached]);
 
             const message = await buildMime({

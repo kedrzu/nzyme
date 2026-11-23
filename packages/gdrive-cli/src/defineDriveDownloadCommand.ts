@@ -1,5 +1,6 @@
 import { createWriteStream } from 'node:fs';
 import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -8,20 +9,20 @@ import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { assert } from '@nzyme/utils/assert.js';
+import type { GoogleCommandParams } from '@nzyme/google-auth/GoogleCommandParams.js';
 
 import { createDriveClient } from './createDriveClient.js';
-import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { downloadFormat, fileIdFrom, FOLDER, isNative } from './formats.js';
 import { getDriveFile } from './getDriveFile.js';
-import { downloadsDir, driveFileAccess, resolveWritablePath } from './localFiles.js';
+import { resolveWritablePath } from './localFiles.js';
 
 /**
  * Defines `<prefix> download <file> [--to] [--format] [--overwrite]`: saves a file, a Google file
- * exported, under the allowed directories only, and prints the saved path.
+ * exported, and prints the saved path.
  * @__NO_SIDE_EFFECTS__
  */
-export function defineDriveDownloadCommand(params: DriveCommandParams): CommandClass {
-    const { prefix, files } = params;
+export function defineDriveDownloadCommand(params: GoogleCommandParams): CommandClass {
+    const { prefix } = params;
 
     return class DriveDownloadCommand extends Command {
         static override paths = [[...prefix.split(' '), 'download']];
@@ -35,9 +36,8 @@ export function defineDriveDownloadCommand(params: DriveCommandParams): CommandC
                 saves its target.
 
                 \`--to\` is a file, or a directory (existing, or ending in /) to save under the Drive
-                name; by default the downloads directory. It must lie in the project directory, a
-                configured root or the downloads directory, and is never a secrets file. An existing
-                file is replaced only with \`--overwrite\`. Prints the saved path.
+                name; by default \`~/.cache/gdrive-cli/downloads\`. An existing file is replaced only
+                with \`--overwrite\`. Prints the saved path.
             `,
             examples: [
                 ['A Doc as PDF', `${prefix} download 1AbC_d-EfGh --format pdf`],
@@ -80,13 +80,11 @@ export function defineDriveDownloadCommand(params: DriveCommandParams): CommandC
                 );
             }
 
-            // An allowed root counts only once it exists.
-            const defaultDir = downloadsDir(files);
-            await fs.mkdir(defaultDir, { recursive: true });
+            // Per user, unlike a fixed name under a shared temp directory another user could create first.
+            const defaultDir = path.join(os.homedir(), '.cache', 'gdrive-cli', 'downloads') + path.sep;
             const target = await resolveWritablePath({
-                input: this.to ?? defaultDir + path.sep,
+                input: this.to ?? defaultDir,
                 defaultName: filename,
-                access: driveFileAccess(files),
                 overwrite: this.overwrite,
             });
 

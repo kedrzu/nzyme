@@ -12,7 +12,7 @@ import type { GmailClient } from './createGmailClient.js';
 import { createGmailClient } from './createGmailClient.js';
 import type { GmailCommandParams } from './GmailCommandsOptions.js';
 import { extractAttachments, extractRawBody } from './gmailContent.js';
-import { assertTotalSize, draftFileAccess, loadLocalFile } from './localFiles.js';
+import { assertTotalSize, loadLocalFile } from './localFiles.js';
 import { readDraftBody } from './readDraftBody.js';
 import { readReplyContext } from './readReplyContext.js';
 import { readSignature } from './readSignature.js';
@@ -25,7 +25,7 @@ import { getHeader } from './utils/getHeader.js';
  * @__NO_SIDE_EFFECTS__
  */
 export function defineGmailDraftUpdateCommand(params: GmailCommandParams): CommandClass {
-    const { prefix, files, reply: attribution } = params;
+    const { prefix, reply: attribution } = params;
 
     return class GmailDraftUpdateCommand extends Command {
         static override paths = [[...prefix.split(' '), 'draft', 'update']];
@@ -68,11 +68,7 @@ export function defineGmailDraftUpdateCommand(params: GmailCommandParams): Comma
             const body =
                 this.bodyFile === undefined
                     ? undefined
-                    : await readDraftBody({
-                          bodyFile: this.bodyFile,
-                          stdin: this.context.stdin,
-                          access: draftFileAccess(files),
-                      });
+                    : await readDraftBody({ bodyFile: this.bodyFile, stdin: this.context.stdin });
             const client = await createGmailClient({
                 auth: this.container.resolve(params.auth),
                 params,
@@ -98,10 +94,9 @@ export function defineGmailDraftUpdateCommand(params: GmailCommandParams): Comma
                 );
             }
 
-            const access = draftFileAccess(files);
             const attached = [
                 ...kept.filter(file => !this.removeAttachment.includes(file.filename)),
-                ...(await Promise.all(this.attach.map(file => loadLocalFile(file, access)))),
+                ...(await Promise.all(this.attach.map(file => loadLocalFile(file)))),
             ];
 
             let inReplyTo = getHeader(headers, 'In-Reply-To');
@@ -136,10 +131,7 @@ export function defineGmailDraftUpdateCommand(params: GmailCommandParams): Comma
                 inline = [
                     ...keptImages,
                     ...(await Promise.all(
-                        freshImages.map(async image => ({
-                            ...(await loadLocalFile(image.path, access)),
-                            cid: image.cid,
-                        })),
+                        freshImages.map(async image => ({ ...(await loadLocalFile(image.path)), cid: image.cid })),
                     )),
                 ];
             }

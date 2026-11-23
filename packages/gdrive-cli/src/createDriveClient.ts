@@ -3,8 +3,7 @@ import { drive } from '@googleapis/drive';
 
 import { authorizeGoogleAccount } from '@nzyme/google-auth/authorizeGoogleAccount.js';
 import type { GoogleAuthShape } from '@nzyme/google-auth/defineGoogleAuth.js';
-
-import type { DriveCommandParams } from './DriveCommandsOptions.js';
+import type { GoogleCommandParams } from '@nzyme/google-auth/GoogleCommandParams.js';
 
 /**
  * The second argument of every Drive API call. The API root is honoured only here: the client's
@@ -28,7 +27,7 @@ export interface CreateDriveClientParams {
     /** The set's auth, resolved from `params.auth`. */
     auth: GoogleAuthShape;
     /** The params the Drive commands are defined with. */
-    params: DriveCommandParams;
+    params: GoogleCommandParams;
     /** The CLI binary, so the sign-in command in errors can be run as is. */
     binaryName: string;
     /** The account to act as (`--account`); unset picks the only usable one. */

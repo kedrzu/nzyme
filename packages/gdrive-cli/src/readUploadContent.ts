@@ -3,7 +3,6 @@ import { Readable } from 'node:stream';
 import { buffer } from 'node:stream/consumers';
 
 import { UsageError } from '@nzyme/cli-core';
-import type { FileAccess } from '@nzyme/node-utils/FileAccess.js';
 
 import { localFile } from './localFiles.js';
 
@@ -12,7 +11,6 @@ export interface ReadUploadContentOptions {
     /** The local file, from `--file`; stdin when unset. */
     file: string | undefined;
     stdin: Readable;
-    access: FileAccess;
     /** The type of what comes on stdin. */
     stdinType: string;
 }
@@ -27,14 +25,13 @@ export interface UploadContent {
 }
 
 /**
- * The contents of an upload or a replacement: the local file (which must pass the file checks, so a
- * secrets file is never sent), or all of stdin. Contents never come from an argument, so a long text
+ * The contents of an upload or a replacement: the local file, or all of stdin. Contents never come from an argument, so a long text
  * needs no shell quoting.
  */
 export async function readUploadContent(options: ReadUploadContentOptions): Promise<UploadContent> {
-    const { file, stdin, access, stdinType } = options;
+    const { file, stdin, stdinType } = options;
     if (file !== undefined) {
-        const local = await localFile(file, access);
+        const local = await localFile(file);
         return { mimeType: local.mimeType, body: () => createReadStream(local.path), filename: local.filename };
     }
 

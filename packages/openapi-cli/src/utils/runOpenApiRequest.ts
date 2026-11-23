@@ -1,4 +1,5 @@
 import type { CommandContext } from '@nzyme/cli-core/Command.js';
+import type { Container } from '@nzyme/ioc/Container.js';
 
 import type { OpenApiCommandsOptions } from '../defineOpenApiCommands.js';
 
@@ -17,6 +18,11 @@ export interface OpenApiRequestParams {
     query: string[];
     /** A JSON text, sent as the body as given. */
     body?: string;
+    /**
+     * The command's scoped container, handed to `credential`. Optional so callers written before it existed
+     * keep compiling; without it, a `credential` that reads `container` throws.
+     */
+    container?: Container;
 }
 
 /**
@@ -46,7 +52,14 @@ export async function runOpenApiRequest(
         return 2;
     }
 
-    const credential = await options.credential();
+    const credential = await options.credential({
+        get container(): Container {
+            if (!params.container) {
+                throw new Error('runOpenApiRequest was called without a container for the credential');
+            }
+            return params.container;
+        },
+    });
     if (credential === '') {
         context.stderr.write(`The ${service} credential is empty\n`);
         return 1;

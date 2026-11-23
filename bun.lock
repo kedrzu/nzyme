@@ -581,10 +581,10 @@
       "version": "0.17.1",
       "dependencies": {
         "@nzyme/cli-core": "workspace:*",
+        "@nzyme/ioc": "workspace:*",
         "@nzyme/utils": "workspace:*",
       },
       "devDependencies": {
-        "@nzyme/ioc": "workspace:*",
         "@nzyme/tsconfig": "workspace:*",
         "@types/bun": "^1.4.5",
         "@types/node": "26.6.6",

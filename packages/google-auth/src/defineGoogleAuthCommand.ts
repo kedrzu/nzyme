@@ -37,8 +37,8 @@ export function defineGoogleAuthCommand(params: GoogleCommandParams): CommandCla
             const { endpoints } = auth;
 
             // Refused up front what can be: the person should not sign in for a write that would fail.
-            auth.storage.assertWritable?.();
-            parseGoogleTokens(await auth.storage.read(), auth.secretName);
+            auth.assertTokensWritable();
+            parseGoogleTokens(await auth.readTokens(), auth.secretName);
 
             const token = await signInGoogle({
                 credentials: await auth.clients.getClient(this.loginHint),
@@ -49,7 +49,7 @@ export function defineGoogleAuthCommand(params: GoogleCommandParams): CommandCla
                 openBrowser: this.browser,
                 print: line => this.context.stderr.write(`${line}\n`),
             });
-            await saveGoogleToken({ storage: auth.storage, secretName: auth.secretName, token, allowed: auth.allowed });
+            await saveGoogleToken({ auth, token });
             this.context.stdout.write(
                 `${token.email} signed in to ${service.name}; its token is in ${auth.secretName}.\n`,
             );

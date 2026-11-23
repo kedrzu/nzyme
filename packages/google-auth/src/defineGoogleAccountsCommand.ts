@@ -27,7 +27,7 @@ export function defineGoogleAccountsCommand(params: GoogleCommandParams): Comman
 
         override async run() {
             const auth = this.container.resolve(params.auth);
-            const tokens = parseGoogleTokens(await auth.storage.read(), auth.secretName);
+            const tokens = parseGoogleTokens(await auth.readTokens(), auth.secretName);
             for (const [email, { scopes }] of [...tokens].toSorted(([a], [b]) => a.localeCompare(b))) {
                 const status = isAccountAllowed(email, auth.allowed) ? scopes.join(' ') : 'not allowed';
                 this.context.stdout.write(`${email}\t${status}\n`);

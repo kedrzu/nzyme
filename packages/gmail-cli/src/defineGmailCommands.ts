@@ -1,5 +1,3 @@
-import * as path from 'node:path';
-
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { defineGoogleAccountsCommand } from '@nzyme/google-auth/defineGoogleAccountsCommand.js';
 import { defineGoogleAuth } from '@nzyme/google-auth/defineGoogleAuth.js';
@@ -29,23 +27,14 @@ import { assertLabelRules } from './labelRules.js';
  * Trash or Spam (`thread label --add TRASH`/`SPAM`) and discarding a draft are allowed: both are
  * recoverable. Only labels no message carries are deleted.
  * Export them from a plugin module or spread them into a product CLI's `execute({ commands })`. Throws
- * when the label rules or the file options are malformed.
+ * when the label rules are malformed.
  * @__NO_SIDE_EFFECTS__
  */
 export function defineGmailCommands(options: GmailCommandsOptions): CommandClass[] {
-    const { prefix = 'gmail', auth, labels, files, reply } = options;
+    const { prefix = 'gmail', auth, labels, reply } = options;
 
     if (labels) {
         assertLabelRules(labels);
-    }
-
-    for (const dir of [
-        ...(files?.roots ?? []),
-        ...(files?.attachmentsDir === undefined ? [] : [files.attachmentsDir]),
-    ]) {
-        if (!path.isAbsolute(dir)) {
-            throw new Error(`Invalid Gmail command options: files: '${dir}' must be an absolute path`);
-        }
     }
 
     const params: GmailCommandParams = {
@@ -53,7 +42,6 @@ export function defineGmailCommands(options: GmailCommandsOptions): CommandClass
         service: gmailService,
         auth: defineGoogleAuth(auth),
         labels,
-        files,
         reply,
     };
     return [

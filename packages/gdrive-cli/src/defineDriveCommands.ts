@@ -1,9 +1,8 @@
-import * as path from 'node:path';
-
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { defineGoogleAccountsCommand } from '@nzyme/google-auth/defineGoogleAccountsCommand.js';
 import { defineGoogleAuth } from '@nzyme/google-auth/defineGoogleAuth.js';
 import { defineGoogleAuthCommand } from '@nzyme/google-auth/defineGoogleAuthCommand.js';
+import type { GoogleCommandParams } from '@nzyme/google-auth/GoogleCommandParams.js';
 
 import { defineDriveDownloadCommand } from './defineDriveDownloadCommand.js';
 import { defineDriveDrivesCommand } from './defineDriveDrivesCommand.js';
@@ -16,7 +15,7 @@ import { defineDriveSearchCommand } from './defineDriveSearchCommand.js';
 import { defineDriveTrashCommand } from './defineDriveTrashCommand.js';
 import { defineDriveUpdateCommand } from './defineDriveUpdateCommand.js';
 import { defineDriveUploadCommand } from './defineDriveUploadCommand.js';
-import type { DriveCommandParams, DriveCommandsOptions } from './DriveCommandsOptions.js';
+import type { DriveCommandsOptions } from './DriveCommandsOptions.js';
 import { driveService } from './driveService.js';
 import type { DrivePermission } from './permissions.js';
 import { effectivePermissions } from './permissions.js';
@@ -27,19 +26,13 @@ import { effectivePermissions } from './permissions.js';
  * with `upload`; `update` and `meta` with `edit`; `trash` and `restore` with `delete`. A command whose
  * permission is off is not registered at all. None deletes a file permanently, empties the trash or
  * edits sharing settings, but moving or uploading into a shared folder or shared drive inherits its
- * sharing. Throws when a `files` path is not absolute.
+ * sharing.
  * @__NO_SIDE_EFFECTS__
  */
 export function defineDriveCommands(options: DriveCommandsOptions): CommandClass[] {
-    const { prefix = 'drive', auth, files } = options;
+    const { prefix = 'drive', auth } = options;
 
-    for (const dir of [...(files?.roots ?? []), ...(files?.downloadsDir === undefined ? [] : [files.downloadsDir])]) {
-        if (!path.isAbsolute(dir)) {
-            throw new Error(`Invalid Drive command options: files: '${dir}' must be an absolute path`);
-        }
-    }
-
-    const params: DriveCommandParams = { prefix, service: driveService, auth: defineGoogleAuth(auth), files };
+    const params: GoogleCommandParams = { prefix, service: driveService, auth: defineGoogleAuth(auth) };
     const permissions = effectivePermissions(options.permissions);
     const commands: [DrivePermission, CommandClass][] = [
         ['browse', defineDriveSearchCommand(params)],

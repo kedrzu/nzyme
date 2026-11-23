@@ -3,9 +3,9 @@ import type { drive_v3 } from '@googleapis/drive';
 import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
+import type { GoogleCommandParams } from '@nzyme/google-auth/GoogleCommandParams.js';
 
 import { createDriveClient } from './createDriveClient.js';
-import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { formatDriveFile } from './formatDriveFile.js';
 import { fileIdFrom } from './formats.js';
 import { FILE_FIELDS, getDriveFile } from './getDriveFile.js';
@@ -15,7 +15,7 @@ import { FILE_FIELDS, getDriveFile } from './getDriveFile.js';
  * describes, stars or moves a file in one update.
  * @__NO_SIDE_EFFECTS__
  */
-export function defineDriveMetaCommand(params: DriveCommandParams): CommandClass {
+export function defineDriveMetaCommand(params: GoogleCommandParams): CommandClass {
     const { prefix } = params;
 
     return class DriveMetaCommand extends Command {

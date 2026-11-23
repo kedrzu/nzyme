@@ -21,9 +21,6 @@ Spread the commands into the product CLI's `execute` (its `packages/cli`,
 
 ```ts
 // packages/cli/src/cli.ts
-import * as os from 'node:os';
-import * as path from 'node:path';
-
 import { execute } from '@nzyme/cli-core/execute.js';
 import { defineDriveCommands } from '@nzyme/gdrive-cli/defineDriveCommands.js';
 
@@ -43,16 +40,10 @@ await execute({
                 accounts: ['*@acme.com'],
             },
             permissions: { upload: true },
-            files: {
-                roots: [path.join(os.homedir(), 'Notes')],
-                downloadsDir: path.join(os.homedir(), '.cache', 'acme', 'downloads'),
-            },
         }),
     ],
 });
 ```
-
-`defineDriveCommands` throws on a path that is not absolute.
 
 ## Before the first use
 
@@ -73,7 +64,6 @@ await execute({
 |`auth`|required|The `GoogleAuthOptions` of [`@nzyme/google-auth`](../google-auth#options): `provider`, `tokens`, `client`, `accounts`|
 |`prefix`|`drive`|The command path prefix, space-separated|
 |`permissions`|below|Switches overriding the defaults one by one|
-|`files`|none|`roots`: directories, besides the repo root, uploads read from and downloads write to. `downloadsDir`: where `download` writes by default, `~/.cache/gdrive-cli/downloads`. Absolute paths|
 
 ### Permissions
 
@@ -101,7 +91,7 @@ several accounts are usable. A file is given as an id or a Drive URL.
 |`drive info <file>`|`browse`|Show a file's metadata|
 |`drive drives`|`browse`|List the shared drives|
 |`drive read <file>`|`download`|Print contents as text (Docs as Markdown, Sheets as CSV); `--max-chars`|
-|`drive download <file>`|`download`|Save to disk with export; `--to`, `--format`, `--overwrite`|
+|`drive download <file>`|`download`|Save to disk with export, by default to `~/.cache/gdrive-cli/downloads`; `--to`, `--format`, `--overwrite`|
 |`drive upload`|`upload`|Create a file from `--file` or stdin; `--name`, `--folder`, `--convert`, `--description`|
 |`drive mkdir <name>`|`upload`|Create a folder; `--parent`|
 |`drive update <file>`|`edit`|Replace contents from `--file` or stdin; `--content-type`|
@@ -116,6 +106,7 @@ several accounts are usable. A file is given as an id or a Drive URL.
   forbidden calls, and a recording fake API that fails on a forbidden request.
 - A file inherits the sharing of the folder or shared drive it sits in, so `meta --move-to`, `upload --folder` and `mkdir --parent` into a shared one expose the file to everyone it is shared with.
 - A write command exists only when the project turned its permission on.
-- Local files are read (uploads) and written (downloads) only under the repo root, `files.roots` and the
-  downloads directory. Secret files (`.env*`, OAuth client files, credentials and token files) are refused even inside them.
+- Local paths are not sandboxed: the commands run in the agent's own shell, which can pipe any file it
+  reads to `upload` on stdin. What the CLI does guard: a download never replaces an existing file without
+  `--overwrite`, and the name Drive chooses is sanitised before it becomes a local file name.
 - An account the project's `auth.accounts` excludes is listed as `not allowed` and cannot be used.

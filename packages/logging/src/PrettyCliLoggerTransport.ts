@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import { highlight } from 'cli-highlight';
+import { stringify } from 'yaml';
 
 import { defineService } from '@nzyme/ioc/Service.js';
 import { identity } from '@nzyme/utils/functions/identity.js';
 import { parseStackTrace } from '@nzyme/utils/parseStackTrace.js';
-import { toJsonString } from '@nzyme/utils/toJsonString.js';
 
 import { LOG_LEVEL } from './env.js';
 import { getEnabledLoggerLevels } from './getEnabledLoggerLevels.js';
@@ -68,12 +68,22 @@ export const PrettyCliLoggerTransport = defineService({
 
             // Format and log other properties
             if (obj && Object.keys(obj).length > 0) {
-                const formattedProps = formatObjectProperties(obj, prefix);
-                console.error(formattedProps);
+                console.error(formatData(obj, prefix));
             }
         };
     },
 });
+
+/** Colours for the token classes highlight.js's YAML grammar emits. */
+const YAML_THEME = {
+    attr: chalk.cyan,
+    string: chalk.green,
+    number: chalk.yellow,
+    literal: chalk.magenta,
+    bullet: chalk.dim,
+    meta: chalk.blue,
+    type: chalk.blue,
+} as const;
 
 function getColor(level: LoggerLevel): (text: string) => string {
     switch (level) {
@@ -119,57 +129,35 @@ function formatError(error: Error, prefix: string): string {
             const causeLines = formatError(error.cause, prefix + '  ');
             output += causeLines;
         } else {
-            // Handle non-Error causes
-            const cause = error.cause;
-            try {
-                let causeStr: string;
-                if (typeof cause === 'string') {
-                    causeStr = cause;
-                } else if (typeof cause === 'number' || typeof cause === 'boolean') {
-                    causeStr = String(cause);
-                } else if (typeof cause === 'object' && cause !== null) {
-                    causeStr = JSON.stringify(cause, null, 2);
-                } else if (cause === null || cause === undefined) {
-                    causeStr = String(cause);
-                } else {
-                    causeStr = '[unknown]';
-                }
-
-                const highlighted = highlight(causeStr, {
-                    language: 'json',
-                    ignoreIllegals: true,
-                });
-                const lines = highlighted.split('\n');
-                for (const line of lines) {
-                    output += prefix + '  ' + line + '\n';
-                }
-            } catch {
-                // If JSON.stringify fails, fall back to string representation
-                output += prefix + '  [object]\n';
-            }
+            output += formatData(error.cause, prefix + '  ') + '\n';
         }
     }
 
     return output.trimEnd();
 }
 
-function formatObjectProperties(obj: Record<string, unknown>, prefix: string): string {
+/**
+ * Renders a value as highlighted YAML, every line led by `prefix` and a dim `›` gutter marker.
+ * Never throws: a value YAML cannot serialise prints one `[unserializable data]` line.
+ */
+function formatData(value: unknown, prefix: string): string {
+    const marker = prefix + chalk.dim('›') + ' ';
+
     try {
-        const json = toJsonString(obj, 2);
-        const highlighted = highlight(json, {
-            language: 'json',
+        const yaml = stringify(value, (_key, item: unknown) =>
+            typeof item === 'function' ? undefined : item,
+        ).trimEnd();
+        const highlighted = highlight(yaml, {
+            language: 'yaml',
+            theme: YAML_THEME,
             ignoreIllegals: true,
         });
-        const lines = highlighted.split('\n');
-        let output = '';
-        for (const line of lines) {
-            if (output.length > 0) {
-                output += '\n';
-            }
-            output += prefix + line;
-        }
-        return output;
+
+        return highlighted
+            .split('\n')
+            .map(line => marker + line)
+            .join('\n');
     } catch {
-        return prefix + JSON.stringify(obj);
+        return marker + '[unserializable data]';
     }
 }

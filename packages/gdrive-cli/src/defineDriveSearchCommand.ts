@@ -2,9 +2,9 @@ import { Option, UsageError } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { parseCount } from '@nzyme/cli-core/utils/parseCount.js';
+import type { GoogleCommandParams } from '@nzyme/google-auth/GoogleCommandParams.js';
 
 import { createDriveClient } from './createDriveClient.js';
-import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { fileIdFrom, mimeTypeFrom, searchQuery } from './formats.js';
 import { listDriveFiles } from './listDriveFiles.js';
 
@@ -13,7 +13,7 @@ import { listDriveFiles } from './listDriveFiles.js';
  * line per file across My Drive, shared with me and shared drives, trashed files left out.
  * @__NO_SIDE_EFFECTS__
  */
-export function defineDriveSearchCommand(params: DriveCommandParams): CommandClass {
+export function defineDriveSearchCommand(params: GoogleCommandParams): CommandClass {
     const { prefix } = params;
 
     return class DriveSearchCommand extends Command {

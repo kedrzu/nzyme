@@ -1,17 +1,28 @@
 import { CommandScope } from '@nzyme/cli-core/Command.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 import { defineService } from '@nzyme/ioc/Service.js';
+import { resolveSecretTarget } from '@nzyme/secrets/resolveSecretTarget.js';
+import { mergeStores, readStores } from '@nzyme/secrets/utils/readStores.js';
 
 import type { GoogleAuthOptions } from './GoogleAuthOptions.js';
 import type { GoogleClientProvider } from './GoogleClientProvider.js';
 import { GoogleEndpoints } from './GoogleEndpoints.js';
-import type { GoogleTokenStorage } from './GoogleTokenStorage.js';
-import { secretTokenStorage } from './secretTokenStorage.js';
 
 /** What the sign-in functions of one command set work with. */
 export interface GoogleAuthShape {
-    /** The token dictionary, in the declared token secret. */
-    storage: GoogleTokenStorage;
+    /**
+     * The raw value of the token secret; `undefined` when nothing is stored. Read from the merged view
+     * of the provider's stores, as every secret is read (an environment variable of the same name does
+     * not override it).
+     */
+    readTokens(): Promise<string | undefined>;
+    /** Replaces the value of the token secret, in the store `resolveSecretTarget` picks. */
+    writeTokens(value: string): Promise<void>;
+    /**
+     * Throws when `writeTokens` would be refused (a secret the provider does not declare or enable, a
+     * store `target` refuses), without writing; sign-in calls it before the browser step.
+     */
+    assertTokensWritable(): void;
     /** The token secret's name, for messages. */
     secretName: string;
     clients: GoogleClientProvider;
@@ -32,13 +43,32 @@ export function defineGoogleAuth(options: GoogleAuthOptions) {
         scope: CommandScope,
         deps: { provider: options.provider, clients: options.client, env: EnvVariables, endpoints: GoogleEndpoints },
         setup({ provider, clients, env, endpoints }): GoogleAuthShape {
+            const secretName = options.tokens.name;
             return {
-                storage: secretTokenStorage({ provider, secret: options.tokens, env }),
-                secretName: options.tokens.name,
+                readTokens,
+                writeTokens,
+                assertTokensWritable,
+                secretName,
                 clients,
                 allowed: options.accounts,
                 endpoints,
             };
+
+            async function readTokens() {
+                return mergeStores(await readStores(provider.stores)).get(secretName);
+            }
+
+            async function writeTokens(value: string) {
+                await resolveTarget().write([{ key: secretName, value }]);
+            }
+
+            function assertTokensWritable() {
+                resolveTarget();
+            }
+
+            function resolveTarget() {
+                return resolveSecretTarget({ provider, env, name: secretName });
+            }
         },
     });
 }

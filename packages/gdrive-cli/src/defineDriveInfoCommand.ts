@@ -4,10 +4,10 @@ import { Option } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { formatHeaderBlock } from '@nzyme/cli-core/utils/formatHeaderBlock.js';
+import type { GoogleCommandParams } from '@nzyme/google-auth/GoogleCommandParams.js';
 
 import type { DriveClient } from './createDriveClient.js';
 import { createDriveClient } from './createDriveClient.js';
-import type { DriveCommandParams } from './DriveCommandsOptions.js';
 import { fileIdFrom, NATIVE, typeLabel } from './formats.js';
 import { FILE_FIELDS, getDriveFile } from './getDriveFile.js';
 
@@ -23,7 +23,7 @@ const MAX_PATH_DEPTH = 25;
  * Defines `<prefix> info <file>`: a file's or folder's metadata as a `key: value` block.
  * @__NO_SIDE_EFFECTS__
  */
-export function defineDriveInfoCommand(params: DriveCommandParams): CommandClass {
+export function defineDriveInfoCommand(params: GoogleCommandParams): CommandClass {
     const { prefix } = params;
 
     return class DriveInfoCommand extends Command {

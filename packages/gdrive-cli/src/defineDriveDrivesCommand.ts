@@ -2,9 +2,9 @@ import { Option } from '@nzyme/cli-core';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { formatTsvLine } from '@nzyme/cli-core/utils/formatTsvLine.js';
+import type { GoogleCommandParams } from '@nzyme/google-auth/GoogleCommandParams.js';
 
 import { createDriveClient } from './createDriveClient.js';
-import type { DriveCommandParams } from './DriveCommandsOptions.js';
 
 /** Shared drives listed at most; past this the list says it stopped. */
 const MAX_DRIVES = 1000;
@@ -13,7 +13,7 @@ const MAX_DRIVES = 1000;
  * Defines `<prefix> drives`: the shared drives the account belongs to, `id  name`, tab-separated.
  * @__NO_SIDE_EFFECTS__
  */
-export function defineDriveDrivesCommand(params: DriveCommandParams): CommandClass {
+export function defineDriveDrivesCommand(params: GoogleCommandParams): CommandClass {
     const { prefix } = params;
 
     return class DriveDrivesCommand extends Command {

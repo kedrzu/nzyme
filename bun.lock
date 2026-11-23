@@ -353,6 +353,7 @@
       "dependencies": {
         "@nzyme/cli-core": "workspace:*",
         "@nzyme/ioc": "workspace:*",
+        "@nzyme/node-utils": "workspace:*",
         "@nzyme/secrets": "workspace:*",
         "google-auth-library": "^11.3.4",
       },

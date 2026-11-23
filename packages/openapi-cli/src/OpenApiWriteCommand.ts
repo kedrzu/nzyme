@@ -57,6 +57,7 @@ export function defineOpenApiWriteCommand(options: OpenApiCommandsOptions): Comm
                 path: this.requestPath,
                 query: this.query,
                 body,
+                container: this.container,
             });
         }
     };

@@ -22,7 +22,8 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
   `gmail-cli` (Gmail for agents: search, read, drafts, labels; never sends or permanently deletes), `gdrive-cli` (Google Drive
   for agents behind per-project permissions), `ticketmaster-cli` (the Ticketmaster Discovery API: a typed client and
   commands to find events, attractions and venues), `lastfm-cli` (a typed read-only Last.fm client and music-discovery
-  commands)
+  commands), `spotify-cli` (Spotify for agents: taste profile, search, playlists and the queue; never removes
+  anything)
 - **Private, never published:** `github-cli`, `linear`, `sentry-cli`, `logging-ui`
 
 `bun run index` (also run by setup) generates a gitignored code map:

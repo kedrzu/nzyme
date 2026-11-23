@@ -1,8 +1,18 @@
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
+import type { Container } from '@nzyme/ioc/Container.js';
 
 import { defineOpenApiGetCommand } from './OpenApiGetCommand.js';
 import { defineOpenApiSchemaCommand } from './OpenApiSchemaCommand.js';
 import { defineOpenApiWriteCommand } from './OpenApiWriteCommand.js';
+
+/** What `credential` receives when a command is about to send a request. */
+export interface OpenApiCredentialContext {
+    /**
+     * The running command's scoped container (`CommandScope`), so the credential can come from a service
+     * resolved per command run. Throws when the request was run through {@link runOpenApiRequest} without one.
+     */
+    container: Container;
+}
 
 /** Options for {@link defineOpenApiCommands}: everything that makes the commands talk to one service. */
 export interface OpenApiCommandsOptions {
@@ -18,9 +28,9 @@ export interface OpenApiCommandsOptions {
     authScheme: string;
     /**
      * The secret sent as `Authorization: <authScheme> <credential>`. Called only when a request is about
-     * to be sent, so `schema` and a usage error never resolve it.
+     * to be sent, so `schema` and a usage error never resolve it. A callback that ignores its argument works as before.
      */
-    credential: () => string | Promise<string>;
+    credential: (context: OpenApiCredentialContext) => string | Promise<string>;
     /** Fixed extra headers sent with every request, e.g. a `User-Agent` the service requires. */
     headers?: Record<string, string>;
     /**

@@ -837,6 +837,7 @@
         "@nzyme/cli-core": "workspace:*",
         "@nzyme/ioc": "workspace:*",
         "@nzyme/logging": "workspace:*",
+        "@nzyme/node-utils": "workspace:*",
         "@nzyme/secrets": "workspace:*",
         "@nzyme/slack": "workspace:*",
         "@nzyme/utils": "workspace:*",

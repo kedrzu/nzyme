@@ -1,10 +1,10 @@
 import { WebAPIPlatformError } from '@slack/web-api';
-import { beforeEach, expect, spyOn, test } from 'bun:test';
+import { beforeEach, expect, test } from 'bun:test';
 
 import { defineSecret } from '@nzyme/secrets/defineSecret.js';
 
 import type { RunSlackCommandOptions } from './__fixtures__/slackTestCli.js';
-import { fakeSlack, resetFakeSlack, runSlackCommand, SLACK_TOKEN } from './__fixtures__/slackTestCli.js';
+import { fakeSlack, resetFakeSlack, runSlackCommand } from './__fixtures__/slackTestCli.js';
 import { SLACK_AGENT_MARKER } from './buildSlackFooter.js';
 import { SLACK_EXIT_CODE } from './slackExitCodes.js';
 
@@ -67,23 +67,6 @@ test('a token Slack refuses names the configured token secret', async () => {
     expect(result.exitCode).toBe(SLACK_EXIT_CODE.UNAVAILABLE);
     expect(result.stderr).toContain('Check that OPENSPACE_SLACK_SESSION is still valid');
     expect(result.stderr).not.toContain('SLACK_TOKEN');
-});
-
-test('auth refuses a token secret it could not store before opening the browser', async () => {
-    // Never a real browser, even when the refusal regresses.
-    const spawn = spyOn(Bun, 'spawn').mockImplementation(() => {
-        throw new Error('The browser was opened');
-    });
-    try {
-        const result = await openspace({ args: ['chat', 'auth'], secrets: [SLACK_TOKEN] });
-
-        expect(result.exitCode).toBe(1);
-        expect(result.errors).toContain('Refusing to write OPENSPACE_SLACK_SESSION');
-        expect(result.stdout).not.toContain('Opening Slack');
-        expect(spawn).not.toHaveBeenCalled();
-    } finally {
-        spawn.mockRestore();
-    }
 });
 
 test('send marks the message as the agent’s in its text and its footer, and links the task the callback returns', async () => {

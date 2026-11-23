@@ -1,20 +1,19 @@
 import type { Injectable } from '@nzyme/ioc/Injectable.js';
-import type { SecretsProvider } from '@nzyme/secrets/commands/SecretsCommandsOptions.js';
 import type { SecretDefinition } from '@nzyme/secrets/defineSecret.js';
+import type { SecretStore } from '@nzyme/secrets/SecretStore.js';
 
 /** How a Slack command set signs the developer in and keeps their user token. */
 export interface SlackAuthOptions {
     /**
-     * The project's service resolving to its `SecretsProvider`: the token secret is read from its
-     * stores and written through its `target`, which must return a store listed in `stores` so a
-     * written token is read back. The auth service is unscoped, resolved from the root container, so
-     * the provider must not be `CommandScope`-scoped either.
+     * The project's service resolving to the store the sign-in lives in: it is read from and written to
+     * this store only. It acts as the developer, so it is a per-developer store (the keychain), never a
+     * shared team store. The auth service is unscoped, resolved from the root container, so the store's
+     * service must not be `CommandScope`-scoped either.
      */
-    provider: Injectable<SecretsProvider>;
+    store: Injectable<SecretStore>;
     /**
-     * The declared secret (`defineSecret`) holding the developer's sign-in, a JSON object with the
-     * access token, the refresh token and the access token's expiry. When the provider declares its
-     * secrets, it must be among them. It acts as the developer, so it belongs in a per-developer store.
+     * The secret (`defineSecret`) holding the developer's sign-in, a JSON object with the access token,
+     * the refresh token and the access token's expiry.
      */
     token: SecretDefinition;
     /** The OAuth client id of the consumer's Slack app; it uses PKCE, so no client secret exists. */
@@ -23,8 +22,8 @@ export interface SlackAuthOptions {
     userScopes: string[];
     /**
      * The redirect URI registered on the Slack app, `http://localhost:<port><path>`: the sign-in waits
-     * on that port and path. Slack accepts plain HTTP only on `localhost` for a PKCE app, so any other
-     * URI is refused when the auth is defined.
+     * on that port and path. Slack accepts plain HTTP only on `localhost` for a PKCE app; `auth` refuses
+     * a URI that is not loopback HTTP with a port before it opens the browser.
      */
     redirectUri: string;
     /** The command that signs the developer in, named in every "sign in again" message. */

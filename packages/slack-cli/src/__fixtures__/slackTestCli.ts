@@ -1,7 +1,7 @@
 /**
  * The harness of the Slack command tests: a fake Slack Web API client in place of the SDK's
  * `WebClient`, and commands run in-process through clipanion with a real container, a real
- * `defineSlackAuth` and a secrets provider over an in-memory store holding the sign-in.
+ * `defineSlackAuth` and an in-memory store holding the sign-in.
  */
 import { PassThrough, Readable } from 'node:stream';
 
@@ -15,9 +15,9 @@ import { createContainer } from '@nzyme/ioc/Container.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 import { createMemoryStore } from '@nzyme/secrets/__fixtures__/createMemoryStore.js';
-import type { SecretsProvider } from '@nzyme/secrets/commands/SecretsCommandsOptions.js';
 import type { SecretDefinition } from '@nzyme/secrets/defineSecret.js';
 import { defineSecret } from '@nzyme/secrets/defineSecret.js';
+import type { SecretStore, SecretStoreEntry } from '@nzyme/secrets/SecretStore.js';
 
 import type { SlackCommandsOptions } from '../SlackCommandsOptions.js';
 
@@ -32,6 +32,8 @@ export interface FakeSlack {
     /** The token each client was built with. */
     tokens: (string | undefined)[];
     authTest: () => Promise<AuthTestResponse>;
+    /** Answers `apiCall`, the call the sign-in's code exchange makes; refuses every call by default. */
+    apiCall: (method: string, options: Record<string, unknown>) => Promise<unknown>;
     /** Every `chat.postMessage` call. */
     posted: FakePostedMessage[];
 }
@@ -43,7 +45,7 @@ export interface FakePostedMessage {
     blocks: (KnownBlock | Block)[] | undefined;
 }
 
-export const fakeSlack: FakeSlack = { tokens: [], authTest: answerAuthTest, posted: [] };
+export const fakeSlack: FakeSlack = { tokens: [], authTest: answerAuthTest, apiCall: refuseApiCall, posted: [] };
 
 /** The identity `auth.test` reports by default. */
 export const IDENTITY = {
@@ -58,11 +60,13 @@ export const IDENTITY = {
 export function resetFakeSlack() {
     fakeSlack.tokens = [];
     fakeSlack.authTest = answerAuthTest;
+    fakeSlack.apiCall = refuseApiCall;
     fakeSlack.posted = [];
 }
 
 class FakeWebClient {
     auth = { test: () => fakeSlack.authTest() };
+    apiCall = (method: string, options: Record<string, unknown>) => fakeSlack.apiCall(method, options);
     chat = {
         postMessage: (args: ChatPostMessageArguments) => {
             fakeSlack.posted.push({
@@ -92,10 +96,10 @@ export interface RunSlackCommandOptions {
     args: string[];
     /** What the developer's store holds; a sign-in valid for 12 hours by default. */
     stored?: Record<string, string>;
-    /** The secrets the provider declares; unset, it declares none. */
-    secrets?: SecretDefinition[];
     /** The token secret; {@link SLACK_TOKEN} by default. */
     token?: SecretDefinition;
+    /** The redirect URI of the Slack app; `http://localhost:8760/callback` by default. */
+    redirectUri?: string;
     /** The sign-in command the auth names; {@link SIGN_IN_COMMAND} by default. */
     signInCommand?: string;
     /** The CLI's binary name; `healed` by default. */
@@ -113,6 +117,8 @@ export interface SlackCommandResult {
     stderr: string;
     /** What was reported through `console.error`: logs and the failure report of an unexpected error. */
     errors: string;
+    /** Every write to the developer's store. */
+    writes: SecretStoreEntry[][];
 }
 
 /** Thrown in place of a real `process.exit`; the base `Command.catch` exits 1 after reporting an error. */
@@ -122,16 +128,13 @@ class ProcessExited extends Error {}
 export async function runSlackCommand(options: RunSlackCommandOptions): Promise<SlackCommandResult> {
     const token = options.token ?? SLACK_TOKEN;
     const memory = createMemoryStore({ id: 'fake:personal', data: options.stored ?? signedIn(token), persist: true });
-    const provider = defineService<SecretsProvider>({
-        name: 'TestSecrets',
-        setup: () => ({ stores: [memory.store], target: () => memory.store, secrets: options.secrets }),
-    });
+    const store = defineService<SecretStore>({ name: 'TestSlackStore', setup: () => memory.store });
     const auth = defineSlackAuth({
-        provider,
+        store,
         token,
         clientId: 'client-1',
         userScopes: ['search:read', 'chat:write'],
-        redirectUri: 'http://localhost:8760/callback',
+        redirectUri: options.redirectUri ?? 'http://localhost:8760/callback',
         signInCommand: options.signInCommand ?? SIGN_IN_COMMAND,
     });
 
@@ -173,6 +176,7 @@ export async function runSlackCommand(options: RunSlackCommandOptions): Promise<
             stdout: stdout.text(),
             stderr: stderr.text(),
             errors,
+            writes: memory.writes,
         };
     } finally {
         for (const spy of spies) {
@@ -194,6 +198,10 @@ export function signedIn(token: SecretDefinition = SLACK_TOKEN): Record<string, 
 
 function answerAuthTest() {
     return Promise.resolve<AuthTestResponse>(IDENTITY);
+}
+
+function refuseApiCall(method: string) {
+    return Promise.reject(new slackWebApi.WebAPIPlatformError({ ok: false, error: `unexpected_${method}` }));
 }
 
 function collect() {

@@ -1,14 +1,11 @@
 import { expect, spyOn, test } from 'bun:test';
 
-import { UsageError } from '@nzyme/cli-core';
 import { defineService } from '@nzyme/ioc/Service.js';
-import type { SecretsProvider } from '@nzyme/secrets/commands/SecretsCommandsOptions.js';
 import { defineSecret } from '@nzyme/secrets/defineSecret.js';
 import type { SecretStore, SecretStoreEntry } from '@nzyme/secrets/SecretStore.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
 import { defineSlackAuth } from './defineSlackAuth.js';
-import type { SlackAuthOptions } from './SlackAuthOptions.js';
 import { SlackSignInRequiredError } from './SlackSignInRequiredError.js';
 
 const HOUR = 60 * 60 * 1000;
@@ -52,7 +49,7 @@ test('refreshes a token about to expire, stores the new grant, and reads it back
 });
 
 // A long-running process: its cached read still holds the sign-in another process has since refreshed.
-test('reads past every store cache before refreshing, and takes the newer grant without calling Slack', async () => {
+test('reads past the store cache before refreshing, and takes the newer grant without calling Slack', async () => {
     const { auth, slackCalls, store } = setUp({
         stored: session(NEW_ACCESS_TOKEN, NEW_REFRESH_TOKEN, Date.now() + 12 * HOUR),
     });
@@ -108,42 +105,13 @@ test.each([
     expect(slackCalls).toHaveLength(0);
 });
 
-test('refuses a token secret the provider does not declare before writing anything', async () => {
-    const { auth, store } = setUp({ stored: {}, secrets: [defineSecret('OTHER_SECRET')] });
+test('writes a signed-in grant to the store and reads it back', async () => {
+    const { auth, store } = setUp({ stored: {} });
 
-    expect(() => auth.assertWritable()).toThrow(UsageError);
-    await expect(auth.store({ accessToken: ACCESS_TOKEN, refreshToken: REFRESH_TOKEN, expiresIn: 60 })).rejects.toThrow(
-        'Refusing to write SLACK_SESSION',
-    );
-    expect(store.values.size).toBe(0);
-});
-
-test('writes a signed-in grant where the provider targets the token secret', async () => {
-    const { auth, store } = setUp({ stored: {}, secrets: [SLACK_SESSION] });
-
-    auth.assertWritable();
     await auth.store({ accessToken: ACCESS_TOKEN, refreshToken: REFRESH_TOKEN, expiresIn: 43_200 });
 
     expect(await auth.get()).toBe(ACCESS_TOKEN);
     expect(store.values.has('SLACK_SESSION')).toBe(true);
-});
-
-test.each([
-    'https://localhost:8760/callback',
-    'http://127.0.0.1:8760/callback',
-    'http://example.com:8760/callback',
-    'http://localhost/callback',
-    'not a url',
-])('refuses the redirect URI %s when the auth is defined', redirectUri => {
-    expect(() => defineSlackAuth(authOptions({ provider: placeholderProvider(), redirectUri }))).toThrow(
-        'The Slack redirect URI must be http://localhost:<port><path>',
-    );
-});
-
-test('reads the port and path of a localhost redirect URI', () => {
-    const { auth } = setUp({ stored: {} });
-
-    expect(auth.redirect).toEqual({ port: 8760, path: '/callback' });
 });
 
 test('never prints a token or puts it in an error, whatever the refresh ends in', async () => {
@@ -198,24 +166,24 @@ interface SetUpOptions {
     stored: Record<string, string>;
     /** Slack's answer to `oauth.v2.access`. */
     slack?: () => object;
-    /** The secrets the provider declares; unset, it declares none. */
-    secrets?: SecretsProvider['secrets'];
 }
 
-/**
- * The auth over two stores: a shared one read first, holding nothing, and the developer's own, the
- * write target. Slack is a fake `fetch` recording the forms it was sent.
- */
-function setUp({ stored, slack, secrets }: SetUpOptions) {
-    const shared = createFakeStore({});
+/** The auth over the developer's store. Slack is a fake `fetch` recording the forms it was sent. */
+function setUp({ stored, slack }: SetUpOptions) {
     const store = createFakeStore(stored);
     const slackCalls: URLSearchParams[] = [];
-    const provider: SecretsProvider = { stores: [shared, store], target: () => store, secrets };
 
-    const unit = defineSlackAuth(authOptions({ provider: placeholderProvider() }));
+    const unit = defineSlackAuth({
+        // The tests hand `create` the store itself.
+        store: defineService<SecretStore>({ name: 'TestSlackStore', setup: () => store }),
+        token: SLACK_SESSION,
+        clientId: 'client-1',
+        userScopes: ['search:read'],
+        redirectUri: 'http://localhost:8760/callback',
+        signInCommand: SIGN_IN_COMMAND,
+    });
     const auth = unit.create({
-        provider,
-        env: {},
+        secretStore: store,
         fetch: (_input, init) => {
             slackCalls.push(init?.body instanceof URLSearchParams ? init.body : new URLSearchParams());
             return Promise.resolve(Response.json(slack?.() ?? { ok: false, error: 'unexpected_call' }));
@@ -223,31 +191,6 @@ function setUp({ stored, slack, secrets }: SetUpOptions) {
     });
 
     return { auth, slackCalls, store };
-}
-
-/** Options for {@link authOptions}. */
-interface TestAuthOptions {
-    provider: SlackAuthOptions['provider'];
-    redirectUri?: string;
-}
-
-function authOptions({ provider, redirectUri }: TestAuthOptions): SlackAuthOptions {
-    return {
-        provider,
-        token: SLACK_SESSION,
-        clientId: 'client-1',
-        userScopes: ['search:read'],
-        redirectUri: redirectUri ?? 'http://localhost:8760/callback',
-        signInCommand: SIGN_IN_COMMAND,
-    };
-}
-
-/** The provider the auth is defined with; the tests hand `create` the provider itself. */
-function placeholderProvider() {
-    return defineService<SecretsProvider>({
-        name: 'TestSecrets',
-        setup: () => ({ stores: [], target: () => createFakeStore({}) }),
-    });
 }
 
 /** A cached store in memory, with `values` exposed for assertions. */

@@ -2,11 +2,13 @@ import { WebAPIPlatformError, WebClient } from '@slack/web-api';
 
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
+import { createPkcePair } from '@nzyme/node-utils/createPkcePair.js';
+import { listenForOAuthCallback } from '@nzyme/node-utils/listenForOAuthCallback.js';
+import { openInBrowser } from '@nzyme/node-utils/openInBrowser.js';
 import { assert } from '@nzyme/utils/assert.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
 import { buildSlackAuthorizeUrl } from './buildSlackAuthorizeUrl.js';
-import { createSlackPkcePair } from './createSlackPkcePair.js';
 import type { SlackAuthShape } from './defineSlackAuth.js';
 import { readSlackUserTokenGrant } from './readSlackUserTokenGrant.js';
 import type { SlackUserTokenGrant } from './readSlackUserTokenGrant.js';
@@ -14,7 +16,6 @@ import { SlackCommand } from './SlackCommand.js';
 import type { SlackCommandParams } from './SlackCommandsOptions.js';
 import { SLACK_EXIT_CODE } from './slackExitCodes.js';
 import type { SlackExitCode } from './slackExitCodes.js';
-import { waitForSlackAuthCallback } from './waitForSlackAuthCallback.js';
 
 const AUTH_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -46,12 +47,11 @@ export function defineSlackAuthCommand(params: SlackCommandParams): CommandClass
 
         protected async runSlack(): Promise<SlackExitCode> {
             const auth = this.container.resolve(this.slackAuth);
-            // Refuse a store the token could not be written to before the developer signs in for nothing.
-            auth.assertWritable();
-
             const { clientId, userScopes, redirectUri } = auth.options;
             const state = crypto.randomUUID();
-            const pkce = createSlackPkcePair();
+            const pkce = createPkcePair();
+            // Before the browser opens: a bad redirect URI or a taken port fails here, not after consent.
+            const callback = listenForOAuthCallback({ redirectUri, state, timeoutMs: AUTH_TIMEOUT_MS });
 
             const authorizeUrl = buildSlackAuthorizeUrl({
                 clientId,
@@ -60,12 +60,10 @@ export function defineSlackAuthCommand(params: SlackCommandParams): CommandClass
                 state,
                 codeChallenge: pkce.challenge,
             });
-            const callback = waitForSlackAuthCallback({ redirectUri, state, timeoutMs: AUTH_TIMEOUT_MS });
-
             this.context.stdout.write(`Opening Slack in your browser. If it does not open, visit:\n${authorizeUrl}\n`);
-            Bun.spawn(['open', authorizeUrl], { stdout: 'ignore', stderr: 'ignore' });
+            openInBrowser(authorizeUrl);
 
-            const result = await callback;
+            const result = await callback.result;
             switch (result.kind) {
                 case 'timeout':
                     this.context.stderr.write(

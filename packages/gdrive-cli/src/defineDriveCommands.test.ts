@@ -347,8 +347,7 @@ function run(drive: ReturnType<typeof startFakeDrive>, args: string[], options: 
     });
     const commands = defineDriveCommands({
         auth: testAuthOptions({
-            stores: [store.store],
-            secrets: [TOKENS],
+            store: store.store,
             tokens: TOKENS,
             accounts: ['*@example.com'],
         }),

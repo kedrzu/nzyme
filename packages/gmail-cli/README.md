@@ -25,7 +25,7 @@ import { execute } from '@nzyme/cli-core/execute.js';
 import { defineGmailCommands } from '@nzyme/gmail-cli/defineGmailCommands.js';
 
 import { AppGoogleClients } from '@acme/app/AppGoogleClients.js';
-import { AppSecrets } from '@acme/secrets/AppSecrets.js';
+import { PersonalStore } from '@acme/secrets/PersonalStore.js';
 import { GMAIL_TOKENS } from '@acme/secrets/secrets.js';
 
 await execute({
@@ -34,7 +34,7 @@ await execute({
         // ...the product's other commands
         ...defineGmailCommands({
             auth: {
-                provider: AppSecrets,
+                store: PersonalStore,
                 tokens: GMAIL_TOKENS,
                 client: AppGoogleClients,
                 accounts: ['*@acme.com'],
@@ -56,11 +56,9 @@ await execute({
 
 1. Create the Google Cloud app, and declare and store `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
    behind your `GoogleClientProvider` ([`@nzyme/google-auth`](../google-auth#the-google-cloud-app)).
-2. Declare `GMAIL_TOKENS` in the product's `@<product>/secrets` (`packages/secrets/src/secrets.ts`) with
-   `meta: { store: 'personal' }`. Route it to a per-developer store (the keychain), never the shared team
-   store: anyone who reads the shared store could act as every mailbox signed in
-   ([why](../google-auth#token-storage)). `target` must return a store listed in `stores`, or a cached
-   store hides a fresh sign-in until its TTL.
+2. Declare `GMAIL_TOKENS` in the product's `@<product>/secrets` (`packages/secrets/src/secrets.ts`), and pass
+   a per-developer store (the keychain) as `store`, never the shared team store: anyone who reads the
+   shared store could act as every mailbox signed in ([why](../google-auth#token-storage)).
 3. **The user runs `gmail auth`, not the agent.** It opens a browser; `--no-browser` only prints the URL.
    Users sign in again after moving from the former MCP server: tokens are not migrated.
 
@@ -68,7 +66,7 @@ await execute({
 
 |Option|Default|Meaning|
 |-|-|-|
-|`auth`|required|The `GoogleAuthOptions` of [`@nzyme/google-auth`](../google-auth#options): `provider`, `tokens`, `client`, `accounts`|
+|`auth`|required|The `GoogleAuthOptions` of [`@nzyme/google-auth`](../google-auth#options): `store`, `tokens`, `client`, `accounts`|
 |`prefix`|`gmail`|The command path prefix, space-separated|
 |`labels`|none|Label rules and views, below. Without them labels are free-form|
 |`reply`|system|`locale` and `timeZone` of the attribution line of a reply quote (`On Mon, Sep 28, 2026 … wrote:`); `pl` gets the Polish template, any other locale the English one|

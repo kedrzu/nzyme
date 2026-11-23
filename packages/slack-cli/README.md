@@ -23,11 +23,11 @@ Define the auth once, in the product, and spread the commands into the product C
 // packages/secrets/src/SlackAuth.ts
 import { defineSlackAuth } from '@nzyme/slack-cli/defineSlackAuth.js';
 
-import { AppSecrets } from './AppSecrets.js';
+import { PersonalStore } from './PersonalStore.js';
 import { SLACK_SESSION } from './secrets.js';
 
 export const SlackAuth = defineSlackAuth({
-    provider: AppSecrets,
+    store: PersonalStore,
     token: SLACK_SESSION,
     clientId: '1234567890.1234567890',
     userScopes: ['channels:history', 'channels:read', 'chat:write', 'search:read', 'users:read'],
@@ -57,10 +57,12 @@ await execute({
 
 Any other code that needs the developer's token resolves the same `SlackAuth` and calls `get()`: it
 refreshes the token when it nears expiry and stores the new grant, so commands and other code never spend
-one refresh token twice. `defineSlackAuth` throws when `redirectUri` is not
-`http://localhost:<port><path>`.
+one refresh token twice.
 
-**The provider must not be `CommandScope`-scoped.** The auth service is unscoped, so code outside a
+`store` is the project's service resolving to the `SecretStore` (`@nzyme/secrets`) the sign-in lives in,
+for example `defineService<SecretStore>({ name: 'PersonalStore', setup: () => keychainStore({ scope: 'acme' }) })`.
+
+**The store's service must not be `CommandScope`-scoped.** The auth service is unscoped, so code outside a
 command can resolve it from the root container; a dependency it resolves cannot live in a narrower scope.
 
 ## Options
@@ -69,11 +71,11 @@ command can resolve it from the root container; a dependency it resolves cannot 
 
 |Option|Meaning|
 |-|-|
-|`provider`|The project's `SecretsProvider`; the token is read from its stores and written through its `target`|
-|`token`|The declared secret (`defineSecret`) holding the sign-in|
+|`store`|The project's service resolving to the `SecretStore` the sign-in is read from and written to|
+|`token`|The secret (`defineSecret`) holding the sign-in|
 |`clientId`|The Slack app's client id; public, as the app uses PKCE|
 |`userScopes`|The user scopes the sign-in asks for: those the Slack app declares for user tokens|
-|`redirectUri`|The redirect URI registered on the Slack app, `http://localhost:<port><path>`|
+|`redirectUri`|The redirect URI registered on the Slack app, `http://localhost:<port><path>`; `auth` refuses one that is not loopback HTTP with a port before it opens the browser|
 |`signInCommand`|The command named in every "sign in again" message|
 
 `defineSlackCommands`:
@@ -96,9 +98,10 @@ command can resolve it from the root container; a dependency it resolves cannot 
 ## Token storage
 
 The token secret holds one JSON object: `{ "accessToken": "…", "refreshToken": "…", "expiresAt": 1767225600000 }`,
-`expiresAt` in milliseconds since the epoch. It acts as the developer, so route it to a per-developer
-store (the keychain), never a shared team store. `target` must return a store listed in `stores`, or a
-cached store hides a fresh sign-in. `auth` checks the token can be stored before it opens the browser.
+`expiresAt` in milliseconds since the epoch. It acts as the developer, so `store` is a per-developer
+store (the keychain), never a shared team store. A store that caches its reads implements `refresh`:
+the auth calls it before refreshing an expiring token, to take a grant another process stored meanwhile.
+If the port of the redirect URI is taken, `auth` says so before it opens the browser.
 
 **The user runs `slack auth`, not the agent.** It opens a browser.
 

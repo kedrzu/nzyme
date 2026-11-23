@@ -25,7 +25,7 @@ import { execute } from '@nzyme/cli-core/execute.js';
 import { defineDriveCommands } from '@nzyme/gdrive-cli/defineDriveCommands.js';
 
 import { AppGoogleClients } from '@acme/app/AppGoogleClients.js';
-import { AppSecrets } from '@acme/secrets/AppSecrets.js';
+import { PersonalStore } from '@acme/secrets/PersonalStore.js';
 import { GDRIVE_TOKENS } from '@acme/secrets/secrets.js';
 
 await execute({
@@ -34,7 +34,7 @@ await execute({
         // ...the product's other commands
         ...defineDriveCommands({
             auth: {
-                provider: AppSecrets,
+                store: PersonalStore,
                 tokens: GDRIVE_TOKENS,
                 client: AppGoogleClients,
                 accounts: ['*@acme.com'],
@@ -49,11 +49,9 @@ await execute({
 
 1. Create the Google Cloud app, enable the Drive API, and declare and store `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
    behind your `GoogleClientProvider` ([`@nzyme/google-auth`](../google-auth#the-google-cloud-app)).
-2. Declare `GDRIVE_TOKENS` in the product's `@<product>/secrets` (`packages/secrets/src/secrets.ts`) with
-   `meta: { store: 'personal' }`. Route it to a per-developer store (the keychain), never the shared team
-   store: anyone who reads the shared store could act as every account signed in
-   ([why](../google-auth#token-storage)). `target` must return a store listed in `stores`, or a cached
-   store hides a fresh sign-in until its TTL.
+2. Declare `GDRIVE_TOKENS` in the product's `@<product>/secrets` (`packages/secrets/src/secrets.ts`), and pass
+   a per-developer store (the keychain) as `store`, never the shared team store: anyone who reads the
+   shared store could act as every account signed in ([why](../google-auth#token-storage)).
 3. **The user runs `drive auth`, not the agent.** It opens a browser; `--no-browser` only prints the URL.
    Users sign in again after moving from the former MCP server: tokens are not migrated.
 
@@ -61,7 +59,7 @@ await execute({
 
 |Option|Default|Meaning|
 |-|-|-|
-|`auth`|required|The `GoogleAuthOptions` of [`@nzyme/google-auth`](../google-auth#options): `provider`, `tokens`, `client`, `accounts`|
+|`auth`|required|The `GoogleAuthOptions` of [`@nzyme/google-auth`](../google-auth#options): `store`, `tokens`, `client`, `accounts`|
 |`prefix`|`drive`|The command path prefix, space-separated|
 |`permissions`|below|Switches overriding the defaults one by one|
 

@@ -53,13 +53,18 @@ The product defines the auth once with `defineSlackAuth` and passes it to `defin
 with a prefix and an optional task-link callback. The auth service is unscoped, unlike `defineGoogleAuth`,
 which is `CommandScope`-scoped, so code outside a command can resolve it from the root container.
 
-The sign-in lives in one JSON secret. The auth reads it on every call, refreshes it an hour before it
-expires, and stores the new grant.
+The sign-in lives in one JSON secret of one store, which the product passes as `store`; the auth reads and
+writes only there, not through the project's `SecretsProvider`. It reads the sign-in on every call,
+refreshes it an hour before it expires, and stores the new grant. The browser sign-in uses the loopback
+PKCE helpers of `@nzyme/node-utils` (`createPkcePair`, `listenForOAuthCallback`), shared with
+`spotify-cli` and `google-auth`.
 
 ## Consequences
 
-- A product's secrets provider must not be `CommandScope`-scoped: the unscoped auth service depends on
-  it.
+- The store's service a product passes must not be `CommandScope`-scoped: the unscoped auth service
+  depends on it.
+- A token secret the project did not declare is not refused before the browser opens, and the sign-in is
+  not read across several stores.
 - A second product gets the commands by defining its auth and calling `defineSlackCommands`; the
   configured sign-in command, token secret, prefix and task link appear in every message and path.
 - Two processes refreshing at the same moment are not coordinated: the one whose refresh token Slack

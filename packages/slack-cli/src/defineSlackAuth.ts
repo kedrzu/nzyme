@@ -1,14 +1,9 @@
 import { Fetch } from '@nzyme/ioc/Fetch.js';
-import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 import { ApplicationError } from '@nzyme/logging/ApplicationError.js';
-import { resolveSecretTarget } from '@nzyme/secrets/resolveSecretTarget.js';
-import { mergeStores, readStores } from '@nzyme/secrets/utils/readStores.js';
 import { immutable } from '@nzyme/utils/immutable.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
-import { parseSlackRedirectUri } from './parseSlackRedirectUri.js';
-import type { SlackRedirect } from './parseSlackRedirectUri.js';
 import { readSlackUserTokenGrant } from './readSlackUserTokenGrant.js';
 import type { SlackUserTokenGrant } from './readSlackUserTokenGrant.js';
 import type { SlackAuthOptions } from './SlackAuthOptions.js';
@@ -17,22 +12,14 @@ import { SlackSignInRequiredError } from './SlackSignInRequiredError.js';
 /** The developer's own Slack user token, kept valid across Slack's token rotation. */
 export interface SlackAuthShape {
     /**
-     * A user token valid for more than the refresh margin, read from the provider's stores on every
-     * call. An expiring one is refreshed and the new grant stored first. Throws
-     * {@link SlackSignInRequiredError} when no complete sign-in is stored, or when Slack refuses its
-     * refresh token.
+     * A user token valid for more than the refresh margin, read from the store on every call. An
+     * expiring one is refreshed and the new grant stored first. Throws {@link SlackSignInRequiredError}
+     * when no complete sign-in is stored, or when Slack refuses its refresh token.
      */
     get(): Promise<string>;
-    /** Stores a grant in the store `resolveSecretTarget` picks for the token secret. */
+    /** Writes a grant to the store, under the token secret. */
     store(grant: SlackUserTokenGrant): Promise<void>;
-    /**
-     * Throws when `store` would be refused (a secret the provider does not declare or enable, a store
-     * `target` refuses), without writing; sign-in calls it before the browser step.
-     */
-    assertWritable(): void;
     options: SlackAuthOptions;
-    /** The port and path of `options.redirectUri`, where the sign-in's callback server listens. */
-    redirect: SlackRedirect;
 }
 
 /**
@@ -60,36 +47,31 @@ interface StoredGrant {
 /**
  * Defines the service keeping the developer's Slack user token usable. The Slack app uses PKCE, and
  * Slack rotates a PKCE app's user tokens: the access token lives 12 hours and a refresh token issues
- * the next pair, with no client secret. The sign-in lives in one secret of the provider's stores, so
- * every process shares it, and `get()` reads it on every call — past the stores' caches before
- * refreshing, so a long-running process takes what another process stored instead of spending a
- * refresh token that is already spent.
+ * the next pair, with no client secret. The sign-in lives in one secret of one store, so every
+ * process shares it, and `get()` reads it on every call — past the store's cache before refreshing,
+ * so a long-running process takes what another process stored instead of spending a refresh token
+ * that is already spent.
  *
  * Two processes refreshing at the same moment are not coordinated: the loser's refresh token is
  * refused and it asks for a new sign-in.
  *
  * Unscoped, unlike the commands, so code outside a command can resolve it from the root container.
- * Throws when `redirectUri` is not `http://localhost:<port><path>`.
  * @__NO_SIDE_EFFECTS__
  */
 export function defineSlackAuth(options: SlackAuthOptions) {
-    const redirect = parseSlackRedirectUri(options.redirectUri);
-
     return defineService({
         name: 'SlackAuth',
-        deps: { provider: options.provider, env: EnvVariables, fetch: Fetch },
-        setup({ provider, env, fetch }): SlackAuthShape {
+        deps: { secretStore: options.store, fetch: Fetch },
+        setup({ secretStore, fetch }): SlackAuthShape {
             const secretName = options.token.name;
 
-            return { get, store, assertWritable, options, redirect };
+            return { get, store, options };
 
             async function get() {
                 let current = await readGrant();
                 if (current && !isUsable(current)) {
                     // A cached read may be stale: another process may have refreshed since.
-                    for (const secretStore of provider.stores) {
-                        await secretStore.refresh?.();
-                    }
+                    await secretStore.refresh?.();
                     current = await readGrant();
                 }
 
@@ -116,19 +98,11 @@ export function defineSlackAuth(options: SlackAuthOptions) {
                     refreshToken: grant.refreshToken,
                     expiresAt: Date.now() + grant.expiresIn * 1000,
                 };
-                await resolveTarget().write([{ key: secretName, value: JSON.stringify(stored) }]);
-            }
-
-            function assertWritable() {
-                resolveTarget();
-            }
-
-            function resolveTarget() {
-                return resolveSecretTarget({ provider, env, name: secretName });
+                await secretStore.write([{ key: secretName, value: JSON.stringify(stored) }]);
             }
 
             async function readGrant() {
-                const value = mergeStores(await readStores(provider.stores)).get(secretName);
+                const value = (await secretStore.readAll()).get(secretName);
                 return value ? parseStoredGrant(value) : null;
             }
 

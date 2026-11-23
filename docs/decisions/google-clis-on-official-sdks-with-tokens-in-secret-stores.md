@@ -69,16 +69,18 @@ How to key the tokens:
    team store: a refresh token is its owner's mailbox or Drive, and the shared store would let anyone who
    reads it act as every account signed in. Configuration (accounts, label rules) is code passed to
    `defineGmailCommands` and `defineDriveCommands`.
-   - The tokens are read from the provider's `stores`, not from the container's config document: `auth`
-     writes a token and reads it back within one command, and a config document is loaded once.
-   - `resolveSecretTarget` of `@nzyme/secrets` is the single write path: it refuses a name the provider
-     does not declare or enable, then asks `target`. `secrets set` and `auth` both use it, and `auth` calls it,
-     and checks that the stored value parses, before the browser step, so a sign-in that cannot be saved is
-     refused before the user consents.
+   - The tokens are read from the one store the product passes as `store`, not from the container's config
+     document: `auth` writes a token and reads it back within one command, and a config document is
+     loaded once.
+   - `auth` writes to that same store, and checks that the stored value parses before the browser step, so
+     a sign-in that cannot be saved is refused before the user consents. The auth takes a store, not the
+     project's `SecretsProvider`: the tokens live in one place, so the provider's merged reads, write
+     policy and declaration check bought nothing here. In exchange a token secret the project did not
+     declare is not refused before the browser step.
 3. `google-auth` is plain functions. The OAuth client comes from the product's service implementing
    `GoogleClientProvider` (`getClient(email)`), so which client serves which account is the product's
    decision and a repo can use several Google Cloud projects. Each command set gets a unit from
-   `defineGoogleAuth(options)`, which receives the product's services (`provider`, `client`) through `deps`;
+   `defineGoogleAuth(options)`, which receives the product's services (`store`, `client`) through `deps`;
    no command looks them up in a service locator.
 4. Gmail may move a thread to the Trash and mark it as spam, as `thread label --add TRASH`/`SPAM`;
    permanent deletion stays forbidden, and with it emptying the Trash, which Gmail can only do through
@@ -96,10 +98,9 @@ How to key the tokens:
 - Users sign in again: tokens of the old servers are not migrated.
 - Access tokens stay in memory, so each command refreshes once. Nothing is written back: a refresh token
   Google no longer accepts fails with `invalid_grant`, and the error names `auth --login-hint <email>`.
-- The product declares the token secrets and routes them to a per-developer store, and `target` must return
-  the store listed in `stores`; with a `cached` store a different instance leaves a fresh sign-in hidden
-  until the TTL expires. A product that sends the token secret to its shared store exposes every signed-in
-  account to whoever reads it: the routing is the product's to get right.
+- The product declares the token secrets and passes a per-developer store as `store`. A product that passes
+  its shared store exposes every signed-in account to whoever reads it: the choice is the product's to get
+  right.
 - A write replaces the whole dictionary, so two simultaneous sign-ins to one service can lose one; sign-in is
   a person at a browser, rarely concurrent.
 - `auth` opens a browser, so a person runs it, never an agent.

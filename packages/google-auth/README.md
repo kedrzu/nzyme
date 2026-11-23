@@ -22,7 +22,7 @@ token secret, so a repo registering two sets (different `prefix`) declares two t
 
 |Option|Default|Meaning|
 |-|-|-|
-|`provider`|required|The product's service resolving to a `SecretsProvider` (`@nzyme/secrets`)|
+|`store`|required|The product's service resolving to the `SecretStore` (`@nzyme/secrets`) the token secret is read from and written to|
 |`tokens`|required|The `defineSecret` declaration holding every signed-in account of the service (`GMAIL_TOKENS`, `GDRIVE_TOKENS`)|
 |`client`|required|The product's service implementing `GoogleClientProvider`: the OAuth client of an account|
 |`accounts`|every signed-in one|Emails or `*` globs (case-insensitive) the project may use; an empty list allows none; others are visible but untouchable|
@@ -36,7 +36,7 @@ export const GMAIL_TOKENS = defineSecret('GMAIL_TOKENS', {
 ```
 
 ```ts
-auth: { provider: AppSecrets, tokens: GMAIL_TOKENS, client: AppGoogleClients, accounts: ['*@example.com'] },
+auth: { store: PersonalStore, tokens: GMAIL_TOKENS, client: AppGoogleClients, accounts: ['*@example.com'] },
 ```
 
 `google-auth` is plain functions and holds no client of its own: the product's `GoogleClientProvider`
@@ -51,17 +51,10 @@ by the lower-cased email, each entry the refresh token and the granted scopes:
 { "ann@example.com": { "refreshToken": "1//0g…", "scopes": ["https://www.googleapis.com/auth/gmail.modify"] } }
 ```
 
-The secret is read from the `provider`'s `stores` and written by `auth` through
-`resolveSecretTarget` of `@nzyme/secrets`, the same declaration-checked path as `secrets set`. Before the
-browser opens, `auth` refuses a token secret that is not declared or not enabled here, a store `target`
-refuses, and a value that is not the dictionary. Requirements:
-
-- `target(<token secret>)` must return the store that is listed in `stores`. A `cached` store keeps its
-  `readAll` in the OS keychain until its TTL expires: a fresh instance writes to the same place but
-  leaves the cached copy stale, so the new sign-in stays hidden until the TTL runs out.
-- **Route the token secret to a per-developer store** (`meta.store: 'personal'`, the keychain), never the
-  shared team store. A refresh token is the mailbox or the Drive of its owner: whoever reads the shared
-  store could act as every account that signed in.
+The secret is read from `store` and written to it by `auth`, which refuses a stored value that is not
+the dictionary before the browser opens. **`store` is a per-developer store** (the keychain), never the
+shared team store. A refresh token is the mailbox or the Drive of its owner: whoever reads the shared
+store could act as every account that signed in.
 
 Access tokens are never stored: each command refreshes once.
 
@@ -142,7 +135,7 @@ of accounts and projects.
    ```
 
 7. Declare the token secret of each CLI (`GMAIL_TOKENS`, `GDRIVE_TOKENS`, [above](#options)). `auth`
-   writes it itself through `resolveSecretTarget`, so no `secrets set` is needed.
+   writes it to `store` itself, so no `secrets set` is needed.
 
 |Message|Cause|Fix|
 |-|-|-|

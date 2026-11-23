@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 
 import { CodeChallengeMethod } from 'google-auth-library';
 
+import { listenForOAuthCallback } from '@nzyme/node-utils/listenForOAuthCallback.js';
 import { openInBrowser } from '@nzyme/node-utils/openInBrowser.js';
 
 import type { GoogleClientCredentials } from './GoogleClientProvider.js';
@@ -38,23 +39,39 @@ export async function signInGoogle(params: SignInGoogleParams): Promise<GoogleTo
     const { service } = params;
     const client = createOAuthClient(params.credentials, params.tokenUrl);
     const state = randomBytes(16).toString('hex');
-    const callback = Promise.withResolvers<string>();
     const { codeVerifier, codeChallenge } = await client.generateCodeVerifierAsync();
+    // A Desktop-app client accepts any loopback port, so the server takes a free one.
+    const callback = listenForOAuthCallback({ redirectUri: 'http://127.0.0.1:0/', state, timeoutMs: TIMEOUT_MS });
+    const { redirectUri } = callback;
 
-    const server = Bun.serve({
-        hostname: '127.0.0.1',
-        port: 0,
-        fetch: request => answerRedirect(new URL(request.url)),
+    const url = client.generateAuthUrl({
+        access_type: 'offline',
+        // Always returns a refresh token, also on a repeated sign-in.
+        prompt: 'consent',
+        scope: [...service.scopes],
+        state,
+        login_hint: params.loginHint,
+        redirect_uri: redirectUri,
+        code_challenge: codeChallenge,
+        code_challenge_method: CodeChallengeMethod.S256,
     });
-    const redirectUri = `http://127.0.0.1:${server.port}/`;
-    let code: string;
-    try {
-        code = await waitForCode();
-    } finally {
-        await server.stop();
+
+    params.print(`Sign in with Google in the browser. If it did not open, visit:\n${url}`);
+    if (params.openBrowser) {
+        openInBrowser(url);
     }
 
-    const tokens = await exchangeCode(code);
+    const result = await callback.result;
+    switch (result.kind) {
+        case 'timeout':
+            throw new Error('Timed out after 5 minutes waiting for the Google sign-in.');
+        case 'denied':
+            throw new Error(`Google sign-in failed: ${result.error}`);
+        case 'code':
+            break;
+    }
+
+    const tokens = await exchangeCode(result.code);
     const refreshToken = tokens.refresh_token;
     if (!refreshToken) {
         throw new Error(
@@ -79,59 +96,6 @@ export async function signInGoogle(params: SignInGoogleParams): Promise<GoogleTo
 
     return { email, refreshToken, scopes: granted };
 
-    async function waitForCode() {
-        const url = client.generateAuthUrl({
-            access_type: 'offline',
-            // Always returns a refresh token, also on a repeated sign-in.
-            prompt: 'consent',
-            scope: [...service.scopes],
-            state,
-            login_hint: params.loginHint,
-            redirect_uri: redirectUri,
-            code_challenge: codeChallenge,
-            code_challenge_method: CodeChallengeMethod.S256,
-        });
-
-        params.print(`Sign in with Google in the browser. If it did not open, visit:\n${url}`);
-        if (params.openBrowser) {
-            openInBrowser(url);
-        }
-
-        const timer = setTimeout(
-            () => callback.reject(new Error('Timed out after 5 minutes waiting for the Google sign-in.')),
-            TIMEOUT_MS,
-        );
-        try {
-            return await callback.promise;
-        } finally {
-            clearTimeout(timer);
-        }
-    }
-
-    function answerRedirect(requestUrl: URL) {
-        if (requestUrl.pathname !== '/') {
-            return new Response(null, { status: 404, headers: { connection: 'close' } });
-        }
-
-        const error = requestUrl.searchParams.get('error');
-        const received = requestUrl.searchParams.get('code');
-        if (requestUrl.searchParams.get('state') !== state || (!received && !error)) {
-            return page({ status: 400, title: 'Unexpected request', body: 'This is not the sign-in that is waiting.' });
-        }
-
-        if (!received) {
-            callback.reject(new Error(`Google sign-in failed: ${error}`));
-            return page({
-                status: 200,
-                title: 'Sign-in cancelled',
-                body: `Google answered: ${error}. You can close this tab.`,
-            });
-        }
-
-        callback.resolve(received);
-        return page({ status: 200, title: 'Signed in', body: 'Access is granted. You can close this tab.' });
-    }
-
     async function exchangeCode(received: string) {
         const response = await client
             .getToken({ code: received, codeVerifier, redirect_uri: redirectUri })
@@ -140,19 +104,4 @@ export async function signInGoogle(params: SignInGoogleParams): Promise<GoogleTo
             });
         return response.tokens;
     }
-}
-
-/** The browser page answering the sign-in redirect. */
-export interface PageParams {
-    status: number;
-    title: string;
-    body: string;
-}
-
-function page({ status, title, body }: PageParams) {
-    const html =
-        `<!doctype html><meta charset="utf-8"><title>${title}</title>` +
-        `<body style="font-family:system-ui;max-width:32rem;margin:4rem auto"><h1>${title}</h1><p>${body}</p></body>`;
-    // `connection: close`, so the browser keeps no connection that would hold the server's graceful stop.
-    return new Response(html, { status, headers: { 'content-type': 'text/html', connection: 'close' } });
 }

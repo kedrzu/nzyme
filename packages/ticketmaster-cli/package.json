@@ -1,0 +1,46 @@
+{
+    "name": "@nzyme/ticketmaster-cli",
+    "version": "0.17.1",
+    "description": "Agent-facing Ticketmaster Discovery API: a typed client and commands to search events, attractions and venues",
+    "license": "MIT",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/kedrzu/nzyme.git"
+    },
+    "files": [
+        "dist"
+    ],
+    "type": "module",
+    "sideEffects": false,
+    "exports": {
+        "./*.js": {
+            "types": "./dist/*.d.ts",
+            "source": "./src/*.ts",
+            "import": "./dist/*.js",
+            "default": "./dist/*.js"
+        }
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "scripts": {
+        "build": "tsgo --build tsconfig.esm.json",
+        "format": "oxfmt ./src > /dev/null"
+    },
+    "dependencies": {
+        "@nzyme/cli-core": "workspace:*",
+        "@nzyme/fetch-utils": "workspace:*",
+        "@nzyme/ioc": "workspace:*",
+        "@nzyme/logging": "workspace:*",
+        "@nzyme/utils": "workspace:*"
+    },
+    "devDependencies": {
+        "@nzyme/tsconfig": "workspace:*",
+        "@types/bun": "^1.4.5",
+        "@types/node": "26.6.6",
+        "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+        "clipanion": "^4.0.0-rc.4",
+        "oxfmt": "0.79.0"
+    }
+}

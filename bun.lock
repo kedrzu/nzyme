@@ -440,6 +440,28 @@
         "oxfmt": "0.79.0",
       },
     },
+    "packages/lastfm-cli": {
+      "name": "@nzyme/lastfm-cli",
+      "version": "0.17.1",
+      "dependencies": {
+        "@nzyme/cli-core": "workspace:*",
+        "@nzyme/fetch-utils": "workspace:*",
+        "@nzyme/ioc": "workspace:*",
+        "@nzyme/utils": "workspace:*",
+        "ufo": "^1.6.4",
+      },
+      "devDependencies": {
+        "@nzyme/config": "workspace:*",
+        "@nzyme/ioc-testing": "workspace:*",
+        "@nzyme/secrets": "workspace:*",
+        "@nzyme/tsconfig": "workspace:*",
+        "@types/bun": "^1.4.5",
+        "@types/node": "26.6.6",
+        "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+        "clipanion": "^4.0.0-rc.4",
+        "oxfmt": "0.79.0",
+      },
+    },
     "packages/linear": {
       "name": "@nzyme/linear",
       "version": "0.17.1",
@@ -1746,6 +1768,8 @@
     "@nzyme/ioc": ["@nzyme/ioc@workspace:packages/ioc"],
 
     "@nzyme/ioc-testing": ["@nzyme/ioc-testing@workspace:packages/ioc-testing"],
+
+    "@nzyme/lastfm-cli": ["@nzyme/lastfm-cli@workspace:packages/lastfm-cli"],
 
     "@nzyme/linear": ["@nzyme/linear@workspace:packages/linear"],
 

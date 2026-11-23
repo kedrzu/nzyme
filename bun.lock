@@ -444,7 +444,7 @@
       "name": "@nzyme/linear",
       "version": "0.17.1",
       "dependencies": {
-        "@linear/sdk": "101.1.0",
+        "@linear/sdk": "103.0.0",
         "@nzyme/cli-core": "workspace:*",
         "@nzyme/github-cli": "workspace:*",
         "@nzyme/logging": "workspace:*",
@@ -1558,7 +1558,7 @@
 
     "@kwsites/promise-deferred": ["@kwsites/promise-deferred@1.1.1", "", {}, "sha512-GaHYm+c0O9MjZRu0ongGBRbinu8gVAMd2UZjji6jVmqKtZluZnptXGWhz1E8j8D2HJ3f/yMxKAUC0b+57wncIw=="],
 
-    "@linear/sdk": ["@linear/sdk@101.1.0", "", { "dependencies": { "@graphql-typed-document-node/core": "^3.2.0" } }, "sha512-sDlYKMoTiOQU1C6+B2451qMbrR6zdKbBZfqIGp/dpZdVeOzYQSmp8e4uUHlCdMuFM7sRhQFMIl82AtwoaKYW5g=="],
+    "@linear/sdk": ["@linear/sdk@103.0.0", "", { "dependencies": { "@graphql-typed-document-node/core": "^3.2.0" } }, "sha512-JLkRB9f16DVVy+PLCIr9o4C4RiXQNIBgLAPk4OJpTxxoO8uxcFfgmTGadO0VNFAbA3BKAHQ96CAeQ2FE1ogviw=="],
 
     "@logdna/tail-file": ["@logdna/tail-file@2.2.0", "", {}, "sha512-XGSsWDweP80Fks16lwkAUIr54ICyBs6PsI4mpfTLQaWgEJRtY9xEV+PeyDpJ+sJEGZxqINlpmAwe/6tS1pP8Ng=="],
 

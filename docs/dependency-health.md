@@ -2,6 +2,9 @@
 
 Last full review: 2026-10-26
 
+Weekly registry-flag check: 2026-11-23, from a consumer — every direct dependency queried, no
+`deprecated` flag set. The next full review is due from 2026-11-26.
+
 Direct dependencies of nzyme's packages that were deprecated, renamed or abandoned, found by the
 registry `deprecated` check or the monthly full review of `/dev:update-packages`. The update run never
 migrates one; it raises each finding until the owner decides. One `###` per package (a family reviewed

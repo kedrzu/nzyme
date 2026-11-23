@@ -287,7 +287,6 @@
         "@nzyme/cli-core": "workspace:*",
         "@nzyme/google-auth": "workspace:*",
         "@nzyme/node-utils": "workspace:*",
-        "@nzyme/project-utils": "workspace:*",
         "@nzyme/utils": "workspace:*",
       },
       "devDependencies": {
@@ -329,7 +328,6 @@
         "@nzyme/cli-core": "workspace:*",
         "@nzyme/google-auth": "workspace:*",
         "@nzyme/node-utils": "workspace:*",
-        "@nzyme/project-utils": "workspace:*",
         "@nzyme/utils": "workspace:*",
         "email-forward-parser": "^1.7.2",
         "email-reply-parser": "^2.3.5",

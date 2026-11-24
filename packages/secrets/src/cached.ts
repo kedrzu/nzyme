@@ -22,7 +22,7 @@ interface CacheItem {
 /**
  * Wraps a store with a cache in the keychain, so a repeated `readAll` within `ttl` makes no store call.
  * The whole read is ONE keychain item per store id, holding JSON `{ at, values }`, so the
- * cache can never hold a mix of two reads or a key the store no longer has. A write deletes the item,
+ * cache can never hold a mix of two reads or a key the store no longer has. A write or delete removes the item,
  * so the next read goes to the store. A keychain failure or a malformed item only warns: the read falls
  * through to the store. Values are kept only in the keychain, never in a file.
  *
@@ -45,6 +45,7 @@ export function cached(store: SecretStore, options: CachedOptions): SecretStore 
         id: store.id,
         readAll,
         write,
+        delete: store.delete ? deleteKeys : undefined,
         refresh,
         login: store.login?.bind(store),
         credentialEnv: store.credentialEnv,
@@ -61,6 +62,11 @@ export function cached(store: SecretStore, options: CachedOptions): SecretStore 
 
     async function write(entries: SecretStoreEntry[]) {
         await store.write(entries);
+        await guarded('deleting from', () => keychain.delete(itemName));
+    }
+
+    async function deleteKeys(keys: string[]) {
+        await store.delete?.(keys);
         await guarded('deleting from', () => keychain.delete(itemName));
     }
 

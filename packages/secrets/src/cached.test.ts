@@ -62,6 +62,18 @@ test('a write reaches the store and invalidates the cache, so the next read sees
     expect(inner.reads).toBe(2);
 });
 
+test('a delete reaches the store and invalidates the cache, so the next read never serves the deleted value', async () => {
+    const inner = createMemoryStore('bw', { A: 'a', B: 'b' });
+    const store = cached(inner.store, { ttl: HOUR, keychain: createMemoryKeychain() });
+
+    await store.readAll();
+    await store.delete?.(['A']);
+
+    expect(inner.values.has('A')).toBe(false);
+    expect(await store.readAll()).toEqual(new Map([['B', 'b']]));
+    expect(inner.reads).toBe(2);
+});
+
 test('a failing inner write leaves the cache untouched', async () => {
     const inner = createMemoryStore('bw', { A: 'a' });
     const store = cached(
@@ -232,6 +244,13 @@ function createMemoryStore(id: string, initial: Record<string, string>) {
         write: (entries: SecretStoreEntry[]) => {
             for (const { key, value } of entries) {
                 values.set(key, value);
+            }
+
+            return Promise.resolve();
+        },
+        delete: (keys: string[]) => {
+            for (const key of keys) {
+                values.delete(key);
             }
 
             return Promise.resolve();

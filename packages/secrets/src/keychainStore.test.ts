@@ -107,3 +107,56 @@ test.each(['not json', '{"A":1}', '[1,2]', '"A"'])(
         expect(keychain.values.has('keychain:app:A')).toBe(false);
     },
 );
+
+test("delete removes only the given keys and their items, leaving the scope's others and other scopes", async () => {
+    const keychain = createMemoryKeychain();
+    const store = keychainStore({ scope: 'app', keychain });
+    const other = keychainStore({ scope: 'other', keychain });
+    await store.write([
+        { key: 'A', value: 'a' },
+        { key: 'B', value: 'b' },
+        { key: 'C', value: 'c' },
+    ]);
+    await other.write([{ key: 'A', value: 'other-a' }]);
+
+    await store.delete?.(['A', 'missing']);
+
+    expect(await store.readAll()).toEqual(
+        new Map([
+            ['B', 'b'],
+            ['C', 'c'],
+        ]),
+    );
+    expect(JSON.parse(keychain.values.get('keychain:app') ?? '')).toEqual(['B', 'C']);
+    expect(keychain.values.has('keychain:app:A')).toBe(false);
+    expect(await other.readAll()).toEqual(new Map([['A', 'other-a']]));
+});
+
+test('a delete interrupted while removing items leaves no indexed key without a value', async () => {
+    const memory = createMemoryKeychain();
+    const keychain = { ...memory, delete: () => Promise.reject(new Error('keychain refused to delete')) };
+    const store = keychainStore({ scope: 'app', keychain });
+    await store.write([
+        { key: 'A', value: 'a' },
+        { key: 'B', value: 'b' },
+    ]);
+
+    await expect(store.delete?.(['A'])).rejects.toThrow('refused');
+
+    expect(JSON.parse(memory.values.get('keychain:app') ?? '')).toEqual(['B']);
+    expect(await store.readAll()).toEqual(new Map([['B', 'b']]));
+});
+
+test.each(['not json', '{"A":1}', '[1,2]', '"A"'])(
+    'a malformed index (%s) makes delete throw and leaves the index and items untouched',
+    async raw => {
+        const keychain = createMemoryKeychain();
+        keychain.values.set('keychain:app', raw);
+        keychain.values.set('keychain:app:A', 'a');
+        const store = keychainStore({ scope: 'app', keychain });
+
+        await expect(store.delete?.(['A'])).rejects.toThrow('keychain:app');
+        expect(keychain.values.get('keychain:app')).toBe(raw);
+        expect(keychain.values.get('keychain:app:A')).toBe('a');
+    },
+);

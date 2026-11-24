@@ -17,13 +17,15 @@ export interface KeychainStoreOptions {
  * secret: `keychain:<scope>:<key>` holds the raw value. `Bun.secrets` cannot list items, so the item
  * `keychain:<scope>` holds a JSON array of the scope's keys. `readAll` returns every indexed key that has
  * an item, skipping one whose item is gone. `write` sets every value item first and the index last, so
- * an interrupted write leaves at worst an unindexed item, never an indexed key without a value.
+ * an interrupted write leaves at worst an unindexed item, never an indexed key without a value. `delete`
+ * goes the other way: it rewrites the index without the keys first and deletes the items after, so an
+ * interrupted delete likewise leaves at worst an unindexed item.
  *
- * A malformed index makes `readAll` and `write` throw, and `write` never overwrites it. Two concurrent
+ * A malformed index makes `readAll`, `write` and `delete` throw, and neither of the last two overwrites it. Two concurrent
  * writes to one scope can drop a key from the index (re-running the write repairs it). There is no
  * `login`, `refresh` or `credentialEnv`: the OS session unlocks the keychain.
  *
- * Outside Bun, without an explicit `keychain`, `readAll` and `write` throw when called.
+ * Outside Bun, without an explicit `keychain`, `readAll`, `write` and `delete` throw when called.
  * @__NO_SIDE_EFFECTS__
  */
 export function keychainStore(options: KeychainStoreOptions): SecretStore {
@@ -35,7 +37,7 @@ export function keychainStore(options: KeychainStoreOptions): SecretStore {
     const id = `keychain:${scope}`;
     const itemName = (key: string) => `${id}:${key}`;
 
-    return { id, readAll, write };
+    return { id, readAll, write, delete: deleteKeys };
 
     function getKeychain() {
         if (!options.keychain && typeof Bun === 'undefined') {
@@ -99,5 +101,17 @@ export function keychainStore(options: KeychainStoreOptions): SecretStore {
         }
 
         await keychain.set(id, JSON.stringify([...keys]));
+    }
+
+    async function deleteKeys(keys: string[]) {
+        const keychain = getKeychain();
+        const indexed = await readIndex(keychain);
+        const removed = new Set(keys);
+        const remaining = indexed.filter(key => !removed.has(key));
+        await keychain.set(id, JSON.stringify(remaining));
+
+        for (const key of removed) {
+            await keychain.delete(itemName(key));
+        }
     }
 }

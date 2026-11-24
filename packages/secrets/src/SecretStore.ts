@@ -26,6 +26,8 @@ export interface SecretStore {
     readAll(): Promise<Map<string, string>>;
     /** Creates or updates the given entries (keys without the prefix). */
     write(entries: SecretStoreEntry[]): Promise<void>;
+    /** Removes the given entries (keys without the prefix); a key that is absent is ignored. Implemented only by stores that can remove. */
+    delete?(keys: string[]): Promise<void>;
     /** Obtains the store's credentials, asking the user through `prompt` when needed. */
     login?(prompt: SecretPrompt): Promise<void>;
     /** Re-reads the store's secrets; implemented only by stores that cache. */

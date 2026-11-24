@@ -47,7 +47,7 @@ The documents live in the repo's main checkout, in `documents/`:
 - A collection is a folder; a document is `<slug>.md`, and its children are in `<slug>/` next to it.
 - `drafts/` holds the user's unpublished documents; `shared-with-me/` the documents shared with the user whose collection the user cannot see.
 - `_attachments/<id>-<name>` holds the files a document links to; a link to a local file is uploaded on the next push.
-- A file put at the root of `documents/` is created in the user's private collection (`privateCollection`); the collection counts only while the user is its sole member (no other users or groups, no workspace-wide access), so one an admin created for them does not qualify. Until a private collection exists, the file is not sent.
+- A file put at the root of `documents/` is created in the user's private collection (`privateCollection`); the collection counts only while the user is its sole member (no other users or groups, no workspace-wide access), so one an admin created for them does not qualify. Until a private collection exists, the file is not sent and the agent is told to run `outline collection create --private`.
 - Such a file stays at the root, with its children in a folder named like it, as does a document the agent moves there; the private collection's own folder holds its documents created in Outline.
 - `recovered/` holds files whose document is gone from Outline while they had unsent edits.
 
@@ -83,6 +83,13 @@ Sharing:
 - `outline share <file> <name>...` shares a synced document with users (exact full name or e-mail) or groups (exact name), with edit rights; `outline unshare <file> <name>...` removes those direct shares; `outline shares <file>` lists them. Each prints the document's direct shares after.
 - Only direct shares are listed and changed; access through a collection or a parent document is not.
 - A name matching nobody or several changes nothing; a file without an `outline:` id is not in Outline yet and is refused.
+
+Collections:
+
+- `outline collection create <name>` creates a collection only its members can reach (never open to the workspace), refusing a name already taken, then pulls so its folder appears and prints the folder. `outline collection create --private` creates the user's private collection (`privateCollection`), recognized by the sync as such; it changes nothing when that collection already exists. A same-named collection that does not qualify as private (shared, or open to the workspace) is left alone and a new one is created.
+- `outline collection share <collection> [name...] [--everyone]` adds users or groups as members with edit rights; `--everyone` gives the whole workspace edit rights. `outline collection unshare` with the same arguments removes members, and `--everyone` leaves the collection to its members. `outline collection shares <collection>` lists who can reach it. Each prints the workspace-wide access, members and groups after.
+- `<collection>` is the collection's folder in `documents/` or its exact name (any case). Every name is resolved first: a collection, person or group matching nobody or several changes nothing.
+- A path that does not exist from the current directory, for these and the document sharing commands, is looked up in the repo's main checkout, where the documents live, so the commands work from a worktree.
 
 Cadence:
 
@@ -147,7 +154,7 @@ await execute({
 });
 ```
 
-- `outline login`, `outline pull` (a full pull that finishes the first download), `outline sync` (pull and push), `outline share|unshare|shares <file>` and `outline hook <session-start|prompt|stop|session-end>` for Claude Code hooks.
+- `outline login`, `outline pull` (a full pull that finishes the first download), `outline sync` (pull and push), `outline share|unshare|shares <file>`, `outline collection create|share|unshare|shares` and `outline hook <session-start|prompt|stop|session-end>` for Claude Code hooks.
 - The documents (`documents/`, `recovered/`) live in the repo's main checkout and the state in `<git-common-dir>/outline-sync/`, so every worktree shares one sync.
 - Only session start and prompt pull (a prompt at most once a minute, a full pass every 15 minutes); stop and session end push. Both skip quietly while another session syncs.
 - `hook` always exits 0. It prints `additionalContext` for the agent, or a Stop block once for a conflict its push created; a missing login or an unreachable Outline is told once per session, other failures go to `hook.log` in the state directory.
@@ -165,4 +172,4 @@ const doc = outline.addDocument({ collection: wiki, title: 'Offer', text: 'Hello
 const client = outline.clientAs(ana);
 ```
 
-It implements the endpoints the client calls, with per-user visibility (collection permissions, private collections, drafts, direct document shares for users and groups), `revision` counters, `lastRevision` conflicts, archive, a pluggable text normalizer (`normalizeText`) and `injectRateLimit`. The Outline behaviour lives in functions named after the rule they model (`canReadDocument`, `matchesFilters`, ...), so a difference found against real Outline is fixed in one place.
+It implements the endpoints the client calls, with per-user visibility (collection permissions, private collections, creating collections and changing their members and permission as a collection or workspace admin, drafts, direct document shares for users and groups), `revision` counters, `lastRevision` conflicts, archive, a pluggable text normalizer (`normalizeText`) and `injectRateLimit`. The Outline behaviour lives in functions named after the rule they model (`collectionAccess`, `mayManageCollection`, `matchesFilters`, ...), so a difference found against real Outline is fixed in one place.

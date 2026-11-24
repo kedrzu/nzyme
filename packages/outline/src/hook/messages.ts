@@ -90,9 +90,9 @@ export function renderReport(params: RenderReportParams): string {
             paragraphs.push(
                 `Outline sync: a file at the top of ${documents} goes to the user's private Outline collection ` +
                     `"${lookup.name}", ${why}, so these were not sent: ${docs(atRoot.map(skip => skip.path))}. ` +
-                    `Tell the user ${plain} that they need to create a collection named "${lookup.name}" themselves, ` +
-                    'with no workspace-wide access and nobody else added (one created by an admin keeps the admin as a member); ' +
-                    "until then a document can go into an existing collection's folder instead.",
+                    `Run \`${params.commandHint} collection create --private\` yourself: it creates the collection ` +
+                    'with no workspace-wide access and the user as its only member, and the next sync sends these files. ' +
+                    `Tell the user ${plain} only if something remains for them to do.`,
             );
         }
         const skipped = push.skipped.filter(skip => !atRoot.includes(skip));

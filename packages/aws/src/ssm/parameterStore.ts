@@ -1,4 +1,5 @@
 import {
+    DeleteParametersCommand,
     DescribeParametersCommand,
     GetParametersByPathCommand,
     GetParametersCommand,
@@ -48,6 +49,9 @@ export interface ParameterStoreOptions {
 /** `GetParameters` accepts at most this many names per call. */
 const GET_PARAMETERS_BATCH_SIZE = 10;
 
+/** `DeleteParameters` accepts at most this many names per call. */
+const DELETE_PARAMETERS_BATCH_SIZE = 10;
+
 /**
  * An AWS Systems Manager Parameter Store prefix as a secret store. Values are read decrypted and
  * written as `SecureString`, standard tier.
@@ -76,6 +80,7 @@ export function parameterStore(options: ParameterStoreOptions): SecretStore {
         id: `ssm:${region ?? 'default'}${endpoint == null ? '' : `@${endpoint}`}:${prefix}${profile == null ? '' : `:${profile}`}`,
         readAll,
         write,
+        delete: remove,
     };
 
     async function readAll() {
@@ -157,6 +162,16 @@ export function parameterStore(options: ParameterStoreOptions): SecretStore {
                     Tier: 'Standard',
                 }),
             );
+        }
+    }
+
+    async function remove(keys: string[]) {
+        // Like `readAll`, only direct members of the prefix are the store's: an empty key would name the
+        // path itself, and a key with `/` in a path store would reach a deeper path.
+        const names = keys.filter(key => key !== '' && !(isPath && key.includes('/'))).map(key => prefix + key);
+        // Names the service reports as `InvalidParameters` do not exist: nothing to remove, not an error.
+        for (const batch of splitIntoChunks(names, DELETE_PARAMETERS_BATCH_SIZE)) {
+            await client.send(new DeleteParametersCommand({ Names: batch }));
         }
     }
 }

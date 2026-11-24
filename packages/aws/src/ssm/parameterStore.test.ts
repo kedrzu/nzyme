@@ -55,6 +55,12 @@ function fakeSsm(parameters: FakeParameter[], pageSize = 1000) {
             };
         }
 
+        if (command === 'DeleteParametersCommand') {
+            const names = strings(input['Names']);
+            const existing = names.filter(name => parameters.some(p => p.name === name));
+            return { DeletedParameters: existing, InvalidParameters: names.filter(name => !existing.includes(name)) };
+        }
+
         return {};
     }
 }
@@ -155,6 +161,30 @@ test('write sends the keyId on every PutParameter when the store has one, and no
 
     expect(keyed.calls.map(c => c.input['KeyId'])).toEqual(['alias/parameter-store', 'alias/parameter-store']);
     expect(plain.calls.every(c => !('KeyId' in c.input) || c.input['KeyId'] === undefined)).toBe(true);
+});
+
+test('delete removes only prefixed names, in batches of at most 10', async () => {
+    const parameters = Array.from({ length: 25 }, (_, i) => ({ name: `/secrets/dev/K${i}`, value: 'v' }));
+    const { client, calls } = fakeSsm(parameters);
+    await parameterStore({ prefix: '/secrets/dev', client }).delete?.([
+        ...parameters.map(p => p.name.slice('/secrets/dev/'.length)),
+        'nested/DEEP',
+        '',
+    ]);
+
+    expect(calls.every(c => c.command === 'DeleteParametersCommand')).toBe(true);
+    expect(calls.map(c => strings(c.input['Names']).length)).toEqual([10, 10, 5]);
+    expect(calls.flatMap(c => strings(c.input['Names'])).every(name => name.startsWith('/secrets/dev/K'))).toBe(true);
+});
+
+test('delete of an absent key is not an error and makes no call for no keys', async () => {
+    const { client, calls } = fakeSsm([{ name: 'N_A', value: 'a' }]);
+    const store = parameterStore({ prefix: 'N_', client });
+
+    await store.delete?.(['MISSING', 'A']);
+    await store.delete?.([]);
+
+    expect(calls.map(c => c.input)).toEqual([{ Names: ['N_MISSING', 'N_A'] }]);
 });
 
 test('id differs by region, endpoint, profile and prefix', () => {

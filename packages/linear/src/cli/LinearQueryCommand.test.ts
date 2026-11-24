@@ -44,6 +44,19 @@ test('success prints exactly the compact data as one line, and sends the token i
     expect(requests[0]?.body).toEqual({ query: '{ viewer { name } }' });
 });
 
+// The `task` commands' config may carry an OAuth access token instead of a key; Linear takes it only as `Bearer`.
+test('a linear config with an access token sends it as Bearer', async () => {
+    const requests = stubFetch(Response.json({ data: { viewer: { name: 'Ada' } } }));
+
+    const result = await runQuery(['{ viewer { name } }'], '', {
+        prefix: 'linear',
+        linear: { accessToken: FAKE_TOKEN },
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(requests[0]?.headers.authorization).toBe(`Bearer ${FAKE_TOKEN}`);
+});
+
 test('--vars are sent as variables', async () => {
     const requests = stubFetch(Response.json({ data: { issue: null } }));
 

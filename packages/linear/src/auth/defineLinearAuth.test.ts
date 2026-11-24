@@ -92,6 +92,42 @@ test('asks for a new sign-in, naming the sign-in command, when Linear answers in
     expect(store.writes).toEqual([]);
 });
 
+// Linear rotates the refresh token on every refresh: of two processes refreshing at once, one is refused.
+test('takes the grant a concurrent refresh stored when Linear refuses the refresh token', async () => {
+    const { auth, store } = setUp({
+        stored: session(ACCESS_TOKEN, REFRESH_TOKEN, Date.now() - 1000),
+        linear: () => {
+            // The other process wins the race and stores its grant while this one's request is refused.
+            store.values.set(
+                'LINEAR_SESSION',
+                session(NEW_ACCESS_TOKEN, NEW_REFRESH_TOKEN, Date.now() + 24 * HOUR).LINEAR_SESSION ?? '',
+            );
+            return { status: 400, body: { error: 'invalid_grant' } };
+        },
+    });
+
+    expect(await auth.get()).toBe(NEW_ACCESS_TOKEN);
+    expect(store.writes).toEqual([]);
+});
+
+// The winner's write can land after the refusal reached this process: it keeps reading for a moment.
+test("waits briefly for a concurrent refresh's grant that lands after Linear refused this one", async () => {
+    const { auth, store } = setUp({
+        stored: session(ACCESS_TOKEN, REFRESH_TOKEN, Date.now() - 1000),
+        linear: () => {
+            setTimeout(() => {
+                store.values.set(
+                    'LINEAR_SESSION',
+                    session(NEW_ACCESS_TOKEN, NEW_REFRESH_TOKEN, Date.now() + 24 * HOUR).LINEAR_SESSION ?? '',
+                );
+            }, 700);
+            return { status: 400, body: { error: 'invalid_grant' } };
+        },
+    });
+
+    expect(await auth.get()).toBe(NEW_ACCESS_TOKEN);
+});
+
 // A wrong client id or an outage is not the person's sign-in: sending them to sign in again would not help.
 test.each([
     ['invalid_client', { status: 400, body: { error: 'invalid_client' } }],

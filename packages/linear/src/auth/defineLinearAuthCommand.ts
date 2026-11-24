@@ -96,7 +96,16 @@ export function defineLinearAuthCommand(params: LinearAuthCommandParams): Comman
             await auth.store(grant);
             // Only now: the old secrets stay until the new sign-in is safely stored.
             if (replaces?.length) {
-                await this.container.resolve(auth.options.store).delete?.(replaces.map(secret => secret.name));
+                const names = replaces.map(secret => secret.name);
+                try {
+                    await this.container.resolve(auth.options.store).delete?.(names);
+                } catch (error) {
+                    // The sign-in is stored and works; a leftover old secret is no reason to fail it.
+                    this.context.stderr.write(
+                        `Could not remove ${names.join(', ')} from your secret store (${error instanceof Error ? error.message : String(error)}) — ` +
+                            'nothing reads it any more; remove it by hand.\n',
+                    );
+                }
             }
 
             this.context.stdout.write(`Signed in to Linear as ${identity.name} (workspace ${identity.urlKey}).\n`);

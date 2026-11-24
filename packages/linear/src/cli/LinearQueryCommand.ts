@@ -59,7 +59,7 @@ export function defineLinearQueryCommand(options: LinearApiCommandsOptions): Com
 
             let response: LinearGraphqlResponse;
             try {
-                response = await requestLinearGraphql({ token, query, variables });
+                response = await requestLinearGraphql({ authorization: token, query, variables });
             } catch (error) {
                 this.context.stderr.write(
                     `Request to Linear failed: ${error instanceof Error ? error.message : 'unknown error'}\n`,

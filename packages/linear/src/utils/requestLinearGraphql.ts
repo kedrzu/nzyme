@@ -4,8 +4,11 @@ const LINEAR_GRAPHQL_URL = 'https://api.linear.app/graphql';
 
 /** Arguments of {@link requestLinearGraphql}. */
 export interface RequestLinearGraphqlParams {
-    /** A personal API key, sent as the bare `Authorization` header Linear expects for one. */
-    token: string;
+    /**
+     * The full `Authorization` header value, built by the caller: a personal API key bare, an OAuth
+     * access token as `Bearer <token>`.
+     */
+    authorization: string;
     query: string;
     variables?: Record<string, unknown>;
 }
@@ -30,7 +33,7 @@ export interface LinearGraphqlResponse {
 export async function requestLinearGraphql(params: RequestLinearGraphqlParams): Promise<LinearGraphqlResponse> {
     const response = await fetch(LINEAR_GRAPHQL_URL, {
         method: 'POST',
-        headers: { Authorization: params.token, 'Content-Type': 'application/json' },
+        headers: { Authorization: params.authorization, 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: params.query, variables: params.variables }),
     });
 

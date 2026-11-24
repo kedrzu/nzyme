@@ -30,7 +30,7 @@ export class ShareTargetError extends Error {
 export async function findShareTarget(client: OutlineClient, name: string): Promise<ShareTarget> {
     const key = nameKey(name);
     const users = (await listAll(page => client.users.list({ query: name.trim(), ...page }))).filter(
-        user => nameKey(user.name) === key || nameKey(user.email) === key,
+        user => nameKey(user.name) === key || (user.email != null && nameKey(user.email) === key),
     );
     const groups = (await listAll(page => client.groups.list(page))).filter(group => nameKey(group.name) === key);
     const [user, group] = [users[0], groups[0]];

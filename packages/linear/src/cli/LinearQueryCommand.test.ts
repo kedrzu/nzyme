@@ -2,12 +2,21 @@ import { PassThrough, Readable } from 'node:stream';
 
 import type { CommandContext } from '@nzyme/cli-core/Command.js';
 import { createContainer } from '@nzyme/ioc/Container.js';
+import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
+import { defineService } from '@nzyme/ioc/Service.js';
+import { defineSecret } from '@nzyme/secrets/defineSecret.js';
+import type { SecretStore } from '@nzyme/secrets/SecretStore.js';
 import { afterEach, expect, test } from 'bun:test';
 import { Cli } from 'clipanion';
 
+import { defineLinearAuth } from '../auth/defineLinearAuth.js';
 import { defineLinearQueryCommand } from './LinearQueryCommand.js';
+import { defineLinearApiCommands } from './defineLinearApiCommands.js';
+import type { LinearApiCommandsOptions } from './defineLinearApiCommands.js';
 
 const FAKE_TOKEN = 'lin_api_must-never-be-printed';
+const OAUTH_TOKEN = 'lin_oauth_must-never-be-printed';
+const LINEAR_SESSION = defineSecret('LINEAR_SESSION');
 const originalFetch = globalThis.fetch;
 
 interface RecordedRequest {
@@ -154,6 +163,62 @@ test('the token never reaches stdout or stderr, on success or failure', async ()
     }
 });
 
+test('with auth the header is Bearer and the access token from the stored sign-in', async () => {
+    const requests = stubFetch(Response.json({ data: { viewer: { name: 'Ada' } } }));
+    const auth = createAuth({
+        LINEAR_SESSION: JSON.stringify({
+            accessToken: OAUTH_TOKEN,
+            refreshToken: 'refresh-sentinel',
+            expiresAt: Date.now() + 2 * 60 * 60 * 1000,
+        }),
+    });
+
+    const result = await runQuery(['{ viewer { name } }'], '', { prefix: 'linear', auth });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe(`${JSON.stringify({ viewer: { name: 'Ada' } })}\n`);
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.headers.authorization).toBe(`Bearer ${OAUTH_TOKEN}`);
+    expect(result.stderr).not.toContain(OAUTH_TOKEN);
+});
+
+test('with auth and no sign-in stored it exits 1 with the one sign-in line on stderr, nothing on stdout, no request', async () => {
+    const requests = stubFetch(Response.json({ data: {} }));
+    const auth = createAuth({});
+
+    const result = await runQuery(['{ viewer { name } }'], '', { prefix: 'linear', auth });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toBe('No Linear sign-in is stored — run `bun linear auth`, then retry\n');
+    expect(requests).toHaveLength(0);
+});
+
+test('defineLinearApiCommands registers `linear auth` with auth only', () => {
+    const paths = (options: LinearApiCommandsOptions) =>
+        defineLinearApiCommands(options).flatMap(command => (command.paths ?? []).map(path => path.join(' ')));
+
+    expect(paths({ prefix: 'linear', auth: createAuth({}) })).toEqual(['linear query', 'linear schema', 'linear auth']);
+    expect(paths({ prefix: 'linear', linear: { apiToken: FAKE_TOKEN } })).toEqual(['linear query', 'linear schema']);
+});
+
+/** The auth unit over an in-memory store holding `stored`. */
+function createAuth(stored: Record<string, string>) {
+    const store: SecretStore = {
+        id: 'fake:personal',
+        readAll: () => Promise.resolve(new Map(Object.entries(stored))),
+        write: () => Promise.resolve(),
+    };
+    return defineLinearAuth({
+        store: defineService<SecretStore>({ name: 'TestLinearStore', setup: () => store }),
+        token: LINEAR_SESSION,
+        clientId: 'client-1',
+        scopes: ['read', 'write'],
+        redirectUri: 'http://localhost:8761/callback',
+        signInCommand: 'bun linear auth',
+    });
+}
+
 function stubFetch(response: Response): RecordedRequest[] {
     const requests: RecordedRequest[] = [];
     globalThis.fetch = Object.assign(
@@ -171,7 +236,7 @@ function stubFetch(response: Response): RecordedRequest[] {
     return requests;
 }
 
-async function runQuery(args: string[], stdin = '') {
+async function runQuery(args: string[], stdin = '', options?: LinearApiCommandsOptions) {
     const stdoutStream = new PassThrough();
     const stderrStream = new PassThrough();
     let stdout = '';
@@ -184,9 +249,10 @@ async function runQuery(args: string[], stdin = '') {
     });
 
     const container = createContainer();
+    container.set(EnvVariables, {});
 
     const cli = new Cli<CommandContext>({ binaryName: 'healed', enableColors: false });
-    cli.register(defineLinearQueryCommand({ prefix: 'linear', linear: { apiToken: FAKE_TOKEN } }));
+    cli.register(defineLinearQueryCommand(options ?? { prefix: 'linear', linear: { apiToken: FAKE_TOKEN } }));
 
     const exitCode = await cli.run(['linear', 'query', ...args], {
         container,

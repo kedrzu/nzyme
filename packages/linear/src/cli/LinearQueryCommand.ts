@@ -5,6 +5,7 @@ import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
 import { LinearSignInRequiredError } from '../auth/LinearSignInRequiredError.js';
 import { getCommandPaths } from '../utils/getCommandPaths.js';
+import { getLinearAuthorization } from '../utils/createLinearClient.js';
 import { getLinearConfig } from '../utils/getLinearConfig.js';
 import { requestLinearGraphql } from '../utils/requestLinearGraphql.js';
 import type { LinearGraphqlResponse } from '../utils/requestLinearGraphql.js';
@@ -112,7 +113,7 @@ export function defineLinearQueryCommand(options: LinearApiCommandsOptions): Com
             if ('auth' in options) {
                 return `Bearer ${await this.container.resolve(options.auth).get()}`;
             }
-            return (await getLinearConfig(options)).apiToken;
+            return getLinearAuthorization(await getLinearConfig(options));
         }
     };
 }

@@ -113,6 +113,22 @@ test('auth accepts the configured workspace, and a store that cannot delete is n
     expect(operations.map(operation => operation.kind)).toEqual(['write']);
 });
 
+// The old key is only cleanup: a store refusing to remove it must not fail a sign-in that is already stored.
+test('auth succeeds and says what to remove by hand when the replaced secret cannot be deleted', async () => {
+    stubLinear();
+
+    const { result, operations } = await signIn({
+        redirectUri: await freeRedirectUri(),
+        replaces: true,
+        deleteFails: true,
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(operations.map(operation => operation.kind)).toEqual(['write']);
+    expect(result.stderr).toContain('Could not remove LINEAR_TOKEN from your secret store (AccessDeniedException)');
+    expectNoToken(result);
+});
+
 test("auth stores nothing and names only Linear's error when it refuses the code exchange", async () => {
     stubLinear({ exchange: { status: 400, body: { error: 'invalid_grant', access_token: ACCESS_TOKEN } } });
 
@@ -197,6 +213,8 @@ interface SignInOptions {
     replaces?: boolean;
     /** Whether the store implements `delete`; true by default. */
     canDelete?: boolean;
+    /** Whether the store's `delete` fails. */
+    deleteFails?: boolean;
 }
 
 /**
@@ -232,6 +250,10 @@ async function signIn(options: SignInOptions) {
     };
     if (options.canDelete !== false) {
         store.delete = keys => {
+            if (options.deleteFails) {
+                return Promise.reject(new Error('AccessDeniedException'));
+            }
+
             operations.push({ kind: 'delete', keys });
             return Promise.resolve();
         };

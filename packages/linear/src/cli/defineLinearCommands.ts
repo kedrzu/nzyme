@@ -25,6 +25,7 @@ import { findStackForPr } from '@nzyme/github-cli/utils/stacksApi.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
 
 import { createLinearClient } from '../utils/createLinearClient.js';
+import type { LinearCredentials } from '../utils/createLinearClient.js';
 import { createLinearIssue } from '../utils/createLinearIssue.js';
 import { extractTaskIdFromBranch } from '../utils/extractTaskIdFromBranch.js';
 import { formatProjectStatus } from '../utils/formatProjectStatus.js';
@@ -37,14 +38,15 @@ import { switchToTask } from '../utils/switchToTask.js';
 import type { TaskSwitchedHook } from './TaskSwitchedHook.js';
 
 /**
- * Configuration for Linear API access.
+ * Configuration for Linear API access: the credentials (a personal API key or an OAuth access token,
+ * resolved once per command) and how task IDs are read.
  */
-export interface LinearConfig {
-    /**
-     * Linear API token.
-     */
-    apiToken: string;
+export type LinearConfig = LinearCredentials & LinearTaskConfig;
 
+/**
+ * How the task commands read and act on Linear tasks.
+ */
+export interface LinearTaskConfig {
     /**
      * Default team prefix (e.g., 'ABC' for ABC-123).
      */

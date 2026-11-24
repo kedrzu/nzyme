@@ -2,6 +2,7 @@ import { Fetch } from '@nzyme/ioc/Fetch.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 import { ApplicationError } from '@nzyme/logging/ApplicationError.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
+import { waitFor } from '@nzyme/utils/waitFor.js';
 
 import type { LinearAuthOptions } from './LinearAuthOptions.js';
 import { LinearSignInRequiredError } from './LinearSignInRequiredError.js';
@@ -32,6 +33,14 @@ export interface LinearAuthShape {
 
 /** A token is refreshed this long before it expires, so it does not die halfway through a long command. */
 const REFRESH_MARGIN_MS = 60 * 60 * 1000;
+
+/**
+ * How often, and how far apart, a process whose refresh token Linear refused re-reads the store for the
+ * grant a concurrent refresh stored: Linear rotates the refresh token on every refresh, so of two processes
+ * refreshing at once one is refused, and the winner's write may land just after.
+ */
+const TAKEOVER_READS = 4;
+const TAKEOVER_INTERVAL_MS = 500;
 
 /** A grant as it sits in the token secret, a JSON object. */
 interface StoredGrant {
@@ -96,6 +105,11 @@ export function defineLinearAuth(options: LinearAuthOptions) {
 
                 const refreshed = await refresh(current.refreshToken);
                 if (!refreshed) {
+                    const stored = await readRefreshedElsewhere(current.refreshToken);
+                    if (stored) {
+                        return stored.accessToken;
+                    }
+
                     throw new LinearSignInRequiredError('Your Linear sign-in has expired', options.signInCommand);
                 }
 
@@ -110,6 +124,26 @@ export function defineLinearAuth(options: LinearAuthOptions) {
                     expiresAt: Date.now() + grant.expiresIn * 1000,
                 };
                 await secretStore.write([{ key: secretName, value: JSON.stringify(stored) }]);
+            }
+
+            /**
+             * The usable grant another process stored after refreshing with `spentRefreshToken`, or `null`
+             * when none appears: then the refusal was the sign-in's own.
+             */
+            async function readRefreshedElsewhere(spentRefreshToken: string) {
+                for (let read = 0; read < TAKEOVER_READS; read++) {
+                    if (read > 0) {
+                        await waitFor(TAKEOVER_INTERVAL_MS);
+                    }
+
+                    await secretStore.refresh?.();
+                    const grant = await readGrant();
+                    if (grant && grant.refreshToken !== spentRefreshToken && isUsable(grant)) {
+                        return grant;
+                    }
+                }
+
+                return null;
             }
 
             async function readGrant() {

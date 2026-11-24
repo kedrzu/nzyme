@@ -1,5 +1,6 @@
 import { template, types } from '@babel/core';
 import type { NodePath, PluginObject } from '@babel/core';
+import type { Immutable } from '@nzyme/types/Immutable.js';
 
 /**
  * A single sugar method the `cloudfront-js-2.0` runtime lacks, together with the ES5 replacement
@@ -40,7 +41,7 @@ const FALLBACK_HELPER = `
  * guards on `Array.isArray` (plus `typeof === "string"` for `at`) and otherwise defers to
  * {@link FALLBACK_HELPER}.
  */
-const METHOD_HELPERS: Record<string, CloudFrontMethodHelper> = {
+const METHOD_HELPERS: Immutable<Record<string, CloudFrontMethodHelper>> = {
     toSorted: {
         argumentCount: 1,
         source: `
@@ -170,7 +171,7 @@ const METHOD_HELPERS: Record<string, CloudFrontMethodHelper> = {
  * binding that happens to be called `Object`. `fromEntries` takes an array of pairs — the runtime
  * has no iterators to spread anyway.
  */
-const OBJECT_STATIC_HELPERS: Record<string, CloudFrontMethodHelper> = {
+const OBJECT_STATIC_HELPERS: Immutable<Record<string, CloudFrontMethodHelper>> = {
     fromEntries: {
         argumentCount: 1,
         source: `
@@ -193,6 +194,7 @@ const OBJECT_STATIC_HELPERS: Record<string, CloudFrontMethodHelper> = {
     },
 };
 
+// oxlint-disable-next-line nzyme/no-module-state -- keyed by the Babel program being compiled, so an entry never crosses into another compilation.
 const helperNamesByProgram = new WeakMap<object, Map<string, string>>();
 
 /**

@@ -58,7 +58,7 @@ async function main() {
 
         const tarball = await pack(pkg, outDir);
         await assertNoWorkspaceProtocol(pkg, tarball);
-        await publish(tarball, dryRun);
+        await publish(pkg, tarball, dryRun);
         console.log(`✅ ${pkg.name}@${pkg.version}${dryRun ? ' (dry run)' : ''}`);
     }
 }
@@ -191,7 +191,14 @@ async function assertNoWorkspaceProtocol(pkg: WorkspacePackage, tarball: string)
     }
 }
 
-async function publish(tarball: string, dryRun: boolean) {
+/**
+ * How many times a publish is attempted when the provenance transparency log (Sigstore's Rekor) answers
+ * 409: it stored the first submission but answered too late, npm resubmitted and got told the entry
+ * already exists. A new attempt signs again, so it makes a new entry.
+ */
+const TLOG_CONFLICT_ATTEMPTS = 3;
+
+async function publish(pkg: WorkspacePackage, tarball: string, dryRun: boolean) {
     const args = ['--access', 'public'];
     if (dryRun) {
         args.push('--dry-run');
@@ -200,5 +207,17 @@ async function publish(tarball: string, dryRun: boolean) {
         args.push('--provenance');
     }
 
-    await $`npm publish ${tarball} ${args}`.quiet();
+    for (let attempt = 1; ; attempt++) {
+        const result = await $`npm publish ${tarball} ${args}`.quiet().nothrow();
+        if (result.exitCode === 0) {
+            return;
+        }
+
+        const stderr = result.stderr.toString();
+        if (!stderr.includes('TLOG_CREATE_ENTRY_ERROR') || attempt >= TLOG_CONFLICT_ATTEMPTS) {
+            throw new Error(`npm publish ${pkg.name}@${pkg.version} failed:\n${stderr}`);
+        }
+
+        console.log(`🔁 ${pkg.name}@${pkg.version}: transparency log conflict, publishing again`);
+    }
 }

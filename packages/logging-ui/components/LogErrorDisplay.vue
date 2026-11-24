@@ -187,8 +187,7 @@ function formatValue(value: unknown): string {
                 class="stack-link"
                 >{{ frame.filePath }}</a
               >
-              <template v-else>{{ frame.filePath }}</template
-              >)
+              <template v-else>{{ frame.filePath }}</template>)
             </span>
           </template>
           <template v-else-if="frame.type === 'simple'">

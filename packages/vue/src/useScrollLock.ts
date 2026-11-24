@@ -13,6 +13,7 @@ interface ScrollLockOptions {
 // Because scroll lock can be called from multiple components,
 // we need to track how many components are locking the scroll.
 // Otherwise one component releasing the lock would release it for all.
+// oxlint-disable-next-line nzyme/no-module-state -- counts locks on the one document body; each component releases its own on unmount.
 let lockCount = 0;
 
 /**

@@ -28,7 +28,7 @@ import type { ObjectDirective } from 'vue';
  *
  * Source: https://github.com/shimyshack/uid
  */
-export const vUid: ObjectDirective<Element> = {
+export const vUid: Readonly<ObjectDirective<Element>> = {
     created(el) {
         el.setAttribute('id', el.id || randomId());
     },

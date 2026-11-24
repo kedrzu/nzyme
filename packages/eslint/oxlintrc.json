@@ -30,6 +30,25 @@
         // in the shipped build while the unbundled tests stayed green. Such a call is either dead
         // code or proof the function has side effects and must lose the annotation.
         "nzyme/no-unused-no-side-effects-result": "error",
+        // Module-level state that nobody declared. Test selection by recorded execution assumes state
+        // shared between tests lives only in declared places: a cache one test fills lazily would let
+        // the next test's trace miss the code that produced its data. Allowed at top level: functions,
+        // primitives, immutable values, calls to functions declared `@__NO_SIDE_EFFECTS__` (the
+        // author vouches they are idempotent and tested) and calls into the packages listed here,
+        // which cannot carry the annotation. A repo with other such packages restates the entry.
+        "nzyme/no-module-state": [
+            "error",
+            {
+                "externalPackages": [
+                    "@playwright/test",
+                    "fast-xml-parser",
+                    "node:path",
+                    "node:url",
+                    "remark",
+                    "vue#defineComponent"
+                ]
+            }
+        ],
         // `x == null` is the idiomatic "null or undefined" check and is deliberately kept; without
         // the carve-out the rule reports 375 of them and buries the handful of real loose
         // comparisons.
@@ -283,6 +302,32 @@
             // type, with no failure to point at. Ordinary source keeps the rule.
             "files": ["**/*.d.ts"],
             "rules": { "import/no-empty-named-blocks": "off" }
+        },
+        {
+            // A test file is the unit selection runs or skips as a whole, so state it shares between
+            // its own tests is never split across two recorded traces. A Vue SFC's `<script setup>`
+            // runs per component instance, so its top level is not module state at all. A tool's
+            // config file is read once per process and never imported by the code under test.
+            "files": [
+                "**/*.test.ts",
+                "**/*.test.tsx",
+                "**/*.spec.ts",
+                "**/*.spec.tsx",
+                "**/*.vue",
+                "**/*.config.ts",
+                "**/*.config.mts",
+                "**/*.config.js",
+                "**/*.config.mjs"
+            ],
+            "rules": { "nzyme/no-module-state": "off" }
+        },
+        {
+            // A story that passes `aria-*` to a component can make an axe failure go away without
+            // the component ever becoming accessible, and the next consumer ships the same
+            // violation. Stories are where that silencing happens, so the rule is scoped to them
+            // here, by file kind; the rule itself never looks at the filename.
+            "files": ["**/*.stories.tsx"],
+            "rules": { "nzyme/no-aria-on-component-in-story": "error" }
         }
     ]
 }

@@ -26,11 +26,15 @@ export interface OxlintRuleMeta {
     docs: { description: string };
     /** Message templates, selected by the `messageId` passed to `report`. */
     messages: Record<string, string>;
+    /** JSON Schema of the options array; mandatory once a rule takes options. */
+    schema?: object[];
 }
 
 export interface OxlintRuleContext {
     /** Absolute path of the file being linted. */
     filename: string;
+    /** The rule's options from the config — the array after the severity, `[]` when none. */
+    options: readonly unknown[];
     sourceCode: OxlintSourceCode;
     report(diagnostic: OxlintDiagnostic): void;
 }
@@ -99,6 +103,8 @@ export interface OxlintDefinition {
  */
 export interface OxlintVisitor {
     ExpressionStatement?(node: OxlintExpressionStatement): void;
+    Program?(node: OxlintProgram): void;
+    JSXOpeningElement?(node: OxlintJsxOpeningElement): void;
 }
 
 /**
@@ -116,7 +122,14 @@ export interface OxlintNodeTypes {
     Identifier: OxlintIdentifier;
     ImportDeclaration: OxlintImportDeclaration;
     ImportSpecifier: OxlintImportSpecifier;
+    JSXAttribute: OxlintJsxAttribute;
+    JSXIdentifier: OxlintJsxIdentifier;
+    JSXMemberExpression: OxlintJsxMemberExpression;
+    MemberExpression: OxlintMemberExpression;
+    TSTypeReference: OxlintTsTypeReference;
+    TSTypeOperator: OxlintTsTypeOperator;
     UnaryExpression: OxlintUnaryExpression;
+    VariableDeclaration: OxlintVariableDeclaration;
 }
 
 export interface OxlintAwaitExpression {
@@ -127,6 +140,56 @@ export interface OxlintAwaitExpression {
 export interface OxlintCallExpression {
     type: 'CallExpression';
     callee: OxlintNode;
+    arguments: OxlintNode[];
+}
+
+/**
+ * The top-level nodes `no-module-state` walks. Their `type` names several AST kinds each, so they are
+ * read through a `switch` on `type` rather than narrowed by `isNode`.
+ */
+export interface OxlintProgram {
+    type: 'Program';
+    body: OxlintNode[];
+}
+
+export interface OxlintVariableDeclaration {
+    type: 'VariableDeclaration';
+    /** `const`, `let`, `var`, `using` or `await using`. */
+    kind: string;
+    declarations: OxlintVariableDeclarator[];
+    declare?: boolean;
+}
+
+export interface OxlintVariableDeclarator {
+    type: 'VariableDeclarator';
+    /** An `Identifier`, or an object/array pattern; either may carry a type annotation. */
+    id: OxlintNode & { typeAnnotation?: OxlintTsTypeAnnotation | null };
+    init: OxlintNode | null;
+}
+
+export interface OxlintTsTypeAnnotation {
+    type: 'TSTypeAnnotation';
+    typeAnnotation: OxlintNode;
+}
+
+export interface OxlintTsTypeReference {
+    type: 'TSTypeReference';
+    /** An `Identifier`, or a `TSQualifiedName` for `A.B`. */
+    typeName: OxlintNode;
+}
+
+export interface OxlintTsTypeOperator {
+    type: 'TSTypeOperator';
+    /** `readonly`, `keyof` or `unique`. */
+    operator: string;
+}
+
+export interface OxlintMemberExpression {
+    type: 'MemberExpression';
+    object: OxlintNode;
+    /** An `Identifier` when not `computed`; any expression when it is. */
+    property: OxlintNode;
+    computed: boolean;
 }
 
 export interface OxlintExpressionStatement {
@@ -145,6 +208,41 @@ export interface OxlintImportDeclaration {
     source: { value: string };
 }
 
+/**
+ * Any node whose fields `no-module-state` reads only after a `switch` on `type` told it which kind it
+ * holds. Every field is optional, so a read can never claim more than the AST guarantees.
+ */
+export interface OxlintAnyNode {
+    type: string;
+    argument?: OxlintNode | null;
+    arguments?: OxlintNode[];
+    alternate?: OxlintNode | null;
+    body?: OxlintNode | OxlintNode[] | null;
+    callee?: OxlintNode;
+    computed?: boolean;
+    consequent?: OxlintNode;
+    declaration?: OxlintNode | null;
+    declare?: boolean;
+    directive?: string | null;
+    elements?: (OxlintNode | null)[];
+    expression?: OxlintNode;
+    expressions?: OxlintNode[];
+    key?: OxlintNode;
+    left?: OxlintNode;
+    object?: OxlintNode;
+    properties?: OxlintNode[];
+    property?: OxlintNode;
+    quasi?: OxlintNode;
+    readonly?: boolean;
+    right?: OxlintNode;
+    static?: boolean;
+    superClass?: OxlintNode | null;
+    tag?: OxlintNode;
+    test?: OxlintNode;
+    typeAnnotation?: OxlintNode | null;
+    value?: OxlintNode | null;
+}
+
 export interface OxlintImportSpecifier {
     type: 'ImportSpecifier';
     /** Name in the target module — an `Identifier`, or a literal for a string-named export. */
@@ -155,4 +253,27 @@ export interface OxlintUnaryExpression {
     type: 'UnaryExpression';
     operator: string;
     argument: OxlintNode;
+}
+
+export interface OxlintJsxOpeningElement {
+    type: 'JSXOpeningElement';
+    /** `JSXIdentifier`, `JSXMemberExpression` or `JSXNamespacedName`. */
+    name: OxlintNode;
+    /** `JSXAttribute`s and `JSXSpreadAttribute`s, in source order. */
+    attributes: OxlintNode[];
+}
+
+export interface OxlintJsxAttribute {
+    type: 'JSXAttribute';
+    /** A `JSXIdentifier`, or a `JSXNamespacedName` for `xlink:href`. */
+    name: OxlintNode;
+}
+
+export interface OxlintJsxIdentifier {
+    type: 'JSXIdentifier';
+    name: string;
+}
+
+export interface OxlintJsxMemberExpression {
+    type: 'JSXMemberExpression';
 }

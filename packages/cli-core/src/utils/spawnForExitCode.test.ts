@@ -1,4 +1,10 @@
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
 import { expect, test } from 'bun:test';
+
+import { spawnForExitCode } from './spawnForExitCode.js';
 
 const MODULE_PATH = new URL('./spawnForExitCode.ts', import.meta.url).pathname;
 
@@ -36,4 +42,20 @@ test('outlives SIGINT and forwards SIGTERM to the command, exiting with its code
     wrapper.kill('SIGTERM');
 
     expect(await wrapper.exited).toBe(7);
+});
+
+test('runs the command in the given working directory', async () => {
+    const dir = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'spawn-cwd-')));
+    const output = path.join(dir, 'cwd.txt');
+
+    const { exitCode } = await spawnForExitCode({
+        executable: process.execPath,
+        args: ['-e', `require('node:fs').writeFileSync(${JSON.stringify(output)}, process.cwd())`],
+        stdio: 'inherit',
+        cwd: dir,
+    });
+
+    expect(exitCode).toBe(0);
+    expect(await fs.readFile(output, 'utf8')).toBe(dir);
+    await fs.rm(dir, { recursive: true, force: true });
 });

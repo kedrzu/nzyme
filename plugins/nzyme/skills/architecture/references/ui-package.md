@@ -2,8 +2,8 @@
 
 The package the product's components live in, with Storybook and the Vitest browser project that
 runs every story as a test. This reference owns the setup only. How a component is built, which
-stories and specs it needs, and what WCAG 2.2 AA asks of it are `../ui/SKILL.md`; how a spec is
-written is `nzyme:testing`.
+stories and specs it needs, and what WCAG 2.2 AA asks of it are `../../../../docs/practice/ui.md`; how a
+spec is written is `../../../../docs/practice/testing.md`.
 
 ## Reference state
 
@@ -13,6 +13,7 @@ packages/ui/
 ├── tsconfig.esm.json   # hand-written; nzyme monorepo generates tsconfig.json from it
 ├── viteShared.ts       # cssOptions, shared by Nuxt, Storybook and Vitest
 ├── vitest.config.ts
+├── .gitignore          # storybook-static/, *storybook.log — what `build-storybook` writes
 ├── .storybook/
 │   ├── main.ts
 │   └── preview.ts
@@ -32,7 +33,10 @@ packages/ui/
   packages are one version; `playwright` and `@playwright/test` are one version, and it is the one
   `setup.build.sh` installs a browser for (`references/setup-scripts.md`).
 - **Root wiring:**
-  - root `package.json` scripts `"test:stories": "nx run-many -t test:stories"` and
+  - root `package.json` scripts
+    `"test:stories": "bun nzyme git affected --per-package 'packages/ui/**/*.stories.tsx' 'packages/ui/src/**/*.spec.ts' -- bun run test:stories"`
+    — the stories and specs the change can break, handed to the package's own script
+    (`references/affected-tests.md`) — `"test:stories:full": "nx run-many -t test:stories"` and
     `"storybook": "bun --cwd packages/ui storybook"`; the cached `test:stories` target default is
     already in `nx.json` (`references/nx.md`);
   - `setup.build.sh` keeps its `{{if browser-tests}}` block;
@@ -64,7 +68,7 @@ packages/ui/
 - `tsgo` cannot read `.vue` files, so `vue-tsc --noEmit` is the package's `typecheck` and the root
   `typecheck` reaches it through `nx run-many -t typecheck`.
 - `.loc.yaml` files beside components compile to `.loc.ts` through the root `localise` script (run by
-  `setup.build.sh` and watched by `watch:localise`); authoring them is `nzyme:translations`.
+  `setup.build.sh` and watched by `watch:localise`); authoring them is `../../../../docs/practice/translations.md`.
 
 `src/shims.d.ts`, so a story can put the test id on any element in TSX:
 
@@ -121,7 +125,7 @@ export const cssOptions: CSSOptions = {
 
 The path filter matters: injected into nzyme's or a library's SCSS, the tokens would collide with
 their own variables. What goes in `tokens.scss` and `main.scss` (role names, no emitted CSS, contrast
-noted on the token) is `../ui/references/styling.md`; a new package starts with a comment saying the
+noted on the token) is `../../../../docs/practice/ui/styling.md`; a new package starts with a comment saying the
 partial emits nothing and a handful of tokens.
 
 ## Storybook
@@ -210,7 +214,7 @@ const preview: Preview = {
 export default preview;
 ```
 
-- **`a11y.test: 'error'` with the WCAG 2.2 AA tags** is the enforcement `../ui/SKILL.md` relies on.
+- **`a11y.test: 'error'` with the WCAG 2.2 AA tags** is the enforcement `../../../../docs/practice/ui.md` relies on.
   Without `wcag22aa` axe never runs target-size (2.5.8): proven on the skeleton, a story with two
   10 px buttons passes without the tag and fails with it.
 - The preview registers what the app's `ioc-plugin` registers (`references/nuxt-app.md`); a language
@@ -264,15 +268,15 @@ export default defineConfig({
 });
 ```
 
-`bun run test:stories` then renders every story in Chromium, fails on a render error or an axe
+`bun run test:stories:full` then renders every story in Chromium, fails on a render error or an axe
 violation, and runs the `*.spec.ts` files beside them.
 
 ## A repo with one app and no UI package
 
 The same files go into the app package: `viteShared.ts` and `src/styles/` at the app root,
 `.storybook/` and `vitest.config.ts` beside `nuxt.config.ts`, the stories glob widened to
-`'../**/*.stories.@(ts|tsx)'`, and an `@` alias to the app root in `viteFinal`, since Storybook does
-not run Nuxt. Propose the UI package once a second app or a landing site needs the same components.
+`'../**/*.stories.@(ts|tsx)'`, an `@` alias to the app root in `viteFinal`, since Storybook does
+not run Nuxt, and the root `test:stories` patterns naming the app package instead of `packages/ui`. Propose the UI package once a second app or a landing site needs the same components.
 
 ## Placeholders
 
@@ -284,7 +288,8 @@ not run Nuxt. Propose the UI package once a second app or a landing site needs t
 
 ## Compare
 
-- `package.json`: key-wise; repo dependencies and scripts stay. A `test:stories` script missing, or a
+- `package.json`: key-wise; repo dependencies and scripts stay. A `test:stories` or `test:stories:full`
+  script missing, or a
   `vitest`/`@vitest/browser*` version split, is a difference.
 - `preview.ts`: `a11y.test` other than `'error'`, or `runOnly` without `wcag22aa`, is always a
   difference, shown even when the rest matches. Repo decorators, globals and viewports stay.
@@ -294,4 +299,4 @@ not run Nuxt. Propose the UI package once a second app or a landing site needs t
 - Token injection that is not shared (an `additionalData` copied into the Nuxt config and Storybook
   separately), or one without the path filter: a difference.
 - Jest, `@vue/test-utils` mounts in jsdom, or Storybook's test runner instead of the Vitest project:
-  propose this setup; the component specs move to `composeStories` (`nzyme:testing`).
+  propose this setup; the component specs move to `composeStories` (`../../../../docs/practice/testing.md`).

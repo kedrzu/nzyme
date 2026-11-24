@@ -27,44 +27,21 @@ fi
 
 # --- Worktree: catch up with the branch's base before anything is compiled ---
 
-# A worktree is cut from the *local* `main` (a feature) or `release` (a hotfix), which may have fallen
-# behind origin. Catching up with that base here means the build matches the commit the task branch
-# will sit on — and never with the other one: merging main into a hotfix would ship main with it.
-# Worktrees only: in a plain clone the branch you are on is a deliberate choice, and setup has no
-# business merging into it.
+# A worktree is cut from the *local* `main`, which may have fallen behind origin. Catching up with the
+# branch's base here means the build matches the commit the task branch will sit on. Worktrees only:
+# in a plain clone the branch you are on is a deliberate choice, and setup has no business merging
+# into it.
 if [ "$IS_WORKTREE" = true ]; then
     BRANCH=$(git branch --show-current)
 
-    # The base, most authoritative first: the open PR's, then the one recorded on the first run.
+    # The open PR's base (a stacked node is based on the node below), otherwise main.
     BASE=$(gh pr view --json baseRefName --jq .baseRefName 2> /dev/null || true)
-    if [ -z "$BASE" ]; then
-        BASE=$(git config "branch.$BRANCH.gh-merge-base" 2> /dev/null || true)
-    fi
+    BASE=${BASE:-main}
 
-    # First run: Paseo has just cut the branch, so HEAD still sits on the tip of its local base — read
-    # before that ref is fast-forwarded below. Ancestry cannot tell the bases apart (after a back-merge
-    # release is an ancestor of main), but the tip can. On a tie `release` wins: merging it into a
-    # feature branch is harmless, merging main into a hotfix is the harm. Only an unambiguous base is
-    # recorded, since `gh pr create` also reads the key as its default base.
-    if [ -z "$BASE" ] && [ -n "$BRANCH" ]; then
-        HEAD_SHA=$(git rev-parse HEAD)
-        MAIN_SHA=$(git rev-parse --verify --quiet refs/heads/main || true)
-        RELEASE_SHA=$(git rev-parse --verify --quiet refs/heads/release || true)
-
-        if [ "$HEAD_SHA" = "$RELEASE_SHA" ]; then
-            BASE=release
-        elif [ "$HEAD_SHA" = "$MAIN_SHA" ]; then
-            BASE=main
-        fi
-        if [ -n "$BASE" ] && [ "$MAIN_SHA" != "$RELEASE_SHA" ]; then
-            git config "branch.$BRANCH.gh-merge-base" "$BASE"
-        fi
-    fi
-
-    if [ -z "$BASE" ]; then
-        warn "Not caught up: ${BRANCH:-detached HEAD} has no PR and is not at the tip of main or release, so its base is unknown — merge it by hand if needed."
-    elif [ "$BASE" != main ] && [ "$BASE" != release ]; then
-        warn "Not caught up: $BRANCH is based on $BASE, a stacked node — only the stack's bottom node merges in main or release."
+    if [ -z "$BRANCH" ]; then
+        warn "Not caught up: detached HEAD — merge origin/main by hand if needed."
+    elif [ "$BASE" != main ]; then
+        warn "Not caught up: $BRANCH is based on $BASE, a stacked node — only the stack's bottom node merges in main."
     else
         echo ""
         echo "🔄 Catching up with origin/$BASE..."
@@ -123,6 +100,18 @@ fi
 # --- Build (dependencies, nzyme cli, codegen, packages) ---
 
 bash setup.build.sh
+
+# --- Claude Code plugins ---
+
+# Project-scope plugin installs are recorded per checkout path, so every clone and worktree needs its
+# own (scripts/claude-plugins.sh). Not inside a product repo: sessions there start at the product root,
+# whose setup runs the same script.
+if [ "$CI" != "true" ] && [ -z "$SUPERPROJECT" ]; then
+    echo ""
+    echo "🧩 Setting up the project's Claude Code plugins..."
+    echo ""
+    bash scripts/claude-plugins.sh || warn "Some Claude Code plugins were not set up: see the lines above."
+fi
 
 # --- Code index (agent navigation) ---
 

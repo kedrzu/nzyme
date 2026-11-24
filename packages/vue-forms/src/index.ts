@@ -1,5 +1,5 @@
 export * from './components/defineFormField.js';
-export * from './components/Form.js';
+export { default as Form } from './components/Form.vue';
 export * from './components/TextArea.js';
 export * from './components/useButton.js';
 export * from './components/useCheckbox.js';

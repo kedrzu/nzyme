@@ -1,7 +1,7 @@
 # Verify-only check of the submodule pins a pull request into `main` would land: every pin must be on
 # its submodule's `main` (a merged commit, never a feature branch) and must not move back the pin of
-# the base the merge commit was computed from. Nothing here moves a pin — pins move through the bump
-# PRs (`bump-nzyme.yml`) or a commit that sets the gitlink by hand (nzyme/docs/consumers.md).
+# the base the merge commit was computed from. Nothing here moves a pin — pins move through the product's
+# task PRs or a commit that sets the gitlink (nzyme/docs/consumers.md).
 #
 # The job name `Verify Submodules` is the required check on the `main` ruleset — keep it stable. It is
 # filtered by trunk with a job-level `if:` rather than `branches:`: on a stack the upper nodes' base is

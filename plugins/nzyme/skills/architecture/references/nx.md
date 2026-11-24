@@ -246,7 +246,7 @@ function isTestFile(file: string): boolean {
 }
 ```
 
-`scripts/tsconfig.json` (hand-written, un-ignored in `assets/gitignore.tmpl`):
+`scripts/tsconfig.json` (hand-written, un-ignored by `scripts/.gitignore` holding `!tsconfig.json`):
 
 ```json
 {

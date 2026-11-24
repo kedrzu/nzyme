@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -32,7 +33,9 @@ async function write(relPath: string, content: string): Promise<void> {
 }
 
 describe('collectIndexSourceFiles', () => {
-    it('collects .ts/.tsx/.vue and excludes declarations, tests, stories, and ignored dirs', async () => {
+    it('collects .ts/.tsx/.vue and excludes declarations, tests, stories, and gitignored files', async () => {
+        spawnSync('git', ['init', '-q'], { cwd: root });
+        await write('.gitignore', 'dist/\n*.loc.ts\n');
         await write('src/Good.ts', 'export const a = 1;');
         await write('src/Widget.vue', '<template></template>');
         await write('src/Page.tsx', 'export const b = 2;');
@@ -43,12 +46,13 @@ describe('collectIndexSourceFiles', () => {
         await write('src/Good.stories.ts', 'story');
         await write('src/node_modules/dep/index.ts', 'export const d = 4;');
         await write('src/dist/built.ts', 'export const e = 5;');
-        await write('src/.hidden/secret.ts', 'export const f = 6;');
+        await write('src/Messages.loc.ts', 'export const f = 6;');
+        await write('src/.storybook/preview.ts', 'export const g = 7;');
 
         const files = await collectIndexSourceFiles(join(root, 'src'));
         const names = files.map(f => f.slice(root.length + 1)).toSorted();
 
-        expect(names).toEqual(['src/Good.ts', 'src/Page.tsx', 'src/Widget.vue']);
+        expect(names).toEqual(['src/.storybook/preview.ts', 'src/Good.ts', 'src/Page.tsx', 'src/Widget.vue']);
     });
 
     it('returns [] for a missing directory', async () => {

@@ -2,11 +2,13 @@ import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { Command } from '@nzyme/cli-core/Command.js';
 import { EnvVariables } from '@nzyme/ioc/helpers/EnvVariables.js';
 
-import { resolveSecrets } from '../utils/resolveSecrets.js';
+import { readStores } from '../utils/readStores.js';
+import type { StoreSecrets } from '../utils/readStores.js';
+import { getSecretDeclarations } from './utils/getSecretDeclarations.js';
 import type { SecretsCommandsOptions } from './SecretsCommandsOptions.js';
 
 /**
- * Defines `secrets list`: each mapped name, where it comes from and whether it resolves — never a value.
+ * Defines `secrets list`: every key of every store with its store id — never a value.
  * @__NO_SIDE_EFFECTS__
  */
 export function defineSecretsListCommand(options: SecretsCommandsOptions): CommandClass {
@@ -14,33 +16,57 @@ export function defineSecretsListCommand(options: SecretsCommandsOptions): Comma
         static override paths = [['secrets', 'list']];
         static override usage = Command.Usage({
             category: 'Secrets',
-            description: 'List the mapped secrets and whether each resolves',
+            description: 'List the keys of every store',
             details: `
-                Prints each mapped name with its store and key and a status: \`resolves\`,
-                \`missing\`, or \`overridden by environment\`. Values are never printed. Exits
-                non-zero when any secret is missing.
+                Prints each key of each store with the store id, and \`overridden by environment\`
+                when the variable of that name is set. Values are never printed.
+
+                When the project declares its secrets, it prints each declared secret enabled in this
+                environment with the store holding it, or \`missing\`; then each stored key not
+                declared (\`not declared\`) or declared but not enabled here (\`not enabled here\`).
+                A missing secret does not fail the command.
             `,
         });
 
         override async run() {
-            const mapping = this.container.resolve(options.provider);
+            const { stores, secrets: declared } = this.container.resolve(options.provider);
             const env = this.container.resolve(EnvVariables);
-            const { missing, overridden } = await resolveSecrets(mapping, env);
-            const missingNames = new Set(missing.map(secret => secret.name));
-            const overriddenNames = new Set(overridden);
+            const read = await readStores(stores);
+            const stdout = this.context.stdout;
 
-            for (const [name, key] of Object.entries(mapping.secrets)) {
-                let status = 'resolves';
-                if (overriddenNames.has(name)) {
-                    status = 'overridden by environment';
-                } else if (missingNames.has(name)) {
-                    status = 'missing';
+            if (!declared) {
+                for (const { storeId, secrets } of read) {
+                    for (const key of [...secrets.keys()].toSorted()) {
+                        stdout.write(`${key}  ${storeId}${overriddenSuffix(key)}\n`);
+                    }
                 }
 
-                this.context.stdout.write(`${name}  ${mapping.store.id}:${key}  ${status}\n`);
+                return;
             }
 
-            return missing.length > 0 ? 1 : 0;
+            const { enabled, disabled } = getSecretDeclarations(declared, env);
+            for (const name of enabled) {
+                stdout.write(`${name}  ${findStoreId(read, name) ?? 'missing'}${overriddenSuffix(name)}\n`);
+            }
+
+            for (const { storeId, secrets } of read) {
+                for (const key of [...secrets.keys()].toSorted()) {
+                    if (disabled.has(key)) {
+                        stdout.write(`${key}  ${storeId}  not enabled here\n`);
+                    } else if (!enabled.includes(key)) {
+                        stdout.write(`${key}  ${storeId}  not declared\n`);
+                    }
+                }
+            }
+
+            function overriddenSuffix(key: string) {
+                return env[key] ? '  overridden by environment' : '';
+            }
         }
     };
+}
+
+/** The first store holding a non-empty value for `key`: the one `run` would read it from. */
+function findStoreId(read: StoreSecrets[], key: string): string | undefined {
+    return read.find(({ secrets }) => secrets.get(key))?.storeId;
 }

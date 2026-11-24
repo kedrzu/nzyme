@@ -32,7 +32,8 @@ export async function buildStackWorkspace<TOutput extends StackOutput>(
     stack: Stack<TOutput>,
     config: PulumiConfig,
 ): Promise<StackWorkspace> {
-    const cwd = config.cwd ?? process.cwd();
+    // Absolute, because `main` is resolved against the workspace's temp directory, not against process.cwd().
+    const cwd = path.resolve(config.cwd ?? process.cwd());
     const envVars = { ...process.env } as Record<string, string>;
 
     // Resolve the node_modules directory containing @pulumi/pulumi.
@@ -80,7 +81,9 @@ export async function buildStackWorkspace<TOutput extends StackOutput>(
         },
         options: {
             envVars,
-            workDir: cwd,
+            // No `workDir`: each workspace gets its own temp directory for the Pulumi.yaml and
+            // Pulumi.<stack>.yaml that the CLI needs. Stacks deploy in parallel, and in one shared directory
+            // they rewrote each other's files while another stack's CLI was reading them.
             pulumiHome,
             pulumiCommand,
             stackSettings: {
@@ -93,6 +96,8 @@ export async function buildStackWorkspace<TOutput extends StackOutput>(
             projectSettings: {
                 name: config.project,
                 runtime: 'nodejs',
+                // The program directory; Pulumi's own default for an inline program is process.cwd().
+                main: cwd,
             },
         },
     };

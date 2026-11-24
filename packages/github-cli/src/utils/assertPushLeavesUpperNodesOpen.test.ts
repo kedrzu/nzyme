@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test } from 'bun:test';
+import { afterEach, beforeEach, expect, setDefaultTimeout, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -6,6 +6,9 @@ import type { SimpleGit } from 'simple-git';
 import { simpleGit } from 'simple-git';
 
 import { assertPushLeavesUpperNodesOpen } from './assertPushLeavesUpperNodesOpen.js';
+
+// Every test builds real git repositories, which outgrow the 5 s default under a loaded full run.
+setDefaultTimeout(60_000);
 
 let root: string;
 let git: SimpleGit;

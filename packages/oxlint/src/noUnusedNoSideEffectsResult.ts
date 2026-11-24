@@ -1,6 +1,7 @@
-import { readFileSync, statSync } from 'node:fs';
+import type { Immutable } from '@nzyme/types/Immutable.js';
 
 import { isNode } from './isNode.js';
+import { findVariable, hasAnnotationInFile, isAnnotatedExport } from './noSideEffectsDeclaration.js';
 import type {
     OxlintCallExpression,
     OxlintDefinition,
@@ -8,35 +9,10 @@ import type {
     OxlintNode,
     OxlintRule,
     OxlintRuleContext,
-    OxlintScope,
-    OxlintVariable,
 } from './oxlintTypes.js';
 import { resolveImportSpecifier } from './resolveImportSpecifier.js';
-import type { ExportAnnotationScan } from './scanExportAnnotation.js';
-import { NO_SIDE_EFFECTS_ANNOTATION, scanExportAnnotation } from './scanExportAnnotation.js';
 
 const MESSAGE_ID = 'unusedResult';
-
-/** Real re-export chains are one or two modules deep; the cap only stops a cycle from hanging. */
-const MAX_REEXPORT_HOPS = 5;
-
-/** Wrappers that stand between a leading JSDoc block and the declaration it documents. */
-const EXPORT_DECLARATIONS = new Set(['ExportDefaultDeclaration', 'ExportNamedDeclaration']);
-
-/** One module a call has crossed into: its text as of `mtimeMs`, and each export scanned from it. */
-interface ModuleEntry {
-    mtimeMs: number;
-    source: string;
-    scans: Map<string, ExportAnnotationScan>;
-}
-
-/**
- * A single util is imported by hundreds of files, so without this the rule would re-read and
- * re-scan the same handful of modules on every one of them. Entries are checked against the file's
- * mtime because the editor's language server keeps this module loaded for its whole session: an
- * annotation added or removed there would otherwise go unseen by importers until a restart.
- */
-const moduleCache = new Map<string, ModuleEntry>();
 
 /**
  * Reports a call to an `@__NO_SIDE_EFFECTS__` function whose result nothing consumes.
@@ -55,7 +31,7 @@ const moduleCache = new Map<string, ModuleEntry>();
  * matches any of the ~510 annotated ones, so resolving package entry points would add a
  * node_modules walk to every lint run for no finding.
  */
-export const noUnusedNoSideEffectsResult: OxlintRule = {
+export const noUnusedNoSideEffectsResult: Immutable<OxlintRule> = {
     meta: {
         type: 'problem',
         docs: {
@@ -132,38 +108,6 @@ function isAnnotatedCallee(context: OxlintRuleContext, callee: OxlintIdentifier)
     }
 }
 
-/** Walks out through enclosing scopes the same way the reference itself resolves. */
-function findVariable(scope: OxlintScope, name: string): OxlintVariable | undefined {
-    for (let current: OxlintScope | null = scope; current != null; current = current.upper) {
-        const found = current.variables.find(variable => variable.name === name);
-        if (found != null) {
-            return found;
-        }
-    }
-
-    return undefined;
-}
-
-function hasAnnotationInFile(context: OxlintRuleContext, node: OxlintNode): boolean {
-    const comments = context.sourceCode.getCommentsBefore(exportWrapperOf(context, node));
-    return comments.some(comment => comment.value.includes(NO_SIDE_EFFECTS_ANNOTATION));
-}
-
-/**
- * The node the JSDoc actually precedes.
- *
- * `export function f() {}` wraps the declaration in an `ExportNamedDeclaration`, and the comment
- * sits before that wrapper — asking for the comments before the inner declaration returns only what
- * stands between the `export` keyword and the function, which is nothing. Most annotated functions
- * are exported, so without this the rule saw almost none of them in their own module.
- */
-function exportWrapperOf(context: OxlintRuleContext, node: OxlintNode): OxlintNode {
-    const ancestors = context.sourceCode.getAncestors(node);
-    const parent = ancestors.at(-1);
-
-    return parent != null && EXPORT_DECLARATIONS.has(parent.type) ? parent : node;
-}
-
 function isAnnotatedImport(context: OxlintRuleContext, definition: OxlintDefinition): boolean {
     const { node, parent } = definition;
     // A default or namespace import is neither an `ImportSpecifier` nor a named export to look up.
@@ -180,62 +124,5 @@ function isAnnotatedImport(context: OxlintRuleContext, definition: OxlintDefinit
         return false;
     }
 
-    return isAnnotatedExport(target, node.imported.name, MAX_REEXPORT_HOPS);
-}
-
-function isAnnotatedExport(file: string, exportName: string, hopsLeft: number): boolean {
-    if (hopsLeft <= 0) {
-        return false;
-    }
-
-    const scan = scanExport(file, exportName);
-    if (scan.kind === 'annotated') {
-        return true;
-    }
-
-    if (scan.kind === 'reexport') {
-        for (const hop of scan.hops) {
-            const target = resolveImportSpecifier(file, hop.specifier);
-            if (target != null && isAnnotatedExport(target, hop.exportName, hopsLeft - 1)) {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-function scanExport(file: string, exportName: string): ExportAnnotationScan {
-    const entry = readModule(file);
-    if (entry == null) {
-        return { kind: 'absent' };
-    }
-
-    let scan = entry.scans.get(exportName);
-    if (scan == null) {
-        scan = scanExportAnnotation(entry.source, exportName);
-        entry.scans.set(exportName, scan);
-    }
-
-    return scan;
-}
-
-/** `undefined` when the file cannot be read — a module generated or deleted since, not an error. */
-function readModule(file: string): ModuleEntry | undefined {
-    try {
-        const { mtimeMs } = statSync(file);
-        const cached = moduleCache.get(file);
-        if (cached?.mtimeMs === mtimeMs) {
-            return cached;
-        }
-
-        const entry: ModuleEntry = { mtimeMs, source: readFileSync(file, 'utf8'), scans: new Map() };
-        moduleCache.set(file, entry);
-
-        return entry;
-    } catch {
-        moduleCache.delete(file);
-
-        return undefined;
-    }
+    return isAnnotatedExport(target, node.imported.name, resolveImportSpecifier);
 }

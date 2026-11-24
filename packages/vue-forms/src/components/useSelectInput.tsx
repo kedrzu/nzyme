@@ -1,8 +1,8 @@
 import { assignProps } from '@nzyme/utils/assignProps.js';
 import { defineProps } from '@nzyme/vue-utils/defineProps.js';
 import { useProps } from '@nzyme/vue-utils/useProps.js';
-import type { FunctionalComponent } from 'vue';
 import { h } from 'vue';
+import type { SelectHTMLAttributes, SetupContext } from 'vue';
 
 import { defineFormField } from './defineFormField.js';
 
@@ -28,9 +28,15 @@ function setupSelectInput() {
     const props = useProps(SELECT_PROPS);
     const field = SELECT_FIELD.create({ props });
 
-    const SelectInput: FunctionalComponent = (_, ctx) => {
+    return {
+        field,
+        SelectInput,
+    };
+
+    function SelectInput(attrs: SelectHTMLAttributes, ctx: Pick<SetupContext, 'slots'>) {
         return (
             <select
+                {...attrs}
                 aria-label={props.label || props.placeholder}
                 aria-required={props.required}
                 autocomplete={props.autocomplete}
@@ -46,12 +52,7 @@ function setupSelectInput() {
                 {ctx.slots.default?.()}
             </select>
         );
-    };
-
-    return {
-        field,
-        SelectInput,
-    };
+    }
 
     function onInput(event: Event) {
         const target = event.target as HTMLSelectElement;

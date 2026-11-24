@@ -25,9 +25,12 @@ import { findStackForPr } from '@nzyme/github-cli/utils/stacksApi.js';
 import { syncAllRepos } from '@nzyme/github-cli/utils/syncAllRepos.js';
 
 import { createLinearClient } from '../utils/createLinearClient.js';
+import type { LinearCredentials } from '../utils/createLinearClient.js';
 import { createLinearIssue } from '../utils/createLinearIssue.js';
 import { extractTaskIdFromBranch } from '../utils/extractTaskIdFromBranch.js';
 import { formatProjectStatus } from '../utils/formatProjectStatus.js';
+import { getCommandPaths } from '../utils/getCommandPaths.js';
+import { getLinearConfig } from '../utils/getLinearConfig.js';
 import { getNonCompleteProjects } from '../utils/getProjects.js';
 import { parseTaskIdentifier } from '../utils/parseTaskIdentifier.js';
 import { stackTask } from '../utils/stackTask.js';
@@ -35,14 +38,15 @@ import { switchToTask } from '../utils/switchToTask.js';
 import type { TaskSwitchedHook } from './TaskSwitchedHook.js';
 
 /**
- * Configuration for Linear API access.
+ * Configuration for Linear API access: the credentials (a personal API key or an OAuth access token,
+ * resolved once per command) and how task IDs are read.
  */
-export interface LinearConfig {
-    /**
-     * Linear API token.
-     */
-    apiToken: string;
+export type LinearConfig = LinearCredentials & LinearTaskConfig;
 
+/**
+ * How the task commands read and act on Linear tasks.
+ */
+export interface LinearTaskConfig {
     /**
      * Default team prefix (e.g., 'ABC' for ABC-123).
      */
@@ -1229,22 +1233,6 @@ function parseNodeOption(node: string | undefined): number | undefined {
     }
 
     return parsed;
-}
-
-function getCommandPaths(options: LinearCommandsOptions, ...commands: string[]) {
-    if (options.prefix) {
-        return [[options.prefix, ...commands]];
-    }
-
-    return [[...commands]];
-}
-
-async function getLinearConfig(options: LinearCommandsOptions): Promise<LinearConfig> {
-    if (typeof options.linear === 'function') {
-        return await options.linear();
-    }
-
-    return options.linear;
 }
 
 async function getGithubConfig(options: LinearCommandsOptions): Promise<GithubConfig> {

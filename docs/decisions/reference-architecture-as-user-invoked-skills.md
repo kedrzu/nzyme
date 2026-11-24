@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Accepted. Its context-cost decision for the practice skills is superseded by
+[practice-docs-inlined-into-repo-skills.md](practice-docs-inlined-into-repo-skills.md).
 
 ## Context
 

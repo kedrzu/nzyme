@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [product-clis-over-nzyme-plugins.md](product-clis-over-nzyme-plugins.md)
 
 ## Context
 
@@ -38,8 +38,8 @@ the binary adds those commands to its own.
 - A plugin that fails to load, or a malformed `nzyme.plugins`, only prints a warning on stderr
   naming the plugin's path and the cause; the CLI runs on without it. Invoking one of its commands
   then fails as an unknown command. This replaces an earlier "a broken plugin fails the CLI": the
-  `consumer-bump` workflow runs `nzyme submodule bump` in a product checkout with no dependencies
-  installed, where the product's plugins cannot load.
+  (since removed) `consumer-bump` workflow ran `nzyme submodule bump` in a product checkout with no dependencies
+  installed, where the product's plugins could not load.
 
 ## Consequences
 

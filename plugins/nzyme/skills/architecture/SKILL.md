@@ -3,9 +3,9 @@ name: architecture
 description: >-
     The reference architecture of a product repo built on @nzyme — sets up a new repo, brings an
     existing one up to date element by element (monorepo layout, Nx and parallel worktrees, the nzyme
-    submodule, setup scripts, lint and format, VS Code, Claude Code, GitHub, Nuxt app, UI package, e2e,
-    secrets, and technologies such as Drizzle), keeps the repo's `ARCHITECTURE.md`, and when big work starts
-    routes to the practice skill for that area (ui, drizzle, api-clients) and offers a repo-owned skill.
+    submodule, setup scripts, scoped tests, lint and format, VS Code, Claude Code, GitHub, Nuxt app, UI package, e2e,
+    secrets, and technologies such as Drizzle), keeps the repo's `ARCHITECTURE.md`, and writes the
+    repo's own skill per area, each inlining nzyme's practice document for that area.
     Takes a free-form request; there are no modes or subcommands to remember.
 disable-model-invocation: true
 ---
@@ -18,8 +18,9 @@ for the booking flow", "we're adding a Postgres database" — and the request pl
 repo decide what is in play. There is nothing to choose up front.
 
 Every path below is relative to this skill's directory (the base directory Claude Code announces when
-the skill loads): `references/nx.md`, `assets/ARCHITECTURE.md.tmpl`, `../ui/SKILL.md`. The practice
-skills are user-invoked, so read their `SKILL.md` by path; the Skill tool cannot load them.
+the skill loads): `references/nx.md`, `assets/ARCHITECTURE.md.tmpl`. The exception is a practice
+document, written `nzyme/docs/practice/<area>.md` relative to the repo root, the path a repo skill
+inlines; with no submodule yet, read it from this skill at `../../../../docs/practice/<area>.md`.
 
 When this skill runs inside a repo whose `nzyme/plugins/nzyme/skills/architecture/` exists, that copy
 is the reference: it matches the nzyme commit the repo pins. Read references and assets from there.
@@ -33,18 +34,19 @@ table below. The result is one of these situations, or a combination of them:
 - **Nothing here yet** (an empty directory, or a repo with no product code) → a new repo. Do step 0,
   then every repo element, plus the app and technology elements the request names. Ask only what the
   request leaves open and the reference does not decide — the product name and npm scope, Nuxt SPA or
-  SSR, whether there is a UI package, e2e, CI, a database. Where the reference has one answer, take it
+  SSR, whether there is a UI package, e2e, CI, a database, whether the product is designed in Pen
+  (`references/design-in-pen.md`). Where the reference has one answer, take it
   without asking.
 - **An existing repo, a request about its setup** ("bring up to date", "check our Nx config", "fix
   lint setup") → compare the elements the request names; a general request means every repo element
-  plus each app and technology element whose repo signals are present. A repo already at the
+  plus each app and technology element whose repo signals are present. Design in Pen is asked when
+  `ARCHITECTURE.md` records no choice. A repo already at the
   reference gets "no differences" and no writes.
 - **A request about a piece of work** ("starting the settings screen", "adding Stripe", "we need a
   database") → the element whose signals match. Check that its setup is in place (UI work with no UI
-  package → propose the UI package element), read its practice skill, offer a repo-owned skill
-  (`references/repo-skills.md`), then hand over. This skill does not build the feature; code-level
-  work follows the practice skill and the `nzyme:*` skills (`ioc`, `forms`, `composables`,
-  `translations`, `logging`, `secrets`, `testing`, `code-conventions`), which load on their own.
+  package → propose the UI package element), read its practice document, create or update the repo
+  skill for each area the work brings into play (`references/repo-skills.md`), then hand over. This
+  skill does not build the feature; code-level work follows the repo skills, which load on their own.
 
 **Ask when it is unsettled:** no row matches, or two readings of the request would write different
 files. Ask one question that names the readings. A choice `ARCHITECTURE.md` records with a reason is
@@ -73,28 +75,31 @@ and where each placeholder value comes from.
 |Nx and parallel worktrees|build, cache, Nx, worktrees, slow machine|`nx.json`, `project.json`, Nx inputs guard test|`references/nx.md`|
 |nzyme submodule|submodule, nzyme version, bump nzyme|`.gitmodules`, `nzyme/`|`references/submodule.md`|
 |Setup scripts|setup, onboarding, Paseo, scripts|`setup.sh`, `setup.build.sh`, `package.json` scripts, `paseo.json`|`references/setup-scripts.md`|
+|Scoped tests|slow tests, run only what changed, affected tests, scoped verification|`nzyme.affected` in the root `package.json`, `tests:full` script|`references/affected-tests.md`|
 |Lint and format|lint, format, oxlint, oxfmt, ESLint|`.oxlintrc.json`, `.oxfmtrc.json`, `eslint.config.mjs`|`references/lint-format.md`|
 |VS Code|editor, VS Code, format on save|`.vscode/`|`references/vscode.md`|
-|Claude Code|Claude, agents, skills, permissions, `CLAUDE.md`|`.claude/settings.json`, `.claude/git.json`, `.claude/skills/nzyme`, `CLAUDE.md`, `docs/decisions/`|`references/claude-code.md`|
-|GitHub|PR, CI, GitHub Actions, submodule bump|`.github/`|`references/github.md`|
+|Claude Code|Claude, agents, skills, permissions, `CLAUDE.md`|`.claude/settings.json`, `.claude/.gitignore`, `.claude/git.json`, `.claude/skills/nzyme`, `CLAUDE.md`, `docs/decisions/`|`references/claude-code.md`|
+|GitHub|PR, CI, GitHub Actions, submodule pin|`.github/`|`references/github.md`|
 |Architecture document|architecture, document the repo|`ARCHITECTURE.md`, `docs/architecture/`|`references/architecture-doc.md`|
 
 **App elements** — in play when the request asks for them or the repo has them.
 
-|Element|Request signals|Repo signals|Reference|Practice skill|
+|Element|Request signals|Repo signals|Reference|Practice document|
 |-|-|-|-|-|
-|Nuxt app|Nuxt, app, SPA, SSR, pages, routing|`nuxt.config.ts` in a package|`references/nuxt-app.md`|— (repo skill `app`)|
-|UI package|UI, components, screen, design system, Storybook|a package with `.storybook/` or `*.stories.tsx`|`references/ui-package.md`|`../ui/SKILL.md`|
-|e2e|e2e, end-to-end, Playwright|`playwright.config.ts`|`references/e2e.md`|`nzyme:testing`|
+|Nuxt app|Nuxt, app, SPA, SSR, pages, routing|`nuxt.config.ts` in a package|`references/nuxt-app.md`|`nzyme/docs/practice/ui.md`|
+|UI package|UI, components, screen, design system, Storybook|a package with `.storybook/` or `*.stories.tsx`|`references/ui-package.md`|`nzyme/docs/practice/ui.md`|
+|e2e|e2e, end-to-end, Playwright|`playwright.config.ts`|`references/e2e.md`|`nzyme/docs/practice/testing.md`|
 
 **Technology elements** — applied only when the repo uses that technology, never by default. A new
 platform or technology (Cloudflare, Supabase, …) is added here as one more row.
 
-|Element|Request signals|Repo signals|Reference|Practice skill|
+|Element|Request signals|Repo signals|Reference|Practice document|
 |-|-|-|-|-|
-|SQL with Drizzle|database, Postgres, SQL, Drizzle, migrations|`drizzle-orm` or `drizzle-kit` in a `package.json`|`../drizzle/SKILL.md`|`../drizzle/SKILL.md`|
-|Secrets|secret, API key, token, credentials, password|`@nzyme/secrets`, `defineEnvVariable` holding credentials, a dotenv file with credentials|`references/secrets.md`|`../secrets/SKILL.md`|
-|Third-party APIs|integration, vendor API, OpenAPI, GraphQL, webhook client|an OpenAPI spec or `.graphql` SDL in a package, `@nzyme/openapi`|`../api-clients/SKILL.md`|`../api-clients/SKILL.md`|
+|SQL with Drizzle|database, Postgres, SQL, Drizzle, migrations|`drizzle-orm` or `drizzle-kit` in a `package.json`|`nzyme/docs/practice/drizzle.md`|`nzyme/docs/practice/drizzle.md`|
+|Secrets|secret, API key, token, credentials, password|`@nzyme/secrets`, `defineEnvVariable` holding credentials, a dotenv file with credentials|`references/secrets.md`|`nzyme/docs/practice/secrets.md`|
+|Third-party APIs|integration, vendor API, OpenAPI, GraphQL, webhook client|an OpenAPI spec or `.graphql` SDL in a package, `@nzyme/openapi`|`nzyme/docs/practice/api-clients.md`|`nzyme/docs/practice/api-clients.md`|
+|Product CLI|CLI, command, `bun secrets`, `bun pen`, secrets or pen commands|`packages/cli` with a `bin`; `secrets`/`pen` scripts or `nzyme.plugins` in the root `package.json`|`references/product-cli.md`|`nzyme/docs/decisions/product-clis-over-nzyme-plugins.md`|
+|Design in Pen|design, Pen, mockups, screens to draw|`ARCHITECTURE.md` records that the repo designs in Pen; a tracked `*.pen` (suggests it)|`references/design-in-pen.md`|`nzyme/docs/practice/design.md`|
 
 A backend (server package, hosting, deployment) is not part of the default architecture and has no
 element; build it when the repo needs it, and record its shape in `ARCHITECTURE.md`.
@@ -144,13 +149,16 @@ diff and writes nothing.
    is a difference like any other: steps 4-6 of the apply protocol, ahead of their own "write and
    report". If neither source is reachable, say so and name the two commands for the user to run.
    On a request about a piece of work, a missing `git-workflow` or `verify` is one line in the report.
-4. Report: elements applied, differences declined (and where they are recorded), differences left
+4. Every area in play has its repo skill (`references/repo-skills.md`): create the missing ones and
+   bring the rest up to date, through steps 4-6 of the apply protocol.
+5. Report: elements applied, differences declined (and where they are recorded), differences left
    open, check results. Commit only when the user asks; once `git-workflow` exists, it owns commits.
 
 ## References
 
 - `references/architecture-doc.md` — `ARCHITECTURE.md`: structure, recording choices, when to split.
-- `references/repo-skills.md` — the thin repo-owned skill: what it holds, its frontmatter.
+- `references/repo-skills.md` — the repo skill per area: which areas, what it holds, the inline line;
+  `assets/repo-skill.md.tmpl`.
 - One reference per element, named in the tables above.
 - `assets/*.tmpl` — file templates with `{{…}}` placeholders; a dotfile's asset drops the dot
   (`gitignore.tmpl`).

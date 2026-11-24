@@ -23,12 +23,13 @@ Run from the repo root:
   local files. `bash setup.build.sh` is the build half, shared with CI.
 - `bun run build` — `tsgo --build`; `bun run watch` rebuilds on change, `bun run dev` runs the apps.
 - `bun run typecheck` — build, then each package's own typecheck.
-- `bun run tests` — all tests (`bun:test`); `bun test packages/<pkg>/src` for one package. Not bare
-  `bun test` for the whole suite: it skips the script's flags.
-- `bun run lint` / `bun run lint:check` — oxlint (type-aware) plus ESLint for Vue, this repo's code
-  only. `bun run lint:nzyme` checks the submodule with nzyme's own config.
-- `bun run format` / `bun run format:check` — oxfmt plus `nzyme format-markdown`. Never hand-apply
-  formatting.
+- `bun run tests` — the tests the current change can break (`nzyme git affected`); `bun run tests:full`
+  runs all of them, `bun test packages/<pkg>/src` one package. Not bare `bun test` for the whole
+  suite: it skips the script's flags.
+- `bun run lint` / `bun run lint:check` — oxlint (type-aware) plus ESLint for Vue, `package.json` and
+  Markdown, this repo's code only. `bun run lint:nzyme` checks the submodule with nzyme's own config.
+- `bun run format` / `bun run format:check` — oxfmt plus Markdown through ESLint (`format:md`). Never
+  hand-apply formatting.
 - `bun run reinstall` — clean reinstall after dependency trouble.
 
 ## Keep command output out of context
@@ -47,23 +48,20 @@ one-off dumps at the source too (`git show --stat`, `--jq`, a path).
   and landing.
 - Both are the contracts of the `dev` plugin (`/dev:fix`, `/dev:task`, `/dev:feature`, `/dev:build`,
   `/dev:deliver`), installed from the `kedrzu-skills` marketplace in `.claude/settings.json`.
-- **Every implementation task reads `nzyme:code-conventions`**, plus the `nzyme:*` skill for the area
-  it touches (`ioc`, `logging`, `translations`, `forms`, `composables`, `testing`). They load from
-  the submodule through `.claude/skills/nzyme`.
-- **This repo's own skills** hold what is true only here: {{repo skills — e.g. `ui`, `app`, `database`;
-  each `.claude/skills/<area>/SKILL.md` with one line on when it applies}}.
+- **Every implementation task loads the `code-conventions` skill with the Skill tool**, plus the skill
+  for its area. Each is the repo's own (`.claude/skills/<name>/SKILL.md`) and inlines nzyme's practice
+  document (`nzyme/docs/practice/<area>.md`) only when loaded, so load it, don't Read the file; a rule
+  that is wrong everywhere is fixed in nzyme.
 - **ADRs** go to `docs/decisions/<title-slug>.md`, never numbered.
 
 # TypeScript rules
 
 These always apply. Everything else — organization, naming, casting, JSDoc, design principles — is in
-`nzyme:code-conventions`.
+the `code-conventions` skill.
 
-- Import `.ts` files with a `.js` extension (ESM).
-- Never use `any`; use proper types or `unknown`. Reaching for `any` or an ugly cast means something
-  deeper is wrong: investigate, don't cast.
-- Use `assert()` from `@nzyme/utils` instead of a non-null assertion (`!`) in production code (`!` is
-  fine in tests).
+- Reaching for an ugly cast means something deeper is wrong: investigate, don't cast.
+- Use `assert()` from `@nzyme/utils` instead of a non-null assertion (`!`) in production code: `!` gives
+  no runtime check (it is fine in tests).
 - Never disable a lint rule to make an error go away; ask if stuck. A rule that is genuinely wrong for a
   case is disabled in config, or with a comment saying why.
 
@@ -72,45 +70,60 @@ These always apply. Everything else — organization, naming, casting, JSDoc, de
 - **Commit style, branches and PRs** are the `git-workflow` skill's.
 - **Land every change you were asked to make:**
   1. Run the scoped checks.
-  2. Commit and push through `git-workflow`. Never commit red.
+  2. Commit and push through `git-workflow`. Never commit red, and never ask for permission to commit or
+     push: authorization to make the change is authorization to land it.
   3. Before reporting done, confirm `git status --porcelain` is empty and `HEAD` equals `@{u}`.
      This governs finishing a change; it never licenses making one.
-- **Stash safety:** stashes are shared across all worktrees, and other agents may be working in
-  parallel. Never use bare `git stash`/`pop`/`apply`. Name the stash uniquely and restore it by ref. The
-  `git:stash-safety` skill has the recipes.
 
 # Diagnosing failures — check, don't assume
 
-- **Read the real error first:** the failing assertion, the first error line of the log. Do this before
-  reasoning about causes.
-- **When everything fails, look for one shared cause** (a broken build, a missing generated file).
-  Diagnose it on one fast case, not by re-running the suite.
-- **Fix the whole class, not the instance:** once you know the mechanism, grep for every occurrence.
+Get direct evidence before naming a cause. A plausible story about why something broke is worse than none:
+it sends you fixing the wrong thing, and every wrong fix costs another verify cycle.
+
+- **Read the real error first:** the failing assertion, the browser console, the first error line of the
+  log, the resource that is supposedly missing. A timeout or a dot-reporter run describes a symptom; the
+  underlying error usually names the problem. Use the tool that shows the actual state instead of
+  inferring it.
+- **When everything fails, look for one shared cause:** 35 of 35 e2e specs failing is one broken app
+  boot, not 35 broken tests. Diagnose it on one fast case, not by re-running the suite.
+- **Fix the whole class, not the instance:** once you know the mechanism, grep for every occurrence and
+  handle them together. Finding the second one with another full run is the expensive path.
 - **An implausibly fast green is not green:** a 0 s run, or a usage banner with exit 0, did not run
-  anything.
-- **Say "I don't know yet".** State hypotheses as hypotheses, and drop them plainly when evidence kills
-  them.
+  anything. Check the log before believing a pass.
+- **Say "I don't know yet".** State hypotheses as hypotheses, and when evidence kills one, say so plainly
+  rather than sliding to the next guess.
 
 # Writing style
 
-This applies to everything you write: plans, PR descriptions, reviews, docs, chat replies.
+This applies to everything you write: plans, PR descriptions, issues, reviews, docs, chat replies.
+Templates say which sections to include; they never license length. Each rule has a check to run on your
+draft.
 
-- **Distill.** Every paragraph carries a fact, decision or instruction found nowhere else. No filler
-  ("It is important to note…"), and don't restate the request.
-- **Omit an inapplicable section rather than writing "N/A".** A table needs 3+ rows and 2+ varying
-  columns; anything smaller is bullets.
-- **Match the user's register.** Anything durable or read by agents (code, comments, docs, ADRs, skills,
-  PRs) is English. A reply only the user reads is in their language.
+- **Distill.** Check: every paragraph carries a fact, decision or instruction found nowhere else.
+- **No filler** ("It is important to note…", "In conclusion…"). Check: delete the phrase; if the rest
+  still reads, it was filler.
+- **Don't restate the request.** Check: if the opening can go without losing anything the reader doesn't
+  already know, cut it.
+- **Omit an inapplicable section rather than writing "N/A".** Check: no "N/A", "None" or "TBD" bodies.
+  The exception is a section whose emptiness is the information ("asked and closed"), and only where its
+  template says so.
+- **A table earns its syntax:** 3+ rows and 2+ varying columns. Check: a 2-row table is two bullets.
+- **Name only what the reader has seen.** A label from your own working context (`D41`, "variant B", a
+  term you coined) is noise to someone who was not inside it. Check: every ID or term is explained in the
+  same sentence, or is something the reader wrote.
+- **Match the user's register.** Check: if it reads like a press release and the user writes like an
+  engineer, rewrite it.
+- **Write in the reader's language.** Anything durable or read by agents (code, comments, docs, ADRs,
+  skills, PRs, issues) is English; a reply or plan only the user reads is in their language. Technical
+  terms stay English in both. Check: who opens this next?
 - **Hub files stay thin.** `CLAUDE.md` and a `SKILL.md` carry routing and rules; detail goes in the
-  reference they point at.
+  reference they point at. Check: a paragraph not needed on every invocation belongs one level down.
 
 # Agent tool use
 
-- **Locate, then window:** grep or the index to find the range, then read it with offset/limit. Never
-  re-read a file you already have, or re-read to verify your own edit.
-- **Batch independent calls** in one message; serialize only on real dependencies.
-- **Use absolute paths;** don't rely on `cd` persisting between shell calls.
-- **Pick subagent tiers by the work:**
+- **Locate, then window:** grep or the index to find the range, then read it with offset/limit.
+- **Pick subagent tiers by the work;** the default inherits your model, which is too expensive for
+  fan-out:
   - Haiku for mechanical search;
   - Sonnet for multi-hop or semantic exploration;
   - your own model for the reasoning.

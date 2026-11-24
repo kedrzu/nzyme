@@ -1,5 +1,6 @@
 import { computed, onScopeDispose, reactive, ref, watch } from 'vue';
 
+import { canScrollHorizontally } from '@nzyme/dom-utils/canScrollHorizontally.js';
 import { readonly } from '@nzyme/utils/readonly.js';
 
 import { makeRef } from './reactivity/makeRef.js';
@@ -238,7 +239,8 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
             const swipeDirection = x - (position.startX ?? 0);
 
             // Defer to native scroll if a scrollable container can scroll in this direction
-            if (position.startTarget && isSwipeBlockedByScrollableContainer(position.startTarget, swipeDirection)) {
+            // (a pan to the right brings what is left of the view into it).
+            if (canScrollHorizontally(position.startTarget, swipeDirection > 0 ? 'left' : 'right', element.value)) {
                 swipeReset();
                 return;
             }
@@ -310,50 +312,5 @@ export function useSwipeHorizontal(options: UseSwipeOptions) {
         // Immediate: with the pointer captured, the click may target the element itself.
         event.preventDefault();
         event.stopImmediatePropagation();
-    }
-
-    /**
-     * Checks if a swipe gesture should be blocked because a scrollable container
-     * in the DOM hierarchy can scroll in the same direction.
-     *
-     * This prevents swipe gestures from interfering with native horizontal scrolling.
-     * Only considers elements that:
-     * 1. Have overflow-x set to 'auto' or 'scroll' (intentionally scrollable)
-     * 2. Have content wider than the container (scrollWidth > clientWidth)
-     * 3. Can actually scroll in the swipe direction (not already at the edge)
-     *
-     * @param target - The element where the swipe started
-     * @param swipeDirection - Negative for left swipe, positive for right swipe
-     * @returns true if the swipe should be blocked to allow native scrolling
-     */
-    function isSwipeBlockedByScrollableContainer(target: EventTarget, swipeDirection: number): boolean {
-        let current: EventTarget | null = target;
-
-        while (current && current !== element.value && current instanceof Element) {
-            if (current instanceof HTMLElement) {
-                const style = window.getComputedStyle(current);
-                const isScrollable = style.overflowX === 'auto' || style.overflowX === 'scroll';
-                const hasHorizontalScroll = current.scrollWidth > current.clientWidth;
-
-                if (hasHorizontalScroll && isScrollable) {
-                    const canScrollLeft = current.scrollLeft > 0;
-                    const canScrollRight = current.scrollLeft < current.scrollWidth - current.clientWidth;
-
-                    // Swiping right (positive direction) is blocked if container can scroll left
-                    if (swipeDirection > 0 && canScrollLeft) {
-                        return true;
-                    }
-
-                    // Swiping left (negative direction) is blocked if container can scroll right
-                    if (swipeDirection < 0 && canScrollRight) {
-                        return true;
-                    }
-                }
-            }
-
-            current = current.parentElement;
-        }
-
-        return false;
     }
 }

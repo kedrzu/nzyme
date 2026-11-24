@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -7,6 +7,9 @@ import { simpleGit } from 'simple-git';
 import { createTestLogger } from '@nzyme/logging';
 
 import { syncStackNodesFromRemote } from './syncStackNodesFromRemote.js';
+
+// Every test builds real git repositories, which outgrow the 5 s default under a loaded full run.
+setDefaultTimeout(60_000);
 
 let repo: string;
 let cwd: string;

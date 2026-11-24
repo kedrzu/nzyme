@@ -15,6 +15,7 @@ import type { Package } from '@nzyme/project-utils/getPackages.js';
 import { getPackages } from '@nzyme/project-utils/getPackages.js';
 import { getProjectRoot } from '@nzyme/project-utils/getProjectRoot.js';
 import { isFileIgnored } from '@nzyme/project-utils/isFileIgnored.js';
+import { relativePosixPath } from '@nzyme/project-utils/relativePosixPath.js';
 import { saveFile } from '@nzyme/project-utils/saveFile.js';
 import { asArray } from '@nzyme/utils/array/asArray.js';
 import { debounceAsyncFunction } from '@nzyme/utils/debounceAsyncFunction.js';
@@ -357,10 +358,7 @@ function isCompositePackage(tsconfig: TsConfig | null): tsconfig is TsConfig {
 }
 
 function getRelativePath(fromPath: string, toPath: string) {
-    let relativePath = path.relative(path.dirname(fromPath), toPath);
-    if (path.sep === '\\') {
-        relativePath = relativePath.replace(/\\/g, '/');
-    }
+    let relativePath = relativePosixPath(path.dirname(fromPath), toPath);
 
     if (!relativePath.startsWith('./') && !relativePath.startsWith('../')) {
         relativePath = './' + relativePath;

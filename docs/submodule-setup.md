@@ -99,7 +99,6 @@ All generated files are gitignored, in both trees. In the product's `.gitignore`
 
 ```gitignore
 tsconfig.json
-tsconfig.cjs.json
 *.loc.ts
 /INDEX.md
 /UTILS.md
@@ -199,7 +198,7 @@ nzyme's scripts work in place, with dependencies hoisted to the product's worksp
 ## Tests
 
 The product's test command covers its own packages. nzyme's tests are nzyme's: its CI runs them on
-every change, and a bump PR in the product proves the product still works with the new pin. To run
+every change, and the product's task PR that moves the pin proves the product still works with the new pin. To run
 them in place, for example while changing nzyme from inside the product:
 
 ```sh
@@ -217,18 +216,28 @@ A product's setup script (Paseo runs it for every new worktree through `paseo.js
 2. The build above.
 3. Optionally `nzyme index`, to generate the code map for agents. It covers nzyme's packages too;
    configure it under `nzyme.index` in the product's `package.json`.
+4. `bash nzyme/scripts/claude-plugins.sh`, when the product enables Claude Code plugins in
+   `.claude/settings.json`. Claude Code records a project-scope install against the checkout's path,
+   so each worktree needs its own; without it the plugins show as enabled but not installed. The
+   script also trusts the checkout, so plugins symlinked into `.claude/skills/` load. It exits 1 when
+   it skipped a step: report that as a warning, never fail the setup on it.
 
 ## Agents
 
 - **nzyme's rules:** `nzyme/CLAUDE.md` and the `nzyme` plugin describe how to use and change nzyme.
   Point the product's `CLAUDE.md` at them for work inside `nzyme/`. Changes there follow nzyme's
   conventions: Conventional Commits, and a PR to `kedrzu/nzyme`.
-- **The plugin:** symlink it from the submodule, so the skills always match the nzyme commit the
-  product pins:
+- **The plugin:** it ships `/nzyme:architecture` only. Symlink it from the submodule, so the skill
+  always matches the nzyme commit the product pins:
 
   ```sh
   ln -s ../../nzyme/plugins/nzyme .claude/skills/nzyme
   ```
+
+  The practice is in `nzyme/docs/practice/<area>.md`. The product writes one skill per area it has,
+  with its own facts, ending in `` !`cat nzyme/docs/practice/<area>.md` ``
+  ([practice-docs-inlined-into-repo-skills.md](decisions/practice-docs-inlined-into-repo-skills.md)).
+  Sessions must start at the product root for that path to resolve.
 
   Remove any `nzyme` entry from `extraKnownMarketplaces` and `nzyme@nzyme` from `enabledPlugins` in the
   product's `.claude/settings.json`: a project-level marketplace install of the same plugin wins over

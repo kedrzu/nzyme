@@ -14,7 +14,7 @@ const DEFAULT_MASK = /^[\w\s-]+$/;
 /**
  * Postal code mask configurations for different countries.
  */
-const POST_CODE_MASKS: Partial<Record<CountryCode, string | RegExp>> = {
+const POST_CODE_MASKS: Readonly<Partial<Record<CountryCode, string | RegExp>>> = {
     PL: '00-000',
     DE: '00000',
     US: '00000[-0000]',

@@ -1,11 +1,13 @@
 import chalk from 'chalk';
 import { highlight } from 'cli-highlight';
+import { stringify } from 'yaml';
 
 import { defineService } from '@nzyme/ioc/Service.js';
 import { identity } from '@nzyme/utils/functions/identity.js';
 import { parseStackTrace } from '@nzyme/utils/parseStackTrace.js';
-import { toJsonString } from '@nzyme/utils/toJsonString.js';
 
+import { LOG_LEVEL } from './env.js';
+import { getEnabledLoggerLevels } from './getEnabledLoggerLevels.js';
 import { ApplicationError } from './ApplicationError.js';
 import type { LoggerLevel } from './LoggerLevel.js';
 import { LoggerTransport } from './LoggerTransport.js';
@@ -13,12 +15,23 @@ import { getPrettyPrefix } from './utils/getPrettyPrefix.js';
 
 /**
  * A console logger service for CLI with enhanced formatting.
+ *
+ * Every level goes to stderr: a command's stdout is its output, which callers pipe and parse, so a
+ * log line there corrupts it. `LOG_LEVEL` sets the minimum level; unset, it is `info`, so a command's
+ * routine startup (`debug`, `trace`) stays silent.
  */
 export const PrettyCliLoggerTransport = defineService({
     name: 'PrettyCliLoggerTransport',
     implements: LoggerTransport,
-    setup: (): LoggerTransport => {
+    deps: { logLevel: LOG_LEVEL },
+    setup: ({ logLevel }): LoggerTransport => {
+        const enabled = getEnabledLoggerLevels(logLevel ?? 'info');
+
         return (logger, level, message, obj) => {
+            if (!enabled[level]) {
+                return;
+            }
+
             const prefix = getPrettyPrefix(logger);
             const color = getColor(level);
             const lines = message.split('\n');
@@ -37,14 +50,14 @@ export const PrettyCliLoggerTransport = defineService({
             }
 
             // Log the main message
-            console[level](message);
+            console.error(message);
 
             if (obj?.error instanceof Error) {
                 const { error, ...rest } = obj;
                 obj = rest;
 
                 const formattedError = formatError(error, prefix);
-                console[level](formattedError);
+                console.error(formattedError);
 
                 // Extract and merge ApplicationError data
                 if (error instanceof ApplicationError) {
@@ -55,12 +68,22 @@ export const PrettyCliLoggerTransport = defineService({
 
             // Format and log other properties
             if (obj && Object.keys(obj).length > 0) {
-                const formattedProps = formatObjectProperties(obj, prefix);
-                console[level](formattedProps);
+                console.error(formatData(obj, prefix));
             }
         };
     },
 });
+
+/** Colours for the token classes highlight.js's YAML grammar emits. */
+const YAML_THEME = {
+    attr: chalk.cyan,
+    string: chalk.green,
+    number: chalk.yellow,
+    literal: chalk.magenta,
+    bullet: chalk.dim,
+    meta: chalk.blue,
+    type: chalk.blue,
+} as const;
 
 function getColor(level: LoggerLevel): (text: string) => string {
     switch (level) {
@@ -106,57 +129,35 @@ function formatError(error: Error, prefix: string): string {
             const causeLines = formatError(error.cause, prefix + '  ');
             output += causeLines;
         } else {
-            // Handle non-Error causes
-            const cause = error.cause;
-            try {
-                let causeStr: string;
-                if (typeof cause === 'string') {
-                    causeStr = cause;
-                } else if (typeof cause === 'number' || typeof cause === 'boolean') {
-                    causeStr = String(cause);
-                } else if (typeof cause === 'object' && cause !== null) {
-                    causeStr = JSON.stringify(cause, null, 2);
-                } else if (cause === null || cause === undefined) {
-                    causeStr = String(cause);
-                } else {
-                    causeStr = '[unknown]';
-                }
-
-                const highlighted = highlight(causeStr, {
-                    language: 'json',
-                    ignoreIllegals: true,
-                });
-                const lines = highlighted.split('\n');
-                for (const line of lines) {
-                    output += prefix + '  ' + line + '\n';
-                }
-            } catch {
-                // If JSON.stringify fails, fall back to string representation
-                output += prefix + '  [object]\n';
-            }
+            output += formatData(error.cause, prefix + '  ') + '\n';
         }
     }
 
     return output.trimEnd();
 }
 
-function formatObjectProperties(obj: Record<string, unknown>, prefix: string): string {
+/**
+ * Renders a value as highlighted YAML, every line led by `prefix` and a dim `›` gutter marker.
+ * Never throws: a value YAML cannot serialise prints one `[unserializable data]` line.
+ */
+function formatData(value: unknown, prefix: string): string {
+    const marker = prefix + chalk.dim('›') + ' ';
+
     try {
-        const json = toJsonString(obj, 2);
-        const highlighted = highlight(json, {
-            language: 'json',
+        const yaml = stringify(value, (_key, item: unknown) =>
+            typeof item === 'function' ? undefined : item,
+        ).trimEnd();
+        const highlighted = highlight(yaml, {
+            language: 'yaml',
+            theme: YAML_THEME,
             ignoreIllegals: true,
         });
-        const lines = highlighted.split('\n');
-        let output = '';
-        for (const line of lines) {
-            if (output.length > 0) {
-                output += '\n';
-            }
-            output += prefix + line;
-        }
-        return output;
+
+        return highlighted
+            .split('\n')
+            .map(line => marker + line)
+            .join('\n');
     } catch {
-        return prefix + JSON.stringify(obj);
+        return marker + '[unserializable data]';
     }
 }

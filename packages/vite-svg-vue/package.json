@@ -1,0 +1,62 @@
+{
+    "name": "@nzyme/vite-svg-vue",
+    "version": "0.19.0",
+    "description": "Vite plugin importing SVG files as static Vue functional components",
+    "license": "MIT",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/kedrzu/nzyme.git"
+    },
+    "files": [
+        "dist",
+        "client.d.ts"
+    ],
+    "type": "module",
+    "sideEffects": false,
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "source": "./src/index.ts",
+            "default": "./dist/index.js"
+        },
+        "./client": {
+            "types": "./client.d.ts"
+        },
+        "./*.js": {
+            "types": "./dist/*.d.ts",
+            "source": "./src/*.ts",
+            "import": "./dist/*.js",
+            "default": "./dist/*.js"
+        }
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "scripts": {
+        "build": "tsgo --build tsconfig.esm.json",
+        "format": "oxfmt ./src > /dev/null",
+        "test:components": "vitest run"
+    },
+    "devDependencies": {
+        "@nzyme/tsconfig": "workspace:*",
+        "@types/bun": "^1.4.5",
+        "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+        "@vitest/browser-playwright": "^4.1.12",
+        "oxfmt": "0.79.0",
+        "playwright": "^1.64.1",
+        "rollup": "^4.62.2",
+        "svgo": "^4.1.0",
+        "vite": "^7.3.6",
+        "vitest": "^4.1.12",
+        "vitest-browser-vue": "^3.1.0",
+        "vue": "^3.5.44"
+    },
+    "peerDependencies": {
+        "svgo": "^4.1.0",
+        "vite": "^7.3.6",
+        "vue": "^3.5.44"
+    }
+}

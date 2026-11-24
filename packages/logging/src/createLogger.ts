@@ -2,6 +2,7 @@ import type { Logger, LoggerObject } from './Logger.js';
 import type { LoggerTransport } from './LoggerTransport.js';
 import { consoleLog } from './LoggerTransport.js';
 
+// oxlint-disable-next-line nzyme/no-module-state -- the process-wide transport, set on purpose through `setLoggerTransport`.
 let globalTransport: LoggerTransport = consoleLog;
 
 /**

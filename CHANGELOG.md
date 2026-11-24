@@ -1,3 +1,151 @@
+## 0.19.0 (2026-11-23)
+
+### 🚀 Features
+
+- ⚠️  add the slack agent commands and take one secret store in google-auth ([#337](https://github.com/kedrzu/nzyme/pull/337))
+- **logging:** print cli log data as indented, highlighted yaml ([#338](https://github.com/kedrzu/nzyme/pull/338))
+- **vite-svg-vue:** add a Vite plugin compiling SVG files to static Vue components ([#335](https://github.com/kedrzu/nzyme/pull/335))
+
+### ⚠️  Breaking Changes
+
+- add the slack agent commands and take one secret store in google-auth  ([#337](https://github.com/kedrzu/nzyme/pull/337))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
+## 0.18.0 (2026-11-23)
+
+### 🚀 Features
+
+- ⚠️  select tests by recorded execution — affected suites, a trace probe and no-module-state ([#304](https://github.com/kedrzu/nzyme/pull/304))
+- ⚠️  **cli:** remove the scheduled submodule bump and bump submodules in every task pr ([#324](https://github.com/kedrzu/nzyme/pull/324))
+- **lastfm-cli:** add a typed Last.fm client and music-discovery commands ([#334](https://github.com/kedrzu/nzyme/pull/334))
+- **spotify-cli:** Spotify Web API client, PKCE sign-in and agent commands ([#336](https://github.com/kedrzu/nzyme/pull/336))
+- **ticketmaster-cli:** add a Ticketmaster Discovery API client and concert-finding commands ([#333](https://github.com/kedrzu/nzyme/pull/333))
+
+### 🩹 Fixes
+
+- cut a versioned task branch when the plain one already exists in git ([#323](https://github.com/kedrzu/nzyme/pull/323))
+- **gmail-cli:** name the CLI flags in label rule errors ([#327](https://github.com/kedrzu/nzyme/pull/327))
+
+### ⚠️  Breaking Changes
+
+- **cli:** remove the scheduled submodule bump and bump submodules in every task pr  ([#324](https://github.com/kedrzu/nzyme/pull/324))
+- select tests by recorded execution — affected suites, a trace probe and no-module-state  ([#304](https://github.com/kedrzu/nzyme/pull/304))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
+## 0.17.1 (2026-11-20)
+
+### 🚀 Features
+
+- Gmail and Google Drive CLIs for agents ([#318](https://github.com/kedrzu/nzyme/pull/318))
+- **secrets:** add loadSecretsConfig and resolveOptionalSecret ([#322](https://github.com/kedrzu/nzyme/pull/322))
+
+### 🩹 Fixes
+
+- **config:** load the config document without a log line ([#320](https://github.com/kedrzu/nzyme/pull/320))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
+## 0.17.0 (2026-11-20)
+
+### 🚀 Features
+
+- **aws:** let a parameter store write its SecureStrings with a chosen KMS key ([#307](https://github.com/kedrzu/nzyme/pull/307))
+- **secrets:** add a keychain secret store ([#312](https://github.com/kedrzu/nzyme/pull/312))
+- ⚠️  **secrets:** declare secrets with defineSecret and register commands in a product CLI ([#314](https://github.com/kedrzu/nzyme/pull/314))
+
+### 🩹 Fixes
+
+- **cli-core:** report usage errors on stderr and print the given version ([#317](https://github.com/kedrzu/nzyme/pull/317))
+
+### ⚠️  Breaking Changes
+
+- **secrets:** declare secrets with defineSecret and register commands in a product CLI  ([#314](https://github.com/kedrzu/nzyme/pull/314))
+  the `nzyme` binary no longer loads modules listed under `nzyme.plugins`, `NzymePlugin` is removed from `@nzyme/cli-core`, and `@nzyme/pen/plugin.js` is gone. Define a product CLI on `@nzyme/cli-core` `execute` and register `definePenCommands()` and `defineSecretsCommands({ provider })` there.
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
+## 0.16.0 (2026-11-18)
+
+### 🚀 Features
+
+- ⚠️  declare dependency ranges and framework peers ([#249](https://github.com/kedrzu/nzyme/pull/249))
+- add the architecture, ui, drizzle and api-clients skills to the nzyme plugin ([#252](https://github.com/kedrzu/nzyme/pull/252))
+- add opt-in practice plugins for ui, drizzle and api clients ([#281](https://github.com/kedrzu/nzyme/pull/281))
+- shared OpenAPI agent-CLI core and a Discord CLI on it ([#302](https://github.com/kedrzu/nzyme/pull/302))
+- **bitwarden:** let a store keep its own token with keychainSuffix ([#271](https://github.com/kedrzu/nzyme/pull/271))
+- **cli:** load commands from plugins a repo lists in package.json ([#257](https://github.com/kedrzu/nzyme/pull/257))
+- ⚠️  **cli:** add `nzyme git affected`, a file-level import graph and gitignore negations ([#289](https://github.com/kedrzu/nzyme/pull/289))
+- ⚠️  **cli-core:** split the CLI framework out of @nzyme/cli ([#256](https://github.com/kedrzu/nzyme/pull/256))
+- **dom-utils:** add canScrollHorizontally ([#275](https://github.com/kedrzu/nzyme/pull/275))
+- ⚠️  **eslint:** check package.json and Markdown with ESLint presets ([#248](https://github.com/kedrzu/nzyme/pull/248))
+- **github-cli:** link submodule PRs from the main PR description ([#220](https://github.com/kedrzu/nzyme/pull/220))
+- **github-cli:** refresh a submodule's chain of pull requests from the bottom up ([#242](https://github.com/kedrzu/nzyme/pull/242))
+- **linear:** linear query and linear schema commands ([#298](https://github.com/kedrzu/nzyme/pull/298))
+- ⚠️  **logging:** CLI startup is quiet unless LOGGING=true ([#297](https://github.com/kedrzu/nzyme/pull/297))
+- **oxlint:** report aria attributes passed to components in stories ([#282](https://github.com/kedrzu/nzyme/pull/282))
+- **pen:** merge, check, diff and render .pen files, and the design practice ([#291](https://github.com/kedrzu/nzyme/pull/291))
+- ⚠️  **pulumi:** rework RotatedSecret into a rotated key set ([#232](https://github.com/kedrzu/nzyme/pull/232))
+- **rollup-utils:** add a host option to devServerStart ([#245](https://github.com/kedrzu/nzyme/pull/245))
+- **secrets:** load secrets from Bitwarden into env variables ([#258](https://github.com/kedrzu/nzyme/pull/258))
+- ⚠️  **secrets:** config document from ordered sources; secret stores read by prefix; Parameter Store store ([#285](https://github.com/kedrzu/nzyme/pull/285))
+- **stealth-browser:** a stealth Chrome for AI agents over CDP ([#305](https://github.com/kedrzu/nzyme/pull/305))
+- **vue:** carousel focus and keyboard, showItem, start alignment, and pointer-event swipes ([#228](https://github.com/kedrzu/nzyme/pull/228))
+- ⚠️  **vue,vue-forms:** rewrite Collapse, Reveal, Carousel and Form as single-file components ([#279](https://github.com/kedrzu/nzyme/pull/279))
+- **vue-forms:** make checkbox and radio accessible, honour busy on buttons, drop input tooltips ([#222](https://github.com/kedrzu/nzyme/pull/222))
+- **vue-forms:** expose the radio group's field, report its focus and keep readonly groups reachable ([#226](https://github.com/kedrzu/nzyme/pull/226))
+- **vue-ioc:** name useLogger after the current component by default ([#239](https://github.com/kedrzu/nzyme/pull/239))
+- **vue-utils:** let storageRef use a given storage ([#255](https://github.com/kedrzu/nzyme/pull/255))
+
+### 🩹 Fixes
+
+- decode base64 lambda rpc bodies and bracket line-final urls in slack markdown ([#217](https://github.com/kedrzu/nzyme/pull/217))
+- report form field changes once and correct polish and czech plurals ([#227](https://github.com/kedrzu/nzyme/pull/227))
+- stop modal Back handling from skipping or undoing screens ([#229](https://github.com/kedrzu/nzyme/pull/229))
+- Response bodies and cookies on Lambda; checkbox attributes; injectLazy per container ([#207](https://github.com/kedrzu/nzyme/pull/207))
+- ⚠️  CLI logs go to stderr, so a command's stdout carries only its output ([#296](https://github.com/kedrzu/nzyme/pull/296))
+- **aws:** retry unprocessed DynamoDB batch items instead of dropping them ([#241](https://github.com/kedrzu/nzyme/pull/241))
+- **aws:** read a parameter store with a named profile from that profile alone ([#303](https://github.com/kedrzu/nzyme/pull/303))
+- **github-cli:** merge a stacked submodule pull request through merge-async ([#246](https://github.com/kedrzu/nzyme/pull/246))
+- **github-cli:** take every landing submodule stack node out of draft before merging ([#288](https://github.com/kedrzu/nzyme/pull/288))
+- **github-cli:** refuse to push a pinned gitlink the submodule's remote does not have ([#300](https://github.com/kedrzu/nzyme/pull/300))
+- **openapi:** omit undefined header values instead of sending them as "undefined" ([#244](https://github.com/kedrzu/nzyme/pull/244))
+- **openapi:** accept query on operations whose query parameters are all optional ([#294](https://github.com/kedrzu/nzyme/pull/294))
+- **pulumi:** minify with @rollup/plugin-terser so compiling never forks processes ([#235](https://github.com/kedrzu/nzyme/pull/235))
+- ⚠️  **pulumi:** give every stack workspace its own workDir ([#274](https://github.com/kedrzu/nzyme/pull/274))
+- ⚠️  **rpc:** answer unhandled failures generically unless debugging ([#269](https://github.com/kedrzu/nzyme/pull/269))
+- **utils:** call every listener when one unsubscribes during emit ([#295](https://github.com/kedrzu/nzyme/pull/295))
+- **vue:** settle a modal's promise when Escape closes it ([#251](https://github.com/kedrzu/nzyme/pull/251))
+- **vue-forms:** forward fallthrough attributes to the select of useSelectInput ([#301](https://github.com/kedrzu/nzyme/pull/301))
+- **vue-utils:** keep vFocus from taking back focus moved during its delay ([#243](https://github.com/kedrzu/nzyme/pull/243))
+
+### ⚠️  Breaking Changes
+
+- **logging:** CLI startup is quiet unless LOGGING=true  ([#297](https://github.com/kedrzu/nzyme/pull/297))
+- CLI logs go to stderr, so a command's stdout carries only its output  ([#296](https://github.com/kedrzu/nzyme/pull/296))
+- **secrets:** config document from ordered sources; secret stores read by prefix; Parameter Store store  ([#285](https://github.com/kedrzu/nzyme/pull/285))
+- **cli:** add `nzyme git affected`, a file-level import graph and gitignore negations  ([#289](https://github.com/kedrzu/nzyme/pull/289))
+- **vue,vue-forms:** rewrite Collapse, Reveal, Carousel and Form as single-file components  ([#279](https://github.com/kedrzu/nzyme/pull/279))
+- **pulumi:** give every stack workspace its own workDir  ([#274](https://github.com/kedrzu/nzyme/pull/274))
+- **rpc:** answer unhandled failures generically unless debugging  ([#269](https://github.com/kedrzu/nzyme/pull/269))
+- **cli-core:** split the CLI framework out of @nzyme/cli  ([#256](https://github.com/kedrzu/nzyme/pull/256))
+- **eslint:** check package.json and Markdown with ESLint presets  ([#248](https://github.com/kedrzu/nzyme/pull/248))
+- declare dependency ranges and framework peers  ([#249](https://github.com/kedrzu/nzyme/pull/249))
+- **pulumi:** rework RotatedSecret into a rotated key set  ([#232](https://github.com/kedrzu/nzyme/pull/232))
+
+### ❤️ Thank You
+
+- Michał Kędrzyński
+
 ## 0.15.1 (2026-10-14)
 
 ### 🚀 Features

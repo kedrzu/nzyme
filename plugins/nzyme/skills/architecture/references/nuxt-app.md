@@ -3,7 +3,7 @@
 A Nuxt 4 app package with nothing implicit: no auto-imports, no file-based routes, one path alias,
 one IoC container. The app talks to whatever API the repo has; this element does not prescribe a
 backend. Components come from the UI package (`references/ui-package.md`); how they are built is
-`../ui/SKILL.md`.
+`../../../../docs/practice/ui.md`.
 
 ## Reference state
 
@@ -26,8 +26,9 @@ packages/{{app}}/
   `prep` (`nuxt prepare`, which writes `.nuxt/tsconfig.json`) through the `nx.json` target defaults,
   and `build` depends on `typecheck`.
 - **`tsconfig.json`** extends `.nuxt/tsconfig.json`, so `nzyme monorepo` does not generate it (the app
-  has no `tsconfig.esm.json`). Un-ignore it: `!/packages/{{app}}/tsconfig.json` in `.gitignore`
-  (`references/monorepo.md`).
+  has no `tsconfig.esm.json`).
+- **`.gitignore`** in the app: `.nuxt/`, `.output/` and `!tsconfig.json`, which un-ignores the
+  hand-written tsconfig (`references/monorepo.md`).
 - **Lint:** the app imports `.vue` files, so it gets a `files` entry in the `.oxlintrc.json` override
   (`references/lint-format.md`).
 - **Setup:** `setup.build.sh` keeps its `{{if nuxt}}` block (`references/setup-scripts.md`).
@@ -44,13 +45,16 @@ Ask it in a new repo; in an existing one the config already answers it.
   ```ts
   ssr: true,
   nitro: { prerender: { routes: ['/'], crawlLinks: true, failOnError: true } },
-  // `Reveal`, `Collapse`, `Carousel` (`@nzyme/vue`) and the `@nzyme/vue-transitions` components
-  // import CSS modules from `.tsx` files, which Nuxt's per-component style inlining misses: without
-  // these two, their CSS arrives with the chunk at hydration and a carousel renders stacked until then
-  // (layout shift).
-  features: { inlineStyles: false },
-  vite: { build: { cssCodeSplit: false } },
+  modules: ['@nuxtjs/critters'],
   ```
+
+  Nuxt inlines each rendered SFC's `<style>` (`Reveal`, `Collapse`, `Carousel`, `Form` are SFCs).
+  `@nuxtjs/critters` then inlines into one `<style>` only the rules matching the prerendered DOM and
+  makes the remaining stylesheet links non-blocking (`media="print"` plus `onload`, with a `<noscript>`
+  fallback). The `@nzyme/vue-transitions` components are still `.tsx` with CSS modules. Whether Nuxt
+  inlines their CSS per component has not been measured: the one `.tsx` CSS module measured, on a
+  single prerendered page, was inlined, and why is unverified. Whatever is not inlined reaches the
+  page through linked stylesheets, which critters scans. Add `@nuxtjs/critters` to the app's `devDependencies`.
 
   `failOnError` turns a page that fails to render into a failed build, not a missing file. A page
   rendered on every request needs `nuxt build` and a server to run it; choose that only when
@@ -198,7 +202,7 @@ export default defineNuxtPlugin({
 
 - The `ioc-plugin` registers the interface implementations (`LanguageContext`, an auth store) and
   sets values from `useRuntimeConfig().public`. Services themselves resolve lazily on first
-  `useService`; how to define them is `nzyme:ioc`.
+  `useService`; how to define them is `../../../../docs/practice/ioc.md`.
 - **`dependsOn: ['ioc-plugin']`** on every plugin that resolves a service, so the order is stated,
   not inherited from file names. Outside a component, resolve through
   `nuxtApp.vueApp.runWithContext(() => useService(X))`.
@@ -262,9 +266,8 @@ A build that reads any other gitignored file (a key, a per-worktree config) adds
   a `{projectRoot}` path, is always a difference — and so is a missing guard row. Repo scripts and
   dependencies stay.
 - `nuxt.config.ts`: by option. Auto-imports on, `pages/` routing, a `~`/`@@` alias in use, `ssr`
-  missing (Nuxt's default is SSR), or an SSR app without `inlineStyles: false` and
-  `cssCodeSplit: false` while it uses those `@nzyme/vue` or `@nzyme/vue-transitions` components: each
-  a difference. Repo modules,
+  missing (Nuxt's default is SSR), or a prerendered SSR app without `@nuxtjs/critters` in
+  `modules`: each a difference. Repo modules,
   `app.head`, route rules and hooks stay.
 - Plugins: a container created anywhere but one `ioc-plugin`, or a plugin that resolves services
   without `dependsOn: ['ioc-plugin']`, is a difference.

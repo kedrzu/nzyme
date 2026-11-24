@@ -4,6 +4,7 @@ import { UsageError } from '@nzyme/cli-core';
 import type { Logger } from '@nzyme/logging/Logger.js';
 import { waitFor } from '@nzyme/utils/waitFor.js';
 import { withTimeout } from '@nzyme/utils/withTimeout.js';
+import { immutable } from '@nzyme/utils/immutable.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
 import type { GithubClient } from './createGithubClient.js';
@@ -80,7 +81,7 @@ const DEFAULT_TIMEOUT_MS = 1_200_000;
 /**
  * Check-run conclusions that count as a hard failure.
  */
-const FAILING_CONCLUSIONS = new Set(['failure', 'timed_out', 'cancelled', 'action_required', 'stale']);
+const FAILING_CONCLUSIONS = immutable(new Set(['failure', 'timed_out', 'cancelled', 'action_required', 'stale']));
 
 /**
  * The aggregate state of every check run and commit status on a head SHA.

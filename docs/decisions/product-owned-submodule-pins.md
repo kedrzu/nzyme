@@ -25,20 +25,18 @@ publishes to npm. Every product would hold a credential to the shared library.
   must be synced continuously, nzyme PRs go fork → upstream, and the tooling that assumes a
   submodule's PRs live in its `origin` needs rework. Strong isolation, at a daily cost.
 - **Option C — the product owns its pin; nzyme holds no product state.** The gitlink in the product
-  is the record. Bumps are PRs in the product, gated by its CI. Production branches move only by the
+  is the record. Pin moves are commits in the product, gated by its CI. Production branches move only by the
   product's own promotion. Trade-off: nzyme itself cannot show what each product runs — the product's
-  history and its bump PRs do.
+  history does.
 
 ## Decision
 
 Option C. The gitlink already records exactly what each product branch runs, so mirroring it into
 nzyme added state, automation and a credential without adding information.
 
-- `@nzyme/cli` keeps `submodule bump` and nzyme keeps the reusable `consumer-bump.yml`, which writes
-  only to the product.
 - `submodule mirror`, `consumer-mirror.yml`, the `<consumer>/*` refs and `forward-port.yml` are
   removed.
-- The rules a product follows — exact-pin checkout, automatic bumps on `main` only, reachable pins,
+- The rules a product follows — exact-pin checkout, reachable pins,
   the hotfix flow — are in [docs/consumers.md](../consumers.md).
 
 ## Consequences
@@ -51,3 +49,12 @@ nzyme added state, automation and a credential without adding information.
   - Keeping production branches free of automated bumps is the product's discipline, backed by its own
     guard rails (a deploy-time assertion and a required check on production PRs), not something nzyme
     can enforce.
+
+## Amendment 2026-11-20: no scheduled bump
+
+The scheduled, auto-merged bump (`consumer-bump.yml`, `nzyme submodule bump`) is removed. Its PRs ran
+no tests in the product, so untested nzyme reached the product's `main` and broke diff-based test
+selection (`nzyme git affected` assumes everything on the base branch was tested in its own PR). The
+product's task workflow now moves the pin to nzyme `main` inside every task PR, where the expanded
+gitlink diff selects the nzyme tests ([docs/consumers.md](../consumers.md)). Pin ownership, the
+production pin rules and the absence of any credential to nzyme stand.

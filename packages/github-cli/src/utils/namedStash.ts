@@ -25,7 +25,7 @@ export interface NamedStash {
  *
  * The stash stack is shared across every worktree of a clone and several agents work in parallel
  * worktrees, so an entry is only ever safe to touch when it can be identified unambiguously - by
- * name, never by position. See CLAUDE.md "Stash safety (multi-worktree)". The caller supplies the
+ * name, never by position. The caller supplies the
  * meaningful half of the name; a timestamp and a random suffix make it unique, because a plain
  * per-task label collides whenever two worktrees work the same task at once.
  *

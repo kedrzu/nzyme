@@ -5,10 +5,12 @@ import { UsageError } from '@nzyme/cli-core';
 import type { Logger } from '@nzyme/logging/Logger.js';
 
 import type { GithubConfig } from '../GithubConfig.js';
-import { determineNextVersion, extractBranchVersion } from './branchVersionHelpers.js';
+import { determineNextVersion } from './branchVersionHelpers.js';
+import { buildTaskPrTitle } from './buildTaskPrTitle.js';
 import { createBranchAndPr } from './createBranchAndPr.js';
 import type { GithubClient } from './createGithubClient.js';
 import { findAllMatchingPrs } from './findMatchingPr.js';
+import { findReusableTaskBranch, listTaskBranches } from './listTaskBranches.js';
 
 /**
  * Parameters for handling merged PR reopen.
@@ -165,22 +167,14 @@ export async function handleMergedPrReopen(params: HandleMergedPrReopenParams): 
         await onReopenTask();
     }
 
-    // Determine the new branch name with incremented version
-    // Use all closed PR branches to determine the next version
-    const allClosedBranches = allClosedPrs.map(pr => pr.head.ref);
-    const latestBranchName = mostRecentClosedPr.head.ref;
-    const newBranchName = determineNextVersion(latestBranchName, allClosedBranches);
+    const newBranchName = await resolveReopenBranchName({
+        latestBranchName: mostRecentClosedPr.head.ref,
+        prBranches: allMatchingPrs.map(pr => pr.head.ref),
+    });
 
-    logger.info(`🌿 Creating new versioned branch: ${chalk.cyan(newBranchName)}`);
+    logger.info(`🌿 Using versioned branch: ${chalk.cyan(newBranchName)}`);
 
-    // Extract version for PR title
-    const versionNumber = extractBranchVersion(newBranchName);
-    const versionSuffix = versionNumber > 1 ? ` (v${versionNumber})` : '';
-
-    // Create PR title with version number
-    const prTitle = projectName
-        ? `[${issueId}][${projectName}] ${issueTitle}${versionSuffix}`
-        : `[${issueId}] ${issueTitle}${versionSuffix}`;
+    const prTitle = buildTaskPrTitle({ issueId, issueTitle, projectName, branchName: newBranchName });
 
     // Create new branch and PR
     const result = await createBranchAndPr({
@@ -204,6 +198,46 @@ export async function handleMergedPrReopen(params: HandleMergedPrReopenParams): 
         reopened: true,
         newBranchName,
     };
+}
+
+/**
+ * Parameters for resolving the branch a reopened task continues on.
+ */
+export interface ResolveReopenBranchNameParams {
+    /**
+     * Head branch of the task's most recently merged or closed pull request.
+     */
+    latestBranchName: string;
+
+    /**
+     * Head branches of every pull request of the task, open and closed.
+     */
+    prBranches: string[];
+
+    /**
+     * Repository to inspect. Defaults to the current directory.
+     */
+    baseDir?: string;
+}
+
+/**
+ * Pick the branch a reopened task continues on.
+ *
+ * When HEAD is a task branch no pull request carries - a previous run pushed it and then failed to
+ * open the PR - it is reused. Otherwise the next `--vN` is returned, counting branches left in git
+ * too: the PR list is a window of recent PRs, and a branch whose PR fell out of it (or whose
+ * worktree is still checked out) must not be handed out again.
+ */
+export async function resolveReopenBranchName(params: ResolveReopenBranchNameParams): Promise<string> {
+    const { latestBranchName, prBranches, baseDir } = params;
+
+    const taskBranches = await listTaskBranches({ branchName: latestBranchName, baseDir });
+    const reusable = await findReusableTaskBranch({ taskBranches, prBranches, baseDir });
+    if (reusable) {
+        return reusable;
+    }
+
+    return determineNextVersion(latestBranchName, [...prBranches, ...taskBranches]);
 }
 
 /**

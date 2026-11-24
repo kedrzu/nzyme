@@ -1,4 +1,6 @@
-let scrollBarWidth: number;
+import { createMemo } from '@nzyme/utils/createMemo.js';
+
+const scrollBarWidth = createMemo(getScrollbarWidthCore);
 
 /**
  * Gets the width of the browser's scrollbar in pixels.
@@ -9,11 +11,7 @@ let scrollBarWidth: number;
  * @returns The width of the scrollbar in pixels
  */
 export function getScrollBarWidth() {
-    if (scrollBarWidth != null) {
-        return scrollBarWidth;
-    }
-
-    return (scrollBarWidth = getScrollbarWidthCore());
+    return scrollBarWidth();
 }
 
 /**

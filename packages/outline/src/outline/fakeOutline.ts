@@ -59,7 +59,9 @@ export function outlineLikeNormalizer(text: string): string {
 
 const TABLE_SEPARATOR = /^\|(\s*:?-{3,}:?\s*\|)+\s*$/;
 
-export interface FakeUser extends OutlineUser {
+/** The fake knows every user's e-mail; what Outline reveals of it is `mayReadEmail`'s rule. */
+export interface FakeUser extends Omit<OutlineUser, 'email'> {
+    email: string;
     /** The bearer token that authenticates as this user. */
     token: string;
 }
@@ -565,18 +567,21 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
     // --- handlers ---
 
     function authInfo({ user }: Call) {
-        return ok({ user: presentUser(user), team: { id: 'team-1', name: 'Fake team' } });
+        return ok({ user: presentUser(user, true), team: { id: 'team-1', name: 'Fake team' } });
     }
 
-    function usersList({ body }: Call) {
+    function usersList({ body, user }: Call) {
         const query = optionalString(body, 'query')?.toLowerCase();
         const emails = optionalStringArray(body, 'emails');
         const ids = optionalStringArray(body, 'ids');
         const matching = users
-            .filter(user => query == null || `${user.name} ${user.email}`.toLowerCase().includes(query))
-            .filter(user => emails == null || emails.includes(user.email))
-            .filter(user => ids == null || ids.includes(user.id));
-        return okPage(body, matching.map(presentUser));
+            .filter(other => query == null || `${other.name} ${other.email}`.toLowerCase().includes(query))
+            .filter(other => emails == null || emails.includes(other.email))
+            .filter(other => ids == null || ids.includes(other.id));
+        return okPage(
+            body,
+            matching.map(other => presentUser(other, mayReadEmail(user, other))),
+        );
     }
 
     function groupsList({ body }: Call) {
@@ -1131,8 +1136,19 @@ class FakeApiError extends Error {
 
 // --- pure helpers ---
 
-function presentUser(user: FakeUser): OutlineUser {
-    return { id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin };
+/**
+ * Whether `actor` sees `user`'s e-mail in `users.list`: workspace admins and the user themself do. Simplified:
+ * real Outline also lets a workspace preference (EmailDisplay) reveal e-mails to everyone or to members.
+ */
+function mayReadEmail(actor: FakeUser, user: FakeUser): boolean {
+    return actor.isAdmin || actor.id === user.id;
+}
+
+/** Outline presents a user without an e-mail unless the endpoint passes the policy check; memberships never do. */
+function presentUser(user: FakeUser, withEmail = false): OutlineUser {
+    return withEmail
+        ? { id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin }
+        : { id: user.id, name: user.name, isAdmin: user.isAdmin };
 }
 
 function presentCollection(record: CollectionRecord): OutlineCollection {

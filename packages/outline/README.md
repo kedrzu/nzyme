@@ -80,7 +80,7 @@ Deletions:
 
 Sharing:
 
-- `outline share <file> <name>...` shares a synced document with users (exact full name or e-mail) or groups (exact name), with edit rights; `outline unshare <file> <name>...` removes those direct shares; `outline shares <file>` lists them. Each prints the document's direct shares after.
+- `outline share <file> <name>...` shares a synced document with users (exact full name or e-mail) or groups (exact name), with edit rights; `outline unshare <file> <name>...` removes those direct shares; `outline shares <file>` lists them. Each prints the document's direct shares after. E-mails appear in the listings only when Outline reveals them: Outline leaves them out of membership listings and, for non-admins, often out of the user list, so a user is then named without one and cannot be found by e-mail.
 - Only direct shares are listed and changed; access through a collection or a parent document is not.
 - A name matching nobody or several changes nothing; a file without an `outline:` id is not in Outline yet and is refused.
 

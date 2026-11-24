@@ -15,6 +15,7 @@ import type { HookEvent } from '../hook/hook.js';
 import { renderReport } from '../hook/messages.js';
 import { OutlineApiError } from '../outline/errors.js';
 import { OutlineClient } from '../outline/OutlineClient.js';
+import type { OutlineUser } from '../outline/OutlineTypes.js';
 import { pull } from '../reconcile/pull.js';
 import {
     collectionAccess,
@@ -549,13 +550,17 @@ function folderOf(workspace: Workspace, folder: string | undefined): string {
     return folder == null ? '' : ` in ${relative(workspace.mainDir, join(workspace.documentsDir, folder))}/`;
 }
 
+function userLabel(user: OutlineUser): string {
+    return user.email == null ? user.name : `${user.name} <${user.email}>`;
+}
+
 function renderAccess(access: CollectionAccess): string {
     const { collection } = access;
     const lines = [
         collection.permission == null
             ? '- only its members, not the whole workspace'
             : `- everyone in the workspace (${collection.permission})`,
-        ...access.users.map(({ user, permission }) => `- ${user.name} <${user.email}> (${permission})`),
+        ...access.users.map(({ user, permission }) => `- ${userLabel(user)} (${permission})`),
         ...access.groups.map(({ group, permission }) => `- group ${group.name} (${permission})`),
     ];
     return `Access to the collection "${collection.name}":\n${lines.join('\n')}\n`;
@@ -567,7 +572,7 @@ function renderShares(shares: DirectShare[]): string {
     }
     const lines = shares.map(item =>
         item.kind === 'user'
-            ? `- ${item.user.name} <${item.user.email}> (${item.permission})`
+            ? `- ${userLabel(item.user)} (${item.permission})`
             : `- group ${item.group.name} (${item.permission})`,
     );
     return `Shared directly with:\n${lines.join('\n')}\n`;

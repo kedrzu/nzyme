@@ -11,7 +11,8 @@ export interface OutlineUserRef {
 }
 
 export interface OutlineUser extends OutlineUserRef {
-    email: string;
+    /** Absent when Outline hides it from the caller (memberships listings never carry it). */
+    email?: string | null;
     isAdmin: boolean;
 }
 

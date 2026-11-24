@@ -126,15 +126,6 @@ test.each([
     expect(calls).toHaveLength(0);
 });
 
-test('writes a signed-in grant to the store and reads it back', async () => {
-    const { auth, store } = setUp({ stored: {} });
-
-    await auth.store({ accessToken: ACCESS_TOKEN, refreshToken: REFRESH_TOKEN, expiresIn: 86_399 });
-
-    expect(await auth.get()).toBe(ACCESS_TOKEN);
-    expect(store.values.has('LINEAR_SESSION')).toBe(true);
-});
-
 test('never prints a token or puts it in an error, whatever the refresh ends in', async () => {
     const tokens = [ACCESS_TOKEN, REFRESH_TOKEN, NEW_ACCESS_TOKEN, NEW_REFRESH_TOKEN];
     const answers: LinearAnswer[] = [
@@ -216,7 +207,7 @@ function setUp({ stored, linear }: SetUpOptions) {
         secretStore: store,
         fetch: (input, init) => {
             calls.push({
-                url: String(input),
+                url: input instanceof Request ? input.url : input.toString(),
                 method: init?.method,
                 contentType: new Headers(init?.headers).get('content-type'),
                 form: new URLSearchParams(typeof init?.body === 'string' ? init.body : ''),

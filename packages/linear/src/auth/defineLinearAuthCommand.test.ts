@@ -46,8 +46,8 @@ test('auth exchanges the code with the PKCE verifier, stores the grant, then rem
         redirect_uri: redirectUri,
         response_type: 'code',
         scope: 'read,write',
-        state: expect.any(String),
-        code_challenge: expect.any(String),
+        state: expect.any(String) as string,
+        code_challenge: expect.any(String) as string,
         code_challenge_method: 'S256',
     });
 
@@ -59,7 +59,7 @@ test('auth exchanges the code with the PKCE verifier, stores the grant, then rem
         code: CODE,
         redirect_uri: redirectUri,
         client_id: 'client-1',
-        code_verifier: expect.any(String),
+        code_verifier: expect.any(String) as string,
     });
     // The verifier sent is the one the challenge in the authorize URL was derived from.
     const challenge = createHash('sha256').update(String(form.code_verifier)).digest('base64url');

@@ -3,7 +3,7 @@
     "version": "0.19.0",
     "description": "Helpers about the current machine",
     "license": "MIT",
-    "author": "Micha\u0142 K\u0119drzy\u0144ski <m.kedrzynski@gmail.com>",
+    "author": "Michał Kędrzyński <m.kedrzynski@gmail.com>",
     "repository": {
         "type": "git",
         "url": "https://github.com/kedrzu/nzyme.git"

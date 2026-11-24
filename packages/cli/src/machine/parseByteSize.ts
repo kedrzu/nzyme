@@ -1,11 +1,13 @@
+import { immutable } from '@nzyme/utils/immutable.js';
+
 /** Bytes per binary unit, matched case-insensitively. */
-const UNIT_BYTES = new Map([
-    ['b', 1],
-    ['kib', 1024],
-    ['mib', 1024 ** 2],
-    ['gib', 1024 ** 3],
-    ['tib', 1024 ** 4],
-]);
+const UNIT_BYTES = immutable<Record<string, number>>({
+    b: 1,
+    kib: 1024,
+    mib: 1024 ** 2,
+    gib: 1024 ** 3,
+    tib: 1024 ** 4,
+});
 
 const BYTE_SIZE = /^(\d+(?:\.\d+)?)\s*([a-z]*)$/i;
 
@@ -22,7 +24,7 @@ export function parseByteSize(text: string): number | undefined {
     }
 
     const [, amount = '', unit = ''] = match;
-    const multiplier = unit === '' ? 1 : UNIT_BYTES.get(unit.toLowerCase());
+    const multiplier = unit === '' ? 1 : UNIT_BYTES[unit.toLowerCase()];
     if (multiplier === undefined) {
         return undefined;
     }

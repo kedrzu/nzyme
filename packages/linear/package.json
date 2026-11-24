@@ -40,7 +40,10 @@
         "@linear/sdk": "103.0.0",
         "@nzyme/cli-core": "workspace:*",
         "@nzyme/github-cli": "workspace:*",
+        "@nzyme/ioc": "workspace:*",
         "@nzyme/logging": "workspace:*",
+        "@nzyme/node-utils": "workspace:*",
+        "@nzyme/secrets": "workspace:*",
         "@nzyme/utils": "workspace:*",
         "chalk": "6.0.1",
         "enquirer": "2.4.1",
@@ -48,7 +51,6 @@
         "open": "11.0.4"
     },
     "devDependencies": {
-        "@nzyme/ioc": "workspace:*",
         "@nzyme/tsconfig": "workspace:*",
         "@types/bun": "^1.4.5",
         "@typescript/native-preview": "^7.0.0-dev.20260707.2",

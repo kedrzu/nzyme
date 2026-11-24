@@ -3,6 +3,7 @@ import { Command } from '@nzyme/cli-core/Command.js';
 import type { CommandClass } from '@nzyme/cli-core/Command.js';
 import { isPlainObject } from '@nzyme/utils/isPlainObject.js';
 
+import { LinearSignInRequiredError } from '../auth/LinearSignInRequiredError.js';
 import { getCommandPaths } from '../utils/getCommandPaths.js';
 import { getLinearConfig } from '../utils/getLinearConfig.js';
 import { requestLinearGraphql } from '../utils/requestLinearGraphql.js';
@@ -10,9 +11,11 @@ import type { LinearGraphqlResponse } from '../utils/requestLinearGraphql.js';
 import type { LinearApiCommandsOptions } from './defineLinearApiCommands.js';
 
 /**
- * Defines the command that runs one GraphQL document against Linear with the configured API token, as the
+ * Defines the command that runs one GraphQL document against Linear with the person's credential (a
+ * personal API key, or the OAuth sign-in, renewed as needed), as the
  * agent-facing alternative to loading the Linear MCP's tools: the agent selects exactly the fields
- * it needs. stdout carries only the response's `data` as one compact JSON line; anything else
+ * it needs. When the OAuth sign-in is missing or refused, it exits 1 with the one line naming the
+ * sign-in command. stdout carries only the response's `data` as one compact JSON line; anything else
  * (GraphQL errors, an HTTP failure, bad arguments) goes to stderr with a non-zero exit code, so a
  * failure is never mistaken for an answer.
  *
@@ -55,11 +58,21 @@ export function defineLinearQueryCommand(options: LinearApiCommandsOptions): Com
             }
 
             const query = this.query === '-' ? await readStream(this.context.stdin) : this.query;
-            const { apiToken: token } = await getLinearConfig(options);
+
+            let authorization: string;
+            try {
+                authorization = await this.resolveAuthorization();
+            } catch (error) {
+                if (error instanceof LinearSignInRequiredError) {
+                    this.context.stderr.write(`${error.message}\n`);
+                    return 1;
+                }
+                throw error;
+            }
 
             let response: LinearGraphqlResponse;
             try {
-                response = await requestLinearGraphql({ token, query, variables });
+                response = await requestLinearGraphql({ authorization, query, variables });
             } catch (error) {
                 this.context.stderr.write(
                     `Request to Linear failed: ${error instanceof Error ? error.message : 'unknown error'}\n`,
@@ -92,6 +105,14 @@ export function defineLinearQueryCommand(options: LinearApiCommandsOptions): Com
 
             this.context.stdout.write(`${JSON.stringify(data)}\n`);
             return 0;
+        }
+
+        /** The `Authorization` header value: the bare personal key, or `Bearer` and a fresh OAuth token. */
+        private async resolveAuthorization(): Promise<string> {
+            if ('auth' in options) {
+                return `Bearer ${await this.container.resolve(options.auth).get()}`;
+            }
+            return (await getLinearConfig(options)).apiToken;
         }
     };
 }

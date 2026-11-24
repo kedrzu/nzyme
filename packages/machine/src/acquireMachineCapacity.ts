@@ -4,7 +4,6 @@ import { ApplicationError } from '@nzyme/logging/ApplicationError.js';
 import { formatDurationMs } from '@nzyme/utils/formatDurationMs.js';
 import { waitFor } from '@nzyme/utils/waitFor.js';
 
-import { computeCapacity } from './computeCapacity.js';
 import { createCapacityRegistry } from './createCapacityRegistry.js';
 import type { CapacityRegistry, CapacityReservationRecord, CapacityWaiterRecord } from './createCapacityRegistry.js';
 import { formatMachineCapacityStatus, MACHINE_STATUS_PREFIX } from './formatMachineCapacityStatus.js';
@@ -21,14 +20,14 @@ const DEFAULT_STATUS_INTERVAL_MS = 15_000;
 const DEFAULT_STALL_TIMEOUT_MS = 30 * 60_000;
 
 /**
- * Waits in the machine-global FIFO queue until memory and CPU allow at least `workers.min` workers, then
- * reserves `base + W × perWorker` bytes for the largest W up to `workers.max`. The reservation counts
- * against every other heavy run on the machine, from any repository, until it is released or its owner
- * exits.
+ * Waits in the machine-global FIFO queue for one of the machine's slots (a fixed number of heavy runs
+ * at once, `resolveMachineSlots()`) and takes it. The slot counts against every other heavy run on
+ * the machine, from any repository, until it is released or its owner exits. How much a run does with
+ * its slot (its workers) is the caller's decision.
  *
- * Throws at once when the request can never fit this machine, and with the numbers, the holders and the
- * queue when its place in the queue has not improved for `stallTimeoutMs`: a run behind a stuck head of
- * the queue fails instead of hanging. A waiter killed by a signal stops counting, because its pid is dead.
+ * Throws with the holders and the queue when its place in the queue has not improved for
+ * `stallTimeoutMs`: a run behind a stuck head of the queue fails instead of hanging. A waiter killed by
+ * a signal stops counting, because its pid is dead.
  */
 export async function acquireMachineCapacity(
     options: MachineCapacityRequestOptions,
@@ -51,8 +50,6 @@ export async function acquireMachineCapacity(
         ownerPid: request.ownerPid,
         waitingSince,
         nonce,
-        memory: options.memory,
-        workers: options.workers,
     };
     registry.writeWaiter(waiter);
 
@@ -146,23 +143,12 @@ function prepareRequest(options: MachineCapacityRequestOptions): PreparedRequest
 }
 
 function validateRequest(options: MachineCapacityRequestOptions): void {
-    const { memory, workers } = options;
-
     if (options.label.trim() === '') {
         throw new ApplicationError('Machine capacity request needs a label', {});
     }
 
-    if (!isNonNegativeNumber(memory.base) || !isNonNegativeNumber(memory.perWorker)) {
-        throw new ApplicationError('Machine capacity memory must be non-negative byte counts', { memory });
-    }
-
-    if (
-        !Number.isSafeInteger(workers.min) ||
-        workers.min < 1 ||
-        !Number.isSafeInteger(workers.max) ||
-        workers.max < workers.min
-    ) {
-        throw new ApplicationError('Machine capacity workers must be integers with 1 <= min <= max', { workers });
+    if (options.slots !== undefined && (!Number.isSafeInteger(options.slots) || options.slots < 1)) {
+        throw new ApplicationError('Machine slots must be a positive integer', { slots: options.slots });
     }
 }
 
@@ -179,28 +165,6 @@ function decide(request: PreparedRequest, waiter: CapacityWaiterRecord): Decisio
                 `Process ${request.ownerPid} exited before machine capacity for ${options.label} was granted`,
                 { label: options.label, ownerPid: request.ownerPid },
             ),
-        };
-    }
-
-    const decision = computeCapacity({
-        memory: options.memory,
-        workers: options.workers,
-        availableBytes: status.availableBytes,
-        totalBytes: status.totalBytes,
-        reserveBytes: status.reserveBytes,
-        holders: status.holders,
-        cpu: status.cpu,
-        cpuThreshold: status.cpuThreshold,
-    });
-
-    if (decision.kind === 'never-fits') {
-        return {
-            kind: 'refuse',
-            error: new ApplicationError(`Machine capacity request ${options.label} ${decision.reason}`, {
-                label: options.label,
-                memory: options.memory,
-                workers: options.workers,
-            }),
         };
     }
 
@@ -225,8 +189,8 @@ function decide(request: PreparedRequest, waiter: CapacityWaiterRecord): Decisio
         return { kind: 'wait', reason: `${ahead} request(s) queued ahead`, status, position };
     }
 
-    if (decision.kind === 'wait') {
-        return { kind: 'wait', reason: decision.reason, status, position };
+    if (status.holders.length >= status.slots) {
+        return { kind: 'wait', reason: `all ${status.slots} slots are taken`, status, position };
     }
 
     const record: CapacityReservationRecord = {
@@ -235,8 +199,6 @@ function decide(request: PreparedRequest, waiter: CapacityWaiterRecord): Decisio
         cwd: process.cwd(),
         ownerPid: request.ownerPid,
         ownerStartedAt: request.ownerStartedAt,
-        bytes: decision.bytes,
-        workers: decision.workers,
         createdAt: now,
     };
     registry.writeReservation(record);
@@ -254,7 +216,7 @@ function createReservation(request: PreparedRequest, record: CapacityReservation
         process.on('exit', release);
     }
 
-    return { id: record.id, workers: record.workers, bytes: record.bytes, release };
+    return { id: record.id, release };
 
     function release(): void {
         if (released) {
@@ -269,7 +231,7 @@ function createReservation(request: PreparedRequest, record: CapacityReservation
 
 function describeWait(label: string, outcome: WaitOutcome, now: number): string[] {
     return [
-        `${MACHINE_STATUS_PREFIX}${label} waiting for machine capacity ` +
+        `${MACHINE_STATUS_PREFIX}${label} waiting for a machine slot ` +
             `(position ${outcome.position} of ${Math.max(outcome.position, outcome.status.waiters.length)}): ${outcome.reason}`,
         ...formatMachineCapacityStatus(outcome.status, now),
     ];
@@ -284,8 +246,4 @@ function emitLines(request: PreparedRequest, lines: string[]): void {
 
 function writeToStderr(line: string): void {
     process.stderr.write(`${line}\n`);
-}
-
-function isNonNegativeNumber(value: number): boolean {
-    return Number.isFinite(value) && value >= 0;
 }

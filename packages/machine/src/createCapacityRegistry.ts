@@ -9,29 +9,23 @@ import {
     unlinkSync,
     writeFileSync,
 } from 'node:fs';
-import { homedir, totalmem } from 'node:os';
+import { homedir } from 'node:os';
 import * as path from 'node:path';
 
 import { ApplicationError } from '@nzyme/logging/ApplicationError.js';
 
-import { GiB } from './byteUnits.js';
-import { sumUnmetReservationBytes } from './computeCapacity.js';
-import type { CapacityMemoryRequest, CapacityWorkerRange } from './computeCapacity.js';
 import type {
     MachineCapacityEnvironmentOptions,
     MachineCapacityHolder,
     MachineCapacityStatus,
     MachineCapacityWaiter,
 } from './MachineCapacityTypes.js';
-import { readAvailableMemory } from './readAvailableMemory.js';
-import { readCpuLoad } from './readCpuLoad.js';
-import { getProcessStartTime, readProcessTable, sumProcessTreeRss } from './readProcessTree.js';
+import { getProcessStartTime, readProcessTable } from './readProcessTree.js';
 import type { ProcessInfo } from './readProcessTree.js';
+import { resolveMachineSlots } from './resolveMachineSlots.js';
 
 /** Bumped whenever the on-disk format changes; other versions are detected, never silently ignored. */
-const STATE_VERSION = 'v1';
-const DEFAULT_RESERVE_BYTES = 8 * GiB;
-const DEFAULT_CPU_THRESHOLD = 0.85;
+const STATE_VERSION = 'v2';
 /**
  * A lock is held for one admission decision (tens of milliseconds). Past this age its holder is taken
  * to have died or to be suspended, and the lock is removed.
@@ -45,8 +39,6 @@ export interface CapacityReservationRecord {
     cwd: string;
     ownerPid: number;
     ownerStartedAt: string;
-    bytes: number;
-    workers: number;
     createdAt: number;
 }
 
@@ -60,11 +52,9 @@ export interface CapacityWaiterRecord {
     ownerPid: number;
     waitingSince: number;
     nonce: string;
-    memory: CapacityMemoryRequest;
-    workers: CapacityWorkerRange;
 }
 
-/** Live registry state plus the machine readings taken with it. */
+/** Live registry state plus the process table it was checked against. */
 export interface CapacityRegistryState {
     status: MachineCapacityStatus;
     table: ProcessInfo[];
@@ -89,7 +79,7 @@ export interface CapacityRegistry {
 }
 
 /**
- * Binds the machine-global capacity registry to its state directory and machine readers.
+ * Binds the machine-global registry to its state directory and process table reader.
  *
  * Mutations of the shared decision state happen under a lock, a `lock/` directory created by an atomic
  * `mkdir`. Waiters remove a lock older than `LOCK_STALE_MS`. A holder stalled past that age could then
@@ -102,12 +92,8 @@ export function createCapacityRegistry(options: MachineCapacityEnvironmentOption
     const reservationsDir = path.join(stateDir, 'reservations');
     const waitersDir = path.join(stateDir, 'waiters');
 
-    const readMemory = options.readAvailableMemory ?? readAvailableMemory;
-    const readTotal = options.readTotalMemory ?? totalmem;
-    const readCpu = options.readCpuLoad ?? readCpuLoad;
     const readTable = options.readProcessTable ?? readProcessTable;
-    const reserveBytes = options.reserveBytes ?? DEFAULT_RESERVE_BYTES;
-    const cpuThreshold = options.cpuThreshold ?? DEFAULT_CPU_THRESHOLD;
+    const slots = options.slots ?? resolveMachineSlots();
 
     return {
         readProcessTable: readTable,
@@ -146,10 +132,7 @@ export function createCapacityRegistry(options: MachineCapacityEnvironmentOption
                 label: record.label,
                 cwd: record.cwd,
                 ownerPid: record.ownerPid,
-                bytes: record.bytes,
-                workers: record.workers,
                 createdAt: record.createdAt,
-                currentRssBytes: sumProcessTreeRss(table, record.ownerPid),
             });
         }
 
@@ -169,17 +152,8 @@ export function createCapacityRegistry(options: MachineCapacityEnvironmentOption
             .filter(({ owners }) => owners.some(owner => isOwnerAlive(table, owner)))
             .map(({ version }) => version);
 
-        const availableBytes = readMemory();
-        const unmetBytes = sumUnmetReservationBytes(holders);
-
         const status: MachineCapacityStatus = {
-            availableBytes,
-            totalBytes: readTotal(),
-            reserveBytes,
-            unmetBytes,
-            freeBytes: availableBytes - unmetBytes - reserveBytes,
-            cpu: readCpu(),
-            cpuThreshold,
+            slots,
             holders,
             waiters: liveWaiters.map(toWaiterStatus),
             otherVersions,
@@ -301,8 +275,6 @@ function toWaiterStatus(record: CapacityWaiterRecord): MachineCapacityWaiter {
         pid: record.pid,
         ownerPid: record.ownerPid,
         waitingSince: record.waitingSince,
-        memory: record.memory,
-        workers: record.workers,
     };
 }
 
@@ -362,8 +334,6 @@ function parseReservation(value: unknown): CapacityReservationRecord | undefined
         typeof value.cwd !== 'string' ||
         typeof value.ownerPid !== 'number' ||
         typeof value.ownerStartedAt !== 'string' ||
-        typeof value.bytes !== 'number' ||
-        typeof value.workers !== 'number' ||
         typeof value.createdAt !== 'number'
     ) {
         return undefined;
@@ -375,8 +345,6 @@ function parseReservation(value: unknown): CapacityReservationRecord | undefined
         cwd: value.cwd,
         ownerPid: value.ownerPid,
         ownerStartedAt: value.ownerStartedAt,
-        bytes: value.bytes,
-        workers: value.workers,
         createdAt: value.createdAt,
     };
 }
@@ -391,13 +359,7 @@ function parseWaiter(value: unknown): CapacityWaiterRecord | undefined {
         typeof value.startedAt !== 'string' ||
         typeof value.ownerPid !== 'number' ||
         typeof value.waitingSince !== 'number' ||
-        typeof value.nonce !== 'string' ||
-        !isObject(value.memory) ||
-        typeof value.memory.base !== 'number' ||
-        typeof value.memory.perWorker !== 'number' ||
-        !isObject(value.workers) ||
-        typeof value.workers.min !== 'number' ||
-        typeof value.workers.max !== 'number'
+        typeof value.nonce !== 'string'
     ) {
         return undefined;
     }
@@ -411,8 +373,6 @@ function parseWaiter(value: unknown): CapacityWaiterRecord | undefined {
         ownerPid: value.ownerPid,
         waitingSince: value.waitingSince,
         nonce: value.nonce,
-        memory: { base: value.memory.base, perWorker: value.memory.perWorker },
-        workers: { min: value.workers.min, max: value.workers.max },
     };
 }
 

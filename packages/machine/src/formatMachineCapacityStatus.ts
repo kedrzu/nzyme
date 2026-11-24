@@ -1,36 +1,24 @@
 import { formatDurationMs } from '@nzyme/utils/formatDurationMs.js';
 
-import { formatBytes } from './formatBytes.js';
 import type { MachineCapacityStatus } from './MachineCapacityTypes.js';
 
-/** Prefix of every line the capacity registry prints, so wrappers can pass those lines through. */
+/** Prefix of every line the registry prints, so wrappers can pass those lines through. */
 export const MACHINE_STATUS_PREFIX = '[nzyme machine] ';
 
 /**
- * Renders a capacity snapshot as `[nzyme machine]`-prefixed lines: memory, CPU, holders with reserved
- * versus current memory, the queue, and other nzyme versions sharing the machine.
+ * Renders a registry snapshot as `[nzyme machine]`-prefixed lines: the slots, their holders, the
+ * queue, and other nzyme versions sharing the machine.
  * @__NO_SIDE_EFFECTS__
  */
 export function formatMachineCapacityStatus(status: MachineCapacityStatus, now: number): string[] {
     const lines = [
-        `memory: ${formatBytes(status.freeBytes)} free = ${formatBytes(status.availableBytes)} available − ` +
-            `${formatBytes(status.unmetBytes)} reserved but not yet used − ${formatBytes(status.reserveBytes)} kept free ` +
-            `(${formatBytes(status.totalBytes)} total)`,
-        `cpu: load ${status.cpu.load1m.toFixed(1)} on ${status.cpu.cores} cores ` +
-            `(admits below ${(status.cpuThreshold * status.cpu.cores).toFixed(1)})`,
+        `slots: ${status.holders.length} of ${status.slots} taken (NZYME_MACHINE_SLOTS overrides the count)`,
     ];
 
-    if (status.holders.length === 0) {
-        lines.push('holders: none');
-    } else {
-        lines.push(`holders (${status.holders.length}):`);
-        for (const holder of status.holders) {
-            lines.push(
-                `  ${holder.label} pid ${holder.ownerPid} in ${holder.cwd}: reserved ${formatBytes(holder.bytes)} ` +
-                    `(${holder.workers} workers), using ${formatBytes(holder.currentRssBytes)}, ` +
-                    `for ${formatDurationMs(now - holder.createdAt)}`,
-            );
-        }
+    for (const holder of status.holders) {
+        lines.push(
+            `  ${holder.label} pid ${holder.ownerPid} in ${holder.cwd}: for ${formatDurationMs(now - holder.createdAt)}`,
+        );
     }
 
     if (status.waiters.length > 0) {

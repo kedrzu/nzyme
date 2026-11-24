@@ -34,8 +34,7 @@ const builtinCommands = [
 // command loads its own `.env` if it wants one) and prints nothing beyond its own summary.
 // `git` (`git affected*`, `git base`) needs no `.env`, and its stdout is a contract callers
 // parse — so nothing else may be printed there (loading a `.env` logs a line to stdout). The same
-// holds for `machine`: a shell captures the worker count `machine reserve` prints, and
-// `machine status --json` is parsed.
+// holds for `machine status --json`, which scripts parse.
 if (!['quiet-run', 'git', 'machine'].includes(process.argv[2] ?? '')) {
     loadEnvVariables();
 }

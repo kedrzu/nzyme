@@ -5,9 +5,6 @@ import { ApplicationError } from '@nzyme/logging/ApplicationError.js';
 /** One row of the process table. */
 export interface ProcessInfo {
     pid: number;
-    ppid: number;
-    /** Resident set size in bytes. */
-    rssBytes: number;
     /** `ps` start time (`lstart` in UTC, whitespace-normalized); differs when a pid is reused by another process. */
     startTime: string;
 }
@@ -17,7 +14,7 @@ export interface ProcessInfo {
  * @util
  */
 export function readProcessTable(): ProcessInfo[] {
-    const output = execFileSync('ps', ['-A', '-o', 'pid=,ppid=,rss=,lstart='], {
+    const output = execFileSync('ps', ['-A', '-o', 'pid=,lstart='], {
         encoding: 'utf8',
         // `lstart` prints in the reader's locale and timezone, but start times are compared across processes.
         env: { ...process.env, LC_ALL: 'C', TZ: 'UTC' },
@@ -27,7 +24,7 @@ export function readProcessTable(): ProcessInfo[] {
     return parseProcessTable(output);
 }
 
-/** Parses `ps -A -o pid=,ppid=,rss=,lstart=` output; `ps` reports rss in KiB. */
+/** Parses `ps -A -o pid=,lstart=` output. */
 export function parseProcessTable(text: string): ProcessInfo[] {
     const table: ProcessInfo[] = [];
 
@@ -36,54 +33,16 @@ export function parseProcessTable(text: string): ProcessInfo[] {
             continue;
         }
 
-        const match = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S.*?)\s*$/.exec(line);
+        const match = /^\s*(\d+)\s+(\S.*?)\s*$/.exec(line);
 
         if (!match) {
             throw new ApplicationError('Unrecognized ps output line', { line });
         }
 
-        table.push({
-            pid: Number(match[1]),
-            ppid: Number(match[2]),
-            rssBytes: Number(match[3]) * 1024,
-            startTime: (match[4] ?? '').replace(/\s+/g, ' '),
-        });
+        table.push({ pid: Number(match[1]), startTime: (match[2] ?? '').replace(/\s+/g, ' ') });
     }
 
     return table;
-}
-
-/**
- * Sums RSS (bytes) of `pid` and all its descendants, walking ppid links of one snapshot.
- * @util
- */
-export function sumProcessTreeRss(table: readonly ProcessInfo[], pid: number): number {
-    const children = new Map<number, ProcessInfo[]>();
-    const byPid = new Map<number, ProcessInfo>();
-
-    for (const info of table) {
-        byPid.set(info.pid, info);
-        children.set(info.ppid, [...(children.get(info.ppid) ?? []), info]);
-    }
-
-    let total = 0;
-    const visited = new Set<number>();
-    const pending = [pid];
-
-    for (let current = pending.pop(); current != null; current = pending.pop()) {
-        if (visited.has(current)) {
-            continue;
-        }
-
-        visited.add(current);
-        total += byPid.get(current)?.rssBytes ?? 0;
-
-        for (const child of children.get(current) ?? []) {
-            pending.push(child.pid);
-        }
-    }
-
-    return total;
 }
 
 /**

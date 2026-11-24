@@ -4,17 +4,17 @@ import { formatMachineCapacityStatus } from '@nzyme/machine/formatMachineCapacit
 import type { MachineCapacityEnvironmentOptions } from '@nzyme/machine/MachineCapacityTypes.js';
 import { readMachineCapacityStatus } from '@nzyme/machine/readMachineCapacityStatus.js';
 
-/** Shows who holds and who waits for machine capacity, and what is free — without changing anything. */
+/** Shows who holds and who waits for the machine's slots — without changing anything. */
 export class MachineStatusCommand extends Command {
     static override paths = [['machine', 'status']];
 
     static override usage = Command.Usage({
         category: 'Machine',
-        description: 'Show free memory, CPU load, reservations and the queue of the machine capacity registry',
+        description: 'Show the slots, their holders and the queue of heavy runs on this machine',
         details: `
-            Read-only snapshot of the registry shared by every repository on this machine: memory
-            free for a new request, CPU load, each holder's reserved versus current memory, and the
-            queue in admission order. \`--json\` prints the snapshot as JSON.
+            Read-only snapshot of the registry shared by every repository on this machine: how many
+            heavy runs it admits at once, who holds a slot, and the queue in admission order.
+            \`--json\` prints the snapshot as JSON.
         `,
         examples: [
             ['Show the status', 'nzyme machine status'],
@@ -24,7 +24,7 @@ export class MachineStatusCommand extends Command {
 
     json = Option.Boolean('--json', false, { description: 'Print the snapshot as JSON' });
 
-    /** Where the registry lives and how the machine is read; tests override it. */
+    /** Where the registry lives and how many slots it has; tests override it. */
     environment: MachineCapacityEnvironmentOptions = {};
 
     /**

@@ -9,10 +9,10 @@ import { afterEach, expect, test } from 'bun:test';
 import { Cli } from 'clipanion';
 
 import { createContainer } from '@nzyme/ioc/Container.js';
-import { GiB } from '@nzyme/machine/byteUnits.js';
 import type { MachineCapacityEnvironmentOptions } from '@nzyme/machine/MachineCapacityTypes.js';
 import { readMachineCapacityStatus } from '@nzyme/machine/readMachineCapacityStatus.js';
 import { assert } from '@nzyme/utils/assert.js';
+import { waitUntil } from '@nzyme/utils/waitUntil.js';
 
 import type { CommandContext } from '@nzyme/cli-core/Command.js';
 import { MachineReserveCommand } from './MachineReserveCommand.js';
@@ -25,68 +25,43 @@ afterEach(() => {
     }
 });
 
-test('a request that can never fit exits 1 with the numbers on stderr', async () => {
-    const environment = await createEnvironment(1 * GiB);
+test('holds a slot for --pid after it returns, and a full machine makes the next request wait', async () => {
+    const environment = await createEnvironment();
     const owner = spawnOwner();
 
-    const result = await runReserve(environment, [
-        '--label',
-        'tests',
-        '--pid',
-        String(owner.pid),
-        '--base',
-        '32GiB',
-        '--per-worker',
-        '1GiB',
-        '--min',
-        '1',
-        '--max',
-        '1',
-    ]);
+    const result = await runReserve(environment, ['--label', 'tests', '--pid', String(owner.pid)]);
+
+    expect(result).toMatchObject({ exitCode: 0, stdout: '' });
+    expect(result.stderr).toContain(`[nzyme machine] tests: took a slot, held until pid ${owner.pid} exits`);
+    // The command has returned; the slot outlives it, bound to the owner.
+    expect(readMachineCapacityStatus(environment).holders).toMatchObject([{ label: 'tests', ownerPid: owner.pid }]);
+
+    const second = spawnOwner();
+    let finished = false;
+    const pending = runReserve(environment, ['--label', 'second', '--pid', String(second.pid)]).then(next => {
+        finished = true;
+        return next;
+    });
+    await waitUntil(() => readMachineCapacityStatus(environment).waiters.length === 1);
+    expect(finished).toBe(false);
+
+    owner.kill('SIGKILL');
+    expect(await pending).toMatchObject({ exitCode: 0 });
+});
+
+test('a malformed --pid exits 1 without joining the queue', async () => {
+    const environment = await createEnvironment();
+
+    const result = await runReserve(environment, ['--label', 'tests', '--pid', 'self']);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stdout).toBe('');
-    expect(result.stderr).toContain('nzyme machine reserve: Machine capacity request tests needs at least');
-    expect(readMachineCapacityStatus(environment).holders).toEqual([]);
+    expect(result.stderr).toContain('--pid must be a positive integer');
+    expect(readMachineCapacityStatus(environment).waiters).toEqual([]);
 });
 
-test('prints only the worker count on stdout and leaves the reservation to --pid', async () => {
-    const environment = await createEnvironment(8 * GiB);
-    const owner = spawnOwner();
-
-    const result = await runReserve(environment, [
-        '--label',
-        'tests',
-        '--pid',
-        String(owner.pid),
-        '--base',
-        '1GiB',
-        '--per-worker',
-        '2048MiB',
-        '--min',
-        '1',
-        '--max',
-        '2',
-    ]);
-
-    expect(result).toMatchObject({ exitCode: 0, stdout: '2\n' });
-    expect(result.stderr).toContain('[nzyme machine] tests: reserved 5.0 GiB for 2 workers');
-
-    // The command has returned; the reservation outlives it, bound to the owner.
-    expect(readMachineCapacityStatus(environment).holders).toMatchObject([
-        { label: 'tests', ownerPid: owner.pid, workers: 2, bytes: 5 * GiB },
-    ]);
-});
-
-/** A private registry on a machine with `availableBytes` free of 16 GiB, and idle CPU. */
-async function createEnvironment(availableBytes: number): Promise<MachineCapacityEnvironmentOptions> {
-    return {
-        rootDir: await mkdtemp(path.join(os.tmpdir(), 'machine-reserve-')),
-        reserveBytes: 0,
-        readAvailableMemory: () => availableBytes,
-        readTotalMemory: () => 16 * GiB,
-        readCpuLoad: () => ({ cores: 8, load1m: 0, load5m: 0, load15m: 0 }),
-    };
+/** A private registry with one slot. */
+async function createEnvironment(): Promise<MachineCapacityEnvironmentOptions> {
+    return { rootDir: await mkdtemp(path.join(os.tmpdir(), 'machine-reserve-')), slots: 1 };
 }
 
 /** A live process for the reservation to belong to — the role a shell plays for a real run. */

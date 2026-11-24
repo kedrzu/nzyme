@@ -16,8 +16,8 @@ export interface OutlineCommandsOptions {
     recovered?: string;
     /**
      * The name of the user's own private collection (one with no workspace-wide permission), where a file put at
-     * the root of the documents folder is created. Sync never creates the collection: while none matches, such
-     * files are not sent and the agent is told.
+     * the root of the documents folder is created. `collection create --private` creates it; while none matches,
+     * such files are not sent and the agent is told to run that command.
      */
     privateCollection: (user: OutlineUser) => string;
     /** How the agent runs these commands, e.g. `bun run cli outline`; the prefix by default. */

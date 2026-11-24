@@ -3,7 +3,12 @@ import { waitFor } from '@nzyme/utils/waitFor.js';
 import { OutlineApiError, OutlineConflictError, OutlineNetworkError, OutlineRateLimitError } from './errors.js';
 import type {
     AttachmentsCreateParams,
+    CollectionsAddGroupParams,
+    CollectionsAddUserParams,
     CollectionsCreateParams,
+    CollectionsRemoveGroupParams,
+    CollectionsRemoveUserParams,
+    CollectionsUpdateParams,
     CollectionGroupMembershipsResult,
     CollectionMembershipsResult,
     DocumentGroupMembershipsResult,
@@ -124,16 +129,32 @@ export class OutlineClient {
         list: (params: OutlinePageParams = {}) => this.callPage<OutlineCollection>('collections.list', params),
         info: (params: { id: string }) => this.callData<OutlineCollection>('collections.info', params),
         create: (params: CollectionsCreateParams) => this.callData<OutlineCollection>('collections.create', params),
+        update: (params: CollectionsUpdateParams) => this.callData<OutlineCollection>('collections.update', params),
+        addUser: (params: CollectionsAddUserParams) =>
+            this.callData<CollectionMembershipsResult>('collections.add_user', params),
+        removeUser: async (params: CollectionsRemoveUserParams) => {
+            await this.call('collections.remove_user', params);
+        },
+        addGroup: (params: CollectionsAddGroupParams) =>
+            this.callData<CollectionGroupMembershipsResult>('collections.add_group', params),
+        removeGroup: async (params: CollectionsRemoveGroupParams) => {
+            await this.call('collections.remove_group', params);
+        },
         documents: (params: { id: string }) => this.callData<OutlineNavigationNode[]>('collections.documents', params),
         /** One page of the users with direct access to a collection; the list is under `data`, so `listAll` takes it. */
         memberships: async (params: { id: string } & OutlinePageParams) => ({
-            data: (await this.callData<CollectionMembershipsResult>('collections.memberships', params)).memberships,
+            data: (await this.collections.membershipsPage(params)).memberships,
         }),
         /** One page of the groups with access to a collection. */
         groupMemberships: async (params: { id: string } & OutlinePageParams) => ({
-            data: (await this.callData<CollectionGroupMembershipsResult>('collections.group_memberships', params))
-                .groupMemberships,
+            data: (await this.collections.groupMembershipsPage(params)).groupMemberships,
         }),
+        /** One page of a collection's user memberships, with the users they name. */
+        membershipsPage: (params: { id: string } & OutlinePageParams) =>
+            this.callData<CollectionMembershipsResult>('collections.memberships', params),
+        /** One page of a collection's group memberships, with the groups they name. */
+        groupMembershipsPage: (params: { id: string } & OutlinePageParams) =>
+            this.callData<CollectionGroupMembershipsResult>('collections.group_memberships', params),
     };
 
     readonly userMemberships = {

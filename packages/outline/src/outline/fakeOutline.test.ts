@@ -375,3 +375,58 @@ test('documents.search sorts by updatedAt newest first, filters and pages; a tex
     expect(since.data.map(result => result.document.id)).toEqual([third.id, second.id]);
     await expect(client.documents.search({ query: 'Third' })).rejects.toMatchObject({ status: 400 });
 });
+
+test('anyone creates a collection and is its admin; a private one stays invisible to others until they are added', async () => {
+    const outline = fakeOutline();
+    const ana = outline.addUser({ name: 'Ana' });
+    const bob = outline.addUser({ name: 'Bob' });
+    const team = outline.addGroup({ name: 'Team', members: [bob] });
+    const anaClient = outline.clientAs(ana);
+    const bobClient = outline.clientAs(bob);
+
+    const created = await anaClient.collections.create({ name: 'Notes', permission: null });
+    expect(created.permission).toBeNull();
+    const members = await listAll(page => anaClient.collections.memberships({ id: created.id, ...page }));
+    expect(members.map(member => [member.userId, member.permission])).toEqual([[ana.id, 'admin']]);
+    expect((await listAll(page => bobClient.collections.list(page))).map(item => item.name)).toEqual([]);
+    await expect(bobClient.collections.info({ id: created.id })).rejects.toMatchObject({ status: 404 });
+    await expect(bobClient.collections.addUser({ id: created.id, userId: bob.id })).rejects.toMatchObject({
+        status: 404,
+    });
+
+    await anaClient.collections.addGroup({ id: created.id, groupId: team.id });
+    expect(await bobClient.collections.info({ id: created.id })).toMatchObject({ name: 'Notes' });
+    await anaClient.collections.removeGroup({ id: created.id, groupId: team.id });
+    await expect(bobClient.collections.info({ id: created.id })).rejects.toMatchObject({ status: 404 });
+
+    // Without `permission` the collection is private too.
+    expect((await bobClient.collections.create({ name: 'Bob notes' })).permission).toBeNull();
+});
+
+test('only a collection admin or a workspace admin changes its members and workspace-wide permission', async () => {
+    const outline = fakeOutline();
+    const ana = outline.addUser({ name: 'Ana' });
+    const bob = outline.addUser({ name: 'Bob' });
+    const carol = outline.addUser({ name: 'Carol', isAdmin: true });
+    const notes = await outline.clientAs(ana).collections.create({ name: 'Notes' });
+    const anaClient = outline.clientAs(ana);
+
+    await anaClient.collections.addUser({ id: notes.id, userId: bob.id, permission: 'read_write' });
+    const bobClient = outline.clientAs(bob);
+    await expect(bobClient.collections.update({ id: notes.id, permission: 'read_write' })).rejects.toMatchObject({
+        status: 403,
+    });
+    await expect(bobClient.collections.removeUser({ id: notes.id, userId: ana.id })).rejects.toMatchObject({
+        status: 403,
+    });
+
+    await anaClient.collections.addUser({ id: notes.id, userId: carol.id, permission: 'read' });
+    expect((await outline.clientAs(carol).collections.update({ id: notes.id, permission: 'read' })).permission).toBe(
+        'read',
+    );
+    expect((await anaClient.collections.update({ id: notes.id, name: 'Renamed' })).permission).toBe('read');
+    expect((await anaClient.collections.update({ id: notes.id, permission: null })).permission).toBeNull();
+
+    await anaClient.collections.removeUser({ id: notes.id, userId: bob.id });
+    await expect(bobClient.collections.info({ id: notes.id })).rejects.toMatchObject({ status: 404 });
+});

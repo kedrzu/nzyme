@@ -219,7 +219,7 @@ test('a collection with the right name but another member is not private, and th
     const context = contextOf(await world.hook('prompt'));
 
     expect(context).toContain('"Shared by admin", which exists but is shared with 1 other member(s) or group(s)');
-    expect(context).toContain('create a collection named "Shared by admin" themselves');
+    expect(context).toContain('Run `bun cli outline collection create --private` yourself');
     expect(world.outline.requests.filter(request => request.method === 'documents.create')).toEqual([]);
 });
 

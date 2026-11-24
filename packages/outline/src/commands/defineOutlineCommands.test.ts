@@ -1,5 +1,5 @@
 import { expect, spyOn, test } from 'bun:test';
-import { mkdir, mkdtemp, realpath, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough, Readable } from 'node:stream';
@@ -12,6 +12,8 @@ import { createMemoryKeychain } from '@nzyme/secrets/__fixtures__/createMemoryKe
 
 import { outlineTokenStore } from '../auth/tokens.js';
 import { fakeOutline } from '../outline/fakeOutline.js';
+import { listAll } from '../outline/listAll.js';
+import { findPrivateCollection } from '../sync/syncOnce.js';
 import { defineOutlineCommands } from './defineOutlineCommands.js';
 
 const ACCESS_TOKEN = 'ol_at_SECRET-access';
@@ -96,6 +98,131 @@ test('a name matching nobody, or several, changes nothing; a file not in Outline
     }
 });
 
+test('collection create --private makes a private collection sync then fills with root files; a second run creates nothing', async () => {
+    const world = await sharingWorld();
+    await rm(join(world.repo, 'documents', 'offer.md'));
+    try {
+        const created = await world.run(['outline', 'collection', 'create', '--private']);
+        expect(created.exitCode).toBe(0);
+        expect(created.output).toContain('Created the collection "Ana (private)" in documents/ana-private/.\n');
+        expect(created.output).toContain(
+            'Access to the collection "Ana (private)":\n- only its members, not the whole workspace\n- Ana <ana@example.test> (admin)\n',
+        );
+        const creates = world.outline.requests.filter(request => request.method === 'collections.create');
+        expect(creates.map(request => request.body)).toEqual([{ name: 'Ana (private)', permission: null }]);
+
+        const client = world.outline.clientAs(world.ana);
+        const lookup = await findPrivateCollection(client, user => `${user.name} (private)`);
+        const collections = await listAll(page => client.collections.list(page));
+        expect(lookup.id).toBe(collections.find(collection => collection.name === 'Ana (private)')?.id ?? 'missing');
+
+        const again = await world.run(['outline', 'collection', 'create', '--private']);
+        expect(again.exitCode).toBe(0);
+        expect(again.output).toContain(
+            'The private collection "Ana (private)" already exists in documents/ana-private/; nothing changed.',
+        );
+        expect(world.outline.requests.filter(request => request.method === 'collections.create')).toHaveLength(1);
+
+        await writeFile(join(world.repo, 'documents', 'idea.md'), '# Idea\n\nSomething new.\n');
+        expect((await world.run(['outline', 'sync'])).exitCode).toBe(0);
+        const documents = await listAll(page => client.documents.list(page));
+        expect(documents.find(document => document.title === 'Idea')?.collectionId).toBe(lookup.id ?? 'missing');
+    } finally {
+        await world.close();
+    }
+});
+
+test('collection create refuses a taken name, makes a members-only collection; share and unshare change who reaches it', async () => {
+    const world = await sharingWorld();
+    try {
+        const taken = await world.run(['outline', 'collection', 'create', ' wiki ']);
+        expect(taken.exitCode).toBe(1);
+        expect(taken.output).toContain('An Outline collection named "wiki" already exists.');
+        expect((await world.run(['outline', 'collection', 'create'])).output).toContain(
+            'Give either a collection name or --private.',
+        );
+        expect(world.outline.requests.map(request => request.method)).not.toContain('collections.create');
+
+        const created = await world.run(['outline', 'collection', 'create', 'Knowledge']);
+        expect(created.output).toContain('Created the collection "Knowledge" in documents/knowledge/.\n');
+        expect(created.output).toContain('- only its members, not the whole workspace\n');
+
+        const shared = await world.run(['outline', 'collection', 'share', 'Knowledge', '--everyone', 'bob', 'Team']);
+        expect(shared.exitCode).toBe(0);
+        expect(shared.output).toBe(
+            'Access to the collection "Knowledge":\n- everyone in the workspace (read_write)\n' +
+                '- Ana <ana@example.test> (admin)\n- Bob <bob@example.test> (read_write)\n- group Team (read_write)\n',
+        );
+        const unshared = await world.run([
+            'outline',
+            'collection',
+            'unshare',
+            'documents/knowledge',
+            'Bob',
+            '--everyone',
+        ]);
+        expect(unshared.output).toBe(
+            'Access to the collection "Knowledge":\n- only its members, not the whole workspace\n' +
+                '- Ana <ana@example.test> (admin)\n- group Team (read_write)\n',
+        );
+        expect((await world.run(['outline', 'collection', 'shares', 'KNOWLEDGE'])).output).toBe(unshared.output);
+        expect((await world.run(['outline', 'collection', 'share', 'Knowledge'])).output).toContain(
+            'Name at least one user or group, or give --everyone.',
+        );
+    } finally {
+        await world.close();
+    }
+});
+
+test('a typo in a person, group or collection name changes nothing', async () => {
+    const world = await sharingWorld();
+    const ana = world.outline.clientAs(world.ana);
+    const mine = await ana.collections.create({ name: 'Mine' });
+    await ana.collections.create({ name: 'Twice' });
+    await ana.collections.create({ name: 'twice' });
+    try {
+        const changes = () =>
+            world.outline.requests.filter(request =>
+                ['collections.update', 'collections.add_user', 'collections.add_group'].includes(request.method),
+            );
+        const person = await world.run(['outline', 'collection', 'share', 'Mine', '--everyone', 'Team', 'Nobody']);
+        expect(person.exitCode).toBe(1);
+        expect(person.output).toContain('No Outline user or group has the name or e-mail "Nobody"');
+        const collection = await world.run(['outline', 'collection', 'share', 'Mien', 'Bob']);
+        expect(collection.output).toContain('No Outline collection you can see is named "Mien".');
+        const ambiguous = await world.run(['outline', 'collection', 'share', 'twice', 'Bob']);
+        expect(ambiguous.output).toContain('More than one Outline collection is named "twice"; use its folder.');
+        const notCollection = await world.run(['outline', 'collection', 'shares', 'documents/offer.md']);
+        expect(notCollection.output).toContain('documents/offer.md is not the folder of a synced collection.');
+        expect(changes()).toEqual([]);
+        expect((await ana.collections.info({ id: mine.id })).permission).toBeNull();
+    } finally {
+        await world.close();
+    }
+});
+
+test('from a worktree, document and collection paths are found in the main checkout', async () => {
+    const world = await sharingWorld();
+    try {
+        expect((await world.run(['outline', 'pull'])).exitCode).toBe(0);
+        const git = (args: string[]) =>
+            Bun.$`git -C ${world.repo} -c user.name=Test -c user.email=test@example.test ${args}`.quiet().nothrow();
+        expect((await git(['commit', '--allow-empty', '--quiet', '-m', 'init'])).exitCode).toBe(0);
+        const worktree = `${world.repo}-worktree`;
+        expect((await git(['worktree', 'add', '--quiet', worktree])).exitCode).toBe(0);
+        process.chdir(worktree);
+
+        expect((await world.run(['outline', 'shares', 'documents/offer.md'])).output).toBe(
+            'Not shared with anyone directly.\n',
+        );
+        expect((await world.run(['outline', 'collection', 'shares', 'documents/wiki'])).output).toBe(
+            'Access to the collection "Wiki":\n- everyone in the workspace (read_write)\n',
+        );
+    } finally {
+        await world.close();
+    }
+});
+
 /** A git repo with `documents/offer.md` synced with a document of the fake Outline, served on loopback and logged in as Ana. */
 async function sharingWorld() {
     const outline = fakeOutline();
@@ -127,6 +254,7 @@ async function sharingWorld() {
     process.chdir(repo);
     return {
         outline,
+        ana,
         repo,
         run: (args: string[]) => run(args, { url, clientId: 'client-1', keychain }),
         close: () => {
@@ -148,7 +276,7 @@ async function run(args: string[], options: { url: string; clientId: string } & 
     stderrStream.on('data', collect);
 
     const cli = new Cli<CommandContext>({ binaryName: 'test', enableColors: false });
-    for (const command of defineOutlineCommands({ ...options, privateCollection: user => user.name })) {
+    for (const command of defineOutlineCommands({ ...options, privateCollection: user => `${user.name} (private)` })) {
         cli.register(command);
     }
     // A failing command reports through `onError` and exits the process; the exit throws instead, and clipanion

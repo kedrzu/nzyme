@@ -92,7 +92,7 @@ async function trackedFolderMissing(workspace: Workspace): Promise<boolean> {
  * Only a collection nobody else can read qualifies: no workspace-wide permission and the user as its only member,
  * directly and through groups. A same-named collection made by an admin keeps the admin as a member, so it does not.
  */
-async function findPrivateCollection(
+export async function findPrivateCollection(
     client: OutlineClient,
     nameFor: (user: OutlineUser) => string,
 ): Promise<PrivateCollectionLookup> {

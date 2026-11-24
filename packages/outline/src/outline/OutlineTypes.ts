@@ -274,6 +274,37 @@ export interface CollectionsCreateParams {
     permission?: OutlineCollectionPermission;
 }
 
+export interface CollectionsUpdateParams {
+    id: string;
+    name?: string;
+    /** Workspace-wide access; `null` makes the collection private (members only). */
+    permission?: OutlineCollectionPermission;
+}
+
+export interface CollectionsAddUserParams {
+    id: string;
+    userId: string;
+    /** Outline's default is `read_write`. */
+    permission?: OutlinePermission;
+}
+
+export interface CollectionsRemoveUserParams {
+    id: string;
+    userId: string;
+}
+
+export interface CollectionsAddGroupParams {
+    id: string;
+    groupId: string;
+    /** Outline's default is `read_write`. */
+    permission?: OutlinePermission;
+}
+
+export interface CollectionsRemoveGroupParams {
+    id: string;
+    groupId: string;
+}
+
 export interface DocumentsMoveResult {
     documents: OutlineDocument[];
 }

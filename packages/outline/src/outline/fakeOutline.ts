@@ -203,6 +203,7 @@ type Handler = (call: Call) => Response;
 type AccessNeed = 'read' | 'write';
 
 const PERMISSIONS = immutable<OutlinePermission[]>(['read', 'read_write', 'admin']);
+const COLLECTION_PERMISSIONS = immutable<('read' | 'read_write')[]>(['read', 'read_write']);
 const FILTER_FIELDS = immutable<OutlineFilterField[]>([
     'createdAt',
     'updatedAt',
@@ -220,8 +221,8 @@ const MAX_PAGE_SIZE = 100;
  * Creates an in-memory Outline. Build the world with `addUser`, `addCollection`, `addDocument`, then talk to
  * it through `clientAs(user)` or `fetchAs(user)`.
  *
- * The Outline rules it models are in clearly named functions below (`collectionAccess`, `documentAccess`,
- * `matchesFilters`, `listVisibleDocuments`, `searchableDocuments`, the `documents.update` handler for revisions and
+ * The Outline rules it models are in clearly named functions below (`collectionAccess`, `mayManageCollection`,
+ * `documentAccess`, `matchesFilters`, `listVisibleDocuments`, `searchableDocuments`, the `documents.update` handler for revisions and
  * conflicts), so a behaviour found different on real Outline is corrected in one place.
  */
 export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
@@ -243,6 +244,13 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         'users.list': usersList,
         'groups.list': groupsList,
         'collections.list': collectionsList,
+        'collections.info': collectionsInfo,
+        'collections.create': collectionsCreate,
+        'collections.update': collectionsUpdate,
+        'collections.add_user': collectionsAddUser,
+        'collections.remove_user': collectionsRemoveUser,
+        'collections.add_group': collectionsAddGroup,
+        'collections.remove_group': collectionsRemoveGroup,
         'collections.memberships': collectionsMemberships,
         'collections.group_memberships': collectionsGroupMemberships,
         'documents.list': documentsList,
@@ -446,6 +454,23 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
         ]);
     }
 
+    /**
+     * Who may change a collection's workspace-wide permission and its members: its admins (directly or through a
+     * group) and workspace admins. Anyone may create a collection.
+     */
+    function mayManageCollection(user: FakeUser, collection: CollectionRecord) {
+        return user.isAdmin || collectionAccess(user, collection.id) === 'admin';
+    }
+
+    /** A collection the caller cannot read is a 404, one the caller may not manage a 403. */
+    function requireManageableCollection(user: FakeUser, id: string) {
+        const collection = requireReadableCollection(user, id);
+        if (!mayManageCollection(user, collection)) {
+            throw new FakeApiError(403, 'authorization_error', 'Authorization error');
+        }
+        return collection;
+    }
+
     /** Access granted by a direct share on exactly this document, to the user or one of their groups. */
     function directDocumentAccess(user: FakeUser, document: DocumentRecord) {
         return strongest([
@@ -561,6 +586,85 @@ export function fakeOutline(options: FakeOutlineOptions = {}): FakeOutline {
     function collectionsList({ user, body }: Call) {
         const visible = collections.filter(collection => collectionAccess(user, collection.id) != null);
         return okPage(body, visible.map(presentCollection));
+    }
+
+    function collectionsInfo({ user, body }: Call) {
+        return ok(presentCollection(requireReadableCollection(user, requireString(body, 'id'))));
+    }
+
+    /** The creator becomes the collection's admin; without `permission` the collection is private. */
+    function collectionsCreate({ user, body }: Call) {
+        const collection: CollectionRecord = {
+            id: crypto.randomUUID(),
+            name: requireString(body, 'name'),
+            permission: optionalCollectionPermission(body) ?? null,
+            members: [{ userId: user.id, permission: 'admin' }],
+            groupMembers: [],
+        };
+        collections.push(collection);
+        return ok(presentCollection(collection));
+    }
+
+    /** `permission: null` makes the collection private; leaving `permission` out keeps it. */
+    function collectionsUpdate({ user, body }: Call) {
+        const collection = requireManageableCollection(user, requireString(body, 'id'));
+        collection.name = optionalString(body, 'name') ?? collection.name;
+        if (Object.hasOwn(body, 'permission')) {
+            collection.permission = optionalCollectionPermission(body) ?? null;
+        }
+        return ok(presentCollection(collection));
+    }
+
+    function collectionsAddUser({ user, body }: Call) {
+        const collection = requireManageableCollection(user, requireString(body, 'id'));
+        const target = requireUser(requireString(body, 'userId'));
+        const permission = optionalPermission(body) ?? 'read_write';
+        const existing = collection.members.find(member => member.userId === target.id);
+        if (existing == null) {
+            collection.members.push({ userId: target.id, permission });
+        } else {
+            existing.permission = permission;
+        }
+        const membership = {
+            id: `${collection.id}:${target.id}`,
+            collectionId: collection.id,
+            userId: target.id,
+            permission,
+        };
+        return ok({ users: [presentUser(target)], memberships: [membership] });
+    }
+
+    function collectionsRemoveUser({ user, body }: Call) {
+        const collection = requireManageableCollection(user, requireString(body, 'id'));
+        const userId = requireUser(requireString(body, 'userId')).id;
+        arrayRemoveWhere(collection.members, member => member.userId === userId);
+        return ok({ success: true });
+    }
+
+    function collectionsAddGroup({ user, body }: Call) {
+        const collection = requireManageableCollection(user, requireString(body, 'id'));
+        const group = requireGroup(requireString(body, 'groupId'));
+        const permission = optionalPermission(body) ?? 'read_write';
+        const existing = collection.groupMembers.find(member => member.groupId === group.id);
+        if (existing == null) {
+            collection.groupMembers.push({ groupId: group.id, permission });
+        } else {
+            existing.permission = permission;
+        }
+        const membership = {
+            id: `${collection.id}:${group.id}`,
+            collectionId: collection.id,
+            groupId: group.id,
+            permission,
+        };
+        return ok({ groups: [presentGroup(group)], groupMemberships: [membership] });
+    }
+
+    function collectionsRemoveGroup({ user, body }: Call) {
+        const collection = requireManageableCollection(user, requireString(body, 'id'));
+        const groupId = requireGroup(requireString(body, 'groupId')).id;
+        arrayRemoveWhere(collection.groupMembers, member => member.groupId === groupId);
+        return ok({ success: true });
     }
 
     /** Like Outline, listing who is in a collection needs the right to read it. */
@@ -1209,8 +1313,27 @@ function optionalStringArray(body: Body, key: string) {
 }
 
 function requirePermission(body: Body) {
-    const raw = requireString(body, 'permission');
+    return optionalPermission(body) ?? invalid('permission', PERMISSIONS.join(' | '));
+}
+
+function optionalPermission(body: Body) {
+    const raw = optionalString(body, 'permission');
+    if (raw == null) {
+        return undefined;
+    }
     return PERMISSIONS.find(permission => permission === raw) ?? invalid('permission', PERMISSIONS.join(' | '));
+}
+
+/** A collection's workspace-wide permission; `undefined` for a missing or `null` one. */
+function optionalCollectionPermission(body: Body) {
+    const raw = optionalString(body, 'permission');
+    if (raw == null) {
+        return undefined;
+    }
+    return (
+        COLLECTION_PERMISSIONS.find(permission => permission === raw) ??
+        invalid('permission', `${COLLECTION_PERMISSIONS.join(' | ')} | null`)
+    );
 }
 
 function readFilters(body: Body): OutlineFilter[] {

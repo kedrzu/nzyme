@@ -18,7 +18,7 @@ A typed client for the [Outline](https://www.getoutline.com) API, `fakeOutline`,
            clientId,
            privateCollection: user => `${user.name} (private)`,
            commandHint: 'bun cli outline',
-           userLanguage: 'Polish',
+           userLanguage: 'Spanish',
        }),
    });
    ```
@@ -149,7 +149,7 @@ await execute({
         clientId,
         privateCollection: user => `${user.name} (private)`,
         commandHint: 'bun cli outline',
-        userLanguage: 'Polish',
+        userLanguage: 'Spanish',
     }),
 });
 ```

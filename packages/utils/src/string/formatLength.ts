@@ -5,7 +5,7 @@ import { assertNever } from '../assertNever.js';
  */
 export type LengthUnit = 'cm' | 'km' | 'm' | 'mm';
 
-const lengthFormat = new Intl.NumberFormat('pl-PL', {
+const lengthFormat = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
 });

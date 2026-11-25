@@ -39,7 +39,7 @@ export interface RunHookOptions {
     recovered: string;
     privateCollection: (user: OutlineUser) => string;
     commandHint: string;
-    /** The language the agent speaks to the user, e.g. `Polish`. */
+    /** The language the agent speaks to the user, e.g. `Spanish`. */
     userLanguage?: string;
     tokenStore: OutlineTokenStore;
     fetch?: OutlineFetch;

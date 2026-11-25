@@ -187,7 +187,8 @@ draft.
   engineer, rewrite it.
 - **Write in the reader's language.** Anything durable or read by agents (code, comments, docs, ADRs,
   skills, PRs, issues) is English; a reply or plan only the user reads is in their language. Technical
-  terms stay English in both. Check: who opens this next?
+  terms stay English in both. A person's chat language is their own local setting (e.g. a gitignored
+  `CLAUDE.local.md`), never committed; everything committed is English. Check: who opens this next?
 - **Hub files stay thin.** `CLAUDE.md` and a `SKILL.md` carry routing and rules; detail goes in the
   reference they point at. Check: a paragraph not needed on every invocation belongs one level down.
 

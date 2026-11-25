@@ -22,7 +22,7 @@ export interface OutlineCommandsOptions {
     privateCollection: (user: OutlineUser) => string;
     /** How the agent runs these commands, e.g. `bun run cli outline`; the prefix by default. */
     commandHint?: string;
-    /** The language the agent speaks to the user, e.g. `Polish`; unset, the user's own language. */
+    /** The language the agent speaks to the user, e.g. `Spanish`; unset, the user's own language. */
     userLanguage?: string;
     /** Where the login is kept; the OS keychain by default. For tests. */
     keychain?: Keychain;

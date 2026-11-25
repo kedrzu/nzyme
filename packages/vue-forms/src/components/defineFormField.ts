@@ -169,7 +169,7 @@ export function createFormField<T>(options: FormFieldOptions<T>) {
         focused.value = true;
         props.field?.focus();
 
-        // TODO przywrócić mechanizm scrollowania
+        // TODO: restore the scroll mechanism
         // // sometimes on mobile input may be covered by a keyboard
         // // to prevent that, after focus we scroll the element into view
         // if (props.scrollIntoElement) {

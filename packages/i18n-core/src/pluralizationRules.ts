@@ -25,24 +25,24 @@ export const pluralizationPl = definePluralization({
     plurals: ['few', 'many', 'one', 'zero'],
     optionalPlurals: ['zero'],
     pluralize: (count, plurals) => {
-        // np: zero jabłek
+        // e.g. zero jabłek (zero apples)
         if (count === 0) {
             return plurals.zero ?? plurals.many ?? plurals.few;
         }
 
-        // np: jedno jabłko
+        // e.g. jedno jabłko (one apple)
         if (count === 1) {
             return plurals.one;
         }
 
-        // np: 3 jabłka lub 23 jabłka, ale 12 jabłek i 112 jabłek
+        // e.g. 3 jabłka or 23 jabłka, but 12 jabłek and 112 jabłek
         const lastDigit = count % 10;
         const lastTwoDigits = count % 100;
         if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14)) {
             return plurals.few ?? plurals.many;
         }
 
-        // np 8 jabłek
+        // e.g. 8 jabłek
         return plurals.many ?? plurals.few;
     },
 });

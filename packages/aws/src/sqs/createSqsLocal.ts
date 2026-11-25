@@ -42,8 +42,8 @@ export function createSqsLocal(options: QueueLocalOptions): QueueLocal {
     const { concurrency, handler, onSuccess, onError } = options;
     const queue: QueueMessage[] = [];
     const currentPromises: Promise<void>[] = [];
-    // Aktualnie przetwarzane kolejki eventów.
-    // Dzięki temu możemy zapewnić kolejność FIFO w ramach jednej kolejki.
+    // Event queues currently being processed.
+    // This keeps FIFO order within a single queue.
     const currentQueues = new Set<string>();
 
     return {

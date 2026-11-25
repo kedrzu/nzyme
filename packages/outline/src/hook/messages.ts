@@ -18,7 +18,7 @@ export interface RenderReportParams {
     recoveredFiles: string[];
     /** How the agent runs the commands, e.g. `outline`. */
     commandHint: string;
-    /** The language the agent speaks to the user, e.g. `Polish`; unset, the user's own language. */
+    /** The language the agent speaks to the user, e.g. `Spanish`; unset, the user's own language. */
     userLanguage?: string;
 }
 

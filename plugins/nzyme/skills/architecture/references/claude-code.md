@@ -69,7 +69,10 @@ clone or a new worktree behaves the same for every agent, with no per-machine se
 - **Local files** — `CLAUDE.local.md` (personal instructions, e.g. a reply language) and
   `.claude/settings.local.json` (personal grants, MCP servers) are gitignored, the first in the root
   `.gitignore`, the second with `worktrees/` in `.claude/.gitignore` (`assets/claude-gitignore.tmpl`),
-  and copied into each new worktree by `setup.sh` (`references/setup-scripts.md`).
+  and copied into each new worktree by `setup.sh` (`references/setup-scripts.md`). The chat language is the
+  person's and never sets the language of what is committed — code, names, docs, commit messages and PRs
+  follow the repository language (English unless the project says otherwise); never write "reply in X" or
+  "commit messages in X" into a committed `CLAUDE.md` because the owner chats in X.
 - **`.mcp.json`** — none by default; a product adds its own servers and enables them with
   `enabledMcpjsonServers`. The browser is not an MCP server: it comes from the `browser` plugin.
 

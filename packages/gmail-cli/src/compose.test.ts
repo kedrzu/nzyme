@@ -66,6 +66,24 @@ test('reply helpers: formats the English Gmail attribution for any other locale'
     expect(line).toBe('On Mon, Sep 28, 2026 at 4:15 AM Jan <jan@x.pl> wrote:');
 });
 
+test('reply helpers: shows an en-US attribution in the system time zone when no time zone is given', () => {
+    const date = 'Mon, 28 Sep 2026 08:15:00 +0000';
+    const { timeZone } = Intl.DateTimeFormat().resolvedOptions();
+    const d = new Intl.DateTimeFormat('en-US', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        timeZone,
+    }).format(new Date(date));
+    const time = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone }).format(
+        new Date(date),
+    );
+    expect(quoteAttribution({ from: 'Jan <jan@x.pl>', date, locale: 'en-US' })).toBe(
+        `On ${d} at ${time} Jan <jan@x.pl> wrote:`,
+    );
+});
+
 test('reply helpers: drops quotes around the display name', () => {
     const line = quoteAttribution({
         ...WARSAW_PL,

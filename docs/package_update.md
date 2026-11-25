@@ -6,6 +6,9 @@ Read by every dependency update that touches this repository — a run started h
 a project that consumes nzyme as a submodule. Entries never name a consumer: one that holds nzyme
 back is described by the dependency that conflicts and the mechanism.
 
+Versions the package manager does not track — container images, CI actions, runtimes — are in
+[`UPDATES.md`](../UPDATES.md), the catalogue the same update walks entry by entry.
+
 ## General Rules
 
 Persistent constraints that hold whatever the version: couplings ("update only together with Y",

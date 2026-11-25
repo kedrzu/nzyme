@@ -166,6 +166,10 @@ export function createFormField<T>(options: FormFieldOptions<T>) {
     }
 
     function onFocus(event: FocusEvent) {
+        if (isInsideField(event.relatedTarget)) {
+            return;
+        }
+
         focused.value = true;
         props.field?.focus();
 
@@ -185,8 +189,25 @@ export function createFormField<T>(options: FormFieldOptions<T>) {
     }
 
     function onBlur(event: FocusEvent) {
+        if (isInsideField(event.relatedTarget)) {
+            return;
+        }
+
         focused.value = false;
         props.field?.blur();
         vm.$emit('blur', event);
+    }
+
+    /**
+     * Focus moving between the inputs of one field (the segments of a date) neither leaves nor enters it: the
+     * browser runs the watchers between that blur and focus, so treating it as a blur would reveal errors mid-entry.
+     */
+    function isInsideField(target: EventTarget | null) {
+        if (typeof Node === 'undefined') {
+            return false; // no DOM (server rendering, a custom renderer): nothing to be inside of
+        }
+
+        const root: unknown = vm.$el;
+        return target instanceof Node && root instanceof Node && root.contains(target);
     }
 }

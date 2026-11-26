@@ -113,6 +113,10 @@ function setupButton() {
         Button,
     };
 
+    /**
+     * Renders the button, or an anchor for a link, with `aria-busy` set while it is busy, so assistive
+     * technology hears that a tap is being handled and every consumer styles that state from the DOM.
+     */
     function Button(attrs: AnchorHTMLAttributes | ButtonHTMLAttributes, ctx: SetupContext) {
         const link = props.link;
 
@@ -122,6 +126,7 @@ function setupButton() {
                 {
                     ...attrs,
                     disabled: disabled.value || undefined,
+                    'aria-busy': busy.value || undefined,
                     type: props.type,
                     onClick,
                 },
@@ -140,6 +145,7 @@ function setupButton() {
                         rel: 'noopener noreferrer',
                         onClick: onNativeLinkClick,
                         disabled: disabled.value || undefined,
+                        'aria-busy': busy.value || undefined,
                     },
                     ctx.slots,
                 );
@@ -152,6 +158,7 @@ function setupButton() {
                         href: link,
                         onClick: onNativeLinkClick,
                         disabled: disabled.value || undefined,
+                        'aria-busy': busy.value || undefined,
                     },
                     ctx.slots,
                 );
@@ -177,6 +184,7 @@ function setupButton() {
                             href,
                             onClick: (event: Event) => onClick(event, navigate),
                             disabled: disabled.value || undefined,
+                            'aria-busy': busy.value || undefined,
                         },
                         ctx.slots,
                     );

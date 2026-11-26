@@ -6,13 +6,16 @@ Read by every dependency update that touches this repository — a run started h
 a project that consumes nzyme as a submodule. Entries never name a consumer: one that holds nzyme
 back is described by the dependency that conflicts and the mechanism.
 
+Versions the package manager does not track — container images, CI actions, runtimes — are in
+[`UPDATES.md`](../UPDATES.md), the catalogue the same update walks entry by entry.
+
 ## General Rules
 
 Persistent constraints that hold whatever the version: couplings ("update only together with Y",
 "must match the version X bundles"), the reason behind each root `overrides` entry, and the
-project's own procedures — a container image or tool version pinned outside the package manager and
-how to bump it, how to collapse duplicate dependency trees, which bumps need a rebuild or a restart.
-One `###` per package. Remove an entry only when its constraint is gone.
+project's own procedures — how to collapse duplicate dependency trees, which bumps need a rebuild or
+a restart. A version pinned outside the package manager and how to bump it goes in `UPDATES.md`,
+not here. One `###` per package. Remove an entry only when its constraint is gone.
 
 ### crossws / h3 — Nitro's versions, not ours
 
@@ -71,9 +74,6 @@ installed version exits 0 and applies nothing; lint then reports `await-thenable
 `.rejects` assertions. Do not disable the rule. Before re-applying, check whether upstream fixed it:
 `npm pack bun-types@<version>` then `grep -nE '^\s+(resolves|rejects):' package/test.d.ts` — if
 `rejects` is no longer `Matchers<unknown>`, drop the patch instead of porting it.
-
-`bun upgrade` has no target-version flag; install an exact bun with
-`curl -fsSL https://bun.sh/install | bash -s "bun-v<version>"`.
 
 All three moved to **1.4.5** on 2026-11-23. Upstream is still unpatched — the 1.4.5 tarball's
 `test.d.ts` declares `rejects: Matchers<unknown>` — and `test.d.ts` is byte-identical to 1.4.4's, so

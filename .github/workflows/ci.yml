@@ -36,7 +36,7 @@ jobs:
     steps:
       # The PR head itself, not the merge commit `check` builds: the lockfile is committed to the head
       # branch, so it has to be resolved from the head's own package.json files.
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
@@ -76,7 +76,7 @@ jobs:
     env:
       CI: 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
         with:

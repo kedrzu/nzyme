@@ -26,7 +26,7 @@ jobs:
       pending: ${{ steps.state.outputs.pending }}
       sha: ${{ steps.state.outputs.sha }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -57,7 +57,7 @@ jobs:
     env:
       CI: 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -118,7 +118,7 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version || needs.state.outputs.version }}
       SHA: ${{ needs.prepare.outputs.sha || needs.state.outputs.sha }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.SHA }}
           fetch-depth: 0

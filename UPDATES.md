@@ -40,13 +40,37 @@ not belong here.
 - **Verify**: the workflow's Node steps run on the next release; locally, `node --version` on that
   major runs the same commands.
 
-### GitHub Actions
+Each GitHub Action has its own entry, pinned to a major. Read its release notes for renamed or
+removed inputs before bumping it.
 
-- **Pinned in**: `.github/workflows/*.yml` — every `uses: <owner>/<action>@v<major>`: `actions/checkout`,
-  `actions/setup-node`, `oven-sh/setup-bun`, `amannn/action-semantic-pull-request`
-- **Latest**: per action, `gh api repos/<owner>/<action>/releases/latest --jq '.tag_name | split(".")[0]'`
-  — one line per action in the report.
-- **Bump**: edit the major in every `uses:` of that action; read the action's release notes for
-  renamed or removed inputs first.
-- **Rollout**: takes effect on the PR that carries the bump — its own CI runs on the new major.
-- **Verify**: the PR's checks are green; `release.yml` is proven on the next release.
+### `actions/checkout`
+
+- **Pinned in**: `.github/workflows/*.yml` — every `uses: actions/checkout@v<major>`
+- **Latest**: `gh api repos/actions/checkout/releases/latest --jq '.tag_name | split(".")[0]'`
+- **Bump**: edit the major in every `uses:` of it.
+- **Rollout**: the PR that carries the bump.
+- **Verify**: the PR's `ci.yml` checks are green; `release.yml` is proven on the next release.
+
+### `actions/setup-node`
+
+- **Pinned in**: `.github/workflows/release.yml` — `uses: actions/setup-node@v<major>`
+- **Latest**: `gh api repos/actions/setup-node/releases/latest --jq '.tag_name | split(".")[0]'`
+- **Bump**: edit the major.
+- **Rollout**: the next release run.
+- **Verify**: proven on the next release — say so in the report line.
+
+### `oven-sh/setup-bun`
+
+- **Pinned in**: `.github/workflows/*.yml` — every `uses: oven-sh/setup-bun@v<major>`
+- **Latest**: `gh api repos/oven-sh/setup-bun/releases/latest --jq '.tag_name | split(".")[0]'`
+- **Bump**: edit the major in every `uses:` of it.
+- **Rollout**: the PR that carries the bump.
+- **Verify**: the PR's `ci.yml` checks are green; `release.yml` is proven on the next release.
+
+### `amannn/action-semantic-pull-request`
+
+- **Pinned in**: `.github/workflows/pr-title.yml` — `uses: amannn/action-semantic-pull-request@v<major>`
+- **Latest**: `gh api repos/amannn/action-semantic-pull-request/releases/latest --jq '.tag_name | split(".")[0]'`
+- **Bump**: edit the major.
+- **Rollout**: the PR that carries the bump.
+- **Verify**: the PR's `pr-title.yml` check is green.

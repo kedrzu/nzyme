@@ -1,5 +1,5 @@
 import { getEnabledLoggerLevels } from '@nzyme/logging/getEnabledLoggerLevels.js';
-import type { LoggerLevel } from '@nzyme/logging/LoggerLevel.js';
+import { LOGGER_LEVELS, type LoggerLevel } from '@nzyme/logging/LoggerLevel.js';
 import type { Resolved } from '@nzyme/ioc/Injectable.js';
 import { defineService } from '@nzyme/ioc/Service.js';
 import Dexie from 'dexie';
@@ -89,7 +89,7 @@ function convertDisabledLevelsToMinLevel(disabled: Record<string, false | undefi
     // Return the last enabled level before hitting a disabled one.
     let lastEnabled: LoggerLevel | null = null;
 
-    for (const level of LEVELS_BY_SEVERITY) {
+    for (const level of [...LOGGER_LEVELS].reverse()) {
         if (disabled[level] === false) {
             break;
         }

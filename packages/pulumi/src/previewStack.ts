@@ -14,6 +14,12 @@ export interface PreviewStackOptions {
     refresh?: boolean;
 
     /**
+     * Whether to print each resource's property changes instead of the one-line summary per resource.
+     * @default false
+     */
+    diff?: boolean;
+
+    /**
      * The verbosity of the logs.
      * @default 0
      */
@@ -38,6 +44,7 @@ export async function previewStack<TOut extends StackOutput>(stack: Stack<TOut>,
     const output = await stackInstance.preview({
         onOutput: console.log,
         refresh: options.refresh,
+        diff: options.diff,
         logVerbosity: options.verbosity,
     });
 

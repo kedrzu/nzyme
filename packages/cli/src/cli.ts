@@ -11,6 +11,8 @@ import { GitAffectedTestListCommand } from './commands/GitAffectedTestListComman
 import { GitBaseCommand } from './commands/GitBaseCommand.js';
 import { IndexCommand } from './commands/IndexCommand.js';
 import { LocaliseCommand } from './commands/LocaliseCommand.js';
+import { MachineReserveCommand } from './commands/MachineReserveCommand.js';
+import { MachineStatusCommand } from './commands/MachineStatusCommand.js';
 import { MonorepoCommand } from './commands/MonorepoCommand.js';
 import { QuietRunCommand } from './commands/QuietRunCommand.js';
 
@@ -24,13 +26,16 @@ const builtinCommands = [
     GitAffectedTestListCommand,
     GitAffectedRecordCommand,
     GitBaseCommand,
+    MachineReserveCommand,
+    MachineStatusCommand,
 ];
 
 // `quiet-run` wraps an arbitrary command: it hands that command the environment untouched (the
 // command loads its own `.env` if it wants one) and prints nothing beyond its own summary.
 // `git` (`git affected*`, `git base`) needs no `.env`, and its stdout is a contract callers
-// parse — so nothing else may be printed there (loading a `.env` logs a line to stdout).
-if (!['quiet-run', 'git'].includes(process.argv[2] ?? '')) {
+// parse — so nothing else may be printed there (loading a `.env` logs a line to stdout). The same
+// holds for `machine status --json`, which scripts parse.
+if (!['quiet-run', 'git', 'machine'].includes(process.argv[2] ?? '')) {
     loadEnvVariables();
 }
 

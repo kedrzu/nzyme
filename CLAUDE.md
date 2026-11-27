@@ -10,12 +10,12 @@ monorepos also consume the repo as a git submodule, with `nzyme/packages/*` in t
 - **Vue:** `vue`, `vue-utils`, `vue-ioc`, `vue-forms`, `vue-i18n`, `vue-transitions`, `dom-utils`
 - **Tooling:**
   - `cli-core` (the clipanion-based `Command` framework behind every CLI), `cli` (the `nzyme` binary: `monorepo`, `localise`, `index`, `quiet-run`,
-    `depcheck`, `git affected`, `git base`)
+    `depcheck`, `git affected`, `git base`, `machine`)
   - `pen` (Pen design files in git: the document model and the `pen` commands)
   - `openapi-cli` (agent-facing `schema`/`get`/`write` commands over any OpenAPI REST service)
   - `affected` (test selection behind `git affected`), `trace` (execution tracing for it)
   - `tsconfig`, `eslint` (also the oxlint preset), `oxlint` (custom rules), `project-utils`,
-    `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `vitest`
+    `rollup-utils`, `nuxt-tools`, `esm`, `node-utils`, `machine`, `vitest`
 - **Integrations:** `aws`, `pulumi`, `slack`, `slack-cli` (Slack for agents, acting as the developer: read,
   search, send and wait for replies), `apis`, `bitwarden` (a Secrets Manager store for `secrets`),
   `discord-cli` (the Discord REST API through `openapi-cli`, as a bot), `outline` (an Outline API client and a two-way sync of a

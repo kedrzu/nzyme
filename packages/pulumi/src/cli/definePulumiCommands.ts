@@ -27,6 +27,7 @@ import { selectStack } from '../selectStack.js';
 import { syncStackOutputs } from '../syncStackOutputs.js';
 import { listRemoteStacks } from '../utils/listRemoteStacks.js';
 import { filterStacks } from './filterStacks.js';
+import { isStackListed } from './isStackListed.js';
 
 /**
  * Pulumi command being run — one per command defined by {@link definePulumiCommands}.
@@ -188,7 +189,17 @@ function defineListCommand(options: PulumiCommandsOptions) {
         static override usage = Command.Usage({
             category: 'Pulumi',
             description: 'List stacks',
-            details: 'List all stacks, including orphaned stacks from remote backend with deployment information',
+            details:
+                'List stacks with deployment information, including orphaned stacks from the remote backend. ' +
+                'Disabled stacks with no deployed resources are hidden unless `--all` is passed.',
+            examples: [
+                ['List stacks relevant to this environment', 'list'],
+                ['List every stack, including disabled ones never deployed', 'list --all'],
+            ],
+        });
+
+        all = Option.Boolean('--all,-a', {
+            description: 'Also list disabled stacks that have no deployed resources',
         });
 
         override async run() {
@@ -204,7 +215,7 @@ function defineListCommand(options: PulumiCommandsOptions) {
             const orphanedStacksDetailed = remoteStacksDetailed.filter(stack => !localStackNames.has(stack.name));
 
             console.log();
-            console.log(chalk.bold('All available stacks with deployment information:'));
+            console.log(chalk.bold('Stacks with deployment information:'));
             console.log();
 
             // Create table for local stacks
@@ -222,9 +233,16 @@ function defineListCommand(options: PulumiCommandsOptions) {
                 },
             });
 
+            let hiddenCount = 0;
+
             // Add local stacks to table
             for (const stack of options.stacks) {
                 const remoteInfo = remoteStacksDetailed.find(remote => remote.name === stack.stackName);
+
+                if (!isStackListed({ stack, remote: remoteInfo, all: this.all ?? false })) {
+                    hiddenCount++;
+                    continue;
+                }
 
                 let stackName = stack.stackName;
                 if (!stack.enabled) {
@@ -257,6 +275,14 @@ function defineListCommand(options: PulumiCommandsOptions) {
             }
 
             console.log(localTable.toString());
+
+            if (hiddenCount > 0) {
+                console.log(
+                    chalk.gray(
+                        `${hiddenCount} disabled stack(s) with no deployed resources hidden — use --all to show them.`,
+                    ),
+                );
+            }
 
             // List orphaned stacks with detailed info
             if (orphanedStacksDetailed.length > 0) {

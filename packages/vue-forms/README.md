@@ -149,9 +149,7 @@ Every input primitive follows one shape:
   `defineProps`/`defineEmits`, and is called with no arguments inside its `setup`;
 - it returns `field` (the field controller, below) and a render function named after the input, which
   renders the bare native element with value, ARIA and focus wiring; attributes passed to the render
-  function (`class`, `id`, `aria-describedby`…) land on that element. The exceptions are
-  `PhoneInput` and `SelectInput`, which declare no props: only `class`, `style` and `on*` listeners
-  fall through to them, and `id` or `aria-describedby` is dropped.
+  function (`class`, `id`, `aria-describedby`…) land on that element.
 
 Common props (from `defineFormField`): `modelValue` (`v-model`), `field` (a `FormField` from
 `useFormFields`), `errors` (extra messages), `required`, `disabled`, `readonly`. Common emits:
@@ -160,7 +158,9 @@ Common props (from `defineFormField`): `modelValue` (`v-model`), `field` (a `For
 **Field controller** (`FormFieldController<T>`): reactive `value` (read/write; writes the bound
 `field` or emits `update:modelValue`), `errors` (the `errors` prop plus the bound field's shown errors),
 `focused`, `ok` (non-empty value and no errors), `inputAttrs` (`onFocus`/`onBlur` to put on a custom
-element).
+element). A field of several inputs (date segments) puts `inputAttrs` on each: focus moving between
+elements inside the component's root neither blurs nor focuses the field, so its errors stay hidden
+until focus leaves it.
 
 ```vue
 <script lang="ts">

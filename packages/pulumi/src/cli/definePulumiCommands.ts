@@ -211,7 +211,9 @@ function defineListCommand(options: PulumiCommandsOptions) {
             const localStackNames = new Set(options.stacks.map(stack => stack.stackName));
 
             // Get detailed remote stacks from S3 backend
-            const remoteStacksDetailed = await listRemoteStacks(pulumiConfig);
+            const remoteStacks = await listRemoteStacks(pulumiConfig);
+            const remoteKnown = remoteStacks !== undefined;
+            const remoteStacksDetailed = remoteStacks ?? [];
             const orphanedStacksDetailed = remoteStacksDetailed.filter(stack => !localStackNames.has(stack.name));
 
             console.log();
@@ -239,7 +241,7 @@ function defineListCommand(options: PulumiCommandsOptions) {
             for (const stack of options.stacks) {
                 const remoteInfo = remoteStacksDetailed.find(remote => remote.name === stack.stackName);
 
-                if (!isStackListed({ stack, remote: remoteInfo, all: this.all ?? false })) {
+                if (!isStackListed({ stack, remote: remoteInfo, remoteKnown, all: this.all ?? false })) {
                     hiddenCount++;
                     continue;
                 }

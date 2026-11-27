@@ -64,12 +64,12 @@ describe('listRemoteStacks', () => {
         expect(caughtError).toBe(credentialError);
     });
 
-    test('keeps returning an empty list for a non-credential failure', async () => {
+    test('returns undefined for a non-credential failure, since the remote state is unknown', async () => {
         const networkError = new Error('getaddrinfo ENOTFOUND test-bucket.s3.amazonaws.com');
         sendImpl = () => Promise.reject(networkError);
 
         const result = await listRemoteStacks({ project: 'test-project', backendUrl: 's3://test-bucket' });
 
-        expect(result).toEqual([]);
+        expect(result).toBeUndefined();
     });
 });

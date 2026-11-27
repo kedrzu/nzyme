@@ -74,13 +74,15 @@ export function isCredentialShapedError(error: unknown): error is Error {
 }
 
 /**
- * List remote stacks from the S3 backend with detailed information.
+ * List remote stacks from the S3 backend with detailed information. Resolves to `undefined` when the
+ * remote state could not be read (the backend is not S3, or listing it failed), which is not the same
+ * as an empty list: that means the state was read and holds no stacks.
  */
-export async function listRemoteStacks(config: PulumiConfig): Promise<RemoteStackInfo[]> {
+export async function listRemoteStacks(config: PulumiConfig): Promise<RemoteStackInfo[] | undefined> {
     try {
         // Check if backend is S3
         if (!config.backendUrl?.startsWith('s3://')) {
-            return [];
+            return undefined;
         }
 
         // Parse S3 URL to get bucket name and prefix
@@ -103,12 +105,12 @@ export async function listRemoteStacks(config: PulumiConfig): Promise<RemoteStac
             throw error;
         }
 
-        // If we can't list remote stacks for any other reason (e.g., no S3 access), return empty array
+        // If we can't list remote stacks for any other reason (e.g., no S3 access), report the state as unknown
         console.warn(
             chalk.yellow('Warning: Could not list remote stacks from S3 backend:'),
             error instanceof Error ? error.message : String(error),
         );
-        return [];
+        return undefined;
     }
 }
 

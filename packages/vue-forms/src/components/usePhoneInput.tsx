@@ -4,7 +4,7 @@ import { defineProps } from '@nzyme/vue-utils/defineProps.js';
 import { useProps } from '@nzyme/vue-utils/useProps.js';
 import type { AsYouType, CountryCode } from 'libphonenumber-js';
 import { h, onMounted, ref, watch } from 'vue';
-import type { PropType } from 'vue';
+import type { InputHTMLAttributes, PropType } from 'vue';
 
 import { defineFormField } from './defineFormField.js';
 
@@ -56,9 +56,10 @@ function setupPhoneInput() {
         PhoneInput,
     };
 
-    function PhoneInput() {
+    function PhoneInput(attrs: InputHTMLAttributes) {
         return (
             <input
+                {...attrs}
                 aria-label={props.label}
                 aria-readonly={props.readonly}
                 aria-required={props.required}

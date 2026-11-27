@@ -99,6 +99,8 @@ export function createFormField<T>(options: FormFieldOptions<T>) {
 
     const model = useModel(props, 'modelValue') as Ref<FormFieldValue<T>>;
     const focused = ref(false);
+    /** The elements this field's focus handlers have fired on: its own inputs. */
+    const fieldInputs = new WeakSet<EventTarget>();
 
     const errors = computed(() => {
         const mergedErrors = Array.isArray(props.errors) ? props.errors.slice() : props.errors ? [props.errors] : [];
@@ -166,6 +168,11 @@ export function createFormField<T>(options: FormFieldOptions<T>) {
     }
 
     function onFocus(event: FocusEvent) {
+        rememberInput(event);
+        if (isFieldInput(event.relatedTarget)) {
+            return;
+        }
+
         focused.value = true;
         props.field?.focus();
 
@@ -185,8 +192,54 @@ export function createFormField<T>(options: FormFieldOptions<T>) {
     }
 
     function onBlur(event: FocusEvent) {
+        rememberInput(event);
+        const target = event.relatedTarget;
+        if (isFieldInput(target)) {
+            return;
+        }
+
+        if (isInsideRoot(target)) {
+            // An element inside the field that has not carried its focus handlers yet: either another input of the
+            // field, whose `onFocus` runs before the next task and remembers it, or an addon such as a button.
+            setTimeout(() => {
+                if (!isFieldInput(target)) {
+                    leave(event);
+                }
+            });
+            return;
+        }
+
+        leave(event);
+    }
+
+    function leave(event: FocusEvent) {
         focused.value = false;
         props.field?.blur();
         vm.$emit('blur', event);
+    }
+
+    function rememberInput(event: FocusEvent) {
+        if (event.currentTarget) {
+            fieldInputs.add(event.currentTarget);
+        }
+    }
+
+    /**
+     * Focus moving between the inputs of one field (the segments of a date) neither leaves nor enters it: the
+     * browser runs the watchers between that blur and focus, so treating it as a blur would reveal errors mid-entry.
+     * Only the elements carrying the field's focus handlers count; focus passing through any other element inside
+     * the field (an addon button) leaves it and enters it again.
+     */
+    function isFieldInput(target: EventTarget | null) {
+        return target != null && fieldInputs.has(target);
+    }
+
+    function isInsideRoot(target: EventTarget | null) {
+        if (typeof Node === 'undefined') {
+            return false; // no DOM (server rendering, a custom renderer): nothing to be inside of
+        }
+
+        const root: unknown = vm.$el;
+        return target instanceof Node && root instanceof Node && root.contains(target);
     }
 }

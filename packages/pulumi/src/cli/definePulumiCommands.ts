@@ -581,6 +581,7 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
                 ['Preview all stacks', 'preview'],
                 ['Preview single stack', 'preview core'],
                 ['Preview multiple stacks', 'preview core api'],
+                ['Preview a stack with each property change', 'preview core --diff'],
             ],
         });
 
@@ -592,6 +593,10 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
 
         verbosity = Option.Counter('--verbose,-v', {
             description: 'The verbosity of the logs',
+        });
+
+        diff = Option.Boolean('--diff,-d', {
+            description: 'Show the property changes of each resource',
         });
 
         skip = Option.Array('--skip,-s', [], {
@@ -620,6 +625,7 @@ function definePreviewCommand(options: PulumiCommandsOptions) {
                 const stackResolved = this.container.resolve(stack);
                 await previewStack(stackResolved, {
                     refresh: this.refresh,
+                    diff: this.diff,
                     config: pulumiConfig,
                     verbosity: this.verbosity,
                 });
